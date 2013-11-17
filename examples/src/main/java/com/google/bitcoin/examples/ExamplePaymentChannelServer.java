@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.examples;
+package com.google.digitalcoin.examples;
 
-import com.google.bitcoin.core.*;
-import com.google.bitcoin.kits.WalletAppKit;
-import com.google.bitcoin.params.TestNet3Params;
-import com.google.bitcoin.protocols.channels.*;
-import com.google.bitcoin.utils.BriefLogFormatter;
+import com.google.digitalcoin.core.*;
+import com.google.digitalcoin.kits.WalletAppKit;
+import com.google.digitalcoin.params.TestNet3Params;
+import com.google.digitalcoin.protocols.channels.*;
+import com.google.digitalcoin.utils.BriefLogFormatter;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;

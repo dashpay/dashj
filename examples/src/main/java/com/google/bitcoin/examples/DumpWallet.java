@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.examples;
+package com.google.digitalcoin.examples;
 
-import com.google.bitcoin.core.Wallet;
+import com.google.digitalcoin.core.Wallet;
 
 import java.io.File;
 

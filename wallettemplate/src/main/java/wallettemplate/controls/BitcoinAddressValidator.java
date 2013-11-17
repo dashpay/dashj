@@ -1,8 +1,8 @@
 package wallettemplate.controls;
 
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.AddressFormatException;
-import com.google.bitcoin.core.NetworkParameters;
+import com.google.digitalcoin.core.Address;
+import com.google.digitalcoin.core.AddressFormatException;
+import com.google.digitalcoin.core.NetworkParameters;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
 import wallettemplate.utils.TextFieldValidator;

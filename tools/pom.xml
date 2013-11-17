@@ -20,15 +20,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>com.google</groupId>
-    <artifactId>bitcoinj-parent</artifactId>
-    <version>0.11-SNAPSHOT</version>
+    <artifactId>digitalcoinj-parent</artifactId>
+    <version>0.11</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>bitcoinj-tools</artifactId>
+  <artifactId>digitalcoinj-tools</artifactId>
 
-  <name>bitcoinj Tools</name>
-  <description>A collection of useful tools that use the bitcoinj library to perform wallet operations</description>
+  <name>digitalcoinj Tools</name>
+  <description>A collection of useful tools that use the digitalcoinj library to perform wallet operations</description>
 
   <build>
       <plugins>
@@ -52,7 +52,7 @@
                   </filters>
                   <transformers>
                       <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                          <mainClass>com.google.bitcoin.tools.WalletTool</mainClass>
+                          <mainClass>com.google.digitalcoin.tools.WalletTool</mainClass>
                       </transformer>
                   </transformers>
               </configuration>
@@ -71,7 +71,7 @@
   <dependencies>
     <dependency>
       <groupId>com.google</groupId>
-      <artifactId>bitcoinj</artifactId>
+      <artifactId>digitalcoinj</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>

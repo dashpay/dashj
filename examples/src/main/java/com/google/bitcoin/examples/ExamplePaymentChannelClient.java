@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.examples;
+package com.google.digitalcoin.examples;
 
-import com.google.bitcoin.core.*;
-import com.google.bitcoin.kits.WalletAppKit;
-import com.google.bitcoin.params.TestNet3Params;
-import com.google.bitcoin.protocols.channels.PaymentChannelClientConnection;
-import com.google.bitcoin.protocols.channels.StoredPaymentChannelClientStates;
-import com.google.bitcoin.protocols.channels.ValueOutOfRangeException;
-import com.google.bitcoin.utils.BriefLogFormatter;
+import com.google.digitalcoin.core.*;
+import com.google.digitalcoin.kits.WalletAppKit;
+import com.google.digitalcoin.params.TestNet3Params;
+import com.google.digitalcoin.protocols.channels.PaymentChannelClientConnection;
+import com.google.digitalcoin.protocols.channels.StoredPaymentChannelClientStates;
+import com.google.digitalcoin.protocols.channels.ValueOutOfRangeException;
+import com.google.digitalcoin.utils.BriefLogFormatter;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -34,7 +34,7 @@ import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 
-import static com.google.bitcoin.core.Utils.CENT;
+import static com.google.digitalcoin.core.Utils.CENT;
 import static java.math.BigInteger.TEN;
 import static java.math.BigInteger.ZERO;
 

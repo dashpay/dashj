@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.examples;
+package com.google.digitalcoin.examples;
 
-import com.google.bitcoin.core.*;
-import com.google.bitcoin.params.TestNet3Params;
-import com.google.bitcoin.store.BlockStore;
-import com.google.bitcoin.store.MemoryBlockStore;
-import com.google.bitcoin.utils.BriefLogFormatter;
+import com.google.digitalcoin.core.*;
+import com.google.digitalcoin.params.TestNet3Params;
+import com.google.digitalcoin.store.BlockStore;
+import com.google.digitalcoin.store.MemoryBlockStore;
+import com.google.digitalcoin.utils.BriefLogFormatter;
 
 import java.net.InetAddress;
 import java.util.concurrent.Future;

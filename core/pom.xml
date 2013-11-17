@@ -21,14 +21,14 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.google</groupId>
-        <artifactId>bitcoinj-parent</artifactId>
-        <version>0.11-SNAPSHOT</version>
+        <artifactId>digitalcoinj-parent</artifactId>
+        <version>0.11</version>
     </parent>
 
-    <artifactId>bitcoinj</artifactId>
+    <artifactId>digitalcoinj</artifactId>
 
-    <name>bitcoinj</name>
-    <description>A Java Bitcoin library</description>
+    <name>digitalcoinj</name>
+    <description>A Java digitalcoin library</description>
 
     <profiles>
         <profile>
@@ -176,7 +176,7 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
-        <!-- bitcoinj consumers are expected to provide their own SLF4J adapters
+        <!-- digitalcoinj consumers are expected to provide their own SLF4J adapters
              such as logback, slf4j-log4j12, slf4j-jcl and so on
              see http://www.slf4j.org/faq.html -->
         <dependency>

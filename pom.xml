@@ -3,8 +3,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.google</groupId>
-  <artifactId>bitcoinj-parent</artifactId>
-  <version>0.11-SNAPSHOT</version>
+  <artifactId>digitalcoinj-parent</artifactId>
+  <version>0.11</version>
   <packaging>pom</packaging>
 
   <modules>
@@ -13,12 +13,12 @@
     <module>tools</module>
   </modules>
 
-  <name>bitcoinj Parent</name>
-  <description>Provides the common configuration for the BitCoinJ modules</description>
-  <url>http://code.google.com/p/bitcoinj</url>
+  <name>digitalcoinj Parent</name>
+  <description>Provides the common configuration for the digitalcoinJ modules</description>
+  <url>https://github.com/HashEngineering/digitalcoinj</url>
 
   <ciManagement>
-    <url>http://ci.bitcoinj.org/</url>
+    <url>http://ci.digitalcoinj.org/</url>
   </ciManagement>
 
   <licenses>
@@ -32,25 +32,25 @@
 
   <issueManagement>
     <system>Google Code</system>
-    <url>http://code.google.com/p/bitcoinj/issues/list</url>
+    <url>http://code.google.com/p/digitalcoinj/issues/list</url>
   </issueManagement>
 
   <mailingLists>
     <mailingList>
-      <name>bitcoinj Google Group</name>
-      <post>https://groups.google.com/forum/#!forum/bitcoinj</post>
+      <name>digitalcoinj Google Group</name>
+      <post>https://groups.google.com/forum/#!forum/digitalcoinj</post>
     </mailingList>
   </mailingLists>
 
   <distributionManagement>
     <repository>
-        <id>bitcoinj-distribution</id>
-        <url>https://distribution.bitcoinj.googlecode.com/git/releases</url>
+        <id>digitalcoinj-distribution</id>
+        <url>https://distribution.digitalcoinj.googlecode.com/git/releases</url>
     </repository>
   </distributionManagement>
 
   <scm>
-    <url>http://code.google.com/p/bitcoinj/source/checkout</url>
+    <url>http://code.google.com/p/digitalcoinj/source/checkout</url>
   </scm>
 
   <!-- Common build plugin configuration -->
@@ -91,7 +91,7 @@
         <artifactId>slf4j-api</artifactId>
         <version>1.7.5</version>
       </dependency>
-      <!-- bitcoinj consumers are expected to provide their own SLF4J adapters
+      <!-- digitalcoinj consumers are expected to provide their own SLF4J adapters
     such as logback, slf4j-log4j12, slf4j-jcl and so on
     see http://www.slf4j.org/faq.html -->
       <dependency>

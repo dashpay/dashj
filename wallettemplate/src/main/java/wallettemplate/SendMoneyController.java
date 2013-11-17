@@ -1,6 +1,6 @@
 package wallettemplate;
 
-import com.google.bitcoin.core.*;
+import com.google.digitalcoin.core.*;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import javafx.application.Platform;
@@ -38,7 +38,7 @@ public class SendMoneyController {
             Wallet.SendRequest req = Wallet.SendRequest.emptyWallet(destination);
             sendResult = Main.bitcoin.wallet().sendCoins(req);
             if (sendResult == null) {
-                // We couldn't empty the wallet for some reason. TODO: When bitcoinj issue 425 is fixed, be more helpful
+                // We couldn't empty the wallet for some reason. TODO: When digitalcoinj issue 425 is fixed, be more helpful
                 informationalAlert("Could not empty the wallet",
                         "You may have too little money left in the wallet to make a transaction.");
                 overlayUi.done();

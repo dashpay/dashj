@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.examples;
+package com.google.digitalcoin.examples;
 
-import com.google.bitcoin.core.*;
-import com.google.bitcoin.params.MainNetParams;
-import com.google.bitcoin.store.MemoryBlockStore;
+import com.google.digitalcoin.core.*;
+import com.google.digitalcoin.params.MainNetParams;
+import com.google.digitalcoin.store.MemoryBlockStore;
 
 import java.math.BigInteger;
 import java.net.InetAddress;

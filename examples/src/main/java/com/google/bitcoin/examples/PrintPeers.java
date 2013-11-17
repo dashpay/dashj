@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.examples;
+package com.google.digitalcoin.examples;
 
-import com.google.bitcoin.core.NetworkParameters;
-import com.google.bitcoin.core.TCPNetworkConnection;
-import com.google.bitcoin.core.VersionMessage;
-import com.google.bitcoin.discovery.DnsDiscovery;
-import com.google.bitcoin.discovery.PeerDiscoveryException;
-import com.google.bitcoin.params.MainNetParams;
-import com.google.bitcoin.utils.BriefLogFormatter;
+import com.google.digitalcoin.core.NetworkParameters;
+import com.google.digitalcoin.core.TCPNetworkConnection;
+import com.google.digitalcoin.core.VersionMessage;
+import com.google.digitalcoin.discovery.DnsDiscovery;
+import com.google.digitalcoin.discovery.PeerDiscoveryException;
+import com.google.digitalcoin.params.MainNetParams;
+import com.google.digitalcoin.utils.BriefLogFormatter;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
