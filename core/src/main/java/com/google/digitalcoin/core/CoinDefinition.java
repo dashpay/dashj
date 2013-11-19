@@ -14,10 +14,7 @@ import java.util.Vector;
  */
 public class CoinDefinition {
 
-    enum CoinHash {
-        SHA256,
-        scrypt
-    };
+
     public static final String coinName = "digitalcoin";
     public static final String coinTicker = "DGC";
     public static final String coinURIScheme = "digitalcoin";
@@ -30,7 +27,10 @@ public class CoinDefinition {
 
     public static final String DONATION_ADDRESS = "DPdbL3n3Y3ypwVEvY3wABmpbjsd3AVqm5M";  //HashEngineering donation DGC address
 
-
+    enum CoinHash {
+        SHA256,
+        scrypt
+    };
     public static final CoinHash coinHash = CoinHash.scrypt;
     //Original Values
     public static final int TARGET_TIMESPAN_0 = (int)(6 * 60 * 3 * 20);  // 3.5 days per difficulty cycle, on average.
@@ -88,9 +88,28 @@ public class CoinDefinition {
 
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
+            "direct.crypto-expert.com",
+            "207.12.89.119",
+            "198.50.30.145",
+            "178.237.35.34",
+            "dgc.kadaplace.com",
+
             "50.116.22.43",                           //dgc.cryptocoinexplorer.com
             //"dnsseed.digitalcoin.co",
             //"dnsseed.rc.altcointech.net"
+            //"88.161.131.83",
+            //"98.253.19.158" ,
+    //"198.50.233.6"           ,
+    "82.161.111.51"          ,
+    //"93.96.179.57"           ,
+    "37.187.9.53"            ,
+    //"68.63.214.65"           ,
+    //"54.215.9.205"           ,
+
+    //"97.114.111.53"  ,
+
+    //"93.96.179.57" ,
+    //"173.228.105.207"
     };
 
     //

@@ -46,7 +46,7 @@ public class TestNet3Params extends NetworkParameters {
         spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
         subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash));
+        //checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash));
         alertSigningKey = Hex.decode("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");
 
         dnsSeeds = CoinDefinition.testnetDnsSeeds;
