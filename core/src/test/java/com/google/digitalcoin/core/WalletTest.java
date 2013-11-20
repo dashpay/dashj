@@ -52,8 +52,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+
 import static com.google.digitalcoin.utils.TestUtils.*;
 import static com.google.digitalcoin.core.Utils.*;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import static org.junit.Assert.*;
 
 public class WalletTest extends TestWithWallet {
@@ -563,6 +566,27 @@ public class WalletTest extends TestWithWallet {
     }
 
     @Test
+    public void doubleSpendIdenticalTx() throws Exception {
+        // Test the case where two semantically identical but bitwise different transactions double spend each other.
+        // This can (and has!) happened when a wallet is cloned between devices, and both devices decide to make the
+        // same spend simultaneously - for example due a re-keying operation.
+        final BigInteger value = Utils.toNanoCoins(1, 0);
+        // Give us two outputs.
+        sendMoneyToWallet(value, AbstractBlockChain.NewBlockType.BEST_CHAIN);
+        sendMoneyToWallet(value, AbstractBlockChain.NewBlockType.BEST_CHAIN);
+        final BigInteger value2 = Utils.toNanoCoins(2, 0);
+        // The two transactions will have different hashes due to the lack of deterministic signing, but will be
+        // otherwise identical. Once deterministic signatures are implemented, this test will have to be tweaked.
+        Transaction send1 = checkNotNull(wallet.createSend(new ECKey().toAddress(params), value2));
+        Transaction send2 = checkNotNull(wallet.createSend(new ECKey().toAddress(params), value2));
+        send1 = roundTripTransaction(params, send1);
+        wallet.commitTx(send2);
+        assertEquals(BigInteger.ZERO, wallet.getBalance());
+        sendMoneyToWallet(send1, AbstractBlockChain.NewBlockType.BEST_CHAIN);
+        assertEquals(BigInteger.ZERO, wallet.getBalance());
+    }
+
+    @Test
     public void doubleSpendFinneyAttack() throws Exception {
         // A Finney attack is where a miner includes a transaction spending coins to themselves but does not
         // broadcast it. When they find a solved block, they hold it back temporarily whilst they buy something with
@@ -929,16 +953,6 @@ public class WalletTest extends TestWithWallet {
             wallet.receivePending(t1, null);
         Sha256Hash hash3 = Sha256Hash.hashFileContents(f);
         assertFalse("Wallet not saved after receivePending", hash2.equals(hash3));  // File has changed again.
-
-        Block b1 = createFakeBlock(blockStore, t1).block;
-        chain.add(b1);
-        Sha256Hash hash4 = Sha256Hash.hashFileContents(f);
-        assertFalse("Wallet not saved after chain add.1", hash3.equals(hash4));  // File has changed again.
-
-        // Check that receiving some block without any relevant transactions still triggers a save.
-        Block b2 = b1.createNextBlock(new ECKey().toAddress(params));
-        chain.add(b2);
-        assertFalse("Wallet not saved after chain add.2", hash4.equals(Sha256Hash.hashFileContents(f)));  // File has changed again.
     }
 
     @Test
