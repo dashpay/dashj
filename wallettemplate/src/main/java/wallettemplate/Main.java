@@ -1,13 +1,13 @@
 package wallettemplate;
 
 import com.aquafx_project.AquaFx;
-import com.google.digitalcoin.core.NetworkParameters;
-import com.google.digitalcoin.kits.WalletAppKit;
-import com.google.digitalcoin.params.MainNetParams;
-import com.google.digitalcoin.params.RegTestParams;
-import com.google.digitalcoin.store.BlockStoreException;
-import com.google.digitalcoin.utils.BriefLogFormatter;
-import com.google.digitalcoin.utils.Threading;
+import com.google.bitcoin.core.NetworkParameters;
+import com.google.bitcoin.kits.WalletAppKit;
+import com.google.bitcoin.params.MainNetParams;
+import com.google.bitcoin.params.RegTestParams;
+import com.google.bitcoin.store.BlockStoreException;
+import com.google.bitcoin.utils.BriefLogFormatter;
+import com.google.bitcoin.utils.Threading;
 import com.google.common.base.Throwables;
 import javafx.application.Application;
 import javafx.application.Platform;
