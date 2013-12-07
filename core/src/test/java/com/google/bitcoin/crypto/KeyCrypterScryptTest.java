@@ -19,8 +19,8 @@ import com.google.bitcoin.core.Utils;
 import com.google.bitcoin.utils.BriefLogFormatter;
 import com.google.protobuf.ByteString;
 
-import org.digitalcoinj.wallet.Protos;
-import org.digitalcoinj.wallet.Protos.ScryptParameters;
+import org.bitcoinj.wallet.Protos;
+import org.bitcoinj.wallet.Protos.ScryptParameters;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;

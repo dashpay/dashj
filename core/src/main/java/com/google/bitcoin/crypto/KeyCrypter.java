@@ -17,7 +17,7 @@ package com.google.bitcoin.crypto;
 
 import java.io.Serializable;
 
-import org.digitalcoinj.wallet.Protos.Wallet.EncryptionType;
+import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
 import org.spongycastle.crypto.params.KeyParameter;
 
 /**

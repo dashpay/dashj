@@ -17,9 +17,9 @@ package com.google.bitcoin.crypto;
 
 import com.google.protobuf.ByteString;
 import com.lambdaworks.crypto.SCrypt;
-import org.digitalcoinj.wallet.Protos;
-import org.digitalcoinj.wallet.Protos.ScryptParameters;
-import org.digitalcoinj.wallet.Protos.Wallet.EncryptionType;
+import org.bitcoinj.wallet.Protos;
+import org.bitcoinj.wallet.Protos.ScryptParameters;
+import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.BufferedBlockCipher;

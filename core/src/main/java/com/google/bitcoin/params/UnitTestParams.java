@@ -22,7 +22,7 @@ import com.google.bitcoin.core.NetworkParameters;
 import java.math.BigInteger;
 
 /**
- * Network parameters used by the digitalcoinj unit tests (and potentially your own). This lets you solve a block using
+ * Network parameters used by the bitcoinj unit tests (and potentially your own). This lets you solve a block using
  * {@link com.google.bitcoin.core.Block#solve()} by setting difficulty to the easiest possible.
  */
 public class UnitTestParams extends NetworkParameters {

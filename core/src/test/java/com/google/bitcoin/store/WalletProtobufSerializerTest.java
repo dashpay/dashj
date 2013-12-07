@@ -9,7 +9,7 @@ import com.google.bitcoin.utils.BriefLogFormatter;
 import com.google.bitcoin.utils.TestUtils;
 import com.google.bitcoin.utils.Threading;
 import com.google.protobuf.ByteString;
-import org.digitalcoinj.wallet.Protos;
+import org.bitcoinj.wallet.Protos;
 import org.junit.Before;
 import org.junit.Test;
 
