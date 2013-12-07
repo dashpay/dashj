@@ -16,23 +16,21 @@
 
 package com.google.bitcoin.crypto;
 
+import com.google.bitcoin.core.Sha256Hash;
+import org.spongycastle.crypto.engines.RijndaelEngine;
+import org.spongycastle.crypto.params.KeyParameter;
+import org.spongycastle.util.encoders.Hex;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import org.spongycastle.crypto.engines.RijndaelEngine;
-import org.spongycastle.crypto.params.KeyParameter;
-import org.spongycastle.util.encoders.Hex;
-
-import com.google.bitcoin.core.Sha256Hash;
 
 /**
  * A MnemonicCode object may be used to convert between binary seed values and
@@ -45,19 +43,19 @@ import com.google.bitcoin.core.Sha256Hash;
  */
 
 public class MnemonicCode {
+    private ArrayList<String> wordList;
 
-    private ArrayList<String>	wordList;
+    public static String BIP39_ENGLISH_SHA256 = "ad90bf3beb7b0eb7e5acd74727dc0da96e0a280a258354e7293fb7e211ac03db";
 
-    public static String BIP0039_ENGLISH_SHA256 =
-        "ad90bf3beb7b0eb7e5acd74727dc0da96e0a280a258354e7293fb7e211ac03db";
+    public MnemonicCode() throws IOException {
+        this(MnemonicCode.class.getResourceAsStream("mnemonic/wordlist/english.txt"), BIP39_ENGLISH_SHA256);
+    }
 
     /**
-     * Creates an MnemonicCode object, initializing with words read
-     * from the supplied input stream.  If a wordListDigest is
-     * supplied the digest of the words will be checked.
+     * Creates an MnemonicCode object, initializing with words read from the supplied input stream.  If a wordListDigest
+     * is supplied the digest of the words will be checked.
      */
-    public MnemonicCode(InputStream wordstream, String wordListDigest)
-        throws IOException, IllegalArgumentException {
+    public MnemonicCode(InputStream wordstream, String wordListDigest) throws IOException, IllegalArgumentException {
         BufferedReader br = new BufferedReader(new InputStreamReader(wordstream, "UTF-8"));
         String word;
         this.wordList = new ArrayList<String>();
@@ -196,11 +194,13 @@ public class MnemonicCode {
         //    Set block size to input size (that's why Rijndael is used, not AES).
         byte[] mnemonic = {'m', 'n', 'e', 'm', 'o', 'n', 'i', 'c'};
         byte[] key = Sha256Hash.create(mnemonic).getBytes();
+        byte[] buffer = new byte[data.length];
+        System.arraycopy(data, 0, buffer, 0, data.length);
         RijndaelEngine cipher = new RijndaelEngine(len);
         cipher.init(true, new KeyParameter(key));
         for (int ii = 0; ii < 10000; ++ii)
-            cipher.processBlock(data, 0, data, 0);
-        return data;
+            cipher.processBlock(buffer, 0, buffer, 0);
+        return buffer;
     }
 
     private byte[] unstretch(int len, byte[] data) {
@@ -208,11 +208,13 @@ public class MnemonicCode {
         //    use the same parameters as used in step 3 of encryption.
         byte[] mnemonic = {'m', 'n', 'e', 'm', 'o', 'n', 'i', 'c'};
         byte[] key = Sha256Hash.create(mnemonic).getBytes();
+        byte[] buffer = new byte[data.length];
+        System.arraycopy(data, 0, buffer, 0, data.length);
         RijndaelEngine cipher = new RijndaelEngine(len);
         cipher.init(false, new KeyParameter(key));
         for (int ii = 0; ii < 10000; ++ii)
-            cipher.processBlock(data, 0, data, 0);
-        return data;
+            cipher.processBlock(buffer, 0, buffer, 0);
+        return buffer;
     }
 
     private boolean[] checksum(boolean[] bits) {

@@ -32,9 +32,11 @@ public class MainNetParams extends NetworkParameters {
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
         proofOfWorkLimit = CoinDefinition.proofOfWorkLimit;
-        acceptableAddressCodes = new int[] { CoinDefinition.AddressHeader/*,0*/ };
         dumpedPrivateKeyHeader = 128 + CoinDefinition.AddressHeader;
         addressHeader = CoinDefinition.AddressHeader;
+        p2shHeader = CoinDefinition.p2shHeader;
+        acceptableAddressCodes = new int[] { addressHeader, p2shHeader};
+
         port = CoinDefinition.Port;
         packetMagic = CoinDefinition.PacketMagic;
         genesisBlock.setDifficultyTarget(CoinDefinition.genesisBlockDifficultyTarget);

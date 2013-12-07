@@ -31,13 +31,16 @@ public class TestNet2Params extends NetworkParameters {
         super();
         id = ID_TESTNET;
         packetMagic = 0xfabfb5daL;
+
         port = CoinDefinition.TestPort;
         addressHeader = CoinDefinition.testnetAddressHeader;
+        p2shHeader = CoinDefinition.testnetp2shHeader;
+        acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        proofOfWorkLimit = Utils.decodeCompactBits(0x1d0fffffL);
-        acceptableAddressCodes = new int[] {CoinDefinition.testnetAddressHeader};
+        proofOfWorkLimit = CoinDefinition.proofOfWorkLimit;
         dumpedPrivateKeyHeader = 128 + CoinDefinition.testnetAddressHeader;
+
         genesisBlock.setTime(1296688602L);
         genesisBlock.setDifficultyTarget(0x1d07fff8L);
         genesisBlock.setNonce(384568319);

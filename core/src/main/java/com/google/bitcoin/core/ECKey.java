@@ -19,6 +19,8 @@ package com.google.bitcoin.core;
 import com.google.bitcoin.crypto.EncryptedPrivateKey;
 import com.google.bitcoin.crypto.KeyCrypter;
 import com.google.bitcoin.crypto.KeyCrypterException;
+import com.google.bitcoin.crypto.TransactionSignature;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.bitcoin.NativeSecp256k1;
 import org.slf4j.Logger;
@@ -35,6 +37,7 @@ import org.spongycastle.math.ec.ECFieldElement;
 import org.spongycastle.math.ec.ECPoint;
 import org.spongycastle.util.encoders.Base64;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
@@ -45,6 +48,7 @@ import java.security.SignatureException;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 // TODO: This class is quite a mess by now. Once users are migrated away from Java serialization for the wallets,
 // refactor this to have better internal layout and a more consistent API.
@@ -410,6 +414,14 @@ public class ECKey implements Serializable {
     }
 
     /**
+     * If this global variable is set to true, sign() creates a dummy signature and verify() always returns true.
+     * This is intended to help accelerate unit tests that do a lot of signing/verifying, which in the debugger
+     * can be painfully slow.
+     */
+    @VisibleForTesting
+    public static boolean FAKE_SIGNATURES = false;
+
+    /**
      * Signs the given hash and returns the R and S components as BigIntegers. In the Bitcoin protocol, they are
      * usually encoded using DER format, so you want {@link com.google.bitcoin.core.ECKey.ECDSASignature#encodeToDER()}
      * instead. However sometimes the independent components can be useful, for instance, if you're doing to do further
@@ -419,6 +431,9 @@ public class ECKey implements Serializable {
      * @throws KeyCrypterException if this ECKey doesn't have a private part.
      */
     public ECDSASignature sign(Sha256Hash input, KeyParameter aesKey) throws KeyCrypterException {
+        if (FAKE_SIGNATURES)
+            return TransactionSignature.dummy();
+
         // The private key bytes to use for signing.
         BigInteger privateKeyForSigning;
 
@@ -465,6 +480,9 @@ public class ECKey implements Serializable {
      * @param pub       The public key bytes to use.
      */
     public static boolean verify(byte[] data, ECDSASignature signature, byte[] pub) {
+        if (FAKE_SIGNATURES)
+            return true;
+
         if (NativeSecp256k1.enabled)
             return NativeSecp256k1.verify(data, signature.encodeToDER(), pub);
 
@@ -758,8 +776,9 @@ public class ECKey implements Serializable {
     }
 
     /**
-     * Returns a 32 byte array containing the private key.
+     * Returns a 32 byte array containing the private key, or null if the key is encrypted or public only
      */
+    @Nullable
     public byte[] getPrivKeyBytes() {
         return Utils.bigIntegerToBytes(priv, 32);
     }
@@ -770,9 +789,12 @@ public class ECKey implements Serializable {
      *
      * @param params The network this key is intended for use on.
      * @return Private key bytes as a {@link DumpedPrivateKey}.
+     * @throws IllegalStateException if the private key is not available.
      */
     public DumpedPrivateKey getPrivateKeyEncoded(NetworkParameters params) {
-        return new DumpedPrivateKey(params, getPrivKeyBytes(), isCompressed());
+        final byte[] privKeyBytes = getPrivKeyBytes();
+        checkState(privKeyBytes != null, "Private key is not available");
+        return new DumpedPrivateKey(params, privKeyBytes, isCompressed());
     }
 
     /**
@@ -821,7 +843,9 @@ public class ECKey implements Serializable {
      */
     public ECKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey) throws KeyCrypterException {
         Preconditions.checkNotNull(keyCrypter);
-        EncryptedPrivateKey encryptedPrivateKey = keyCrypter.encrypt(getPrivKeyBytes(), aesKey);
+        final byte[] privKeyBytes = getPrivKeyBytes();
+        checkState(privKeyBytes != null, "Private key is not available");
+        EncryptedPrivateKey encryptedPrivateKey = keyCrypter.encrypt(privKeyBytes, aesKey);
         return new ECKey(encryptedPrivateKey, getPubKey(), keyCrypter);
     }
 
@@ -905,6 +929,7 @@ public class ECKey implements Serializable {
      * @return The encryptedPrivateKey (containing the encrypted private key bytes and initialisation vector) for this ECKey,
      *         or null if the ECKey is not encrypted.
      */
+    @Nullable
     public EncryptedPrivateKey getEncryptedPrivateKey() {
         if (encryptedPrivateKey == null) {
             return null;

@@ -61,6 +61,9 @@ public class Script {
     // must preserve the exact bytes that we read off the wire, along with the parsed form.
     protected byte[] program;
 
+    // Creation time of the associated keys in seconds since the epoch.
+    private long creationTimeSeconds;
+
     /** Creates an empty script that serializes to nothing. */
     private Script() {
         chunks = Lists.newArrayList();
@@ -69,6 +72,7 @@ public class Script {
     // Used from ScriptBuilder.
     Script(List<ScriptChunk> chunks) {
         this.chunks = Collections.unmodifiableList(new ArrayList<ScriptChunk>(chunks));
+        creationTimeSeconds = Utils.now().getTime() / 1000;
     }
 
     /**
@@ -79,6 +83,21 @@ public class Script {
     public Script(byte[] programBytes) throws ScriptException {
         program = programBytes;
         parse(programBytes);
+        creationTimeSeconds = Utils.now().getTime() / 1000;
+    }
+
+    public Script(byte[] programBytes, long creationTimeSeconds) throws ScriptException {
+        program = programBytes;
+        parse(programBytes);
+        this.creationTimeSeconds = creationTimeSeconds;
+    }
+
+    public long getCreationTimeSeconds() {
+        return creationTimeSeconds;
+    }
+
+    public void setCreationTimeSeconds(long creationTimeSeconds) {
+        this.creationTimeSeconds = creationTimeSeconds;
     }
 
     /**
@@ -97,6 +116,11 @@ public class Script {
                 buf.append("] ");
             }
         }
+
+        if (creationTimeSeconds != 0) {
+            buf.append(" timestamp:").append(creationTimeSeconds);
+        }
+
         return buf.toString();
     }
 
@@ -110,7 +134,8 @@ public class Script {
             for (ScriptChunk chunk : chunks) {
                 chunk.write(bos);
             }
-            return bos.toByteArray();
+            program = bos.toByteArray();
+            return program;
         } catch (IOException e) {
             throw new RuntimeException(e);  // Cannot happen.
         }
@@ -195,16 +220,30 @@ public class Script {
     }
 
     /**
+     * Returns true if this script is of the form OP_HASH160 <scriptHash> OP_EQUAL, ie, payment to an
+     * address like 35b9vsyH1KoFT5a5KtrKusaCcPLkiSo1tU. This form was codified as part of BIP13 and BIP16,
+     * for pay to script hash type addresses.
+     */
+    public boolean isSentToP2SH() {
+        return chunks.size() == 3 &&
+               chunks.get(0).equalsOpCode(OP_HASH160) &&
+               chunks.get(1).data.length == Address.LENGTH &&
+               chunks.get(2).equalsOpCode(OP_EQUAL);
+    }
+
+    /**
      * If a program matches the standard template DUP HASH160 <pubkey hash> EQUALVERIFY CHECKSIG
      * then this function retrieves the third element, otherwise it throws a ScriptException.<p>
      *
      * This is useful for fetching the destination address of a transaction.
      */
     public byte[] getPubKeyHash() throws ScriptException {
-        if (!isSentToAddress())
+        if (isSentToAddress())
+            return chunks.get(2).data;
+        else if (isSentToP2SH())
+            return chunks.get(1).data;
+        else
             throw new ScriptException("Script not in the standard scriptPubKey form");
-        // Otherwise, the third element is the hash of the public key, ie the bitcoin address.
-        return chunks.get(2).data;
     }
 
     /**
@@ -1226,5 +1265,26 @@ public class Script {
             if (!castToBool(p2shStack.pollLast()))
                 throw new ScriptException("P2SH script execution resulted in a non-true stack");
         }
+    }
+
+    // Utility that doesn't copy for internal use
+    private byte[] getQuickProgram() {
+        if (program != null)
+            return program;
+        return getProgram();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Script))
+            return false;
+        Script s = (Script)obj;
+        return Arrays.equals(getQuickProgram(), s.getQuickProgram());
+    }
+
+    @Override
+    public int hashCode() {
+        byte[] bytes = getQuickProgram();
+        return Arrays.hashCode(bytes);
     }
 }

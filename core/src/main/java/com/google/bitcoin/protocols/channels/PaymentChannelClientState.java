@@ -23,7 +23,11 @@ import com.google.bitcoin.script.ScriptBuilder;
 import com.google.bitcoin.utils.Threading;
 import com.google.bitcoin.wallet.AllowUnconfirmedCoinSelector;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,12 +197,19 @@ public class PaymentChannelClientState {
         // When we see the close transaction get a few confirmations, we can just delete the record
         // of this channel along with the refund tx from the wallet, because we're not going to need
         // any of that any more.
-        storedChannel.close.getConfidence().getDepthFuture(CONFIRMATIONS_FOR_DELETE).addListener(new Runnable() {
+        final TransactionConfidence confidence = storedChannel.close.getConfidence();
+        ListenableFuture<Transaction> future = confidence.getDepthFuture(CONFIRMATIONS_FOR_DELETE, Threading.SAME_THREAD);
+        Futures.addCallback(future, new FutureCallback<Transaction>() {
             @Override
-            public void run() {
+            public void onSuccess(Transaction result) {
                 deleteChannelFromWallet();
             }
-        }, Threading.SAME_THREAD);
+
+            @Override
+            public void onFailure(Throwable t) {
+                Throwables.propagate(t);
+            }
+        });
     }
 
     private synchronized void deleteChannelFromWallet() {
@@ -224,9 +235,10 @@ public class PaymentChannelClientState {
      * overriding {@link PaymentChannelClientState#editContractSendRequest(com.google.bitcoin.core.Wallet.SendRequest)}.
      * By default unconfirmed coins are allowed to be used, as for micropayments the risk should be relatively low.
      *
-     * @throws ValueOutOfRangeException If the value being used cannot be afforded or is too small to be accepted by the network
+     * @throws ValueOutOfRangeException if the value being used is too small to be accepted by the network
+     * @throws InsufficientMoneyException if the wallet doesn't contain enough balance to initiate
      */
-    public synchronized void initiate() throws ValueOutOfRangeException {
+    public synchronized void initiate() throws ValueOutOfRangeException, InsufficientMoneyException {
         final NetworkParameters params = wallet.getParams();
         Transaction template = new Transaction(params);
         // We always place the client key before the server key because, if either side wants some privacy, they can
@@ -241,8 +253,7 @@ public class PaymentChannelClientState {
         Wallet.SendRequest req = Wallet.SendRequest.forTx(template);
         req.coinSelector = AllowUnconfirmedCoinSelector.get();
         editContractSendRequest(req);
-        if (!wallet.completeTx(req))
-            throw new ValueOutOfRangeException("Cannot afford this channel");
+        wallet.completeTx(req);
         BigInteger multisigFee = req.fee;
         multisigContract = req.tx;
         // Build a refund transaction that protects us in the case of a bad server that's just trying to cause havoc
