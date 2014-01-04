@@ -16,6 +16,7 @@
 
 package com.google.bitcoin.core;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
@@ -217,7 +218,7 @@ public class VersionMessage extends Message {
      */
     @Override
     byte[] getChecksum() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -225,6 +226,7 @@ public class VersionMessage extends Message {
      */
     @Override
     void setChecksum(byte[] checksum) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -278,7 +280,7 @@ public class VersionMessage extends Message {
      * @param comments Optional (can be null) platform or other node specific information.
      * @throws IllegalArgumentException if name, version or comments contains invalid characters.
      */
-    public void appendToSubVer(String name, String version, String comments) {
+    public void appendToSubVer(String name, String version, @Nullable String comments) {
         checkSubVerComponent(name);
         checkSubVerComponent(version);
         if (comments != null) {

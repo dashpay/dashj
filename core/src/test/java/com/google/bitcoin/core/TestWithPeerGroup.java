@@ -17,12 +17,15 @@
 package com.google.bitcoin.core;
 
 import com.google.bitcoin.params.UnitTestParams;
+import com.google.bitcoin.net.BlockingClientManager;
+import com.google.bitcoin.net.NioClientManager;
 import com.google.bitcoin.store.BlockStore;
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.*;
+import com.google.bitcoin.utils.ExponentialBackoff;
+import com.google.common.base.Preconditions;
 
 import java.net.InetSocketAddress;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -33,55 +36,78 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
     protected PeerGroup peerGroup;
 
     protected VersionMessage remoteVersionMessage;
-    private ClientBootstrap bootstrap;
+    private final ClientType clientType;
+
+    public TestWithPeerGroup(ClientType clientType) {
+        super(clientType);
+        if (clientType != ClientType.NIO_CLIENT_MANAGER && clientType != ClientType.BLOCKING_CLIENT_MANAGER)
+            throw new RuntimeException();
+        this.clientType = clientType;
+    }
 
     public void setUp(BlockStore blockStore) throws Exception {
         super.setUp(blockStore);
 
         remoteVersionMessage = new VersionMessage(unitTestParams, 1);
+        remoteVersionMessage.localServices = VersionMessage.NODE_NETWORK;
         remoteVersionMessage.clientVersion = FilteredBlock.MIN_PROTOCOL_VERSION;
         initPeerGroup();
     }
 
     protected void initPeerGroup() {
-        bootstrap = new ClientBootstrap(new ChannelFactory() {
-            public void releaseExternalResources() {}
-            public Channel newChannel(ChannelPipeline pipeline) {
-                ChannelSink sink = new FakeChannelSink();
-                return new FakeChannel(this, pipeline, sink);
-            }
-            public void shutdown() {}
-        });
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                VersionMessage ver = new VersionMessage(unitTestParams, 1);
-                ChannelPipeline p = Channels.pipeline();
-
-                Peer peer = new Peer(unitTestParams, blockChain, ver, peerGroup.getMemoryPool());
-                peer.addLifecycleListener(peerGroup.startupListener);
-                p.addLast("peer", peer.getHandler());
-                return p;
-            }
-
-        });
-        peerGroup = new PeerGroup(unitTestParams, blockChain, bootstrap);
+        if (clientType == ClientType.NIO_CLIENT_MANAGER)
+            peerGroup = new PeerGroup(unitTestParams, blockChain, new NioClientManager());
+        else
+            peerGroup = new PeerGroup(unitTestParams, blockChain, new BlockingClientManager());
         peerGroup.setPingIntervalMsec(0);  // Disable the pings as they just get in the way of most tests.
     }
 
-    protected FakeChannel connectPeer(int id) {
+    protected InboundMessageQueuer connectPeerWithoutVersionExchange(int id) throws Exception {
+        Preconditions.checkArgument(id < PEER_SERVERS);
+        InetSocketAddress remoteAddress = new InetSocketAddress("127.0.0.1", 2000 + id);
+        Peer peer = peerGroup.connectTo(remoteAddress).getConnectionOpenFuture().get();
+        InboundMessageQueuer writeTarget = newPeerWriteTargetQueue.take();
+        writeTarget.peer = peer;
+        return writeTarget;
+    }
+    
+    protected InboundMessageQueuer connectPeer(int id) throws Exception {
         return connectPeer(id, remoteVersionMessage);
     }
 
-    protected FakeChannel connectPeer(int id, VersionMessage versionMessage) {
-        InetSocketAddress remoteAddress = new InetSocketAddress("127.0.0.1", 2000 + id);
-        FakeChannel p = (FakeChannel) peerGroup.connectTo(remoteAddress).getChannel();
-        assertTrue(p.nextEvent() instanceof ChannelStateEvent);
-        inbound(p, versionMessage);
-        inbound(p, new VersionAck());
+    protected InboundMessageQueuer connectPeer(int id, VersionMessage versionMessage) throws Exception {
+        checkArgument(versionMessage.hasBlockChain());
+        InboundMessageQueuer writeTarget = connectPeerWithoutVersionExchange(id);
+        // Complete handshake with the peer - send/receive version(ack)s, receive bloom filter
+        writeTarget.sendMessage(versionMessage);
+        writeTarget.sendMessage(new VersionAck());
+        assertTrue(writeTarget.nextMessageBlocking() instanceof VersionMessage);
+        assertTrue(writeTarget.nextMessageBlocking() instanceof VersionAck);
         if (versionMessage.isBloomFilteringSupported()) {
-            assertTrue(outbound(p) instanceof BloomFilter);
-            assertTrue(outbound(p) instanceof MemoryPoolMessage);
+            assertTrue(writeTarget.nextMessageBlocking() instanceof BloomFilter);
+            assertTrue(writeTarget.nextMessageBlocking() instanceof MemoryPoolMessage);
         }
-        return p;
+        return writeTarget;
+    }
+
+    // handle peer discovered by PeerGroup
+    protected InboundMessageQueuer handleConnectToPeer(int id) throws Exception {
+        return handleConnectToPeer(id, remoteVersionMessage);
+    }
+
+    // handle peer discovered by PeerGroup
+    protected InboundMessageQueuer handleConnectToPeer(int id, VersionMessage versionMessage) throws Exception {
+        InboundMessageQueuer writeTarget = newPeerWriteTargetQueue.take();
+        checkArgument(versionMessage.hasBlockChain());
+        // Complete handshake with the peer - send/receive version(ack)s, receive bloom filter
+        writeTarget.sendMessage(versionMessage);
+        writeTarget.sendMessage(new VersionAck());
+        assertTrue(writeTarget.nextMessageBlocking() instanceof VersionMessage);
+        assertTrue(writeTarget.nextMessageBlocking() instanceof VersionAck);
+        if (versionMessage.isBloomFilteringSupported()) {
+            assertTrue(writeTarget.nextMessageBlocking() instanceof BloomFilter);
+            assertTrue(writeTarget.nextMessageBlocking() instanceof MemoryPoolMessage);
+        }
+        return writeTarget;
     }
 }

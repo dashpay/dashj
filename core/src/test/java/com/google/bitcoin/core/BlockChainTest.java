@@ -399,4 +399,31 @@ public class BlockChainTest {
         // The actual date of block 200,000 was 2012-09-22 10:47:00
         assertEquals(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parse("2012-10-23T08:35:05.000-0700"), d);
     }
+
+    @Test
+    public void falsePositives() throws Exception {
+        double decay = AbstractBlockChain.FP_ESTIMATOR_ALPHA;
+        assertTrue(0 == chain.getFalsePositiveRate()); // Exactly
+        chain.trackFalsePositives(55);
+        assertEquals(decay * 55, chain.getFalsePositiveRate(), 1e-4);
+        chain.trackFilteredTransactions(550);
+        double rate1 = chain.getFalsePositiveRate();
+        // Run this scenario a few more time for the filter to converge
+        for (int i = 1 ; i < 10 ; i++) {
+            chain.trackFalsePositives(55);
+            chain.trackFilteredTransactions(550);
+        }
+
+        // Ensure we are within 10%
+        assertEquals(0.1, chain.getFalsePositiveRate(), 0.01);
+
+        // Check that we get repeatable results after a reset
+        chain.resetFalsePositiveEstimate();
+        assertTrue(0 == chain.getFalsePositiveRate()); // Exactly
+
+        chain.trackFalsePositives(55);
+        assertEquals(decay * 55, chain.getFalsePositiveRate(), 1e-4);
+        chain.trackFilteredTransactions(550);
+        assertEquals(rate1, chain.getFalsePositiveRate(), 1e-4);
+    }
 }

@@ -88,18 +88,19 @@ public class BlockChain extends AbstractBlockChain {
     @Override
     protected TransactionOutputChanges connectTransactions(int height, Block block) {
         // Don't have to do anything as this is only called if(shouldVerifyTransactions())
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     protected TransactionOutputChanges connectTransactions(StoredBlock newBlock) {
         // Don't have to do anything as this is only called if(shouldVerifyTransactions())
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     protected void disconnectTransactions(StoredBlock block) {
-        // Don't have to do anything as this is only called if(shouldVerifyTransactions())        
+        // Don't have to do anything as this is only called if(shouldVerifyTransactions())
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -115,5 +116,14 @@ public class BlockChain extends AbstractBlockChain {
     @Override
     protected StoredBlock getStoredBlockInCurrentScope(Sha256Hash hash) throws BlockStoreException {
         return blockStore.get(hash);
+    }
+
+    @Override
+    public boolean add(FilteredBlock block) throws VerificationException, PrunedException {
+        boolean success = super.add(block);
+        if (success) {
+            trackFilteredTransactions(block.getTransactionCount());
+        }
+        return success;
     }
 }

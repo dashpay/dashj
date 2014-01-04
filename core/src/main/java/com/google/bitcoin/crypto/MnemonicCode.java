@@ -17,8 +17,7 @@
 package com.google.bitcoin.crypto;
 
 import com.google.bitcoin.core.Sha256Hash;
-import org.spongycastle.crypto.engines.RijndaelEngine;
-import org.spongycastle.crypto.params.KeyParameter;
+import com.google.common.base.Joiner;
 import org.spongycastle.util.encoders.Hex;
 
 import java.io.BufferedReader;
@@ -28,7 +27,6 @@ import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -36,16 +34,14 @@ import java.util.List;
  * A MnemonicCode object may be used to convert between binary seed values and
  * lists of words per <a href="https://en.bitcoin.it/wiki/BIP_0039">the BIP 39
  * specification</a>
- *
- * NOTE - as of 15 Oct 2013 the spec at
- * https://en.bitcoin.it/wiki/BIP_0039 is out-of-date.  The correct
- * spec can be found at https://github.com/trezor/python-mnemonic
  */
 
 public class MnemonicCode {
     private ArrayList<String> wordList;
 
     public static String BIP39_ENGLISH_SHA256 = "ad90bf3beb7b0eb7e5acd74727dc0da96e0a280a258354e7293fb7e211ac03db";
+
+    private static final int PBKDF2_ROUNDS = 4096;
 
     public MnemonicCode() throws IOException {
         this(MnemonicCode.class.getResourceAsStream("mnemonic/wordlist/english.txt"), BIP39_ENGLISH_SHA256);
@@ -84,149 +80,123 @@ public class MnemonicCode {
     }
 
     /**
-     * Encodes a 128, 192 or 256 bit seed into a list of words.
+     * Convert mnemonic word list to seed.
      */
-    public List<String> encode(byte[] seed) throws IllegalArgumentException {
-        
-        // 2. Make sure its length (L) is 128, 192 or 256 bits.
-        int len = seed.length * 8;
-        if (len != 128 && len != 192 && len != 256)
-            throw new IllegalArgumentException("seed not 128, 192 or 256 bits");
+    public static byte[] toSeed(List<String> words, String passphrase) {
 
-        // 3. Encrypt input data 10000x with Rijndael (ECB mode).
-        //    Set key to SHA256 hash of string ("mnemonic" + user_password).
-        //    Set block size to input size (that's why Rijndael is used, not AES).
-        byte[] indata = stretch(len, seed);
+        // To create binary seed from mnemonic, we use PBKDF2 function
+        // with mnemonic sentence (in UTF-8) used as a password and
+        // string "mnemonic" + passphrase (again in UTF-8) used as a
+        // salt. Iteration count is set to 4096 and HMAC-SHA512 is
+        // used as a pseudo-random function. Desired length of the
+        // derived key is 512 bits (= 64 bytes).
+        //
+        String pass = Joiner.on(' ').join(words);
+        String salt = "mnemonic" + passphrase;
 
-        // Convert binary data to array of boolean for processing.
-        boolean[] inarray = new boolean[indata.length * 8];
-        for (int ii = 0; ii < indata.length; ++ii)
-            for (int kk = 0; kk < 8; ++kk)
-                inarray[(ii * 8) + kk] = (indata[ii] & (1 << (7 - kk))) != 0;
-
-        // 4-6 Compute checksum.
-        boolean[] chksum = checksum(inarray);
-
-        // 7. Concatenate I and C into encoded data (E). Length of E is divisable by 33 bits.
-        boolean[] ee = new boolean[inarray.length + chksum.length];
-        for (int ii = 0; ii < inarray.length; ++ii)
-            ee[ii] = inarray[ii];
-        for (int ii = 0; ii < chksum.length; ++ii)
-            ee[inarray.length + ii] = chksum[ii];
-
-        // 8. Keep taking 11 bits from E until there are none left.
-        // 9. Treat them as integer W, add word with index W to the output.
-        ArrayList<String> words = new ArrayList<String>();
-        int nwords = ee.length / 11;
-        for (int ii = 0; ii < nwords; ++ii) {
-            int ndx = 0;
-            for (int kk = 0; kk < 11; ++kk) {
-                ndx <<= 1;
-                if (ee[(ii * 11) + kk])
-                    ndx |= 0x1;
-            }
-            words.add(this.wordList.get(ndx));
-        }
-            
-        return words;
+        return PBKDF2SHA512.derive(pass, salt, PBKDF2_ROUNDS, 64);
     }
 
     /**
-     * Decodes a list of words into a seed value.
+     * Convert mnemonic word list to original entropy value.
      */
-    public byte[] decode(List<String> words) throws IllegalArgumentException {
-        int nwords = words.size();
+    public byte[] toEntropy(List<String> words) throws MnemonicException.MnemonicLengthException, MnemonicException.MnemonicWordException, MnemonicException.MnemonicChecksumException {
+        if (words.size() % 3 > 0)
+            throw new MnemonicException.MnemonicLengthException("Word list size must be multiple of three words.");
 
-        // 2. Make sure the number of words is 12, 18 or 24.
-        if (nwords != 12 && nwords != 18 && nwords != 24)
-            throw new IllegalArgumentException("Mnemonic code not 12, 18 or 24 words");
-
-        // 3. Figure out word indexes in a dictionary and output them as binary stream E.
-        int len = nwords * 11;
-        boolean[] ee = new boolean[len];
+        // Look up all the words in the list and construct the
+        // concatenation of the original entropy and the checksum.
+        //
+        int concatLenBits = words.size() * 11;
+        boolean[] concatBits = new boolean[concatLenBits];
         int wordindex = 0;
         for (String word : words) {
             // Find the words index in the wordlist.
             int ndx = Collections.binarySearch(this.wordList, word);
             if (ndx < 0)
-                throw new IllegalArgumentException("\"" + word + "\" invalid");
+                throw new MnemonicException.MnemonicWordException(word);
 
             // Set the next 11 bits to the value of the index.
             for (int ii = 0; ii < 11; ++ii)
-                ee[(wordindex * 11) + ii] = (ndx & (1 << (10 - ii))) != 0;
+                concatBits[(wordindex * 11) + ii] = (ndx & (1 << (10 - ii))) != 0;
             ++wordindex;
-        }
+        }        
 
-        // 5. Split E into two parts: B and C, where B are first L/33*32 bits, C are last L/33 bits.
-        int bblen = (len / 33) * 32;
-        int cclen = len - bblen;
+        int checksumLengthBits = concatLenBits / 33;
+        int entropyLengthBits = concatLenBits - checksumLengthBits;
 
-        boolean[] bb = new boolean[bblen];
-        for (int ii = 0; ii < bblen; ++ii)
-            bb[ii] = ee[ii];
-
-        boolean[] cc = new boolean[cclen];
-        for (int ii = 0; ii < cclen; ++ii)
-            cc[ii] = ee[bblen + ii];
-
-        // 6. Make sure C is the checksum of B (using the step 5 from the above paragraph).
-        boolean[] chksum = checksum(bb);
-        if (!Arrays.equals(chksum, cc))
-            throw new IllegalArgumentException("checksum error");
-
-        // 8. Treat B as binary data.
-        byte[] outdata = new byte[bblen / 8];
-        for (int ii = 0; ii < outdata.length; ++ii)
+        // Extract original entropy as bytes.
+        byte[] entropy = new byte[entropyLengthBits / 8];
+        for (int ii = 0; ii < entropy.length; ++ii)
             for (int jj = 0; jj < 8; ++jj)
-                if (bb[(ii * 8) + jj])
-                    outdata[ii] |= 1 << (7 - jj);
+                if (concatBits[(ii * 8) + jj])
+                    entropy[ii] |= 1 << (7 - jj);
 
-        // 9. Decrypt this data 10000x with Rijndael (ECB mode),
-        //    use the same parameters as used in step 3 of encryption.
-        byte[] seed = unstretch(bblen, outdata);
+        // Take the digest of the entropy.
+        byte[] hash = Sha256Hash.create(entropy).getBytes();
+        boolean[] hashBits = bytesToBits(hash);
 
-        return seed;
+        // Check all the checksum bits.
+        for (int i = 0; i < checksumLengthBits; ++i)
+            if (concatBits[entropyLengthBits + i] != hashBits[i])
+                throw new MnemonicException.MnemonicChecksumException();
+
+        return entropy;
     }
 
-    private byte[] stretch(int len, byte[] data) {
-        // 3. Encrypt input data 10000x with Rijndael (ECB mode).
-        //    Set key to SHA256 hash of string ("mnemonic" + user_password).
-        //    Set block size to input size (that's why Rijndael is used, not AES).
-        byte[] mnemonic = {'m', 'n', 'e', 'm', 'o', 'n', 'i', 'c'};
-        byte[] key = Sha256Hash.create(mnemonic).getBytes();
-        byte[] buffer = new byte[data.length];
-        System.arraycopy(data, 0, buffer, 0, data.length);
-        RijndaelEngine cipher = new RijndaelEngine(len);
-        cipher.init(true, new KeyParameter(key));
-        for (int ii = 0; ii < 10000; ++ii)
-            cipher.processBlock(buffer, 0, buffer, 0);
-        return buffer;
+    /**
+     * Convert entropy data to mnemonic word list.
+     */
+    public List<String> toMnemonic(byte[] entropy) throws MnemonicException.MnemonicLengthException {
+        if (entropy.length % 4 > 0)
+            throw new MnemonicException.MnemonicLengthException("entropy length not multiple of 32 bits");
+
+        // We take initial entropy of ENT bits and compute its
+        // checksum by taking first ENT / 32 bits of its SHA256 hash.
+
+        byte[] hash = Sha256Hash.create(entropy).getBytes();
+        boolean[] hashBits = bytesToBits(hash);
+        
+        boolean[] entropyBits = bytesToBits(entropy);
+        int checksumLengthBits = entropyBits.length / 32;
+
+        // We append these bits to the end of the initial entropy. 
+        boolean[] concatBits = new boolean[entropyBits.length + checksumLengthBits];
+        System.arraycopy(entropyBits, 0, concatBits, 0, entropyBits.length);
+        System.arraycopy(hashBits, 0, concatBits, entropyBits.length, checksumLengthBits);
+
+        // Next we take these concatenated bits and split them into
+        // groups of 11 bits. Each group encodes number from 0-2047
+        // which is a position in a wordlist.  We convert numbers into
+        // words and use joined words as mnemonic sentence.
+
+        ArrayList<String> words = new ArrayList<String>();
+        int nwords = concatBits.length / 11;
+        for (int i = 0; i < nwords; ++i) {
+            int index = 0;
+            for (int j = 0; j < 11; ++j) {
+                index <<= 1;
+                if (concatBits[(i * 11) + j])
+                    index |= 0x1;
+            }
+            words.add(this.wordList.get(index));
+        }
+            
+        return words;        
     }
 
-    private byte[] unstretch(int len, byte[] data) {
-        // 9. Decrypt this data 10000x with Rijndael (ECB mode),
-        //    use the same parameters as used in step 3 of encryption.
-        byte[] mnemonic = {'m', 'n', 'e', 'm', 'o', 'n', 'i', 'c'};
-        byte[] key = Sha256Hash.create(mnemonic).getBytes();
-        byte[] buffer = new byte[data.length];
-        System.arraycopy(data, 0, buffer, 0, data.length);
-        RijndaelEngine cipher = new RijndaelEngine(len);
-        cipher.init(false, new KeyParameter(key));
-        for (int ii = 0; ii < 10000; ++ii)
-            cipher.processBlock(buffer, 0, buffer, 0);
-        return buffer;
+    /**
+     * Check to see if a mnemonic word list is valid.
+     */
+    public void check(List<String> words) throws MnemonicException {
+        toEntropy(words);
     }
 
-    private boolean[] checksum(boolean[] bits) {
-        // 4. Compute the length of the checkum (LC). LC = L/32
-        int lc = bits.length / 32;
-
-        // 5. Split I into chunks of LC bits (I1, I2, I3, ...).
-        // 6. XOR them altogether and produce the checksum C. C = I1 xor I2 xor I3 ... xor In.
-        boolean[] cc = new boolean[lc];
-        for (int ii = 0; ii < 32; ++ii)
-            for (int jj = 0; jj < lc; ++jj)
-                cc[jj] ^= bits[(ii * lc) + jj];
-        return cc;
+    private static boolean[] bytesToBits(byte[] data) {
+        boolean[] bits = new boolean[data.length * 8];
+        for (int i = 0; i < data.length; ++i)
+            for (int j = 0; j < 8; ++j)
+                bits[(i * 8) + j] = (data[i] & (1 << (7 - j))) != 0;
+        return bits;
     }
 }

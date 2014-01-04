@@ -21,6 +21,7 @@ import com.google.bitcoin.store.BlockStoreException;
 import com.google.bitcoin.utils.ListenerRegistration;
 import com.google.bitcoin.utils.Threading;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.slf4j.Logger;
@@ -34,7 +35,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.*;
-import static java.lang.String.format;
 
 /**
  * <p>An AbstractBlockChain holds a series of {@link Block} objects, links them together, and knows how to verify that
@@ -81,7 +81,7 @@ import static java.lang.String.format;
  */
 public abstract class AbstractBlockChain {
     private static final Logger log = LoggerFactory.getLogger(AbstractBlockChain.class);
-    protected ReentrantLock lock = Threading.lock("blockchain");
+    protected final ReentrantLock lock = Threading.lock("blockchain");
 
     /** Keeps a map of block hashes to StoredBlocks. */
     private final BlockStore blockStore;
@@ -107,10 +107,10 @@ public abstract class AbstractBlockChain {
     private final CopyOnWriteArrayList<ListenerRegistration<BlockChainListener>> listeners;
 
     // Holds a block header and, optionally, a list of tx hashes or block's transactions
-    protected static class OrphanBlock {
-        Block block;
-        List<Sha256Hash> filteredTxHashes;
-        Map<Sha256Hash, Transaction> filteredTxn;
+    static class OrphanBlock {
+        final Block block;
+        final List<Sha256Hash> filteredTxHashes;
+        final Map<Sha256Hash, Transaction> filteredTxn;
         OrphanBlock(Block block, @Nullable List<Sha256Hash> filteredTxHashes, @Nullable Map<Sha256Hash, Transaction> filteredTxn) {
             final boolean filtered = filteredTxHashes != null && filteredTxn != null;
             Preconditions.checkArgument((block.transactions == null && filtered)
@@ -123,6 +123,16 @@ public abstract class AbstractBlockChain {
     // Holds blocks that we have received but can't plug into the chain yet, eg because they were created whilst we
     // were downloading the block chain.
     private final LinkedHashMap<Sha256Hash, OrphanBlock> orphanBlocks = new LinkedHashMap<Sha256Hash, OrphanBlock>();
+
+    /** False positive estimation uses a double exponential moving average. */
+    public static final double FP_ESTIMATOR_ALPHA = 0.0001;
+    /** False positive estimation uses a double exponential moving average. */
+    public static final double FP_ESTIMATOR_BETA = 0.01;
+
+    private double falsePositiveRate;
+    private double falsePositiveTrend;
+    private double previousFalsePositiveRate;
+
 
     /**
      * Constructs a BlockChain connected to the given list of listeners (eg, wallets) and a store.
@@ -402,9 +412,6 @@ public abstract class AbstractBlockChain {
                               @Nullable final Map<Sha256Hash, Transaction> filteredTxn) throws BlockStoreException, VerificationException, PrunedException {
         checkState(lock.isHeldByCurrentThread());
         boolean filtered = filteredTxHashList != null && filteredTxn != null;
-        boolean fullBlock = block.transactions != null && !filtered;
-        // If !filtered and !fullBlock then we have just a header.
-
         // Check that we aren't connecting a block that fails a checkpoint check
         if (!params.passesCheckpoint(storedPrev.getHeight() + 1, block.getHash()))
             throw new VerificationException("Block failed checkpoint lockin at " + (storedPrev.getHeight() + 1));
@@ -418,9 +425,9 @@ public abstract class AbstractBlockChain {
         StoredBlock head = getChainHead();
         if (storedPrev.equals(head)) {
             if (filtered && filteredTxn.size() > 0)  {
-                log.info(format("Block %s connects to top of best chain with %d transaction(s) of which we were sent %d",
-                        block.getHashAsString(), filteredTxHashList.size(), filteredTxn.size()));
-                for (Sha256Hash hash : filteredTxHashList) log.info("  matched tx {}", hash);
+                log.debug("Block {} connects to top of best chain with {} transaction(s) of which we were sent {}",
+                        block.getHashAsString(), filteredTxHashList.size(), filteredTxn.size());
+                for (Sha256Hash hash : filteredTxHashList) log.debug("  matched tx {}", hash);
             }
             if (expensiveChecks && block.getTimeSeconds() <= getMedianTimestampOfRecentBlocks(head, blockStore))
                 throw new VerificationException("Block's timestamp is too early");
@@ -488,10 +495,12 @@ public abstract class AbstractBlockChain {
         // (in the case of the listener being a wallet). Wallets need to know how deep each transaction is so
         // coinbases aren't used before maturity.
         boolean first = true;
+        Set<Transaction> falsePositives = Sets.newHashSet();
+        if (filteredTxn != null) falsePositives.addAll(filteredTxn.values());
         for (final ListenerRegistration<BlockChainListener> registration : listeners) {
             if (registration.executor == Threading.SAME_THREAD) {
                 informListenerForNewTransactions(block, newBlockType, filteredTxHashList, filteredTxn,
-                        newStoredBlock, first, registration.listener);
+                        newStoredBlock, first, registration.listener, falsePositives);
                 if (newBlockType == NewBlockType.BEST_CHAIN)
                     registration.listener.notifyNewBestBlock(newStoredBlock);
             } else {
@@ -501,8 +510,10 @@ public abstract class AbstractBlockChain {
                     @Override
                     public void run() {
                         try {
+                            // We can't do false-positive handling when executing on another thread
+                            Set<Transaction> ignoredFalsePositives = Sets.newHashSet();
                             informListenerForNewTransactions(block, newBlockType, filteredTxHashList, filteredTxn,
-                                    newStoredBlock, notFirst, registration.listener);
+                                    newStoredBlock, notFirst, registration.listener, ignoredFalsePositives);
                             if (newBlockType == NewBlockType.BEST_CHAIN)
                                 registration.listener.notifyNewBestBlock(newStoredBlock);
                         } catch (VerificationException e) {
@@ -516,20 +527,24 @@ public abstract class AbstractBlockChain {
             }
             first = false;
         }
+
+        trackFalsePositives(falsePositives.size());
     }
 
     private static void informListenerForNewTransactions(Block block, NewBlockType newBlockType,
                                                          @Nullable List<Sha256Hash> filteredTxHashList,
                                                          @Nullable Map<Sha256Hash, Transaction> filteredTxn,
                                                          StoredBlock newStoredBlock, boolean first,
-                                                         BlockChainListener listener) throws VerificationException {
+                                                         BlockChainListener listener,
+                                                         Set<Transaction> falsePositives) throws VerificationException {
         if (block.transactions != null) {
             // If this is not the first wallet, ask for the transactions to be duplicated before being given
             // to the wallet when relevant. This ensures that if we have two connected wallets and a tx that
             // is relevant to both of them, they don't end up accidentally sharing the same object (which can
             // result in temporary in-memory corruption during re-orgs). See bug 257. We only duplicate in
             // the case of multiple wallets to avoid an unnecessary efficiency hit in the common case.
-            sendTransactionsToListener(newStoredBlock, newBlockType, listener, 0, block.transactions, !first);
+            sendTransactionsToListener(newStoredBlock, newBlockType, listener, 0, block.transactions,
+                    !first, falsePositives);
         } else if (filteredTxHashList != null) {
             checkNotNull(filteredTxn);
             // We must send transactions to listeners in the order they appeared in the block - thus we iterate over the
@@ -540,7 +555,7 @@ public abstract class AbstractBlockChain {
                 Transaction tx = filteredTxn.get(hash);
                 if (tx != null)
                     sendTransactionsToListener(newStoredBlock, newBlockType, listener, relativityOffset,
-                            Arrays.asList(tx), !first);
+                            Arrays.asList(tx), !first, falsePositives);
                 else
                     listener.notifyTransactionIsInBlock(hash, newStoredBlock, newBlockType, relativityOffset);
                 relativityOffset++;
@@ -707,10 +722,12 @@ public abstract class AbstractBlockChain {
                                                    BlockChainListener listener,
                                                    int relativityOffset,
                                                    List<Transaction> transactions,
-                                                   boolean clone) throws VerificationException {
+                                                   boolean clone,
+                                                   Set<Transaction> falsePositives) throws VerificationException {
         for (Transaction tx : transactions) {
             try {
                 if (listener.isTransactionRelevant(tx)) {
+                    falsePositives.remove(tx);
                     if (clone)
                         tx = new Transaction(tx.params, tx.bitcoinSerialize());
                     listener.receiveFromBlock(tx, block, blockType, relativityOffset++);
@@ -771,7 +788,7 @@ public abstract class AbstractBlockChain {
     }
 
     // February 16th 2012
-    private static Date testnetDiffDate = new Date(1329264000000L);
+    private static final Date testnetDiffDate = new Date(1329264000000L);
 
     /**
      * Throws an exception if the blocks difficulty is not correct.
@@ -1064,5 +1081,66 @@ public abstract class AbstractBlockChain {
             }
         }, Threading.SAME_THREAD);
         return result;
+    }
+
+
+
+    /**
+     * The false positive rate is the average over all blockchain transactions of:
+     *
+     * - 1.0 if the transaction was false-positive (was irrelevant to all listeners)
+     * - 0.0 if the transaction was relevant or filtered out
+     */
+    public double getFalsePositiveRate() {
+        return falsePositiveRate;
+    }
+
+    /*
+     * We completed handling of a filtered block. Update false-positive estimate based
+     * on the total number of transactions in the original block.
+     *
+     * count includes filtered transactions, transactions that were passed in and were relevant
+     * and transactions that were false positives (i.e. includes all transactions in the block).
+     */
+    protected void trackFilteredTransactions(int count) {
+        // Track non-false-positives in batch.  Each non-false-positive counts as
+        // 0.0 towards the estimate.
+        //
+        // This is slightly off because we are applying false positive tracking before non-FP tracking,
+        // which counts FP as if they came at the beginning of the block.  Assuming uniform FP
+        // spread in a block, this will somewhat underestimate the FP rate (5% for 1000 tx block).
+        double alphaDecay = Math.pow(1 - FP_ESTIMATOR_ALPHA, count);
+
+        // new_rate = alpha_decay * new_rate
+        falsePositiveRate = alphaDecay * falsePositiveRate;
+
+        double betaDecay = Math.pow(1 - FP_ESTIMATOR_BETA, count);
+
+        // trend = beta * (new_rate - old_rate) + beta_decay * trend
+        falsePositiveTrend =
+                FP_ESTIMATOR_BETA * count * (falsePositiveRate - previousFalsePositiveRate) +
+                betaDecay * falsePositiveTrend;
+
+        // new_rate += alpha_decay * trend
+        falsePositiveRate += alphaDecay * falsePositiveTrend;
+
+        // Stash new_rate in old_rate
+        previousFalsePositiveRate = falsePositiveRate;
+    }
+
+    /* Irrelevant transactions were received.  Update false-positive estimate. */
+    void trackFalsePositives(int count) {
+        // Track false positives in batch by adding alpha to the false positive estimate once per count.
+        // Each false positive counts as 1.0 towards the estimate.
+        falsePositiveRate += FP_ESTIMATOR_ALPHA * count;
+        if (count > 0)
+            log.debug("{} false positives, current rate = {} trend = {}", count, falsePositiveRate, falsePositiveTrend);
+    }
+
+    /** Resets estimates of false positives. Used when the filter is sent to the peer. */
+    public void resetFalsePositiveEstimate() {
+        falsePositiveRate = 0;
+        falsePositiveTrend = 0;
+        previousFalsePositiveRate = 0;
     }
 }

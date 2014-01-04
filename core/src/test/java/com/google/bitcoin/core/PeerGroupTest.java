@@ -16,32 +16,79 @@
 
 package com.google.bitcoin.core;
 
-import com.google.bitcoin.discovery.PeerDiscovery;
-import com.google.bitcoin.discovery.PeerDiscoveryException;
+import com.google.bitcoin.net.discovery.PeerDiscovery;
+import com.google.bitcoin.net.discovery.PeerDiscoveryException;
 import com.google.bitcoin.params.UnitTestParams;
 import com.google.bitcoin.store.MemoryBlockStore;
 import com.google.bitcoin.utils.TestUtils;
 import com.google.bitcoin.utils.Threading;
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.SettableFuture;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
 
 
 // TX announcement and broadcast is tested in TransactionBroadcastTest.
 
+@RunWith(value = Parameterized.class)
 public class PeerGroupTest extends TestWithPeerGroup {
+    static final NetworkParameters params = UnitTestParams.get();
+    private BlockingQueue<Peer> connectedPeers;
+    private BlockingQueue<Peer> disconnectedPeers;
+    private PeerEventListener listener;
+    private Map<Peer, AtomicInteger> peerToMessageCount;
+
+    @Parameterized.Parameters
+    public static Collection<ClientType[]> parameters() {
+        return Arrays.asList(new ClientType[] {ClientType.NIO_CLIENT_MANAGER},
+                             new ClientType[] {ClientType.BLOCKING_CLIENT_MANAGER});
+    }
+
+    public PeerGroupTest(ClientType clientType) {
+        super(clientType);
+    }
+
     @Override
     @Before
     public void setUp() throws Exception {
+        peerToMessageCount = new HashMap<Peer, AtomicInteger>();
+        connectedPeers = new LinkedBlockingQueue<Peer>();
+        disconnectedPeers = new LinkedBlockingQueue<Peer>();
+        listener = new AbstractPeerEventListener() {
+            @Override
+            public void onPeerConnected(Peer peer, int peerCount) {
+                connectedPeers.add(peer);
+            }
+
+            @Override
+            public void onPeerDisconnected(Peer peer, int peerCount) {
+                disconnectedPeers.add(peer);
+            }
+
+            @Override
+            public Message onPreMessageReceived(Peer peer, Message m) {
+                AtomicInteger messageCount = peerToMessageCount.get(peer);
+                if (messageCount == null) {
+                    messageCount = new AtomicInteger(0);
+                    peerToMessageCount.put(peer, messageCount);
+                }
+                messageCount.incrementAndGet();
+                // Just pass the message right through for further processing.
+                return m;
+            }
+        };
         super.setUp(new MemoryBlockStore(UnitTestParams.get()));
         peerGroup.addWallet(wallet);
     }
@@ -49,43 +96,63 @@ public class PeerGroupTest extends TestWithPeerGroup {
     @After
     public void tearDown() throws Exception {
         super.tearDown();
+        Utils.finishMockSleep();
         peerGroup.stopAndWait();
     }
 
     @Test
     public void listener() throws Exception {
-        AbstractPeerEventListener listener = new AbstractPeerEventListener() {
-        };
+        final SettableFuture<Void> firstDisconnectFuture = SettableFuture.create();
+        final SettableFuture<Void> secondDisconnectFuture = SettableFuture.create();
+        peerGroup.startAndWait();
         peerGroup.addEventListener(listener);
+
+        // Create a couple of peers.
+        InboundMessageQueuer p1 = connectPeer(1);
+        InboundMessageQueuer p2 = connectPeer(2);
+        connectedPeers.take();
+        connectedPeers.take();
+
+        pingAndWait(p1);
+        pingAndWait(p2);
+        Threading.waitForUserCode();
+        assertEquals(0, disconnectedPeers.size());
+
+        p1.close();
+        disconnectedPeers.take();
+        assertEquals(0, disconnectedPeers.size());
+        p2.close();
+        disconnectedPeers.take();
+        assertEquals(0, disconnectedPeers.size());
+
         assertTrue(peerGroup.removeEventListener(listener));
+        assertFalse(peerGroup.removeEventListener(listener));
     }
 
     @Test
-    public void peerDiscoveryPolling() throws Exception {
+    public void peerDiscoveryPolling() throws InterruptedException {
         // Check that if peer discovery fails, we keep trying until we have some nodes to talk with.
-        final Semaphore sem = new Semaphore(0);
-        final boolean[] result = new boolean[1];
-        result[0] = false;
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicBoolean result = new AtomicBoolean();
         peerGroup.addPeerDiscovery(new PeerDiscovery() {
             public InetSocketAddress[] getPeers(long unused, TimeUnit unused2) throws PeerDiscoveryException {
-                if (result[0] == false) {
+                if (!result.getAndSet(true)) {
                     // Pretend we are not connected to the internet.
-                    result[0] = true;
                     throw new PeerDiscoveryException("test failure");
                 } else {
                     // Return a bogus address.
-                    sem.release();
-                    return new InetSocketAddress[]{new InetSocketAddress("localhost", 0)};
+                    latch.countDown();
+                    return new InetSocketAddress[]{new InetSocketAddress("localhost", 1)};
                 }
             }
             public void shutdown() {
             }
         });
         peerGroup.startAndWait();
-        sem.acquire();
+        latch.await();
         // Check that we did indeed throw an exception. If we got here it means we threw and then PeerGroup tried
         // again a bit later.
-        assertTrue(result[0]);
+        assertTrue(result.get());
     }
 
     @Test
@@ -94,8 +161,8 @@ public class PeerGroupTest extends TestWithPeerGroup {
         peerGroup.startAndWait();
 
         // Create a couple of peers.
-        FakeChannel p1 = connectPeer(1);
-        FakeChannel p2 = connectPeer(2);
+        InboundMessageQueuer p1 = connectPeer(1);
+        InboundMessageQueuer p2 = connectPeer(2);
         
         // Check the peer accessors.
         assertEquals(2, peerGroup.numConnectedPeers());
@@ -122,6 +189,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         GetDataMessage getdata = (GetDataMessage) outbound(p2);
         assertNotNull(getdata);
         inbound(p2, new NotFoundMessage(unitTestParams, getdata.getItems()));
+        pingAndWait(p2);
         assertEquals(value, wallet.getBalance(Wallet.BalanceType.ESTIMATED));
         peerGroup.stopAndWait();
     }
@@ -132,8 +200,8 @@ public class PeerGroupTest extends TestWithPeerGroup {
         peerGroup.startAndWait();
 
         // Create a couple of peers.
-        FakeChannel p1 = connectPeer(1);
-        FakeChannel p2 = connectPeer(2);
+        InboundMessageQueuer p1 = connectPeer(1);
+        InboundMessageQueuer p2 = connectPeer(2);
         assertEquals(2, peerGroup.numConnectedPeers());
 
         // Set up a little block chain. We heard about b1 but not b2 (it is pending download). b3 is solved whilst we
@@ -148,11 +216,20 @@ public class PeerGroupTest extends TestWithPeerGroup {
         inv.addBlock(b3);
         // Only peer 1 tries to download it.
         inbound(p1, inv);
+        pingAndWait(p1);
         
         assertTrue(outbound(p1) instanceof GetDataMessage);
         assertNull(outbound(p2));
         // Peer 1 goes away, peer 2 becomes the download peer and thus queries the remote mempool.
+        final SettableFuture<Void> p1CloseFuture = SettableFuture.create();
+        peerOf(p1).addEventListener(new AbstractPeerEventListener() {
+            @Override
+            public void onPeerDisconnected(Peer peer, int peerCount) {
+                p1CloseFuture.set(null);
+            }
+        });
         closePeer(peerOf(p1));
+        p1CloseFuture.get();
         // Peer 2 fetches it next time it hears an inv (should it fetch immediately?).
         inbound(p2, inv);
         assertTrue(outbound(p2) instanceof GetDataMessage);
@@ -167,7 +244,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         peerGroup.startAndWait();
 
         // Create a couple of peers.
-        FakeChannel p1 = connectPeer(1);
+        InboundMessageQueuer p1 = connectPeer(1);
 
         // Set up a little block chain.
         Block b1 = TestUtils.createFakeBlock(blockStore).block;
@@ -190,7 +267,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         // We hand back the first block.
         inbound(p1, b1);
         // Now we successfully connect to another peer. There should be no messages sent.
-        FakeChannel p2 = connectPeer(2);
+        InboundMessageQueuer p2 = connectPeer(2);
         Message message = (Message)outbound(p2);
         assertNull(message == null ? "" : message.toString(), message);
         peerGroup.stop();
@@ -200,6 +277,8 @@ public class PeerGroupTest extends TestWithPeerGroup {
     public void transactionConfidence() throws Exception {
         // Checks that we correctly count how many peers broadcast a transaction, so we can establish some measure of
         // its trustworthyness assuming an untampered with internet connection.
+        peerGroup.startAndWait();
+
         final Transaction[] event = new Transaction[2];
         peerGroup.addEventListener(new AbstractPeerEventListener() {
             @Override
@@ -208,9 +287,9 @@ public class PeerGroupTest extends TestWithPeerGroup {
             }
         }, Threading.SAME_THREAD);
 
-        FakeChannel p1 = connectPeer(1);
-        FakeChannel p2 = connectPeer(2);
-        FakeChannel p3 = connectPeer(3);
+        InboundMessageQueuer p1 = connectPeer(1);
+        InboundMessageQueuer p2 = connectPeer(2);
+        InboundMessageQueuer p3 = connectPeer(3);
 
         Transaction tx = TestUtils.createFakeTx(params, Utils.toNanoCoins(20, 0), address);
         InventoryMessage inv = new InventoryMessage(params);
@@ -247,6 +326,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         });
         // A straggler reports in.
         inbound(p3, inv);
+        pingAndWait(p3);
         Threading.waitForUserCode();
         assertEquals(tx, event[1]);
         assertEquals(3, tx.getConfidence().numBroadcastPeers());
@@ -280,8 +360,10 @@ public class PeerGroupTest extends TestWithPeerGroup {
         peerGroup.startAndWait();
         peerGroup.setPingIntervalMsec(0);
         VersionMessage versionMessage = new VersionMessage(params, 2);
-        versionMessage.clientVersion = Pong.MIN_PROTOCOL_VERSION;
+        versionMessage.clientVersion = FilteredBlock.MIN_PROTOCOL_VERSION;
+        versionMessage.localServices = VersionMessage.NODE_NETWORK;
         connectPeer(1, versionMessage);
+        peerGroup.waitForPeers(1).get();
         assertFalse(peerGroup.getConnectedPeers().get(0).getLastPingTime() < Long.MAX_VALUE);
     }
 
@@ -290,10 +372,12 @@ public class PeerGroupTest extends TestWithPeerGroup {
         peerGroup.startAndWait();
         peerGroup.setPingIntervalMsec(100);
         VersionMessage versionMessage = new VersionMessage(params, 2);
-        versionMessage.clientVersion = Pong.MIN_PROTOCOL_VERSION;
-        FakeChannel p1 = connectPeer(1, versionMessage);
+        versionMessage.clientVersion = FilteredBlock.MIN_PROTOCOL_VERSION;
+        versionMessage.localServices = VersionMessage.NODE_NETWORK;
+        InboundMessageQueuer p1 = connectPeer(1, versionMessage);
         Ping ping = (Ping) outbound(p1);
         inbound(p1, new Pong(ping.getNonce()));
+        pingAndWait(p1);
         assertTrue(peerGroup.getConnectedPeers().get(0).getLastPingTime() < Long.MAX_VALUE);
         // The call to outbound should block until a ping arrives.
         ping = (Ping) waitForOutbound(p1);
@@ -305,26 +389,122 @@ public class PeerGroupTest extends TestWithPeerGroup {
     public void downloadPeerSelection() throws Exception {
         peerGroup.startAndWait();
         VersionMessage versionMessage2 = new VersionMessage(params, 2);
-        versionMessage2.clientVersion = 60000;
+        versionMessage2.clientVersion = FilteredBlock.MIN_PROTOCOL_VERSION;
+        versionMessage2.localServices = VersionMessage.NODE_NETWORK;
         VersionMessage versionMessage3 = new VersionMessage(params, 3);
-        versionMessage3.clientVersion = 60000;
+        versionMessage3.clientVersion = FilteredBlock.MIN_PROTOCOL_VERSION;
+        versionMessage3.localServices = VersionMessage.NODE_NETWORK;
         assertNull(peerGroup.getDownloadPeer());
-        Peer a = PeerGroup.peerFromChannel(connectPeer(1, versionMessage2));
+        Peer a = connectPeer(1, versionMessage2).peer;
         assertEquals(2, peerGroup.getMostCommonChainHeight());
         assertEquals(a, peerGroup.getDownloadPeer());
-        PeerGroup.peerFromChannel(connectPeer(2, versionMessage2));
+        connectPeer(2, versionMessage2);
         assertEquals(2, peerGroup.getMostCommonChainHeight());
         assertEquals(a, peerGroup.getDownloadPeer());  // No change.
-        Peer c = PeerGroup.peerFromChannel(connectPeer(3, versionMessage3));
+        Peer c = connectPeer(3, versionMessage3).peer;
         assertEquals(2, peerGroup.getMostCommonChainHeight());
         assertEquals(a, peerGroup.getDownloadPeer());  // No change yet.
-        PeerGroup.peerFromChannel(connectPeer(4, versionMessage3));
+        connectPeer(4, versionMessage3);
         assertEquals(3, peerGroup.getMostCommonChainHeight());
         assertEquals(c, peerGroup.getDownloadPeer());  // Switch to first peer advertising new height.
         // New peer with a higher protocol version but same chain height.
-        VersionMessage versionMessage4 = new VersionMessage(params, 3);
+        //TODO: When PeerGroup.selectDownloadPeer.PREFERRED_VERSION is not equal to vMinRequiredProtocolVersion,
+        // reenable this test
+        /*VersionMessage versionMessage4 = new VersionMessage(params, 3);
         versionMessage4.clientVersion = 100000;
-        Peer d = PeerGroup.peerFromChannel(connectPeer(5, versionMessage4));
-        assertEquals(d, peerGroup.getDownloadPeer());
+        versionMessage4.localServices = VersionMessage.NODE_NETWORK;
+        InboundMessageQueuer d = connectPeer(5, versionMessage4);
+        assertEquals(d.peer, peerGroup.getDownloadPeer());*/
+    }
+
+    @Test
+    public void peerTimeoutTest() throws Exception {
+        peerGroup.startAndWait();
+        peerGroup.setConnectTimeoutMillis(100);
+
+        final SettableFuture<Void> peerConnectedFuture = SettableFuture.create();
+        final SettableFuture<Void> peerDisconnectedFuture = SettableFuture.create();
+        peerGroup.addEventListener(new AbstractPeerEventListener() {
+            @Override public void onPeerConnected(Peer peer, int peerCount) {
+                peerConnectedFuture.set(null);
+            }
+            @Override public void onPeerDisconnected(Peer peer, int peerCount) {
+                peerDisconnectedFuture.set(null);
+            }
+        }, Threading.SAME_THREAD);
+        connectPeerWithoutVersionExchange(0);
+        Thread.sleep(50);
+        assertFalse(peerConnectedFuture.isDone() || peerDisconnectedFuture.isDone());
+        Thread.sleep(60);
+        assertTrue(!peerConnectedFuture.isDone());
+        assertTrue(!peerConnectedFuture.isDone() && peerDisconnectedFuture.isDone());
+    }
+
+    @Test
+    public void peerPriority() throws Exception {
+        final List<InetSocketAddress> addresses = Lists.newArrayList(
+                new InetSocketAddress("localhost", 2000),
+                new InetSocketAddress("localhost", 2001),
+                new InetSocketAddress("localhost", 2002)
+        );
+        peerGroup.addEventListener(listener);
+        peerGroup.addPeerDiscovery(new PeerDiscovery() {
+            public InetSocketAddress[] getPeers(long unused, TimeUnit unused2) throws PeerDiscoveryException {
+                return addresses.toArray(new InetSocketAddress[0]);
+            }
+
+            public void shutdown() {
+            }
+        });
+        peerGroup.setMaxConnections(3);
+        Utils.setMockSleep(true);
+        peerGroup.startAndWait();
+
+        handleConnectToPeer(0);
+        handleConnectToPeer(1);
+        handleConnectToPeer(2);
+        connectedPeers.take();
+        connectedPeers.take();
+        connectedPeers.take();
+        addresses.clear();
+        addresses.addAll(Lists.newArrayList(new InetSocketAddress("localhost", 2003)));
+        stopPeerServer(2);
+        assertEquals(2002, disconnectedPeers.take().getAddress().getPort()); // peer died
+
+        // discovers, connects to new peer
+        handleConnectToPeer(3);
+        assertEquals(2003, connectedPeers.take().getAddress().getPort());
+
+        stopPeerServer(1);
+        assertEquals(2001, disconnectedPeers.take().getAddress().getPort()); // peer died
+
+        // Alternates trying two offline peers
+        Utils.passMockSleep();
+        assertEquals(2001, disconnectedPeers.take().getAddress().getPort());
+        Utils.passMockSleep();
+        assertEquals(2002, disconnectedPeers.take().getAddress().getPort());
+        Utils.passMockSleep();
+        assertEquals(2001, disconnectedPeers.take().getAddress().getPort());
+        Utils.passMockSleep();
+        assertEquals(2002, disconnectedPeers.take().getAddress().getPort());
+        Utils.passMockSleep();
+        assertEquals(2001, disconnectedPeers.take().getAddress().getPort());
+
+        // Peer 2 comes online
+        startPeerServer(2);
+        Utils.passMockSleep();
+        handleConnectToPeer(2);
+        assertEquals(2002, connectedPeers.take().getAddress().getPort());
+
+        stopPeerServer(2);
+        assertEquals(2002, disconnectedPeers.take().getAddress().getPort()); // peer died
+
+        // Peer 2 is tried twice before peer 1, since it has a lower backoff due to recent success
+        Utils.passMockSleep();
+        assertEquals(2002, disconnectedPeers.take().getAddress().getPort());
+        Utils.passMockSleep();
+        assertEquals(2002, disconnectedPeers.take().getAddress().getPort());
+        Utils.passMockSleep();
+        assertEquals(2001, disconnectedPeers.take().getAddress().getPort());
     }
 }

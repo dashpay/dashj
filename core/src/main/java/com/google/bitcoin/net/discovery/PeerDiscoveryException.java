@@ -1,5 +1,5 @@
-/*
- * Copyright 2013 Google Inc.
+/**
+ * Copyright 2011 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.protocols.niowrapper;
+package com.google.bitcoin.net.discovery;
 
-import java.net.InetAddress;
-import javax.annotation.Nullable;
+public class PeerDiscoveryException extends Exception {
+    private static final long serialVersionUID = -2863411151549391392L;
 
-/**
- * A factory which generates new {@link StreamParser}s when a new connection is opened.
- */
-public interface StreamParserFactory {
-    /**
-     * Returns a new handler or null to have the connection close.
-     * @param inetAddress The client's (IP) address
-     * @param port The remote port on the client side
-     */
-    @Nullable public StreamParser getNewParser(InetAddress inetAddress, int port);
+    public PeerDiscoveryException() {
+        super();
+    }
+
+    public PeerDiscoveryException(String message) {
+        super(message);
+    }
+
+    public PeerDiscoveryException(Throwable arg0) {
+        super(arg0);
+    }
+
+    public PeerDiscoveryException(String message, Throwable arg0) {
+        super(message, arg0);
+    }
 }

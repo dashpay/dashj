@@ -17,7 +17,6 @@
 package com.google.bitcoin.core;
 
 import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
-import com.google.bitcoin.core.WalletTransaction.Pool;
 import com.google.bitcoin.crypto.KeyCrypter;
 import com.google.bitcoin.crypto.KeyCrypterException;
 import com.google.bitcoin.crypto.KeyCrypterScrypt;
@@ -29,6 +28,7 @@ import com.google.bitcoin.store.WalletProtobufSerializer;
 import com.google.bitcoin.utils.ListenerRegistration;
 import com.google.bitcoin.utils.Threading;
 import com.google.bitcoin.wallet.*;
+import com.google.bitcoin.wallet.WalletTransaction.Pool;
 import com.google.common.collect.*;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.FutureCallback;
@@ -52,6 +52,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.bitcoin.core.Utils.bitcoinValueToFriendlyString;
+import static com.google.bitcoin.core.Utils.bitcoinValueToPlainString;
 import static com.google.common.base.Preconditions.*;
 
 // To do list:
@@ -136,7 +137,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
 
     private final NetworkParameters params;
 
-    private Sha256Hash lastBlockSeenHash;
+    @Nullable private Sha256Hash lastBlockSeenHash;
     private int lastBlockSeenHeight;
     private long lastBlockSeenTimeSecs;
 
@@ -189,14 +190,6 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * see loadFromFile.
      */
     public Wallet(NetworkParameters params) {
-        this(params, null);
-    }
-
-    /**
-     * Create a wallet with a keyCrypter to use in encrypting and decrypting keys.
-     */
-    public Wallet(NetworkParameters params, KeyCrypter keyCrypter) {
-        this.keyCrypter = keyCrypter;
         this.params = checkNotNull(params);
         keychain = new ArrayList<ECKey>();
         watchedScripts = Sets.newHashSet();
@@ -209,6 +202,14 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         extensions = new HashMap<String, WalletExtension>();
         confidenceChanged = new HashMap<Transaction, TransactionConfidence.Listener.ChangeReason>();
         createTransientState();
+    }
+
+    /**
+     * Create a wallet with a keyCrypter to use in encrypting and decrypting keys.
+     */
+    public Wallet(NetworkParameters params, KeyCrypter keyCrypter) {
+        this(params);
+        this.keyCrypter = checkNotNull(keyCrypter);
     }
 
     private void createTransientState() {
@@ -1332,9 +1333,6 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         case DEAD:
             checkState(dead.put(tx.getHash(), tx) == null);
             break;
-        case PENDING_INACTIVE:
-            checkState(pending.put(tx.getHash(), tx) == null);
-            break;
         default:
             throw new RuntimeException("Unknown wallet transaction type " + pool);
         }
@@ -1458,8 +1456,6 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                     return pending.size();
                 case DEAD:
                     return dead.size();
-                case ALL:
-                    return unspent.size() + spent.size() + pending.size() + dead.size();
             }
             throw new RuntimeException("Unreachable");
         } finally {
@@ -1597,7 +1593,9 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
          */
         public static SendRequest to(Address destination, BigInteger value) {
             SendRequest req = new SendRequest();
-            req.tx = new Transaction(destination.getParameters());
+            final NetworkParameters parameters = destination.getParameters();
+            checkNotNull(parameters, "Address is for an unknown network");
+            req.tx = new Transaction(parameters);
             req.tx.addOutput(value, destination);
             return req;
         }
@@ -1626,7 +1624,9 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
 
         public static SendRequest emptyWallet(Address destination) {
             SendRequest req = new SendRequest();
-            req.tx = new Transaction(destination.getParameters());
+            final NetworkParameters parameters = destination.getParameters();
+            checkNotNull(parameters, "Address is for an unknown network");
+            req.tx = new Transaction(parameters);
             req.tx.addOutput(BigInteger.ZERO, destination);
             req.emptyWallet = true;
             return req;
@@ -1772,9 +1772,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      *
      * @return The {@link Transaction} that was created or null if there was insufficient balance to send the coins.
      * @throws InsufficientMoneyException if the request could not be completed due to not enough balance.
-     * @throws IOException if there was a problem broadcasting the transaction
      */
-    public Transaction sendCoins(Peer peer, SendRequest request) throws IOException, InsufficientMoneyException {
+    public Transaction sendCoins(Peer peer, SendRequest request) throws InsufficientMoneyException {
         Transaction tx = sendCoinsOffline(request);
         peer.sendMessage(tx);
         return tx;
@@ -2103,6 +2102,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      *
      * @return ECKey object or null if no such key was found.
      */
+    @Nullable
     public ECKey findKeyFromPubHash(byte[] pubkeyHash) {
         lock.lock();
         try {
@@ -2146,6 +2146,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * Locates a keypair from the keychain given the raw public key bytes.
      * @return ECKey or null if no such key was found.
      */
+    @Nullable
     public ECKey findKeyFromPubKey(byte[] pubkey) {
         lock.lock();
         try {
@@ -2273,7 +2274,10 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         lock.lock();
         try {
             StringBuilder builder = new StringBuilder();
-            builder.append(String.format("Wallet containing %s %s in:%n", bitcoinValueToFriendlyString(getBalance()), CoinDefinition.coinTicker));
+
+            BigInteger balance = getBalance(BalanceType.ESTIMATED);
+            builder.append(String.format("Wallet containing %s %s (%d satoshis) in:%n",
+                    bitcoinValueToPlainString(balance), CoinDefinition.coinTicker, balance.longValue()));
             builder.append(String.format("  %d unspent transactions%n", unspent.size()));
             builder.append(String.format("  %d spent transactions%n", spent.size()));
             builder.append(String.format("  %d pending transactions%n", pending.size()));
@@ -2336,7 +2340,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     }
 
     private void toStringHelper(StringBuilder builder, Map<Sha256Hash, Transaction> transactionMap,
-                                AbstractBlockChain chain) {
+                                @Nullable AbstractBlockChain chain) {
         checkState(lock.isHeldByCurrentThread());
         for (Transaction tx : transactionMap.values()) {
             try {
@@ -2581,7 +2585,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         }
     }
 
-    /** Returns the hash of the last seen best-chain block. */
+    /** Returns the hash of the last seen best-chain block, or null if the wallet is too old to store this data. */
+    @Nullable
     public Sha256Hash getLastBlockSeenHash() {
         lock.lock();
         try {
@@ -2591,7 +2596,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         }
     }
 
-    public void setLastBlockSeenHash(Sha256Hash lastBlockSeenHash) {
+    public void setLastBlockSeenHash(@Nullable Sha256Hash lastBlockSeenHash) {
         lock.lock();
         try {
             this.lastBlockSeenHash = lastBlockSeenHash;
@@ -2813,11 +2818,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     public boolean checkPassword(CharSequence password) {
         lock.lock();
         try {
-            if (keyCrypter == null) {
-                // The password cannot decrypt anything as the keyCrypter is null.
-                return false;
-            }
-            return checkAESKey(keyCrypter.deriveKey(checkNotNull(password)));
+            return keyCrypter != null && checkAESKey(keyCrypter.deriveKey(checkNotNull(password)));
         } finally {
             lock.unlock();
         }
@@ -2956,7 +2957,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         for (Transaction tx : getTransactions(false)) {
             for (TransactionOutput out : tx.getOutputs()) {
                 try {
-                    if (out.isMine(this) && out.getScriptPubKey().isSentToRawPubKey())
+                    if (isTxOutputBloomFilterable(out))
                         size++;
                 } catch (ScriptException e) {
                     throw new RuntimeException(e); // If it is ours, we parsed the script correctly, so this shouldn't happen
@@ -3026,8 +3027,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             for (int i = 0; i < tx.getOutputs().size(); i++) {
                 TransactionOutput out = tx.getOutputs().get(i);
                 try {
-                    if ((out.isMine(this) && out.getScriptPubKey().isSentToRawPubKey()) ||
-                            out.isWatched(this)) {
+                    if (isTxOutputBloomFilterable(out)) {
                         TransactionOutPoint outPoint = new TransactionOutPoint(params, i, tx);
                         filter.insert(outPoint.bitcoinSerialize());
                     }
@@ -3038,6 +3038,11 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         }
 
         return filter;
+    }
+
+    private boolean isTxOutputBloomFilterable(TransactionOutput out) {
+        return (out.isMine(this) && out.getScriptPubKey().isSentToRawPubKey()) ||
+                out.isWatched(this);
     }
 
     /** Returns the {@link CoinSelector} object which controls which outputs can be spent by this wallet. */
@@ -3511,15 +3516,16 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             try {
                 if (output.getScriptPubKey().isSentToAddress()) {
                     // Send-to-address spends usually take maximum pubkey.length (as it may be compressed or not) + 75 bytes
-                    size += findKeyFromPubHash(output.getScriptPubKey().getPubKeyHash()).getPubKey().length + 75;
+                    final ECKey key = findKeyFromPubHash(output.getScriptPubKey().getPubKeyHash());
+                    size += checkNotNull(key, "Coin selection includes unspendable outputs").getPubKey().length + 75;
                 } else if (output.getScriptPubKey().isSentToRawPubKey())
                     size += 74; // Send-to-pubkey spends usually take maximum 74 bytes to spend
                 else
-                    throw new RuntimeException("Unknown output type returned in coin selection");
+                    throw new IllegalStateException("Unknown output type returned in coin selection");
             } catch (ScriptException e) {
                 // If this happens it means an output script in a wallet tx could not be understood. That should never
                 // happen, if it does it means the wallet has got into an inconsistent state.
-                throw new RuntimeException(e);
+                throw new IllegalStateException(e);
             }
         }
         return size;
@@ -3634,6 +3640,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         } while (tx != null && tx.getInputs().size() == KeyTimeCoinSelector.MAX_SIMULTANEOUS_INPUTS);
     }
 
+    @Nullable
     private Transaction rekeyOneBatch(long keyRotationTimestamp, final TransactionBroadcaster broadcaster) {
         final Transaction rekeyTx;
 
@@ -3650,7 +3657,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                     safeKey = key;
                 }
             }
-            if (!haveRotatingKeys) return null;
+            if (!haveRotatingKeys)
+                return null;
             if (safeKey == null) {
                 log.warn("Key rotation requested but no keys newer than the timestamp are available.");
                 return null;
