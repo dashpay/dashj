@@ -782,8 +782,11 @@ public abstract class AbstractBlockChain {
 
         int nDifficultySwitchHeight = 476280;
         int nInflationFixHeight = 523800;
+        int nDifficultySwitchHeightTwo = 625800;
+
         boolean fNewDifficultyProtocol = ((storedPrev.getHeight() + 1) >= CoinDefinition.nDifficultySwitchHeight);
         boolean fInflationFixProtocol = ((storedPrev.getHeight() + 1) >= CoinDefinition.nInflationFixHeight);
+        boolean fDifficultySwitchHeightTwo = ((storedPrev.getHeight() + 1) >= nDifficultySwitchHeightTwo /*|| fTestNet*/);
 
         int nTargetTimespanCurrent = fInflationFixProtocol? params.targetTimespan : (params.targetTimespan*5);
         int interval = fInflationFixProtocol? (nTargetTimespanCurrent / params.TARGET_SPACING) : (nTargetTimespanCurrent / (params.TARGET_SPACING / 2));
@@ -840,11 +843,11 @@ public abstract class AbstractBlockChain {
         int nActualTimespanMax = fNewDifficultyProtocol? (nTargetTimespanCurrent*2) : (nTargetTimespanCurrent*4);
         int nActualTimespanMin = fNewDifficultyProtocol? (nTargetTimespanCurrent/2) : (nTargetTimespanCurrent/4);
 
-        //new for v1.0 - POSSIBLE BUG in digitalcoin client   - this is not used
-        //if (fInflationFixProtocol){
-        //   nActualTimespanMax = ((nTargetTimespanCurrent*75)/55);
-        //    nActualTimespanMin = ((nTargetTimespanCurrent*55)/75);
-        //}
+        //new for v1.0.0
+        if (fDifficultySwitchHeightTwo){
+           nActualTimespanMax = ((nTargetTimespanCurrent*75)/60);
+            nActualTimespanMin = ((nTargetTimespanCurrent*55)/73);
+        }
 
         if (timespan < nActualTimespanMin)
             timespan = nActualTimespanMin;

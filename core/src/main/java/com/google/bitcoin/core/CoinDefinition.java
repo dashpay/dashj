@@ -61,7 +61,7 @@ public class CoinDefinition {
     public static final BigInteger DEFAULT_MIN_TX_FEE = BigInteger.valueOf(10000000);   // MIN_TX_FEE
     public static final BigInteger DUST_LIMIT = Utils.CENT; //main.h CTransaction::GetMinFee        0.01 coins
 
-    public static final int PROTOCOL_VERSION = 60001;          //version.h PROTOCOL_VERSION
+    public static final int PROTOCOL_VERSION = 60002;          //version.h PROTOCOL_VERSION
     public static final int MIN_PROTOCOL_VERSION = 209;        //version.h MIN_PROTO_VERSION
 
     public static final boolean supportsBloomFiltering = false; //Requires PROTOCOL_VERSION 70000 in the client
@@ -213,6 +213,7 @@ public class CoinDefinition {
         checkpoints.put( 3500, new Sha256Hash("6e92c6cf634c39149d07f022cf13e87b91713d1e7a5d9abc2b5f3646a4027838"));
         checkpoints.put( 22222, new Sha256Hash("7a58919a24c189f8c286413381e6ed7224c90a4181a7f7cd098825cc75ddec27"));
         checkpoints.put( 480000, new Sha256Hash("a11759fa9ed9c11769dc7ec3c279f523c886ea0ca0b9e1d1a49441c32b701f0d"));
+        checkpoints.put( 600308, new Sha256Hash("0cd7f68e0e79a4595abb871fb71fd2db803b34b15da182d23c1568f56611af91"));
     }
 
 
