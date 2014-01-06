@@ -34,25 +34,54 @@ public class CoinDefinition {
     public static final CoinHash coinHash = CoinHash.scrypt;
     //Original Values
     public static final int TARGET_TIMESPAN_0 = (int)(6 * 60 * 3 * 20);  // 3.5 days per difficulty cycle, on average.
-    public static final int TARGET_SPACING_0 = (int)(1 * 20);  // 2.5 minutes per block.
-    public static final int INTERVAL_0 = TARGET_TIMESPAN_0 / TARGET_SPACING_0;
+    public static final int TARGET_SPACING_0 = (int)(1 * 20);  // 20 seconds per block.
+    public static final int INTERVAL_0 = TARGET_TIMESPAN_0 / TARGET_SPACING_0;  //1080 blocks
+
+    public static final int TARGET_TIMESPAN_1 = (int)(108 * 20);  // 36 minutes per difficulty cycle, on average.
+    public static final int TARGET_SPACING_1 = (int)(1 * 20);  // 20 seconds per block.
+    public static final int INTERVAL_1 = TARGET_TIMESPAN_1 / TARGET_SPACING_1;  //108 blocks
 
     public static final int TARGET_TIMESPAN = (int)(108 * 40);  // 72 minutes per difficulty cycle, on average.
     public static final int TARGET_SPACING = (int)(1 * 40);  // 40 seconds per block.
+    public static final int INTERVAL = TARGET_TIMESPAN / TARGET_SPACING;  //108 blocks
 
-    public static final int INTERVAL = TARGET_TIMESPAN / TARGET_SPACING;
+    private static int nDifficultySwitchHeight = 476280;    //retarget every 108 instead of 1080 blocks; adjust by +100%/-50% instead of +400/-75%
+    private static int nInflationFixHeight = 523800;        //increase block time to 40 from 20 seconds; decrease reward from 20 to 15 DGC
+    private static int nDifficultySwitchHeightTwo = 625800; //retarget adjust changed
 
     public static final int getInterval(int height, boolean testNet) {
         if(height < nDifficultySwitchHeight)
-            return INTERVAL_0;
+            return INTERVAL_0;    //1080
+        else if(height < nInflationFixHeight)
+            return INTERVAL_1;    //108
         else
-            return INTERVAL;
+            return INTERVAL;      //108
     }
     public static final int getTargetTimespan(int height, boolean testNet) {
         if(height < nDifficultySwitchHeight)
-            return TARGET_TIMESPAN_0;
+            return TARGET_TIMESPAN_0;  //3.5 days
+        else if(height < nInflationFixHeight)
+            return TARGET_TIMESPAN_1;  //36 min
         else
-            return TARGET_TIMESPAN;
+            return TARGET_TIMESPAN;    //72 min
+    }
+    public static int getMaxTimeSpan(int value, int height, boolean testNet)
+    {
+        if(height < nDifficultySwitchHeight)
+            return value * 4;
+        else if(height < nInflationFixHeight)
+            return value * 2;
+        else
+            return value * 75 / 60;
+    }
+    public static int getMinTimeSpan(int value, int height, boolean testNet)
+    {
+        if(height < nDifficultySwitchHeight)
+            return value / 4;
+        else if(height < nInflationFixHeight)
+            return value / 2;
+        else
+            return value * 55 / 73;
     }
     public static int spendableCoinbaseDepth = 5; //main.h: static const int COINBASE_MATURITY
     public static final int MAX_MONEY = 200000000;                 //main.h:  MAX_MONEY
@@ -128,8 +157,7 @@ public class CoinDefinition {
 
 
 
-    public static int nDifficultySwitchHeight = 476280;
-    public static int nInflationFixHeight = 523800;
+
 
     public static final boolean usingNewDifficultyProtocol(int height)
     { return height >= nDifficultySwitchHeight;}
