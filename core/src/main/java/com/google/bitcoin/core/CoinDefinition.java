@@ -120,8 +120,8 @@ public class CoinDefinition {
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
             "direct.crypto-expert.com",
-            "207.12.89.119",
-            "198.50.30.145",
+            //"207.12.89.119",
+            //"198.50.30.145",
             "178.237.35.34",
             "dgc.kadaplace.com",
 

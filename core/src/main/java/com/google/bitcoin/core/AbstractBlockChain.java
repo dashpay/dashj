@@ -793,7 +793,7 @@ public abstract class AbstractBlockChain {
     /**
      * Throws an exception if the blocks difficulty is not correct.
      */
-    private void checkDifficultyTransitions2(StoredBlock storedPrev, Block nextBlock) throws BlockStoreException, VerificationException {
+    private void checkDifficultyTransitions(StoredBlock storedPrev, Block nextBlock) throws BlockStoreException, VerificationException {
         checkState(lock.isLocked());
         Block prev = storedPrev.getHeader();
 
@@ -891,7 +891,7 @@ public abstract class AbstractBlockChain {
             throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
                     receivedDifficulty.toString(16) + " vs " + newDifficulty.toString(16));
     }
-    private void checkDifficultyTransitions(StoredBlock storedPrev, Block nextBlock) throws BlockStoreException, VerificationException {
+    private void checkDifficultyTransitionsNew(StoredBlock storedPrev, Block nextBlock) throws BlockStoreException, VerificationException {
         checkState(lock.isHeldByCurrentThread());
         Block prev = storedPrev.getHeader();
         
