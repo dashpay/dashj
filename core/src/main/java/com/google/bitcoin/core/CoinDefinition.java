@@ -49,6 +49,8 @@ public class CoinDefinition {
     private static int nInflationFixHeight = 523800;        //increase block time to 40 from 20 seconds; decrease reward from 20 to 15 DGC
     private static int nDifficultySwitchHeightTwo = 625800; //retarget adjust changed
 
+    public static boolean checkpointFileSupport = true;
+
     public static final int getInterval(int height, boolean testNet) {
         if(height < nDifficultySwitchHeight)
             return INTERVAL_0;    //1080
@@ -92,6 +94,10 @@ public class CoinDefinition {
 
     public static final int PROTOCOL_VERSION = 60002;          //version.h PROTOCOL_VERSION
     public static final int MIN_PROTOCOL_VERSION = 209;        //version.h MIN_PROTO_VERSION
+
+    public static final int BLOCK_CURRENTVERSION = 1;   //CBlock::CURRENT_VERSION
+    public static final int MAX_BLOCK_SIZE = 1 * 1000 * 1000;
+
 
     public static final boolean supportsBloomFiltering = false; //Requires PROTOCOL_VERSION 70000 in the client
 
