@@ -20,6 +20,7 @@ public class CoinDefinition {
     public static final String coinURIScheme = "digitalcoin";
     public static final String cryptsyMarketId = "26";
     public static final String cryptsyMarketCurrency = "BTC";
+    public static final String PATTERN_PRIVATE_KEY_START = "6";
 
 
     public static final String BLOCKEXPLORER_BASE_URL_PROD = "http://dgc.cryptocoinexplorer.com/";
@@ -32,6 +33,8 @@ public class CoinDefinition {
         scrypt
     };
     public static final CoinHash coinHash = CoinHash.scrypt;
+
+    public static boolean checkpointFileSupport = true;
     //Original Values
     public static final int TARGET_TIMESPAN_0 = (int)(6 * 60 * 3 * 20);  // 3.5 days per difficulty cycle, on average.
     public static final int TARGET_SPACING_0 = (int)(1 * 20);  // 20 seconds per block.
@@ -49,7 +52,7 @@ public class CoinDefinition {
     private static int nInflationFixHeight = 523800;        //increase block time to 40 from 20 seconds; decrease reward from 20 to 15 DGC
     private static int nDifficultySwitchHeightTwo = 625800; //retarget adjust changed
 
-    public static boolean checkpointFileSupport = true;
+
 
     public static final int getInterval(int height, boolean testNet) {
         if(height < nDifficultySwitchHeight)
