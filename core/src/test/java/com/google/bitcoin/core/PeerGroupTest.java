@@ -22,6 +22,7 @@ import com.google.bitcoin.params.UnitTestParams;
 import com.google.bitcoin.store.MemoryBlockStore;
 import com.google.bitcoin.utils.TestUtils;
 import com.google.bitcoin.utils.Threading;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.SettableFuture;
 import org.junit.After;
@@ -102,8 +103,6 @@ public class PeerGroupTest extends TestWithPeerGroup {
 
     @Test
     public void listener() throws Exception {
-        final SettableFuture<Void> firstDisconnectFuture = SettableFuture.create();
-        final SettableFuture<Void> secondDisconnectFuture = SettableFuture.create();
         peerGroup.startAndWait();
         peerGroup.addEventListener(listener);
 
@@ -338,20 +337,22 @@ public class PeerGroupTest extends TestWithPeerGroup {
         // Check the fast catchup time was initialized to something around the current runtime minus a week.
         // The wallet was already added to the peer in setup.
         final int WEEK = 86400 * 7;
-        final long now = Utils.now().getTime() / 1000;
+        final long now = Utils.currentTimeMillis() / 1000;
+        peerGroup.startAndWait();
         assertTrue(peerGroup.getFastCatchupTimeSecs() > now - WEEK - 10000);
         Wallet w2 = new Wallet(params);
         ECKey key1 = new ECKey();
         key1.setCreationTimeSeconds(now - 86400);  // One day ago.
         w2.addKey(key1);
         peerGroup.addWallet(w2);
-        Threading.waitForUserCode();
+        peerGroup.waitForJobQueue();
         assertEquals(peerGroup.getFastCatchupTimeSecs(), now - 86400 - WEEK);
-        // Adding a key to the wallet should update the fast catchup time.
+        // Adding a key to the wallet should update the fast catchup time, but asynchronously and in the background
+        // due to the need to avoid complicated lock inversions.
         ECKey key2 = new ECKey();
         key2.setCreationTimeSeconds(now - 100000);
         w2.addKey(key2);
-        Threading.waitForUserCode();
+        peerGroup.waitForJobQueue();
         assertEquals(peerGroup.getFastCatchupTimeSecs(), now - WEEK - 100000);
     }
 
@@ -450,7 +451,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         peerGroup.addEventListener(listener);
         peerGroup.addPeerDiscovery(new PeerDiscovery() {
             public InetSocketAddress[] getPeers(long unused, TimeUnit unused2) throws PeerDiscoveryException {
-                return addresses.toArray(new InetSocketAddress[0]);
+                return addresses.toArray(new InetSocketAddress[addresses.size()]);
             }
 
             public void shutdown() {
@@ -506,5 +507,37 @@ public class PeerGroupTest extends TestWithPeerGroup {
         assertEquals(2002, disconnectedPeers.take().getAddress().getPort());
         Utils.passMockSleep();
         assertEquals(2001, disconnectedPeers.take().getAddress().getPort());
+    }
+
+    @Test
+    public void testBloomOnP2Pubkey() throws Exception {
+        // Cover bug 513. When a relevant transaction with a p2pubkey output is found, the Bloom filter should be
+        // recalculated to include that transaction hash but not re-broadcast as the remote nodes should have followed
+        // the same procedure. However a new node that's connected should get the fresh filter.
+        peerGroup.startAndWait();
+        final ECKey key = wallet.getKeys().get(0);
+        // Create a couple of peers.
+        InboundMessageQueuer p1 = connectPeer(1);
+        InboundMessageQueuer p2 = connectPeer(2);
+        // Create a pay to pubkey tx.
+        Transaction tx = TestUtils.createFakeTx(params, Utils.COIN, key);
+        Transaction tx2 = new Transaction(params);
+        tx2.addInput(tx.getOutput(0));
+        TransactionOutPoint outpoint = tx2.getInput(0).getOutpoint();
+        assertTrue(p1.lastReceivedFilter.contains(key.getPubKey()));
+        assertFalse(p1.lastReceivedFilter.contains(tx.getHash().getBytes()));
+        inbound(p1, tx);
+        // p1 requests dep resolution, p2 is quiet.
+        assertTrue(outbound(p1) instanceof GetDataMessage);
+        final Sha256Hash dephash = tx.getInput(0).getOutpoint().getHash();
+        final InventoryItem inv = new InventoryItem(InventoryItem.Type.Transaction, dephash);
+        inbound(p1, new NotFoundMessage(params, ImmutableList.of(inv)));
+        assertNull(outbound(p1));
+        assertNull(outbound(p2));
+        peerGroup.waitForJobQueue();
+        // Now we connect p3 and there is a new bloom filter sent, that DOES match the relevant outpoint.
+        InboundMessageQueuer p3 = connectPeer(3);
+        assertTrue(p3.lastReceivedFilter.contains(key.getPubKey()));
+        assertTrue(p3.lastReceivedFilter.contains(outpoint.bitcoinSerialize()));
     }
 }

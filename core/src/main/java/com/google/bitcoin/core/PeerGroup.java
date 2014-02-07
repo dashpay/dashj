@@ -25,8 +25,11 @@ import com.google.bitcoin.script.Script;
 import com.google.bitcoin.utils.ExponentialBackoff;
 import com.google.bitcoin.utils.ListenerRegistration;
 import com.google.bitcoin.utils.Threading;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.*;
 import net.jcip.annotations.GuardedBy;
 import org.slf4j.Logger;
@@ -126,20 +129,75 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
             double rate = checkNotNull(chain).getFalsePositiveRate();
             if (rate > bloomFilterFPRate * MAX_FP_RATE_INCREASE) {
                 log.info("Force update Bloom filter due to high false positive rate");
-                recalculateFastCatchupAndFilter(true);
+                recalculateFastCatchupAndFilter(FilterRecalculateMode.FORCE_SEND);
             }
         }
     };
 
     private int minBroadcastConnections = 0;
-    private AbstractWalletEventListener walletEventListener = new AbstractWalletEventListener() {
-        private void onChanged() {
-            recalculateFastCatchupAndFilter(false);
+    private Runnable bloomSendIfChanged = new Runnable() {
+        @Override public void run() {
+            recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
         }
-        @Override public void onScriptsAdded(Wallet wallet, List<Script> scripts) { onChanged(); }
-        @Override public void onKeysAdded(Wallet wallet, List<ECKey> keys) { onChanged(); }
-        @Override public void onCoinsReceived(Wallet wallet, Transaction tx, BigInteger prevBalance, BigInteger newBalance) { onChanged(); }
-        @Override public void onCoinsSent(Wallet wallet, Transaction tx, BigInteger prevBalance, BigInteger newBalance) { onChanged(); }
+    };
+    private Runnable bloomDontSend = new Runnable() {
+        @Override public void run() {
+            recalculateFastCatchupAndFilter(FilterRecalculateMode.DONT_SEND);
+        }
+    };
+    private AbstractWalletEventListener walletEventListener = new AbstractWalletEventListener() {
+        private void queueRecalc(boolean andTransmit) {
+            if (andTransmit) {
+                log.info("Queuing recalc of the Bloom filter due to new keys or scripts becoming available");
+                Uninterruptibles.putUninterruptibly(jobQueue, bloomSendIfChanged);
+            } else {
+                log.info("Queuing recalc of the Bloom filter due to observing a pay to pubkey output on a relevant tx");
+                Uninterruptibles.putUninterruptibly(jobQueue, bloomDontSend);
+            }
+        }
+
+        @Override public void onScriptsAdded(Wallet wallet, List<Script> scripts) {
+            queueRecalc(true);
+        }
+
+        @Override public void onKeysAdded(Wallet wallet, List<ECKey> keys) {
+            queueRecalc(true);
+        }
+
+        @Override
+        public void onCoinsReceived(Wallet wallet, Transaction tx, BigInteger prevBalance, BigInteger newBalance) {
+            // We received a relevant transaction. We MAY need to recalculate and resend the Bloom filter, but only
+            // if we have received a transaction that includes a relevant pay-to-pubkey output.
+            //
+            // The reason is that pay-to-pubkey outputs, when spent, will not repeat any data we can predict in their
+            // inputs. So a remote peer will update the Bloom filter for us when such an output is seen matching the
+            // existing filter, so that it includes the tx hash in which the pay-to-pubkey output was observed. Thus
+            // the spending transaction will always match (due to the outpoint structure).
+            //
+            // Unfortunately, whilst this is required for correct sync of the chain in blocks, there are two edge cases.
+            //
+            // (1) If a wallet receives a relevant, confirmed p2pubkey output that was not broadcast across the network,
+            // for example in a coinbase transaction, then the node that's serving us the chain will update its filter
+            // but the rest will not. If another transaction then spends it, the other nodes won't match/relay it.
+            //
+            // (2) If we receive a p2pubkey output broadcast across the network, all currently connected nodes will see
+            // it and update their filter themselves, but any newly connected nodes will receive the last filter we
+            // calculated, which would not include this transaction.
+            //
+            // For this reason we check if the transaction contained any relevant pay to pubkeys and force a recalc
+            // and possibly retransmit if so. The recalculation process will end up including the tx hash into the
+            // filter. In case (1), we need to retransmit the filter to the connected peers. In case (2), we don't
+            // and shouldn't, we should just recalculate and cache the new filter for next time.
+            for (TransactionOutput output : tx.getOutputs()) {
+                if (output.getScriptPubKey().isSentToRawPubKey() && output.isMine(wallet)) {
+                    if (tx.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)
+                        queueRecalc(true);
+                    else
+                        queueRecalc(false);
+                    return;
+                }
+            }
+        }
     };
 
     // Exponential backoff for peers starts at 1 second and maxes at 10 minutes.
@@ -147,7 +205,13 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
     // Tracks failures globally in case of a network failure
     private ExponentialBackoff groupBackoff = new ExponentialBackoff(new ExponentialBackoff.Params(100, 1.1f, 30 * 1000));
 
-    private LinkedBlockingQueue<Object> morePeersMailbox = new LinkedBlockingQueue<Object>();
+    // Things for the dedicated PeerGroup management thread to do.
+    private LinkedBlockingQueue<Runnable> jobQueue = new LinkedBlockingQueue<Runnable>();
+
+    // This is a synchronized set, so it locks on itself. We use it to prevent TransactionBroadcast objects from
+    // being garbage collected if nothing in the apps code holds on to them transitively. See the discussion
+    // in broadcastTransaction.
+    private final Set<TransactionBroadcast> runningBroadcasts;
 
     private class PeerStartupListener extends AbstractPeerEventListener {
         @Override
@@ -235,7 +299,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
                 int result = backoffMap.get(a).compareTo(backoffMap.get(b));
                 // Sort by port if otherwise equals - for testing
                 if (result == 0)
-                    result = Integer.valueOf(a.getPort()).compareTo(b.getPort());
+                    result = Ints.compare(a.getPort(), b.getPort());
                 return result;
             }
         });
@@ -245,6 +309,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
         channels = connectionManager;
         peerDiscoverers = new CopyOnWriteArraySet<PeerDiscovery>();
         peerEventListeners = new CopyOnWriteArrayList<ListenerRegistration<PeerEventListener>>();
+        runningBroadcasts = Collections.synchronizedSet(new HashSet<TransactionBroadcast>());
     }
 
     /**
@@ -264,14 +329,31 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
         // We may now have too many or too few open connections. Add more or drop some to get to the right amount.
         adjustment = maxConnections - channels.getConnectedClientCount();
         if (adjustment > 0)
-            notifyServiceThread();
+            triggerConnections();
 
         if (adjustment < 0)
             channels.closeConnections(-adjustment);
     }
 
-    private void notifyServiceThread() {
-        morePeersMailbox.offer(this);   // Any non-null object will do.
+
+    private Runnable triggerConnectionsJob = new Runnable() {
+        @Override
+        public void run() {
+            // We have to test the condition at the end, because during startup we need to run this at least once
+            // when isRunning() can return false.
+            do {
+                try {
+                    connectToAnyPeer();
+                } catch(PeerDiscoveryException e) {
+                    groupBackoff.trackFailure();
+                }
+            } while (isRunning() && countConnectedAndPendingPeers() < getMaxConnections());
+        }
+    };
+
+    private void triggerConnections() {
+        // Run on a background thread due to the need to potentially retry and back off in the background.
+        Uninterruptibles.putUninterruptibly(jobQueue, triggerConnectionsJob);
     }
 
     /** The maximum number of connections that we will create to peers. */
@@ -517,24 +599,31 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
 
     @Override
     protected void run() throws Exception {
+        // Runs in a background thread dedicated to the PeerGroup. Jobs are for handling peer connections with backoff,
+        // and also recalculating filters.
         while (isRunning()) {
-            int numPeers;
-            lock.lock();
-            try {
-                numPeers = peers.size() + pendingPeers.size();
-            } finally {
-                lock.unlock();
-            }
+            jobQueue.take().run();
+        }
+    }
 
-            if (numPeers < getMaxConnections()) {
-                try {
-                    connectToAnyPeer();
-                } catch(PeerDiscoveryException e) {
-                    groupBackoff.trackFailure();
-                }
+    @VisibleForTesting
+    void waitForJobQueue() {
+        final CountDownLatch latch = new CountDownLatch(1);
+        Uninterruptibles.putUninterruptibly(jobQueue, new Runnable() {
+            @Override
+            public void run() {
+                latch.countDown();
             }
-            else
-                morePeersMailbox.take();
+        });
+        Uninterruptibles.awaitUninterruptibly(latch);
+    }
+
+    private int countConnectedAndPendingPeers() {
+        lock.lock();
+        try {
+            return peers.size() + pendingPeers.size();
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -589,6 +678,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
         // This is run in a background thread by the Service implementation.
         vPingTimer = new Timer("Peer pinging thread", true);
         channels.startAndWait();
+        triggerConnections();
     }
 
     @Override
@@ -604,7 +694,11 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
 
     @Override
     protected void triggerShutdown() {
-        notifyServiceThread();
+        // Force the thread to wake up.
+        Uninterruptibles.putUninterruptibly(jobQueue, new Runnable() {
+            public void run() {
+            }
+        });
     }
 
     /**
@@ -630,7 +724,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
             checkState(!wallets.contains(wallet));
             wallets.add(wallet);
             wallet.setTransactionBroadcaster(this);
-            wallet.addEventListener(walletEventListener);  // TODO: Run this in the current peer thread.
+            wallet.addEventListener(walletEventListener, Threading.SAME_THREAD);
             addPeerFilterProvider(wallet);
         } finally {
             lock.unlock();
@@ -655,7 +749,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
             // if a key is added. Of course, by then we may have downloaded the chain already. Ideally adding keys would
             // automatically rewind the block chain and redownload the blocks to find transactions relevant to those keys,
             // all transparently and in the background. But we are a long way from that yet.
-            recalculateFastCatchupAndFilter(false);
+            recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
             updateVersionMessageRelayTxesBeforeFilter(getVersionMessage());
         } finally {
             lock.unlock();
@@ -672,19 +766,25 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
         wallet.setTransactionBroadcaster(null);
     }
 
+    public static enum FilterRecalculateMode {
+        SEND_IF_CHANGED,
+        FORCE_SEND,
+        DONT_SEND,
+    }
+
     /**
      * Recalculates the bloom filter given to peers as well as the timestamp after which full blocks are downloaded
      * (instead of only headers).
      *
-     * @param forceFilterUpdate send the bloom filter even if it didn't change.  Use
-     *                          this if the false positive rate is high due to server auto-update.
+     * @param mode In what situations to send the filter to connected peers.
      */
-    public void recalculateFastCatchupAndFilter(boolean forceFilterUpdate) {
+    public void recalculateFastCatchupAndFilter(FilterRecalculateMode mode) {
         lock.lock();
         try {
             // Fully verifying mode doesn't use this optimization (it can't as it needs to see all transactions).
             if (chain != null && chain.shouldVerifyTransactions())
                 return;
+            log.info("Recalculating filter in mode {}", mode);
             long earliestKeyTimeSecs = Long.MAX_VALUE;
             int elements = 0;
             boolean requiresUpdateAll = false;
@@ -705,8 +805,18 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
                 BloomFilter filter = new BloomFilter(lastBloomFilterElementCount, bloomFilterFPRate, bloomFilterTweak, bloomFlags);
                 for (PeerFilterProvider p : peerFilterProviders)
                     filter.merge(p.getBloomFilter(lastBloomFilterElementCount, bloomFilterFPRate, bloomFilterTweak));
-                if (forceFilterUpdate || !filter.equals(bloomFilter)) {
-                    bloomFilter = filter;
+                bloomFilter = filter;
+
+                boolean changed = !filter.equals(bloomFilter);
+                boolean send = false;
+
+                switch (mode) {
+                    case SEND_IF_CHANGED: send = changed; break;
+                    case DONT_SEND: send = false; break;
+                    case FORCE_SEND: send = true; break;
+                }
+
+                if (send) {
                     for (Peer peer : peers)
                         peer.setBloomFilter(filter);
                     // Reset the false positive estimate so that we don't send a flood of filter updates
@@ -740,7 +850,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
         lock.lock();
         try {
             this.bloomFilterFPRate = bloomFilterFPRate;
-            recalculateFastCatchupAndFilter(false);
+            recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
         } finally {
             lock.unlock();
         }
@@ -775,7 +885,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
     protected Peer connectTo(PeerAddress address, boolean incrementMaxConnections) {
         VersionMessage ver = getVersionMessage().duplicate();
         ver.bestHeight = chain == null ? 0 : chain.getBestChainHeight();
-        ver.time = Utils.now().getTime() / 1000;
+        ver.time = Utils.currentTimeMillis() / 1000;
 
         Peer peer = new Peer(params, ver, address, chain, memoryPool);
         peer.addEventListener(startupListener, Threading.SAME_THREAD);
@@ -1071,7 +1181,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
             inactives.offer(address);
 
             if (numPeers < getMaxConnections()) {
-                notifyServiceThread();
+                triggerConnections();
             }
         } finally {
             lock.unlock();
@@ -1198,12 +1308,13 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
      * bringup of the peer group you can lower it.</p>
      */
     public ListenableFuture<Transaction> broadcastTransaction(final Transaction tx, final int minConnections) {
-        TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
+        final TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
         broadcast.setMinConnections(minConnections);
         // Send the TX to the wallet once we have a successful broadcast.
         Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
             @Override
             public void onSuccess(Transaction transaction) {
+                runningBroadcasts.remove(broadcast);
                 // OK, now tell the wallet about the transaction. If the wallet created the transaction then
                 // it already knows and will ignore this. If it's a transaction we received from
                 // somebody else via a side channel and are now broadcasting, this will put it into the
@@ -1223,8 +1334,16 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
 
             @Override
             public void onFailure(Throwable throwable) {
+                // This can't happen with the current code, but just in case one day that changes ...
+                runningBroadcasts.remove(broadcast);
+                throw new RuntimeException(throwable);
             }
         });
+        // Keep a reference to the TransactionBroadcast object. This is important because otherwise, the entire tree
+        // of objects we just created would become garbage if the user doens't hold on to the returned future, and
+        // eventually be collected. This in turn could result in the transaction not being committed to the wallet
+        // at all.
+        runningBroadcasts.add(broadcast);
         broadcast.broadcast();
         return broadcast.future();
     }
@@ -1371,13 +1490,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
         // Sort by ping time.
         Collections.sort(candidates2, new Comparator<PeerAndPing>() {
             public int compare(PeerAndPing peerAndPing, PeerAndPing peerAndPing2) {
-                if (peerAndPing.pingTime < peerAndPing2.pingTime)
-                    return -1;
-                else if (peerAndPing.pingTime == peerAndPing2.pingTime)
-                    return 0;
-                else
-                    return 1;
-
+                return Longs.compare(peerAndPing.pingTime, peerAndPing2.pingTime);
             }
         });
         return candidates2.get(0).peer;

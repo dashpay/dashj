@@ -61,6 +61,7 @@ public class MainNetParams extends NetworkParameters {
         CoinDefinition.initCheckpoints(checkpoints);
 
         dnsSeeds = CoinDefinition.dnsSeeds;
+
     }
 
     private static MainNetParams instance;
@@ -69,5 +70,9 @@ public class MainNetParams extends NetworkParameters {
             instance = new MainNetParams();
         }
         return instance;
+    }
+
+    public String getPaymentProtocolId() {
+        return PAYMENT_PROTOCOL_ID_MAINNET;
     }
 }

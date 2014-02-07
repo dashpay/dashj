@@ -16,17 +16,18 @@
 
 package com.google.bitcoin.utils;
 
-import com.google.common.util.concurrent.Callables;
+import com.google.bitcoin.core.CoinDefinition;
 import com.google.common.util.concurrent.CycleDetectingLockFactory;
-import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.Uninterruptibles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.ref.WeakReference;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
-
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Various threading related utilities. Provides a wrapper around explicit lock creation that lets you control whether
@@ -34,15 +35,19 @@ import static com.google.common.base.Preconditions.checkState;
  * Also provides a worker thread that is designed for event listeners to be dispatched on.
  */
 public class Threading {
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // User thread/event handling utilities
+    //
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     /**
      * An executor with one thread that is intended for running event listeners on. This ensures all event listener code
      * runs without any locks being held. It's intended for the API user to run things on. Callbacks registered by
      * bitcoinj internally shouldn't normally run here, although currently there are a few exceptions.
      */
     public static Executor USER_THREAD;
-
-    // Default value for USER_THREAD.
-    private static final ExecutorService SINGLE_THREADED_EXECUTOR;
 
     /**
      * A dummy executor that just invokes the runnable immediately. Use this over
@@ -52,9 +57,6 @@ public class Threading {
      */
     public static final Executor SAME_THREAD;
 
-    // For safety reasons keep track of the thread we use to run user-provided event listeners to avoid deadlock.
-    private static volatile WeakReference<Thread> vUserThread;
-
     /**
      * Put a dummy task into the queue and wait for it to be run. Because it's single threaded, this means all
      * tasks submitted before this point are now completed. Usually you won't want to use this method - it's a
@@ -63,14 +65,13 @@ public class Threading {
      * on it. You can then either block on that future, compose it, add listeners to it and so on.
      */
     public static void waitForUserCode() {
-        // If this assert fires it means you have a bug in your code - you can't call this method inside your own
-        // event handlers because it would never return. If you aren't calling this method explicitly, then that
-        // means there's a bug in digitalcoinj.
-        if (vUserThread != null) {
-            checkState(vUserThread.get() != null && vUserThread.get() != Thread.currentThread(),
-                    "waitForUserCode() run on user code thread would deadlock.");
-        }
-        Futures.getUnchecked(SINGLE_THREADED_EXECUTOR.submit(Callables.returning(null)));
+        final CountDownLatch latch = new CountDownLatch(1);
+        USER_THREAD.execute(new Runnable() {
+            @Override public void run() {
+                latch.countDown();
+            }
+        });
+        Uninterruptibles.awaitUninterruptibly(latch);
     }
 
     /**
@@ -84,7 +85,42 @@ public class Threading {
     @Nullable
     public static volatile Thread.UncaughtExceptionHandler uncaughtExceptionHandler;
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public static class UserThread extends Thread implements Executor {
+        private static final Logger log = LoggerFactory.getLogger(UserThread.class);
+        private LinkedBlockingQueue<Runnable> tasks;
+
+        public UserThread() {
+            super(CoinDefinition.coinURIScheme + "j user thread");      //Modified for CoinDefinition
+            setDaemon(true);
+            tasks = new LinkedBlockingQueue<Runnable>();
+            start();
+        }
+
+        @SuppressWarnings("InfiniteLoopStatement") @Override
+        public void run() {
+            while (true) {
+                Runnable task = Uninterruptibles.takeUninterruptibly(tasks);
+                try {
+                    task.run();
+                } catch (Throwable throwable) {
+                    log.warn("Exception in user thread", throwable);
+                    Thread.UncaughtExceptionHandler handler = uncaughtExceptionHandler;
+                    if (handler != null)
+                        handler.uncaughtException(this, throwable);
+                }
+            }
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            if (tasks.size() > 100) {
+                log.warn("User thread saturated, memory exhaustion may occur.");
+                log.warn("Check for deadlocked or slow event handlers. Sample tasks:");
+                for (Object task : tasks.toArray()) log.warn(task.toString());
+            }
+            Uninterruptibles.putUninterruptibly(tasks, command);
+        }
+    }
 
     static {
         // Default policy goes here. If you want to change this, use one of the static methods before
@@ -92,17 +128,7 @@ public class Threading {
         // from that point onwards.
         throwOnLockCycles();
 
-        SINGLE_THREADED_EXECUTOR = Executors.newSingleThreadExecutor(new ThreadFactory() {
-            @Nonnull @Override public Thread newThread(@Nonnull Runnable runnable) {
-                Thread t = new Thread(runnable);
-                t.setName("bitcoinj user thread");
-                t.setDaemon(true);
-                t.setUncaughtExceptionHandler(uncaughtExceptionHandler);
-                vUserThread = new WeakReference<Thread>(t);
-                return t;
-            }
-        });
-        USER_THREAD = SINGLE_THREADED_EXECUTOR;
+        USER_THREAD = new UserThread();
         SAME_THREAD = new Executor() {
             @Override
             public void execute(@Nonnull Runnable runnable) {
@@ -110,6 +136,12 @@ public class Threading {
             }
         };
     }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Cycle detecting lock factories
+    //
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private static CycleDetectingLockFactory.Policy policy;
     public static CycleDetectingLockFactory factory;
@@ -138,4 +170,23 @@ public class Threading {
     public static CycleDetectingLockFactory.Policy getPolicy() {
         return policy;
     }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Generic worker pool.
+    //
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /** A caching thread pool that creates daemon threads, which won't keep the JVM alive waiting for more work. */
+    public static ListeningExecutorService THREAD_POOL = MoreExecutors.listeningDecorator(
+            Executors.newCachedThreadPool(new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r);
+                    t.setName("Threading.THREAD_POOL worker");
+                    t.setDaemon(true);
+                    return t;
+                }
+            })
+    );
 }

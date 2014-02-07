@@ -1,5 +1,6 @@
 /**
  * Copyright 2013 Google Inc.
+ * Copyright 2014 Andreas Schildbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -315,6 +316,9 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             } else if (!temp.renameTo(destFile)) {
                 throw new IOException("Failed to rename " + temp + " to " + destFile);
             }
+        } catch (RuntimeException e) {
+            log.error("Failed whilst saving wallet", e);
+            throw e;
         } finally {
             lock.unlock();
             if (stream != null) {
@@ -1338,7 +1342,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         }
         // This is safe even if the listener has been added before, as TransactionConfidence ignores duplicate
         // registration requests. That makes the code in the wallet simpler.
-        tx.getConfidence().addEventListener(txConfidenceListener);
+        tx.getConfidence().addEventListener(txConfidenceListener, Threading.SAME_THREAD);
     }
 
     /**
@@ -2039,7 +2043,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * Same as {@link #addWatchedAddress(Address, long)} with the current time as the creation time.
      */
     public boolean addWatchedAddress(final Address address) {
-        long now = Utils.now().getTime() / 1000;
+        long now = Utils.currentTimeMillis() / 1000;
         return addWatchedAddresses(Lists.newArrayList(address), now) == 1;
     }
 
@@ -2261,6 +2265,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         return toString(false, true, true, null);
     }
 
+
     /**
      * Formats the wallet as a human readable piece of text. Intended for debugging, the format is not meant to be
      * stable or human readable.
@@ -2276,11 +2281,13 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             StringBuilder builder = new StringBuilder();
 
             BigInteger balance = getBalance(BalanceType.ESTIMATED);
+
             builder.append(String.format("Wallet containing %s %s (%d satoshis) in:%n",
-                    bitcoinValueToPlainString(balance), CoinDefinition.coinTicker, balance.longValue()));
+                    bitcoinValueToPlainString(balance), CoinDefinition.coinTicker, balance.longValue()));    //Modified for CoinDefinition
+            builder.append(String.format("  %d pending transactions%n", pending.size()));
+
             builder.append(String.format("  %d unspent transactions%n", unspent.size()));
             builder.append(String.format("  %d spent transactions%n", spent.size()));
-            builder.append(String.format("  %d pending transactions%n", pending.size()));
             builder.append(String.format("  %d dead transactions%n", dead.size()));
             final Date lastBlockSeenTime = getLastBlockSeenTime();
             final String lastBlockSeenTimeStr = lastBlockSeenTime == null ? "time unknown" : lastBlockSeenTime.toString();
@@ -2310,21 +2317,21 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
 
             if (includeTransactions) {
                 // Print the transactions themselves
+                if (pending.size() > 0) {
+                    builder.append("\n>>> PENDING:\n");
+                    toStringHelper(builder, pending, chain, Transaction.SORT_TX_BY_UPDATE_TIME);
+                }
                 if (unspent.size() > 0) {
                     builder.append("\n>>> UNSPENT:\n");
-                    toStringHelper(builder, unspent, chain);
+                    toStringHelper(builder, unspent, chain, Transaction.SORT_TX_BY_HEIGHT);
                 }
                 if (spent.size() > 0) {
                     builder.append("\n>>> SPENT:\n");
-                    toStringHelper(builder, spent, chain);
-                }
-                if (pending.size() > 0) {
-                    builder.append("\n>>> PENDING:\n");
-                    toStringHelper(builder, pending, chain);
+                    toStringHelper(builder, spent, chain, Transaction.SORT_TX_BY_HEIGHT);
                 }
                 if (dead.size() > 0) {
                     builder.append("\n>>> DEAD:\n");
-                    toStringHelper(builder, dead, chain);
+                    toStringHelper(builder, dead, chain, Transaction.SORT_TX_BY_HEIGHT);
                 }
             }
             if (includeExtensions && extensions.size() > 0) {
@@ -2340,9 +2347,18 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     }
 
     private void toStringHelper(StringBuilder builder, Map<Sha256Hash, Transaction> transactionMap,
-                                @Nullable AbstractBlockChain chain) {
+                                @Nullable AbstractBlockChain chain, @Nullable Comparator<Transaction> sortOrder) {
         checkState(lock.isHeldByCurrentThread());
-        for (Transaction tx : transactionMap.values()) {
+
+        final Collection<Transaction> txns;
+        if (sortOrder != null) {
+            txns = new TreeSet<Transaction>(sortOrder);
+            txns.addAll(transactionMap.values());
+        } else {
+            txns = transactionMap.values();
+        }
+
+        for (Transaction tx : txns) {
             try {
                 builder.append("Sends ");
                 builder.append(Utils.bitcoinValueToFriendlyString(tx.getValueSentFromMe(this)));
@@ -2578,7 +2594,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             for (Script script : watchedScripts)
                 earliestTime = Math.min(script.getCreationTimeSeconds(), earliestTime);
             if (earliestTime == Long.MAX_VALUE)
-                return Utils.now().getTime() / 1000;
+                return Utils.currentTimeMillis() / 1000;
             return earliestTime;
         } finally {
             lock.unlock();
@@ -3227,12 +3243,16 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     private void queueOnTransactionConfidenceChanged(final Transaction tx) {
         checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<WalletEventListener> registration : eventListeners) {
-            registration.executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    registration.listener.onTransactionConfidenceChanged(Wallet.this, tx);
-                }
-            });
+            if (registration.executor == Threading.SAME_THREAD) {
+                registration.listener.onTransactionConfidenceChanged(this, tx);
+            } else {
+                registration.executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        registration.listener.onTransactionConfidenceChanged(Wallet.this, tx);
+                    }
+                });
+            }
         }
     }
 
@@ -3548,6 +3568,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * optimise itself to reduce fees or improve privacy.</p>
      */
     public void setTransactionBroadcaster(@Nullable com.google.bitcoin.core.TransactionBroadcaster broadcaster) {
+        Transaction[] toBroadcast = {};
         lock.lock();
         try {
             if (vTransactionBroadcaster == broadcaster)
@@ -3555,18 +3576,21 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             vTransactionBroadcaster = broadcaster;
             if (broadcaster == null)
                 return;
-            // Now use it to upload any pending transactions we have that are marked as not being seen by any peers yet.
-            for (Transaction tx : pending.values()) {
-                checkState(tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING);
-                // Re-broadcast even if it's marked as already seen for two reasons
-                // 1) Old wallets may have transactions marked as broadcast by 1 peer when in reality the network
-                //    never saw it, due to bugs.
-                // 2) It can't really hurt.
-                log.info("New broadcaster so uploading waiting tx {}", tx.getHash());
-                broadcaster.broadcastTransaction(tx);
-            }
+            toBroadcast = pending.values().toArray(toBroadcast);
         } finally {
             lock.unlock();
+        }
+        // Now use it to upload any pending transactions we have that are marked as not being seen by any peers yet.
+        // Don't hold the wallet lock whilst doing this, so if the broadcaster accesses the wallet at some point there
+        // is no inversion.
+        for (Transaction tx : toBroadcast) {
+            checkState(tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING);
+            // Re-broadcast even if it's marked as already seen for two reasons
+            // 1) Old wallets may have transactions marked as broadcast by 1 peer when in reality the network
+            //    never saw it, due to bugs.
+            // 2) It can't really hurt.
+            log.info("New broadcaster so uploading waiting tx {}", tx.getHash());
+            broadcaster.broadcastTransaction(tx);
         }
     }
 
