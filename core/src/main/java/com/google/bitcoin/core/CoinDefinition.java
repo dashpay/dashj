@@ -22,6 +22,12 @@ public class CoinDefinition {
     public static final String cryptsyMarketCurrency = "BTC";
     public static final String PATTERN_PRIVATE_KEY_START = "6";
 
+    public enum CoinPrecision {
+        Coins,
+        Millicoins,
+    }
+    public static final CoinPrecision coinPrecision = CoinPrecision.Coins;
+
 
     public static final String BLOCKEXPLORER_BASE_URL_PROD = "http://dgc.cryptocoinexplorer.com/";
     public static final String BLOCKEXPLORER_BASE_URL_TEST = "http://dgc.cryptocoinexplorer.com/";
