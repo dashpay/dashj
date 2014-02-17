@@ -151,7 +151,7 @@ public class BitcoinURI {
         // Split off the address from the rest of the query parameters.
         String[] addressSplitTokens = schemeSpecificPart.split("\\?");
         if (addressSplitTokens.length == 0)
-            throw new BitcoinURIParseException("No data found after the bitcoin: prefix");
+            throw new BitcoinURIParseException("No data found after the "+CoinDefinition.coinName +": prefix");
         String addressToken = addressSplitTokens[0];  // may be empty!
 
         String[] nameValuePairTokens;
@@ -195,7 +195,7 @@ public class BitcoinURI {
         for (String nameValuePairToken : nameValuePairTokens) {
             String[] tokens = nameValuePairToken.split("=");
             if (tokens.length != 2 || "".equals(tokens[0])) {
-                throw new BitcoinURIParseException("Malformed Bitcoin URI - cannot parse name value pair '" +
+                throw new BitcoinURIParseException("Malformed "+CoinDefinition.coinName +" URI - cannot parse name value pair '" +
                         nameValuePairToken + "'");
             }
 

@@ -13,8 +13,8 @@ public class PostgresFullPrunedBlockChainTest extends AbstractFullPrunedBlockCha
 {
     // Replace these with your postgres location/credentials and remove @Ignore to test
     private static final String DB_HOSTNAME = "localhost";
-    private static final String DB_NAME = "bitcoinj_test";
-    private static final String DB_USERNAME = "bitcoinj";
+    private static final String DB_NAME = CoinDefinition.coinName.toLowerCase() + "j_test";
+    private static final String DB_USERNAME = CoinDefinition.coinName.toLowerCase() +"j";
     private static final String DB_PASSWORD = "password";
 
     @Override

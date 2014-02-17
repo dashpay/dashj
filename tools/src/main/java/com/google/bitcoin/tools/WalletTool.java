@@ -475,7 +475,7 @@ public class WalletTool {
     }
 
     private static void sendPaymentRequest(String location, boolean verifyPki) {
-        if (location.startsWith("http") || location.startsWith("bitcoin")) {
+        if (location.startsWith("http") || location.startsWith(CoinDefinition.coinURIScheme)) {
             try {
                 ListenableFuture<PaymentSession> future;
                 if (location.startsWith("http")) {
@@ -495,7 +495,7 @@ public class WalletTool {
                 System.err.println("Error creating payment session " + e.getMessage());
                 System.exit(1);
             } catch (BitcoinURIParseException e) {
-                System.err.println("Invalid bitcoin uri: " + e.getMessage());
+                System.err.println("Invalid "+CoinDefinition.coinName +" uri: " + e.getMessage());
                 System.exit(1);
             } catch (InterruptedException e) {
                 // Ignore.
@@ -844,7 +844,7 @@ public class WalletTool {
                 Address address = new Address(wallet.getParams(), addr);
                 key = wallet.findKeyFromPubHash(address.getHash160());
             } catch (AddressFormatException e) {
-                System.err.println(addr + " does not parse as a Bitcoin address of the right network parameters.");
+                System.err.println(addr + " does not parse as a "+CoinDefinition.coinName +" address of the right network parameters.");
                 return;
             }
         }

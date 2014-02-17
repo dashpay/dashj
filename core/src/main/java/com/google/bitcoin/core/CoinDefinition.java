@@ -241,11 +241,11 @@ public class CoinDefinition {
     public static final String TESTNET_SATOSHI_KEY = "";
 
     /** The string returned by getId() for the main, production network where people trade things. */
-    public static final String ID_MAINNET = "org.bitcoin.production";
+    public static final String ID_MAINNET = "org.digitalcoin.production";
     /** The string returned by getId() for the testnet. */
-    public static final String ID_TESTNET = "org.bitcoin.test";
+    public static final String ID_TESTNET = "org.digitalcoin.test";
     /** Unit test network. */
-    public static final String ID_UNITTESTNET = "com.google.bitcoin.unittest";
+    public static final String ID_UNITTESTNET = "com.google.digitalcoin.unittest";
 
     //checkpoints.cpp Checkpoints::mapCheckpoints
     public static void initCheckpoints(Map<Integer, Sha256Hash> checkpoints)
