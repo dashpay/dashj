@@ -29,16 +29,19 @@ public class CoinDefinition {
     public static final CoinPrecision coinPrecision = CoinPrecision.Coins;
 
 
-    public static final String BLOCKEXPLORER_BASE_URL_PROD = "http://dgc.cryptocoinexplorer.com/";
-    public static final String BLOCKEXPLORER_BASE_URL_TEST = "http://dgc.cryptocoinexplorer.com/";
+    public static final String BLOCKEXPLORER_BASE_URL_PROD = "http://dgc.blockr.io/";    //blockr.io
+    public static final String BLOCKEXPLORER_ADDRESS_PATH = "address/info/";             //blockr.io path
+    public static final String BLOCKEXPLORER_TRANSACTION_PATH = "tx/info/";              //blockr.io path
+    public static final String BLOCKEXPLORER_BLOCK_PATH = "block/info/";                 //blockr.io path
+    public static final String BLOCKEXPLORER_BASE_URL_TEST = BLOCKEXPLORER_BASE_URL_PROD;
 
     public static final String DONATION_ADDRESS = "DPdbL3n3Y3ypwVEvY3wABmpbjsd3AVqm5M";  //HashEngineering donation DGC address
 
     enum CoinHash {
         SHA256,
-        scrypt
+        scrypt,
     };
-    public static final CoinHash coinHash = CoinHash.scrypt;
+    public static final CoinHash coinPOWHash = CoinHash.scrypt;
 
     public static boolean checkpointFileSupport = true;
     //Original Values
@@ -95,8 +98,8 @@ public class CoinDefinition {
             return value * 55 / 73;
     }
     public static int spendableCoinbaseDepth = 5; //main.h: static const int COINBASE_MATURITY
-    public static final int MAX_MONEY = 200000000;                 //main.h:  MAX_MONEY
-    public static final String MAX_MONEY_STRING = "200000000";     //main.h:  MAX_MONEY
+    public static final BigInteger MAX_MONEY = BigInteger.valueOf(200000000).multiply(Utils.COIN);                 //main.h:  MAX_MONEY
+    //public static final String MAX_MONEY_STRING = "200000000";     //main.h:  MAX_MONEY
 
     public static final BigInteger DEFAULT_MIN_TX_FEE = BigInteger.valueOf(10000000);   // MIN_TX_FEE
     public static final BigInteger DUST_LIMIT = Utils.CENT; //main.h CTransaction::GetMinFee        0.01 coins
@@ -118,7 +121,7 @@ public class CoinDefinition {
     //
     public static final int AddressHeader = 30;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS
     public static final int p2shHeader = 5;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS
-
+    public static final boolean allowBitcoinPrivateKey = true; //for backward compatibility with previous
     public static final int dumpedPrivateKeyHeader = 128;   //common to all coins
     public static final long PacketMagic = 0xfbc0b6db;      //0xfb, 0xc0, 0xb6, 0xdb
 
@@ -134,21 +137,25 @@ public class CoinDefinition {
 
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
-            "direct.crypto-expert.com",
-            //"207.12.89.119",
-            //"198.50.30.145",
+            //"direct.crypto-expert.com",         //offline
+            //"207.12.89.119",                    //offline
+            //"198.50.30.145",                    //offline
             "178.237.35.34",
             "dgc.kadaplace.com",
+            //"dnsseed.digitalcoin.co",
+            "dnsseed.rc.altcointech.net",
+            //"207.12.89.119",
+            //"198.50.30.145",
+            //"178.237.35.34",
+            //"dgc.kadaplace.com",
 
-            "50.116.22.43",                           //dgc.cryptocoinexplorer.com
-            //"dnsseed.bitcoin.co",
-            //"dnsseed.rc.altcointech.net"
+            //"50.116.22.43",                           //dgc.cryptocoinexplorer.com
             //"88.161.131.83",
             //"98.253.19.158" ,
     //"198.50.233.6"           ,
-    "82.161.111.51"          ,
+    //"82.161.111.51"          ,
     //"93.96.179.57"           ,
-    "37.187.9.53"            ,
+    //"37.187.9.53"            ,
     //"68.63.214.65"           ,
     //"54.215.9.205"           ,
 
@@ -259,5 +266,8 @@ public class CoinDefinition {
         checkpoints.put( 600308, new Sha256Hash("0cd7f68e0e79a4595abb871fb71fd2db803b34b15da182d23c1568f56611af91"));
     }
 
+    //Unit Test Information
+    public static final String UNITTEST_ADDRESS = "DPHYTSm3f96dHRY3VG1vZAFC1QrEPkEQnt";
+    public static final String UNITTEST_ADDRESS_PRIVATE_KEY = "QU1rjHbrdJonVUgjT7Mncw7PEyPv3fMPvaGXp9EHDs1uzdJ98hUZ";
 
 }

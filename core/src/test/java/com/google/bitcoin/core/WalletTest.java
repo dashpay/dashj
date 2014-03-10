@@ -2005,6 +2005,7 @@ public class WalletTest extends TestWithWallet {
         block = new StoredBlock(makeSolvedTestBlock(blockStore, outputKey), BigInteger.ONE, 1);
         tx = createFakeTx(params, CENT, myAddress);
         wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 0);
+        wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 0);
         tx = createFakeTx(params, CENT, myAddress);
         wallet.receivePending(tx, null);
         request = SendRequest.emptyWallet(outputKey);

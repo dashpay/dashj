@@ -667,8 +667,20 @@ public class Block extends Message {
         // To prevent this attack from being possible, elsewhere we check that the difficultyTarget
         // field is of the right value. This requires us to have the preceeding blocks.
         BigInteger target = getDifficultyTargetAsInteger();
+        BigInteger h = null;
+        switch (CoinDefinition.coinPOWHash)
+        {
+            case scrypt:
+                    h = getScryptHash().toBigInteger();
+                    break;
+            case SHA256:
+                    h = getHash().toBigInteger();
+                    break;
+            default:  //use the normal getHash() method.
+                h = getHash().toBigInteger();
+                break;
+        }
 
-        BigInteger h = getScryptHash().toBigInteger();
         if (h.compareTo(target) > 0) {
             // Proof of work check failed!
             if (throwException)

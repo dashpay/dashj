@@ -124,7 +124,7 @@ public class Utils {
         if (bigint.compareTo(BigInteger.ZERO) < 0)
             throw new ArithmeticException("Negative coins specified");
         if (bigint.compareTo(NetworkParameters.MAX_MONEY) > 0)
-            throw new ArithmeticException("Amount larger than the total quantity of Bitcoins possible specified.");
+            throw new ArithmeticException("Amount larger than the total quantity of "+CoinDefinition.coinName+"s possible specified.");
         return bigint;
     }
 

@@ -577,7 +577,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
     }
 
     protected void discoverPeers() throws PeerDiscoveryException {
-        long start = System.currentTimeMillis();
+        //long start = System.currentTimeMillis();       //removed to reduce log file usage
         Set<PeerAddress> addressSet = Sets.newHashSet();
         for (PeerDiscovery peerDiscovery : peerDiscoverers) {
             InetSocketAddress[] addresses;
@@ -593,8 +593,8 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
         } finally {
             lock.unlock();
         }
-        log.info("Peer discovery took {}msec and returned {} items",
-                System.currentTimeMillis() - start, addressSet.size());
+        //log.info("Peer discovery took {}msec and returned {} items",
+        //        System.currentTimeMillis() - start, addressSet.size());
     }
 
     @Override
