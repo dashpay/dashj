@@ -121,7 +121,7 @@ public class CoinDefinition {
     //
     public static final int AddressHeader = 30;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS
     public static final int p2shHeader = 5;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS
-    public static final boolean allowBitcoinPrivateKey = true; //for backward compatibility with previous
+    public static final boolean allowBitcoinPrivateKey = true; //for backward compatibility with previous version of digitalcoin
     public static final int dumpedPrivateKeyHeader = 128;   //common to all coins
     public static final long PacketMagic = 0xfbc0b6db;      //0xfb, 0xc0, 0xb6, 0xdb
 

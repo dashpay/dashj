@@ -164,7 +164,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
             if (!params.isCheckpoint(height)) {
                 // BIP30 violator blocks are ones that contain a duplicated transaction. They are all in the
                 // checkpoints list and we therefore only check non-checkpoints for duplicated transactions here. See the
-                // BIP30 document for more details on this: https://en.bitcoin.it/wiki/BIP_0030
+                // BIP30 document for more details on this: https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki
                 for (Transaction tx : block.transactions) {
                     Sha256Hash hash = tx.getHash();
                     // If we already have unspent outputs for this hash, we saw the tx already. Either the block is
@@ -224,7 +224,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 }
                 // All values were already checked for being non-negative (as it is verified in Transaction.verify())
                 // but we check again here just for defence in depth. Transactions with zero output value are OK.
-                if (valueOut.compareTo(BigInteger.ZERO) < 0 || valueOut.compareTo(params.MAX_MONEY) > 0)
+                if (valueOut.signum() < 0 || valueOut.compareTo(params.MAX_MONEY) > 0)
                     throw new VerificationException("Transaction output value out of rage");
                 if (isCoinBase) {
                     coinbaseValue = valueOut;
@@ -346,7 +346,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     }
                     // All values were already checked for being non-negative (as it is verified in Transaction.verify())
                     // but we check again here just for defence in depth. Transactions with zero output value are OK.
-                    if (valueOut.compareTo(BigInteger.ZERO) < 0 || valueOut.compareTo(params.MAX_MONEY) > 0)
+                    if (valueOut.signum() < 0 || valueOut.compareTo(params.MAX_MONEY) > 0)
                         throw new VerificationException("Transaction output value out of rage");
                     if (isCoinBase) {
                         coinbaseValue = valueOut;

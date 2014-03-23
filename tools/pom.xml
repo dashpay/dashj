@@ -33,6 +33,7 @@
   <description>A collection of useful tools that use the digitalcoinj library to perform wallet operations</description>
 
   <build>
+
       <plugins>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
@@ -84,7 +85,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-jdk14</artifactId>
-      <version>1.6.4</version>
+      <version>1.7.6</version>
     </dependency>
     <dependency>
       <groupId>com.h2database</groupId>

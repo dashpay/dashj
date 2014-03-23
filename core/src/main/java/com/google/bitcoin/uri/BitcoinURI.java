@@ -70,7 +70,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * @author Andreas Schildbach (initial code)
  * @author Jim Burton (enhancements for MultiBit)
  * @author Gary Rowe (BIP21 support)
- * @see <a href="https://en.bitcoin.it/wiki/BIP_0021">BIP 0021</a>
+ * @see <a href="https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki">BIP 0021</a>
  */
 public class BitcoinURI {
     /**
@@ -327,7 +327,7 @@ public class BitcoinURI {
     public static String convertToBitcoinURI(String address, @Nullable BigInteger amount, @Nullable String label,
                                              @Nullable String message) {
         checkNotNull(address);
-        if (amount != null && amount.compareTo(BigInteger.ZERO) < 0) {
+        if (amount != null && amount.signum() < 0) {
             throw new IllegalArgumentException("Amount must be positive");
         }
         

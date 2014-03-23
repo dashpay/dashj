@@ -40,6 +40,7 @@ import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
+import org.spongycastle.util.encoders.Hex;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -201,7 +202,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         transactions = new HashMap<Sha256Hash, Transaction>();
         eventListeners = new CopyOnWriteArrayList<ListenerRegistration<WalletEventListener>>();
         extensions = new HashMap<String, WalletExtension>();
-        confidenceChanged = new HashMap<Transaction, TransactionConfidence.Listener.ChangeReason>();
+        // Use a linked hash map to ensure ordering of event listeners is correct.
+        confidenceChanged = new LinkedHashMap<Transaction, TransactionConfidence.Listener.ChangeReason>();
         createTransientState();
     }
 
@@ -530,7 +532,13 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 }
             }
 
-            if (!success) log.error(toString());
+            if (!success) {
+                try {
+                    log.error(toString());
+                } catch (RuntimeException x) {
+                    log.error("Printing inconsistent wallet failed", x);
+                }
+            }
             return success;
         } finally {
             lock.unlock();
@@ -732,8 +740,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     public boolean isTransactionRelevant(Transaction tx) throws ScriptException {
         lock.lock();
         try {
-            return tx.getValueSentFromMe(this).compareTo(BigInteger.ZERO) > 0 ||
-                   tx.getValueSentToMe(this).compareTo(BigInteger.ZERO) > 0 ||
+            return tx.getValueSentFromMe(this).signum() > 0 ||
+                   tx.getValueSentToMe(this).signum() > 0 ||
                    checkForDoubleSpendAgainstPending(tx, false);
         } finally {
             lock.unlock();
@@ -901,7 +909,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             BigInteger newBalance = getBalance();  // This is slow.
             log.info("Balance is now: " + bitcoinValueToFriendlyString(newBalance));
             if (!wasPending) {
-                int diff = valueDifference.compareTo(BigInteger.ZERO);
+                int diff = valueDifference.signum();
                 // We pick one callback based on the value difference, though a tx can of course both send and receive
                 // coins from the wallet.
                 if (diff > 0) {
@@ -987,9 +995,13 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         boolean isDeadCoinbase = tx.isCoinBase() && dead.containsKey(tx.getHash());
         if (isDeadCoinbase) {
             // There is a dead coinbase tx being received on the best chain. A coinbase tx is made dead when it moves
-            // to a side chain but it can be switched back on a reorg and 'resurrected' back to spent or unspent.
-            // So take it out of the dead pool.
-            log.info("  coinbase tx {} <-dead: confidence {}", tx.getHashAsString(),
+            // to a side chain but it can be switched back on a reorg and resurrected back to spent or unspent.
+            // So take it out of the dead pool. Note that we don't resurrect dependent transactions here, even though
+            // we could. Bitcoin Core nodes on the network have deleted the dependent transactions from their mempools
+            // entirely by this point. We could and maybe should rebroadcast them so the network remembers and tries
+            // to confirm them again. But this is a deeply unusual edge case that due to the maturity rule should never
+            // happen in practice, thus for simplicities sake we ignore it here.
+            log.info("  coinbase tx <-dead: confidence {}", tx.getHashAsString(),
                     tx.getConfidence().getConfidenceType().name());
             dead.remove(tx.getHash());
         }
@@ -1000,7 +1012,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         // Now make sure it ends up in the right pool. Also, handle the case where this TX is double-spending
         // against our pending transactions. Note that a tx may double spend our pending transactions and also send
         // us money/spend our money.
-        boolean hasOutputsToMe = tx.getValueSentToMe(this, true).compareTo(BigInteger.ZERO) > 0;
+        boolean hasOutputsToMe = tx.getValueSentToMe(this, true).signum() > 0;
         if (hasOutputsToMe) {
             // Needs to go into either unspent or spent (if the outputs were already spent by a pending tx).
             if (tx.isEveryOwnedOutputSpent(this)) {
@@ -1010,7 +1022,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 log.info("  tx {} ->unspent", tx.getHashAsString());
                 addWalletTransaction(Pool.UNSPENT, tx);
             }
-        } else if (tx.getValueSentFromMe(this).compareTo(BigInteger.ZERO) > 0) {
+        } else if (tx.getValueSentFromMe(this).signum() > 0) {
             // Didn't send us any money, but did spend some. Keep it around for record keeping purposes.
             log.info("  tx {} ->spent", tx.getHashAsString());
             addWalletTransaction(Pool.SPENT, tx);
@@ -1066,10 +1078,13 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                     log.warn("updateForSpends: saw double spend from chain, handling later.");
                 } else {
                     // We saw two pending transactions that double spend each other. We don't know which will win.
-                    // This should not happen.
-                    log.warn("Saw two pending transactions double spend each other: {} vs {}",
-                            tx.getHash(), input.getConnectedOutput().getSpentBy().getParentTransaction().getHash());
+                    // This can happen in the case of bad network nodes that mutate transactions. Do a hex dump
+                    // so the exact nature of the mutation can be examined.
+                    log.warn("Saw two pending transactions double spend each other");
                     log.warn("  offending input is input {}", tx.getInputs().indexOf(input));
+                    log.warn("{}: {}", tx.getHash(), new String(Hex.encode(tx.unsafeBitcoinSerialize())));
+                    Transaction other = input.getConnectedOutput().getSpentBy().getParentTransaction();
+                    log.warn("{}: {}", other.getHash(), new String(Hex.encode(tx.unsafeBitcoinSerialize())));
                 }
             } else if (result == TransactionInput.ConnectionResult.SUCCESS) {
                 // Otherwise we saw a transaction spend our coins, but we didn't try and spend them ourselves yet.
@@ -1103,25 +1118,18 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         }
     }
 
-    private void killCoinbase(Transaction coinbase) {
-        log.warn("Coinbase killed by re-org: {}", coinbase.getHashAsString());
-        coinbase.getConfidence().setOverridingTransaction(null);
-        confidenceChanged.put(coinbase, TransactionConfidence.Listener.ChangeReason.TYPE);
-        final Sha256Hash hash = coinbase.getHash();
-        pending.remove(hash);
-        unspent.remove(hash);
-        spent.remove(hash);
-        addWalletTransaction(Pool.DEAD, coinbase);
-        // TODO: Properly handle the recursive nature of killing transactions here.
-    }
-
-    // Updates the wallet when a double spend occurs. overridingTx/overridingInput can be null for the case of coinbases
-    private void killTx(Transaction overridingTx, List<Transaction> killedTx) {
-        for (Transaction tx : killedTx) {
-            log.warn("Saw double spend from chain override pending tx {}", tx.getHashAsString());
-            log.warn("  <-pending ->dead   killed by {}", overridingTx.getHashAsString());
+    // Updates the wallet when a double spend occurs. overridingTx can be null for the case of coinbases
+    private void killTx(@Nullable Transaction overridingTx, List<Transaction> killedTx) {
+        LinkedList<Transaction> work = new LinkedList<Transaction>(killedTx);
+        while (!work.isEmpty()) {
+            final Transaction tx = work.poll();
+            log.warn("TX {} killed{}", tx.getHashAsString(),
+                    overridingTx != null ? "by " + overridingTx.getHashAsString() : "");
             log.warn("Disconnecting each input and moving connected transactions.");
+            // TX could be pending (finney attack), or in unspent/spent (coinbase killed by reorg).
             pending.remove(tx.getHash());
+            unspent.remove(tx.getHash());
+            spent.remove(tx.getHash());
             addWalletTransaction(Pool.DEAD, tx);
             for (TransactionInput deadInput : tx.getInputs()) {
                 Transaction connected = deadInput.getOutpoint().fromTx;
@@ -1131,7 +1139,17 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             }
             tx.getConfidence().setOverridingTransaction(overridingTx);
             confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
+            // Now kill any transactions we have that depended on this one.
+            for (TransactionOutput deadOutput : tx.getOutputs()) {
+                TransactionInput connected = deadOutput.getSpentBy();
+                if (connected == null) continue;
+                final Transaction parentTransaction = connected.getParentTransaction();
+                log.info("This death invalidated dependent tx {}", parentTransaction.getHash());
+                work.push(parentTransaction);
+            }
         }
+        if (overridingTx == null)
+            return;
         log.warn("Now attempting to connect the inputs of the overriding transaction.");
         for (TransactionInput input : overridingTx.getInputs()) {
             TransactionInput.ConnectionResult result = input.connect(unspent, TransactionInput.ConnectMode.DISCONNECT_ON_CONFLICT);
@@ -1144,7 +1162,6 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 }
             }
         }
-        // TODO: Recursively kill other transactions that were double spent.
     }
 
     /**
@@ -1224,11 +1241,11 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 BigInteger valueSentFromMe = tx.getValueSentFromMe(this);
                 BigInteger valueSentToMe = tx.getValueSentToMe(this);
                 BigInteger newBalance = balance.add(valueSentToMe).subtract(valueSentFromMe);
-                if (valueSentToMe.compareTo(BigInteger.ZERO) > 0) {
+                if (valueSentToMe.signum() > 0) {
                     checkBalanceFuturesLocked(null);
                     queueOnCoinsReceived(tx, balance, newBalance);
                 }
-                if (valueSentFromMe.compareTo(BigInteger.ZERO) > 0)
+                if (valueSentFromMe.signum() > 0)
                     queueOnCoinsSent(tx, balance, newBalance);
 
                 maybeQueueOnWalletChanged();
@@ -1425,6 +1442,40 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         }
     }
 
+    /**
+     * Clean up the wallet. Currently, it only removes risky pending transaction from the wallet and only if their
+     * outputs have not been spent.
+     */
+    public void cleanup() {
+        lock.lock();
+        try {
+            boolean dirty = false;
+            for (Iterator<Transaction> i = pending.values().iterator(); i.hasNext();) {
+                Transaction tx = i.next();
+                if (isTransactionRisky(tx, null) && !acceptRiskyTransactions) {
+                    log.debug("Found risky transaction {} in wallet during cleanup.", tx.getHashAsString());
+                    if (!tx.isAnyOutputSpent()) {
+                        tx.disconnectInputs();
+                        i.remove();
+                        transactions.remove(tx.getHash());
+                        dirty = true;
+                        log.info("Removed transaction {} from pending pool during cleanup.", tx.getHashAsString());
+                    } else {
+                        log.info(
+                                "Cannot remove transaction {} from pending pool during cleanup, as it's already spent partially.",
+                                tx.getHashAsString());
+                    }
+                }
+            }
+            if (dirty) {
+                checkState(isConsistent());
+                saveLater();
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
     EnumSet<Pool> getContainingPools(Transaction tx) {
         lock.lock();
         try {
@@ -1573,7 +1624,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         /**
          * The AES key to use to decrypt the private keys before signing.
          * If null then no decryption will be performed and if decryption is required an exception will be thrown.
-         * You can get this from a password by doing wallet.getKeyCrypter().derivePassword(password).
+         * You can get this from a password by doing wallet.getKeyCrypter().deriveKey(password).
          */
         public KeyParameter aesKey = null;
 
@@ -1876,7 +1927,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 log.info("  with {} coins change", bitcoinValueToFriendlyString(bestChangeOutput.getValue()));
             }
             final BigInteger calculatedFee = totalInput.subtract(totalOutput);
-            if (calculatedFee.compareTo(BigInteger.ZERO) > 0) {
+            if (calculatedFee.signum() > 0) {
                 log.info("  with a fee of {}", bitcoinValueToFriendlyString(calculatedFee));
             }
 
@@ -2014,10 +2065,10 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
 
                 // If the key has a keyCrypter that does not match the Wallet's then a KeyCrypterException is thrown.
                 // This is done because only one keyCrypter is persisted per Wallet and hence all the keys must be homogenous.
-                if (keyCrypter != null && keyCrypter.getUnderstoodEncryptionType() != EncryptionType.UNENCRYPTED) {
-                    if (key.isEncrypted() && !keyCrypter.equals(key.getKeyCrypter())) {
-                        throw new KeyCrypterException("Cannot add key " + key.toString() + " because the keyCrypter does not match the wallets. Keys must be homogenous.");
-                    }
+                if (isEncrypted() && (!key.isEncrypted() || !keyCrypter.equals(key.getKeyCrypter()))) {
+                    throw new KeyCrypterException("Cannot add key " + key.toString() + " because the keyCrypter does not match the wallets. Keys must be homogenous.");
+                } else if (key.isEncrypted() && !isEncrypted()) {
+                    throw new KeyCrypterException("Cannot add key because it's encrypted and this wallet is not.");
                 }
                 keychain.add(key);
                 added++;
@@ -2279,11 +2330,11 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         lock.lock();
         try {
             StringBuilder builder = new StringBuilder();
+            BigInteger estimatedBalance = getBalance(BalanceType.ESTIMATED);
+            BigInteger availableBalance = getBalance(BalanceType.AVAILABLE);
+            builder.append(String.format("Wallet containing %s %s (available: %s %s) in:%n",
+                    bitcoinValueToPlainString(estimatedBalance), CoinDefinition.coinTicker, bitcoinValueToPlainString(availableBalance), CoinDefinition.coinTicker));
 
-            BigInteger balance = getBalance(BalanceType.ESTIMATED);
-
-            builder.append(String.format("Wallet containing %s %s (%d satoshis) in:%n",
-                    bitcoinValueToPlainString(balance), CoinDefinition.coinTicker, balance.longValue()));    //Modified for CoinDefinition
             builder.append(String.format("  %d pending transactions%n", pending.size()));
 
             builder.append(String.format("  %d unspent transactions%n", unspent.size()));
@@ -2299,8 +2350,11 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             // Do the keys.
             builder.append("\nKeys:\n");
             for (ECKey key : keychain) {
+                final Address address = key.toAddress(params);
                 builder.append("  addr:");
-                builder.append(key.toAddress(params));
+                builder.append(address.toString());
+                builder.append(" hash160:");
+                builder.append(Utils.bytesToHexString(address.getHash160()));
                 builder.append(" ");
                 builder.append(includePrivateKeys ? key.toStringWithPrivate() : key.toString());
                 builder.append("\n");
@@ -2460,17 +2514,14 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                         // graph we can never reliably kill all transactions we might have that were rooted in
                         // this coinbase tx. Some can just go pending forever, like the Satoshi client. However we
                         // can do our best.
-                        //
-                        // TODO: Is it better to try and sometimes fail, or not try at all?
-                        killCoinbase(tx);
+                        log.warn("Coinbase killed by re-org: {}", tx.getHashAsString());
+                        killTx(null, ImmutableList.of(tx));
                     } else {
                         for (TransactionOutput output : tx.getOutputs()) {
                             TransactionInput input = output.getSpentBy();
                             if (input != null) input.disconnect();
                         }
-                        for (TransactionInput input : tx.getInputs()) {
-                            input.disconnect();
-                        }
+                        tx.disconnectInputs();
                         oldChainTxns.add(tx);
                         unspent.remove(txHash);
                         spent.remove(txHash);
@@ -3414,7 +3465,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
 
                 int size = 0;
                 TransactionOutput changeOutput = null;
-                if (change.compareTo(BigInteger.ZERO) > 0) {
+                if (change.signum() > 0) {
                     // The value of the inputs is greater than what we want to send. Just like in real life then,
                     // we need to take back some coins ... this is called "change". Add another output that sends the change
                     // back to us. The address comes either from the request or getChangeAddress() as a default.
@@ -3453,7 +3504,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 // include things we haven't added yet like input signatures/scripts or the change output.
                 size += req.tx.bitcoinSerialize().length;
                 size += estimateBytesForSigning(selection);
-                if (size/1000 > lastCalculatedSize/1000 && req.feePerKb.compareTo(BigInteger.ZERO) > 0) {
+                if (size/1000 > lastCalculatedSize/1000 && req.feePerKb.signum() > 0) {
                     lastCalculatedSize = size;
                     // We need more fees anyway, just try again with the same additional value
                     additionalValueForNextCategory = additionalValueSelected;

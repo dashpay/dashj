@@ -472,7 +472,7 @@ public class Script {
      * spending input to provide a program matching that hash. This rule is "soft enforced" by the network as it does
      * not exist in Satoshis original implementation. It means blocks containing P2SH transactions that don't match
      * correctly are considered valid, but won't be mined upon, so they'll be rapidly re-orgd out of the chain. This
-     * logic is defined by <a href="https://en.bitcoin.it/wiki/BIP_0016">BIP 16</a>.</p>
+     * logic is defined by <a href="https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki">BIP 16</a>.</p>
      *
      * <p>bitcoinj does not support creation of P2SH transactions today. The goal of P2SH is to allow short addresses
      * even for complex scripts (eg, multi-sig outputs) so they are convenient to work with in things like QRcodes or
@@ -660,10 +660,7 @@ public class Script {
                     continue;
                 
                 switch(opcode) {
-                case OP_0:
-                    // This is also OP_FALSE (they are both zero).
-                    stack.add(new byte[]{0});
-                    break;
+                // OP_0 is no opcode
                 case OP_1NEGATE:
                     stack.add(Utils.reverseBytes(Utils.encodeMPI(BigInteger.ONE.negate(), false)));
                     break;
@@ -883,7 +880,7 @@ public class Script {
                         numericOPnum = numericOPnum.negate();
                         break;
                     case OP_ABS:
-                        if (numericOPnum.compareTo(BigInteger.ZERO) < 0)
+                        if (numericOPnum.signum() < 0)
                             numericOPnum = numericOPnum.negate();
                         break;
                     case OP_NOT:
