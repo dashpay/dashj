@@ -134,7 +134,7 @@ public class PeerGroup extends AbstractExecutionThreadService implements Transac
         }
     };
 
-    private int minBroadcastConnections = 0;
+    private int minBroadcastConnections = CoinDefinition.minBroadcastConnections;
     private Runnable bloomSendIfChanged = new Runnable() {
         @Override public void run() {
             recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);

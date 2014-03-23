@@ -165,6 +165,8 @@ public class CoinDefinition {
     //"173.228.105.207"
     };
 
+    public static int minBroadcastConnections = 0;   //0 for default; we need more peers.
+
     //
     // TestNet - digitalcoin - not tested
     //
