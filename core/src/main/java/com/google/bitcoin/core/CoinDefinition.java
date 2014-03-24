@@ -71,6 +71,10 @@ public class CoinDefinition {
         else
             return INTERVAL;      //108
     }
+    public static final int getIntervalCheckpoints() {
+            return INTERVAL_0;    //1080
+
+    }
     public static final int getTargetTimespan(int height, boolean testNet) {
         if(height < nDifficultySwitchHeight)
             return TARGET_TIMESPAN_0;  //3.5 days
@@ -144,6 +148,8 @@ public class CoinDefinition {
             "dgc.kadaplace.com",
             //"dnsseed.digitalcoin.co",
             "dnsseed.rc.altcointech.net",
+            "54.208.77.156",
+            "68.14.170.140",
             //"207.12.89.119",
             //"198.50.30.145",
             //"178.237.35.34",
