@@ -21,16 +21,16 @@
   <parent>
     <groupId>com.google</groupId>
 
-    <artifactId>digitalcoinj-parent</artifactId>
+    <artifactId>limecoinj-parent</artifactId>
     <version>0.12-SNAPSHOT</version>
 
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>digitalcoinj-tools</artifactId>
+  <artifactId>limecoinj-tools</artifactId>
 
-  <name>digitalcoinj Tools</name>
-  <description>A collection of useful tools that use the digitalcoinj library to perform wallet operations</description>
+  <name>limecoinj Tools</name>
+  <description>A collection of useful tools that use the limecoinj library to perform wallet operations</description>
 
   <build>
 
@@ -74,7 +74,7 @@
   <dependencies>
     <dependency>
       <groupId>com.google</groupId>
-      <artifactId>digitalcoinj</artifactId>
+      <artifactId>limecoinj</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>

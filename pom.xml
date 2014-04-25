@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.google</groupId>
-  <artifactId>digitalcoinj-parent</artifactId>
+  <artifactId>limecoinj-parent</artifactId>
   <version>0.12-SNAPSHOT</version>
   <packaging>pom</packaging>
 
@@ -25,9 +25,9 @@
         <url>http://code.google.com/p/bitcoinj/source/browse</url>
     </scm>
 
-  <name>digitalcoinj Parent</name>
-  <description>Provides the common configuration for the digitalcoinJ modules</description>
-  <url>https://github.com/HashEngineering/digitalcoinj</url>
+  <name>limecoinj Parent</name>
+  <description>Provides the common configuration for the limecoinJ modules</description>
+  <url>https://github.com/HashEngineering/limecoinj</url>
 
   <licenses>
     <license>
@@ -40,19 +40,19 @@
 
   <issueManagement>
     <system>Google Code</system>
-    <url>http://code.google.com/p/digitalcoinj/issues/list</url>
+    <url>http://code.google.com/p/limecoinj/issues/list</url>
   </issueManagement>
 
   <mailingLists>
     <mailingList>
-      <name>digitalcoinj Google Group</name>
-      <post>https://groups.google.com/forum/#!forum/digitalcoinj</post>
+      <name>limecoinj Google Group</name>
+      <post>https://groups.google.com/forum/#!forum/limecoinj</post>
     </mailingList>
   </mailingLists>
 
   <repositories>
     <repository>
-        <id>digitalcoinj-distribution</id>
+        <id>limecoinj-distribution</id>
         <url>https://distribution.bitcoinj.googlecode.com/git/releases</url>
     </repository>
   </repositories>
@@ -82,7 +82,7 @@
         <artifactId>slf4j-api</artifactId>
         <version>1.7.6</version>
       </dependency>
-      <!-- digitalcoinj consumers are expected to provide their own SLF4J adapters
+      <!-- limecoinj consumers are expected to provide their own SLF4J adapters
     such as logback, slf4j-log4j12, slf4j-jcl and so on
     see http://www.slf4j.org/faq.html -->
       <dependency>
