@@ -21,14 +21,14 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.google</groupId>
-        <artifactId>limecoinj-parent</artifactId>
+        <artifactId>darkcoinj-parent</artifactId>
         <version>0.12-SNAPSHOT</version>
     </parent>
 
-    <artifactId>limecoinj</artifactId>
+    <artifactId>darkcoinj</artifactId>
 
-    <name>limecoinj</name>
-    <description>A Java limecoin library</description>
+    <name>darkcoinj</name>
+    <description>A Java darkcoin library</description>
 
     <packaging>jar</packaging>
 
@@ -226,7 +226,7 @@
             <version>3.0</version>
             <scope>test</scope>
         </dependency>
-        <!-- limecoinj consumers are expected to provide their own SLF4J adapters
+        <!-- darkcoinj consumers are expected to provide their own SLF4J adapters
              such as logback, slf4j-log4j12, slf4j-jcl and so on
              see http://www.slf4j.org/faq.html -->
         <dependency>

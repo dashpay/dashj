@@ -801,13 +801,12 @@ public abstract class AbstractBlockChain {
 
         int DiffMode = 1;
         if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
-            if (storedPrev.getHeight()+1 >= 15) { DiffMode = 4; }
-            else if (storedPrev.getHeight()+1 >= 5) { DiffMode = 3; }
+            if (storedPrev.getHeight()+1 >= 16) { DiffMode = 4; }
         }
         else {
-            if (storedPrev.getHeight()+1 >= 1600) { DiffMode = 4; }
-            else if (storedPrev.getHeight()+1 >= 1400) { DiffMode = 3; }
-            else if (storedPrev.getHeight()+1 >= 1200) { DiffMode = 2; }
+            if (storedPrev.getHeight()+1 >= 45000) { DiffMode = 4; }
+            else if (storedPrev.getHeight()+1 >= 34140) { DiffMode = 3; }
+            else if (storedPrev.getHeight()+1 >= 15200) { DiffMode = 2; }
         }
 
         if (DiffMode == 1) { checkDifficultyTransitions_V1(storedPrev, nextBlock); return; }
@@ -815,12 +814,11 @@ public abstract class AbstractBlockChain {
         else if (DiffMode == 3) { DarkGravityWave(storedPrev, nextBlock); return;}
         else if (DiffMode == 4) { DarkGravityWave2(storedPrev, nextBlock); return; }
 
-        DarkGravityWave2(storedPrev, nextBlock);
+        DarkGravityWave3(storedPrev, nextBlock);
 
         return;
 
     }
-
     private void DarkGravityWave(StoredBlock storedPrev, Block nextBlock) {
     /* current difficulty formula, limecoin - DarkGravity, written by Evan Duffield - evan@limecoin.io */
         StoredBlock BlockLastSolved = storedPrev;
@@ -953,7 +951,8 @@ public abstract class AbstractBlockChain {
 
             if(LastBlockTime > 0){
                 long Diff = (LastBlockTime - BlockReading.getHeader().getTimeSeconds());
-                //if(Diff < 0) Diff = 0;
+                //if(Diff < 0)
+                //   Diff = 0;
                 if(nBlockTimeCount <= PastBlocksMin) {
                     nBlockTimeCount++;
 
@@ -988,8 +987,8 @@ public abstract class AbstractBlockChain {
             if(SmartAverage < 1) SmartAverage = 1;
             double Shift = CoinDefinition.TARGET_SPACING/SmartAverage;
 
-            double fActualTimespan = (((double)CountBlocks*(double)CoinDefinition.TARGET_SPACING)/Shift);
-            double fTargetTimespan = ((double)CountBlocks*(double)CoinDefinition.TARGET_SPACING);
+            double fActualTimespan = ((CountBlocks*CoinDefinition.TARGET_SPACING)/Shift);
+            double fTargetTimespan = (CountBlocks*CoinDefinition.TARGET_SPACING);
             if (fActualTimespan < fTargetTimespan/3)
                 fActualTimespan = fTargetTimespan/3;
             if (fActualTimespan > fTargetTimespan*3)
@@ -1009,6 +1008,81 @@ public abstract class AbstractBlockChain {
         }
 
         return bnNew.GetCompact();*/
+    }
+    private void DarkGravityWave3(StoredBlock storedPrev, Block nextBlock) {
+    /* current difficulty formula, limecoin - DarkGravity, written by Evan Duffield - evan@limecoin.io */
+        StoredBlock BlockLastSolved = storedPrev;
+        StoredBlock BlockReading = storedPrev;
+        Block BlockCreating = nextBlock;
+        //BlockCreating = BlockCreating;
+        long nBlockTimeAverage = 0;
+        long nBlockTimeAveragePrev = 0;
+        long nBlockTimeCount = 0;
+        long nBlockTimeSum2 = 0;
+        long nBlockTimeCount2 = 0;
+        long nActualTimespan = 0;
+        long LastBlockTime = 0;
+        long PastBlocksMin = 24;
+        long PastBlocksMax = 24;
+        long CountBlocks = 0;
+        BigInteger PastDifficultyAverage = BigInteger.valueOf(0);
+        BigInteger PastDifficultyAveragePrev = BigInteger.valueOf(0);
+
+        //if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || BlockLastSolved->nHeight < PastBlocksMin) { return bnProofOfWorkLimit.GetCompact(); }
+        if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || (long)BlockLastSolved.getHeight() < PastBlocksMin)
+        { verifyDifficulty(params.getProofOfWorkLimit(), nextBlock); }
+
+        for (int i = 1; BlockReading != null && BlockReading.getHeight() > 0; i++) {
+            if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
+            CountBlocks++;
+
+            if(CountBlocks <= PastBlocksMin) {
+                if (CountBlocks == 1) { PastDifficultyAverage = BlockReading.getHeader().getDifficultyTargetAsInteger(); }
+                else
+                {
+                    //PastDifficultyAverage = ((CBigNum().SetCompact(BlockReading->nBits) - PastDifficultyAveragePrev) / CountBlocks) + PastDifficultyAveragePrev;
+                    PastDifficultyAverage = PastDifficultyAveragePrev.multiply(BigInteger.valueOf(CountBlocks)).add(BlockReading.getHeader().getDifficultyTargetAsInteger()).divide(BigInteger.valueOf(CountBlocks + 1));
+                }
+                PastDifficultyAveragePrev = PastDifficultyAverage;
+            }
+
+            if(LastBlockTime > 0){
+                long Diff = (LastBlockTime - BlockReading.getHeader().getTimeSeconds());
+                nActualTimespan += Diff;
+            }
+            LastBlockTime = BlockReading.getHeader().getTimeSeconds();
+
+            //if (BlockReading->pprev == NULL)
+            try {
+                StoredBlock BlockReadingPrev = blockStore.get(BlockReading.getHeader().getPrevBlockHash());
+                if (BlockReadingPrev == null)
+                {
+                    //assert(BlockReading); break;
+                    return;
+                }
+                BlockReading = BlockReadingPrev;
+            }
+            catch(BlockStoreException x)
+            {
+                return;
+            }
+        }
+
+        BigInteger bnNew = PastDifficultyAverage;
+        long nTargetTimespan = CountBlocks * params.TARGET_SPACING;
+
+        if (nBlockTimeCount != 0 && nBlockTimeCount2 != 0) {
+            if (nActualTimespan < nTargetTimespan/3)
+                nActualTimespan = nTargetTimespan/3;
+            if (nActualTimespan > nTargetTimespan*3)
+                nActualTimespan = nTargetTimespan*3;
+
+             // Retarget
+            bnNew = bnNew.multiply(BigInteger.valueOf(nActualTimespan));
+            bnNew = bnNew.divide(BigInteger.valueOf(nTargetTimespan));
+        }
+        verifyDifficulty(bnNew, nextBlock);
+
     }
 
 
@@ -1087,7 +1161,7 @@ public abstract class AbstractBlockChain {
     }
 
     private void checkDifficultyTransitions_V2(StoredBlock storedPrev, Block nextBlock) throws BlockStoreException, VerificationException {
-        final long      	BlocksTargetSpacing			= 10 * 60; // 10 minutes
+        final long      	BlocksTargetSpacing			= (long)(2.5 * 60); // 10 minutes
         int         		TimeDaySeconds				= 60 * 60 * 24;
         long				PastSecondsMin				= TimeDaySeconds / 40;
         long				PastSecondsMax				= TimeDaySeconds * 7;

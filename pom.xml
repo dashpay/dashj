@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.google</groupId>
-  <artifactId>limecoinj-parent</artifactId>
+  <artifactId>darkcoinj-parent</artifactId>
   <version>0.12-SNAPSHOT</version>
   <packaging>pom</packaging>
 
@@ -25,9 +25,9 @@
         <url>http://code.google.com/p/bitcoinj/source/browse</url>
     </scm>
 
-  <name>limecoinj Parent</name>
-  <description>Provides the common configuration for the limecoinJ modules</description>
-  <url>https://github.com/HashEngineering/limecoinj</url>
+  <name>darkcoinj Parent</name>
+  <description>Provides the common configuration for the darkcoinJ modules</description>
+  <url>https://github.com/HashEngineering/darkcoinj</url>
 
   <licenses>
     <license>
@@ -40,19 +40,19 @@
 
   <issueManagement>
     <system>Google Code</system>
-    <url>http://code.google.com/p/limecoinj/issues/list</url>
+    <url>http://code.google.com/p/darkcoinj/issues/list</url>
   </issueManagement>
 
   <mailingLists>
     <mailingList>
-      <name>limecoinj Google Group</name>
-      <post>https://groups.google.com/forum/#!forum/limecoinj</post>
+      <name>darkcoinj Google Group</name>
+      <post>https://groups.google.com/forum/#!forum/darkcoinj</post>
     </mailingList>
   </mailingLists>
 
   <repositories>
     <repository>
-        <id>limecoinj-distribution</id>
+        <id>darkcoinj-distribution</id>
         <url>https://distribution.bitcoinj.googlecode.com/git/releases</url>
     </repository>
   </repositories>
@@ -82,7 +82,7 @@
         <artifactId>slf4j-api</artifactId>
         <version>1.7.6</version>
       </dependency>
-      <!-- limecoinj consumers are expected to provide their own SLF4J adapters
+      <!-- darkcoinj consumers are expected to provide their own SLF4J adapters
     such as logback, slf4j-log4j12, slf4j-jcl and so on
     see http://www.slf4j.org/faq.html -->
       <dependency>
