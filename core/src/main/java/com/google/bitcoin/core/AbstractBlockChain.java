@@ -804,7 +804,7 @@ public abstract class AbstractBlockChain {
             if (storedPrev.getHeight()+1 >= 16) { DiffMode = 4; }
         }
         else {
-            if (storedPrev.getHeight()+1 >= 45000) { DiffMode = 4; }
+            if (storedPrev.getHeight()+1 >= 68589) { DiffMode = 4; }
             else if (storedPrev.getHeight()+1 >= 34140) { DiffMode = 3; }
             else if (storedPrev.getHeight()+1 >= 15200) { DiffMode = 2; }
         }
@@ -812,14 +812,14 @@ public abstract class AbstractBlockChain {
         if (DiffMode == 1) { checkDifficultyTransitions_V1(storedPrev, nextBlock); return; }
         else if (DiffMode == 2) { checkDifficultyTransitions_V2(storedPrev, nextBlock); return;}
         else if (DiffMode == 3) { DarkGravityWave(storedPrev, nextBlock); return;}
-        else if (DiffMode == 4) { DarkGravityWave2(storedPrev, nextBlock); return; }
+        else if (DiffMode == 4) { DarkGravityWave3(storedPrev, nextBlock); return; }
 
         DarkGravityWave3(storedPrev, nextBlock);
 
         return;
 
     }
-    private void DarkGravityWave(StoredBlock storedPrev, Block nextBlock) {
+    private void DarkGravityWave1(StoredBlock storedPrev, Block nextBlock) {
     /* current difficulty formula, limecoin - DarkGravity, written by Evan Duffield - evan@limecoin.io */
         StoredBlock BlockLastSolved = storedPrev;
         StoredBlock BlockReading = storedPrev;
@@ -839,7 +839,7 @@ public abstract class AbstractBlockChain {
 
         //if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || BlockLastSolved->nHeight < PastBlocksMin) { return bnProofOfWorkLimit.GetCompact(); }
         if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || (long)BlockLastSolved.getHeight() < PastBlocksMin)
-        { verifyDifficulty(params.getProofOfWorkLimit(), nextBlock); }
+        { verifyDifficulty(params.getProofOfWorkLimit(), storedPrev, nextBlock); }
 
         for (int i = 1; BlockReading != null && BlockReading.getHeight() > 0; i++) {
             if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
@@ -904,7 +904,7 @@ public abstract class AbstractBlockChain {
             bnNew = bnNew.multiply(BigInteger.valueOf(nActualTimespan));
             bnNew = bnNew.divide(BigInteger.valueOf(nTargetTimespan));
         }
-        verifyDifficulty(bnNew, nextBlock);
+        verifyDifficulty(bnNew, storedPrev, nextBlock);
 
         /*if (bnNew > bnProofOfWorkLimit){
             bnNew = bnProofOfWorkLimit;
@@ -912,7 +912,7 @@ public abstract class AbstractBlockChain {
 
         return bnNew.GetCompact();*/
     }
-    private void DarkGravityWave2(StoredBlock storedPrev, Block nextBlock) {
+    private void DarkGravityWave(StoredBlock storedPrev, Block nextBlock) {
     /* current difficulty formula, limecoin - DarkGravity, written by Evan Duffield - evan@limecoin.io */
         StoredBlock BlockLastSolved = storedPrev;
         StoredBlock BlockReading = storedPrev;
@@ -932,10 +932,13 @@ public abstract class AbstractBlockChain {
 
         //if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || BlockLastSolved->nHeight < PastBlocksMin) { return bnProofOfWorkLimit.GetCompact(); }
         if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || (long)BlockLastSolved.getHeight() < PastBlocksMin)
-        { verifyDifficulty(params.getProofOfWorkLimit(), nextBlock); }
+        { verifyDifficulty(params.getProofOfWorkLimit(), storedPrev, nextBlock); }
 
         for (int i = 1; BlockReading != null && BlockReading.getHeight() > 0; i++) {
-            if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
+            if (PastBlocksMax > 0 && i > PastBlocksMax)
+            {
+                break;
+            }
             CountBlocks++;
 
             if(CountBlocks <= PastBlocksMin) {
@@ -987,8 +990,8 @@ public abstract class AbstractBlockChain {
             if(SmartAverage < 1) SmartAverage = 1;
             double Shift = CoinDefinition.TARGET_SPACING/SmartAverage;
 
-            double fActualTimespan = ((CountBlocks*CoinDefinition.TARGET_SPACING)/Shift);
-            double fTargetTimespan = (CountBlocks*CoinDefinition.TARGET_SPACING);
+            double fActualTimespan = (((double)CountBlocks*(double)CoinDefinition.TARGET_SPACING)/Shift);
+            double fTargetTimespan = ((double)CountBlocks*CoinDefinition.TARGET_SPACING);
             if (fActualTimespan < fTargetTimespan/3)
                 fActualTimespan = fTargetTimespan/3;
             if (fActualTimespan > fTargetTimespan*3)
@@ -1001,7 +1004,7 @@ public abstract class AbstractBlockChain {
             bnNew = bnNew.multiply(BigInteger.valueOf(nActualTimespan));
             bnNew = bnNew.divide(BigInteger.valueOf(nTargetTimespan));
         }
-        verifyDifficulty(bnNew, nextBlock);
+        verifyDifficulty(bnNew, storedPrev, nextBlock);
 
         /*if (bnNew > bnProofOfWorkLimit){
             bnNew = bnProofOfWorkLimit;
@@ -1010,27 +1013,23 @@ public abstract class AbstractBlockChain {
         return bnNew.GetCompact();*/
     }
     private void DarkGravityWave3(StoredBlock storedPrev, Block nextBlock) {
-    /* current difficulty formula, limecoin - DarkGravity, written by Evan Duffield - evan@limecoin.io */
+        /* current difficulty formula, darkcoin - DarkGravity v3, written by Evan Duffield - evan@darkcoin.io */
         StoredBlock BlockLastSolved = storedPrev;
         StoredBlock BlockReading = storedPrev;
         Block BlockCreating = nextBlock;
-        //BlockCreating = BlockCreating;
-        long nBlockTimeAverage = 0;
-        long nBlockTimeAveragePrev = 0;
-        long nBlockTimeCount = 0;
-        long nBlockTimeSum2 = 0;
-        long nBlockTimeCount2 = 0;
+        BlockCreating = BlockCreating;
         long nActualTimespan = 0;
         long LastBlockTime = 0;
         long PastBlocksMin = 24;
         long PastBlocksMax = 24;
         long CountBlocks = 0;
-        BigInteger PastDifficultyAverage = BigInteger.valueOf(0);
-        BigInteger PastDifficultyAveragePrev = BigInteger.valueOf(0);
+        BigInteger PastDifficultyAverage = BigInteger.ZERO;
+        BigInteger PastDifficultyAveragePrev = BigInteger.ZERO;
 
-        //if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || BlockLastSolved->nHeight < PastBlocksMin) { return bnProofOfWorkLimit.GetCompact(); }
-        if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || (long)BlockLastSolved.getHeight() < PastBlocksMin)
-        { verifyDifficulty(params.getProofOfWorkLimit(), nextBlock); }
+        if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || BlockLastSolved.getHeight() < PastBlocksMin) {
+            verifyDifficulty(params.getProofOfWorkLimit(), storedPrev, nextBlock);
+            return;
+        }
 
         for (int i = 1; BlockReading != null && BlockReading.getHeight() > 0; i++) {
             if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
@@ -1038,11 +1037,7 @@ public abstract class AbstractBlockChain {
 
             if(CountBlocks <= PastBlocksMin) {
                 if (CountBlocks == 1) { PastDifficultyAverage = BlockReading.getHeader().getDifficultyTargetAsInteger(); }
-                else
-                {
-                    //PastDifficultyAverage = ((CBigNum().SetCompact(BlockReading->nBits) - PastDifficultyAveragePrev) / CountBlocks) + PastDifficultyAveragePrev;
-                    PastDifficultyAverage = PastDifficultyAveragePrev.multiply(BigInteger.valueOf(CountBlocks)).add(BlockReading.getHeader().getDifficultyTargetAsInteger()).divide(BigInteger.valueOf(CountBlocks + 1));
-                }
+                else { PastDifficultyAverage = ((PastDifficultyAveragePrev.multiply(BigInteger.valueOf(CountBlocks)).add(BlockReading.getHeader().getDifficultyTargetAsInteger()).divide(BigInteger.valueOf(CountBlocks + 1)))); }
                 PastDifficultyAveragePrev = PastDifficultyAverage;
             }
 
@@ -1052,7 +1047,6 @@ public abstract class AbstractBlockChain {
             }
             LastBlockTime = BlockReading.getHeader().getTimeSeconds();
 
-            //if (BlockReading->pprev == NULL)
             try {
                 StoredBlock BlockReadingPrev = blockStore.get(BlockReading.getHeader().getPrevBlockHash());
                 if (BlockReadingPrev == null)
@@ -1068,21 +1062,20 @@ public abstract class AbstractBlockChain {
             }
         }
 
-        BigInteger bnNew = PastDifficultyAverage;
-        long nTargetTimespan = CountBlocks * params.TARGET_SPACING;
+        BigInteger bnNew= PastDifficultyAverage;
 
-        if (nBlockTimeCount != 0 && nBlockTimeCount2 != 0) {
-            if (nActualTimespan < nTargetTimespan/3)
-                nActualTimespan = nTargetTimespan/3;
-            if (nActualTimespan > nTargetTimespan*3)
-                nActualTimespan = nTargetTimespan*3;
+        long nTargetTimespan = CountBlocks*params.TARGET_SPACING;//nTargetSpacing;
 
-             // Retarget
-            bnNew = bnNew.multiply(BigInteger.valueOf(nActualTimespan));
-            bnNew = bnNew.divide(BigInteger.valueOf(nTargetTimespan));
-        }
-        verifyDifficulty(bnNew, nextBlock);
+        if (nActualTimespan < nTargetTimespan/3)
+            nActualTimespan = nTargetTimespan/3;
+        if (nActualTimespan > nTargetTimespan*3)
+            nActualTimespan = nTargetTimespan*3;
 
+        // Retarget
+        bnNew = bnNew.multiply(BigInteger.valueOf(nActualTimespan));
+        bnNew = bnNew.divide(BigInteger.valueOf(nTargetTimespan));
+        verifyDifficulty(bnNew, storedPrev, nextBlock);
+        
     }
 
 
@@ -1218,7 +1211,7 @@ public abstract class AbstractBlockChain {
         long start = System.currentTimeMillis();
 
         if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || (long)BlockLastSolved.getHeight() < PastBlocksMin)
-        { verifyDifficulty(params.getProofOfWorkLimit(), nextBlock); }
+        { verifyDifficulty(params.getProofOfWorkLimit(), storedPrev, nextBlock); }
 
         int i = 0;
         long LatestBlockTime = BlockLastSolved.getHeader().getTimeSeconds();
@@ -1291,11 +1284,31 @@ public abstract class AbstractBlockChain {
 
 
         //log.info("KGW-j Difficulty Calculated: {}", newDifficulty.toString(16));
-        verifyDifficulty(newDifficulty, nextBlock);
+        verifyDifficulty(newDifficulty, storedPrev, nextBlock);
 
     }
 
-    private void verifyDifficulty(BigInteger calcDiff, Block nextBlock)
+    static double ConvertBitsToDouble(long nBits){
+        long nShift = (nBits >> 24) & 0xff;
+
+        double dDiff =
+                (double)0x0000ffff / (double)(nBits & 0x00ffffff);
+
+        while (nShift < 29)
+        {
+            dDiff *= 256.0;
+            nShift++;
+        }
+        while (nShift > 29)
+        {
+            dDiff /= 256.0;
+            nShift--;
+        }
+
+        return dDiff;
+    }
+
+    private void verifyDifficulty(BigInteger calcDiff, StoredBlock storedPrev, Block nextBlock)
     {
         if (calcDiff.compareTo(params.getProofOfWorkLimit()) > 0) {
             log.info("Difficulty hit proof of work limit: {}", calcDiff.toString(16));
@@ -1307,10 +1320,78 @@ public abstract class AbstractBlockChain {
         // The calculated difficulty is to a higher precision than received, so reduce here.
         BigInteger mask = BigInteger.valueOf(0xFFFFFFL).shiftLeft(accuracyBytes * 8);
         calcDiff = calcDiff.and(mask);
+        if(params.getId().compareTo(params.ID_TESTNET) == 0)
+        {
+            if (calcDiff.compareTo(receivedDifficulty) != 0)
+                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                        receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+        }
+        else
+        {
 
-        if (calcDiff.compareTo(receivedDifficulty) != 0)
-            throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
-                    receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+
+
+            int height = storedPrev.getHeight() + 1;
+            if(System.getProperty("os.name").toLowerCase().contains("windows"))
+            {
+                if(height >= 34140)
+                {
+                    long nBitsNext = nextBlock.getDifficultyTarget();
+
+                    long calcDiffBits = (accuracyBytes+3) << 24;
+                    calcDiffBits |= calcDiff.shiftRight(accuracyBytes*8).longValue();
+
+                    double n1 = ConvertBitsToDouble(calcDiffBits);
+                    double n2 = ConvertBitsToDouble(nBitsNext);
+
+                    if(height <= 45000) {
+
+
+                        if(java.lang.Math.abs(n1-n2) > n1*0.2)
+                            throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                    receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+
+
+                    }
+                    else if(java.lang.Math.abs(n1-n2) > n1*0.005)
+                        throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+
+                }
+                else
+                {
+                    if (calcDiff.compareTo(receivedDifficulty) != 0)
+                        throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+                }
+            }
+            else
+            {
+
+            if(height >= 34140 && height <= 45000)
+            {
+                long nBitsNext = nextBlock.getDifficultyTarget();
+
+                long calcDiffBits = (accuracyBytes+3) << 24;
+                calcDiffBits |= calcDiff.shiftRight(accuracyBytes*8).longValue();
+
+                double n1 = ConvertBitsToDouble(calcDiffBits);
+                double n2 = ConvertBitsToDouble(nBitsNext);
+
+                if(java.lang.Math.abs(n1-n2) > n1*0.2)
+                    throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                            receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+
+            }
+            else
+            {
+                if (calcDiff.compareTo(receivedDifficulty) != 0)
+                    throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                            receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+            }
+
+            }
+        }
     }
 
     private void checkTestnetDifficulty(StoredBlock storedPrev, Block prev, Block next) throws VerificationException, BlockStoreException {

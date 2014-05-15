@@ -7,9 +7,8 @@ import java.util.Vector;
 
 /**
  * Created with IntelliJ IDEA.
- * User: HashEngineering
- * Date: 8/13/13
- * Time: 7:23 PM
+ * User: Hash Engineering Solutions
+ * Date: 5/3/14
  * To change this template use File | Settings | File Templates.
  */
 public class CoinDefinition {
@@ -35,7 +34,7 @@ public class CoinDefinition {
     public static final String BLOCKEXPLORER_BLOCK_PATH = "block/";                 //blockr.io path
     public static final String BLOCKEXPLORER_BASE_URL_TEST = BLOCKEXPLORER_BASE_URL_PROD;
 
-    public static final String DONATION_ADDRESS = "8te616mgL3DM9H7dvPpajeidb6ng6HPxc1";  //HashEngineering donation DGC address
+    public static final String DONATION_ADDRESS = "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv";  //Hash Engineering donation DRK address
 
     enum CoinHash {
         SHA256,
@@ -87,7 +86,8 @@ public class CoinDefinition {
     public static final int p2shHeader = 5;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS
     public static final boolean allowBitcoinPrivateKey = false; //for backward compatibility with previous version of digitalcoin
     public static final int dumpedPrivateKeyHeader = 128;   //common to all coins
-    public static final long PacketMagic = 0xfbc0b6db;//0xbf0c6bbd;      //0xfb, 0xc0, 0xb6, 0xdb
+    public static final long oldPacketMagic = 0xfbc0b6db;      //0xfb, 0xc0, 0xb6, 0xdb
+    public static final long PacketMagic = 0xbf0c6bbd;
 
     //Genesis Block Information from main.cpp: LoadBlockIndex
     static public long genesisBlockDifficultyTarget = (0x1e0ffff0L);         //main.cpp: LoadBlockIndex
