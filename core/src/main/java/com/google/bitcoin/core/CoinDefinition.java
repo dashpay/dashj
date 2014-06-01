@@ -35,6 +35,7 @@ public class CoinDefinition {
     public static final String BLOCKEXPLORER_BASE_URL_TEST = BLOCKEXPLORER_BASE_URL_PROD;
 
     public static final String DONATION_ADDRESS = "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv";  //Hash Engineering donation DRK address
+    public static final String DONATION_ADDRESS_TESTNET = "";  //Hash Engineering donation DRK address
 
     enum CoinHash {
         SHA256,
@@ -67,10 +68,11 @@ public class CoinDefinition {
     public static final BigInteger DEFAULT_MIN_TX_FEE = BigInteger.valueOf(100000);   // MIN_TX_FEE
     public static final BigInteger DUST_LIMIT = BigInteger.valueOf(1000); //main.h CTransaction::GetMinFee        0.01 coins
 
-    public static final int PROTOCOL_VERSION = 70014;          //version.h PROTOCOL_VERSION
+    public static final int PROTOCOL_VERSION = 70015;          //version.h PROTOCOL_VERSION
     public static final int MIN_PROTOCOL_VERSION = 70002;        //version.h MIN_PROTO_VERSION
+    public static final int BIP0031_VERSION = 60000;
 
-    public static final int BLOCK_CURRENTVERSION = 1;   //CBlock::CURRENT_VERSION
+    public static final int BLOCK_CURRENTVERSION = 2;   //CBlock::CURRENT_VERSION
     public static final int MAX_BLOCK_SIZE = 1 * 1000 * 1000;
 
 
@@ -97,31 +99,47 @@ public class CoinDefinition {
     static public String genesisMerkleRoot = "e0028eb9648db56b1ac77cf090b99048a8007e2bb64b68f092c03c7f56a662c7";
     static public int genesisBlockValue = 50;                                                              //main.cpp: LoadBlockIndex
     //taken from the raw data of the block explorer
-    static public String genesisXInBytes = "04ffff001d01044c5957697265642030392f4a616e2f3230313420546865204772616e64204578706572696d656e7420476f6573204c6976653a204f76657273746f636b2e636f6d204973204e6f7720416363657074696e6720426974636f696e73";   //"limecoin se convertira en una de las monedas mas segura del mercado, checa nuestros avances"
-    static public String genessiXOutBytes = "040184710fa689ad5023690c80f3a49c8f13f8d45b8c857fbcbc8bc4a8e4d3eb4b10f4d4604fa08dce601aaf0f470216fe1b51850b4acf21b179c45070ac7b03a9";
+    static public String genesisTxInBytes = "04ffff001d01044c5957697265642030392f4a616e2f3230313420546865204772616e64204578706572696d656e7420476f6573204c6976653a204f76657273746f636b2e636f6d204973204e6f7720416363657074696e6720426974636f696e73";   //"limecoin se convertira en una de las monedas mas segura del mercado, checa nuestros avances"
+    static public String genesisTxOutBytes = "040184710fa689ad5023690c80f3a49c8f13f8d45b8c857fbcbc8bc4a8e4d3eb4b10f4d4604fa08dce601aaf0f470216fe1b51850b4acf21b179c45070ac7b03a9";
 
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
             "23.23.186.131", //Evan's seed node
-        "50.16.206.102", //InternetApe's seed node
-        "50.19.116.123",
-    "54.193.124.32",
-    "62.141.39.175",
-    "lotteryingmining.com", //"192.99.32.166"},
-    "107.155.71.72",
-    "drkpool.com", //"162.252.83.44"}
+            "162.252.83.46",  //drkpool.com
+            "107.155.71.72",
+            "50.16.206.102",
+            "50.19.116.123",
+            "98.165.130.67",
+            "23.23.186.131",
+            "50.16.206.102",
+            "50.19.116.123",
+            "50.19.116.123",
+            "23.21.204.34",
+            "188.142.39.105",
+            "50.16.206.102", //InternetApe's seed node
+            "23.23.186.131",
+            "50.19.116.123",
+            "54.248.227.151",
+            "42.121.58.91",
+            "50.81.192.39",
+            "54.193.124.32",
+            "62.141.39.175",
+            "5.254.96.3",
+            "175.115.201.44",
+            "208.53.191.2",
+            "162.243.33.16",
     };
 
     public static int minBroadcastConnections = 0;   //0 for default; we need more peers.
 
     //
-    // TestNet - limecoin - not tested
+    // TestNet - dimecoin - not tested
     //
-    public static final boolean supportsTestNet = false;
+    public static final boolean supportsTestNet = true;
     public static final int testnetAddressHeader = 111;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS_TEST
     public static final int testnetp2shHeader = 196;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS_TEST
-    public static final long testnetPacketMagic = 0xfcc1b7dc;      //0xfc, 0xc1, 0xb7, 0xdc
-    public static final String testnetGenesisHash = "5e039e1ca1dbf128973bf6cff98169e40a1b194c3b91463ab74956f413b2f9c8";
+    public static final long testnetPacketMagic = 0xcee2caff;      //
+    public static final String testnetGenesisHash = "00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c";
     static public long testnetGenesisBlockDifficultyTarget = (0x1e0ffff0L);         //main.cpp: LoadBlockIndex
     static public long testnetGenesisBlockTime = 1390666206L;                       //main.cpp: LoadBlockIndex
     static public long testnetGenesisBlockNonce = (3861367235L);                         //main.cpp: LoadBlockIndex
@@ -169,6 +187,8 @@ public class CoinDefinition {
         checkpoints.put( 23912, new Sha256Hash("0000000000335eac6703f3b1732ec8b2f89c3ba3a7889e5767b090556bb9a276"));
         checkpoints.put( 35457, new Sha256Hash("0000000000b0ae211be59b048df14820475ad0dd53b9ff83b010f71a77342d9f"));
         checkpoints.put( 45479, new Sha256Hash("000000000063d411655d590590e16960f15ceea4257122ac430c6fbe39fbf02d"));
+        checkpoints.put( 55895, new Sha256Hash("0000000000ae4c53a43639a4ca027282f69da9c67ba951768a20415b6439a2d7"));
+        checkpoints.put( 68899, new Sha256Hash("0000000000194ab4d3d9eeb1f2f792f21bb39ff767cb547fe977640f969d77b7"));
     }
 
     //Unit Test Information

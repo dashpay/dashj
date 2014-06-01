@@ -51,7 +51,7 @@ public class HeadersMessage extends Message {
     public void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         stream.write(new VarInt(blockHeaders.size()).encode());
         for (Block header : blockHeaders) {
-            if (header.transactions == null)
+            if (header.transactions == null && header.masterNodeVotes == null)
                 header.bitcoinSerializeToStream(stream);
             else
                 header.cloneAsHeader().bitcoinSerializeToStream(stream);
@@ -87,6 +87,13 @@ public class HeadersMessage extends Message {
             if (blockHeader[80] != 0)
                 throw new ProtocolException("Block header does not end with a null byte");
             Block newBlockHeader = new Block(this.params, blockHeader, true, true, 81);
+            if(newBlockHeader.shouldHaveMasterNodeVotes())
+            {
+                byte[] mnv = readBytes(1);
+                if(mnv[0] != 0)
+                    throw new ProtocolException("Block header does not end with two null bytes");
+            }
+
             blockHeaders.add(newBlockHeader);
         }
 

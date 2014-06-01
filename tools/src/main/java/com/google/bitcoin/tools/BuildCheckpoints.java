@@ -2,6 +2,7 @@ package com.google.bitcoin.tools;
 
 import com.google.bitcoin.core.*;
 import com.google.bitcoin.params.MainNetParams;
+import com.google.bitcoin.params.TestNet3Params;
 import com.google.bitcoin.store.BlockStore;
 import com.google.bitcoin.store.MemoryBlockStore;
 import com.google.bitcoin.utils.BriefLogFormatter;
@@ -42,6 +43,7 @@ public class BuildCheckpoints {
         final PeerGroup peerGroup = new PeerGroup(PARAMS, chain);
         peerGroup.addAddress(InetAddress.getLocalHost());
         peerGroup.addAddress(InetAddress.getByName("95.85.46.126"));
+        //peerGroup.addAddress(InetAddress.getByName(CoinDefinition.testnetDnsSeeds[0]));
         long now = new Date().getTime() / 1000;
         peerGroup.setFastCatchupTimeSecs(now);
 

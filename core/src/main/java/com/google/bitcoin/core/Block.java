@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.hashengineering.crypto.X11;
+import com.sun.xml.internal.ws.api.config.management.policy.ManagedServiceAssertion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,15 +88,20 @@ public class Block extends Message {
     /** If null, it means this object holds only the headers. */
     List<Transaction> transactions;
 
+    List<MasterNodeVote> masterNodeVotes;
+
     /** Stores the hash of the block. If null, getHash() will recalculate it. */
     private transient Sha256Hash hash;
     private transient Sha256Hash scryptHash;
 
     private transient boolean headerParsed;
     private transient boolean transactionsParsed;
+    private transient boolean masterNodeVotesParsed;
 
     private transient boolean headerBytesValid;
     private transient boolean transactionBytesValid;
+    private transient boolean masterNodeVotesBytesValid;
+
     
     // Blocks can be encoded in a way that will use more bytes than is optimal (due to VarInts having multiple encodings)
     // MAX_BLOCK_SIZE must be compared to the optimal encoding, not the actual encoding, so when parsing, we keep track
@@ -157,6 +163,7 @@ public class Block extends Message {
         this.difficultyTarget = difficultyTarget;
         this.nonce = nonce;
         this.transactions = new LinkedList<Transaction>();
+        this.masterNodeVotes = new LinkedList<MasterNodeVote>();
         this.transactions.addAll(transactions);
     }
 
@@ -228,6 +235,50 @@ public class Block extends Message {
         // If this is a genuine lazy parse then length must have been provided to the constructor.
         transactionsParsed = true;
         transactionBytesValid = parseRetain;
+
+        parseMasterNodeVotes();
+    }
+
+    private final long START_MASTERNODE_PAYMENTS = 1401033600; //Sun, 25 May 2014 16:00:00 GMT
+    private final long START_MASTERNODE_PAYMENTS_STOP = 1401134533; // Mon, 26 May 2014 20:02:13 GMT
+    //
+    // only call from parseTransactions
+    //
+    void parseMasterNodeVotes() throws ProtocolException {
+
+        if(getTimeSeconds() < START_MASTERNODE_PAYMENTS || getTimeSeconds() > START_MASTERNODE_PAYMENTS_STOP)
+            return;
+
+        if (masterNodeVotesParsed)
+            return;
+
+        //cursor = offset + HEADER_SIZE;
+        //optimalEncodingMessageSize = HEADER_SIZE;
+
+        //This must be done first to ensure that cursor and offset are set correctly
+        parseTransactions();
+
+        if (bytes.length == cursor) {
+            // This message is just a header, it has no master node votes.
+            masterNodeVotesParsed = true;
+            masterNodeVotesBytesValid = false;
+            return;
+        }
+
+        int numMasterNodeVotes = (int) readVarInt();
+        optimalEncodingMessageSize += VarInt.sizeOf(numMasterNodeVotes);
+        masterNodeVotes = new ArrayList<MasterNodeVote>(numMasterNodeVotes);
+        for (int i = 0; i < numMasterNodeVotes; i++) {
+            MasterNodeVote mnv = new MasterNodeVote(params, bytes, cursor, this, parseLazy, parseRetain, UNKNOWN_LENGTH);
+
+            masterNodeVotes.add(mnv);
+            cursor += mnv.getMessageSize();
+            optimalEncodingMessageSize += mnv.getOptimalEncodingMessageSize();
+        }
+        // No need to set length here. If length was not provided then it should be set at the end of parseLight().
+        // If this is a genuine lazy parse then length must have been provided to the constructor.
+        masterNodeVotesParsed = true;
+        masterNodeVotesBytesValid = parseRetain;
     }
 
     void parse() throws ProtocolException {
@@ -257,6 +308,7 @@ public class Block extends Message {
             length = cursor - offset;
         } else {
             transactionBytesValid = !transactionsParsed || parseRetain && length > HEADER_SIZE;
+            masterNodeVotesBytesValid = !masterNodeVotesParsed || parseRetain && length > HEADER_SIZE;
         }
         headerBytesValid = !headerParsed || parseRetain && length >= HEADER_SIZE;
     }
@@ -294,6 +346,7 @@ public class Block extends Message {
             parseTransactions();
             if (!parseRetain) {
                 transactionBytesValid = false;
+                masterNodeVotesBytesValid = false;
                 if (headerParsed)
                     bytes = null;
             }
@@ -303,6 +356,25 @@ public class Block extends Message {
                     e);
         }
     }
+
+    /*private void maybeParseMasterNodeVotes() {
+
+        if (masterNodeVotesParsed || bytes == null)
+            return;
+        try {
+            //maybeParseTransactions();
+            parseMasterNodeVotes();
+            if (!parseRetain) {
+                masterNodeVotesBytesValid = false;
+                if (headerParsed)
+                    bytes = null;
+            }
+        } catch (ProtocolException e) {
+            throw new LazyParseException(
+                    "ProtocolException caught during lazy parse.  For safe access to fields call ensureParsed before attempting read or write access",
+                    e);
+        }
+    }*/
 
     /**
      * Ensure the object is parsed if needed. This should be called in every getter before returning a value. If the
@@ -327,6 +399,7 @@ public class Block extends Message {
         try {
             maybeParseHeader();
             maybeParseTransactions();
+            //maybeParseMasterNodeVotes();
         } catch (LazyParseException e) {
             if (e.getCause() instanceof ProtocolException)
                 throw (ProtocolException) e.getCause();
@@ -373,7 +446,17 @@ public class Block extends Message {
             throw new ProtocolException(e);
         }
     }
-
+    /*
+    public void ensureParsedMasterNodeVotes() throws ProtocolException {
+        try {
+            maybeParseMasterNodeVotes();
+        } catch (LazyParseException e) {
+            if (e.getCause() instanceof ProtocolException)
+                throw (ProtocolException) e.getCause();
+            throw new ProtocolException(e);
+        }
+    }
+    */
     // default for testing
     void writeHeader(OutputStream stream) throws IOException {
         // try for cached write first
@@ -399,6 +482,7 @@ public class Block extends Message {
         }
 
         // confirmed we must have transactions either cached or as objects.
+        // this should write the transaction and the master node votes.
         if (transactionBytesValid && bytes != null && bytes.length >= offset + length) {
             stream.write(bytes, offset + HEADER_SIZE, length - HEADER_SIZE);
             return;
@@ -408,6 +492,34 @@ public class Block extends Message {
             stream.write(new VarInt(transactions.size()).encode());
             for (Transaction tx : transactions) {
                 tx.bitcoinSerialize(stream);
+            }
+        }
+        writeMasterNodeVotes(stream);
+    }
+    //
+    // Only call from writeTransactions
+    //
+    private void writeMasterNodeVotes(OutputStream stream) throws IOException {
+
+        if(getTimeSeconds() < START_MASTERNODE_PAYMENTS || getTimeSeconds() > START_MASTERNODE_PAYMENTS_STOP)
+            return;
+
+        // check for no transaction conditions first
+        // must be a more efficient way to do this but I'm tired atm.
+        if (masterNodeVotes == null && masterNodeVotesParsed) {
+            return;
+        }
+        //TODO:  This will not work - this should be handled above
+        // confirmed we must have master node votes either cached or as objects.
+        /*if (masterNodeVotesBytesValid && bytes != null && bytes.length >= offset + length) {
+            stream.write(bytes, offset + HEADER_SIZE, length - HEADER_SIZE);
+            return;
+        }*/
+
+        if (masterNodeVotes != null) {
+            stream.write(new VarInt(masterNodeVotes.size()).encode());
+            for (MasterNodeVote mnv : masterNodeVotes) {
+                mnv.bitcoinSerialize(stream);
             }
         }
     }
@@ -527,7 +639,7 @@ public class Block extends Message {
     /**
      * Returns the hash of the block (which for a valid, solved block should be below the target) in the form seen on
      * the block explorer. If you call this on block 1 in the production chain
-     * you will get "00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048".
+     * you will get "000007d91d1254d60e2dd1ae580383070a4ddffa4c64c2eeb4a2f9ecc0414343".
      */
     public String getHashAsString() {
         return getHash().toString();
@@ -584,6 +696,7 @@ public class Block extends Message {
         block.time = time;
         block.difficultyTarget = difficultyTarget;
         block.transactions = null;
+        block.masterNodeVotes = null;
         block.hash = getHash().duplicate();
         return block;
     }
@@ -618,6 +731,12 @@ public class Block extends Message {
             s.append("   with ").append(transactions.size()).append(" transaction(s):\n");
             for (Transaction tx : transactions) {
                 s.append(tx.toString());
+            }
+        }
+        if(masterNodeVotes != null && masterNodeVotes.size() > 0) {
+            s.append("   with ").append(masterNodeVotes.size()).append(" master node vote(s):\n");
+            for(MasterNodeVote mnv : masterNodeVotes) {
+                s.append(mnv.toString());
             }
         }
         return s.toString();
@@ -1116,5 +1235,13 @@ public class Block extends Message {
     @VisibleForTesting
     boolean isTransactionBytesValid() {
         return transactionBytesValid;
+    }
+    @VisibleForTesting
+    boolean isMasterNodeVotesBytesValid() {
+        return masterNodeVotesBytesValid;
+    }
+
+    boolean shouldHaveMasterNodeVotes() {
+        return (getTimeSeconds() >= START_MASTERNODE_PAYMENTS && getTimeSeconds() < START_MASTERNODE_PAYMENTS_STOP);
     }
 }

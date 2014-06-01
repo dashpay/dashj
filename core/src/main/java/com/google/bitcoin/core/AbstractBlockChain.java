@@ -1332,9 +1332,38 @@ public abstract class AbstractBlockChain {
 
 
             int height = storedPrev.getHeight() + 1;
-            if(System.getProperty("os.name").toLowerCase().contains("windows"))
+            ///if(System.getProperty("os.name").toLowerCase().contains("windows"))
+            //{
+            if(height <= 68589)
             {
-                if(height >= 34140)
+                long nBitsNext = nextBlock.getDifficultyTarget();
+
+                long calcDiffBits = (accuracyBytes+3) << 24;
+                calcDiffBits |= calcDiff.shiftRight(accuracyBytes*8).longValue();
+
+                double n1 = ConvertBitsToDouble(calcDiffBits);
+                double n2 = ConvertBitsToDouble(nBitsNext);
+
+
+
+
+                if(java.lang.Math.abs(n1-n2) > n1*0.2)
+                              throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+
+
+            }
+            else
+            {
+                    if (calcDiff.compareTo(receivedDifficulty) != 0)
+                        throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+            }
+
+
+
+            /*
+            if(height >= 34140)
                 {
                     long nBitsNext = nextBlock.getDifficultyTarget();
 
@@ -1364,8 +1393,10 @@ public abstract class AbstractBlockChain {
                         throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
                                 receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
                 }
-            }
-            else
+            */
+
+            //}
+            /*else
             {
 
             if(height >= 34140 && height <= 45000)
@@ -1390,7 +1421,7 @@ public abstract class AbstractBlockChain {
                             receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
             }
 
-            }
+            }*/
         }
     }
 

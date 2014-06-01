@@ -5,3 +5,5 @@ target
 .idea
 *.iml
 Thumbs.db
+obj/
+libs/

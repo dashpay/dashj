@@ -44,6 +44,13 @@ public class X11 {
         //long start = System.currentTimeMillis();
         try {
             return native_library_loaded ? x11_native(input) : x11(input);
+            /*long start = System.currentTimeMillis();
+            byte [] result = x11_native(input);
+            long end1 = System.currentTimeMillis();
+            byte [] result2 = x11(input);
+            long end2 = System.currentTimeMillis();
+            log.info("x11: native {} / java {}", end1-start, end2-end1);
+            return result;*/
         } catch (Exception e) {
             return null;
         }
@@ -79,7 +86,6 @@ public class X11 {
 
         Keccak512 keccak = new Keccak512();
         hash[5] = new Sha512Hash(keccak.digest(hash[4].getBytes()));
-
 
         Luffa512 luffa = new Luffa512();
         hash[6] = new Sha512Hash(luffa.digest(hash[5].getBytes()));

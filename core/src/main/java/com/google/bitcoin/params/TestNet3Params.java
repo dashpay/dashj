@@ -32,13 +32,13 @@ public class TestNet3Params extends NetworkParameters {
         super();
         id = ID_TESTNET;
 
-        // Genesis hash is 000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943
+        // Genesis hash is
 
-        packetMagic = 0x0b110907;
+        packetMagic = CoinDefinition.testnetPacketMagic;
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        proofOfWorkLimit = Utils.decodeCompactBits(0x1d00ffffL);
-        port = 18333;
+        proofOfWorkLimit = CoinDefinition.proofOfWorkLimit;//Utils.decodeCompactBits(0x1d00ffffL);
+        port = CoinDefinition.TestPort;
         addressHeader = CoinDefinition.testnetAddressHeader;
         p2shHeader = CoinDefinition.testnetp2shHeader;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
@@ -53,7 +53,7 @@ public class TestNet3Params extends NetworkParameters {
             checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash));
         alertSigningKey = Hex.decode(CoinDefinition.TESTNET_SATOSHI_KEY);
 
-        dnsSeeds = CoinDefinition.dnsSeeds;
+        dnsSeeds = CoinDefinition.testnetDnsSeeds;
 
     }
 

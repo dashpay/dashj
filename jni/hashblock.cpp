@@ -7,6 +7,7 @@
 #include <jni.h>
 
 
+
 jbyteArray JNICALL hash11_native(JNIEnv *env, jclass cls, jbyteArray header)
 {
     jint Plen = (env)->GetArrayLength(header);
@@ -51,7 +52,7 @@ jbyteArray JNICALL hash11_native(JNIEnv *env, jclass cls, jbyteArray header)
 }
 
 static const JNINativeMethod methods[] = {
-    { "x11_native", "([B)[B", (void *) hash9_native }
+    { "x11_native", "([B)[B", (void *) hash11_native }
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
