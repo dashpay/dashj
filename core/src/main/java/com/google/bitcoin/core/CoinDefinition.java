@@ -19,7 +19,7 @@ public class CoinDefinition {
     public static final String coinURIScheme = "darkcoin";
     public static final String cryptsyMarketId = "155";
     public static final String cryptsyMarketCurrency = "BTC";
-    public static final String PATTERN_PRIVATE_KEY_START = "6";
+    public static final String PATTERN_PRIVATE_KEY_START = "[7X]";
 
     public enum CoinPrecision {
         Coins,
@@ -189,10 +189,12 @@ public class CoinDefinition {
         checkpoints.put( 45479, new Sha256Hash("000000000063d411655d590590e16960f15ceea4257122ac430c6fbe39fbf02d"));
         checkpoints.put( 55895, new Sha256Hash("0000000000ae4c53a43639a4ca027282f69da9c67ba951768a20415b6439a2d7"));
         checkpoints.put( 68899, new Sha256Hash("0000000000194ab4d3d9eeb1f2f792f21bb39ff767cb547fe977640f969d77b7"));
+        checkpoints.put( 74619, new Sha256Hash("000000000011d28f38f05d01650a502cc3f4d0e793fbc26e2a2ca71f07dc3842"));
+        checkpoints.put( 75095, new Sha256Hash("0000000000193d12f6ad352a9996ee58ef8bdc4946818a5fec5ce99c11b87f0d"));
     }
 
     //Unit Test Information
-    public static final String UNITTEST_ADDRESS = "";
-    public static final String UNITTEST_ADDRESS_PRIVATE_KEY = "";
+    public static final String UNITTEST_ADDRESS = "XgxQxd6B8iYgEEryemnJrpvoWZ3149MCkK";
+    public static final String UNITTEST_ADDRESS_PRIVATE_KEY = "XDtvHyDHk4S3WJvwjxSANCpZiLLkKzoDnjrcRhca2iLQRtGEz1JZ";
 
 }
