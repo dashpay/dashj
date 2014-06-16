@@ -239,14 +239,20 @@ public class Block extends Message {
         parseMasterNodeVotes();
     }
 
-    private final long START_MASTERNODE_PAYMENTS = 1401033600; //Sun, 25 May 2014 16:00:00 GMT
-    private final long START_MASTERNODE_PAYMENTS_STOP = 1401134533; // Mon, 26 May 2014 20:02:13 GMT
+    private static final long START_MASTERNODE_PAYMENTS_1 = 1401033600L; //Sun, 25 May 2014 16:00:00 GMT
+    private static final long START_MASTERNODE_PAYMENTS_STOP_1 = 1401134533L; // Mon, 26 May 2014 20:02:13 GMT
+
+    private static final long START_MASTERNODE_PAYMENTS = 1403280000; //Fri, 20 Jun 2014 16:00:00 GMT
+    //private static final long START_MASTERNODE_PAYMENTS_STOP = ?
+
+    private static final long START_MASTERNODE_PAYMENTS_TESTNET_1 = 1401757793;
+    private static final long START_MASTERNODE_PAYMENTS_TESTNET = 1402440553;
     //
     // only call from parseTransactions
     //
     void parseMasterNodeVotes() throws ProtocolException {
 
-        if(getTimeSeconds() < START_MASTERNODE_PAYMENTS || getTimeSeconds() > START_MASTERNODE_PAYMENTS_STOP)
+        if(shouldHaveMasterNodeVotes() == false)
             return;
 
         if (masterNodeVotesParsed)
@@ -256,7 +262,7 @@ public class Block extends Message {
         //optimalEncodingMessageSize = HEADER_SIZE;
 
         //This must be done first to ensure that cursor and offset are set correctly
-        parseTransactions();
+        //parseTransactions();
 
         if (bytes.length == cursor) {
             // This message is just a header, it has no master node votes.
@@ -501,7 +507,7 @@ public class Block extends Message {
     //
     private void writeMasterNodeVotes(OutputStream stream) throws IOException {
 
-        if(getTimeSeconds() < START_MASTERNODE_PAYMENTS || getTimeSeconds() > START_MASTERNODE_PAYMENTS_STOP)
+        if(shouldHaveMasterNodeVotes() == false)
             return;
 
         // check for no transaction conditions first
@@ -1242,6 +1248,9 @@ public class Block extends Message {
     }
 
     boolean shouldHaveMasterNodeVotes() {
-        return (getTimeSeconds() >= START_MASTERNODE_PAYMENTS && getTimeSeconds() < START_MASTERNODE_PAYMENTS_STOP);
+        if(getParams().getId().equals(CoinDefinition.ID_MAINNET))
+            return (getTimeSeconds() > START_MASTERNODE_PAYMENTS/* && getTimeSeconds() < START_MASTERNODE_PAYMENTS_STOP*/);
+        else
+            return getTimeSeconds() > START_MASTERNODE_PAYMENTS_TESTNET;
     }
 }
