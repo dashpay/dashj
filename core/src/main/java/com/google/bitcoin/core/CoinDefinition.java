@@ -62,14 +62,14 @@ public class CoinDefinition {
     }
 
     public static int spendableCoinbaseDepth = 100; //main.h: static const int COINBASE_MATURITY
-    public static final BigInteger MAX_MONEY = BigInteger.valueOf(84000000).multiply(Utils.COIN);                 //main.h:  MAX_MONEY
+    public static final BigInteger MAX_MONEY = BigInteger.valueOf(22000000).multiply(Utils.COIN);                 //main.h:  MAX_MONEY
     //public static final String MAX_MONEY_STRING = "200000000";     //main.h:  MAX_MONEY
 
     public static final BigInteger DEFAULT_MIN_TX_FEE = BigInteger.valueOf(100000);   // MIN_TX_FEE
     public static final BigInteger DUST_LIMIT = BigInteger.valueOf(1000); //main.h CTransaction::GetMinFee        0.01 coins
 
-    public static final int PROTOCOL_VERSION = 70015;          //version.h PROTOCOL_VERSION
-    public static final int MIN_PROTOCOL_VERSION = 70002;        //version.h MIN_PROTO_VERSION
+    public static final int PROTOCOL_VERSION = 70019;          //version.h PROTOCOL_VERSION
+    public static final int MIN_PROTOCOL_VERSION = 70015;        //version.h MIN_PROTO_VERSION
     public static final int BIP0031_VERSION = 60000;
 
     public static final int BLOCK_CURRENTVERSION = 2;   //CBlock::CURRENT_VERSION
@@ -104,6 +104,8 @@ public class CoinDefinition {
 
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
+            "dnsseed.darkcoin.io",
+            "dnsseed.darkcoin.qa",
             "23.23.186.131", //Evan's seed node
             "162.252.83.46",  //drkpool.com
             "107.155.71.72",
@@ -163,6 +165,8 @@ public class CoinDefinition {
     public static BigInteger proofOfWorkLimit = Utils.decodeCompactBits(0x1e0fffffL);  //main.cpp bnProofOfWorkLimit (~uint256(0) >> 20); // digitalcoin: starting difficulty is 1 / 2^12
 
     static public String[] testnetDnsSeeds = new String[] {
+            "testnet-seed.darkcoin.io",
+            "testnet-seed.darkcoin.qa",
             "23.23.186.131"
     };
     //from main.h: CAlert::CheckSignature
@@ -191,6 +195,7 @@ public class CoinDefinition {
         checkpoints.put( 68899, new Sha256Hash("0000000000194ab4d3d9eeb1f2f792f21bb39ff767cb547fe977640f969d77b7"));
         checkpoints.put( 74619, new Sha256Hash("000000000011d28f38f05d01650a502cc3f4d0e793fbc26e2a2ca71f07dc3842"));
         checkpoints.put( 75095, new Sha256Hash("0000000000193d12f6ad352a9996ee58ef8bdc4946818a5fec5ce99c11b87f0d"));
+        checkpoints.put( 88805, new Sha256Hash("00000000001392f1652e9bf45cd8bc79dc60fe935277cd11538565b4a94fa85f"));
     }
 
     //Unit Test Information

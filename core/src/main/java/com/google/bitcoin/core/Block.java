@@ -236,17 +236,17 @@ public class Block extends Message {
         transactionsParsed = true;
         transactionBytesValid = parseRetain;
 
-        parseMasterNodeVotes();
+        //parseMasterNodeVotes();
     }
 
     private static final long START_MASTERNODE_PAYMENTS_1 = 1401033600L; //Sun, 25 May 2014 16:00:00 GMT
     private static final long START_MASTERNODE_PAYMENTS_STOP_1 = 1401134533L; // Mon, 26 May 2014 20:02:13 GMT
 
-    private static final long START_MASTERNODE_PAYMENTS = 1403280000; //Fri, 20 Jun 2014 16:00:00 GMT
+    private static final long START_MASTERNODE_PAYMENTS = 1403728576L; //Fri, 20 Jun 2014 16:00:00 GMT
     //private static final long START_MASTERNODE_PAYMENTS_STOP = ?
 
     private static final long START_MASTERNODE_PAYMENTS_TESTNET_1 = 1401757793;
-    private static final long START_MASTERNODE_PAYMENTS_TESTNET = 1402440553;
+    private static final long START_MASTERNODE_PAYMENTS_TESTNET = 1403568776L;
     //
     // only call from parseTransactions
     //
@@ -500,7 +500,7 @@ public class Block extends Message {
                 tx.bitcoinSerialize(stream);
             }
         }
-        writeMasterNodeVotes(stream);
+        //writeMasterNodeVotes(stream);
     }
     //
     // Only call from writeTransactions
