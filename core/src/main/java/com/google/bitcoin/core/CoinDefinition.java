@@ -66,7 +66,7 @@ public class CoinDefinition {
     public static final BigInteger DEFAULT_MIN_TX_FEE = BigInteger.valueOf(100000);   // MIN_TX_FEE
     public static final BigInteger DUST_LIMIT = BigInteger.valueOf(1000); //main.h CTransaction::GetMinFee        0.01 coins
 
-    public static final int PROTOCOL_VERSION = 70051;          //version.h PROTOCOL_VERSION
+    public static final int PROTOCOL_VERSION = 70054;          //version.h PROTOCOL_VERSION
     public static final int MIN_PROTOCOL_VERSION = 70046;        //version.h MIN_PROTO_VERSION
     public static final int BIP0031_VERSION = 60000;
 
@@ -74,7 +74,7 @@ public class CoinDefinition {
     public static final int MAX_BLOCK_SIZE = 1 * 1000 * 1000;
 
 
-    public static final boolean supportsBloomFiltering = false; //Requires PROTOCOL_VERSION 70000 in the client
+    public static final boolean supportsBloomFiltering = true; //Requires PROTOCOL_VERSION 70000 in the client
 
     public static final int Port    = 9999;       //protocol.h GetDefaultPort(testnet=false)
     public static final int TestPort = 19999;     //protocol.h GetDefaultPort(testnet=true)
