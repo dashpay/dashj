@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.core;
+package com.hashengineering.crypto;
 
 import com.google.common.io.ByteStreams;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Utils;
 import org.spongycastle.util.encoders.Hex;
 
 import java.io.File;
@@ -110,7 +112,7 @@ public class Sha512Hash implements Serializable, Comparable {
 
     @Override
     public String toString() {
-        return Utils.bytesToHexString(bytes);
+        return Utils.HEX.encode(bytes);
     }
 
     /**
