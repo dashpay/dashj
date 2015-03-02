@@ -1,5 +1,6 @@
 package org.darkcoinj;
 
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.TransactionInput;
 
 /**
@@ -9,9 +10,9 @@ public class DarkSendEntryVin {
     boolean isSigSet;
     TransactionInput vin;
 
-    DarkSendEntryVin()
+    DarkSendEntryVin(NetworkParameters params)
     {
         isSigSet = false;
-        vin = null;  //need to set later
+        vin = new TransactionInput(params, null, null);  //need to set later
     }
 }

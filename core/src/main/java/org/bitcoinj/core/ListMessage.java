@@ -100,6 +100,18 @@ public abstract class ListMessage extends Message {
                 case 3:
                     type = InventoryItem.Type.FilteredBlock;
                     break;
+                case 4:
+                    type = InventoryItem.Type.TransactionLockRequest;
+                    break;
+                case 5:
+                    type = InventoryItem.Type.TransactionLockVote;
+                    break;
+                case 6:
+                    type = InventoryItem.Type.Spork;
+                    break;
+                case 7:
+                    type = InventoryItem.Type.MasterNodeWinner;
+                    break;
                 default:
                     throw new ProtocolException("Unknown CInv type: " + typeCode);
             }

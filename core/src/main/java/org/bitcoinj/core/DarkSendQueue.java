@@ -15,34 +15,45 @@
  */
 package org.bitcoinj.core;
 
+import org.darkcoinj.DarkSend;
+import org.darkcoinj.DarkSendSigner;
+import org.darkcoinj.MasterNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import org.bitcoinj.script.Script;
+import java.net.InetSocketAddress;
 
+import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
 
 public class DarkSendQueue extends ChildMessage implements Serializable {
 
-    private static final Logger log = LoggerFactory.getLogger(Transaction.class);
+    private static final Logger log = LoggerFactory.getLogger(DarkSendQueue.class);
 
-    TransactionInput vinMasterNode;
-    boolean approved;
-    Sha256Hash txHash;
-    byte [] vchMasterNodeSignature;
-    int blockHeight;
-
+    TransactionInput vin;
+    long time;
+    int denom;
+    boolean ready;
+    byte[] vchSig;
 
     private transient int optimalEncodingMessageSize;
 
-    DarkSendQueue()
-    {
+    DarkCoinSystem system;
+
+    DarkSendQueue() {
+        denom = 0;
+        vin = null;
+        time = 0;
+        vchSig = null;
+        ready = false;
+
+        this.system = null;
     }
-    DarkSendQueue(NetworkParameters params, byte[] bytes, int cursor)
-    {
+
+    DarkSendQueue(NetworkParameters params, byte[] bytes, int cursor) {
         super(params, bytes, cursor);
     }
 
@@ -66,80 +77,76 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
             cursor = offset + length;
         }
     }
+
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
         // jump past version (uint32)
-        int cursor = offset;// + 4;
-        // jump past the txHash
-        cursor += 32 ;
-        //vinMasternode TransactionInput
+        int cursor = offset;
+        cursor += 4; //denom
+        //vin
         cursor += 36;
         varint = new VarInt(buf, cursor);
         long scriptLen = varint.value;
         // 4 = length of sequence field (unint32)
         cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
-        // approved
+        //time
+        cursor += 8;
+        //ready
         cursor += 1;
-
-        //vchMasterNodeSignature
+        //vchSig
         varint = new VarInt(buf, cursor);
         long size = varint.value;
         cursor += varint.getOriginalSizeInBytes();
         cursor += size;
 
-        //blockHeight
-        cursor += 4;
-
-
         return cursor - offset;
     }
+
     @Override
     void parse() throws ProtocolException {
-        if(parsed)
+        if (parsed)
             return;
 
         cursor = offset;
 
-        byte [] hash256 = readBytes(32);
-        txHash = new Sha256Hash(hash256);
-        optimalEncodingMessageSize = 32;
+        denom = (int) readUint32();
+        optimalEncodingMessageSize = 4;
 
-        vinMasterNode = new TransactionInput(params, null, payload, cursor);
-        optimalEncodingMessageSize += vinMasterNode.getMessageSize();
+        vin = new TransactionInput(params, null, payload, cursor);
+        optimalEncodingMessageSize += vin.getMessageSize();
 
-        byte [] approvedByte = readBytes(1);
-        approved = approvedByte[0] != 0 ? true : false;
+        time = readInt64();
+        optimalEncodingMessageSize += 4;
+
+        byte[] readyByte = readBytes(1);
+        ready = readyByte[0] != 0 ? true : false;
         optimalEncodingMessageSize += 1;
 
-        vchMasterNodeSignature = readByteArray();
-        optimalEncodingMessageSize += vchMasterNodeSignature.length;
-
-        blockHeight = (int)readUint32();
-        optimalEncodingMessageSize += 4;
+        vchSig = readByteArray();
+        optimalEncodingMessageSize += vchSig.length;
 
         length = cursor - offset;
 
 
     }
+
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
-        stream.write(txHash.getBytes()); //writes 32
 
-        vinMasterNode.bitcoinSerialize(stream);
+        uint32ToByteStreamLE(denom, stream);
 
-        stream.write(new VarInt(approved ? 1 : 0).encode());
+        vin.bitcoinSerialize(stream);
 
-        stream.write(new VarInt(vchMasterNodeSignature.length).encode());
-        stream.write(vchMasterNodeSignature);
+        int64ToByteStreamLE(time, stream);
 
-        uint32ToByteStreamLE(blockHeight, stream);
+        stream.write(new VarInt(ready ? 1 : 0).encode());
 
-
+        stream.write(new VarInt(vchSig.length).encode());
+        stream.write(vchSig);
     }
 
-    long getOptimalEncodingMessageSize()
-    {
+    long getOptimalEncodingMessageSize() {
         if (optimalEncodingMessageSize != 0)
             return optimalEncodingMessageSize;
         maybeParse();
@@ -149,82 +156,88 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
         return optimalEncodingMessageSize;
     }
 
-    public String toString()
-    {
-        return "not ready";
+    boolean getAddress(InetSocketAddress address) {
+        for (MasterNode mn : system.masternode.vecMasternodes) {
+            if (mn.vin == vin) {
+                address = mn.address;
+                return true;
+            }
+        }
+        return false;
     }
 
-    public long getHeight()
-    {return blockHeight;}
-    public boolean isApproved() { return approved; }
+    int getProtocolVersion() {
+        for (MasterNode mn : system.masternode.vecMasternodes) {
+            if (mn.vin == vin) {
+                return mn.protocolVersion;
+            }
+        }
+        return 0;
+    }
 
-    boolean signatureValid()
-    {
-        String errorMessage;
-        String strMessage = txHash.toString() + blockHeight + approved;
-        log.info("verify strMessage %s \n", strMessage);
+    boolean Sign() {
+        if (!DarkCoinSystem.fMasterNode) return false;
 
-        int n = GetMasternodeByVin(vinMasterNode);
+        String strMessage = vin.toString() + denom + time + ready;
 
-        if(n == -1)
-        {
-            log.warn("InstantX::CConsensusVote::SignatureValid() - Unknown Masternode\n");
+        ECKey eckey2;
+        StringBuilder errorMessage = new StringBuilder();
+
+        if ((eckey2 = DarkSendSigner.setKey(system.strMasterNodePrivKey, errorMessage)) == null) {
+            log.warn("CDarksendQueue():Relay - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage);
             return false;
         }
 
-        log.info("verify addr %s \n", vecMasternodes[0].addr.ToString().c_str());
-        log.info("verify addr %s \n", vecMasternodes[1].addr.ToString().c_str());
-        log.info("verify addr %d %s \n", n, vecMasternodes[n].addr.ToString().c_str());
+        if ((vchSig = DarkSendSigner.signMessage(strMessage, errorMessage, eckey2)) == null) {
+            log.warn("CDarksendQueue():Relay - Sign message failed");
+            return false;
+        }
 
-        CScript pubkey;
-        pubkey.SetDestination(vecMasternodes[n].pubkey2.GetID());
-        CTxDestination address1;
-        ExtractDestination(pubkey, address1);
-        CBitcoinAddress address2(address1);
-        LogPrintf("verify pubkey2 %s \n", address2.ToString().c_str());
-
-        if(!darkSendSigner.VerifyMessage(vecMasternodes[n].pubkey2, vchMasterNodeSignature, strMessage, errorMessage)) {
-            LogPrintf("InstantX::CConsensusVote::SignatureValid() - Verify message failed\n");
+        if (!DarkSendSigner.verifyMessage(eckey2, vchSig, strMessage, errorMessage)) {
+            log.warn("CDarksendQueue():Relay - Verify message failed");
             return false;
         }
 
         return true;
     }
 
-    bool CConsensusVote::Sign()
-    {
-        String errorMessage;
+    boolean Relay() {
 
-        CKey key2;
-        CPubKey pubkey2;
-        String strMessage = txHash.ToString() + blockHeight + approved;
-        log.info("signing strMessage %s \n", strMessage);
-        log.info("signing privkey %s \n", strMasterNodePrivKey);
-
-        if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, key2, pubkey2))
+       // LOCK(cs_vNodes);
+        for(Peer peer : system.peerGroup.getConnectedPeers())
         {
-            log.error("CActiveMasternode::RegisterAsMasterNode() - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage.c_str());
-            return false;
-        }
-
-        Script pubkey;
-        pubkey.SetDestination(pubkey2.GetID());
-        CTxDestination address1;
-        ExtractDestination(pubkey, address1);
-        Address address2(address1);
-        log.info("signing pubkey2 %s \n", address2.ToString().c_str());
-
-        if(!darkSendSigner.SignMessage(strMessage, errorMessage, vchMasterNodeSignature, key2)) {
-            log.error("CActiveMasternode::RegisterAsMasterNode() - Sign message failed");
-            return false;
-        }
-
-        if(!darkSendSigner.VerifyMessage(pubkey2, vchMasterNodeSignature, strMessage, errorMessage)) {
-            log.error("CActiveMasternode::RegisterAsMasterNode() - Verify message failed");
-            return false;
+            //TODO:
+            // always relay to everyone
+            peer.sendMessage(this);
+            //pnode -> PushMessage("dsq", ( * this));
         }
 
         return true;
+    }
+
+    boolean IsExpired()
+    {
+        return (Utils.currentTimeSeconds() - time) > DarkSend.DARKSEND_QUEUE_TIMEOUT;// 120 seconds
+    }
+
+    boolean CheckSignature()
+    {
+        for(MasterNode mn : system.masternode.vecMasternodes) {
+
+            if(mn.vin == vin) {
+                String strMessage = vin.toString() + denom + time + ready;
+
+                StringBuilder errorMessage = new StringBuilder();
+                if(!DarkSendSigner.verifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
+                    log.error("CDarksendQueue::CheckSignature() - Got bad masternode address signature %s \n", vin.toString());
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

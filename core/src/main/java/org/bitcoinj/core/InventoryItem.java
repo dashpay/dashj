@@ -27,7 +27,12 @@ public class InventoryItem {
         Error,
         Transaction,
         Block,
-        FilteredBlock
+        FilteredBlock,
+        TransactionLockRequest, //Darkcoin InstantX
+        TransactionLockVote,         //Darkcoin InstantX
+        Spork,
+        MasterNodeWinner,
+
     }
 
     public final Type type;

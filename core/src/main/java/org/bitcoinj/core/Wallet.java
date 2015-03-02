@@ -52,7 +52,6 @@ import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
-
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -61,7 +60,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -3102,6 +3100,8 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
 
         // Tracks if this has been passed to wallet.completeTx already: just a safety check.
         private boolean completed;
+
+        public boolean useInstantX = false;
 
         private SendRequest() {}
 
