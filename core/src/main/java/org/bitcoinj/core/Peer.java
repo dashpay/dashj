@@ -394,8 +394,10 @@ public class Peer extends PeerSocketHandler {
             if (utxosFuture != null) {
                 SettableFuture<UTXOsMessage> future = utxosFuture;
                 utxosFuture = null;
-                future.set((UTXOsMessage)m);
+                future.set((UTXOsMessage) m);
             }
+        } else if(m instanceof DarkSendElectionEntryPingMessage) {
+            // do nothing
         } else {
             log.warn("Received unhandled message: {}", m);
         }

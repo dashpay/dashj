@@ -36,7 +36,7 @@ public final class Fiat implements Monetary, Comparable<Fiat>, Serializable {
      * The absolute value of exponent of the value of a "smallest unit" in scientific notation. We picked 4 rather than
      * 2, because in financial applications it's common to use sub-cent precision.
      */
-    public static final int SMALLEST_UNIT_EXPONENT = 4;
+    public static final int SMALLEST_UNIT_EXPONENT = 8;
 
     /**
      * The number of smallest units of this monetary value.

@@ -16,6 +16,7 @@
 
 package org.bitcoinj.utils;
 
+import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.utils.BtcAutoFormat.Style;
 import static org.bitcoinj.utils.BtcAutoFormat.Style.*;
 
@@ -492,11 +493,11 @@ public abstract class BtcFormat extends Format {
      */
 
     /** The conventional international currency code for bitcoins: "BTC" */
-    private static final String COIN_CODE = "BTC";
+    private static final String COIN_CODE = CoinDefinition.coinTicker;
     /** The default currency symbols for bitcoins */
-    private static final String COIN_SYMBOL = "฿";
+    private static final String COIN_SYMBOL = "D";
     /** An alternative currency symbol to use in locales where the default symbol is used for the national currency. */
-    protected static final String COIN_SYMBOL_ALT = "Ƀ";
+    protected static final String COIN_SYMBOL_ALT = "D";
 
     protected final DecimalFormat numberFormat; // warning: mutable
     protected final int minimumFractionDigits;

@@ -12,12 +12,13 @@ import java.util.Map;
 public class CoinDefinition {
 
 
-    public static final String coinName = "Darkcoin";
+    public static final String coinName = "DarkCoin";
     public static final String coinTicker = "DRK";
     public static final String coinURIScheme = "darkcoin";
     public static final String cryptsyMarketId = "155";
     public static final String cryptsyMarketCurrency = "BTC";
-    public static final String PATTERN_PRIVATE_KEY_START = "[7X]";
+    public static final String PATTERN_PRIVATE_KEY_START_UNCOMPRESSED = "[7]";
+    public static final String PATTERN_PRIVATE_KEY_START_COMPRESSED = "[X]";
 
     public enum CoinPrecision {
         Coins,
@@ -25,6 +26,14 @@ public class CoinDefinition {
     }
     public static final CoinPrecision coinPrecision = CoinPrecision.Coins;
 
+    public static final String UNSPENT_API_URL = "https://chainz.cryptoid.info/drk/api.dws?q=unspent";
+    public enum UnspentAPIType {
+        BitEasy,
+        Blockr,
+        Abe,
+        Cryptoid,
+    };
+    public static final UnspentAPIType UnspentAPI = UnspentAPIType.Cryptoid;
 
     public static final String BLOCKEXPLORER_BASE_URL_PROD = "http://explorer.darkcoin.io/";    //blockr.io
     public static final String BLOCKEXPLORER_ADDRESS_PATH = "address/";             //blockr.io path
@@ -65,6 +74,7 @@ public class CoinDefinition {
 
     public static final long DEFAULT_MIN_TX_FEE = 100000;   // MIN_TX_FEE
     public static final long DUST_LIMIT = 1000; //main.h CTransaction::GetMinFee        0.01 coins
+    public static final long INSTANTX_FEE = 1000000;
 
     public static final int PROTOCOL_VERSION = 70054;          //version.h PROTOCOL_VERSION
     public static final int MIN_PROTOCOL_VERSION = 70046;        //version.h MIN_PROTO_VERSION
