@@ -16,22 +16,16 @@
 
 package org.bitcoinj.utils;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.math.LongMath.checkedMultiply;
-import static com.google.common.math.LongMath.checkedPow;
-import static com.google.common.math.LongMath.divide;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Monetary;
 
 import java.math.RoundingMode;
 import java.text.DecimalFormatSymbols;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Monetary;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.math.LongMath.*;
 
 /**
  * <p>
@@ -55,11 +49,11 @@ public final class MonetaryFormat {
     /** Standard format for fiat amounts. */
     public static final MonetaryFormat FIAT = new MonetaryFormat().shift(0).minDecimals(2).repeatOptionalDecimals(2, 1);
     /** Currency code for base 1 Bitcoin. */
-    public static final String CODE_BTC = "DRK";
+    public static final String CODE_BTC = "DASH";
     /** Currency code for base 1/1000 Bitcoin. */
-    public static final String CODE_MBTC = "mDRK";
+    public static final String CODE_MBTC = "mDASH";
     /** Currency code for base 1/1000000 Bitcoin. */
-    public static final String CODE_UBTC = "µDRK";
+    public static final String CODE_UBTC = "µDASH";
 
     private final char negativeSign;
     private final char positiveSign;

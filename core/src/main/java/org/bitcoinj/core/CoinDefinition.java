@@ -12,9 +12,9 @@ import java.util.Map;
 public class CoinDefinition {
 
 
-    public static final String coinName = "DarkCoin";
-    public static final String coinTicker = "DRK";
-    public static final String coinURIScheme = "darkcoin";
+    public static final String coinName = "Dash";
+    public static final String coinTicker = "DASH";
+    public static final String coinURIScheme = "dash";
     public static final String cryptsyMarketId = "155";
     public static final String cryptsyMarketCurrency = "BTC";
     public static final String PATTERN_PRIVATE_KEY_START_UNCOMPRESSED = "[7]";
@@ -39,10 +39,10 @@ public class CoinDefinition {
     public static final String BLOCKEXPLORER_ADDRESS_PATH = "address/";             //blockr.io path
     public static final String BLOCKEXPLORER_TRANSACTION_PATH = "tx/";              //blockr.io path
     public static final String BLOCKEXPLORER_BLOCK_PATH = "block/";                 //blockr.io path
-    public static final String BLOCKEXPLORER_BASE_URL_TEST = BLOCKEXPLORER_BASE_URL_PROD;
+    public static final String BLOCKEXPLORER_BASE_URL_TEST = "http://test.explorer.darkcoin.qa/chain/tDarkcoin/";
 
-    public static final String DONATION_ADDRESS = "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv";  //Hash Engineering donation DRK address
-    public static final String DONATION_ADDRESS_TESTNET = "";  //Hash Engineering donation DRK address
+    public static final String DONATION_ADDRESS = "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv";  //Hash Engineering donation DASH address
+    public static final String DONATION_ADDRESS_TESTNET = "";  //Hash Engineering donation DASH address
 
     enum CoinHash {
         SHA256,
