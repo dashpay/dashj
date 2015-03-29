@@ -15,25 +15,26 @@
  */
 package org.bitcoinj.core;
 
-import org.darkcoinj.MasterNodeSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.math.BigInteger;
+import java.util.Arrays;
 
 import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
 
-public class ConsensusVote extends ChildMessage implements Serializable {
+public class ConsensusVote extends Message implements Serializable {
 
     private static final Logger log = LoggerFactory.getLogger(ConsensusVote.class);
 
-    TransactionInput vinMasterNode;
-    boolean approved;
-    Sha256Hash txHash;
+    public TransactionInput vinMasterNode;
+    public Sha256Hash txHash;
+    public int blockHeight;
     byte [] vchMasterNodeSignature;
-    int blockHeight;
+
 
 
     private transient int optimalEncodingMessageSize;
@@ -42,11 +43,12 @@ public class ConsensusVote extends ChildMessage implements Serializable {
 
     ConsensusVote(MasterNodeSystem system)
     {
-        this.system = system;
+        this.system = MasterNodeSystem.get();
     }
-    ConsensusVote(NetworkParameters params, byte[] bytes, int cursor)
+    ConsensusVote(NetworkParameters params, byte[] payload)
     {
-        super(params, bytes, cursor);
+        super(params, payload, 0, false, false, payload.length);
+        this.system = MasterNodeSystem.get();
     }
 
     @Override
@@ -81,8 +83,6 @@ public class ConsensusVote extends ChildMessage implements Serializable {
         long scriptLen = varint.value;
         // 4 = length of sequence field (unint32)
         cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
-        // approved
-        cursor += 1;
 
         //vchMasterNodeSignature
         varint = new VarInt(buf, cursor);
@@ -103,16 +103,16 @@ public class ConsensusVote extends ChildMessage implements Serializable {
 
         cursor = offset;
 
-        byte [] hash256 = readBytes(32);
-        txHash = new Sha256Hash(hash256);
+        txHash = readHash();
         optimalEncodingMessageSize = 32;
 
-        vinMasterNode = new TransactionInput(params, null, payload, cursor);
+        TransactionOutPoint outpoint = new TransactionOutPoint(params, payload, cursor, this, parseLazy, parseRetain);
+        cursor += outpoint.getMessageSize();
+        int scriptLen = (int) readVarInt();
+        byte [] scriptBytes = readBytes(scriptLen);
+        long sequence = readUint32();
+        vinMasterNode = new TransactionInput(params, null, scriptBytes, outpoint);
         optimalEncodingMessageSize += vinMasterNode.getMessageSize();
-
-        byte [] approvedByte = readBytes(1);
-        approved = approvedByte[0] != 0 ? true : false;
-        optimalEncodingMessageSize += 1;
 
         vchMasterNodeSignature = readByteArray();
         optimalEncodingMessageSize += vchMasterNodeSignature.length;
@@ -130,8 +130,6 @@ public class ConsensusVote extends ChildMessage implements Serializable {
         stream.write(txHash.getBytes()); //writes 32
 
         vinMasterNode.bitcoinSerialize(stream);
-
-        stream.write(new VarInt(approved ? 1 : 0).encode());
 
         stream.write(new VarInt(vchMasterNodeSignature.length).encode());
         stream.write(vchMasterNodeSignature);
@@ -154,20 +152,21 @@ public class ConsensusVote extends ChildMessage implements Serializable {
 
     public String toString()
     {
-        return "not ready";
+        return "ConsensusVote: tx: " + txHash +
+                "height: " + blockHeight;
     }
 
     public long getHeight()
     {return blockHeight;}
-    public boolean isApproved() { return approved; }
-    /*
-    boolean signatureValid()
-    {
-        String errorMessage;
-        String strMessage = txHash.toString() + blockHeight + approved;
-        log.info("verify strMessage %s \n", strMessage);
 
-        int n = system.getMasternodeByVin(vinMasterNode);
+
+    public boolean signatureValid()
+    {
+        StringBuilder errorMessage = new StringBuilder();
+        String strMessage = txHash.toString() + blockHeight;
+        log.info("verify strMessage " + strMessage);
+
+        /*int n = system.getMasternodeByVin(vinMasterNode);
 
         if(n == -1)
         {
@@ -179,50 +178,55 @@ public class ConsensusVote extends ChildMessage implements Serializable {
         log.info("verify addr %s \n", system.vecMasternodes.get(1).getAddress().toString());
         log.info("verify addr %d %s \n", n, system.vecMasternodes.get(n).getAddress().toString());
 
-        CScript pubkey;
-        pubkey.SetDestination(system.vecMasternodes[n].pubkey2.GetID());
-        CTxDestination address1;
-        ExtractDestination(pubkey, address1);
-        CBitcoinAddress address2(address1);
-        LogPrintf("verify pubkey2 %s \n", address2.ToString().c_str());
+        Script pubkey;
+        //pubkey.SetDestination(system.vecMasternodes.get(n).pubkey2.GetID());
+        pubkey = ScriptBuilder.createOutputScript(system.vecMasternodes.get(n).pubkey2);
+        //CTxDestination address1;
+       //ExtractDestination(pubkey, address1);
+        //CBitcoinAddress address2(address1);
 
-        if(!DarkSendSigner.VerifyMessage(system.vecMasternodes[n].pubkey2, vchMasterNodeSignature, strMessage, errorMessage)) {
-            LogPrintf("InstantX::CConsensusVote::SignatureValid() - Verify message failed\n");
+        Address address2 = pubkey.getToAddress(params);
+        log.info("verify pubkey2 %s \n", address2.toString());
+
+        if(!DarkSendSigner.verifyMessage(system.vecMasternodes.get(n).pubkey2, vchMasterNodeSignature, strMessage, errorMessage)) {
+            log.info("InstantX::CConsensusVote::SignatureValid() - Verify message failed\n");
             return false;
-        }
+        } */
 
         return true;
     }
-
-    bool CConsensusVote::Sign()
+    /*
+    boolean sign()
     {
         StringBuilder errorMessage = new StringBuilder();
 
-        CKey key2;
-        CPubKey pubkey2;
-        String strMessage = txHash.toString() + blockHeight + approved;
+        //CKey key2;
+        //CPubKey pubkey2;
+        String strMessage = txHash.toString() + blockHeight;
         log.info("signing strMessage %s \n", strMessage);
-        log.info("signing privkey %s \n", MasterNodeSystem.strMasterNodePrivKey);
+        log.info("signing privkey %s \n", DarkCoinSystem.strMasterNodePrivKey);
 
-        if(!DarkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, key2, pubkey2))
+        ECKey key2 = DarkSendSigner.setKey(DarkCoinSystem.strMasterNodePrivKey, errorMessage);
+        if(key2 == null)
         {
-            log.error("CActiveMasternode::RegisterAsMasterNode() - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage.c_str());
+            log.error("CActiveMasternode::RegisterAsMasterNode() - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage);
             return false;
         }
 
-        Script pubkey;
-        pubkey.SetDestination(pubkey2.GetID());
-        CTxDestination address1;
-        ExtractDestination(pubkey, address1);
-        Address address2(address1);
-        log.info("signing pubkey2 %s \n", address2.ToString().c_str());
+        Script pubkey = ScriptBuilder.createOutputScript(key2);
+        //pubkey.SetDestination(pubkey2.GetID());
+        //CTxDestination address1;
+        //ExtractDestination(pubkey, address1);
+        //Address address2(address1);
+        Address address2 = pubkey.getToAddress(params);
+        log.info("signing pubkey2 %s \n", address2.toString());
 
-        if(!DarkSendSigner.SignMessage(strMessage, errorMessage, vchMasterNodeSignature, key2)) {
+        if(vchMasterNodeSignature = DarkSendSigner.signMessage(strMessage, errorMessage, vchMasterNodeSignature, key2) == null) {
             log.error("CActiveMasternode::RegisterAsMasterNode() - Sign message failed");
             return false;
         }
 
-        if(!DarkSendSigner.VerifyMessage(pubkey2, vchMasterNodeSignature, strMessage, errorMessage)) {
+        if(!DarkSendSigner.verifyMessage(pubkey2, vchMasterNodeSignature, strMessage, errorMessage)) {
             log.error("CActiveMasternode::RegisterAsMasterNode() - Verify message failed");
             return false;
         }
@@ -230,4 +234,12 @@ public class ConsensusVote extends ChildMessage implements Serializable {
         return true;
     }
     */
+    public Sha256Hash getHash()
+    {
+        BigInteger part1 =  vinMasterNode.getOutpoint().getHash().toBigInteger();
+        BigInteger part2 = BigInteger.valueOf(vinMasterNode.getOutpoint().getIndex());
+        BigInteger part3 = txHash.toBigInteger();
+
+        return new Sha256Hash(Arrays.copyOf(part1.add(part2.add(part3)).toByteArray(), 32));
+    }
 }

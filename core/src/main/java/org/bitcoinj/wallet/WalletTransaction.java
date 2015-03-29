@@ -29,6 +29,8 @@ public class WalletTransaction {
         SPENT, // spent in best chain
         DEAD, // double-spend in alt chain
         PENDING, // a pending tx we would like to go into the best chain
+        INSTANTX_PENDING,
+        INSTANTX_LOCKED,
     }
     private final Transaction transaction;
     private final Pool pool;

@@ -5,14 +5,15 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 /**
  * Created by Hash Engineering on 2/10/2015.
  */
-public class PublicKey extends Message {
+public class PublicKey extends ChildMessage {
     private static final Logger log = LoggerFactory.getLogger(PublicKey.class);
 
-    TransactionInput vin;
+    byte [] bytes;
 
     private transient int optimalEncodingMessageSize;
 
@@ -22,14 +23,14 @@ public class PublicKey extends Message {
         super();
     }
 
-    PublicKey(NetworkParameters params, byte[] payloadBytes)
+    public PublicKey(NetworkParameters params, byte[] payloadBytes)
     {
-        super(params, payloadBytes, 0, false, false, payloadBytes.length);
+        super(params, payloadBytes, 0, null, false, false, payloadBytes.length);
     }
-    PublicKey(NetworkParameters params, TransactionInput vin)
+
+    public PublicKey(NetworkParameters params, byte[] payloadBytes, int cursor, Message parent, boolean parseLazy, boolean parseRetain)
     {
-        super(params);
-        this.vin = vin;
+        super(params, payloadBytes, cursor, parent, parseLazy, parseRetain, payloadBytes.length);
     }
 
     @Override
@@ -57,11 +58,10 @@ public class PublicKey extends Message {
         // jump past version (uint32)
         int cursor = offset;// + 4;
         //vin TransactionInput
-        cursor += 36;
         varint = new VarInt(buf, cursor);
-        long scriptLen = varint.value;
+        long len = varint.value;
         // 4 = length of sequence field (unint32)
-        cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
+        cursor += len;
 
         return cursor - offset;
     }
@@ -74,23 +74,17 @@ public class PublicKey extends Message {
 
         optimalEncodingMessageSize = 0;
 
-        TransactionOutPoint outpoint = new TransactionOutPoint(params, payload, cursor, this, parseLazy, parseRetain);
-        cursor += outpoint.getMessageSize();
-        int scriptLen = (int) readVarInt();
-        byte [] scriptBytes = readBytes(scriptLen);
-        long sequence = readUint32();
-        vin = new TransactionInput(params, null, scriptBytes, outpoint);
+        bytes = readByteArray();
 
-        optimalEncodingMessageSize += outpoint.getMessageSize() + scriptLen + VarInt.sizeOf(scriptLen) +4;
+        optimalEncodingMessageSize += VarInt.sizeOf(bytes.length) + bytes.length;
 
-         length = cursor - offset;
-
-
+        length = cursor - offset;
     }
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
-        vin.bitcoinSerialize(stream);
+        stream.write(new VarInt(bytes.length).encode());
+        stream.write(bytes);
     }
 
     long getOptimalEncodingMessageSize()
@@ -106,8 +100,23 @@ public class PublicKey extends Message {
 
     public String toString()
     {
-        return "dseg Message:  " +
-                "vin: " + vin.toString();
+        return "public key:  " + Utils.HEX.encode(bytes);
 
     }
+
+    public byte [] getBytes() { maybeParse(); return bytes; }
+
+    public boolean equals(Object o)
+    {
+        maybeParse();
+       PublicKey key = (PublicKey)o;
+        if(key.bytes.length == this.bytes.length)
+        {
+            if(Arrays.equals(key.bytes, this.bytes) == true)
+                return true;
+        }
+        return false;
+    }
+
+
 }

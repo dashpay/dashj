@@ -843,7 +843,7 @@ public abstract class AbstractBlockChain {
 
         int DiffMode = 1;
         if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
-            if (storedPrev.getHeight()+1 >= 16) { DiffMode = 4; }
+            if (storedPrev.getHeight()+1 >= 2000) { DiffMode = 4; }
         }
         else {
             if (storedPrev.getHeight()+1 >= 68589) { DiffMode = 4; }

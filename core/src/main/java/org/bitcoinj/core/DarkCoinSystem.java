@@ -3,7 +3,6 @@ package org.bitcoinj.core;
 import org.bitcoinj.store.BlockStore;
 import org.darkcoinj.DarkSend;
 import org.darkcoinj.InstantXSystem;
-import org.darkcoinj.MasterNodeSystem;
 
 import java.util.ArrayList;
 
@@ -21,9 +20,9 @@ public class DarkCoinSystem {
 
     public static boolean fMasterNode = false;
 
-    public String strMasterNodePrivKey = "";
+    static public String strMasterNodePrivKey = "";
     String strMasterNodeAddr = "";
-    boolean fLiteMode = false;
+    public static final boolean fLiteMode = false;
     int nInstantXDepth = 1;
     int nDarksendRounds = 2;
     int nAnonymizeDarkcoinAmount = 1000;
@@ -35,6 +34,8 @@ public class DarkCoinSystem {
     boolean fEnableDarksend = false;
 /** All denominations used by darksend */
     ArrayList<Long> darkSendDenominations;
+
+    public static final boolean fDebug = true;
 
     public DarkCoinSystem(NetworkParameters params, PeerGroup peerGroup, BlockChain blockChain, BlockStore blockStore)
     {

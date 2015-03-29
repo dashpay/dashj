@@ -13,6 +13,15 @@ public class DarkSendElectionEntryMessage extends Message {
     private static final Logger log = LoggerFactory.getLogger(DarkSendElectionEntryMessage.class);
 
     TransactionInput vin;
+    PeerAddress addr;
+    PublicKey pubkey;
+    PublicKey pubkey2;
+    byte [] vchSig;
+    long sigTime;
+    int count;
+    int current;
+    long lastUpdated;
+    int protocolVersion;
 
     private transient int optimalEncodingMessageSize;
 
@@ -26,11 +35,22 @@ public class DarkSendElectionEntryMessage extends Message {
     {
         super(params, payloadBytes, 0, false, false, payloadBytes.length);
     }
-    DarkSendElectionEntryMessage(NetworkParameters params, TransactionInput vin)
+
+    DarkSendElectionEntryMessage(NetworkParameters params, TransactionInput vin, PeerAddress addr, byte [] vchSig,  long sigTime, PublicKey pubkey, PublicKey pubkey2, int count, int current, long lastTimeSeen, int protocolVersion)
     {
         super(params);
         this.vin = vin;
+        this.addr = addr;
+        this.vchSig = vchSig;
+        this.sigTime = sigTime;
+        this.pubkey = pubkey;
+        this.pubkey2 = pubkey2;
+        this.count = count;
+        this.current = current;
+        this.protocolVersion = protocolVersion;
+
     }
+
 
     @Override
     protected void parseLite() throws ProtocolException {
@@ -63,6 +83,17 @@ public class DarkSendElectionEntryMessage extends Message {
         // 4 = length of sequence field (unint32)
         cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
 
+        varint = new VarInt(buf, cursor);
+        cursor += varint.getOriginalSizeInBytes() + varint.value;
+
+        varint = new VarInt(buf, cursor);
+        cursor += varint.getOriginalSizeInBytes() + varint.value;
+
+        varint = new VarInt(buf, cursor);
+        cursor += varint.getOriginalSizeInBytes() + varint.value;
+
+        cursor += 8 + 4 + 4 + 8 + 4;
+
         return cursor - offset;
     }
     @Override
@@ -83,7 +114,25 @@ public class DarkSendElectionEntryMessage extends Message {
 
         optimalEncodingMessageSize += outpoint.getMessageSize() + scriptLen + VarInt.sizeOf(scriptLen) +4;
 
-         length = cursor - offset;
+        pubkey = new PublicKey(params, payload, cursor, this, parseLazy, parseRetain);
+        cursor += pubkey.getMessageSize();
+
+        pubkey2 = new PublicKey(params, payload, cursor, this, parseLazy, parseRetain);
+        cursor += pubkey.getMessageSize();
+
+        vchSig = readByteArray();
+
+        sigTime = readInt64();
+
+        count = (int)readUint32();
+
+        current = (int)readUint32();
+
+        lastUpdated = readInt64();
+
+        protocolVersion = (int)readUint32();
+
+        length = cursor - offset;
 
 
     }
@@ -91,6 +140,17 @@ public class DarkSendElectionEntryMessage extends Message {
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
         vin.bitcoinSerialize(stream);
+        pubkey.bitcoinSerialize(stream);
+        pubkey2.bitcoinSerialize(stream);
+
+        stream.write(new VarInt(vchSig.length).encode());
+        stream.write(vchSig);
+
+        Utils.int64ToByteStreamLE(sigTime, stream);
+        Utils.uint32ToByteStreamLE(count, stream);
+        Utils.uint32ToByteStreamLE(current, stream);
+        Utils.int64ToByteStreamLE(lastUpdated, stream);
+        Utils.uint32ToByteStreamLE(protocolVersion, stream);
     }
 
     long getOptimalEncodingMessageSize()
@@ -106,8 +166,8 @@ public class DarkSendElectionEntryMessage extends Message {
 
     public String toString()
     {
-        return "dseg Message:  " +
-                "vin: " + vin.toString();
+        return "dsee Message:  " +
+                "vin: " + vin.toString() + " - " + addr.toString();
 
     }
 }

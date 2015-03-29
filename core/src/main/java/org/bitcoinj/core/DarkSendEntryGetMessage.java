@@ -6,36 +6,30 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
-
 /**
- * Created by Eric on 2/10/2015.
+ * Created by Hash Engineering on 2/10/2015.
  */
 public class DarkSendEntryGetMessage extends Message {
-    private static final Logger log = LoggerFactory.getLogger(ConsensusVote.class);
+    private static final Logger log = LoggerFactory.getLogger(DarkSendEntryGetMessage.class);
 
     TransactionInput vin;
-    byte [] vchSig;
-    long sigTime;
-    boolean stop;
 
     private transient int optimalEncodingMessageSize;
 
-    MasterNodeSystem system;
 
     DarkSendEntryGetMessage()
     {
         super();
     }
 
-    DarkSendEntryGetMessage(MasterNodeSystem system)
-    {
-        super();
-        this.system = system;
-    }
     DarkSendEntryGetMessage(NetworkParameters params, byte[] payloadBytes)
     {
         super(params, payloadBytes, 0, false, false, payloadBytes.length);
+    }
+    DarkSendEntryGetMessage(NetworkParameters params, TransactionInput vin)
+    {
+        super(params);
+        this.vin = vin;
     }
 
     @Override
@@ -69,16 +63,6 @@ public class DarkSendEntryGetMessage extends Message {
         // 4 = length of sequence field (unint32)
         cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
 
-        //vchMasterNodeSignature
-        varint = new VarInt(buf, cursor);
-        long size = varint.value;
-        cursor += varint.getOriginalSizeInBytes();
-        cursor += size;
-
-        //sigTime, stop
-        cursor += 8 + 1;
-
-
         return cursor - offset;
     }
     @Override
@@ -99,21 +83,7 @@ public class DarkSendEntryGetMessage extends Message {
 
         optimalEncodingMessageSize += outpoint.getMessageSize() + scriptLen + VarInt.sizeOf(scriptLen) +4;
 
-        vchSig = readByteArray();
-        optimalEncodingMessageSize += vchSig.length + VarInt.sizeOf(vchSig.length);
-
-        sigTime = readInt64();
-        optimalEncodingMessageSize += 4;
-
-        byte [] stopByte = readBytes(1);
-        stop = stopByte[0] != 0 ? true : false;
-        optimalEncodingMessageSize += 1;
-
-
-
-
-
-        length = cursor - offset;
+         length = cursor - offset;
 
 
     }
@@ -121,9 +91,6 @@ public class DarkSendEntryGetMessage extends Message {
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
         vin.bitcoinSerialize(stream);
-        stream.write(vchSig);
-        int64ToByteStreamLE(sigTime, stream);
-        stream.write(new VarInt(stop ? 1 : 0).encode());
     }
 
     long getOptimalEncodingMessageSize()
@@ -139,11 +106,8 @@ public class DarkSendEntryGetMessage extends Message {
 
     public String toString()
     {
-        return "Dark Send Election Entry Ping Message:  " +
-                "vin: " + vin.toString() +
-                "sig: " + Utils.HEX.encode(vchSig) +
-                "time " + sigTime +
-                "stop " + stop;
+        return "dseg Message:  " +
+                "vin: " + vin.toString();
 
     }
 }

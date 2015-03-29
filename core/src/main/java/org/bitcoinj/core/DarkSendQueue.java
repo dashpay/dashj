@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.net.InetSocketAddress;
 
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
@@ -156,7 +155,7 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
         return optimalEncodingMessageSize;
     }
 
-    boolean getAddress(InetSocketAddress address) {
+    boolean getAddress(PeerAddress address) {
         for (MasterNode mn : system.masternode.vecMasternodes) {
             if (mn.vin == vin) {
                 address = mn.address;
@@ -183,7 +182,7 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
         ECKey eckey2;
         StringBuilder errorMessage = new StringBuilder();
 
-        if ((eckey2 = DarkSendSigner.setKey(system.strMasterNodePrivKey, errorMessage)) == null) {
+        if ((eckey2 = DarkSendSigner.setKey(params, system.strMasterNodePrivKey, errorMessage)) == null) {
             log.warn("CDarksendQueue():Relay - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage);
             return false;
         }
@@ -228,7 +227,7 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
                 String strMessage = vin.toString() + denom + time + ready;
 
                 StringBuilder errorMessage = new StringBuilder();
-                if(!DarkSendSigner.verifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
+                if(!DarkSendSigner.verifyMessage(ECKey.fromPublicOnly(mn.pubkey2.getBytes()), vchSig, strMessage, errorMessage)){
                     log.error("CDarksendQueue::CheckSignature() - Got bad masternode address signature %s \n", vin.toString());
                     return false;
                 }

@@ -6722,6 +6722,14 @@ public final class Protos {
        * </pre>
        */
       DEAD(4, 4),
+      /**
+       * <code>INSTANTX_PENDING = 100;</code>
+       */
+      INSTANTX_PENDING(5, 100),
+      /**
+       * <code>INSTANTX_LOCKED = 101;</code>
+       */
+      INSTANTX_LOCKED(6, 101),
       ;
 
       /**
@@ -6760,6 +6768,14 @@ public final class Protos {
        * </pre>
        */
       public static final int DEAD_VALUE = 4;
+      /**
+       * <code>INSTANTX_PENDING = 100;</code>
+       */
+      public static final int INSTANTX_PENDING_VALUE = 100;
+      /**
+       * <code>INSTANTX_LOCKED = 101;</code>
+       */
+      public static final int INSTANTX_LOCKED_VALUE = 101;
 
 
       public final int getNumber() { return value; }
@@ -6771,6 +6787,8 @@ public final class Protos {
           case 2: return PENDING;
           case 3: return NOT_IN_BEST_CHAIN;
           case 4: return DEAD;
+          case 100: return INSTANTX_PENDING;
+          case 101: return INSTANTX_LOCKED;
           default: return null;
         }
       }
@@ -8524,6 +8542,14 @@ public final class Protos {
        * </pre>
        */
       PENDING_INACTIVE(5, 18),
+      /**
+       * <code>INSTANTX_PENDING = 48;</code>
+       */
+      INSTANTX_PENDING(6, 48),
+      /**
+       * <code>INSTANTX_LOCKED = 49;</code>
+       */
+      INSTANTX_LOCKED(7, 49),
       ;
 
       /**
@@ -8574,6 +8600,14 @@ public final class Protos {
        * </pre>
        */
       public static final int PENDING_INACTIVE_VALUE = 18;
+      /**
+       * <code>INSTANTX_PENDING = 48;</code>
+       */
+      public static final int INSTANTX_PENDING_VALUE = 48;
+      /**
+       * <code>INSTANTX_LOCKED = 49;</code>
+       */
+      public static final int INSTANTX_LOCKED_VALUE = 49;
 
 
       public final int getNumber() { return value; }
@@ -8586,6 +8620,8 @@ public final class Protos {
           case 10: return DEAD;
           case 16: return PENDING;
           case 18: return PENDING_INACTIVE;
+          case 48: return INSTANTX_PENDING;
+          case 49: return INSTANTX_LOCKED;
           default: return null;
         }
       }
@@ -19016,60 +19052,62 @@ public final class Protos {
       "equence\030\004 \001(\r\022\r\n\005value\030\005 \001(\003\"\177\n\021Transact" +
       "ionOutput\022\r\n\005value\030\001 \002(\003\022\024\n\014script_bytes" +
       "\030\002 \002(\014\022!\n\031spent_by_transaction_hash\030\003 \001(" +
-      "\014\022\"\n\032spent_by_transaction_index\030\004 \001(\005\"\211\003" +
+      "\014\022\"\n\032spent_by_transaction_index\030\004 \001(\005\"\264\003" +
       "\n\025TransactionConfidence\0220\n\004type\030\001 \001(\0162\"." +
       "wallet.TransactionConfidence.Type\022\032\n\022app" +
       "eared_at_height\030\002 \001(\005\022\036\n\026overriding_tran" +
       "saction\030\003 \001(\014\022\r\n\005depth\030\004 \001(\005\022)\n\014broadcas",
       "t_by\030\006 \003(\0132\023.wallet.PeerAddress\0224\n\006sourc" +
       "e\030\007 \001(\0162$.wallet.TransactionConfidence.S" +
-      "ource\"O\n\004Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILDING\020\001" +
+      "ource\"z\n\004Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILDING\020\001" +
       "\022\013\n\007PENDING\020\002\022\025\n\021NOT_IN_BEST_CHAIN\020\003\022\010\n\004" +
-      "DEAD\020\004\"A\n\006Source\022\022\n\016SOURCE_UNKNOWN\020\000\022\022\n\016" +
-      "SOURCE_NETWORK\020\001\022\017\n\013SOURCE_SELF\020\002\"\264\005\n\013Tr" +
-      "ansaction\022\017\n\007version\030\001 \002(\005\022\014\n\004hash\030\002 \002(\014" +
-      "\022&\n\004pool\030\003 \001(\0162\030.wallet.Transaction.Pool" +
-      "\022\021\n\tlock_time\030\004 \001(\r\022\022\n\nupdated_at\030\005 \001(\003\022" +
-      "3\n\021transaction_input\030\006 \003(\0132\030.wallet.Tran",
-      "sactionInput\0225\n\022transaction_output\030\007 \003(\013" +
-      "2\031.wallet.TransactionOutput\022\022\n\nblock_has" +
-      "h\030\010 \003(\014\022 \n\030block_relativity_offsets\030\013 \003(" +
-      "\005\0221\n\nconfidence\030\t \001(\0132\035.wallet.Transacti" +
-      "onConfidence\0225\n\007purpose\030\n \001(\0162\033.wallet.T" +
-      "ransaction.Purpose:\007UNKNOWN\022+\n\rexchange_" +
-      "rate\030\014 \001(\0132\024.wallet.ExchangeRate\022\014\n\004memo" +
-      "\030\r \001(\t\"Y\n\004Pool\022\013\n\007UNSPENT\020\004\022\t\n\005SPENT\020\005\022\014" +
-      "\n\010INACTIVE\020\002\022\010\n\004DEAD\020\n\022\013\n\007PENDING\020\020\022\024\n\020P" +
-      "ENDING_INACTIVE\020\022\"\224\001\n\007Purpose\022\013\n\007UNKNOWN",
-      "\020\000\022\020\n\014USER_PAYMENT\020\001\022\020\n\014KEY_ROTATION\020\002\022\034" +
-      "\n\030ASSURANCE_CONTRACT_CLAIM\020\003\022\035\n\031ASSURANC" +
-      "E_CONTRACT_PLEDGE\020\004\022\033\n\027ASSURANCE_CONTRAC" +
-      "T_STUB\020\005\"N\n\020ScryptParameters\022\014\n\004salt\030\001 \002" +
-      "(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\0018\022\014\n\001p\030" +
-      "\004 \001(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001 \002(\t\022\014\n\004dat" +
-      "a\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022\013\n\003tag" +
-      "\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"5\n\021TransactionSigne" +
-      "r\022\022\n\nclass_name\030\001 \002(\t\022\014\n\004data\030\002 \001(\014\"\211\005\n\006" +
-      "Wallet\022\032\n\022network_identifier\030\001 \002(\t\022\034\n\024la",
-      "st_seen_block_hash\030\002 \001(\014\022\036\n\026last_seen_bl" +
-      "ock_height\030\014 \001(\r\022!\n\031last_seen_block_time" +
-      "_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013.wallet.Key\022(\n" +
-      "\013transaction\030\004 \003(\0132\023.wallet.Transaction\022" +
-      "&\n\016watched_script\030\017 \003(\0132\016.wallet.Script\022" +
-      "C\n\017encryption_type\030\005 \001(\0162\035.wallet.Wallet" +
-      ".EncryptionType:\013UNENCRYPTED\0227\n\025encrypti" +
-      "on_parameters\030\006 \001(\0132\030.wallet.ScryptParam" +
-      "eters\022\022\n\007version\030\007 \001(\005:\0011\022$\n\textension\030\n" +
-      " \003(\0132\021.wallet.Extension\022\023\n\013description\030\013",
-      " \001(\t\022\031\n\021key_rotation_time\030\r \001(\004\022\031\n\004tags\030" +
-      "\020 \003(\0132\013.wallet.Tag\0226\n\023transaction_signer" +
-      "s\030\021 \003(\0132\031.wallet.TransactionSigner\022\036\n\023si" +
-      "gsRequiredToSpend\030\022 \001(\r:\0011\";\n\016Encryption" +
-      "Type\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYPTED_SCRYP" +
-      "T_AES\020\002\"R\n\014ExchangeRate\022\022\n\ncoin_value\030\001 " +
-      "\002(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n\022fiat_currency" +
-      "_code\030\003 \002(\tB\035\n\023org.bitcoinj.walletB\006Prot" +
-      "os"
+      "DEAD\020\004\022\024\n\020INSTANTX_PENDING\020d\022\023\n\017INSTANTX" +
+      "_LOCKED\020e\"A\n\006Source\022\022\n\016SOURCE_UNKNOWN\020\000\022" +
+      "\022\n\016SOURCE_NETWORK\020\001\022\017\n\013SOURCE_SELF\020\002\"\340\005\n" +
+      "\013Transaction\022\017\n\007version\030\001 \002(\005\022\014\n\004hash\030\002 " +
+      "\002(\014\022&\n\004pool\030\003 \001(\0162\030.wallet.Transaction.P" +
+      "ool\022\021\n\tlock_time\030\004 \001(\r\022\022\n\nupdated_at\030\005 \001",
+      "(\003\0223\n\021transaction_input\030\006 \003(\0132\030.wallet.T" +
+      "ransactionInput\0225\n\022transaction_output\030\007 " +
+      "\003(\0132\031.wallet.TransactionOutput\022\022\n\nblock_" +
+      "hash\030\010 \003(\014\022 \n\030block_relativity_offsets\030\013" +
+      " \003(\005\0221\n\nconfidence\030\t \001(\0132\035.wallet.Transa" +
+      "ctionConfidence\0225\n\007purpose\030\n \001(\0162\033.walle" +
+      "t.Transaction.Purpose:\007UNKNOWN\022+\n\rexchan" +
+      "ge_rate\030\014 \001(\0132\024.wallet.ExchangeRate\022\014\n\004m" +
+      "emo\030\r \001(\t\"\204\001\n\004Pool\022\013\n\007UNSPENT\020\004\022\t\n\005SPENT" +
+      "\020\005\022\014\n\010INACTIVE\020\002\022\010\n\004DEAD\020\n\022\013\n\007PENDING\020\020\022",
+      "\024\n\020PENDING_INACTIVE\020\022\022\024\n\020INSTANTX_PENDIN" +
+      "G\0200\022\023\n\017INSTANTX_LOCKED\0201\"\224\001\n\007Purpose\022\013\n\007" +
+      "UNKNOWN\020\000\022\020\n\014USER_PAYMENT\020\001\022\020\n\014KEY_ROTAT" +
+      "ION\020\002\022\034\n\030ASSURANCE_CONTRACT_CLAIM\020\003\022\035\n\031A" +
+      "SSURANCE_CONTRACT_PLEDGE\020\004\022\033\n\027ASSURANCE_" +
+      "CONTRACT_STUB\020\005\"N\n\020ScryptParameters\022\014\n\004s" +
+      "alt\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\001" +
+      "8\022\014\n\001p\030\004 \001(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001 \002(\t" +
+      "\022\014\n\004data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag" +
+      "\022\013\n\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"5\n\021Transacti",
+      "onSigner\022\022\n\nclass_name\030\001 \002(\t\022\014\n\004data\030\002 \001" +
+      "(\014\"\211\005\n\006Wallet\022\032\n\022network_identifier\030\001 \002(" +
+      "\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022\036\n\026last_" +
+      "seen_block_height\030\014 \001(\r\022!\n\031last_seen_blo" +
+      "ck_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013.wallet" +
+      ".Key\022(\n\013transaction\030\004 \003(\0132\023.wallet.Trans" +
+      "action\022&\n\016watched_script\030\017 \003(\0132\016.wallet." +
+      "Script\022C\n\017encryption_type\030\005 \001(\0162\035.wallet" +
+      ".Wallet.EncryptionType:\013UNENCRYPTED\0227\n\025e" +
+      "ncryption_parameters\030\006 \001(\0132\030.wallet.Scry",
+      "ptParameters\022\022\n\007version\030\007 \001(\005:\0011\022$\n\texte" +
+      "nsion\030\n \003(\0132\021.wallet.Extension\022\023\n\013descri" +
+      "ption\030\013 \001(\t\022\031\n\021key_rotation_time\030\r \001(\004\022\031" +
+      "\n\004tags\030\020 \003(\0132\013.wallet.Tag\0226\n\023transaction" +
+      "_signers\030\021 \003(\0132\031.wallet.TransactionSigne" +
+      "r\022\036\n\023sigsRequiredToSpend\030\022 \001(\r:\0011\";\n\016Enc" +
+      "ryptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYPTE" +
+      "D_SCRYPT_AES\020\002\"R\n\014ExchangeRate\022\022\n\ncoin_v" +
+      "alue\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n\022fiat_c" +
+      "urrency_code\030\003 \002(\tB\035\n\023org.bitcoinj.walle",
+      "tB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

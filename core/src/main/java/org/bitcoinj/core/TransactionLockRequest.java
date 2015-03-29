@@ -53,6 +53,29 @@ public class TransactionLockRequest extends Transaction {
     }
 
     public String toString(@Nullable AbstractBlockChain chain) {
-        return "Transaction Lock Request containing:\n" + super.toString(chain);
+        return "Transaction Lock Request:\n" + super.toString(chain);
+    }
+
+    public void verify() throws VerificationException {
+        super.verify();
+        maybeParse();
+
+        Coin valueOut = Coin.valueOf(0);
+        Coin valueIn = Coin.valueOf(0);
+
+        for (TransactionOutput output : getOutputs()) {
+            valueOut = valueOut.add(output.getValue());
+        }
+
+        if(valueOut.compareTo(Coin.valueOf(1000, 0)) > 0)
+            throw new VerificationException("InstantX transaction of more than 1000");
+
+        Coin fee = getFee();
+        if(fee != null) {
+            if (fee.compareTo(Coin.valueOf(0, 1)) < 0)
+                throw new VerificationException("InstantX transaction with fee less than 0.01");
+        }
+
+
     }
 }

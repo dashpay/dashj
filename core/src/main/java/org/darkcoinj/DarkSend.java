@@ -32,7 +32,7 @@ public class DarkSend {
     public static final int DARKSEND_QUEUE_TIMEOUT               =  120;
     public static final int DARKSEND_SIGNING_TIMEOUT             =  30;
 
-    DarkSendPool darkSendPool;
+    //public static DarkSendPool darkSendPool = new DarkSendPool();
     DarkSendSigner darkSendSigner;
     ArrayList<DarkSendQueue> vecDarksendQueue;
     String strMasterNodePrivKey;

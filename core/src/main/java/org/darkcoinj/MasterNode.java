@@ -1,26 +1,23 @@
 package org.darkcoinj;
 
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.TransactionInput;
-
-import java.net.InetSocketAddress;
+import org.bitcoinj.core.*;
 
 /**
  * Created by Eric on 2/8/2015.
  */
 public class MasterNode {
-    public InetSocketAddress getAddress() {
+    public PeerAddress getAddress() {
         return address;
     }
 
-    public InetSocketAddress address;
+    public PeerAddress address;
     public    TransactionInput vin;
-        long lastTimeSeen;
-        ECKey pubkey;
-        public ECKey pubkey2;
-        byte [] sig;
-        long now; //dsee message times
-        long lastDseep;
+        public long lastTimeSeen;
+        public PublicKey pubkey;
+        public PublicKey pubkey2;
+        public byte [] sig;
+        public long now; //dsee message times
+        public long lastDseep;
         int cacheInputAge;
         int cacheInputAgeBlock;
         int enabled;
@@ -34,9 +31,9 @@ public class MasterNode {
         //other variables
         DarkSend darkSend;
 
-        MasterNode(DarkSend darkSend, InetSocketAddress newAddr, TransactionInput newVin, ECKey newPubkey, byte [] newSig, long newNow, ECKey newPubkey2, int protocolVersionIn)
+        public MasterNode(PeerAddress newAddr, TransactionInput newVin, PublicKey newPubkey, byte [] newSig, long newNow, PublicKey newPubkey2, int protocolVersionIn)
         {
-            this.darkSend = darkSend;
+            //this.darkSend = darkSend;
             address = newAddr;
             vin = newVin;
             pubkey = newPubkey;
@@ -56,89 +53,90 @@ public class MasterNode {
         /*
         Sha256Hash CalculateScore(int mod, long nBlockHeight)
         {
-            if(chainActive.Tip() == NULL) return 0;
+            //if(chainActive.Tip() == NULL) return 0;
 
             Sha256Hash hash = Sha256Hash.ZERO_HASH;
-            if(!darkSend.darkSendPool.GetLastValidBlockHash(hash, mod, nBlockHeight)) return 0;
-            byte [] hash2 = X11.x11Digest(hash.getBytes());
+            Sha256Hash aux = new Sha256Hash(vin.getOutpoint().getHash().toBigInteger().add(BigInteger.valueOf(vin.getOutpoint().getIndex())).toByteArray());
 
-            // we'll make a 4 dimensional point in space
-            // the closest masternode to that point wins
-            long a1 = hash2.Get64(0);
-            long a2 = hash2.Get64(1);
-            long a3 = hash2.Get64(2);
-            long a4 = hash2.Get64(3);
+            //We can't get the hash of the block, reliably because we don't have access to the blockchain
+            //if(!GetBlockHash(hash, nBlockHeight)) return 0;
 
-            //copy part of our source hash
-            int i1, i2, i3, i4;
-            i1=0;i2=0;i3=0;i4=0;
-            memcpy(&i1, &a1, 1);
-            memcpy(&i2, &a2, 1);
-            memcpy(&i3, &a3, 1);
-            memcpy(&i4, &a4, 1);
+            uint256 hash2 = Hash(BEGIN(hash), END(hash));
+            uint256 hash3 = Hash(BEGIN(hash), END(aux));
 
-            //split up our mn hash
-            uint64_t b1 = vin.prevout.hash.Get64(0);
-            uint64_t b2 = vin.prevout.hash.Get64(1);
-            uint64_t b3 = vin.prevout.hash.Get64(2);
-            uint64_t b4 = vin.prevout.hash.Get64(3);
-
-            //move mn hash around
-            b1 <<= (i1 % 64);
-            b2 <<= (i2 % 64);
-            b3 <<= (i3 % 64);
-            b4 <<= (i4 % 64);
-
-            // calculate distance between target point and mn point
-            uint256 r = 0;
-            r +=  (a1 > b1 ? a1 - b1 : b1 - a1);
-            r +=  (a2 > b2 ? a2 - b2 : b2 - a2);
-            r +=  (a3 > b3 ? a3 - b3 : b3 - a3);
-            r +=  (a4 > b4 ? a4 - b4 : b4 - a4);
-
-
-    //LogPrintf(" -- MasterNode CalculateScore() n2 = %s \n", n2.ToString().c_str());
-    //LogPrintf(" -- MasterNode CalculateScore() vin = %s \n", vin.prevout.hash.GetHex().c_str());
-    //LogPrintf(" -- MasterNode CalculateScore() n3 = %s \n", n3.ToString().c_str());
+            uint256 r = (hash3 > hash2 ? hash3 - hash2 : hash2 - hash3);
 
             return r;
         }
-
-        void UpdateLastSeen(int64_t override=0)
+        */
+        public void UpdateLastSeen()
+        { UpdateLastSeen(0);}
+        public void UpdateLastSeen(long override)
         {
             if(override == 0){
-            lastTimeSeen = GetAdjustedTime();
+            lastTimeSeen = Utils.currentTimeSeconds();
             } else {
             lastTimeSeen = override;
             }
         }
 
-        inline uint64_t SliceHash(uint256& hash, int slice)
+        /*long SliceHash(Sha256Hash hash, int slice)
         {
             long n = 0;
+            //Utils.readInt64()
             memcpy(&n, &hash+slice*64, 64);
             return n;
+        }*/
+
+        public void Check()
+        {
+            //once spent, stop doing the checks
+            if(enabled==3) return;
+
+
+            if(!UpdatedWithin(MasterNodeSystem.MASTERNODE_REMOVAL_SECONDS)){
+                enabled = 4;
+                return;
+            }
+
+            if(!UpdatedWithin(MasterNodeSystem.MASTERNODE_EXPIRATION_SECONDS)){
+                enabled = 2;
+                return;
+            }
+
+            /*if(!unitTest){
+                CValidationState state;
+                CTransaction tx = CTransaction();
+                CTxOut vout = CTxOut(999.99*COIN, darkSendPool.collateralPubKey);
+                tx.vin.push_back(vin);
+                tx.vout.push_back(vout);
+
+                if(!AcceptableInputs(mempool, state, tx)){
+                    enabled = 3;
+                    return;
+                }
+            }*/
+
+            enabled = 1; // OK
         }
 
-        void Check();
-
-        bool UpdatedWithin(int seconds)
+        public boolean UpdatedWithin(int seconds)
         {
             // LogPrintf("UpdatedWithin %d, %d --  %d \n", GetAdjustedTime() , lastTimeSeen, (GetAdjustedTime() - lastTimeSeen) < seconds);
-            return (Utils.currentTimeSeconds() - lastTimeSeen < seconds);
+            return (Utils.currentTimeSeconds() - lastTimeSeen) < seconds;
             //return (GetAdjustedTime() - lastTimeSeen) < seconds;
         }
 
-        void Disable()
+        public void Disable()
         {
             lastTimeSeen = 0;
         }
 
-        boolean IsEnabled()
+        public boolean IsEnabled()
         {
             return enabled == 1;
         }
-
+        /*
         int GetMasternodeInputAge()
         {
             if(chainActive.Tip() == NULL) return 0;

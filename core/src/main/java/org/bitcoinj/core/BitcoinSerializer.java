@@ -78,6 +78,8 @@ public class BitcoinSerializer {
         names.put(DarkSendElectionEntryPingMessage.class, "dseep");
 
         names.put(TransactionLockRequest.class, "txlreq");
+        names.put(ConsensusVote.class, "txlvote");
+
     }
 
     /**
@@ -249,6 +251,8 @@ public class BitcoinSerializer {
             return new DarkSendElectionEntryPingMessage(params, payloadBytes);
         } else if (command.equals("txlreq")) {
             return new TransactionLockRequest(params, payloadBytes);
+        } else if (command.equals("txlvote")) {
+            return new ConsensusVote(params, payloadBytes);
         } else {
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);

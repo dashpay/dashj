@@ -17,10 +17,10 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.utils.ListenerRegistration;
+import org.bitcoinj.utils.Threading;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
@@ -28,7 +28,7 @@ import java.util.ListIterator;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * <p>A TransactionConfidence object tracks data you can use to make a confidence decision about a transaction.
@@ -97,6 +97,9 @@ public class TransactionConfidence implements Serializable {
          * It can also mean that a coinbase transaction has been made dead from it being moved onto a side chain.
          */
         DEAD(4),
+
+        INSTANTX_PENDING (101),
+        INSTANTX_LOCKED (100),
 
         /**
          * If a transaction hasn't been broadcast yet, or there's no record of it, its confidence is UNKNOWN.
@@ -214,7 +217,7 @@ public class TransactionConfidence implements Serializable {
      * @throws IllegalStateException if the confidence type is not BUILDING.
      */
     public synchronized int getAppearedAtChainHeight() {
-        if (getConfidenceType() != ConfidenceType.BUILDING)
+        if (getConfidenceType() != ConfidenceType.BUILDING && getConfidenceType() != ConfidenceType.INSTANTX_LOCKED)
             throw new IllegalStateException("Confidence type is " + getConfidenceType() + ", not BUILDING");
         return appearedAtChainHeight;
     }
@@ -228,7 +231,8 @@ public class TransactionConfidence implements Serializable {
             throw new IllegalArgumentException("appearedAtChainHeight out of range");
         this.appearedAtChainHeight = appearedAtChainHeight;
         this.depth = 1;
-        setConfidenceType(ConfidenceType.BUILDING);
+        if(getConfidenceType() != ConfidenceType.INSTANTX_LOCKED)
+            setConfidenceType(ConfidenceType.BUILDING);
     }
 
     /**
@@ -249,7 +253,7 @@ public class TransactionConfidence implements Serializable {
         if (confidenceType != ConfidenceType.DEAD) {
             overridingTransaction = null;
         }
-        if (confidenceType == ConfidenceType.PENDING) {
+        if (confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.INSTANTX_PENDING) {
             depth = 0;
             appearedAtChainHeight = -1;
         }
@@ -313,6 +317,15 @@ public class TransactionConfidence implements Serializable {
                 break;
             case PENDING:
                 builder.append("Pending/unconfirmed.");
+                break;
+            case INSTANTX_PENDING:
+                builder.append("InstantX Lock Request");
+                break;
+            case INSTANTX_LOCKED:
+                builder.append("InstantX Locked");
+                if(getAppearedAtChainHeight() > 0)
+                    builder.append(String.format("Appeared in best chain at height %d, depth %d.",
+                            getAppearedAtChainHeight(), getDepthInBlocks()));
                 break;
             case BUILDING:
                 builder.append(String.format("Appeared in best chain at height %d, depth %d.",

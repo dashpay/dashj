@@ -315,6 +315,8 @@ public class WalletProtobufSerializer {
             case SPENT: return Protos.Transaction.Pool.SPENT;
             case DEAD: return Protos.Transaction.Pool.DEAD;
             case PENDING: return Protos.Transaction.Pool.PENDING;
+            case INSTANTX_LOCKED: return Protos.Transaction.Pool.INSTANTX_LOCKED;
+            case INSTANTX_PENDING: return Protos.Transaction.Pool.INSTANTX_PENDING;
             default:
                 throw new RuntimeException("Unreachable");
         }
@@ -629,6 +631,12 @@ public class WalletProtobufSerializer {
             case PENDING_INACTIVE:
                 pool = WalletTransaction.Pool.PENDING;
                 break;
+            case INSTANTX_PENDING:
+                pool = WalletTransaction.Pool.INSTANTX_PENDING;
+                break;
+            case INSTANTX_LOCKED:
+                pool = WalletTransaction.Pool.INSTANTX_LOCKED;
+                break;
             default:
                 throw new UnreadableWalletException("Unknown transaction pool: " + txProto.getPool());
         }
@@ -672,6 +680,8 @@ public class WalletProtobufSerializer {
             // These two are equivalent (must be able to read old wallets).
             case NOT_IN_BEST_CHAIN: confidenceType = ConfidenceType.PENDING; break;
             case PENDING: confidenceType = ConfidenceType.PENDING; break;
+            case INSTANTX_PENDING: confidenceType = ConfidenceType.INSTANTX_PENDING; break;
+            case INSTANTX_LOCKED: confidenceType = ConfidenceType.INSTANTX_LOCKED; break;
             case UNKNOWN:
                 // Fall through.
             default:
