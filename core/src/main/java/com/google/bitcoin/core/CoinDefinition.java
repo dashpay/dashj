@@ -12,9 +12,9 @@ import java.util.Map;
 public class CoinDefinition {
 
 
-    public static final String coinName = "Darkcoin";
-    public static final String coinTicker = "DRK";
-    public static final String coinURIScheme = "darkcoin";
+    public static final String coinName = "Dash";
+    public static final String coinTicker = "DASH";
+    public static final String coinURIScheme = "dash";
     public static final String cryptsyMarketId = "155";
     public static final String cryptsyMarketCurrency = "BTC";
     public static final String PATTERN_PRIVATE_KEY_START = "[7X]";
@@ -66,8 +66,8 @@ public class CoinDefinition {
     public static final BigInteger DEFAULT_MIN_TX_FEE = BigInteger.valueOf(100000);   // MIN_TX_FEE
     public static final BigInteger DUST_LIMIT = BigInteger.valueOf(1000); //main.h CTransaction::GetMinFee        0.01 coins
 
-    public static final int PROTOCOL_VERSION = 70054;          //version.h PROTOCOL_VERSION
-    public static final int MIN_PROTOCOL_VERSION = 70046;        //version.h MIN_PROTO_VERSION
+    public static final int PROTOCOL_VERSION = 70075;          //version.h PROTOCOL_VERSION
+    public static final int MIN_PROTOCOL_VERSION = 70066;        //version.h MIN_PROTO_VERSION
     public static final int BIP0031_VERSION = 60000;
 
     public static final int BLOCK_CURRENTVERSION = 2;   //CBlock::CURRENT_VERSION
@@ -102,7 +102,7 @@ public class CoinDefinition {
 
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
-            //"dnsseed.darkcoin.io",
+            "masternode.io",
             "dnsseed.darkcoin.qa",
             "23.23.186.131", //Evan's seed node
             "162.252.83.46",  //drkpool.com
