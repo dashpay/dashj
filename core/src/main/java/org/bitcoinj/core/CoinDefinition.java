@@ -76,8 +76,8 @@ public class CoinDefinition {
     public static final long DUST_LIMIT = 1000; //main.h CTransaction::GetMinFee        0.01 coins
     public static final long INSTANTX_FEE = 1000000;
 
-    public static final int PROTOCOL_VERSION = 70054;          //version.h PROTOCOL_VERSION
-    public static final int MIN_PROTOCOL_VERSION = 70046;        //version.h MIN_PROTO_VERSION
+    public static final int PROTOCOL_VERSION = 70066;          //version.h PROTOCOL_VERSION
+    public static final int MIN_PROTOCOL_VERSION = 70054;        //version.h MIN_PROTO_VERSION
     public static final int BIP0031_VERSION = 60000;
 
     public static final int BLOCK_CURRENTVERSION = 2;   //CBlock::CURRENT_VERSION
@@ -112,11 +112,12 @@ public class CoinDefinition {
 
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
-            //"dnsseed.darkcoin.io",
+            "dnsseed.masternode.io",
             "dnsseed.darkcoin.qa",
+            //"dnsseed.darkcoin.io",
             "23.23.186.131", //Evan's seed node
             "162.252.83.46",  //drkpool.com
-            "107.155.71.72",
+            /*"107.155.71.72",
             "50.16.206.102",
             "50.19.116.123",
             "98.165.130.67",
@@ -137,7 +138,7 @@ public class CoinDefinition {
             "5.254.96.3",
             "175.115.201.44",
             "208.53.191.2",
-            "162.243.33.16",
+            "162.243.33.16",*/
     };
 
     public static int minBroadcastConnections = 0;   //0 for default; we need more peers.

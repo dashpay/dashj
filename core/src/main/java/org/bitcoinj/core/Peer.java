@@ -1300,6 +1300,10 @@ public class Peer extends PeerSocketHandler {
                 case TransactionLockVote:
                     instantxLocks.add(item);
                     break;
+                case Spork:
+                    break;
+                case MasterNodeWinner:
+                    break;
                 default:
                     throw new IllegalStateException("Not implemented: " + item.type);
             }
