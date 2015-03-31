@@ -32,8 +32,8 @@ public class CoinDefinition {
     public static final String BLOCKEXPLORER_BLOCK_PATH = "block/";                 //blockr.io path
     public static final String BLOCKEXPLORER_BASE_URL_TEST = BLOCKEXPLORER_BASE_URL_PROD;
 
-    public static final String DONATION_ADDRESS = "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv";  //Hash Engineering donation DRK address
-    public static final String DONATION_ADDRESS_TESTNET = "";  //Hash Engineering donation DRK address
+    public static final String DONATION_ADDRESS = "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv";  //Hash Engineering donation DASH address
+    public static final String DONATION_ADDRESS_TESTNET = "";  //Hash Engineering donation DASH address
 
     enum CoinHash {
         SHA256,
