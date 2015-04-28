@@ -26,7 +26,7 @@ public class CoinDefinition {
     }
     public static final CoinPrecision coinPrecision = CoinPrecision.Coins;
 
-    public static final String UNSPENT_API_URL = "https://chainz.cryptoid.info/drk/api.dws?q=unspent";
+    public static final String UNSPENT_API_URL = "https://chainz.cryptoid.info/dash/api.dws?q=unspent";
     public enum UnspentAPIType {
         BitEasy,
         Blockr,
@@ -42,7 +42,6 @@ public class CoinDefinition {
     public static final String BLOCKEXPLORER_BASE_URL_TEST = "http://test.explorer.darkcoin.qa/chain/tDarkcoin/";
 
     public static final String DONATION_ADDRESS = "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv";  //Hash Engineering donation DASH address
-    public static final String DONATION_ADDRESS_TESTNET = "";  //Hash Engineering donation DASH address
 
     enum CoinHash {
         SHA256,
@@ -76,8 +75,8 @@ public class CoinDefinition {
     public static final long DUST_LIMIT = 1000; //main.h CTransaction::GetMinFee        0.01 coins
     public static final long INSTANTX_FEE = 1000000;
 
-    public static final int PROTOCOL_VERSION = 70066;          //version.h PROTOCOL_VERSION
-    public static final int MIN_PROTOCOL_VERSION = 70054;        //version.h MIN_PROTO_VERSION
+    public static final int PROTOCOL_VERSION = 70076;          //version.h PROTOCOL_VERSION
+    public static final int MIN_PROTOCOL_VERSION = 70066;        //version.h MIN_PROTO_VERSION
     public static final int BIP0031_VERSION = 60000;
 
     public static final int BLOCK_CURRENTVERSION = 2;   //CBlock::CURRENT_VERSION

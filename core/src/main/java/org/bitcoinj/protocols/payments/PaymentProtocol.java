@@ -17,19 +17,20 @@
 
 package org.bitcoinj.protocols.payments;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.X509Utils;
-import org.bitcoinj.script.ScriptBuilder;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.bitcoin.protocols.payments.Protos;
+import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.X509Utils;
+import org.bitcoinj.script.ScriptBuilder;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.security.*;
+import java.security.PublicKey;
 import java.security.cert.*;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
