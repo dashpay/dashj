@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 The bitcoinj developers.
+ * Copyright 2014 The bitcoinj developers.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -682,7 +682,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                 for (int i : key.getDeterministicKey().getPathList())
                     path.add(new ChildNumber(i));
                 // Deserialize the public key and path.
-                ECPoint pubkey = ECKey.CURVE.getCurve().decodePoint(key.getPublicKey().toByteArray());
+                LazyECPoint pubkey = new LazyECPoint(ECKey.CURVE.getCurve(), key.getPublicKey().toByteArray());
                 final ImmutableList<ChildNumber> immutablePath = ImmutableList.copyOf(path);
                 // Possibly create the chain, if we didn't already do so yet.
                 boolean isWatchingAccountKey = false;
@@ -1070,6 +1070,12 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         return keys;
     }
 
+    /**
+     * Returns only the keys that have been issued by this chain, lookahead not included.
+     */
+    public List<ECKey> getIssuedReceiveKeys() {
+        return getKeys(false);
+    }
 
     /**
      * Returns leaf keys issued by this chain (including lookahead zone)

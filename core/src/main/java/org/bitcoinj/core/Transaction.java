@@ -32,8 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.*;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static org.bitcoinj.core.Utils.*;
@@ -677,8 +675,11 @@ public class Transaction extends ChildMessage implements Serializable {
                 s.append(outpoint.toString());
                 final TransactionOutput connectedOutput = outpoint.getConnectedOutput();
                 if (connectedOutput != null) {
-                    s.append(" hash160:");
-                    s.append(Utils.HEX.encode(connectedOutput.getScriptPubKey().getPubKeyHash()));
+                    Script scriptPubKey = connectedOutput.getScriptPubKey();
+                    if (scriptPubKey.isSentToAddress() || scriptPubKey.isPayToScriptHash()) {
+                        s.append(" hash160:");
+                        s.append(Utils.HEX.encode(scriptPubKey.getPubKeyHash()));
+                    }
                 }
             } catch (Exception e) {
                 s.append("[exception: ").append(e.getMessage()).append("]");
@@ -1262,19 +1263,6 @@ public class Transaction extends ChildMessage implements Serializable {
         if (!isTimeLocked())
             return true;
         return false;
-    }
-
-    /**
-     * Parses the string either as a whole number of blocks, or if it contains slashes as a YYYY/MM/DD format date
-     * and returns the lock time in wire format.
-     */
-    public static long parseLockTimeStr(String lockTimeStr) throws ParseException {
-        if (lockTimeStr.indexOf("/") != -1) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd", Locale.US);
-            Date date = format.parse(lockTimeStr);
-            return date.getTime() / 1000;
-        }
-        return Long.parseLong(lockTimeStr);
     }
 
     /**

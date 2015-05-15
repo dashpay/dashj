@@ -57,7 +57,6 @@ public class TestNet3Params extends NetworkParameters {
 
         dnsSeeds = CoinDefinition.testnetDnsSeeds;
 
-
     }
 
     private static TestNet3Params instance;

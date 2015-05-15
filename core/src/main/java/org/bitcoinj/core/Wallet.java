@@ -453,6 +453,30 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         return freshAddress(KeyChain.KeyPurpose.RECEIVE_FUNDS);
     }
 
+    /**
+     * Returns only the keys that have been issued by {@link #freshReceiveKey()}, {@link #freshReceiveAddress()},
+     * {@link #currentReceiveKey()} or {@link #currentReceiveAddress()}.
+     */
+    public List<ECKey> getIssuedReceiveKeys() {
+        keychainLock.lock();
+        try {
+            return keychain.getActiveKeyChain().getIssuedReceiveKeys();
+        } finally {
+            keychainLock.unlock();
+        }
+    }
+
+    /**
+     * Returns only the addresses that have been issued by {@link #freshReceiveKey()}, {@link #freshReceiveAddress()},
+     * {@link #currentReceiveKey()} or {@link #currentReceiveAddress()}.
+     */
+    public List<Address> getIssuedReceiveAddresses() {
+        final List<ECKey> keys = getIssuedReceiveKeys();
+        List<Address> addresses = new ArrayList<Address>(keys.size());
+        for (ECKey key : keys)
+            addresses.add(key.toAddress(getParams()));
+        return addresses;
+    }
 
     /**
      * Upgrades the wallet to be deterministic (BIP32). You should call this, possibly providing the users encryption
@@ -2001,22 +2025,27 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         // ever occur because we expect transactions to arrive in temporal order, but this assumption can be violated
         // when we receive a pending transaction from the mempool that is relevant to us, which spends coins that we
         // didn't see arrive on the best chain yet. For instance, because of a chain replay or because of our keys were
-        // used by another wallet somewhere else.
-        if (fromChain) {
-            for (Transaction pendingTx : pending.values()) {
-                for (TransactionInput input : pendingTx.getInputs()) {
-                    TransactionInput.ConnectionResult result = input.connect(tx, TransactionInput.ConnectMode.ABORT_ON_CONFLICT);
+        // used by another wallet somewhere else. Also, unconfirmed transactions can arrive from the mempool in more or
+        // less random order.
+        for (Transaction pendingTx : pending.values()) {
+            for (TransactionInput input : pendingTx.getInputs()) {
+                TransactionInput.ConnectionResult result = input.connect(tx, TransactionInput.ConnectMode.ABORT_ON_CONFLICT);
+                if (fromChain) {
                     // This TX is supposed to have just appeared on the best chain, so its outputs should not be marked
                     // as spent yet. If they are, it means something is happening out of order.
                     checkState(result != TransactionInput.ConnectionResult.ALREADY_SPENT);
-                    if (result == TransactionInput.ConnectionResult.SUCCESS) {
-                        log.info("Connected pending tx input {}:{}",
-                                pendingTx.getHashAsString(), pendingTx.getInputs().indexOf(input));
-                    }
                 }
-                // If the transactions outputs are now all spent, it will be moved into the spent pool by the
-                // processTxFromBestChain method.
+                if (result == TransactionInput.ConnectionResult.SUCCESS) {
+                    log.info("Connected pending tx input {}:{}",
+                            pendingTx.getHashAsString(), pendingTx.getInputs().indexOf(input));
+                }
             }
+        }
+        if (!fromChain) {
+            maybeMovePool(tx, "pendingtx");
+        } else {
+            // If the transactions outputs are now all spent, it will be moved into the spent pool by the
+            // processTxFromBestChain method.
         }
     }
 
@@ -2446,6 +2475,25 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
     }
 
     /**
+     * Prepares the wallet for a blockchain replay. Removes all transactions (as they would get in the way of the
+     * replay) and makes the wallet think it has never seen a block. {@link WalletEventListener#onWalletChanged()} will
+     * be fired.
+     */
+    public void reset() {
+        lock.lock();
+        try {
+            clearTransactions();
+            lastBlockSeenHash = null;
+            lastBlockSeenHeight = -1; // Magic value for 'never'.
+            lastBlockSeenTimeSecs = 0;
+            saveLater();
+            maybeQueueOnWalletChanged();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
      * Deletes transactions which appeared above the given block height from the wallet, but does not touch the keys.
      * This is useful if you have some keys and wish to replay the block chain into the wallet in order to pick them up.
      * Triggers auto saving.
@@ -2454,11 +2502,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         lock.lock();
         try {
             if (fromHeight == 0) {
-                unspent.clear();
-                spent.clear();
-                pending.clear();
-                dead.clear();
-                transactions.clear();
+                clearTransactions();
                 saveLater();
             } else {
                 throw new UnsupportedOperationException();
@@ -2466,6 +2510,14 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         } finally {
             lock.unlock();
         }
+    }
+
+    private void clearTransactions() {
+        unspent.clear();
+        spent.clear();
+        pending.clear();
+        dead.clear();
+        transactions.clear();
     }
 
     /**
@@ -2609,6 +2661,9 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
 
             // Do the keys.
             builder.append("\nKeys:\n");
+            final long keyRotationTime = vKeyRotationTimestamp * 1000;
+            if (keyRotationTime > 0)
+                builder.append(String.format("Key rotation time: %s\n", Utils.dateTimeFormat(keyRotationTime)));
             builder.append(keychain.toString(includePrivateKeys));
 
             if (!watchedScripts.isEmpty()) {
@@ -4083,7 +4138,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
     }
 
     @Override
-    public synchronized void setTag(String tag, ByteString value) {
+    public void setTag(String tag, ByteString value) {
         super.setTag(tag, value);
         saveNow();
     }
@@ -4401,9 +4456,6 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
     public void setKeyRotationTime(long unixTimeSeconds) {
         checkArgument(unixTimeSeconds <= Utils.currentTimeSeconds());
         vKeyRotationTimestamp = unixTimeSeconds;
-        if (unixTimeSeconds > 0) {
-            log.info("Key rotation time set: {}", unixTimeSeconds);
-        }
         saveNow();
     }
 
@@ -4477,13 +4529,13 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         checkState(keychainLock.isHeldByCurrentThread());
         List<Transaction> results = Lists.newLinkedList();
         // TODO: Handle chain replays here.
-        long keyRotationTimestamp = vKeyRotationTimestamp;
+        final long keyRotationTimestamp = vKeyRotationTimestamp;
         if (keyRotationTimestamp == 0) return results;  // Nothing to do.
 
         // We might have to create a new HD hierarchy if the previous ones are now rotating.
         boolean allChainsRotating = true;
         for (DeterministicKeyChain chain : keychain.getDeterministicKeyChains()) {
-            if (chain.getEarliestKeyCreationTime() >= vKeyRotationTimestamp) {
+            if (chain.getEarliestKeyCreationTime() >= keyRotationTimestamp) {
                 allChainsRotating = false;
                 break;
             }

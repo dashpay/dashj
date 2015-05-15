@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.bitcoinj</groupId>
         <artifactId>darkcoinj-parent</artifactId>
-        <version>0.12.2</version>
+        <version>0.12.3</version>
     </parent>
 
     <artifactId>darkcoinj-core</artifactId>
@@ -136,6 +136,7 @@
                         <link>http://docs.guava-libraries.googlecode.com/git-history/release/javadoc/</link>
                     </links>
                     <detectJavaApiLink/>
+                    <quiet>true</quiet>
                 </configuration>
             </plugin>
 
@@ -243,6 +244,15 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- Unit tests plugin, to skip runing test add -Dmaven.test.skip -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <runOrder>alphabetical</runOrder>
+                </configuration>
             </plugin>
 
             <!-- Create a bundled executable test jar that runs the regtester/pulltester.
