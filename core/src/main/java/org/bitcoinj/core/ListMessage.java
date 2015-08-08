@@ -112,6 +112,30 @@ public abstract class ListMessage extends Message {
                 case 7:
                     type = InventoryItem.Type.MasterNodeWinner;
                     break;
+                case 8:
+                    type = InventoryItem.Type.MasterNodeScanningError;
+                    break;
+                case 9:
+                    type = InventoryItem.Type.BudgetVote;
+                    break;
+                case 10:
+                    type = InventoryItem.Type.BudgetFinalized;
+                    break;
+                case 11:
+                    type = InventoryItem.Type.BudgetFinalizedVote;
+                    break;
+                case 12:
+                    type = InventoryItem.Type.MasterNodeQuarum;
+                    break;
+                case 13:
+                    type = InventoryItem.Type.MasterNodeAnnounce;
+                    break;
+                case 14:
+                    type = InventoryItem.Type.MasterNodePing;
+                    break;
+                case 15:
+                    type = InventoryItem.Type.DarkSendTransaction;
+                    break;
                 default:
                     throw new ProtocolException("Unknown CInv type: " + typeCode);
             }

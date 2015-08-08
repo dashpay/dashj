@@ -32,6 +32,16 @@ public class InventoryItem {
         TransactionLockVote,         //Darkcoin InstantX
         Spork,
         MasterNodeWinner,
+        MasterNodeScanningError,
+        BudgetVote,
+        BudgetProposal,
+        BudgetFinalized,
+        BudgetFinalizedVote,
+        MasterNodeQuarum,
+        MasterNodeAnnounce,
+        MasterNodePing,
+        DarkSendTransaction
+
 
     }
 
