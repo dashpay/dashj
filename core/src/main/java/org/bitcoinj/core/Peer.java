@@ -687,6 +687,9 @@ public class Peer extends PeerSocketHandler {
         final Transaction fTx;
         lock.lock();
         InstantXSystem instantx = InstantXSystem.get(blockChain);
+        if(!instantx.isEnabled())
+            return;
+
         try {
             log.debug("{}: Received txlreq {}", getAddress(), tx.getHashAsString());
 
@@ -806,6 +809,9 @@ public class Peer extends PeerSocketHandler {
         lock.lock();
         try {
             InstantXSystem instantx = InstantXSystem.get(blockChain);
+            if(!instantx.isEnabled())
+                return;
+
             if(instantx.mapTxLockVote.containsKey(ctx.getHash()))
                 return;
 
@@ -1286,19 +1292,23 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> instantxLockRequests = new LinkedList<InventoryItem>();
         List<InventoryItem> instantxLocks = new LinkedList<InventoryItem>();
 
+        InstantXSystem instantx = InstantXSystem.get(blockChain);
+
         for (InventoryItem item : items) {
             switch (item.type) {
                 case Transaction:
                     transactions.add(item);
                     break;
                 case TransactionLockRequest:
-                    instantxLockRequests.add(item);
+                    if(instantx.isEnabled())
+                        instantxLockRequests.add(item);
                     break;
                 case Block:
                     blocks.add(item);
                     break;
                 case TransactionLockVote:
-                    instantxLocks.add(item);
+                    if(instantx.isEnabled())
+                        instantxLocks.add(item);
                     break;
                 case Spork:
                     break;
@@ -1382,7 +1392,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         it = instantxLocks.iterator();
-        InstantXSystem instantx = InstantXSystem.get(blockChain);
+        //InstantXSystem instantx = InstantXSystem.get(blockChain);
         while (it.hasNext()) {
             InventoryItem item = it.next();
 
