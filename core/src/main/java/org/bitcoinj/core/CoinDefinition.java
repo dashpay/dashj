@@ -75,7 +75,10 @@ public class CoinDefinition {
     public static final long DUST_LIMIT = 1000; //main.h CTransaction::GetMinFee        0.01 coins
     public static final long INSTANTX_FEE = 1000000;
 
-    public static final int PROTOCOL_VERSION = 70076;          //version.h PROTOCOL_VERSION
+    //
+    // Dash 0.12
+    //
+    public static final int PROTOCOL_VERSION = 70103;          //version.h PROTOCOL_VERSION
     public static final int MIN_PROTOCOL_VERSION = 70066;        //version.h MIN_PROTO_VERSION
     public static final int BIP0031_VERSION = 60000;
 
