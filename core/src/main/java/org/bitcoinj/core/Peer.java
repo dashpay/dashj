@@ -1314,6 +1314,16 @@ public class Peer extends PeerSocketHandler {
                     break;
                 case MasterNodeWinner:
                     break;
+                case MasterNodeScanningError: break;
+                case BudgetVote: break;
+                case    BudgetProposal: break;
+                case    BudgetFinalized: break;
+                case    BudgetFinalizedVote: break;
+                case    MasterNodeQuarum: break;
+                case    MasterNodeAnnounce: break;
+                case    MasterNodePing: break;
+                case DarkSendTransaction:
+                    break;
                 default:
                     throw new IllegalStateException("Not implemented: " + item.type);
             }
