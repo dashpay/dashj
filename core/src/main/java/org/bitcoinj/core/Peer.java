@@ -16,12 +16,9 @@
 
 package org.bitcoinj.core;
 
-import com.google.common.base.*;
 import com.google.common.base.Objects;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -1312,7 +1309,8 @@ public class Peer extends PeerSocketHandler {
                 case DarkSendTransaction:
                     break;
                 default:
-                    throw new IllegalStateException("Not implemented: " + item.type);
+                    break;
+                    //throw new IllegalStateException("Not implemented: " + item.type);
             }
         }
 
