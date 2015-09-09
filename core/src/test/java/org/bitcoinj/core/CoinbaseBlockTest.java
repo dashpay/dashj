@@ -19,6 +19,7 @@ package org.bitcoinj.core;
 import org.bitcoinj.core.AbstractBlockChain.NewBlockType;
 import org.bitcoinj.core.Wallet.BalanceType;
 import org.bitcoinj.params.MainNetParams;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -31,7 +32,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
- * Test that an example production coinbase transactions can be added to a wallet ok.
+ * Test that an example mainnet coinbase transactions can be added to a wallet ok.
  */
 public class CoinbaseBlockTest {
     static final NetworkParameters params = MainNetParams.get();
@@ -43,6 +44,11 @@ public class CoinbaseBlockTest {
     private static final int BLOCK_LENGTH_AS_HEX = 37357;
     private static final long BLOCK_NONCE = 3973947400L;
     private static final Coin BALANCE_AFTER_BLOCK = Coin.valueOf(22223642);
+
+    @Before
+    public void setUp() throws Exception {
+        Context context = new Context(params);
+    }
 
     @Test
     public void testReceiveCoinbaseTransaction() throws Exception {
@@ -65,8 +71,8 @@ public class CoinbaseBlockTest {
         // Create a wallet contain the miner's key that receives a spend from a coinbase.
         ECKey miningKey = (new DumpedPrivateKey(params, MINING_PRIVATE_KEY)).getKey();
         assertNotNull(miningKey);
-
-        Wallet wallet = new Wallet(params);
+        Context context = new Context(params);
+        Wallet wallet = new Wallet(context);
         wallet.importKey(miningKey);
 
         // Initial balance should be zero by construction.

@@ -47,6 +47,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
     private final LinkedHashMap<ByteString, ECKey> hashToKeys;
     private final LinkedHashMap<ByteString, ECKey> pubkeyToKeys;
     @Nullable private final KeyCrypter keyCrypter;
+    private boolean isWatching;
 
     private final CopyOnWriteArrayList<ListenerRegistration<KeyChainEventListener>> listeners;
 
@@ -167,8 +168,17 @@ public class BasicKeyChain implements EncryptableKeyChain {
     }
 
     private void importKeyLocked(ECKey key) {
-        pubkeyToKeys.put(ByteString.copyFrom(key.getPubKey()), key);
+        if (hashToKeys.isEmpty()) {
+            isWatching = key.isWatching();
+        } else {
+            if (key.isWatching() && !isWatching)
+                throw new IllegalArgumentException("Key is watching but chain is not");
+            if (!key.isWatching() && isWatching)
+                throw new IllegalArgumentException("Key is not watching but chain is");
+        }
+        ECKey previousKey = pubkeyToKeys.put(ByteString.copyFrom(key.getPubKey()), key);
         hashToKeys.put(ByteString.copyFrom(key.getPubKeyHash()), key);
+        checkState(previousKey == null);
     }
 
     private void importKeysLocked(List<ECKey> keys) {
@@ -218,6 +228,28 @@ public class BasicKeyChain implements EncryptableKeyChain {
     @Override
     public int numKeys() {
         return pubkeyToKeys.size();
+    }
+
+    /** Whether this basic key chain is empty, full of regular (usable for signing) keys, or full of watching keys. */
+    public enum State {
+        EMPTY,
+        WATCHING,
+        REGULAR
+    }
+
+    /**
+     * Returns whether this chain consists of pubkey only (watching) keys, regular keys (usable for signing), or
+     * has no keys in it yet at all (thus we cannot tell).
+     */
+    public State isWatching() {
+        lock.lock();
+        try {
+            if (hashToKeys.isEmpty())
+                return State.EMPTY;
+            return isWatching ? State.WATCHING : State.REGULAR;
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**

@@ -24,6 +24,10 @@ import com.lambdaworks.crypto.SCrypt;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.text.Normalizer;
@@ -37,7 +41,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class BIP38PrivateKey extends VersionedChecksummedBytes {
 
-    public final NetworkParameters params;
+    public transient NetworkParameters params;
     public final boolean ecMultiply;
     public final boolean compressed;
     public final boolean hasLotAndSequence;
@@ -87,7 +91,7 @@ public class BIP38PrivateKey extends VersionedChecksummedBytes {
     public ECKey decrypt(String passphrase) throws BadPassphraseException {
         String normalizedPassphrase = Normalizer.normalize(passphrase, Normalizer.Form.NFC);
         ECKey key = ecMultiply ? decryptEC(normalizedPassphrase) : decryptNoEC(normalizedPassphrase);
-        Sha256Hash hash = Sha256Hash.createDouble(key.toAddress(params).toString().getBytes(Charsets.US_ASCII));
+        Sha256Hash hash = Sha256Hash.twiceOf(key.toAddress(params).toString().getBytes(Charsets.US_ASCII));
         byte[] actualAddressHash = Arrays.copyOfRange(hash.getBytes(), 0, 4);
         if (!Arrays.equals(actualAddressHash, addressHash))
             throw new BadPassphraseException();
@@ -122,7 +126,7 @@ public class BIP38PrivateKey extends VersionedChecksummedBytes {
             if (hasLotAndSequence) {
                 byte[] hashBytes = Bytes.concat(passFactorBytes, ownerEntropy);
                 checkState(hashBytes.length == 40);
-                passFactorBytes = Sha256Hash.createDouble(hashBytes).getBytes();
+                passFactorBytes = Sha256Hash.hashTwice(hashBytes);
             }
             BigInteger passFactor = new BigInteger(1, passFactorBytes);
             ECKey k = ECKey.fromPrivate(passFactor, true);
@@ -150,10 +154,10 @@ public class BIP38PrivateKey extends VersionedChecksummedBytes {
 
             byte[] seed = Bytes.concat(decrypted1, Arrays.copyOfRange(decrypted2, 8, 16));
             checkState(seed.length == 24);
-            BigInteger seedFactor = new BigInteger(1, Sha256Hash.createDouble(seed).getBytes());
+            BigInteger seedFactor = new BigInteger(1, Sha256Hash.hashTwice(seed));
             checkState(passFactor.signum() >= 0);
             checkState(seedFactor.signum() >= 0);
-            BigInteger priv = passFactor.multiply(seedFactor).mod(ECKey.CURVE_PARAMS.getN());
+            BigInteger priv = passFactor.multiply(seedFactor).mod(ECKey.CURVE.getN());
 
             return ECKey.fromPrivate(priv, compressed);
         } catch (GeneralSecurityException x) {
@@ -174,5 +178,17 @@ public class BIP38PrivateKey extends VersionedChecksummedBytes {
     @Override
     public int hashCode() {
         return Objects.hashCode(super.hashCode(), params);
+    }
+
+    // Java serialization
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        out.defaultWriteObject();
+        out.writeUTF(params.getId());
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        params = NetworkParameters.fromID(in.readUTF());
     }
 }

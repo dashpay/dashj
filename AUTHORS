@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 --------------darkcoinj
 HashEngineering <hashengineeringsolutions@gmail.com>
 
@@ -45,3 +46,73 @@ Oscar Guindzberg <oscar.guindzberg@gmail.com>
 Richard Green <richardagreen@gmail.com>
 Martin Zachrison <zac@cyberzac.se>
 Michael Bumann <michael@railslove.com>
+=======
+$ git log --format='%aN' | sort -u
+
+Aaron Voisine
+Adam Mackler
+Alexander Lolis
+Alex Taylor
+Alon Muroch
+Amichai Rothman
+Andreas Schildbach
+Bennett Hoffman
+Carlos Lopez-Camey
+Carsten Otto
+cyberzac
+Dave Collins
+Diego Basch
+elbandi
+eleetas
+En-Ran Zhou
+Erik Tierney
+Fireduck
+freak
+Gary Rowe
+Giannis Dzegoutanis
+gubatron
+Harald Hoyer
+Jakob Stuber
+Jameson Lopp
+Jarl Fransson
+Jim Burton
+Jiri Peinlich
+Johnathan
+Jonny Heggheim
+Justas
+Kalpesh Parmar
+Ken Sedgwick
+Kevin Greene
+Kosta Korenkov
+Loco
+Manfred Karrer
+Martin Zachrison
+matija.mazi@gmail.com
+Matt Corallo
+Michael Bell
+Michael Bumann
+Mike Hearn
+Mike Rosseel
+Miron Cuperman
+monk
+Mora Zyx
+ollekullberg
+Oscar Guindzberg
+Pavol Rusnak
+Peter Dettman
+Peter Stockli
+Peter Todd
+Piotr Włodarek
+Richard Green
+Ross Nicoll
+Sean Gilligan
+Sebastian Ortega
+Simon de la Rouviere
+Simon Vermeersch
+Stephen Reed
+troggy
+Tyler Houlihan
+Wojciech Langiewicz
+Xiaofeng Guo
+Ximo Guanter
+>>>>>>> upstream2/release-0.13

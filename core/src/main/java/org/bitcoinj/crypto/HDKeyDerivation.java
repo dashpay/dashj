@@ -35,8 +35,16 @@ import static com.google.common.base.Preconditions.checkState;
  * deterministic wallet child key generation algorithm.
  */
 public final class HDKeyDerivation {
+    static {
+        // Init proper random number generator, as some old Android installations have bugs that make it unsecure.
+        if (Utils.isAndroidRuntime())
+            new LinuxSecureRandom();
+
+        RAND_INT = new BigInteger(256, new SecureRandom());
+    }
+
     // Some arbitrary random number. Doesn't matter what it is.
-    private static final BigInteger RAND_INT = new BigInteger(256, new SecureRandom());
+    private static final BigInteger RAND_INT;
 
     private HDKeyDerivation() { }
 
@@ -125,7 +133,7 @@ public final class HDKeyDerivation {
      * if the resulting derived key is invalid (eg. private key == 0).
      */
     public static DeterministicKey deriveChildKey(DeterministicKey parent, ChildNumber childNumber) throws HDDerivationException {
-        if (parent.isPubKeyOnly()) {
+        if (!parent.hasPrivKey()) {
             RawKeyBytes rawKey = deriveChildKeyBytesFromPublic(parent, childNumber, PublicDeriveMode.NORMAL);
             return new DeterministicKey(
                     HDUtils.append(parent.getPath(), childNumber),
@@ -146,7 +154,7 @@ public final class HDKeyDerivation {
     public static RawKeyBytes deriveChildKeyBytesFromPrivate(DeterministicKey parent,
                                                               ChildNumber childNumber) throws HDDerivationException {
         checkArgument(parent.hasPrivKey(), "Parent key must have private key bytes for this method.");
-        byte[] parentPublicKey = ECKey.compressPoint(parent.getPubKeyPoint()).getEncoded();
+        byte[] parentPublicKey = parent.getPubKeyPoint().getEncoded(true);
         assert parentPublicKey.length == 33 : parentPublicKey.length;
         ByteBuffer data = ByteBuffer.allocate(37);
         if (childNumber.isHardened()) {
@@ -174,7 +182,7 @@ public final class HDKeyDerivation {
 
     public static RawKeyBytes deriveChildKeyBytesFromPublic(DeterministicKey parent, ChildNumber childNumber, PublicDeriveMode mode) throws HDDerivationException {
         checkArgument(!childNumber.isHardened(), "Can't use private derivation with public keys only.");
-        byte[] parentPublicKey = ECKey.compressPoint(parent.getPubKeyPoint()).getEncoded();
+        byte[] parentPublicKey = parent.getPubKeyPoint().getEncoded(true);
         assert parentPublicKey.length == 33 : parentPublicKey.length;
         ByteBuffer data = ByteBuffer.allocate(37);
         data.put(parentPublicKey);
@@ -186,21 +194,20 @@ public final class HDKeyDerivation {
         BigInteger ilInt = new BigInteger(1, il);
         assertLessThanN(ilInt, "Illegal derived key: I_L >= n");
 
-        final ECPoint G = ECKey.CURVE.getG();
         final BigInteger N = ECKey.CURVE.getN();
         ECPoint Ki;
         switch (mode) {
             case NORMAL:
-                Ki = G.multiply(ilInt).add(parent.getPubKeyPoint());
+                Ki = ECKey.publicPointFromPrivate(ilInt).add(parent.getPubKeyPoint());
                 break;
             case WITH_INVERSION:
                 // This trick comes from Gregory Maxwell. Check the homomorphic properties of our curve hold. The
                 // below calculations should be redundant and give the same result as NORMAL but if the precalculated
                 // tables have taken a bit flip will yield a different answer. This mode is used when vending a key
                 // to perform a last-ditch sanity check trying to catch bad RAM.
-                Ki = G.multiply(ilInt.add(RAND_INT));
+                Ki = ECKey.publicPointFromPrivate(ilInt.add(RAND_INT).mod(N));
                 BigInteger additiveInverse = RAND_INT.negate().mod(N);
-                Ki = Ki.add(G.multiply(additiveInverse));
+                Ki = Ki.add(ECKey.publicPointFromPrivate(additiveInverse));
                 Ki = Ki.add(parent.getPubKeyPoint());
                 break;
             default: throw new AssertionError();

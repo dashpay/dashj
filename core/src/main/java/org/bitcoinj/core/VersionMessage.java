@@ -75,7 +75,7 @@ public class VersionMessage extends Message {
     public boolean relayTxesBeforeFilter;
 
     /** The version of this library release, as a string. */
-    public static final String BITCOINJ_VERSION = "0.12.3";
+    public static final String BITCOINJ_VERSION = "0.13.2";
     /** The value that is prepended to the subVer field of this application. */
     public static final String LIBRARY_SUBVER = "/"+CoinDefinition.coinName+"J:" + BITCOINJ_VERSION + "/";
 
@@ -235,17 +235,17 @@ public class VersionMessage extends Message {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n");
-        sb.append("client version: ").append(clientVersion).append("\n");
-        sb.append("local services: ").append(localServices).append("\n");
-        sb.append("time:           ").append(time).append("\n");
-        sb.append("my addr:        ").append(myAddr).append("\n");
-        sb.append("their addr:     ").append(theirAddr).append("\n");
-        sb.append("sub version:    ").append(subVer).append("\n");
-        sb.append("best height:    ").append(bestHeight).append("\n");
-        sb.append("delay tx relay: ").append(!relayTxesBeforeFilter).append("\n");
-        return sb.toString();
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("\n");
+        stringBuilder.append("client version: ").append(clientVersion).append("\n");
+        stringBuilder.append("local services: ").append(localServices).append("\n");
+        stringBuilder.append("time:           ").append(time).append("\n");
+        stringBuilder.append("my addr:        ").append(myAddr).append("\n");
+        stringBuilder.append("their addr:     ").append(theirAddr).append("\n");
+        stringBuilder.append("sub version:    ").append(subVer).append("\n");
+        stringBuilder.append("best height:    ").append(bestHeight).append("\n");
+        stringBuilder.append("delay tx relay: ").append(!relayTxesBeforeFilter).append("\n");
+        return stringBuilder.toString();
     }
 
     public VersionMessage duplicate() {

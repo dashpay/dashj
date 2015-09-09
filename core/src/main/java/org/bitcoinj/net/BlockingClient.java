@@ -16,20 +16,18 @@
 
 package org.bitcoinj.net;
 
-import org.slf4j.LoggerFactory;
+import com.google.common.util.concurrent.*;
+import org.bitcoinj.core.*;
+import org.slf4j.*;
 
-import javax.annotation.Nullable;
-import javax.net.SocketFactory;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.util.Set;
+import javax.annotation.*;
+import javax.net.*;
+import java.io.*;
+import java.net.*;
+import java.nio.*;
+import java.util.*;
 
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.*;
 
 /**
  * <p>Creates a simple connection to a server using a {@link StreamParser} to process data.</p>
@@ -47,6 +45,7 @@ public class BlockingClient implements MessageWriteTarget {
     private final ByteBuffer dbuf;
     private Socket socket;
     private volatile boolean vCloseRequested = false;
+    private SettableFuture<SocketAddress> connectFuture;
 
     /**
      * <p>Creates a new client to the given server address using the given {@link StreamParser} to decode the data.
@@ -62,20 +61,23 @@ public class BlockingClient implements MessageWriteTarget {
      */
     public BlockingClient(final SocketAddress serverAddress, final StreamParser parser,
                           final int connectTimeoutMillis, final SocketFactory socketFactory, @Nullable final Set<BlockingClient> clientSet) throws IOException {
+        connectFuture = SettableFuture.create();
         // Try to fit at least one message in the network buffer, but place an upper and lower limit on its size to make
         // sure it doesnt get too large or have to call read too often.
         dbuf = ByteBuffer.allocateDirect(Math.min(Math.max(parser.getMaxMessageSize(), BUFFER_SIZE_LOWER_BOUND), BUFFER_SIZE_UPPER_BOUND));
         parser.setWriteTarget(this);
         socket = socketFactory.createSocket();
+        final Context context = Context.get();
         Thread t = new Thread() {
             @Override
             public void run() {
+                Context.propagate(context);
                 if (clientSet != null)
                     clientSet.add(BlockingClient.this);
                 try {
-                    InetSocketAddress iServerAddress = (InetSocketAddress)serverAddress;
                     socket.connect(serverAddress, connectTimeoutMillis);
                     parser.connectionOpened();
+                    connectFuture.set(serverAddress);
                     InputStream stream = socket.getInputStream();
                     byte[] readBuff = new byte[dbuf.capacity()];
 
@@ -97,8 +99,10 @@ public class BlockingClient implements MessageWriteTarget {
                         dbuf.compact();
                     }
                 } catch (Exception e) {
-                    if (!vCloseRequested)
-                        log.error("Error trying to open/read from connection: " + serverAddress, e);
+                    if (!vCloseRequested) {
+                        log.error("Error trying to open/read from connection: {}: {}", serverAddress, e.getMessage());
+                        connectFuture.setException(e);
+                    }
                 } finally {
                     try {
                         socket.close();
@@ -142,5 +146,10 @@ public class BlockingClient implements MessageWriteTarget {
             closeConnection();
             throw e;
         }
+    }
+
+    /** Returns a future that completes once connection has occurred at the socket level or with an exception if failed to connect. */
+    public ListenableFuture<SocketAddress> getConnectFuture() {
+        return connectFuture;
     }
 }

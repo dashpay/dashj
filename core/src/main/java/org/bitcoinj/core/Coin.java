@@ -85,7 +85,8 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
     private final long MAX_SATOSHIS = COIN_VALUE * NetworkParameters.MAX_COINS;
 
     private Coin(final long satoshis) {
-        checkArgument(-MAX_SATOSHIS <= satoshis && satoshis <= MAX_SATOSHIS,
+        long maxSatoshis = COIN_VALUE * NetworkParameters.MAX_COINS;
+        checkArgument(-maxSatoshis <= satoshis && satoshis <= maxSatoshis,
             "%s satoshis exceeds maximum possible quantity of Bitcoin.", satoshis);
         this.value = satoshis;
     }
@@ -128,7 +129,12 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
      * @throws IllegalArgumentException if you try to specify fractional satoshis, or a value out of range.
      */
     public static Coin parseCoin(final String str) {
-        return Coin.valueOf(new BigDecimal(str).movePointRight(SMALLEST_UNIT_EXPONENT).toBigIntegerExact().longValue());
+        try {
+            long satoshis = new BigDecimal(str).movePointRight(SMALLEST_UNIT_EXPONENT).toBigIntegerExact().longValue();
+            return Coin.valueOf(satoshis);
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException(e); // Repackage exception to honor method contract
+        }
     }
 
     public Coin add(final Coin value) {

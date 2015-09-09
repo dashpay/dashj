@@ -29,48 +29,48 @@ import java.util.List;
  * BIP30 (no duplicate txid creation if the previous one was not fully spent prior to this block) verification.</p>
  */
 public class TransactionOutputChanges {
-    public final List<StoredTransactionOutput> txOutsCreated;
-    public final List<StoredTransactionOutput> txOutsSpent;
+    public final List<UTXO> txOutsCreated;
+    public final List<UTXO> txOutsSpent;
     
-    public TransactionOutputChanges(List<StoredTransactionOutput> txOutsCreated, List<StoredTransactionOutput> txOutsSpent) {
+    public TransactionOutputChanges(List<UTXO> txOutsCreated, List<UTXO> txOutsSpent) {
         this.txOutsCreated = txOutsCreated;
         this.txOutsSpent = txOutsSpent;
     }
     
     public TransactionOutputChanges(InputStream in) throws IOException {
-        int numOutsCreated = ((in.read() & 0xFF) << 0) |
+        int numOutsCreated = (in.read() & 0xFF) |
                              ((in.read() & 0xFF) << 8) |
                              ((in.read() & 0xFF) << 16) |
                              ((in.read() & 0xFF) << 24);
-        txOutsCreated = new LinkedList<StoredTransactionOutput>();
+        txOutsCreated = new LinkedList<UTXO>();
         for (int i = 0; i < numOutsCreated; i++)
-            txOutsCreated.add(new StoredTransactionOutput(in));
+            txOutsCreated.add(new UTXO(in));
         
-        int numOutsSpent = ((in.read() & 0xFF) << 0) |
+        int numOutsSpent = (in.read() & 0xFF) |
                            ((in.read() & 0xFF) << 8) |
                            ((in.read() & 0xFF) << 16) |
                            ((in.read() & 0xFF) << 24);
-        txOutsSpent = new LinkedList<StoredTransactionOutput>();
+        txOutsSpent = new LinkedList<UTXO>();
         for (int i = 0; i < numOutsSpent; i++)
-            txOutsSpent.add(new StoredTransactionOutput(in));
+            txOutsSpent.add(new UTXO(in));
     }
 
     public void serializeToStream(OutputStream bos) throws IOException {
         int numOutsCreated = txOutsCreated.size();
-        bos.write(0xFF & (numOutsCreated >> 0));
+        bos.write(0xFF & numOutsCreated);
         bos.write(0xFF & (numOutsCreated >> 8));
         bos.write(0xFF & (numOutsCreated >> 16));
         bos.write(0xFF & (numOutsCreated >> 24));
-        for (StoredTransactionOutput output : txOutsCreated) {
+        for (UTXO output : txOutsCreated) {
             output.serializeToStream(bos);
         }
         
         int numOutsSpent = txOutsSpent.size();
-        bos.write(0xFF & (numOutsSpent >> 0));
+        bos.write(0xFF & numOutsSpent);
         bos.write(0xFF & (numOutsSpent >> 8));
         bos.write(0xFF & (numOutsSpent >> 16));
         bos.write(0xFF & (numOutsSpent >> 24));
-        for (StoredTransactionOutput output : txOutsSpent) {
+        for (UTXO output : txOutsSpent) {
             output.serializeToStream(bos);
         }
     }

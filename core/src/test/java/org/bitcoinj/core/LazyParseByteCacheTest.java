@@ -61,8 +61,7 @@ public class LazyParseByteCacheTest {
             "b6 3b 50 88 19 90 e4 b4  0d 6a ee 36 29 00 00 00" +
             "00 8b 48 30 45 02 21 00  f3 58 1e 19 72 ae 8a c7" +
             "c7 36 7a 7a 25 3b c1 13  52 23 ad b9 a4 68 bb 3a");
-    
-    private Wallet wallet;
+
     private BlockStore blockStore;
     private NetworkParameters unitTestParams;
     
@@ -74,7 +73,7 @@ public class LazyParseByteCacheTest {
     
     private byte[] tx2Bytes;
     private byte[] tx2BytesWithHeader;
-    
+
     private void resetBlockStore() {
         blockStore = new MemoryBlockStore(unitTestParams);
     }
@@ -82,7 +81,8 @@ public class LazyParseByteCacheTest {
     @Before
     public void setUp() throws Exception {
         unitTestParams = UnitTestParams.get();
-        wallet = new Wallet(unitTestParams);
+        Context context = new Context(unitTestParams);
+        Wallet wallet = new Wallet(context);
         wallet.freshReceiveKey();
 
         resetBlockStore();
@@ -123,8 +123,8 @@ public class LazyParseByteCacheTest {
     
     @Test
     public void validateSetup() {
-        byte[] b1 = new byte[] {1, 1, 1, 2, 3, 4, 5, 6, 7};
-        byte[] b2 = new byte[] {1, 2, 3};
+        byte[] b1 = {1, 1, 1, 2, 3, 4, 5, 6, 7};
+        byte[] b2 = {1, 2, 3};
         assertTrue(arrayContains(b1, b2));
         assertTrue(arrayContains(txMessage, txMessagePart));
         assertTrue(arrayContains(tx1BytesWithHeader, tx1Bytes));
@@ -306,7 +306,7 @@ public class LazyParseByteCacheTest {
             assertEquals(!lazy, b1.isParsedHeader());
             
             assertEquals(!lazy, tin.isParsed());
-            assertEquals(tin.isParsed() ? retain : true, tin.isCached());    
+            assertEquals(!tin.isParsed() || retain, tin.isCached());
             
             //does it still match ref tx?
             bos.reset();
@@ -336,7 +336,7 @@ public class LazyParseByteCacheTest {
                 //confirm sibling cache status was unaffected
                 if (tx1.getInputs().size() > 1) {
                     boolean parsed = tx1.getInputs().get(1).isParsed();
-                    assertEquals(parsed ? retain : true, tx1.getInputs().get(1).isCached());
+                    assertEquals(!parsed || retain, tx1.getInputs().get(1).isCached());
                     assertEquals(!lazy, parsed);
                 }
                 

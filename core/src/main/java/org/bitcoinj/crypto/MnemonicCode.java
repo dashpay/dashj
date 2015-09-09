@@ -19,7 +19,6 @@ package org.bitcoinj.crypto;
 
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Utils;
-import com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +28,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -48,7 +46,7 @@ public class MnemonicCode {
     private ArrayList<String> wordList;
 
     private static final String BIP39_ENGLISH_RESOURCE_NAME = "mnemonic/wordlist/english.txt";
-    private static String BIP39_ENGLISH_SHA256 = "ad90bf3beb7b0eb7e5acd74727dc0da96e0a280a258354e7293fb7e211ac03db";
+    private static final String BIP39_ENGLISH_SHA256 = "ad90bf3beb7b0eb7e5acd74727dc0da96e0a280a258354e7293fb7e211ac03db";
 
     /** UNIX time for when the BIP39 standard was finalised. This can be used as a default seed birthday. */
     public static long BIP39_STANDARDISATION_TIME_SECS = 1381276800;
@@ -88,12 +86,7 @@ public class MnemonicCode {
     public MnemonicCode(InputStream wordstream, String wordListDigest) throws IOException, IllegalArgumentException {
         BufferedReader br = new BufferedReader(new InputStreamReader(wordstream, "UTF-8"));
         this.wordList = new ArrayList<String>(2048);
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException ex) {
-            throw new RuntimeException(ex);		// Can't happen.
-        }
+        MessageDigest md = Sha256Hash.newDigest();
         String word;
         while ((word = br.readLine()) != null) {
             md.update(word.getBytes());
@@ -132,7 +125,7 @@ public class MnemonicCode {
         // used as a pseudo-random function. Desired length of the
         // derived key is 512 bits (= 64 bytes).
         //
-        String pass = Joiner.on(' ').join(words);
+        String pass = Utils.join(words);
         String salt = "mnemonic" + passphrase;
 
         long start = System.currentTimeMillis();
@@ -180,7 +173,7 @@ public class MnemonicCode {
                     entropy[ii] |= 1 << (7 - jj);
 
         // Take the digest of the entropy.
-        byte[] hash = Sha256Hash.create(entropy).getBytes();
+        byte[] hash = Sha256Hash.hash(entropy);
         boolean[] hashBits = bytesToBits(hash);
 
         // Check all the checksum bits.
@@ -204,7 +197,7 @@ public class MnemonicCode {
         // We take initial entropy of ENT bits and compute its
         // checksum by taking first ENT / 32 bits of its SHA256 hash.
 
-        byte[] hash = Sha256Hash.create(entropy).getBytes();
+        byte[] hash = Sha256Hash.hash(entropy);
         boolean[] hashBits = bytesToBits(hash);
         
         boolean[] entropyBits = bytesToBits(entropy);

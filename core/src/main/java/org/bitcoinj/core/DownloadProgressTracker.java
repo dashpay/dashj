@@ -17,29 +17,31 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.*;
 import java.util.Date;
-import java.util.concurrent.Semaphore;
-
-// TODO: Rename this to DownloadProgressTracker or something more appropriate.
+import java.util.concurrent.ExecutionException;
 
 /**
  * <p>An implementation of {@link AbstractPeerEventListener} that listens to chain download events and tracks progress
  * as a percentage. The default implementation prints progress to stdout, but you can subclass it and override the
  * progress method to update a GUI instead.</p>
  */
-public class DownloadListener extends AbstractPeerEventListener {
-    private static final Logger log = LoggerFactory.getLogger(DownloadListener.class);
+public class DownloadProgressTracker extends AbstractPeerEventListener {
+    private static final Logger log = LoggerFactory.getLogger(DownloadProgressTracker.class);
     private int originalBlocksLeft = -1;
     private int lastPercent = 0;
-    private Semaphore done = new Semaphore(0);
+    private SettableFuture<Long> future = SettableFuture.create();
     private boolean caughtUp = false;
 
     @Override
     public void onChainDownloadStarted(Peer peer, int blocksLeft) {
-        startDownload(blocksLeft);
+        if (blocksLeft > 0 && originalBlocksLeft == -1)
+            startDownload(blocksLeft);
         // Only mark this the first time, because this method can be called more than once during a chain download
         // if we switch peers during it.
         if (originalBlocksLeft == -1)
@@ -48,19 +50,19 @@ public class DownloadListener extends AbstractPeerEventListener {
             log.info("Chain download switched to {}", peer);
         if (blocksLeft == 0) {
             doneDownload();
-            done.release();
+            future.set(peer.getBestHeight());
         }
     }
 
     @Override
-    public void onBlocksDownloaded(Peer peer, Block block, int blocksLeft) {
+    public void onBlocksDownloaded(Peer peer, Block block, @Nullable FilteredBlock filteredBlock, int blocksLeft) {
         if (caughtUp)
             return;
 
         if (blocksLeft == 0) {
             caughtUp = true;
             doneDownload();
-            done.release();
+            future.set(peer.getBestHeight());
         }
 
         if (blocksLeft < 0 || originalBlocksLeft <= 0)
@@ -90,10 +92,8 @@ public class DownloadListener extends AbstractPeerEventListener {
      * @param blocks the number of blocks to download, estimated
      */
     protected void startDownload(int blocks) {
-        if (blocks > 0 && originalBlocksLeft == -1)
-            log.info("Downloading block chain of size " + blocks + ". " +
-                    (blocks > 1000 ? "This may take a while." : ""));
-
+        log.info("Downloading block chain of size " + blocks + ". " +
+                (blocks > 1000 ? "This may take a while." : ""));
     }
 
     /**
@@ -106,6 +106,18 @@ public class DownloadListener extends AbstractPeerEventListener {
      * Wait for the chain to be downloaded.
      */
     public void await() throws InterruptedException {
-        done.acquire();
+        try {
+            future.get();
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Returns a listenable future that completes with the height of the best chain (as reported by the peer) once chain
+     * download seems to be finished.
+     */
+    public ListenableFuture<Long> getFuture() {
+        return future;
     }
 }

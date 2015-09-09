@@ -103,7 +103,7 @@ public class SPVBlockStore implements BlockStore {
             FileChannel channel = randomAccessFile.getChannel();
             fileLock = channel.tryLock();
             if (fileLock == null)
-                throw new BlockStoreException("Store file is already locked by another process");
+                throw new ChainFileLockedException("Store file is already locked by another process");
 
             // Map it into memory read/write. The kernel will take care of flushing writes to disk at the most
             // efficient times, which may mean that until the map is deallocated the data on disk is randomly
@@ -234,7 +234,7 @@ public class SPVBlockStore implements BlockStore {
                 byte[] headHash = new byte[32];
                 buffer.position(8);
                 buffer.get(headHash);
-                Sha256Hash hash = new Sha256Hash(headHash);
+                Sha256Hash hash = Sha256Hash.wrap(headHash);
                 StoredBlock block = get(hash);
                 if (block == null)
                     throw new BlockStoreException("Corrupted block store: could not find chain head: " + hash);
@@ -271,6 +271,11 @@ public class SPVBlockStore implements BlockStore {
         } catch (IOException e) {
             throw new BlockStoreException(e);
         }
+    }
+
+    @Override
+    public NetworkParameters getParams() {
+        return params;
     }
 
     protected static final int RECORD_SIZE = 32 /* hash */ + StoredBlock.COMPACT_SERIALIZED_SIZE;

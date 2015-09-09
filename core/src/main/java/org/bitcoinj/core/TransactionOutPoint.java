@@ -41,6 +41,9 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
     // It points to the connected transaction.
     Transaction fromTx;
 
+    // The connected output.
+    private TransactionOutput connectedOutput;
+
     public TransactionOutPoint(NetworkParameters params, long index, @Nullable Transaction fromTx) {
         super(params);
         this.index = index;
@@ -59,6 +62,11 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
         this.index = index;
         this.hash = hash;
         length = MESSAGE_LENGTH;
+    }
+
+    public TransactionOutPoint(NetworkParameters params, TransactionOutput connectedOutput) {
+        this(params, connectedOutput.getIndex(), connectedOutput.getParentTransactionHash());
+        this.connectedOutput = connectedOutput;
     }
 
     /**
@@ -104,7 +112,7 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        stream.write(Utils.reverseBytes(hash.getBytes()));
+        stream.write(hash.getReversedBytes());
         Utils.uint32ToByteStreamLE(index, stream);
     }
 
@@ -115,8 +123,12 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
      */
     @Nullable
     public TransactionOutput getConnectedOutput() {
-        if (fromTx == null) return null;
-        return fromTx.getOutputs().get((int) index);
+        if (fromTx != null) {
+            return fromTx.getOutputs().get((int) index);
+        } else if (connectedOutput != null) {
+            return connectedOutput;
+        }
+        return null;
     }
 
     /**
@@ -181,9 +193,8 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
 
     @Override
     public String toString() {
-        return hash.toString() + ":" + index;
+        return hash + ":" + index;
     }
-
 
     /**
      * Returns the hash of the transaction this outpoint references/spends/is connected to.

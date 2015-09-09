@@ -17,30 +17,23 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.testing.FakeTxBuilder;
-import org.bitcoinj.testing.InboundMessageQueuer;
-import org.bitcoinj.testing.TestWithPeerGroup;
-import org.bitcoinj.utils.Threading;
-import com.google.common.util.concurrent.ListenableFuture;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import com.google.common.util.concurrent.*;
+import org.bitcoinj.params.*;
+import org.bitcoinj.testing.*;
+import org.bitcoinj.utils.*;
+import org.junit.*;
+import org.junit.runner.*;
+import org.junit.runners.*;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Random;
+import java.util.*;
+import java.util.concurrent.*;
 
+import static com.google.common.base.Preconditions.*;
 import static org.bitcoinj.core.Coin.*;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.*;
 
 @RunWith(value = Parameterized.class)
 public class TransactionBroadcastTest extends TestWithPeerGroup {
-    static final NetworkParameters params = UnitTestParams.get();
-
     @Parameterized.Parameters
     public static Collection<ClientType[]> parameters() {
         return Arrays.asList(new ClientType[] {ClientType.NIO_CLIENT_MANAGER},
@@ -59,8 +52,7 @@ public class TransactionBroadcastTest extends TestWithPeerGroup {
         // Fix the random permutation that TransactionBroadcast uses to shuffle the peers.
         TransactionBroadcast.random = new Random(0);
         peerGroup.setMinBroadcastConnections(2);
-        peerGroup.startAsync();
-        peerGroup.awaitRunning();
+        peerGroup.start();
     }
 
     @Override
@@ -73,16 +65,25 @@ public class TransactionBroadcastTest extends TestWithPeerGroup {
     public void fourPeers() throws Exception {
         InboundMessageQueuer[] channels = { connectPeer(1), connectPeer(2), connectPeer(3), connectPeer(4) };
         Transaction tx = new Transaction(params);
+        tx.getConfidence().setSource(TransactionConfidence.Source.SELF);
         TransactionBroadcast broadcast = new TransactionBroadcast(peerGroup, tx);
+        final AtomicDouble lastProgress = new AtomicDouble();
+        broadcast.setProgressCallback(new TransactionBroadcast.ProgressCallback() {
+            @Override
+            public void onBroadcastProgress(double progress) {
+                lastProgress.set(progress);
+            }
+        });
         ListenableFuture<Transaction> future = broadcast.broadcast();
         assertFalse(future.isDone());
+        assertEquals(0.0, lastProgress.get(), 0.0);
         // We expect two peers to receive a tx message, and at least one of the others must announce for the future to
         // complete successfully.
         Message[] messages = {
-                (Message) outbound(channels[0]),
-                (Message) outbound(channels[1]),
-                (Message) outbound(channels[2]),
-                (Message) outbound(channels[3])
+                outbound(channels[0]),
+                outbound(channels[1]),
+                outbound(channels[2]),
+                outbound(channels[3])
         };
         // 0 and 3 are randomly selected to receive the broadcast.
         assertEquals(tx, messages[0]);
@@ -91,10 +92,55 @@ public class TransactionBroadcastTest extends TestWithPeerGroup {
         assertNull(messages[2]);
         Threading.waitForUserCode();
         assertFalse(future.isDone());
+        assertEquals(0.0, lastProgress.get(), 0.0);
+        inbound(channels[1], InventoryMessage.with(tx));
+        future.get();
+        Threading.waitForUserCode();
+        assertEquals(1.0, lastProgress.get(), 0.0);
+        // There is no response from the Peer as it has nothing to do.
+        assertNull(outbound(channels[1]));
+    }
+
+    @Test
+    public void lateProgressCallback() throws Exception {
+        // Check that if we register a progress callback on a broadcast after the broadcast has started, it's invoked
+        // immediately with the latest state. This avoids API users writing accidentally racy code when they use
+        // a convenience method like peerGroup.broadcastTransaction.
+        InboundMessageQueuer[] channels = { connectPeer(1), connectPeer(2), connectPeer(3), connectPeer(4) };
+        Transaction tx = FakeTxBuilder.createFakeTx(params, CENT, UnitTestParams.TEST_ADDRESS);
+        tx.getConfidence().setSource(TransactionConfidence.Source.SELF);
+        TransactionBroadcast broadcast = peerGroup.broadcastTransaction(tx);
         inbound(channels[1], InventoryMessage.with(tx));
         pingAndWait(channels[1]);
-        Threading.waitForUserCode();
-        assertTrue(future.isDone());
+        final AtomicDouble p = new AtomicDouble();
+        broadcast.setProgressCallback(new TransactionBroadcast.ProgressCallback() {
+            @Override
+            public void onBroadcastProgress(double progress) {
+                p.set(progress);
+            }
+        }, Threading.SAME_THREAD);
+        assertEquals(1.0, p.get(), 0.01);
+    }
+
+    @Test
+    public void rejectHandling() throws Exception {
+        InboundMessageQueuer[] channels = { connectPeer(0), connectPeer(1), connectPeer(2), connectPeer(3), connectPeer(4) };
+        Transaction tx = new Transaction(params);
+        TransactionBroadcast broadcast = new TransactionBroadcast(peerGroup, tx);
+        ListenableFuture<Transaction> future = broadcast.broadcast();
+        // 0 and 3 are randomly selected to receive the broadcast.
+        assertEquals(tx, outbound(channels[1]));
+        assertEquals(tx, outbound(channels[2]));
+        assertEquals(tx, outbound(channels[4]));
+        RejectMessage reject = new RejectMessage(params, RejectMessage.RejectCode.DUST, tx.getHash(), "tx", "dust");
+        inbound(channels[1], reject);
+        inbound(channels[4], reject);
+        try {
+            future.get();
+            fail();
+        } catch (ExecutionException e) {
+            assertEquals(RejectedTransactionException.class, e.getCause().getClass());
+        }
     }
 
     @Test
@@ -204,6 +250,6 @@ public class TransactionBroadcastTest extends TestWithPeerGroup {
         // Add the wallet to the peer group (simulate initialization). Transactions should be announced.
         peerGroup.addWallet(wallet);
         // Transaction announced to the first peer. No extra Bloom filter because no change address was needed.
-        assertEquals(t3.getHash(), ((Transaction) outbound(p1)).getHash());
+        assertEquals(t3.getHash(), outbound(p1).getHash());
     }
 }

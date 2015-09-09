@@ -25,16 +25,16 @@ import com.google.common.io.BaseEncoding;
 import com.google.common.io.Resources;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.UnsignedLongs;
-
 import org.spongycastle.crypto.digests.RIPEMD160Digest;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.URL;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -50,18 +50,12 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
  * To enable debug logging from the library, run with -Dbitcoinj.logging=true on your command line.
  */
 public class Utils {
-    private static final MessageDigest digest;
-    static {
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);  // Can't happen.
-        }
-    }
 
     /** The string that prefixes all text messages signed using Bitcoin keys. */
     public static final String BITCOIN_SIGNED_MESSAGE_HEADER = CoinDefinition.coinName + " Signed Message:\n";
     public static final byte[] BITCOIN_SIGNED_MESSAGE_HEADER_BYTES = BITCOIN_SIGNED_MESSAGE_HEADER.getBytes(Charsets.UTF_8);
+
+    private static final Joiner SPACE_JOINER = Joiner.on(" ");
 
     private static BlockingQueue<Boolean> mockSleepQueue;
 
@@ -86,21 +80,21 @@ public class Utils {
     }
 
     public static void uint32ToByteArrayBE(long val, byte[] out, int offset) {
-        out[offset + 0] = (byte) (0xFF & (val >> 24));
+        out[offset] = (byte) (0xFF & (val >> 24));
         out[offset + 1] = (byte) (0xFF & (val >> 16));
         out[offset + 2] = (byte) (0xFF & (val >> 8));
-        out[offset + 3] = (byte) (0xFF & (val >> 0));
+        out[offset + 3] = (byte) (0xFF & val);
     }
 
     public static void uint32ToByteArrayLE(long val, byte[] out, int offset) {
-        out[offset + 0] = (byte) (0xFF & (val >> 0));
+        out[offset] = (byte) (0xFF & val);
         out[offset + 1] = (byte) (0xFF & (val >> 8));
         out[offset + 2] = (byte) (0xFF & (val >> 16));
         out[offset + 3] = (byte) (0xFF & (val >> 24));
     }
 
     public static void uint64ToByteArrayLE(long val, byte[] out, int offset) {
-        out[offset + 0] = (byte) (0xFF & (val >> 0));
+        out[offset] = (byte) (0xFF & val);
         out[offset + 1] = (byte) (0xFF & (val >> 8));
         out[offset + 2] = (byte) (0xFF & (val >> 16));
         out[offset + 3] = (byte) (0xFF & (val >> 24));
@@ -111,14 +105,14 @@ public class Utils {
     }
 
     public static void uint32ToByteStreamLE(long val, OutputStream stream) throws IOException {
-        stream.write((int) (0xFF & (val >> 0)));
+        stream.write((int) (0xFF & val));
         stream.write((int) (0xFF & (val >> 8)));
         stream.write((int) (0xFF & (val >> 16)));
         stream.write((int) (0xFF & (val >> 24)));
     }
     
     public static void int64ToByteStreamLE(long val, OutputStream stream) throws IOException {
-        stream.write((int) (0xFF & (val >> 0)));
+        stream.write((int) (0xFF & val));
         stream.write((int) (0xFF & (val >> 8)));
         stream.write((int) (0xFF & (val >> 16)));
         stream.write((int) (0xFF & (val >> 24)));
@@ -138,48 +132,6 @@ public class Utils {
         if (bytes.length < 8) {
             for (int i = 0; i < 8 - bytes.length; i++)
                 stream.write(0);
-        }
-    }
-
-    /**
-     * See {@link Utils#doubleDigest(byte[], int, int)}.
-     */
-    public static byte[] doubleDigest(byte[] input) {
-        return doubleDigest(input, 0, input.length);
-    }
-
-    /**
-     * Calculates the SHA-256 hash of the given byte range, and then hashes the resulting hash again. This is
-     * standard procedure in Bitcoin. The resulting hash is in big endian form.
-     */
-    public static byte[] doubleDigest(byte[] input, int offset, int length) {
-        synchronized (digest) {
-            digest.reset();
-            digest.update(input, offset, length);
-            byte[] first = digest.digest();
-            return digest.digest(first);
-        }
-    }
-
-    public static byte[] singleDigest(byte[] input, int offset, int length) {
-        synchronized (digest) {
-            digest.reset();
-            digest.update(input, offset, length);
-            return digest.digest();
-        }
-    }
-
-    /**
-     * Calculates SHA256(SHA256(byte range 1 + byte range 2)).
-     */
-    public static byte[] doubleDigestTwoBuffers(byte[] input1, int offset1, int length1,
-                                                byte[] input2, int offset2, int length2) {
-        synchronized (digest) {
-            digest.reset();
-            digest.update(input1, offset1, length1);
-            digest.update(input2, offset2, length2);
-            byte[] first = digest.digest();
-            return digest.digest(first);
         }
     }
 
@@ -236,14 +188,14 @@ public class Utils {
 }
 
     public static long readUint32(byte[] bytes, int offset) {
-        return ((bytes[offset++] & 0xFFL) << 0) |
+        return (bytes[offset++] & 0xFFL) |
                 ((bytes[offset++] & 0xFFL) << 8) |
                 ((bytes[offset++] & 0xFFL) << 16) |
                 ((bytes[offset] & 0xFFL) << 24);
     }
     
     public static long readInt64(byte[] bytes, int offset) {
-        return ((bytes[offset++] & 0xFFL) << 0) |
+        return (bytes[offset++] & 0xFFL) |
                ((bytes[offset++] & 0xFFL) << 8) |
                ((bytes[offset++] & 0xFFL) << 16) |
                ((bytes[offset++] & 0xFFL) << 24) |
@@ -254,10 +206,10 @@ public class Utils {
     }
 
     public static long readUint32BE(byte[] bytes, int offset) {
-        return ((bytes[offset + 0] & 0xFFL) << 24) |
+        return ((bytes[offset] & 0xFFL) << 24) |
                 ((bytes[offset + 1] & 0xFFL) << 16) |
                 ((bytes[offset + 2] & 0xFFL) << 8) |
-                ((bytes[offset + 3] & 0xFFL) << 0);
+                (bytes[offset + 3] & 0xFFL);
     }
 
     public static int readUint16BE(byte[] bytes, int offset) {
@@ -268,16 +220,12 @@ public class Utils {
      * Calculates RIPEMD160(SHA256(input)). This is used in Address calculations.
      */
     public static byte[] sha256hash160(byte[] input) {
-        try {
-            byte[] sha256 = MessageDigest.getInstance("SHA-256").digest(input);
-            RIPEMD160Digest digest = new RIPEMD160Digest();
-            digest.update(sha256, 0, sha256.length);
-            byte[] out = new byte[20];
-            digest.doFinal(out, 0);
-            return out;
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);  // Cannot happen.
-        }
+        byte[] sha256 = Sha256Hash.hash(input);
+        RIPEMD160Digest digest = new RIPEMD160Digest();
+        digest.update(sha256, 0, sha256.length);
+        byte[] out = new byte[20];
+        digest.doFinal(out, 0);
+        return out;
     }
 
     /**
@@ -362,7 +310,7 @@ public class Utils {
         bytes[3] = (byte) size;
         if (size >= 1) bytes[4] = (byte) ((compact >> 16) & 0xFF);
         if (size >= 2) bytes[5] = (byte) ((compact >> 8) & 0xFF);
-        if (size >= 3) bytes[6] = (byte) ((compact >> 0) & 0xFF);
+        if (size >= 3) bytes[6] = (byte) (compact & 0xFF);
         return decodeMPI(bytes, true);
     }
 
@@ -427,19 +375,13 @@ public class Utils {
      * Returns the current time, or a mocked out equivalent.
      */
     public static Date now() {
-        if (mockTime != null)
-            return mockTime;
-        else
-            return new Date();
+        return mockTime != null ? mockTime : new Date();
     }
 
     // TODO: Replace usages of this where the result is / 1000 with currentTimeSeconds.
     /** Returns the current time in milliseconds since the epoch, or a mocked out equivalent. */
     public static long currentTimeMillis() {
-        if (mockTime != null)
-            return mockTime.getTime();
-        else
-            return System.currentTimeMillis();
+        return mockTime != null ? mockTime.getTime() : System.currentTimeMillis();
     }
 
     public static long currentTimeSeconds() {
@@ -468,6 +410,18 @@ public class Utils {
         return iso8601.format(dateTime);
     }
 
+    /**
+     * Returns a string containing the string representation of the given items,
+     * delimited by a single space character.
+     *
+     * @param items the items to join
+     * @param <T> the item type
+     * @return the joined space-delimited string
+     */
+    public static <T> String join(Iterable<T> items) {
+        return SPACE_JOINER.join(items);
+    }
+
     public static byte[] copyOf(byte[] in, int length) {
         byte[] out = new byte[length];
         System.arraycopy(in, 0, out, 0, Math.min(length, in.length));
@@ -481,6 +435,44 @@ public class Utils {
         byte[] result = Arrays.copyOf(bytes, bytes.length + 1);
         result[result.length - 1] = b;
         return result;
+    }
+
+    /**
+     * Constructs a new String by decoding the given bytes using the specified charset.
+     * <p>
+     * This is a convenience method which wraps the checked exception with a RuntimeException.
+     * The exception can never occur given the charsets
+     * US-ASCII, ISO-8859-1, UTF-8, UTF-16, UTF-16LE or UTF-16BE.
+     *
+     * @param bytes the bytes to be decoded into characters
+     * @param charsetName the name of a supported {@linkplain java.nio.charset.Charset charset}
+     * @return the decoded String
+     */
+    public static String toString(byte[] bytes, String charsetName) {
+        try {
+            return new String(bytes, charsetName);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Encodes the given string into a sequence of bytes using the named charset.
+     * <p>
+     * This is a convenience method which wraps the checked exception with a RuntimeException.
+     * The exception can never occur given the charsets
+     * US-ASCII, ISO-8859-1, UTF-8, UTF-16, UTF-16LE or UTF-16BE.
+     *
+     * @param str the string to encode into bytes
+     * @param charsetName the name of a supported {@linkplain java.nio.charset.Charset charset}
+     * @return the encoded bytes
+     */
+    public static byte[] toBytes(CharSequence str, String charsetName) {
+        try {
+            return str.toString().getBytes(charsetName);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -525,7 +517,7 @@ public class Utils {
     }
     
     // 00000001, 00000010, 00000100, 00001000, ...
-    private static final int bitMask[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
+    private static final int[] bitMask = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
     
     /** Checks if the given bit is set in data, using little endian (not the same as Java native big endian) */
     public static boolean checkBitLE(byte[] data, int index) {
@@ -575,9 +567,13 @@ public class Utils {
         }
     }
 
+    private static int isAndroid = -1;
     public static boolean isAndroidRuntime() {
-        final String runtime = System.getProperty("java.runtime.name");
-        return runtime != null && runtime.equals("Android Runtime");
+        if (isAndroid == -1) {
+            final String runtime = System.getProperty("java.runtime.name");
+            isAndroid = (runtime != null && runtime.equals("Android Runtime")) ? 1 : 0;
+        }
+        return isAndroid == 1;
     }
 
     private static class Pair implements Comparable<Pair> {
@@ -627,4 +623,22 @@ public class Utils {
         return Joiner.on('\n').join(lines);
     }
 
+    // Can't use Closeable here because it's Java 7 only and Android devices only got that with KitKat.
+    public static InputStream closeUnchecked(InputStream stream) {
+        try {
+            stream.close();
+            return stream;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static OutputStream closeUnchecked(OutputStream stream) {
+        try {
+            stream.close();
+            return stream;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

@@ -38,7 +38,7 @@
     </HBox>
     <HBox fx:id="controlsBox" alignment="TOP_LEFT" fillHeight="true" layoutX="14.0" layoutY="347.0" minHeight="16.0" prefHeight="36.0" prefWidth="243.0" spacing="10.0" translateY="60.0" visible="true" AnchorPane.bottomAnchor="17.0">
       <children>
-        <Button id="connectBtn" defaultButton="true" mnemonicParsing="false" styleClass="fat-button" text="Primary" />
+        <Button defaultButton="true" mnemonicParsing="false" styleClass="fat-button" text="Primary" />
         <Button cancelButton="true" mnemonicParsing="false" styleClass="fat-button" text="Secondary" />
       </children>
     </HBox>
@@ -63,7 +63,7 @@
     <HBox spacing="20" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="17.0">
        <children>
            <Button onAction="#settingsClicked" style="-fx-base: white;" styleClass="fat-button" text="Settings" />
-           <Button id="sendMoneyOut" fx:id="sendMoneyOutBtn" alignment="CENTER" mnemonicParsing="false" onAction="#sendMoneyOut" style="-fx-base: lightgreen;" styleClass="fat-button" text="Send money out" />
+           <Button id="sendMoneyOut" fx:id="sendMoneyOutBtn" alignment="CENTER" mnemonicParsing="false" onAction="#sendMoneyOut" style="-fx-base: lightgreen; -fx-font-weight: bold" styleClass="fat-button" text="Send money out" />
        </children>
     </HBox>
   </children>

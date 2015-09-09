@@ -38,7 +38,7 @@ import java.util.List;
 
 import static com.hashengineering.crypto.X11.x11Digest;
 import static org.bitcoinj.core.Coin.FIFTY_COINS;
-import static org.bitcoinj.core.Utils.doubleDigestTwoBuffers;
+import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 //import com.sun.xml.internal.ws.api.config.management.policy.ManagedServiceAssertion;
 
@@ -85,14 +85,13 @@ public class Block extends Message {
     private long difficultyTarget; // "nBits"
     private long nonce;
 
+    // TODO: Get rid of all the direct accesses to this field. It's a long-since unnecessary holdover from the Dalvik days.
     /** If null, it means this object holds only the headers. */
-    List<Transaction> transactions;
-
-    List<MasterNodeVote> masterNodeVotes;
+    @Nullable List<Transaction> transactions;
 
     /** Stores the hash of the block. If null, getHash() will recalculate it. */
     private transient Sha256Hash hash;
-    private transient Sha256Hash scryptHash;
+
 
     private transient boolean headerParsed;
     private transient boolean transactionsParsed;
@@ -163,7 +162,6 @@ public class Block extends Message {
         this.difficultyTarget = difficultyTarget;
         this.nonce = nonce;
         this.transactions = new LinkedList<Transaction>();
-        this.masterNodeVotes = new LinkedList<MasterNodeVote>();
         this.transactions.addAll(transactions);
     }
 
@@ -190,7 +188,7 @@ public class Block extends Message {
         hash = null;
     }
 
-    private void parseHeader() throws ProtocolException {
+    protected void parseHeader() throws ProtocolException {
         if (headerParsed)
             return;
 
@@ -202,14 +200,14 @@ public class Block extends Message {
         difficultyTarget = readUint32();
         nonce = readUint32();
 
-        hash = new Sha256Hash(Utils.reverseBytes(x11Digest(payload, offset, cursor)));
+        hash = Sha256Hash.wrapReversed(x11Digest(payload, offset, cursor));
 
 
         headerParsed = true;
         headerBytesValid = parseRetain;
     }
 
-    private void parseTransactions() throws ProtocolException {
+    protected void parseTransactions() throws ProtocolException {
         if (transactionsParsed)
             return;
 
@@ -249,45 +247,6 @@ public class Block extends Message {
 
     private static final long START_MASTERNODE_PAYMENTS_TESTNET_1 = 1401757793;
     private static final long START_MASTERNODE_PAYMENTS_TESTNET = 1403568776L;
-    //
-    // only call from parseTransactions
-    //
-    void parseMasterNodeVotes() throws ProtocolException {
-
-        if(shouldHaveMasterNodeVotes() == false)
-            return;
-
-        if (masterNodeVotesParsed)
-            return;
-
-        //cursor = offset + HEADER_SIZE;
-        //optimalEncodingMessageSize = HEADER_SIZE;
-
-        //This must be done first to ensure that cursor and offset are set correctly
-        //parseTransactions();
-
-        if (payload.length == cursor) {
-            // This message is just a header, it has no master node votes.
-            masterNodeVotesParsed = true;
-            masterNodeVotesBytesValid = false;
-            return;
-        }
-
-        int numMasterNodeVotes = (int) readVarInt();
-        optimalEncodingMessageSize += VarInt.sizeOf(numMasterNodeVotes);
-        masterNodeVotes = new ArrayList<MasterNodeVote>(numMasterNodeVotes);
-        for (int i = 0; i < numMasterNodeVotes; i++) {
-            MasterNodeVote mnv = new MasterNodeVote(params, payload, cursor, this, parseLazy, parseRetain, UNKNOWN_LENGTH);
-
-            masterNodeVotes.add(mnv);
-            cursor += mnv.getMessageSize();
-            optimalEncodingMessageSize += mnv.getOptimalEncodingMessageSize();
-        }
-        // No need to set length here. If length was not provided then it should be set at the end of parseLight().
-        // If this is a genuine lazy parse then length must have been provided to the constructor.
-        masterNodeVotesParsed = true;
-        masterNodeVotesBytesValid = parseRetain;
-    }
 
     @Override
     void parse() throws ProtocolException {
@@ -479,8 +438,8 @@ public class Block extends Message {
         // fall back to manual write
         maybeParseHeader();
         Utils.uint32ToByteStreamLE(version, stream);
-        stream.write(Utils.reverseBytes(prevBlockHash.getBytes()));
-        stream.write(Utils.reverseBytes(getMerkleRoot().getBytes()));
+        stream.write(prevBlockHash.getReversedBytes());
+        stream.write(getMerkleRoot().getReversedBytes());
         Utils.uint32ToByteStreamLE(time, stream);
         Utils.uint32ToByteStreamLE(difficultyTarget, stream);
         Utils.uint32ToByteStreamLE(nonce, stream);
@@ -507,34 +466,6 @@ public class Block extends Message {
         }
         //writeMasterNodeVotes(stream);
     }
-    //
-    // Only call from writeTransactions
-    //
-    private void writeMasterNodeVotes(OutputStream stream) throws IOException {
-
-        if(shouldHaveMasterNodeVotes() == false)
-            return;
-
-        // check for no transaction conditions first
-        // must be a more efficient way to do this but I'm tired atm.
-        if (masterNodeVotes == null && masterNodeVotesParsed) {
-            return;
-        }
-        //TODO:  This will not work - this should be handled above
-        // confirmed we must have master node votes either cached or as objects.
-        /*if (masterNodeVotesBytesValid && bytes != null && bytes.length >= offset + length) {
-            stream.write(bytes, offset + HEADER_SIZE, length - HEADER_SIZE);
-            return;
-        }*/
-
-        if (masterNodeVotes != null) {
-            stream.write(new VarInt(masterNodeVotes.size()).encode());
-            for (MasterNodeVote mnv : masterNodeVotes) {
-                mnv.bitcoinSerialize(stream);
-            }
-        }
-    }
-
     /**
      * Special handling to check if we have a valid byte array for both header
      * and transactions
@@ -633,7 +564,7 @@ public class Block extends Message {
         try {
             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
             writeHeader(bos);
-            return new Sha256Hash(Utils.reverseBytes(x11Digest(bos.toByteArray())));
+            return Sha256Hash.wrapReversed(x11Digest(bos.toByteArray()));
         } catch (IOException e) {
             throw new RuntimeException(e); // Cannot happen.
         }
@@ -641,8 +572,13 @@ public class Block extends Message {
 
     /**
      * Returns the hash of the block (which for a valid, solved block should be below the target) in the form seen on
+<<<<<<< HEAD
      * the block explorer. If you call this on block 1 in the production chain
      * you will get "000007d91d1254d60e2dd1ae580383070a4ddffa4c64c2eeb4a2f9ecc0414343".
+=======
+     * the block explorer. If you call this on block 1 in the mainnet chain
+     * you will get "00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048".
+>>>>>>> upstream2/release-0.13
      */
     public String getHashAsString() {
         return getHash().toString();
@@ -665,7 +601,7 @@ public class Block extends Message {
      * The number that is one greater than the largest representable SHA-256
      * hash.
      */
-    static private BigInteger LARGEST_HASH = BigInteger.ONE.shiftLeft(256);
+    private static BigInteger LARGEST_HASH = BigInteger.ONE.shiftLeft(256);
 
     /**
      * Returns the work represented by this block.<p>
@@ -684,16 +620,20 @@ public class Block extends Message {
     public Block cloneAsHeader() {
         maybeParseHeader();
         Block block = new Block(params);
+        copyBitcoinHeaderTo(block);
+        return block;
+    }
+
+    /** Copy the block without transactions into the provided empty block. */
+    protected final void copyBitcoinHeaderTo(final Block block) {
         block.nonce = nonce;
-        block.prevBlockHash = prevBlockHash.duplicate();
-        block.merkleRoot = getMerkleRoot().duplicate();
+        block.prevBlockHash = prevBlockHash;
+        block.merkleRoot = getMerkleRoot();
         block.version = version;
         block.time = time;
         block.difficultyTarget = difficultyTarget;
         block.transactions = null;
-        block.masterNodeVotes = null;
-        block.hash = getHash().duplicate();
-        return block;
+        block.hash = getHash();
     }
 
     /**
@@ -705,33 +645,15 @@ public class Block extends Message {
         StringBuilder s = new StringBuilder("v");
         s.append(version);
         s.append(" block: \n");
-        s.append("   previous block: ");
-        s.append(getPrevBlockHash());
-        s.append("\n");
-        s.append("   merkle root: ");
-        s.append(getMerkleRoot());
-        s.append("\n");
-        s.append("   time: [");
-        s.append(time);
-        s.append("] ");
-        s.append(Utils.dateTimeFormat(time * 1000));
-        s.append("\n");
-        s.append("   difficulty target (nBits): ");
-        s.append(difficultyTarget);
-        s.append("\n");
-        s.append("   nonce: ");
-        s.append(nonce);
-        s.append("\n");
+        s.append("   previous block: ").append(getPrevBlockHash()).append("\n");
+        s.append("   merkle root: ").append(getMerkleRoot()).append("\n");
+        s.append("   time: [").append(time).append("] ").append(Utils.dateTimeFormat(time * 1000)).append("\n");
+        s.append("   difficulty target (nBits): ").append(difficultyTarget).append("\n");
+        s.append("   nonce: ").append(nonce).append("\n");
         if (transactions != null && transactions.size() > 0) {
             s.append("   with ").append(transactions.size()).append(" transaction(s):\n");
             for (Transaction tx : transactions) {
-                s.append(tx.toString());
-            }
-        }
-        if(masterNodeVotes != null && masterNodeVotes.size() > 0) {
-            s.append("   with ").append(masterNodeVotes.size()).append(" master node vote(s):\n");
-            for(MasterNodeVote mnv : masterNodeVotes) {
-                s.append(mnv.toString());
+                s.append(tx);
             }
         }
         return s.toString();
@@ -773,7 +695,7 @@ public class Block extends Message {
     }
 
     /** Returns true if the hash of the block is OK (lower than difficulty target). */
-    private boolean checkProofOfWork(boolean throwException) throws VerificationException {
+    protected boolean checkProofOfWork(boolean throwException) throws VerificationException {
         // This part is key - it is what proves the block was as difficult to make as it claims
         // to be. Note however that in the context of this function, the block can claim to be
         // as difficult as it wants to be .... if somebody was able to take control of our network
@@ -825,7 +747,7 @@ public class Block extends Message {
 
     private Sha256Hash calculateMerkleRoot() {
         List<byte[]> tree = buildMerkleTree();
-        return new Sha256Hash(tree.get(tree.size() - 1));
+        return Sha256Hash.wrap(tree.get(tree.size() - 1));
     }
 
     private List<byte[]> buildMerkleTree() {
@@ -875,7 +797,7 @@ public class Block extends Message {
                 int right = Math.min(left + 1, levelSize - 1);
                 byte[] leftBytes = Utils.reverseBytes(tree.get(levelOffset + left));
                 byte[] rightBytes = Utils.reverseBytes(tree.get(levelOffset + right));
-                tree.add(Utils.reverseBytes(doubleDigestTwoBuffers(leftBytes, 0, 32, rightBytes, 0, 32)));
+                tree.add(Utils.reverseBytes(hashTwice(leftBytes, 0, 32, rightBytes, 0, 32)));
             }
             // Move to the next level.
             levelOffset += levelSize;
@@ -962,10 +884,8 @@ public class Block extends Message {
     public Sha256Hash getMerkleRoot() {
         maybeParseHeader();
         if (merkleRoot == null) {
-
             //TODO check if this is really necessary.
             unCacheHeader();
-
             merkleRoot = calculateMerkleRoot();
         }
         return merkleRoot;
@@ -1019,7 +939,6 @@ public class Block extends Message {
         unCacheHeader();
         this.prevBlockHash = prevBlockHash;
         this.hash = null;
-        this.scryptHash = null;
     }
 
     /**
@@ -1042,7 +961,6 @@ public class Block extends Message {
         unCacheHeader();
         this.time = time;
         this.hash = null;
-        this.scryptHash = null;
     }
 
     /**
@@ -1064,7 +982,6 @@ public class Block extends Message {
         unCacheHeader();
         this.difficultyTarget = compactForm;
         this.hash = null;
-        this.scryptHash = null;
     }
 
     /**
@@ -1081,22 +998,23 @@ public class Block extends Message {
         unCacheHeader();
         this.nonce = nonce;
         this.hash = null;
-        this.scryptHash = null;
     }
 
-    /** Returns an immutable list of transactions held in this block. */
+    /** Returns an immutable list of transactions held in this block, or null if this object represents just a header. */
+    @Nullable
     public List<Transaction> getTransactions() {
-       maybeParseTransactions();
-       return ImmutableList.copyOf(transactions);
+        maybeParseTransactions();
+        return transactions == null ? null : ImmutableList.copyOf(transactions);
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////////////
     // Unit testing related methods.
 
     // Used to make transactions unique.
-    static private int txCounter;
+    private static int txCounter;
 
     /** Adds a coinbase transaction to the block. This exists for unit tests. */
+    @VisibleForTesting
     void addCoinbaseTransaction(byte[] pubKeyTo, Coin value) {
         unCacheTransactions();
         transactions = new ArrayList<Transaction>();
@@ -1106,7 +1024,8 @@ public class Block extends Message {
         //
         // Here we will do things a bit differently so a new address isn't needed every time. We'll put a simple
         // counter in the scriptSig so every transaction has a different hash.
-        coinbase.addInput(new TransactionInput(params, coinbase, new byte[]{(byte) txCounter, (byte) (txCounter++ >> 8)}));
+        coinbase.addInput(new TransactionInput(params, coinbase,
+                new ScriptBuilder().data(new byte[]{(byte) txCounter, (byte) (txCounter++ >> 8)}).build().getProgram()));
         coinbase.addOutput(new TransactionOutput(params, coinbase, value,
                 ScriptBuilder.createOutputScript(ECKey.fromPublicOnly(pubKeyTo)).getProgram()));
         transactions.add(coinbase);
@@ -1151,7 +1070,7 @@ public class Block extends Message {
                 byte[] counter = new byte[32];
                 counter[0] = (byte) txCounter;
                 counter[1] = (byte) (txCounter++ >> 8);
-                input.getOutpoint().setHash(new Sha256Hash(counter));
+                input.getOutpoint().setHash(Sha256Hash.wrap(counter));
             } else {
                 input = new TransactionInput(params, t, Script.createInputScript(EMPTY_BYTES, EMPTY_BYTES), prevOut);
             }
@@ -1176,12 +1095,12 @@ public class Block extends Message {
 
     @VisibleForTesting
     public Block createNextBlock(@Nullable Address to, TransactionOutPoint prevOut) {
-        return createNextBlock(to, prevOut, Utils.currentTimeSeconds(), pubkeyForTesting, FIFTY_COINS);
+        return createNextBlock(to, prevOut, getTimeSeconds() + 5, pubkeyForTesting, FIFTY_COINS);
     }
 
     @VisibleForTesting
     public Block createNextBlock(@Nullable Address to, Coin value) {
-        return createNextBlock(to, null, Utils.currentTimeSeconds(), pubkeyForTesting, value);
+        return createNextBlock(to, null, getTimeSeconds() + 5, pubkeyForTesting, value);
     }
 
     @VisibleForTesting

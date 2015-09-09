@@ -17,19 +17,18 @@
 
 package org.bitcoinj.wallet;
 
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.store.UnreadableWalletException;
 import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import org.spongycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
-import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
 import java.util.List;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.bitcoinj.core.Utils.HEX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -45,8 +44,8 @@ public class DeterministicSeed implements EncryptableItem {
     public static final int MAX_SEED_ENTROPY_BITS = 512;
 
     @Nullable private final byte[] seed;
-    @Nullable private List<String> mnemonicCode;
-    @Nullable private EncryptedData encryptedMnemonicCode;
+    @Nullable private final List<String> mnemonicCode; // only one of mnemonicCode/encryptedMnemonicCode will be set
+    @Nullable private final EncryptedData encryptedMnemonicCode;
     @Nullable private EncryptedData encryptedSeed;
     private final long creationTimeSeconds;
 
@@ -78,7 +77,7 @@ public class DeterministicSeed implements EncryptableItem {
      * @param creationTimeSeconds When the seed was originally created, UNIX time.
      */
     public DeterministicSeed(List<String> mnemonicCode, @Nullable byte[] seed, String passphrase, long creationTimeSeconds) {
-        this((seed != null ? seed : MnemonicCode.toSeed(mnemonicCode, passphrase)), mnemonicCode, creationTimeSeconds);
+        this((seed != null ? seed : MnemonicCode.toSeed(mnemonicCode, checkNotNull(passphrase))), mnemonicCode, creationTimeSeconds);
     }
 
     /**
@@ -90,7 +89,7 @@ public class DeterministicSeed implements EncryptableItem {
      * @param creationTimeSeconds When the seed was originally created, UNIX time.
      */
     public DeterministicSeed(SecureRandom random, int bits, String passphrase, long creationTimeSeconds) {
-        this(getEntropy(random, bits), passphrase, creationTimeSeconds);
+        this(getEntropy(random, bits), checkNotNull(passphrase), creationTimeSeconds);
     }
 
     /**
@@ -101,8 +100,9 @@ public class DeterministicSeed implements EncryptableItem {
      * @param creationTimeSeconds When the seed was originally created, UNIX time.
      */
     public DeterministicSeed(byte[] entropy, String passphrase, long creationTimeSeconds) {
-        Preconditions.checkArgument(entropy.length % 4 == 0, "entropy size in bits not divisible by 32");
-        Preconditions.checkArgument(entropy.length * 8 >= DEFAULT_SEED_ENTROPY_BITS, "entropy size too small");
+        checkArgument(entropy.length % 4 == 0, "entropy size in bits not divisible by 32");
+        checkArgument(entropy.length * 8 >= DEFAULT_SEED_ENTROPY_BITS, "entropy size too small");
+        checkNotNull(passphrase);
 
         try {
             this.mnemonicCode = MnemonicCode.INSTANCE.toMnemonic(entropy);
@@ -116,7 +116,7 @@ public class DeterministicSeed implements EncryptableItem {
     }
 
     private static byte[] getEntropy(SecureRandom random, int bits) {
-        Preconditions.checkArgument(bits <= MAX_SEED_ENTROPY_BITS, "requested entropy size too large");
+        checkArgument(bits <= MAX_SEED_ENTROPY_BITS, "requested entropy size too large");
 
         byte[] seed = new byte[bits / 8];
         random.nextBytes(seed);
@@ -131,20 +131,15 @@ public class DeterministicSeed implements EncryptableItem {
 
     @Override
     public String toString() {
-        if (isEncrypted())
-            return "DeterministicSeed [encrypted]";
-        else
-            return "DeterministicSeed " + toHexString() +
-                    ((mnemonicCode != null) ? " " + Joiner.on(" ").join(mnemonicCode) : "");
+        return isEncrypted()
+            ? "DeterministicSeed [encrypted]"
+            : "DeterministicSeed " + toHexString() + " " + Utils.join(mnemonicCode);
     }
 
     /** Returns the seed as hex or null if encrypted. */
     @Nullable
     public String toHexString() {
-        if (seed != null)
-            return HEX.encode(seed);
-        else
-            return null;
+        return seed != null ? HEX.encode(seed) : null;
     }
 
     @Nullable
@@ -188,23 +183,14 @@ public class DeterministicSeed implements EncryptableItem {
     }
 
     private byte[] getMnemonicAsBytes() {
-        return Joiner.on(" ").join(mnemonicCode).getBytes(Charsets.UTF_8);
+        return Utils.join(mnemonicCode).getBytes(Charsets.UTF_8);
     }
 
     public DeterministicSeed decrypt(KeyCrypter crypter, String passphrase, KeyParameter aesKey) {
         checkState(isEncrypted());
         checkNotNull(encryptedMnemonicCode);
-        List<String> mnemonic = null;
-        byte[] seed = null;
-        try {
-            mnemonic = decodeMnemonicCode(crypter.decrypt(encryptedMnemonicCode, aesKey));
-            if (encryptedSeed != null) {
-                seed = crypter.decrypt(encryptedSeed, aesKey);
-            }
-        } catch (UnreadableWalletException e) {
-            // TODO what is the best way to handle this exception?
-            throw new RuntimeException(e);
-        }
+        List<String> mnemonic = decodeMnemonicCode(crypter.decrypt(encryptedMnemonicCode, aesKey));
+        byte[] seed = encryptedSeed == null ? null : crypter.decrypt(encryptedSeed, aesKey);
         return new DeterministicSeed(mnemonic, seed, passphrase, creationTimeSeconds);
     }
 
@@ -254,12 +240,8 @@ public class DeterministicSeed implements EncryptableItem {
         return mnemonicCode;
     }
 
-    private static List<String> decodeMnemonicCode(byte[] mnemonicCode) throws UnreadableWalletException {
-        try {
-            return Splitter.on(" ").splitToList(new String(mnemonicCode, "UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            throw new UnreadableWalletException(e.toString());
-        }
+    private static List<String> decodeMnemonicCode(byte[] mnemonicCode) {
+        return decodeMnemonicCode(Utils.toString(mnemonicCode, "UTF-8"));
     }
 
     private static List<String> decodeMnemonicCode(String mnemonicCode) {

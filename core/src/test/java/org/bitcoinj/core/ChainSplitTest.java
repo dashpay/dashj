@@ -50,7 +50,6 @@ public class ChainSplitTest {
     private Address coinsTo;
     private Address coinsTo2;
     private Address someOtherGuy;
-    private MemoryBlockStore blockStore;
 
     @Before
     public void setUp() throws Exception {
@@ -58,10 +57,11 @@ public class ChainSplitTest {
         Utils.setMockClock(); // Use mock clock
         Wallet.SendRequest.DEFAULT_FEE_PER_KB = Coin.ZERO;
         unitTestParams = UnitTestParams.get();
-        wallet = new Wallet(unitTestParams);
+        Context context = new Context(unitTestParams);
+        MemoryBlockStore blockStore = new MemoryBlockStore(unitTestParams);
+        wallet = new Wallet(context);
         ECKey key1 = wallet.freshReceiveKey();
         ECKey key2 = wallet.freshReceiveKey();
-        blockStore = new MemoryBlockStore(unitTestParams);
         chain = new BlockChain(unitTestParams, wallet, blockStore);
         coinsTo = key1.toAddress(unitTestParams);
         coinsTo2 = key2.toAddress(unitTestParams);
@@ -204,7 +204,7 @@ public class ChainSplitTest {
         chain.add(b3);
         chain.add(b4);
         // b4 causes a re-org that should make our spend go pending again.
-        assertEquals(valueOf(40, 0), wallet.getBalance());
+        assertEquals(valueOf(40, 0), wallet.getBalance(Wallet.BalanceType.ESTIMATED));
         assertEquals(ConfidenceType.PENDING, spend.getConfidence().getConfidenceType());
     }
 
@@ -339,9 +339,7 @@ public class ChainSplitTest {
         wallet.addEventListener(new AbstractWalletEventListener() {
             @Override
             public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
-                super.onTransactionConfidenceChanged(wallet, tx);
-                if (tx.getConfidence().getConfidenceType() ==
-                        TransactionConfidence.ConfidenceType.DEAD) {
+                if (tx.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.DEAD) {
                     eventDead[0] = tx;
                     eventReplacement[0] = tx.getConfidence().getOverridingTransaction();
                 }
@@ -547,7 +545,7 @@ public class ChainSplitTest {
         chain.add(b2);
         chain.add(b3);
 
-        // And verify that the balance is as expected. Because signatures are currently non-deterministic if the order
+        // And verify that the balance is as expected. Because new ECKey() is non-deterministic, if the order
         // isn't being stored correctly this should fail 50% of the time.
         assertEquals(coins0point98, wallet.getBalance());
     }
@@ -604,8 +602,8 @@ public class ChainSplitTest {
         final AtomicBoolean fodderIsDead = new AtomicBoolean(false);
         fodder.getConfidence().addEventListener(new TransactionConfidence.Listener() {
             @Override
-            public void onConfidenceChanged(Transaction tx, ChangeReason reason) {
-                fodderIsDead.set(tx.getConfidence().getConfidenceType() == ConfidenceType.DEAD);
+            public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
+                fodderIsDead.set(confidence.getConfidenceType() == ConfidenceType.DEAD);
             }
         }, Threading.SAME_THREAD);
 

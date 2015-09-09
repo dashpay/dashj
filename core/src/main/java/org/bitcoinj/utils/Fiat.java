@@ -25,8 +25,8 @@ import org.bitcoinj.core.Monetary;
 import com.google.common.math.LongMath;
 
 /**
- * Represents a monetary fiat value. It was decided to not fold this into {@link Coin} because of type safety. Fiat
- * values always come with an attached currency code.
+ * Represents a monetary fiat value. It was decided to not fold this into {@link org.bitcoinj.core.Coin} because of type
+ * safety. Fiat values always come with an attached currency code.
  * 
  * This class is immutable.
  */
@@ -81,8 +81,13 @@ public final class Fiat implements Monetary, Comparable<Fiat>, Serializable {
      *             if you try to specify fractional satoshis, or a value out of range.
      */
     public static Fiat parseFiat(final String currencyCode, final String str) {
-        return Fiat.valueOf(currencyCode, new BigDecimal(str).movePointRight(SMALLEST_UNIT_EXPONENT)
-                .toBigIntegerExact().longValue());
+        try {
+            long val = new BigDecimal(str).movePointRight(SMALLEST_UNIT_EXPONENT)
+                    .toBigIntegerExact().longValue();
+            return Fiat.valueOf(currencyCode, val);
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException(e);
+        }
     }
 
     public Fiat add(final Fiat value) {

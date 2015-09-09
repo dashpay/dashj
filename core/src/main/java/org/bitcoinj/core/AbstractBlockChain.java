@@ -17,14 +17,14 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.store.BlockStore;
+import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.utils.ListenerRegistration;
+import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,16 +137,21 @@ public abstract class AbstractBlockChain {
     private double falsePositiveTrend;
     private double previousFalsePositiveRate;
 
+    /** See {@link #AbstractBlockChain(Context, List, BlockStore)} */
+    public AbstractBlockChain(NetworkParameters params, List<BlockChainListener> listeners,
+                              BlockStore blockStore) throws BlockStoreException {
+        this(Context.getOrCreate(params), listeners, blockStore);
+    }
 
     /**
      * Constructs a BlockChain connected to the given list of listeners (eg, wallets) and a store.
      */
-    public AbstractBlockChain(NetworkParameters params, List<BlockChainListener> listeners,
+    public AbstractBlockChain(Context context, List<BlockChainListener> listeners,
                               BlockStore blockStore) throws BlockStoreException {
         this.blockStore = blockStore;
         chainHead = blockStore.getChainHead();
         log.info("chain head is at height {}:\n{}", chainHead.getHeight(), chainHead.getHeader());
-        this.params = params;
+        this.params = context.getParams();
         this.listeners = new CopyOnWriteArrayList<ListenerRegistration<BlockChainListener>>();
         for (BlockChainListener l : listeners) addListener(l, Threading.SAME_THREAD);
     }
@@ -344,24 +349,13 @@ public abstract class AbstractBlockChain {
      */
     protected abstract TransactionOutputChanges connectTransactions(StoredBlock newBlock) throws VerificationException, BlockStoreException, PrunedException;    
     
-    // Stat counters.
-    private long statsLastTime = System.currentTimeMillis();
-    private long statsBlocksAdded;
-
     // filteredTxHashList contains all transactions, filteredTxn just a subset
     private boolean add(Block block, boolean tryConnecting,
                         @Nullable List<Sha256Hash> filteredTxHashList, @Nullable Map<Sha256Hash, Transaction> filteredTxn)
             throws BlockStoreException, VerificationException, PrunedException {
+        // TODO: Use read/write locks to ensure that during chain download properties are still low latency.
         lock.lock();
         try {
-            // TODO: Use read/write locks to ensure that during chain download properties are still low latency.
-            if (System.currentTimeMillis() - statsLastTime > 1000) {
-                // More than a second passed since last stats logging.
-                if (statsBlocksAdded > 1)
-                    log.info("{} blocks per second", statsBlocksAdded);
-                statsLastTime = System.currentTimeMillis();
-                statsBlocksAdded = 0;
-            }
             // Quick check for duplicates to avoid an expensive check further down (in findSplit). This can happen a lot
             // when connecting orphan transactions due to the dumb brute force algorithm we use.
             if (block.equals(getChainHead().getHeader())) {
@@ -415,15 +409,15 @@ public abstract class AbstractBlockChain {
                 orphanBlocks.put(block.getHash(), new OrphanBlock(block, filteredTxHashList, filteredTxn));
                 return false;
             } else {
+                checkState(lock.isHeldByCurrentThread());
                 // It connects to somewhere on the chain. Not necessarily the top of the best known chain.
-                checkDifficultyTransitions(storedPrev, block);
+                params.checkDifficultyTransitions(storedPrev, block, blockStore);
                 connectBlock(block, storedPrev, shouldVerifyTransactions(), filteredTxHashList, filteredTxn);
             }
 
             if (tryConnecting)
                 tryConnectingOrphans();
 
-            statsBlocksAdded++;
             return true;
         } finally {
             lock.unlock();
@@ -597,7 +591,7 @@ public abstract class AbstractBlockChain {
                 Transaction tx = filteredTxn.get(hash);
                 if (tx != null) {
                     sendTransactionsToListener(newStoredBlock, newBlockType, listener, relativityOffset,
-                            Arrays.asList(tx), !first, falsePositives);
+                            Collections.singletonList(tx), !first, falsePositives);
                 } else {
                     if (listener.notifyTransactionIsInBlock(hash, newStoredBlock, newBlockType, relativityOffset)) {
                         falsePositives.remove(hash);
@@ -671,14 +665,15 @@ public abstract class AbstractBlockChain {
             // Walk in ascending chronological order.
             for (Iterator<StoredBlock> it = newBlocks.descendingIterator(); it.hasNext();) {
                 cursor = it.next();
-                if (expensiveChecks && cursor.getHeader().getTimeSeconds() <= getMedianTimestampOfRecentBlocks(cursor.getPrev(blockStore), blockStore))
+                Block cursorBlock = cursor.getHeader();
+                if (expensiveChecks && cursorBlock.getTimeSeconds() <= getMedianTimestampOfRecentBlocks(cursor.getPrev(blockStore), blockStore))
                     throw new VerificationException("Block's timestamp is too early during reorg");
                 TransactionOutputChanges txOutChanges;
                 if (cursor != newChainHead || block == null)
                     txOutChanges = connectTransactions(cursor);
                 else
                     txOutChanges = connectTransactions(newChainHead.getHeight(), block);
-                storedNewHead = addToBlockStore(storedNewHead, cursor.getHeader(), txOutChanges);
+                storedNewHead = addToBlockStore(storedNewHead, cursorBlock.cloneAsHeader(), txOutChanges);
             }
         } else {
             // (Finally) write block to block store
@@ -831,6 +826,7 @@ public abstract class AbstractBlockChain {
             }
         } while (blocksConnectedThisRound > 0);
     }
+
 
     // February 16th 2012
     private static final Date testnetDiffDate = new Date(1329264000000L);
@@ -1492,6 +1488,7 @@ public abstract class AbstractBlockChain {
                     Long.toHexString(next.getDifficultyTarget()));
         }
     }
+
 
     /**
      * Returns true if any connected wallet considers any transaction in the block to be relevant.

@@ -47,14 +47,16 @@ public class HeadersMessage extends Message {
         blockHeaders = Arrays.asList(headers);
     }
 
+    public HeadersMessage(NetworkParameters params, List<Block> headers) throws ProtocolException {
+        super(params);
+        blockHeaders = headers;
+    }
+
     @Override
     public void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         stream.write(new VarInt(blockHeaders.size()).encode());
         for (Block header : blockHeaders) {
-            if (header.transactions == null && header.masterNodeVotes == null)
-                header.bitcoinSerializeToStream(stream);
-            else
-                header.cloneAsHeader().bitcoinSerializeToStream(stream);
+            header.cloneAsHeader().bitcoinSerializeToStream(stream);
             stream.write(0);
         }
     }

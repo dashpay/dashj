@@ -17,19 +17,16 @@
 
 package org.bitcoinj.wallet;
 
-import org.bitcoinj.core.Wallet;
-import org.bitcoinj.utils.Threading;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.bitcoinj.core.*;
+import org.bitcoinj.utils.*;
+import org.slf4j.*;
 
-import javax.annotation.Nonnull;
-import java.io.File;
-import java.io.IOException;
+import javax.annotation.*;
+import java.io.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.*;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.*;
 
 /**
  * A class that handles atomic and optionally delayed writing of the wallet file to disk. In future: backups too.
@@ -58,24 +55,17 @@ public class WalletFiles {
          * Called on the auto-save thread when a new temporary file is created but before the wallet data is saved
          * to it. If you want to do something here like adjust permissions, go ahead and do so.
          */
-        public void onBeforeAutoSave(File tempFile);
+        void onBeforeAutoSave(File tempFile);
 
         /**
          * Called on the auto-save thread after the newly created temporary file has been filled with data and renamed.
          */
-        public void onAfterAutoSave(File newlySavedFile);
+        void onAfterAutoSave(File newlySavedFile);
     }
 
     public WalletFiles(final Wallet wallet, File file, long delay, TimeUnit delayTimeUnit) {
-        final ThreadFactoryBuilder builder = new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat("Wallet autosave thread")
-                .setPriority(Thread.MIN_PRIORITY);  // Avoid competing with the GUI thread.
-        Thread.UncaughtExceptionHandler handler = Threading.uncaughtExceptionHandler;
-        if (handler != null)
-            builder.setUncaughtExceptionHandler(handler);
         // An executor that starts up threads when needed and shuts them down later.
-        this.executor = new ScheduledThreadPoolExecutor(1, builder.build());
+        this.executor = new ScheduledThreadPoolExecutor(1, new ContextPropagatingThreadFactory("Wallet autosave thread", Thread.MIN_PRIORITY));
         this.executor.setKeepAliveTime(5, TimeUnit.SECONDS);
         this.executor.allowCoreThreadTimeOut(true);
         this.executor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);

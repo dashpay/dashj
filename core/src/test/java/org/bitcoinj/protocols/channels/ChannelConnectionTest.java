@@ -29,6 +29,7 @@ import org.bitcoin.paymentchannel.Protos;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.spongycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
@@ -49,7 +50,6 @@ import static org.junit.Assert.*;
 public class ChannelConnectionTest extends TestWithWallet {
     private static final int CLIENT_MAJOR_VERSION = 1;
     private Wallet serverWallet;
-    private BlockChain serverChain;
     private AtomicBoolean fail;
     private BlockingQueue<Transaction> broadcasts;
     private TransactionBroadcaster mockBroadcaster;
@@ -57,7 +57,7 @@ public class ChannelConnectionTest extends TestWithWallet {
 
     private static final TransactionBroadcaster failBroadcaster = new TransactionBroadcaster() {
         @Override
-        public ListenableFuture<Transaction> broadcastTransaction(Transaction tx) {
+        public TransactionBroadcast broadcastTransaction(Transaction tx) {
             fail();
             return null;
         }
@@ -71,10 +71,10 @@ public class ChannelConnectionTest extends TestWithWallet {
         sendMoneyToWallet(COIN, AbstractBlockChain.NewBlockType.BEST_CHAIN);
         sendMoneyToWallet(COIN, AbstractBlockChain.NewBlockType.BEST_CHAIN);
         wallet.addExtension(new StoredPaymentChannelClientStates(wallet, failBroadcaster));
-        serverWallet = new Wallet(params);
+        Context context = new Context(params, 3);  // Shorter event horizon for unit tests.
+        serverWallet = new Wallet(context);
         serverWallet.addExtension(new StoredPaymentChannelServerStates(serverWallet, failBroadcaster));
         serverWallet.freshReceiveKey();
-        serverChain = new BlockChain(params, serverWallet, blockStore);
         // Use an atomic boolean to indicate failure because fail()/assert*() dont work in network threads
         fail = new AtomicBoolean(false);
 
@@ -84,12 +84,12 @@ public class ChannelConnectionTest extends TestWithWallet {
         broadcastTxPause = new Semaphore(0);
         mockBroadcaster = new TransactionBroadcaster() {
             @Override
-            public ListenableFuture<Transaction> broadcastTransaction(Transaction tx) {
+            public TransactionBroadcast broadcastTransaction(Transaction tx) {
                 broadcastTxPause.acquireUninterruptibly();
                 SettableFuture<Transaction> future = SettableFuture.create();
                 future.set(tx);
                 broadcasts.add(tx);
-                return future;
+                return TransactionBroadcast.createMockBroadcast(tx, future);
             }
         };
 
@@ -116,6 +116,20 @@ public class ChannelConnectionTest extends TestWithWallet {
 
     @Test
     public void testSimpleChannel() throws Exception {
+        exectuteSimpleChannelTest(null);
+    }
+
+    @Test
+    public void testEncryptedClientWallet() throws Exception {
+        // Encrypt the client wallet
+        String mySecretPw = "MySecret";
+        wallet.encrypt(mySecretPw);
+
+        KeyParameter userKeySetup = wallet.getKeyCrypter().deriveKey(mySecretPw);
+        exectuteSimpleChannelTest(userKeySetup);
+    }
+
+    public void exectuteSimpleChannelTest(KeyParameter userKeySetup) throws Exception {
         // Test with network code and without any issues. We'll broadcast two txns: multisig contract and settle transaction.
         final SettableFuture<ListenableFuture<PaymentChannelServerState>> serverCloseFuture = SettableFuture.create();
         final SettableFuture<Sha256Hash> channelOpenFuture = SettableFuture.create();
@@ -147,7 +161,7 @@ public class ChannelConnectionTest extends TestWithWallet {
         server.bindAndStart(4243);
 
         PaymentChannelClientConnection client = new PaymentChannelClientConnection(
-                new InetSocketAddress("localhost", 4243), 30, wallet, myKey, COIN, "");
+                new InetSocketAddress("localhost", 4243), 30, wallet, myKey, COIN, "", PaymentChannelClient.DEFAULT_TIME_WINDOW, userKeySetup);
 
         // Wait for the multi-sig tx to be transmitted.
         broadcastTxPause.release();
@@ -177,7 +191,7 @@ public class ChannelConnectionTest extends TestWithWallet {
         q.take().assertPair(amount, null);
         for (String info : new String[] {null, "one", "two"} ) {
             final ByteString bytes = (info==null) ? null :ByteString.copyFromUtf8(info);
-            final PaymentIncrementAck ack = client.incrementPayment(CENT, bytes).get();
+            final PaymentIncrementAck ack = client.incrementPayment(CENT, bytes, userKeySetup).get();
             if (info != null) {
                 final ByteString ackInfo = ack.getInfo();
                 assertNotNull("Ack info is null", ackInfo);
@@ -277,7 +291,7 @@ public class ChannelConnectionTest extends TestWithWallet {
         // Tests various aspects of channel resuming.
         Utils.setMockClock();
 
-        final Sha256Hash someServerId = Sha256Hash.create(new byte[]{});
+        final Sha256Hash someServerId = Sha256Hash.of(new byte[]{});
 
         // Open up a normal channel.
         ChannelTestUtils.RecordingPair pair = ChannelTestUtils.makeRecorders(serverWallet, mockBroadcaster);
@@ -325,11 +339,11 @@ public class ChannelConnectionTest extends TestWithWallet {
         pair = ChannelTestUtils.makeRecorders(serverWallet, mockBroadcaster);
         pair.server.connectionOpen();
         pair.server.receiveMessage(Protos.TwoWayChannelMessage.newBuilder()
-                .setType(MessageType.CLIENT_VERSION)
-                .setClientVersion(Protos.ClientVersion.newBuilder()
-                        .setPreviousChannelContractHash(ByteString.copyFrom(Sha256Hash.create(new byte[]{0x03}).getBytes()))
-                        .setMajor(CLIENT_MAJOR_VERSION).setMinor(42))
-                .build());
+            .setType(MessageType.CLIENT_VERSION)
+            .setClientVersion(Protos.ClientVersion.newBuilder()
+                .setPreviousChannelContractHash(ByteString.copyFrom(Sha256Hash.hash(new byte[] { 0x03 })))
+                .setMajor(CLIENT_MAJOR_VERSION).setMinor(42))
+            .build());
         pair.serverRecorder.checkNextMsg(MessageType.SERVER_VERSION);
         pair.serverRecorder.checkNextMsg(MessageType.INITIATE);
 
@@ -347,7 +361,7 @@ public class ChannelConnectionTest extends TestWithWallet {
         // Check the contract hash is sent on the wire correctly.
         final Protos.TwoWayChannelMessage clientVersionMsg = pair.clientRecorder.checkNextMsg(MessageType.CLIENT_VERSION);
         assertTrue(clientVersionMsg.getClientVersion().hasPreviousChannelContractHash());
-        assertEquals(contractHash, new Sha256Hash(clientVersionMsg.getClientVersion().getPreviousChannelContractHash().toByteArray()));
+        assertEquals(contractHash, Sha256Hash.wrap(clientVersionMsg.getClientVersion().getPreviousChannelContractHash().toByteArray()));
         server.receiveMessage(clientVersionMsg);
         client.receiveMessage(pair.serverRecorder.checkNextMsg(MessageType.SERVER_VERSION));
         client.receiveMessage(pair.serverRecorder.checkNextMsg(MessageType.CHANNEL_OPEN));

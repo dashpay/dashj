@@ -24,7 +24,7 @@ public class InventoryItem {
     static final int MESSAGE_LENGTH = 36;
     
     public enum Type {
-        Error,
+        Error,  //0
         Transaction,
         Block,
         FilteredBlock,
@@ -40,7 +40,9 @@ public class InventoryItem {
         MasterNodeQuarum,
         MasterNodeAnnounce,
         MasterNodePing,
-        DarkSendTransaction
+        DarkSendTransaction,
+
+        None,
 
 
     }
@@ -53,10 +55,9 @@ public class InventoryItem {
         this.hash = hash;
     }
 
-
     @Override
     public String toString() {
-        return type.toString() + ": " + hash;
+        return type + ": " + hash;
     }
 
     @Override

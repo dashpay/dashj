@@ -3,6 +3,7 @@ package org.bitcoinj.core;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
 import org.bitcoinj.store.PostgresFullPrunedBlockStore;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -13,6 +14,7 @@ import org.junit.Test;
 public class PostgresFullPrunedBlockChainTest extends AbstractFullPrunedBlockChainTest
 {
     // Replace these with your postgres location/credentials and remove @Ignore to test
+    // You can set up a fresh postgres with the command: create user bitcoinj superuser password 'password';
     private static final String DB_HOSTNAME = "localhost";
     private static final String DB_NAME = CoinDefinition.coinName.toLowerCase() + "j_test";
     private static final String DB_USERNAME = CoinDefinition.coinName.toLowerCase() +"j";
@@ -21,6 +23,11 @@ public class PostgresFullPrunedBlockChainTest extends AbstractFullPrunedBlockCha
 
     // whether to run the test with a schema name
     private boolean useSchema = false;
+
+    @After
+    public void tearDown() throws Exception {
+        ((PostgresFullPrunedBlockStore)store).deleteStore();
+    }
 
     @Override
     public FullPrunedBlockStore createStore(NetworkParameters params, int blockCount)

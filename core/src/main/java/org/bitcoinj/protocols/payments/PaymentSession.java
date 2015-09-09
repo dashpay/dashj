@@ -67,7 +67,6 @@ import java.util.concurrent.Callable;
 public class PaymentSession {
     private static ListeningExecutorService executor = Threading.THREAD_POOL;
     private NetworkParameters params;
-    private final TrustStoreLoader trustStoreLoader;
     private Protos.PaymentRequest paymentRequest;
     private Protos.PaymentDetails paymentDetails;
     private Coin totalValue = Coin.ZERO;
@@ -202,11 +201,11 @@ public class PaymentSession {
      * If trustStoreLoader is null, the system default trust store is used.
      */
     public PaymentSession(Protos.PaymentRequest request, boolean verifyPki, @Nullable final TrustStoreLoader trustStoreLoader) throws PaymentProtocolException {
-        this.trustStoreLoader = trustStoreLoader != null ? trustStoreLoader : new TrustStoreLoader.DefaultTrustStoreLoader();
+        TrustStoreLoader nonNullTrustStoreLoader = trustStoreLoader != null ? trustStoreLoader : new TrustStoreLoader.DefaultTrustStoreLoader();
         parsePaymentRequest(request);
         if (verifyPki) {
             try {
-                pkiVerificationData = PaymentProtocol.verifyPaymentRequestPki(request, this.trustStoreLoader.getKeyStore());
+                pkiVerificationData = PaymentProtocol.verifyPaymentRequestPki(request, nonNullTrustStoreLoader.getKeyStore());
             } catch (IOException x) {
                 throw new PaymentProtocolException(x);
             } catch (KeyStoreException x) {
@@ -274,7 +273,8 @@ public class PaymentSession {
      * Returns the payment url where the Payment message should be sent.
      * Returns null if no payment url was provided in the PaymentRequest.
      */
-    public @Nullable String getPaymentUrl() {
+    @Nullable
+    public String getPaymentUrl() {
         if (paymentDetails.hasPaymentUrl())
             return paymentDetails.getPaymentUrl();
         return null;
@@ -311,7 +311,8 @@ public class PaymentSession {
      * @param refundAddr will be used by the merchant to send money back if there was a problem.
      * @param memo is a message to include in the payment message sent to the merchant.
      */
-    public @Nullable ListenableFuture<PaymentProtocol.Ack> sendPayment(List<Transaction> txns, @Nullable Address refundAddr, @Nullable String memo)
+    @Nullable
+    public ListenableFuture<PaymentProtocol.Ack> sendPayment(List<Transaction> txns, @Nullable Address refundAddr, @Nullable String memo)
             throws PaymentProtocolException, VerificationException, IOException {
         Protos.Payment payment = getPayment(txns, refundAddr, memo);
         if (payment == null)
@@ -335,7 +336,8 @@ public class PaymentSession {
      * @param refundAddr will be used by the merchant to send money back if there was a problem.
      * @param memo is a message to include in the payment message sent to the merchant.
      */
-    public @Nullable Protos.Payment getPayment(List<Transaction> txns, @Nullable Address refundAddr, @Nullable String memo)
+    @Nullable
+    public Protos.Payment getPayment(List<Transaction> txns, @Nullable Address refundAddr, @Nullable String memo)
             throws IOException, PaymentProtocolException.InvalidNetwork {
         if (paymentDetails.hasPaymentUrl()) {
             for (Transaction tx : txns)
@@ -400,7 +402,7 @@ public class PaymentSession {
             }
             // This won't ever happen in practice. It would only happen if the user provided outputs
             // that are obviously invalid. Still, we don't want to silently overflow.
-            if (totalValue.compareTo(NetworkParameters.MAX_MONEY) > 0)
+            if (params.hasMaxMoney() && totalValue.compareTo(params.getMaxMoney()) > 0)
                 throw new PaymentProtocolException.InvalidOutputs("The outputs are way too big.");
         } catch (InvalidProtocolBufferException e) {
             throw new PaymentProtocolException(e);

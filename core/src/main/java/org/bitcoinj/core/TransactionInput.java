@@ -57,7 +57,7 @@ public class TransactionInput extends ChildMessage implements Serializable {
     private byte[] scriptBytes;
     // The Script object obtained from parsing scriptBytes. Only filled in on demand and if the transaction is not
     // coinbase.
-    transient private WeakReference<Script> scriptSig;
+    private transient WeakReference<Script> scriptSig;
     /** Value of the output connected to the input, if known. This field does not participate in equals()/hashCode(). */
     @Nullable
     private Coin value;
@@ -91,7 +91,11 @@ public class TransactionInput extends ChildMessage implements Serializable {
     TransactionInput(NetworkParameters params, Transaction parentTransaction, TransactionOutput output) {
         super(params);
         long outputIndex = output.getIndex();
-        outpoint = new TransactionOutPoint(params, outputIndex, output.getParentTransaction());
+        if(output.getParentTransaction() != null ) {
+            outpoint = new TransactionOutPoint(params, outputIndex, output.getParentTransaction());
+        } else {
+            outpoint = new TransactionOutPoint(params, output);
+        }
         scriptBytes = EMPTY_ARRAY;
         sequence = NO_SEQUENCE;
         setParent(parentTransaction);
@@ -173,7 +177,6 @@ public class TransactionInput extends ChildMessage implements Serializable {
             maybeParse();
             script = new Script(scriptBytes);
             scriptSig = new WeakReference<Script>(script);
-            return script;
         }
         return script;
     }
@@ -276,10 +279,8 @@ public class TransactionInput extends ChildMessage implements Serializable {
      */
     @Override
     public String toString() {
-        if (isCoinBase())
-            return "TxIn: COINBASE";
         try {
-            return "TxIn for [" + outpoint + "]: " + getScriptSig();
+            return isCoinBase() ? "TxIn: COINBASE" : "TxIn for [" + outpoint + "]: " + getScriptSig();
         } catch (ScriptException e) {
             throw new RuntimeException(e);
         }

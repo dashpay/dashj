@@ -16,8 +16,8 @@
 
 package org.bitcoinj.core;
 
-import javax.annotation.Nullable;
-import java.util.List;
+import javax.annotation.*;
+import java.util.*;
 
 /**
  * <p>Implementors can listen to events like blocks being downloaded/transactions being broadcast/connect/disconnects,
@@ -26,15 +26,26 @@ import java.util.List;
  */
 public interface PeerEventListener {
     /**
-     * Called on a Peer thread when a block is received.<p>
+     * <p>Called when peers are discovered, this happens at startup of {@link PeerGroup} or if we run out of
+     * suitable {@link Peer}s to connect to.</p>
      *
-     * The block may have transactions or may be a header only once getheaders is implemented.
+     * @param peerAddresses the set of discovered {@link PeerAddress}es
+     */
+    void onPeersDiscovered(Set<PeerAddress> peerAddresses);
+
+    // TODO: Fix the Block/FilteredBlock type hierarchy so we can avoid the stupid typeless API here.
+    /**
+     * <p>Called on a Peer thread when a block is received.</p>
+     *
+     * <p>The block may be a Block object that contains transactions, a Block object that is only a header when
+     * fast catchup is being used. If set, filteredBlock can be used to retrieve the list of associated transactions.</p>
      *
      * @param peer       the peer receiving the block
      * @param block      the downloaded block
+     * @param filteredBlock if non-null, the object that wraps the block header passed as the block param.
      * @param blocksLeft the number of blocks left to download
      */
-    public void onBlocksDownloaded(Peer peer, Block block, int blocksLeft);
+    void onBlocksDownloaded(Peer peer, Block block, @Nullable FilteredBlock filteredBlock, int blocksLeft);
 
     /**
      * Called when a download is started with the initial number of blocks to be downloaded.
@@ -42,7 +53,7 @@ public interface PeerEventListener {
      * @param peer       the peer receiving the block
      * @param blocksLeft the number of blocks left to download
      */
-    public void onChainDownloadStarted(Peer peer, int blocksLeft);
+    void onChainDownloadStarted(Peer peer, int blocksLeft);
 
     /**
      * Called when a peer is connected. If this listener is registered to a {@link Peer} instead of a {@link PeerGroup},
@@ -51,17 +62,18 @@ public interface PeerEventListener {
      * @param peer
      * @param peerCount the total number of connected peers
      */
-    public void onPeerConnected(Peer peer, int peerCount);
+    void onPeerConnected(Peer peer, int peerCount);
 
     /**
      * Called when a peer is disconnected. Note that this won't be called if the listener is registered on a
      * {@link PeerGroup} and the group is in the process of shutting down. If this listener is registered to a
-     * {@link Peer} instead of a {@link PeerGroup}, peerCount will always be 0.
+     * {@link Peer} instead of a {@link PeerGroup}, peerCount will always be 0. This handler can be called without
+     * a corresponding invocation of onPeerConnected if the initial connection is never successful.
      *
      * @param peer
      * @param peerCount the total number of connected peers
      */
-    public void onPeerDisconnected(Peer peer, int peerCount);
+    void onPeerDisconnected(Peer peer, int peerCount);
 
     /**
      * <p>Called when a message is received by a peer, before the message is processed. The returned message is
@@ -72,12 +84,12 @@ public interface PeerEventListener {
      * <p>Note that this will never be called if registered with any executor other than
      * {@link org.bitcoinj.utils.Threading#SAME_THREAD}</p>
      */
-    public Message onPreMessageReceived(Peer peer, Message m);
+    Message onPreMessageReceived(Peer peer, Message m);
 
     /**
      * Called when a new transaction is broadcast over the network.
      */
-    public void onTransaction(Peer peer, Transaction t);
+    void onTransaction(Peer peer, Transaction t);
 
     /**
      * <p>Called when a peer receives a getdata message, usually in response to an "inv" being broadcast. Return as many
@@ -87,5 +99,5 @@ public interface PeerEventListener {
      * {@link org.bitcoinj.utils.Threading#SAME_THREAD}</p>
      */
     @Nullable
-    public List<Message> getData(Peer peer, GetDataMessage m);
+    List<Message> getData(Peer peer, GetDataMessage m);
 }

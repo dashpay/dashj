@@ -55,8 +55,8 @@ public abstract class Message implements Serializable {
 
     protected transient boolean parsed = false;
     protected transient boolean recached = false;
-    protected transient final boolean parseLazy;
-    protected transient final boolean parseRetain;
+    protected final transient boolean parseLazy;
+    protected final transient boolean parseRetain;
 
     protected transient int protocolVersion;
 
@@ -357,7 +357,7 @@ public abstract class Message implements Serializable {
      * @param stream
      * @throws IOException
      */
-    final public void bitcoinSerialize(OutputStream stream) throws IOException {
+    public final void bitcoinSerialize(OutputStream stream) throws IOException {
         // 1st check for cached bytes.
         if (payload != null && length != UNKNOWN_LENGTH) {
             stream.write(payload, offset, length);
@@ -407,20 +407,6 @@ public abstract class Message implements Serializable {
         }
     }
 
-    Sha256Hash readHash() throws ProtocolException {
-        try {
-            byte[] hash = new byte[32];
-            System.arraycopy(payload, cursor, hash, 0, 32);
-            // We have to flip it around, as it's been read off the wire in little endian.
-            // Not the most efficient way to do this but the clearest.
-            hash = Utils.reverseBytes(hash);
-            cursor += 32;
-            return new Sha256Hash(hash);
-        } catch (IndexOutOfBoundsException e) {
-            throw new ProtocolException(e);
-        }
-    }
-
     long readInt64() throws ProtocolException {
         try {
             long u = Utils.readInt64(payload, cursor);
@@ -432,16 +418,8 @@ public abstract class Message implements Serializable {
     }
 
     BigInteger readUint64() throws ProtocolException {
-        try {
-            // Java does not have an unsigned 64 bit type. So scrape it off the wire then flip.
-            byte[] valbytes = new byte[8];
-            System.arraycopy(payload, cursor, valbytes, 0, 8);
-            valbytes = Utils.reverseBytes(valbytes);
-            cursor += valbytes.length;
-            return new BigInteger(valbytes);
-        } catch (IndexOutOfBoundsException e) {
-            throw new ProtocolException(e);
-        }
+        // Java does not have an unsigned 64 bit type. So scrape it off the wire then flip.
+        return new BigInteger(Utils.reverseBytes(readBytes(8)));
     }
 
     long readVarInt() throws ProtocolException {
@@ -460,7 +438,7 @@ public abstract class Message implements Serializable {
 
     byte[] readBytes(int length) throws ProtocolException {
         if (length > MAX_SIZE) {
-            throw new ProtocolException("Claimed byte array length too large: " + length);
+            throw new ProtocolException("Claimed value length too large: " + length);
         }
         try {
             byte[] b = new byte[length];
@@ -478,31 +456,16 @@ public abstract class Message implements Serializable {
     }
 
     String readStr() throws ProtocolException {
-        try {
-            VarInt varInt = new VarInt(payload, cursor);
-            if (varInt.value == 0) {
-                cursor += 1;
-                return "";
-            }
-            cursor += varInt.getOriginalSizeInBytes();
-            if (varInt.value > MAX_SIZE) {
-                throw new ProtocolException("Claimed var_str length too large: " + varInt.value);
-            }
-            byte[] characters = new byte[(int) varInt.value];
-            System.arraycopy(payload, cursor, characters, 0, characters.length);
-            cursor += characters.length;
-            try {
-                return new String(characters, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException(e);  // Cannot happen, UTF-8 is always supported.
-            }
-        } catch (ArrayIndexOutOfBoundsException e) {
-            throw new ProtocolException(e);
-        } catch (IndexOutOfBoundsException e) {
-            throw new ProtocolException(e);
-        }
+        long length = readVarInt();
+        return length == 0 ? "" : Utils.toString(readBytes((int) length), "UTF-8"); // optimization for empty strings
     }
-    
+
+    Sha256Hash readHash() throws ProtocolException {
+        // We have to flip it around, as it's been read off the wire in little endian.
+        // Not the most efficient way to do this but the clearest.
+        return Sha256Hash.wrapReversed(readBytes(32));
+    }
+
     boolean hasMoreBytes() {
         return cursor < payload.length;
     }

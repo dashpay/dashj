@@ -1,6 +1,7 @@
 /**
  * Copyright 2011 Google Inc.
  * Copyright 2014 Giannis Dzegoutanis
+ * Copyright 2015 Andreas Schildbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +17,10 @@
  */
 
 package org.bitcoinj.core;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 import org.bitcoinj.params.Networks;
 import org.bitcoinj.script.Script;
@@ -42,12 +47,12 @@ public class Address extends VersionedChecksummedBytes {
      */
     public static final int LENGTH = 20;
 
-    transient final NetworkParameters params;
+    private transient NetworkParameters params;
 
     /**
      * Construct an address from parameters, the address version, and the hash160 form. Example:<p>
      *
-     * <pre>new Address(NetworkParameters.prodNet(), NetworkParameters.getAddressHeader(), Hex.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));</pre>
+     * <pre>new Address(MainNetParams.get(), NetworkParameters.getAddressHeader(), Hex.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));</pre>
      */
     public Address(NetworkParameters params, int version, byte[] hash160) throws WrongNetworkException {
         super(version, hash160);
@@ -76,7 +81,7 @@ public class Address extends VersionedChecksummedBytes {
     /**
      * Construct an address from parameters and the hash160 form. Example:<p>
      *
-     * <pre>new Address(NetworkParameters.prodNet(), Hex.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));</pre>
+     * <pre>new Address(MainNetParams.get(), Hex.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));</pre>
      */
     public Address(NetworkParameters params, byte[] hash160) {
         super(params.getAddressHeader(), hash160);
@@ -87,12 +92,12 @@ public class Address extends VersionedChecksummedBytes {
     /**
      * Construct an address from parameters and the standard "human readable" form. Example:<p>
      *
-     * <pre>new Address(NetworkParameters.prodNet(), "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");</pre><p>
+     * <pre>new Address(MainNetParams.get(), "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");</pre><p>
      *
      * @param params The expected NetworkParameters or null if you don't want validation.
      * @param address The textual form of the address, such as "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL"
      * @throws AddressFormatException if the given address doesn't parse or the checksum is invalid
-     * @throws WrongNetworkException if the given address is valid but for a different chain (eg testnet vs prodnet)
+     * @throws WrongNetworkException if the given address is valid but for a different chain (eg testnet vs mainnet)
      */
     public Address(@Nullable NetworkParameters params, String address) throws AddressFormatException {
         super(address);
@@ -121,7 +126,7 @@ public class Address extends VersionedChecksummedBytes {
         return bytes;
     }
 
-    /*
+    /**
      * Returns true if this address is a Pay-To-Script-Hash (P2SH) address.
      * See also https://github.com/bitcoin/bips/blob/master/bip-0013.mediawiki: Address Format for pay-to-script-hash
      */
@@ -167,5 +172,25 @@ public class Address extends VersionedChecksummedBytes {
             }
         }
         return false;
+    }
+
+    /**
+     * This implementation narrows the return type to <code>Address</code>.
+     */
+    @Override
+    public Address clone() throws CloneNotSupportedException {
+        return (Address) super.clone();
+    }
+
+    // Java serialization
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        out.defaultWriteObject();
+        out.writeUTF(params.id);
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        params = NetworkParameters.fromID(in.readUTF());
     }
 }

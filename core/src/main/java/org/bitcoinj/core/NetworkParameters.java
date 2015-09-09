@@ -17,18 +17,23 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.base.Objects;
+import org.bitcoinj.net.discovery.HttpDiscovery;
 import org.bitcoinj.params.*;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptOpCodes;
-import com.google.common.base.Objects;
+import org.bitcoinj.store.BlockStore;
+import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.utils.MonetaryFormat;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
-import static org.bitcoinj.core.Coin.*;
+import static org.bitcoinj.core.Coin.COIN;
 
 /**
  * <p>NetworkParameters contains the data needed for working with an instantiation of a Bitcoin chain.</p>
@@ -64,6 +69,9 @@ public abstract class NetworkParameters implements Serializable {
     public static final String PAYMENT_PROTOCOL_ID_MAINNET = "main";
     /** The string used by the payment protocol to represent the test net. */
     public static final String PAYMENT_PROTOCOL_ID_TESTNET = "test";
+    /** The string used by the payment protocol to represent unit testing (note that this is non-standard). */
+    public static final String PAYMENT_PROTOCOL_ID_UNIT_TESTS = "unittest";
+    public static final String PAYMENT_PROTOCOL_ID_REGTEST = "regtest";
 
     // TODO: Seed nodes should be here as well.
 
@@ -77,6 +85,8 @@ public abstract class NetworkParameters implements Serializable {
     protected int interval;
     protected int targetTimespan;
     protected byte[] alertSigningKey;
+    protected int bip32HeaderPub;
+    protected int bip32HeaderPriv;
 
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
@@ -92,6 +102,8 @@ public abstract class NetworkParameters implements Serializable {
     
     protected int[] acceptableAddressCodes;
     protected String[] dnsSeeds;
+    protected int[] addrSeeds;
+    protected HttpDiscovery.Details[] httpSeeds = {};
     protected Map<Integer, Sha256Hash> checkpoints = new HashMap<Integer, Sha256Hash>();
 
     protected NetworkParameters() {
@@ -228,6 +240,10 @@ public abstract class NetworkParameters implements Serializable {
             return MainNetParams.get();
         } else if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_TESTNET)) {
             return TestNet3Params.get();
+        } else if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_UNIT_TESTS)) {
+            return UnitTestParams.get();
+        } else if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_REGTEST)) {
+            return RegTestParams.get();
         } else {
             return null;
         }
@@ -236,6 +252,13 @@ public abstract class NetworkParameters implements Serializable {
     public int getSpendableCoinbaseDepth() {
         return spendableCoinbaseDepth;
     }
+
+    /**
+     * Throws an exception if the block's difficulty is not correct.
+     *
+     * @throws VerificationException if the block's difficulty is not correct.
+     */
+    public abstract void checkDifficultyTransitions(StoredBlock storedPrev, Block next, final BlockStore blockStore) throws VerificationException, BlockStoreException;
 
     /**
      * Returns true if the block height is either not a checkpoint, or is a checkpoint and the hash matches.
@@ -262,6 +285,16 @@ public abstract class NetworkParameters implements Serializable {
         return dnsSeeds;
     }
 
+    /** Returns IP address of active peers. */
+    public int[] getAddrSeeds() {
+        return addrSeeds;
+    }
+
+    /** Returns discovery objects for seeds implementing the Cartographer protocol. See {@link org.bitcoinj.net.discovery.HttpDiscovery} for more info. */
+    public HttpDiscovery.Details[] getHttpSeeds() {
+        return httpSeeds;
+    }
+
     /**
      * <p>Genesis block for this chain.</p>
      *
@@ -269,7 +302,7 @@ public abstract class NetworkParameters implements Serializable {
      * block to be valid, it must be eventually possible to work backwards to the genesis block by following the
      * prevBlockHash pointers in the block headers.</p>
      *
-     * <p>The genesis blocks for both test and prod networks contain the timestamp of when they were created,
+     * <p>The genesis blocks for both test and main networks contain the timestamp of when they were created,
      * and a message in the coinbase transaction. It says, <i>"The Times 03/Jan/2009 Chancellor on brink of second
      * bailout for banks"</i>.</p>
      */
@@ -311,7 +344,7 @@ public abstract class NetworkParameters implements Serializable {
     /**
      * How much time in seconds is supposed to pass between "interval" blocks. If the actual elapsed time is
      * significantly different from this value, the network difficulty formula will produce a different value. Both
-     * test and production Bitcoin networks use 2 weeks (1209600 seconds).
+     * test and main Bitcoin networks use 2 weeks (1209600 seconds).
      */
     public int getTargetTimespan() {
         return targetTimespan;
@@ -350,4 +383,44 @@ public abstract class NetworkParameters implements Serializable {
     public byte[] getAlertSigningKey() {
         return alertSigningKey;
     }
+
+    /** Returns the 4 byte header for BIP32 (HD) wallet - public key part. */
+    public int getBip32HeaderPub() {
+        return bip32HeaderPub;
+    }
+
+    /** Returns the 4 byte header for BIP32 (HD) wallet - private key part. */
+    public int getBip32HeaderPriv() {
+        return bip32HeaderPriv;
+    }
+
+    /**
+     * Returns the number of coins that will be produced in total, on this
+     * network. Where not applicable, a very large number of coins is returned
+     * instead (i.e. the main coin issue for Dogecoin).
+     */
+    public abstract Coin getMaxMoney();
+
+    /**
+     * Any standard (ie pay-to-address) output smaller than this value will
+     * most likely be rejected by the network.
+     */
+    public abstract Coin getMinNonDustOutput();
+
+    /**
+     * The monetary object for this currency.
+     */
+    public abstract MonetaryFormat getMonetaryFormat();
+
+    /**
+     * Scheme part for URIs, for example "bitcoin".
+     */
+    public abstract String getUriScheme();
+
+    /**
+     * Returns whether this network has a maximum number of coins (finite supply) or
+     * not. Always returns true for Bitcoin, but exists to be overriden for other
+     * networks.
+     */
+    public abstract boolean hasMaxMoney();
 }

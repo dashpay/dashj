@@ -70,13 +70,6 @@ public class Sha512Hash implements Serializable, Comparable {
     }
 
     /**
-     * Calculates the hash of the hash of the contents. This is a standard operation in Bitcoin.
-     */
-    public static Sha512Hash createDouble(byte[] contents) {
-        return new Sha512Hash(Utils.doubleDigest(contents));
-    }
-
-    /**
      * Returns a hash of the given files contents. Reads the file fully into memory before hashing so only use with
      * small files.
      * @throws java.io.IOException

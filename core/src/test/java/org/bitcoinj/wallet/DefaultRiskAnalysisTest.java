@@ -17,22 +17,19 @@
 
 package org.bitcoinj.wallet;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.*;
 import org.bitcoinj.core.*;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.script.ScriptChunk;
-import com.google.common.collect.ImmutableList;
-import org.bitcoinj.wallet.DefaultRiskAnalysis;
-import org.bitcoinj.wallet.RiskAnalysis;
-import org.junit.Before;
-import org.junit.Test;
+import org.bitcoinj.crypto.*;
+import org.bitcoinj.params.*;
+import org.bitcoinj.script.*;
+import org.bitcoinj.wallet.DefaultRiskAnalysis.*;
+import org.junit.*;
 
-import static org.bitcoinj.core.Coin.COIN;
-import static org.bitcoinj.script.ScriptOpCodes.OP_PUSHDATA1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import java.util.*;
+
+import static org.bitcoinj.core.Coin.*;
+import static org.bitcoinj.script.ScriptOpCodes.*;
+import static org.junit.Assert.*;
 
 public class DefaultRiskAnalysisTest {
     // Uses mainnet because isStandard checks are disabled on testnet.
@@ -44,7 +41,7 @@ public class DefaultRiskAnalysisTest {
 
     @Before
     public void setup() {
-        wallet = new Wallet(params) {
+        wallet = new Wallet(new Context(params)) {
             @Override
             public int getLastBlockSeenHeight() {
                 return 1000;
@@ -160,6 +157,22 @@ public class DefaultRiskAnalysisTest {
         assertEquals(DefaultRiskAnalysis.RuleViolation.NONE, DefaultRiskAnalysis.isStandard(tx));
         tx.addOutput(new TransactionOutput(params, null, COIN, nonStandardScript));
         assertEquals(DefaultRiskAnalysis.RuleViolation.SHORTEST_POSSIBLE_PUSHDATA, DefaultRiskAnalysis.isStandard(tx));
+    }
+
+    @Test
+    public void canonicalSignature() {
+        TransactionSignature sig = TransactionSignature.dummy();
+        Script scriptOk = ScriptBuilder.createInputScript(sig);
+        assertEquals(RuleViolation.NONE,
+                DefaultRiskAnalysis.isInputStandard(new TransactionInput(params, null, scriptOk.getProgram())));
+
+        byte[] sigBytes = sig.encodeToBitcoin();
+        // Appending a zero byte makes the signature uncanonical without violating DER encoding.
+        Script scriptUncanonicalEncoding = new ScriptBuilder().data(Arrays.copyOf(sigBytes, sigBytes.length + 1))
+                .build();
+        assertEquals(RuleViolation.SIGNATURE_CANONICAL_ENCODING,
+                DefaultRiskAnalysis.isInputStandard(new TransactionInput(params, null, scriptUncanonicalEncoding
+                        .getProgram())));
     }
 
     @Test

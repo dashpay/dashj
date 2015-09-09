@@ -16,24 +16,24 @@
 
 package org.bitcoinj.testing;
 
+import com.google.common.base.*;
+import com.google.common.util.concurrent.*;
 import org.bitcoinj.core.*;
-import org.bitcoinj.net.BlockingClientManager;
-import org.bitcoinj.net.NioClientManager;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.MemoryBlockStore;
-import com.google.common.base.Preconditions;
+import org.bitcoinj.net.*;
+import org.bitcoinj.store.*;
+import org.bitcoinj.utils.*;
 
-import java.net.InetSocketAddress;
+import java.net.*;
+import java.util.concurrent.*;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.*;
 
 /**
- * Utility class that makes it easy to work with mock NetworkConnections in PeerGroups.
+ * You can derive from this class and call peerGroup.start() in your tests to get a functional PeerGroup that can be
+ * used with loopback peers created using connectPeer. This involves real TCP connections so is a pretty accurate
+ * mock, but means unit tests cannot be run simultaneously.
  */
 public class TestWithPeerGroup extends TestWithNetworkConnections {
-    protected static final NetworkParameters params = UnitTestParams.get();
     protected PeerGroup peerGroup;
 
     protected VersionMessage remoteVersionMessage;
@@ -55,9 +55,10 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
     public void setUp(BlockStore blockStore) throws Exception {
         super.setUp(blockStore);
 
-        remoteVersionMessage = new VersionMessage(unitTestParams, 1);
+        remoteVersionMessage = new VersionMessage(params, 1);
         remoteVersionMessage.localServices = VersionMessage.NODE_NETWORK;
         remoteVersionMessage.clientVersion = NotFoundMessage.MIN_PROTOCOL_VERSION;
+        blockJobs = false;
         initPeerGroup();
     }
 
@@ -65,9 +66,10 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
     public void tearDown() {
         try {
             super.tearDown();
+            blockJobs = false;
             Utils.finishMockSleep();
-            peerGroup.stopAsync();
-            peerGroup.awaitTerminated();
+            if (peerGroup.isRunning())
+                peerGroup.stopAsync();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -75,12 +77,38 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
 
     protected void initPeerGroup() {
         if (clientType == ClientType.NIO_CLIENT_MANAGER)
-            peerGroup = new PeerGroup(unitTestParams, blockChain, new NioClientManager());
+            peerGroup = createPeerGroup(new NioClientManager());
         else
-            peerGroup = new PeerGroup(unitTestParams, blockChain, new BlockingClientManager());
+            peerGroup = createPeerGroup(new BlockingClientManager());
         peerGroup.setPingIntervalMsec(0);  // Disable the pings as they just get in the way of most tests.
         peerGroup.addWallet(wallet);
         peerGroup.setUseLocalhostPeerWhenPossible(false); // Prevents from connecting to bitcoin nodes on localhost.
+    }
+
+    protected boolean blockJobs = false;
+    protected final Semaphore jobBlocks = new Semaphore(0);
+
+    private PeerGroup createPeerGroup(final ClientConnectionManager manager) {
+        return new PeerGroup(params, blockChain, manager) {
+            @Override
+            protected ListeningScheduledExecutorService createPrivateExecutor() {
+                return MoreExecutors.listeningDecorator(new ScheduledThreadPoolExecutor(1, new ContextPropagatingThreadFactory("PeerGroup test thread")) {
+                    @Override
+                    public ScheduledFuture<?> schedule(final Runnable command, final long delay, final TimeUnit unit) {
+                        if (!blockJobs)
+                            return super.schedule(command, delay, unit);
+                        return super.schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                Utils.rollMockClockMillis(unit.toMillis(delay));
+                                command.run();
+                                jobBlocks.acquireUninterruptibly();
+                            }
+                        }, 0 /* immediate */, unit);
+                    }
+                });
+            }
+        };
     }
 
     protected InboundMessageQueuer connectPeerWithoutVersionExchange(int id) throws Exception {

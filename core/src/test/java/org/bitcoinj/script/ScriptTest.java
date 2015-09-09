@@ -82,7 +82,11 @@ public class ScriptTest {
     public void testMultiSig() throws Exception {
         List<ECKey> keys = Lists.newArrayList(new ECKey(), new ECKey(), new ECKey());
         assertTrue(ScriptBuilder.createMultiSigOutputScript(2, keys).isSentToMultiSig());
-        assertTrue(ScriptBuilder.createMultiSigOutputScript(3, keys).isSentToMultiSig());
+        Script script = ScriptBuilder.createMultiSigOutputScript(3, keys);
+        assertTrue(script.isSentToMultiSig());
+        List<ECKey> pubkeys = new ArrayList<ECKey>(3);
+        for (ECKey key : keys) pubkeys.add(ECKey.fromPublicOnly(key.getPubKeyPoint()));
+        assertEquals(script.getPubKeys(), pubkeys);
         assertFalse(ScriptBuilder.createOutputScript(new ECKey()).isSentToMultiSig());
         try {
             // Fail if we ask for more signatures than keys.
@@ -102,8 +106,8 @@ public class ScriptTest {
 
     @Test
     public void testP2SHOutputScript() throws Exception {
-      Address p2shAddress = new Address(MainNetParams.get(), "35b9vsyH1KoFT5a5KtrKusaCcPLkiSo1tU");
-      assertTrue(ScriptBuilder.createOutputScript(p2shAddress).isPayToScriptHash());
+        Address p2shAddress = new Address(MainNetParams.get(), "35b9vsyH1KoFT5a5KtrKusaCcPLkiSo1tU");
+        assertTrue(ScriptBuilder.createOutputScript(p2shAddress).isPayToScriptHash());
     }
 
     @Test
@@ -304,7 +308,7 @@ public class ScriptTest {
             String hash = input.get(0).asText();
             int index = input.get(1).asInt();
             String script = input.get(2).asText();
-            Sha256Hash sha256Hash = new Sha256Hash(HEX.decode(hash));
+            Sha256Hash sha256Hash = Sha256Hash.wrap(HEX.decode(hash));
             scriptPubKeys.put(new TransactionOutPoint(params, index, sha256Hash), parseScriptString(script));
         }
         return scriptPubKeys;

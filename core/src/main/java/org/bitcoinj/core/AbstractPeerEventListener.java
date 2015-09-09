@@ -16,14 +16,20 @@
 
 package org.bitcoinj.core;
 
+import javax.annotation.*;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Convenience implementation of {@link PeerEventListener}.
  */
 public class AbstractPeerEventListener implements PeerEventListener {
     @Override
-    public void onBlocksDownloaded(Peer peer, Block block, int blocksLeft) {
+    public void onPeersDiscovered(Set<PeerAddress> peerAddresses) {
+    }
+
+    @Override
+    public void onBlocksDownloaded(Peer peer, Block block, @Nullable FilteredBlock filteredBlock, int blocksLeft) {
     }
 
     @Override

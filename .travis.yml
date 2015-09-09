@@ -1,13 +1,18 @@
 # configuration for https://travis-ci.org/bitcoinj/bitcoinj
 language: java
-jdk: openjdk6
-before_install: lsb_release -a
+jdk: oraclejdk8
 install: true # remove default
 script:
-  - mvn -q clean install
-  - cd wallettemplate
-  - jdk_switcher use oraclejdk8
-  - mvn -q clean install
+  - mvn -q clean install -Pno-network
+  - jdk_switcher use openjdk6
+  - cd orchid
+  - mvn -q clean package
+  - cd ../core
+  - mvn -q clean package -Pno-network
+
+after_success:
+  - cd ../core
+  - mvn jacoco:report coveralls:report
 
 notifications:
   irc:

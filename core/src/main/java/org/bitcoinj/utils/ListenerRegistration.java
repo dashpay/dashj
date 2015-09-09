@@ -33,6 +33,7 @@ public class ListenerRegistration<T> {
         this.executor = checkNotNull(executor);
     }
 
+    /** Returns true if the listener was removed, else false. */
     public static <T> boolean removeFromList(T listener, List<? extends ListenerRegistration<T>> list) {
         checkNotNull(listener);
 
@@ -43,11 +44,6 @@ public class ListenerRegistration<T> {
                 break;
             }
         }
-        if (item != null) {
-            list.remove(item);
-            return true;
-        } else {
-            return false;
-        }
+        return item != null && list.remove(item);
     }
 }

@@ -28,6 +28,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 
 public class BIP38PrivateKeyTest {
 
@@ -150,11 +151,30 @@ public class BIP38PrivateKeyTest {
 
     @Test
     public void testJavaSerialization() throws Exception {
-        BIP38PrivateKey key = new BIP38PrivateKey(TESTNET, "6PfMmVHn153N3x83Yiy4Nf76dHUkXufe2Adr9Fw5bewrunGNeaw2QCpifb");
+        BIP38PrivateKey testKey = new BIP38PrivateKey(TESTNET,
+                "6PfMmVHn153N3x83Yiy4Nf76dHUkXufe2Adr9Fw5bewrunGNeaw2QCpifb");
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        new ObjectOutputStream(os).writeObject(key);
-        BIP38PrivateKey keyCopy = (BIP38PrivateKey) new ObjectInputStream(new ByteArrayInputStream(os.toByteArray()))
-                .readObject();
-        assertEquals(key, keyCopy);
+        new ObjectOutputStream(os).writeObject(testKey);
+        BIP38PrivateKey testKeyCopy = (BIP38PrivateKey) new ObjectInputStream(
+                new ByteArrayInputStream(os.toByteArray())).readObject();
+        assertEquals(testKey, testKeyCopy);
+
+        BIP38PrivateKey mainKey = new BIP38PrivateKey(MAINNET,
+                "6PfMmVHn153N3x83Yiy4Nf76dHUkXufe2Adr9Fw5bewrunGNeaw2QCpifb");
+        os = new ByteArrayOutputStream();
+        new ObjectOutputStream(os).writeObject(mainKey);
+        BIP38PrivateKey mainKeyCopy = (BIP38PrivateKey) new ObjectInputStream(
+                new ByteArrayInputStream(os.toByteArray())).readObject();
+        assertEquals(mainKey, mainKeyCopy);
+    }
+
+    @Test
+    public void cloning() throws Exception {
+        BIP38PrivateKey a = new BIP38PrivateKey(TESTNET, "6PfMmVHn153N3x83Yiy4Nf76dHUkXufe2Adr9Fw5bewrunGNeaw2QCpifb");
+        // TODO: Consider overriding clone() in BIP38PrivateKey to narrow the type
+        BIP38PrivateKey b = (BIP38PrivateKey) a.clone();
+
+        assertEquals(a, b);
+        assertNotSame(a, b);
     }
 }

@@ -24,6 +24,10 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,6 +37,23 @@ import static org.junit.Assert.*;
 public class AddressTest {
     static final NetworkParameters testParams = TestNet3Params.get();
     static final NetworkParameters mainParams = MainNetParams.get();
+
+    @Test
+    public void testJavaSerialization() throws Exception {
+        Address testAddress = new Address(testParams, "n4eA2nbYqErp7H6jebchxAN59DmNpksexv");
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        new ObjectOutputStream(os).writeObject(testAddress);
+        VersionedChecksummedBytes testAddressCopy = (VersionedChecksummedBytes) new ObjectInputStream(
+                new ByteArrayInputStream(os.toByteArray())).readObject();
+        assertEquals(testAddress, testAddressCopy);
+
+        Address mainAddress = new Address(mainParams, "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
+        os = new ByteArrayOutputStream();
+        new ObjectOutputStream(os).writeObject(mainAddress);
+        VersionedChecksummedBytes mainAddressCopy = (VersionedChecksummedBytes) new ObjectInputStream(
+                new ByteArrayInputStream(os.toByteArray())).readObject();
+        assertEquals(mainAddress, mainAddressCopy);
+    }
 
     @Test
     public void stringification() throws Exception {
@@ -173,5 +194,62 @@ public class AddressTest {
         Script p2shScript = ScriptBuilder.createP2SHOutputScript(2, keys);
         Address address = Address.fromP2SHScript(mainParams, p2shScript);
         assertEquals("3N25saC4dT24RphDAwLtD8LUN4E2gZPJke", address.toString());
+    }
+
+    @Test
+    public void cloning() throws Exception {
+        Address a = new Address(testParams, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
+        Address b = a.clone();
+
+        assertEquals(a, b);
+        assertNotSame(a, b);
+    }
+
+    @Test
+    public void comparisonCloneEqualTo() throws Exception {
+        Address a = new Address(mainParams, "1Dorian4RoXcnBv9hnQ4Y2C1an6NJ4UrjX");
+        Address b = a.clone();
+
+        int result = a.compareTo(b);
+        assertEquals(0, result);
+    }
+
+    @Test
+    public void comparisonEqualTo() throws Exception {
+        Address a = new Address(mainParams, "1Dorian4RoXcnBv9hnQ4Y2C1an6NJ4UrjX");
+        Address b = a.clone();
+
+        int result = a.compareTo(b);
+        assertEquals(0, result);
+    }
+
+    @Test
+    public void comparisonLessThan() throws Exception {
+        Address a = new Address(mainParams, "1Dorian4RoXcnBv9hnQ4Y2C1an6NJ4UrjX");
+        Address b = new Address(mainParams, "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P");
+
+        int result = a.compareTo(b);
+        assertTrue(result < 0);
+    }
+
+    @Test
+    public void comparisonGreaterThan() throws Exception {
+        Address a = new Address(mainParams, "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P");
+        Address b = new Address(mainParams, "1Dorian4RoXcnBv9hnQ4Y2C1an6NJ4UrjX");
+
+        int result = a.compareTo(b);
+        assertTrue(result > 0);
+    }
+
+    @Test
+    public void comparisonBytesVsString() throws Exception {
+        // TODO: To properly test this we need a much larger data set
+        Address a = new Address(mainParams, "1Dorian4RoXcnBv9hnQ4Y2C1an6NJ4UrjX");
+        Address b = new Address(mainParams, "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P");
+
+        int resultBytes = a.compareTo(b);
+        int resultsString = a.toString().compareTo(b.toString());
+        assertTrue( resultBytes < 0 );
+        assertTrue( resultsString < 0 );
     }
 }

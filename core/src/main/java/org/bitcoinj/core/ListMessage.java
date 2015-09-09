@@ -119,25 +119,30 @@ public abstract class ListMessage extends Message {
                     type = InventoryItem.Type.BudgetVote;
                     break;
                 case 10:
-                    type = InventoryItem.Type.BudgetFinalized;
+                    type = InventoryItem.Type.BudgetProposal;
                     break;
                 case 11:
-                    type = InventoryItem.Type.BudgetFinalizedVote;
+                    type = InventoryItem.Type.BudgetFinalized;
                     break;
                 case 12:
-                    type = InventoryItem.Type.MasterNodeQuarum;
+                    type = InventoryItem.Type.BudgetFinalizedVote;
                     break;
                 case 13:
-                    type = InventoryItem.Type.MasterNodeAnnounce;
+                    type = InventoryItem.Type.MasterNodeQuarum;
                     break;
                 case 14:
-                    type = InventoryItem.Type.MasterNodePing;
+                    type = InventoryItem.Type.MasterNodeAnnounce;
                     break;
                 case 15:
+                    type = InventoryItem.Type.MasterNodePing;
+                    break;
+                case 16:
                     type = InventoryItem.Type.DarkSendTransaction;
                     break;
                 default:
-                    throw new ProtocolException("Unknown CInv type: " + typeCode);
+                    //throw new ProtocolException("Unknown CInv type: " + typeCode);
+                    type = InventoryItem.Type.None;
+                    break;
             }
             InventoryItem item = new InventoryItem(type, readHash());
             items.add(item);
@@ -152,7 +157,7 @@ public abstract class ListMessage extends Message {
             // Write out the type code.
             Utils.uint32ToByteStreamLE(i.type.ordinal(), stream);
             // And now the hash.
-            stream.write(Utils.reverseBytes(i.hash.getBytes()));
+            stream.write(i.hash.getReversedBytes());
         }
     }
 

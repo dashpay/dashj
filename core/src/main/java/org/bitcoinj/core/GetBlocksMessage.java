@@ -49,7 +49,7 @@ public class GetBlocksMessage extends Message {
         int startCount = (int) readVarInt();
         if (startCount > 500)
             throw new ProtocolException("Number of locators cannot be > 500, received: " + startCount);
-        length = (int) (cursor - offset + ((startCount + 1) * 32));
+        length = cursor - offset + ((startCount + 1) * 32);
     }
 
     @Override
@@ -76,13 +76,7 @@ public class GetBlocksMessage extends Message {
 
     @Override
     public String toString() {
-        StringBuffer b = new StringBuffer();
-        b.append("getblocks: ");
-        for (Sha256Hash hash : locator) {
-            b.append(hash.toString());
-            b.append(" ");
-        }
-        return b.toString();
+        return "getblocks: " + Utils.join(locator);
     }
 
     @Override
@@ -95,10 +89,10 @@ public class GetBlocksMessage extends Message {
         stream.write(new VarInt(locator.size()).encode());
         for (Sha256Hash hash : locator) {
             // Have to reverse as wire format is little endian.
-            stream.write(Utils.reverseBytes(hash.getBytes()));
+            stream.write(hash.getReversedBytes());
         }
         // Next, a block ID to stop at.
-        stream.write(Utils.reverseBytes(stopHash.getBytes()));
+        stream.write(stopHash.getReversedBytes());
     }
 
     @Override

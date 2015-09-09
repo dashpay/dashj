@@ -22,8 +22,26 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 
+/**
+ * <p>This command is supported only by <a href="http://github.com/bitcoinxt/bitcoinxt">Bitcoin XT</a> nodes, which
+ * advertise themselves using the second service bit flag. It requests a query of the UTXO set keyed by a set of
+ * outpoints (i.e. tx hash and output index). The result contains a bitmap of spentness flags, and the contents of
+ * the associated outputs if they were found. The results aren't authenticated by anything, so the peer could lie,
+ * or a man in the middle could swap out its answer for something else. Please consult
+ * <a href="https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki">BIP 65</a> for more information on this
+ * message.</p>
+ *
+ * <p>Note that this message does not let you query the UTXO set by address, script or any other criteria. The
+ * reason is that Bitcoin nodes don't calculate the necessary database indexes to answer such queries, to save
+ * space and time. If you want to look up unspent outputs by address, you can either query a block explorer site,
+ * or you can use the {@link FullPrunedBlockChain} class to build the required indexes yourself. Bear in that it will
+ * be quite slow and disk intensive to do that!</p>
+ */
 public class GetUTXOsMessage extends Message {
     public static final int MIN_PROTOCOL_VERSION = 70002;
+
+    /** Bitmask of service flags required for a node to support this command (0x3) */
+    public static final int SERVICE_FLAGS_REQUIRED = 3;
 
     private boolean includeMempool;
     private ImmutableList<TransactionOutPoint> outPoints;

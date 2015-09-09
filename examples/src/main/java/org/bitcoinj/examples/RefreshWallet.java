@@ -23,7 +23,6 @@ import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
 
 import java.io.File;
-import java.net.InetAddress;
 
 /**
  * RefreshWallet loads a wallet, then processes the block chain to update the transaction pools within it.
@@ -40,7 +39,6 @@ public class RefreshWallet {
         BlockChain chain = new BlockChain(params, wallet, blockStore);
 
         final PeerGroup peerGroup = new PeerGroup(params, chain);
-        peerGroup.addAddress(new PeerAddress(InetAddress.getLocalHost()));
         peerGroup.startAsync();
 
         wallet.addEventListener(new AbstractWalletEventListener() {

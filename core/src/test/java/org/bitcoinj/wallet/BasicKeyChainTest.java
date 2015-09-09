@@ -147,6 +147,8 @@ public class BasicKeyChainTest {
         assertFalse(chain.checkPassword("wrong"));
         ECKey key = chain.findKeyFromPubKey(key1.getPubKey());
         assertTrue(key.isEncrypted());
+        assertTrue(key.isPubKeyOnly());
+        assertFalse(key.isWatching());
         assertNull(key.getSecretBytes());
 
         try {
@@ -163,6 +165,8 @@ public class BasicKeyChainTest {
         chain = chain.toDecrypted(PASSWORD);
         key = chain.findKeyFromPubKey(key1.getPubKey());
         assertFalse(key.isEncrypted());
+        assertFalse(key.isPubKeyOnly());
+        assertFalse(key.isWatching());
         key.getPrivKeyBytes();
     }
 

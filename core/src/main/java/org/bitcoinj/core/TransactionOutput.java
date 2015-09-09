@@ -83,7 +83,7 @@ public class TransactionOutput extends ChildMessage implements Serializable {
 
     /**
      * Creates an output that sends 'value' to the given address (public key hash). The amount should be created with
-     * something like {@link Utils#valueOf(int, int)}. Typically you would use
+     * something like {@link Coin#valueOf(int, int)}. Typically you would use
      * {@link Transaction#addOutput(Coin, Address)} instead of creating a TransactionOutput directly.
      */
     public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, Coin value, Address to) {
@@ -92,7 +92,7 @@ public class TransactionOutput extends ChildMessage implements Serializable {
 
     /**
      * Creates an output that sends 'value' to the given public key using a simple CHECKSIG script (no addresses). The
-     * amount should be created with something like {@link Utils#valueOf(int, int)}. Typically you would use
+     * amount should be created with something like {@link Coin#valueOf(int, int)}. Typically you would use
      * {@link Transaction#addOutput(Coin, ECKey)} instead of creating an output directly.
      */
     public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, Coin value, ECKey to) {
@@ -206,8 +206,9 @@ public class TransactionOutput extends ChildMessage implements Serializable {
      * over the parents list to discover this.
      */
     public int getIndex() {
-        for (int i = 0; i < getParentTransaction().getOutputs().size(); i++) {
-            if (getParentTransaction().getOutputs().get(i) == this)
+        List<TransactionOutput> outputs = getParentTransaction().getOutputs();
+        for (int i = 0; i < outputs.size(); i++) {
+            if (outputs.get(i) == this)
                 return i;
         }
         throw new IllegalStateException("Output linked to wrong parent transaction?");
@@ -256,7 +257,7 @@ public class TransactionOutput extends ChildMessage implements Serializable {
         availableForSpending = false;
         spentBy = input;
         if (parent != null)
-            if (log.isDebugEnabled()) log.debug("Marked {}:{} as spent by {}", getParentTransaction().getHash(), getIndex(), input);
+            if (log.isDebugEnabled()) log.debug("Marked {}:{} as spent by {}", getParentTransactionHash(), getIndex(), input);
         else
             if (log.isDebugEnabled()) log.debug("Marked floating output as spent by {}", input);
     }
@@ -266,7 +267,7 @@ public class TransactionOutput extends ChildMessage implements Serializable {
      */
     public void markAsUnspent() {
         if (parent != null)
-            if (log.isDebugEnabled()) log.debug("Un-marked {}:{} as spent by {}", getParentTransaction().getHash(), getIndex(), spentBy);
+            if (log.isDebugEnabled()) log.debug("Un-marked {}:{} as spent by {}", getParentTransactionHash(), getIndex(), spentBy);
         else
             if (log.isDebugEnabled()) log.debug("Un-marked floating output as spent by {}", spentBy);
         availableForSpending = true;
@@ -353,8 +354,7 @@ public class TransactionOutput extends ChildMessage implements Serializable {
                 buf.append(" to multisig");
             else
                 buf.append(" (unknown type)");
-            buf.append(" script:");
-            buf.append(script);
+            buf.append(" script:").append(script);
             return buf.toString();
         } catch (ScriptException e) {
             throw new RuntimeException(e);
@@ -370,10 +370,36 @@ public class TransactionOutput extends ChildMessage implements Serializable {
     }
 
     /**
-     * Returns the transaction that owns this output, or throws NullPointerException if unowned.
+     * Returns the transaction that owns this output.
      */
+    @Nullable
     public Transaction getParentTransaction() {
-        return checkNotNull((Transaction) parent, "Free-standing TransactionOutput");
+        return (Transaction)parent;
+    }
+
+    /**
+     * Returns the transaction hash that owns this output.
+     */
+    @Nullable
+    public Sha256Hash getParentTransactionHash() {
+        return parent == null ? null : parent.getHash();
+    }
+
+    /**
+     * Returns the depth in blocks of the parent tx.
+     *
+     * <p>If the transaction appears in the top block, the depth is one. If it's anything else (pending, dead, unknown)
+     * then -1.</p>
+     * @return The tx depth or -1.
+     */
+    public int getParentTransactionDepthInBlocks() {
+        if (getParentTransaction() != null) {
+            TransactionConfidence confidence = getParentTransaction().getConfidence();
+            if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
+                return confidence.getDepthInBlocks();
+            }
+        }
+        return -1;
     }
 
     /**

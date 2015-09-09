@@ -38,7 +38,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
@@ -101,7 +100,7 @@ public class CheckpointManager {
     private Sha256Hash readBinary(InputStream inputStream) throws IOException {
         DataInputStream dis = null;
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            MessageDigest digest = Sha256Hash.newDigest();
             DigestInputStream digestInputStream = new DigestInputStream(inputStream, digest);
             dis = new DataInputStream(digestInputStream);
             digestInputStream.on(false);
@@ -127,11 +126,9 @@ public class CheckpointManager {
                 buffer.position(0);
                 checkpoints.put(block.getHeader().getTimeSeconds(), block);
             }
-            Sha256Hash dataHash = new Sha256Hash(digest.digest());
+            Sha256Hash dataHash = Sha256Hash.wrap(digest.digest());
             log.info("Read {} checkpoints, hash is {}", checkpoints.size(), dataHash);
             return dataHash;
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);  // Cannot happen.
         } catch (ProtocolException e) {
             throw new IOException(e);
         } finally {
@@ -168,7 +165,7 @@ public class CheckpointManager {
             }
             HashCode hash = hasher.hash();
             log.info("Read {} checkpoints, hash is {}", checkpoints.size(), hash);
-            return new Sha256Hash(hash.asBytes());
+            return Sha256Hash.wrap(hash.asBytes());
         } finally {
             if (reader != null) reader.close();
         }
@@ -219,6 +216,9 @@ public class CheckpointManager {
         checkArgument(!(store instanceof FullPrunedBlockStore), "You cannot use checkpointing with a full store.");
 
         time -= 86400 * 7;
+
+        checkArgument(time > 0);
+        log.info("Attempting to initialize a new block store with a checkpoint for time {}", time);
 
         BufferedInputStream stream = new BufferedInputStream(checkpoints);
         CheckpointManager manager = new CheckpointManager(params, stream);

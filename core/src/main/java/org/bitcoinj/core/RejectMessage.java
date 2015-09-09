@@ -26,7 +26,7 @@ public class RejectMessage extends Message {
     private static final long serialVersionUID = -5246995579800334336L;
 
     private String message, reason;
-    public static enum RejectCode {
+    public enum RejectCode {
         /** The message was not able to be parsed */
         MALFORMED((byte) 0x01),
         /** The message described an invalid object */
@@ -72,8 +72,13 @@ public class RejectMessage extends Message {
         super(params, payload, 0);
     }
 
-    public RejectMessage(NetworkParameters params, byte[] payload, boolean parseLazy, boolean parseRetain, int length) throws ProtocolException {
-        super(params, payload, 0, parseLazy, parseRetain, length);
+    /** Constructs a reject message that fingers the object with the given hash as rejected for the given reason. */
+    public RejectMessage(NetworkParameters params, RejectCode code, Sha256Hash hash, String message, String reason) throws ProtocolException {
+        super(params);
+        this.code = code;
+        this.messageHash = hash;
+        this.message = message;
+        this.reason = reason;
     }
 
     @Override
@@ -102,7 +107,7 @@ public class RejectMessage extends Message {
         stream.write(new VarInt(reasonBytes.length).encode());
         stream.write(reasonBytes);
         if (message.equals("block") || message.equals("tx"))
-            stream.write(messageHash.getBytes());
+            stream.write(messageHash.getReversedBytes());
     }
 
     /**
@@ -137,15 +142,18 @@ public class RejectMessage extends Message {
         return reason;
     }
 
+
+    /**
+     * A String representation of the relevant details of this reject message.
+     * Be aware that the value returned by this method includes the value returned by
+     * {@link #getReasonString() getReasonString}, which is taken from the reject message unchecked.
+     * Through malice or otherwise, it might contain control characters or other harmful content.
+     */
     @Override
     public String toString() {
         Sha256Hash hash = getRejectedObjectHash();
-        if (hash != null)
-            return String.format("Reject: %s %s for reason '%s' (%d)", getRejectedMessage(), getRejectedObjectHash(),
-                getReasonString(), getReasonCode().code);
-        else
-            return String.format("Reject: %s for reason '%s' (%d)", getRejectedMessage(),
-                    getReasonString(), getReasonCode().code);
+        return String.format("Reject: %s %s for reason '%s' (%d)", getRejectedMessage(),
+            hash != null ? hash : "", getReasonString(), getReasonCode().code);
     }
 
     @Override

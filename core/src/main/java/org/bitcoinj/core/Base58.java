@@ -16,7 +16,6 @@
 
 package org.bitcoinj.core;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -84,11 +83,7 @@ public class Base58 {
         }
 
         byte[] output = copyOfRange(temp, j, temp.length);
-        try {
-            return new String(output, "US-ASCII");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);  // Cannot happen.
-        }
+        return Utils.toString(output, "US-ASCII");
     }
 
     public static byte[] decode(String input) throws AddressFormatException {
@@ -147,13 +142,13 @@ public class Base58 {
      * @throws AddressFormatException if the input is not base 58 or the checksum does not validate.
      */
     public static byte[] decodeChecked(String input) throws AddressFormatException {
-        byte tmp [] = decode(input);
+        byte[] tmp  = decode(input);
         if (tmp.length < 4)
             throw new AddressFormatException("Input too short");
         byte[] bytes = copyOfRange(tmp, 0, tmp.length - 4);
         byte[] checksum = copyOfRange(tmp, tmp.length - 4, tmp.length);
         
-        tmp = Utils.doubleDigest(bytes);
+        tmp = Sha256Hash.hashTwice(bytes);
         byte[] hash = copyOfRange(tmp, 0, 4);
         if (!Arrays.equals(checksum, hash)) 
             throw new AddressFormatException("Checksum does not validate");
