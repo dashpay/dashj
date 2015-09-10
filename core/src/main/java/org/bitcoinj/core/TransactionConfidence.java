@@ -240,7 +240,7 @@ public class TransactionConfidence implements Serializable {
      * @throws IllegalStateException if the confidence type is not BUILDING.
      */
     public synchronized int getAppearedAtChainHeight() {
-        if (getConfidenceType() != ConfidenceType.BUILDING && getConfidenceType() != ConfidenceType.INSTANTX_LOCKED)
+        if (getConfidenceType() != ConfidenceType.BUILDING && getConfidenceType() != ConfidenceType.INSTANTX_LOCKED) //TODO:InstantX
             throw new IllegalStateException("Confidence type is " + getConfidenceType() + ", not BUILDING");
         return appearedAtChainHeight;
     }
@@ -254,7 +254,7 @@ public class TransactionConfidence implements Serializable {
             throw new IllegalArgumentException("appearedAtChainHeight out of range");
         this.appearedAtChainHeight = appearedAtChainHeight;
         this.depth = 1;
-        if(getConfidenceType() != ConfidenceType.INSTANTX_LOCKED)
+        //if(getConfidenceType() != ConfidenceType.INSTANTX_LOCKED)  //TODO:InstantX
             setConfidenceType(ConfidenceType.BUILDING);
     }
 

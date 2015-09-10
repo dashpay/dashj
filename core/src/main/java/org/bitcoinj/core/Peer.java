@@ -361,7 +361,7 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof FilteredBlock) {
             startFilteredBlock((FilteredBlock) m);
         } else if (m instanceof TransactionLockRequest) {
-            processTransactionLockRequest((TransactionLockRequest) m);
+            //processTransactionLockRequest((TransactionLockRequest) m);
         } else if (m instanceof Transaction) {
             processTransaction((Transaction) m);
         } else if (m instanceof GetDataMessage) {

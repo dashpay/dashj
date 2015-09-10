@@ -2289,13 +2289,13 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             // Add to the pending pool. It'll be moved out once we receive this transaction on the best chain.
             // This also registers txConfidenceListener so wallet listeners get informed.
             log.info("->pending: {}", tx.getHashAsString());
-            if(tx instanceof TransactionLockRequest)
+            /*if(tx instanceof TransactionLockRequest) //TODO:InstantX
                 tx.getConfidence().setConfidenceType(ConfidenceType.INSTANTX_PENDING);
-            else tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
+            else*/ tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
             confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
-            if(tx instanceof TransactionLockRequest)
+            /*if(tx instanceof TransactionLockRequest)  //TODO:InstantX
                 addWalletTransaction(Pool.INSTANTX_PENDING, tx);
-            else addWalletTransaction(Pool.PENDING, tx);
+            else*/ addWalletTransaction(Pool.PENDING, tx);
             // Mark any keys used in the outputs as "used", this allows wallet UI's to auto-advance the current key
             // they are showing to the user in qr codes etc.
             markKeysAsUsed(tx);
@@ -4832,8 +4832,8 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         // Don't hold the wallet lock whilst doing this, so if the broadcaster accesses the wallet at some point there
         // is no inversion.
         for (Transaction tx : toBroadcast) {
-            if(tx.getConfidence().getConfidenceType() == ConfidenceType.INSTANTX_LOCKED)
-                continue;
+            /*if(tx.getConfidence().getConfidenceType() == ConfidenceType.INSTANTX_LOCKED)
+                continue;*/
             checkState(tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING || tx.getConfidence().getConfidenceType() == ConfidenceType.INSTANTX_PENDING);
             // Re-broadcast even if it's marked as already seen for two reasons
             // 1) Old wallets may have transactions marked as broadcast by 1 peer when in reality the network
