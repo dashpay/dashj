@@ -4,7 +4,7 @@
 
   <groupId>org.bitcoinj</groupId>
   <artifactId>darkcoinj-parent</artifactId>
-  <version>0.13.2</version>
+  <version>0.13.2.ix</version>
   <packaging>pom</packaging>
 
   <modules>

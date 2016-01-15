@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.bitcoinj</groupId>
         <artifactId>darkcoinj-parent</artifactId>
-        <version>0.13.2</version>
+        <version>0.13.2.ix</version>
     </parent>
 
     <artifactId>darkcoinj-core</artifactId>
@@ -357,7 +357,7 @@
                                 <artifactItem>
                                     <outputDirectory>target/test-classes/</outputDirectory>
                                     <groupId>org.bitcoinj</groupId>
-                                    <artifactId>bitcoinj-core</artifactId>
+                                    <artifactId>darkcoinj-core</artifactId>
                                     <version>${project.version}</version>
                                 </artifactItem>
                             </artifactItems>

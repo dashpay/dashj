@@ -76,7 +76,7 @@ public class BitcoinSerializer {
         //Darkcoin specific messages
         names.put(DarkSendElectionEntryPingMessage.class, "dseep");
 
-        names.put(TransactionLockRequest.class, "txlreq");
+        names.put(TransactionLockRequest.class, "ix");
         names.put(ConsensusVote.class, "txlvote");
 
     }
@@ -248,7 +248,7 @@ public class BitcoinSerializer {
             return new GetUTXOsMessage(params, payloadBytes);
         } else if (command.equals("dseep")) {
             return new DarkSendElectionEntryPingMessage(params, payloadBytes);
-        } else if (command.equals("txlreq")) {
+        } else if (command.equals("ix")) {
             return new TransactionLockRequest(params, payloadBytes);
         } else if (command.equals("txlvote")) {
             return new ConsensusVote(params, payloadBytes);

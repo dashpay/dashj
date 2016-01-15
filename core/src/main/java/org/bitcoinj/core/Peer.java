@@ -362,6 +362,7 @@ public class Peer extends PeerSocketHandler {
             startFilteredBlock((FilteredBlock) m);
         } else if (m instanceof TransactionLockRequest) {
             //processTransactionLockRequest((TransactionLockRequest) m);
+            processTransaction((TransactionLockRequest)m);
         } else if (m instanceof Transaction) {
             processTransaction((Transaction) m);
         } else if (m instanceof GetDataMessage) {
@@ -1284,15 +1285,16 @@ public class Peer extends PeerSocketHandler {
                     transactions.add(item);
                     break;
                 case TransactionLockRequest:
-                    if(instantx.isEnabled())
-                        instantxLockRequests.add(item);
+                    //if(instantx.isEnabled())
+                    //    instantxLockRequests.add(item);
+                    transactions.add(item);
                     break;
                 case Block:
                     blocks.add(item);
                     break;
                 case TransactionLockVote:
-                    if(instantx.isEnabled())
-                        instantxLocks.add(item);
+                    //if(instantx.isEnabled())
+                    //    instantxLocks.add(item);
                     break;
                 case Spork:
                     break;
@@ -1358,7 +1360,7 @@ public class Peer extends PeerSocketHandler {
             }
         }
 
-        it = instantxLockRequests.iterator();
+        /*it = instantxLockRequests.iterator();
         while (it.hasNext()) {
             InventoryItem item = it.next();
             // Only download the transaction if we are the first peer that saw it be advertised. Other peers will also
@@ -1382,9 +1384,9 @@ public class Peer extends PeerSocketHandler {
                 // Register with the garbage collector that we care about the confidence data for a while.
                 pendingTxDownloads.add(conf);
             }
-        }
+        }*/
 
-        it = instantxLocks.iterator();
+        /*it = instantxLocks.iterator();
         //InstantXSystem instantx = InstantXSystem.get(blockChain);
         while (it.hasNext()) {
             InventoryItem item = it.next();
@@ -1393,7 +1395,7 @@ public class Peer extends PeerSocketHandler {
             {
                 getdata.addItem(item);
             }
-        }
+        }*/
 
         // If we are requesting filteredblocks we have to send a ping after the getdata so that we have a clear
         // end to the final FilteredBlock's transactions (in the form of a pong) sent to us
