@@ -185,6 +185,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
 
     protected transient CoinSelector coinSelector = new DefaultCoinSelector();
 
+
     // The wallet version. This is an int that can be used to track breaking changes in the wallet format.
     // You can also use it to detect wallets that come from the future (ie they contain features you
     // do not know how to deal with).
