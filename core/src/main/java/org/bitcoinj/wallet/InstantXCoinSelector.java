@@ -32,7 +32,7 @@ public class InstantXCoinSelector extends DefaultCoinSelector {
         return (type.equals(TransactionConfidence.ConfidenceType.BUILDING) && ( usingInstantX ? confidence.getDepthInBlocks() > 6 : true))||
                 //type.equals(TransactionConfidence.ConfidenceType.INSTANTX_LOCKED) || //TODO:InstantX
                 type.equals(TransactionConfidence.ConfidenceType.PENDING) &&
-                        confidence.getSource().equals(TransactionConfidence.Source.SELF) && ( usingInstantX ? confidence.getDepthInBlocks() > 6 : true) &&
+                        confidence.getSource().equals(TransactionConfidence.Source.SELF) && ( usingInstantX ? false : true) &&
                         // In regtest mode we expect to have only one peer, so we won't see transactions propagate.
                         // TODO: The value 1 below dates from a time when transactions we broadcast *to* were counted, set to 0
                         (confidence.numBroadcastPeers() > 1 || tx.getParams() == RegTestParams.get());
