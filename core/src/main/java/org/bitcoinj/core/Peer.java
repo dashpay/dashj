@@ -407,6 +407,8 @@ public class Peer extends PeerSocketHandler {
             processUTXOMessage((UTXOsMessage) m);
         } else if (m instanceof RejectMessage) {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
+        } else if(m instanceof DarkSendQueue) {
+            //do nothing
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }

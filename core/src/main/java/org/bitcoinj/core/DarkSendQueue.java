@@ -28,7 +28,7 @@ import java.io.Serializable;
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
 
-public class DarkSendQueue extends ChildMessage implements Serializable {
+public class DarkSendQueue extends Message implements Serializable {
 
     private static final Logger log = LoggerFactory.getLogger(DarkSendQueue.class);
 
@@ -50,6 +50,11 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
         ready = false;
 
         this.system = null;
+    }
+
+    DarkSendQueue(NetworkParameters params, byte[] bytes)
+    {
+        super(params, bytes, 0);
     }
 
     DarkSendQueue(NetworkParameters params, byte[] bytes, int cursor) {
@@ -78,7 +83,7 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
     }
 
     protected static int calcLength(byte[] buf, int offset) {
-        VarInt varint;
+        /*VarInt varint;
         // jump past version (uint32)
         int cursor = offset;
         cursor += 4; //denom
@@ -99,6 +104,8 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
         cursor += size;
 
         return cursor - offset;
+        */
+        return 0;
     }
 
     @Override
@@ -106,7 +113,7 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
         if (parsed)
             return;
 
-        cursor = offset;
+        /*cursor = offset;
 
         denom = (int) readUint32();
         optimalEncodingMessageSize = 4;
@@ -125,7 +132,7 @@ public class DarkSendQueue extends ChildMessage implements Serializable {
         optimalEncodingMessageSize += vchSig.length;
 
         length = cursor - offset;
-
+        */
 
     }
 

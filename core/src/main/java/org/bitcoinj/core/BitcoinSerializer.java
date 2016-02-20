@@ -252,7 +252,10 @@ public class BitcoinSerializer {
             return new TransactionLockRequest(params, payloadBytes);
         } else if (command.equals("txlvote")) {
             return new ConsensusVote(params, payloadBytes);
-        } else {
+        //} else if (command.equals("dsq")) {
+            //return new DarkSendQueue(params, payloadBytes);
+        }
+        else{
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);
         }

@@ -41,7 +41,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     }
 
     /** 
-     * Checks if we are at a difficulty transition point. 
+     * Checks if we are at a difficulty transition point. \
      * @param storedPrev The previous stored block 
      * @return If this is a difficulty transition point 
      */
