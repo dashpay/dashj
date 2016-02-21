@@ -409,7 +409,14 @@ public class Peer extends PeerSocketHandler {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
         } else if(m instanceof DarkSendQueue) {
             //do nothing
-        } else {
+        } else if(m instanceof MasternodeBroadcast) {
+
+        }
+        else if(m instanceof MasternodePing) {
+
+        }
+        else
+        {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
     }
@@ -1278,6 +1285,8 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> blocks = new LinkedList<InventoryItem>();
         List<InventoryItem> instantxLockRequests = new LinkedList<InventoryItem>();
         List<InventoryItem> instantxLocks = new LinkedList<InventoryItem>();
+        List<InventoryItem> masternodePings = new LinkedList<InventoryItem>();
+        List<InventoryItem> masternodeBroadcasts = new LinkedList<InventoryItem>();
 
         InstantXSystem instantx = InstantXSystem.get(blockChain);
 
@@ -1308,8 +1317,12 @@ public class Peer extends PeerSocketHandler {
                 case    BudgetFinalized: break;
                 case    BudgetFinalizedVote: break;
                 case    MasterNodeQuarum: break;
-                case    MasterNodeAnnounce: break;
-                case    MasterNodePing: break;
+                case    MasterNodeAnnounce:
+                    masternodeBroadcasts.add(item);
+                    break;
+                case    MasterNodePing:
+                    masternodePings.add(item);
+                    break;
                 case DarkSendTransaction:
                     break;
                 default:
@@ -1398,6 +1411,29 @@ public class Peer extends PeerSocketHandler {
                 getdata.addItem(item);
             }
         }*/
+
+        //masternodepings
+        it = masternodePings.iterator();
+
+        while (it.hasNext()) {
+            InventoryItem item = it.next();
+
+            //if(!instantx.mapTxLockVote.containsKey(item.hash))
+            //{
+                getdata.addItem(item);
+            //}
+        }
+
+        it = masternodeBroadcasts.iterator();
+
+        while (it.hasNext()) {
+            InventoryItem item = it.next();
+
+            //if(!instantx.mapTxLockVote.containsKey(item.hash))
+            //{
+            getdata.addItem(item);
+            //}
+        }
 
         // If we are requesting filteredblocks we have to send a ping after the getdata so that we have a clear
         // end to the final FilteredBlock's transactions (in the form of a pong) sent to us

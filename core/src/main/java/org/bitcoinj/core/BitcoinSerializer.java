@@ -73,11 +73,14 @@ public class BitcoinSerializer {
         names.put(GetUTXOsMessage.class, "getutxos");
         names.put(UTXOsMessage.class, "utxos");
 
-        //Darkcoin specific messages
+        //Dash specific messages
         names.put(DarkSendElectionEntryPingMessage.class, "dseep");
 
         names.put(TransactionLockRequest.class, "ix");
         names.put(ConsensusVote.class, "txlvote");
+
+        names.put(MasternodeBroadcast.class, "mnb");
+        names.put(MasternodePing.class, "mnp");
 
     }
 
@@ -252,8 +255,12 @@ public class BitcoinSerializer {
             return new TransactionLockRequest(params, payloadBytes);
         } else if (command.equals("txlvote")) {
             return new ConsensusVote(params, payloadBytes);
-        //} else if (command.equals("dsq")) {
-            //return new DarkSendQueue(params, payloadBytes);
+        } else if (command.equals("dsq")) {
+            return new DarkSendQueue(params, payloadBytes);
+        } else if (command.equals("mnb")) {
+            return new MasternodeBroadcast(params, payloadBytes);
+        } else if( command.equals("mnp")) {
+            return new MasternodePing(params, payloadBytes);
         }
         else{
             log.warn("No support for deserializing message with name {}", command);
