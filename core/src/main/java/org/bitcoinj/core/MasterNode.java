@@ -1,34 +1,45 @@
-package org.darkcoinj;
+package org.bitcoinj.core;
 
 import org.bitcoinj.core.*;
+import org.darkcoinj.DarkSend;
 
 /**
  * Created by Eric on 2/8/2015.
  */
 public class MasterNode {
-    public PeerAddress getAddress() {
-        return address;
-    }
+    long lastTimeChecked;
 
+    public int MASTERNODE_ENABLED = 1;
+    public int MASTERNODE_EXPIRED = 2;
+    public int MASTERNODE_VIN_SPENT = 3;
+    public int MASTERNODE_REMOVE = 4;
+    public int MASTERNODE_POS_ERROR = 5;
+
+    public TransactionInput vin;
     public PeerAddress address;
-    public    TransactionInput vin;
-        public long lastTimeSeen;
-        public PublicKey pubkey;
-        public PublicKey pubkey2;
-        public byte [] sig;
-        public long now; //dsee message times
-        public long lastDseep;
-        int cacheInputAge;
-        int cacheInputAgeBlock;
-        int enabled;
-        boolean unitTest;
-        boolean allowFreeTx;
-        public int protocolVersion;
+    public PublicKey pubkey;
+    public PublicKey pubkey2;
+    public byte [] sig;
+    public int activeState;
+    public long sigTime; //mnb message time
 
-        //the dsq count from the last dsq broadcast of this node
-        long nLastDsq;
+    int cacheInputAge;
+    int cacheInputAgeBlock;
+    boolean unitTest;
+    boolean allowFreeTx;
+    public int protocolVersion;
+
+    //the dsq count from the last dsq broadcast of this node
+    long nLastDsq;
+    int nScanningErrorCount;
+    int nLastScanningErrorBlockHeight;
+    MasternodePing lastPing;
+
+    public long lastDseep;// temporary, do not save. Remove after migration to v12
+    long lastDSeep;// temporary, do not save. Remove after migration to v12
 
         //other variables
+
         DarkSend darkSend;
 
         public MasterNode(PeerAddress newAddr, TransactionInput newVin, PublicKey newPubkey, byte [] newSig, long newNow, PublicKey newPubkey2, int protocolVersionIn)
