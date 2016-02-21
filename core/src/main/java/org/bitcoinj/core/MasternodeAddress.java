@@ -141,7 +141,7 @@ public class MasternodeAddress extends ChildMessage {
     @Override
     public int getMessageSize() {
         // The 4 byte difference is the uint32 timestamp that was introduced in version 31402 
-        length = protocolVersion > 31402 ? MESSAGE_SIZE : MESSAGE_SIZE - 4;
+        length = MESSAGE_SIZE;
         return length;
     }
 
