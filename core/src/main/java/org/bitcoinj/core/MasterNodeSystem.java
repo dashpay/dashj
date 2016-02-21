@@ -4,7 +4,6 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.darkcoinj.ActiveMasterNode;
 import org.darkcoinj.DarkSendSigner;
-import org.darkcoinj.MasterNode;
 import org.darkcoinj.MasterNodePayments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +37,7 @@ public class MasterNodeSystem {
 
     /** The list of active masternodes */
     //std::vector<CMasterNode> vecMasternodes;
-    public ArrayList<MasterNode> vecMasternodes;
+    public ArrayList<Masternode> vecMasternodes;
     /** Object for who's going to get paid on which blocks */
     //CMasternodePayments masternodePayments;
     MasterNodePayments masternodePayments;
@@ -74,7 +73,7 @@ public class MasterNodeSystem {
         int winner = -1;
 
         // scan for winner
-        for(MasterNode mn : vecMasternodes) {
+        for(Masternode mn : vecMasternodes) {
             mn.Check();
             if(mn.protocolVersion < minProtocol) continue;
             if(!mn.IsEnabled()) {
@@ -104,7 +103,7 @@ public class MasterNodeSystem {
         //std::vector<pair<unsigned int, CTxIn> > vecMasternodeScores;
         ArrayList<Pair<Integer, TransactionInput>> vecMasternodeScores = new ArrayList<Pair<Integer, TransactionInput>>();
 
-        for(MasterNode mn : vecMasternodes)
+        for(Masternode mn : vecMasternodes)
         {
             mn.Check();
 
@@ -138,7 +137,7 @@ public class MasterNodeSystem {
         int i = 0;
 
 
-        for(MasterNode mn : vecMasternodes) {
+        for(Masternode mn : vecMasternodes) {
             if (mn.vin == vin) return i;
             i++;
         }
@@ -172,7 +171,7 @@ public class MasterNodeSystem {
     {
         ArrayList<Pair<Integer, TransactionInput>> vecMasternodeScores = new ArrayList<Pair<Integer, TransactionInput>>(vecMasternodes.size());
 
-        for(MasterNode mn : vecMasternodes) {
+        for(Masternode mn : vecMasternodes) {
             mn.Check();
             if(mn.protocolVersion < minProtocol) continue;
             if(!mn.IsEnabled()) {
@@ -233,7 +232,7 @@ public class MasterNodeSystem {
         //std::vector<pair<unsigned int, int> > vecMasternodeScores;
 
         i = 0;
-        for(MasterNode mn : vecMasternodes)
+        for(Masternode mn : vecMasternodes)
         {
             mn.Check();
             if(mn.protocolVersion < minProtocol) continue;
@@ -289,7 +288,7 @@ public class MasterNodeSystem {
 
         // see if we have this masternode
 
-        for(MasterNode mn : vecMasternodes) {
+        for(Masternode mn : vecMasternodes) {
         if(mn.vin.getOutpoint() == m.vin.getOutpoint()) {
             // LogPrintf("dseep - Found corresponding mn for vin: %s\n", vin.ToString().c_str());
             // take this only if it's newer
@@ -353,6 +352,7 @@ public class MasterNodeSystem {
     {
        return new TransactionInput(params, null, new byte [1], new TransactionOutPoint(params, -1, Sha256Hash.ZERO_HASH));
     }
+    /*
     public void processDarkSendEntryGet(Peer peer, NetworkParameters params, DarkSendEntryGetMessage m)
     {
         if(DarkCoinSystem.fLiteMode) return; //disable all darksend/masternode related functionality
@@ -384,7 +384,7 @@ public class MasterNodeSystem {
         int count = vecMasternodes.size();
         int i = 0;
 
-        for(MasterNode mn : vecMasternodes)
+        for(Masternode mn : vecMasternodes)
         {
 
         if(IsRFC1918(mn.address.getAddr().getAddress())) continue; //local network
@@ -415,6 +415,8 @@ public class MasterNodeSystem {
 
         log.info("dseg - Sent "+count+" masternode entries to " + peer.getAddress().toString());
     }
+    */
+    /*
     void processDarkSendElectionEntry(Peer peer, NetworkParameters params, DarkSendElectionEntryMessage m)
     {
 
@@ -474,7 +476,7 @@ public class MasterNodeSystem {
         }
 
         //search existing masternode list, this is where we update existing masternodes with new dsee broadcasts
-        for (MasterNode mn : vecMasternodes)
+        for (Masternode mn : vecMasternodes)
         {
           if(mn.vin.getOutpoint() == m.vin.getOutpoint()) {
             // count == -1 when it's a new entry
@@ -522,20 +524,21 @@ public class MasterNodeSystem {
         //tx.vout.push_back(vout);
         //tx.addOutput(vout);
 
-        if(true /*AcceptableInputs(mempool, state, tx)*/){
+        //if(true AcceptableInputs(mempool, state, tx))
+        {
             if(DarkCoinSystem.fDebug) log.info("dsee - Accepted masternode entry "+ m.count + " "+ m.current);
 
-            /*if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
+            if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
                 LogPrintf("dsee - Input must have least %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS);
                 Misbehaving(pfrom->GetId(), 20);
                 return;
-            }*/
+            }
 
             // use this as a peer
             //addrman.Add(CAddress(addr), pfrom->addr, 2*60*60);
 
             // add our masternode
-            MasterNode mn = new MasterNode(m.addr, m.vin, m.pubkey, m.vchSig, m.sigTime, m.pubkey2, m.protocolVersion);
+            Masternode mn = new Masternode(m.addr, m.vin, m.pubkey, m.vchSig, m.sigTime, m.pubkey2, m.protocolVersion);
             mn.UpdateLastSeen(m.lastUpdated);
             vecMasternodes.add(mn);
 
@@ -550,16 +553,16 @@ public class MasterNodeSystem {
         } else {
             log.info("dsee - Rejected masternode entry %s"+ m.addr.toString());
 
-            /*int nDoS = 0;
+            int nDoS = 0;
             if (state.IsInvalid(nDoS))
             {
                 log.info("dsee - %s from %s %s was not accepted into the memory pool\n", tx.GetHash().ToString().c_str(),
                         pfrom -> addr.ToString().c_str(), pfrom -> cleanSubVer.c_str());
                 if (nDoS > 0)
                     Misbehaving(pfrom->GetId(), nDoS);
-            }*/
-        }
-    }
+            }
+           }
+    }*/
 
     public static MasterNodeSystem mns;
     public static MasterNodeSystem get() {

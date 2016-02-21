@@ -20,6 +20,7 @@ public class InstantXSystem {
     public HashMap<Sha256Hash, TransactionLock> mapTxLocks;
     public HashMap<TransactionOutPoint, Sha256Hash> mapLockedInputs;
     public HashMap<Sha256Hash, Long> mapUnknownVotes; //track votes with no tx for DOS
+    int nCompleteTXLocks;
 
     public static final int INSTANTX_SIGNATURES_REQUIRED = 20;
     public static final int INSTANTX_SIGNATURES_TOTAL = 30;

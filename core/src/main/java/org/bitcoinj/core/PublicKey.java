@@ -15,17 +15,13 @@ public class PublicKey extends ChildMessage {
 
     byte [] bytes;
 
-    private transient int optimalEncodingMessageSize;
-
-
-    PublicKey()
+    PublicKey(NetworkParameters params)
     {
-        super();
+        super(params);
     }
 
-    public PublicKey(NetworkParameters params, byte[] payloadBytes)
-    {
-        super(params, payloadBytes, 0, null, false, false, payloadBytes.length);
+    public PublicKey(NetworkParameters params, byte[] payload, int offset) throws ProtocolException {
+        super(params, payload, offset);
     }
 
     public PublicKey(NetworkParameters params, byte[] payloadBytes, int cursor, Message parent, boolean parseLazy, boolean parseRetain)
@@ -36,31 +32,17 @@ public class PublicKey extends ChildMessage {
     @Override
     protected void parseLite() throws ProtocolException {
         if (parseLazy && length == UNKNOWN_LENGTH) {
-            //If length hasn't been provided this tx is probably contained within a block.
-            //In parseRetain mode the block needs to know how long the transaction is
-            //unfortunately this requires a fairly deep (though not total) parse.
-            //This is due to the fact that transactions in the block's list do not include a
-            //size header and inputs/outputs are also variable length due the contained
-            //script so each must be instantiated so the scriptlength varint can be read
-            //to calculate total length of the transaction.
-            //We will still persist will this semi-light parsing because getting the lengths
-            //of the various components gains us the ability to cache the backing bytearrays
-            //so that only those subcomponents that have changed will need to be reserialized.
-
-            //parse();
-            //parsed = true;
             length = calcLength(payload, offset);
             cursor = offset + length;
         }
     }
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
-        // jump past version (uint32)
+
         int cursor = offset;// + 4;
-        //vin TransactionInput
         varint = new VarInt(buf, cursor);
         long len = varint.value;
-        // 4 = length of sequence field (unint32)
+        len += varint.getOriginalSizeInBytes();
         cursor += len;
 
         return cursor - offset;
@@ -72,11 +54,7 @@ public class PublicKey extends ChildMessage {
 
         cursor = offset;
 
-        optimalEncodingMessageSize = 0;
-
         bytes = readByteArray();
-
-        optimalEncodingMessageSize += VarInt.sizeOf(bytes.length) + bytes.length;
 
         length = cursor - offset;
     }
@@ -85,17 +63,6 @@ public class PublicKey extends ChildMessage {
 
         stream.write(new VarInt(bytes.length).encode());
         stream.write(bytes);
-    }
-
-    long getOptimalEncodingMessageSize()
-    {
-        if (optimalEncodingMessageSize != 0)
-            return optimalEncodingMessageSize;
-        maybeParse();
-        if (optimalEncodingMessageSize != 0)
-            return optimalEncodingMessageSize;
-        optimalEncodingMessageSize = getMessageSize();
-        return optimalEncodingMessageSize;
     }
 
     public String toString()
@@ -118,5 +85,11 @@ public class PublicKey extends ChildMessage {
         return false;
     }
 
+    PublicKey duplicate()
+    {
+        PublicKey copy = new PublicKey(params, getBytes(), 0);
+
+        return copy;
+    }
 
 }
