@@ -21,29 +21,26 @@ import org.bitcoinj.params.MainNetParams;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
-import static org.bitcoinj.core.Utils.uint64ToByteStreamLE;
 
 /**
  * A PeerAddress holds an IP address and port number representing the network location of
  * a peer in the Bitcoin P2P network. It exists primarily for serialization purposes.
  */
-public class MasternodeAddress extends NetAddress {
+public class NetAddress extends ChildMessage {
     private static final long serialVersionUID = 7501293709324197411L;
-    static final int MESSAGE_SIZE = 18;
+    static final int MESSAGE_SIZE = 16;
 
-    private int port;
+    private InetAddress addr;
 
     /**
      * Construct a peer address from a serialized payload.
      */
-    public MasternodeAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion) throws ProtocolException {
+    public NetAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion) throws ProtocolException {
         super(params, payload, offset, protocolVersion);
     }
 
@@ -59,9 +56,9 @@ public class MasternodeAddress extends NetAddress {
      * the cached bytes may be repopulated and retained if the message is serialized again in the future.
      * @throws ProtocolException
      */
-    public MasternodeAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion, Message parent, boolean parseLazy,
-                           boolean parseRetain) throws ProtocolException {
-        super(params, payload, offset, protocolVersion, parent, parseLazy, parseRetain);
+    public NetAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion, Message parent, boolean parseLazy,
+                      boolean parseRetain) throws ProtocolException {
+        super(params, payload, offset, protocolVersion, parent, parseLazy, parseRetain, UNKNOWN_LENGTH);
         // Message length is calculated in parseLite which is guaranteed to be called before it is ever read.
         // Even though message length is static for a PeerAddress it is safer to leave it there
         // as it will be set regardless of which constructor was used.
@@ -71,34 +68,28 @@ public class MasternodeAddress extends NetAddress {
     /**
      * Construct a peer address from a memorized or hardcoded address.
      */
-    public MasternodeAddress(InetAddress addr, int port) {
-        super(addr);
-        this.port = port;
+    public NetAddress(InetAddress addr) {
+        this.addr = checkNotNull(addr);
+        this.protocolVersion = protocolVersion;
         length = MESSAGE_SIZE;
     }
 
-    /**
-     * Constructs a peer address from the given IP address. Port and protocol version are default for the mainnet.
-     */
-    public MasternodeAddress(InetAddress addr) {
-        this(addr, MainNetParams.get().getPort());
-    }
-
-    public MasternodeAddress(InetSocketAddress addr) {
-        this(addr.getAddress(), addr.getPort());
-    }
-
-    public static MasternodeAddress localhost(NetworkParameters params) {
-        return new MasternodeAddress(InetAddresses.forString("127.0.0.1"), params.getPort());
+    public static NetAddress localhost(NetworkParameters params) {
+        return new NetAddress(InetAddresses.forString("127.0.0.1"));
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         // Java does not provide any utility to map an IPv4 address into IPv6 space, so we have to do it by hand.
-        super.bitcoinSerializeToStream(stream);
-        // And write out the port. Unlike the rest of the protocol, address and port is in big endian byte order.
-        stream.write((byte) (0xFF & port >> 8));
-        stream.write((byte) (0xFF & port));
+        byte[] ipBytes = addr.getAddress();
+        if (ipBytes.length == 4) {
+            byte[] v6addr = new byte[16];
+            System.arraycopy(ipBytes, 0, v6addr, 12, 4);
+            v6addr[10] = (byte) 0xFF;
+            v6addr[11] = (byte) 0xFF;
+            ipBytes = v6addr;
+        }
+        stream.write(ipBytes);
     }
 
     @Override
@@ -108,54 +99,51 @@ public class MasternodeAddress extends NetAddress {
 
     @Override
     protected void parse() throws ProtocolException {
-        super.parse();
-        port = ((0xFF & payload[cursor++]) << 8) | (0xFF & payload[cursor++]);
+        // Format of a serialized address:
+        //   16 bytes ip address
+        //   2 bytes port num
+
+        byte[] addrBytes = readBytes(16);
+        try {
+            addr = InetAddress.getByAddress(addrBytes);
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);  // Cannot happen.
+        }
     }
 
     @Override
     public int getMessageSize() {
-
         length = MESSAGE_SIZE;
         return length;
     }
 
-    public InetSocketAddress getSocketAddress() {
-        return new InetSocketAddress(getAddr(), getPort());
-    }
-
-    public int getPort() {
+    public InetAddress getAddr() {
         maybeParse();
-        return port;
+        return addr;
     }
 
-
-    public void setPort(int port) {
+    public void setAddr(InetAddress addr) {
         unCache();
-        this.port = port;
+        this.addr = addr;
     }
 
 
     @Override
     public String toString() {
-        return super.toString() + ":" + port;
+        return "[" + addr.getHostAddress() + "]:";
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        MasternodeAddress other = (MasternodeAddress) o;
-        return other.getAddr().equals(getAddr()) &&
-                other.port == port;
+        NetAddress other = (NetAddress) o;
+        return other.addr.equals(addr) ;
         //TODO: including services and time could cause same peer to be added multiple times in collections
     }
 
     @Override
     public int hashCode() {
-        return getAddr().hashCode() ^ port;
-    }
-    
-    public InetSocketAddress toSocketAddress() {
-        return new InetSocketAddress(getAddr(), port);
+        return addr.hashCode();
     }
 }

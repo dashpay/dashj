@@ -2,11 +2,13 @@ package org.bitcoinj.core;
 
 import com.squareup.okhttp.internal.Network;
 import org.bitcoinj.core.*;
+import org.bitcoinj.utils.Threading;
 import org.darkcoinj.DarkSend;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 
@@ -14,6 +16,7 @@ import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
  * Created by Eric on 2/8/2015.
  */
 public class Masternode extends Message{
+    ReentrantLock lock = Threading.lock("Masternode");
     long lastTimeChecked;
 
     public int MASTERNODE_ENABLED = 1;
@@ -55,9 +58,9 @@ public class Masternode extends Message{
         super(params);
     }
 
-    public Masternode(NetworkParameters params, byte [] payload)
+    public Masternode(NetworkParameters params, byte [] payload, int cursor)
     {
-        super(params, payload, 0);
+        super(params, payload, cursor);
     }
 
     public Masternode(Masternode other)
