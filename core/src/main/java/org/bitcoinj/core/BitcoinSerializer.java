@@ -81,6 +81,9 @@ public class BitcoinSerializer {
 
         names.put(MasternodeBroadcast.class, "mnb");
         names.put(MasternodePing.class, "mnp");
+        names.put(SporkMessage.class, "spork");
+        names.put(GetSporksMessage.class, "getsporks");
+
 
     }
 
@@ -261,6 +264,8 @@ public class BitcoinSerializer {
             return new MasternodeBroadcast(params, payloadBytes);
         } else if( command.equals("mnp")) {
             return new MasternodePing(params, payloadBytes);
+        } else if (command.equals("spork")) {
+            return new SporkMessage(params, payloadBytes, 0);
         }
         else{
             log.warn("No support for deserializing message with name {}", command);

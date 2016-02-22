@@ -411,9 +411,14 @@ public class Peer extends PeerSocketHandler {
             //do nothing
         } else if(m instanceof MasternodeBroadcast) {
 
+
         }
         else if(m instanceof MasternodePing) {
 
+        }
+        else if(m instanceof SporkMessage)
+        {
+            params.sporkManager.processSpork(this, (SporkMessage)m);
         }
         else
         {
@@ -1287,6 +1292,7 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> instantxLocks = new LinkedList<InventoryItem>();
         List<InventoryItem> masternodePings = new LinkedList<InventoryItem>();
         List<InventoryItem> masternodeBroadcasts = new LinkedList<InventoryItem>();
+        List<InventoryItem> sporks = new LinkedList<InventoryItem>();
 
         InstantXSystem instantx = InstantXSystem.get(blockChain);
 
@@ -1308,6 +1314,7 @@ public class Peer extends PeerSocketHandler {
                     //    instantxLocks.add(item);
                     break;
                 case Spork:
+                    sporks.add(item);
                     break;
                 case MasterNodeWinner:
                     break;
@@ -1425,6 +1432,17 @@ public class Peer extends PeerSocketHandler {
         }
 
         it = masternodeBroadcasts.iterator();
+
+        while (it.hasNext()) {
+            InventoryItem item = it.next();
+
+            //if(!instantx.mapTxLockVote.containsKey(item.hash))
+            //{
+            getdata.addItem(item);
+            //}
+        }
+
+        it = sporks.iterator();
 
         while (it.hasNext()) {
             InventoryItem item = it.next();
