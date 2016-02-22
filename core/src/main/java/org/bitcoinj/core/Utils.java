@@ -52,7 +52,7 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
 public class Utils {
 
     /** The string that prefixes all text messages signed using Bitcoin keys. */
-    public static final String BITCOIN_SIGNED_MESSAGE_HEADER = CoinDefinition.coinName + " Signed Message:\n";
+    public static final String BITCOIN_SIGNED_MESSAGE_HEADER = "DarkCoin Signed Message:\n";  //Dash use DarkCoin here
     public static final byte[] BITCOIN_SIGNED_MESSAGE_HEADER_BYTES = BITCOIN_SIGNED_MESSAGE_HEADER.getBytes(Charsets.UTF_8);
 
     private static final Joiner SPACE_JOINER = Joiner.on(" ");

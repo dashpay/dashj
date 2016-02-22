@@ -164,7 +164,7 @@ public class DarkSendQueue extends Message implements Serializable {
         return 0;
     }
 
-    boolean Sign() {
+    /*boolean Sign() {
         if (!DarkCoinSystem.fMasterNode) return false;
 
         String strMessage = vin.toString() + denom + time + ready;
@@ -228,5 +228,5 @@ public class DarkSendQueue extends Message implements Serializable {
 
         return false;
     }
-
+*/
 }

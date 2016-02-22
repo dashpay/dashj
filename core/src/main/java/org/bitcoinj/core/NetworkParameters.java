@@ -106,9 +106,25 @@ public abstract class NetworkParameters implements Serializable {
     protected HttpDiscovery.Details[] httpSeeds = {};
     protected Map<Integer, Sha256Hash> checkpoints = new HashMap<Integer, Sha256Hash>();
 
+
+    public SporkManager sporkManager;
+
+    //Dash Extra Parameters
+    String strSporkKey = "04549ac134f694c0243f503e8c8a9a986f5de6610049c40b07816809b0d1d06a21b07be27b9bb555931773f62ba6cf35a25fd52f694d4e1106ccd237a7bb899fdd";
+    String strMasternodePaymentsPubKey;
+    String strDarksendPoolDummyAddress;
+    long nStartMasternodePayments;
+
+    public String getSporkKey() {
+        return strSporkKey;
+    }
+
     protected NetworkParameters() {
         alertSigningKey = SATOSHI_KEY;
         genesisBlock = createGenesis(this);
+
+        //Dash Specific
+        sporkManager = new SporkManager(this);
     }
     //TODO:  put these bytes into the CoinDefinition
     private static Block createGenesis(NetworkParameters n) {

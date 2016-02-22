@@ -130,7 +130,7 @@ public class NetAddress extends ChildMessage {
 
     @Override
     public String toString() {
-        return "[" + addr.getHostAddress() + "]:";
+        return "[" + addr.getHostAddress() + "]";
     }
 
     @Override

@@ -399,6 +399,9 @@ public class PeerGroup implements TransactionBroadcaster {
         peerEventListeners = new CopyOnWriteArrayList<ListenerRegistration<PeerEventListener>>();
         runningBroadcasts = Collections.synchronizedSet(new HashSet<TransactionBroadcast>());
         bloomFilterMerger = new FilterMerger(DEFAULT_BLOOM_FILTER_FP_RATE);
+
+        //DashSpecific
+        params.sporkManager.setBlockChain(chain);
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);
