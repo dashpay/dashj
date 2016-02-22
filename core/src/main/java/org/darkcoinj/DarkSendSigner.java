@@ -1,11 +1,13 @@
 package org.darkcoinj;
 
+import com.google.common.base.Charsets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongycastle.crypto.params.KeyParameter;
 import org.spongycastle.util.encoders.Base64;
 
 import java.security.SignatureException;
@@ -31,9 +33,9 @@ public class DarkSendSigner {
             }
         }*/
 
-        return false;
+        return true;  //we will assume this is true, we cannot check it.
     }
-    public static ECKey setKey(NetworkParameters params, String strSecret, StringBuilder errorMessage)
+    public static ECKey setKey(String strSecret, StringBuilder errorMessage)
     {
         //CBitcoinSecret vchSecret;
         //boolean fGood = vchSecret.SetString(strSecret);
@@ -48,49 +50,54 @@ public class DarkSendSigner {
         }
         ECKey key = ECKey.fromPrivate(bytes);
         return key;
-        //return new PublicKey(params, key.getSecretBytes()getPubKey());
     }
-    public static byte [] signMessage(String strMessage, StringBuilder errorMessage, ECKey key)
+    public static MasternodeSignature signMessage(String strMessage, StringBuilder errorMessage, ECKey key)
     {
         //ECKey ecKey = ECKey.fromPublicOnly(key.getBytes());
         try {
-            String vchSig = key.signMessage(Utils.BITCOIN_SIGNED_MESSAGE_HEADER + strMessage);
-            return vchSig.getBytes();
+            byte dataToHash [] = (Utils.BITCOIN_SIGNED_MESSAGE_HEADER_BYTES+strMessage).getBytes(Charsets.UTF_8);
+
+
+            ECKey.ECDSASignature signature = key.sign(Sha256Hash.twiceOf(dataToHash));
+
+            return new MasternodeSignature(signature.encodeToDER());
         }
         catch (KeyCrypterException x)
         {
 
         }
-
-
-
         errorMessage.append("Sign failed");
         return null;
     }
-    public static boolean verifyMessage(ECKey pubkey, byte [] vchSig, String strMessage, StringBuilder errorMessage)
+    public static boolean verifyMessage(PublicKey pubkey, MasternodeSignature vchSig, String strMessage, StringBuilder errorMessage)
     {
-        ECKey pubkey2;
-        //ECKey pubkey1 = ECKey.fromPublicOnly(pubkey.getBytes());
+        //int length = Utils.BITCOIN_SIGNED_MESSAGE_HEADER.length()+strMessage.length();
+
+        byte dataToHash [] = (Utils.BITCOIN_SIGNED_MESSAGE_HEADER_BYTES+strMessage).getBytes();
+
+        PublicKey pubkey2;
+
         try {
-            pubkey2 = ECKey.signedMessageToKey(Utils.BITCOIN_SIGNED_MESSAGE_HEADER+strMessage, Base64.toBase64String(vchSig));
+            //pubkey2 = PublicKey.recoverCompact(Sha256Hash.twiceOf(dataToHash), vchSig);
+
+            ECKey pubkey1 = ECKey.fromPublicOnly(pubkey.getBytes());
+
+            pubkey1.verifyMessage(strMessage, Base64.toBase64String(vchSig.getBytes()));
+
+            //ECKey.verify()
+
+            //if(DarkCoinSystem.fDebug && !pubkey.getPublicHash().equals(pubkey2.getPublicHash()))
+            //    log.info("DarkSendSigner.verifyMessage -- keys don't match: " + pubkey2.getPublicHash().toString()+ " " + pubkey.getPublicHash().toString());
+
+            //return pubkey.getPublicHash().equals(pubkey2.getPublicHash());
+            return true;
+
         }
         catch(SignatureException x)
         {
             errorMessage.append("Error recovering pubkey");
             return false;
         }
-
-
-        /*CPubKey pubkey2;
-        if (!pubkey2.RecoverCompact(ss.GetHash(), vchSig)) {
-            errorMessage = "Error recovering pubkey";
-            return false;
-        }*/
-
-        if (pubkey2.getPubKeyHash() != pubkey.getPubKeyHash())
-            log.warn("CDarkSendSigner::VerifyMessage -- keys don't match: "+  pubkey2.getPubKeyHash().toString() +" " + pubkey.getPubKeyHash().toString());
-
-        return (pubkey2.getPubKeyHash() == pubkey.getPubKeyHash());
     }
 
 }

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.SignatureException;
 import java.util.Arrays;
 
 /**
@@ -14,6 +15,7 @@ public class PublicKey extends ChildMessage {
     private static final Logger log = LoggerFactory.getLogger(PublicKey.class);
 
     byte [] bytes;
+    ECKey key;
 
     PublicKey(NetworkParameters params)
     {
@@ -27,6 +29,13 @@ public class PublicKey extends ChildMessage {
     public PublicKey(NetworkParameters params, byte[] payloadBytes, int cursor, Message parent, boolean parseLazy, boolean parseRetain)
     {
         super(params, payloadBytes, cursor, parent, parseLazy, parseRetain, payloadBytes.length);
+    }
+    public PublicKey(byte [] key)
+    {
+        super();
+        bytes = new byte[key.length];
+        System.arraycopy(key, 0, bytes, 0, key.length);
+        this.key = ECKey.fromPublicOnly(bytes);
     }
 
     @Override
@@ -55,6 +64,7 @@ public class PublicKey extends ChildMessage {
         cursor = offset;
 
         bytes = readByteArray();
+        //this.key = ECKey.fromPublicOnly(bytes);
 
         length = cursor - offset;
     }
@@ -87,9 +97,32 @@ public class PublicKey extends ChildMessage {
 
     PublicKey duplicate()
     {
-        PublicKey copy = new PublicKey(params, getBytes(), 0);
+        PublicKey copy = new PublicKey(getBytes());
 
         return copy;
+    }
+
+    //
+    //  This doesn't work.  May not be necessary;  ECKey.verifyMessage handles making a ECDSASignature from the signature
+    //
+    static public PublicKey recoverCompact(Sha256Hash hash, MasternodeSignature sig) throws SignatureException
+    {
+        if(sig.getBytes().length != 65)
+            throw new SignatureException("signature is wrong size");
+        int recid = (sig.getBytes()[0] - 27) & 3;
+        boolean comp = ((sig.getBytes()[0] - 27) & 4) != 0;
+
+        ECKey.ECDSASignature esig = ECKey.ECDSASignature.decodeFromDER(sig.getBytes());
+        ECKey ecKey = ECKey.recoverFromSignature(recid, esig, hash, comp);
+
+
+
+        return new PublicKey (ecKey.getPubKey());
+    }
+
+    public byte [] getPublicHash()
+    {
+        return key.getPubKeyHash();
     }
 
 }
