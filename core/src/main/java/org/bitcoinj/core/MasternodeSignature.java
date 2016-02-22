@@ -29,6 +29,13 @@ public class MasternodeSignature extends ChildMessage {
         super(params, payloadBytes, cursor, parent, parseLazy, parseRetain, payloadBytes.length);
     }
 
+    public MasternodeSignature(byte [] signature)
+    {
+        super();
+        bytes = new byte[signature.length];
+        System.arraycopy(signature, 0, bytes, 0, signature.length);
+    }
+
     @Override
     protected void parseLite() throws ProtocolException {
         if (parseLazy && length == UNKNOWN_LENGTH) {

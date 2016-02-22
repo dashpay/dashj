@@ -1,6 +1,9 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.utils.Threading;
+import org.darkcoinj.DarkSendSigner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -12,6 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Created by Hash Engineering on 2/20/2016.
  */
 public class MasternodeManager extends Message {
+    private static final Logger log = LoggerFactory.getLogger(MasternodeManager.class);
     // critical section to protect the inner data structures
     //mutable CCriticalSection cs;
     ReentrantLock lock = Threading.lock("MasternodeManager");
@@ -109,7 +113,46 @@ public class MasternodeManager extends Message {
         }
         //TODO: add the rest
     }
+/*
+    void processMasternodeBroadcast(MasternodeBroadcast mnb)
+    {
+        if(mapSeenMasternodeBroadcast.containsKey(mnb.getHash())) { //seen
+            masternodeSync.AddedMasternodeList(mnb.getHash());
+            return;
+        }
+        mapSeenMasternodeBroadcast.put(mnb.getHash(), mnb);
 
+        int nDoS = 0;
+        if(!mnb.checkAndUpdate(nDoS)){
 
+            if(nDoS > 0)
+                Misbehaving(pfrom->GetId(), nDoS);
+
+            //failed
+            return;
+        }
+
+        // make sure the vout that was signed is related to the transaction that spawned the Masternode
+        //  - this is expensive, so it's only done once per Masternode
+        if(!DarkSendSigner.isVinAssociatedWithPubkey(params, mnb.vin, mnb.pubkey)) {
+            log.info("mnb - Got mismatched pubkey and vin");
+            //Misbehaving(pfrom->GetId(), 33);
+            return;
+        }
+
+        // make sure it's still unspent
+        //  - this is checked later by .check() in many places and by ThreadCheckDarkSendPool()
+        if(mnb.CheckInputsAndAdd(nDoS)) {
+            // use this as a peer
+            addrman.Add(CAddress(mnb.addr), pfrom->addr, 2*60*60);
+            masternodeSync.AddedMasternodeList(mnb.GetHash());
+        } else {
+            LogPrintf("mnb - Rejected Masternode entry %s\n", mnb.addr.ToString());
+
+            if (nDoS > 0)
+                Misbehaving(pfrom->GetId(), nDoS);
+        }
+    }
+*/
 
 }

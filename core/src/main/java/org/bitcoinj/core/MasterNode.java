@@ -68,7 +68,7 @@ public class Masternode extends Message{
         super(other.params);
 
         this.vin = other.vin;  //TODO:  need to make copies of all these?
-        this.address = new MasternodeAddress(other.address.getAddr(), other.address.getPort(), CoinDefinition.PROTOCOL_VERSION);
+        this.address = new MasternodeAddress(other.address.getAddr(), other.address.getPort());
         this.pubkey = other.pubkey.duplicate();
         this.pubkey2 = other.pubkey2.duplicate();
 

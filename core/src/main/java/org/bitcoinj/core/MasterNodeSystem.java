@@ -262,7 +262,7 @@ public class MasterNodeSystem {
 
         return -1;
     }
-    */
+
     //void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
     void processMessageMasternode(Peer peer, Message m)
     {
