@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.bitcoinj</groupId>
         <artifactId>darkcoinj-parent</artifactId>
-        <version>0.13.2.ix</version>
+        <version>0.13.2.rix</version>
     </parent>
 
     <artifactId>darkcoinj-core</artifactId>
