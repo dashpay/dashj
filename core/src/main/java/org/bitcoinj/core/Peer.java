@@ -362,6 +362,7 @@ public class Peer extends PeerSocketHandler {
             startFilteredBlock((FilteredBlock) m);
         } else if (m instanceof TransactionLockRequest) {
             //processTransactionLockRequest((TransactionLockRequest) m);
+            params.instantx.processTransactionLockRequest(this, (TransactionLockRequest)m);
             processTransaction((TransactionLockRequest)m);
         } else if (m instanceof Transaction) {
             processTransaction((Transaction) m);
@@ -410,15 +411,18 @@ public class Peer extends PeerSocketHandler {
         } else if(m instanceof DarkSendQueue) {
             //do nothing
         } else if(m instanceof MasternodeBroadcast) {
-
+            params.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);
 
         }
         else if(m instanceof MasternodePing) {
-
+            params.masternodeManager.processMasternodePing(this, (MasternodePing)m);
         }
         else if(m instanceof SporkMessage)
         {
             params.sporkManager.processSpork(this, (SporkMessage)m);
+        }
+        else if(m instanceof ConsensusVote) {
+            params.instantx.processConsensusVoteMessage(this, (ConsensusVote)m);
         }
         else
         {
@@ -681,6 +685,11 @@ public class Peer extends PeerSocketHandler {
                                     try {
                                         log.info("{}: Dependency download complete!", getAddress());
                                         wallet.receivePending(tx, dependencies);
+
+                                        if(tx instanceof TransactionLockRequest)
+                                        {
+                                            params.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
+                                        }
                                     } catch (VerificationException e) {
                                         log.error("{}: Wallet failed to process pending transaction {}", getAddress(), tx.getHash());
                                         log.error("Error was: ", e);
@@ -697,6 +706,11 @@ public class Peer extends PeerSocketHandler {
                             });
                         } else {
                             wallet.receivePending(tx, null);
+
+                            if(tx instanceof TransactionLockRequest)
+                            {
+                                params.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
+                            }
                         }
                     }
                 } catch (VerificationException e) {
@@ -724,7 +738,7 @@ public class Peer extends PeerSocketHandler {
         tx.verify();
         final Transaction fTx;
         lock.lock();
-        InstantXSystem instantx = InstantXSystem.get(blockChain);
+        InstantXSystem instantx = params.instantx;
         if(!instantx.isEnabled())
             return;
 
@@ -846,7 +860,7 @@ public class Peer extends PeerSocketHandler {
 
         lock.lock();
         try {
-            InstantXSystem instantx = InstantXSystem.get(blockChain);
+            InstantXSystem instantx = params.instantx;
             if(!instantx.isEnabled())
                 return;
 
@@ -855,7 +869,7 @@ public class Peer extends PeerSocketHandler {
 
             instantx.mapTxLockVote.put(ctx.getHash(), ctx);
 
-            if(instantx.processConsensusVote(ctx)) {
+            if(true/*instantx.processConsensusVote(ctx)*/) {
                 //Spam/Dos protection
                 /*
                     Masternodes will sometimes propagate votes before the transaction is known to the client.
@@ -863,19 +877,19 @@ public class Peer extends PeerSocketHandler {
                     a peer violates it, it will simply be ignored
                 */
                 if (!instantx.mapTxLockReq.containsKey(ctx.txHash) && !instantx.mapTxLockReqRejected.containsKey(ctx.txHash)) {
-                    if (!instantx.mapUnknownVotes.containsKey(ctx.vinMasterNode.getOutpoint().getHash())) {
-                        instantx.mapUnknownVotes.put(ctx.vinMasterNode.getOutpoint().getHash(), Utils.currentTimeSeconds() + (60 * 10));
+                    if (!instantx.mapUnknownVotes.containsKey(ctx.vinMasternode.getOutpoint().getHash())) {
+                        instantx.mapUnknownVotes.put(ctx.vinMasternode.getOutpoint().getHash(), Utils.currentTimeSeconds() + (60 * 10));
                     }
 
-                    if (instantx.mapUnknownVotes.get(ctx.vinMasterNode.getOutpoint().getHash()) > Utils.currentTimeSeconds() &&
-                            instantx.mapUnknownVotes.get(ctx.vinMasterNode.getOutpoint().getHash()) - instantx.GetAverageVoteTime() > 60 * 10) {
+                    if (instantx.mapUnknownVotes.get(ctx.vinMasternode.getOutpoint().getHash()) > Utils.currentTimeSeconds() &&
+                            instantx.mapUnknownVotes.get(ctx.vinMasternode.getOutpoint().getHash()) - instantx.getAverageVoteTime() > 60 * 10) {
                         log.info("ProcessMessageInstantX::txlreq - masternode is spamming transaction votes: %s %s\n",
-                                ctx.vinMasterNode.toString(),
+                                ctx.vinMasternode.toString(),
                                 ctx.txHash.toString()
                         );
                         return;
                     } else {
-                        instantx.mapUnknownVotes.put(ctx.vinMasterNode.getOutpoint().getHash(), Utils.currentTimeMillis() + (60 * 10));
+                        instantx.mapUnknownVotes.put(ctx.vinMasternode.getOutpoint().getHash(), Utils.currentTimeMillis() + (60 * 10));
                     }
                 }
 
@@ -1294,7 +1308,7 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> masternodeBroadcasts = new LinkedList<InventoryItem>();
         List<InventoryItem> sporks = new LinkedList<InventoryItem>();
 
-        InstantXSystem instantx = InstantXSystem.get(blockChain);
+        //InstantXSystem instantx = InstantXSystem.get(blockChain);
 
         for (InventoryItem item : items) {
             switch (item.type) {
@@ -1303,15 +1317,15 @@ public class Peer extends PeerSocketHandler {
                     break;
                 case TransactionLockRequest:
                     //if(instantx.isEnabled())
-                    //    instantxLockRequests.add(item);
-                    transactions.add(item);
+                        instantxLockRequests.add(item);
+                    //transactions.add(item);
                     break;
                 case Block:
                     blocks.add(item);
                     break;
                 case TransactionLockVote:
                     //if(instantx.isEnabled())
-                    //    instantxLocks.add(item);
+                        instantxLocks.add(item);
                     break;
                 case Spork:
                     sporks.add(item);
@@ -1382,7 +1396,7 @@ public class Peer extends PeerSocketHandler {
             }
         }
 
-        /*it = instantxLockRequests.iterator();
+        it = instantxLockRequests.iterator();
         while (it.hasNext()) {
             InventoryItem item = it.next();
             // Only download the transaction if we are the first peer that saw it be advertised. Other peers will also
@@ -1399,49 +1413,63 @@ public class Peer extends PeerSocketHandler {
                 it.remove();
             } else if (conf.getSource().equals(TransactionConfidence.Source.SELF)) {
                 // We created this transaction ourselves, so don't download.
-                it.remove();
+                //it.remove();
             } else {
                 log.debug("{}: getdata on tx {}", getAddress(), item.hash);
                 getdata.addItem(item);
                 // Register with the garbage collector that we care about the confidence data for a while.
                 pendingTxDownloads.add(conf);
             }
-        }*/
+        }
 
-        /*it = instantxLocks.iterator();
+        it = instantxLocks.iterator();
         //InstantXSystem instantx = InstantXSystem.get(blockChain);
         while (it.hasNext()) {
             InventoryItem item = it.next();
 
-            if(!instantx.mapTxLockVote.containsKey(item.hash))
+//            if(!instantx.mapTxLockVote.containsKey(item.hash))
             {
                 getdata.addItem(item);
             }
-        }*/
+        }
 
         //masternodepings
-        it = masternodePings.iterator();
 
-        while (it.hasNext()) {
-            InventoryItem item = it.next();
+        if(blockChain.getBestChainHeight() > (this.getBestHeight() - 100))
+        {
 
-            //if(!instantx.mapTxLockVote.containsKey(item.hash))
-            //{
+            it = masternodePings.iterator();
+
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
                 getdata.addItem(item);
-            //}
+
+            /*MasternodePing mnp = params.masternodeManager.mapSeenMasternodePing.get(item.hash);
+            if(mnp == null)
+            {
+
+            }
+            else
+            {
+                Masternode mn = params.masternodeManager.find(mnp.vin);
+                if(mn == null)
+                    getdata.addItem(item);
+                else if(mn != null && !mn.isPingedWithin(MasternodePing.MASTERNODE_MIN_MNP_SECONDS - 60, Utils.currentTimeSeconds()))
+                    getdata.addItem(item);
+            }*/
+            }
+
+            it = masternodeBroadcasts.iterator();
+
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+
+                //if(!instantx.mapTxLockVote.containsKey(item.hash))
+                //{
+                getdata.addItem(item);
+                //}
+            }
         }
-
-        it = masternodeBroadcasts.iterator();
-
-        while (it.hasNext()) {
-            InventoryItem item = it.next();
-
-            //if(!instantx.mapTxLockVote.containsKey(item.hash))
-            //{
-            getdata.addItem(item);
-            //}
-        }
-
         it = sporks.iterator();
 
         while (it.hasNext()) {
@@ -2045,5 +2073,16 @@ public class Peer extends PeerSocketHandler {
      */
     public void setDownloadTxDependencies(boolean value) {
         vDownloadTxDependencies = value;
+    }
+
+    //Dash Specific Code
+    public void notifyLock(Transaction tx)
+    {
+        for(Wallet wallet : wallets)
+        {
+            if(wallet.isTransactionRelevant(tx)){
+                wallet.receiveLock(tx);
+            }
+        }
     }
 }

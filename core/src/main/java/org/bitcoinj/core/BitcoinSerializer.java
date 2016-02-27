@@ -83,6 +83,7 @@ public class BitcoinSerializer {
         names.put(MasternodePing.class, "mnp");
         names.put(SporkMessage.class, "spork");
         names.put(GetSporksMessage.class, "getsporks");
+        names.put(DarkSendEntryGetMessage.class, "dseg");
 
 
     }

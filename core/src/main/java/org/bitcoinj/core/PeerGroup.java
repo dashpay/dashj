@@ -402,6 +402,9 @@ public class PeerGroup implements TransactionBroadcaster {
 
         //DashSpecific
         params.sporkManager.setBlockChain(chain);
+        params.masternodeManager.setBlockChain(chain);
+        params.masternodeSync.setBlockChain(chain);
+        params.instantx.setBlockChain(chain);
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);

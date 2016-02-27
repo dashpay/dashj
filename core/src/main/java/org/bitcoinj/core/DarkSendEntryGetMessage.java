@@ -26,9 +26,8 @@ public class DarkSendEntryGetMessage extends Message {
     {
         super(params, payloadBytes, 0, false, false, payloadBytes.length);
     }
-    DarkSendEntryGetMessage(NetworkParameters params, TransactionInput vin)
+    DarkSendEntryGetMessage(TransactionInput vin)
     {
-        super(params);
         this.vin = vin;
     }
 

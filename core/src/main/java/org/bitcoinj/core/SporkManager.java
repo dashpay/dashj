@@ -84,33 +84,33 @@ public class SporkManager {
 
     }*/
 
-    static final int  SPORK_START              =                             10001;
-            static final int  SPORK_END           =                                  10012;
+    public static final int  SPORK_START              =                             10001;
+    public static final int  SPORK_END           =                                  10012;
 
-            static final int  SPORK_2_INSTANTX     =                                 10001;
-            static final int  SPORK_3_INSTANTX_BLOCK_FILTERING =                     10002;
-            static final int  SPORK_5_MAX_VALUE                            =         10004;
-            static final int  SPORK_7_MASTERNODE_SCANNING                  =         10006;
-            static final int  SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT       =         10007;
-            static final int  SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT        =         10008;
-            static final int  SPORK_10_MASTERNODE_PAY_UPDATED_NODES        =         10009;
-            static final int  SPORK_11_RESET_BUDGET                        =         10010;
-            static final int  SPORK_12_RECONSIDER_BLOCKS                   =         10011;
-            static final int  SPORK_13_ENABLE_SUPERBLOCKS                  =         10012;
+    public  static final int  SPORK_2_INSTANTX     =                                 10001;
+    public  static final int  SPORK_3_INSTANTX_BLOCK_FILTERING =                     10002;
+    public  static final int  SPORK_5_MAX_VALUE                            =         10004;
+    public  static final int  SPORK_7_MASTERNODE_SCANNING                  =         10006;
+    public  static final int  SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT       =         10007;
+    public  static final int  SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT        =         10008;
+    public  static final int  SPORK_10_MASTERNODE_PAY_UPDATED_NODES        =         10009;
+    public  static final int  SPORK_11_RESET_BUDGET                        =         10010;
+    public  static final int  SPORK_12_RECONSIDER_BLOCKS                   =         10011;
+    public  static final int  SPORK_13_ENABLE_SUPERBLOCKS                  =         10012;
 
-            static final int  SPORK_2_INSTANTX_DEFAULT                     =         978307200;  //2001-1-1
-            static final int  SPORK_3_INSTANTX_BLOCK_FILTERING_DEFAULT     =         1424217600;  //2015-2-18
-            static final int  SPORK_5_MAX_VALUE_DEFAULT                    =         1000;        //1000 DASH
-            static final int  SPORK_7_MASTERNODE_SCANNING_DEFAULT          =         978307200;   //2001-1-1
-            static final long  SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT=        4070908800L;   //OFF
-            static final long  SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT_DEFAULT =        4070908800L;   //OFF
-            static final long  SPORK_10_MASTERNODE_PAY_UPDATED_NODES_DEFAULT =        4070908800L;   //OFF
-            static final long  SPORK_11_RESET_BUDGET_DEFAULT                 =        0;
-            static final int  SPORK_12_RECONSIDER_BLOCKS_DEFAULT            =        0;
-            static final long  SPORK_13_ENABLE_SUPERBLOCKS_DEFAULT           =        4070908800L;   //OFF
+    public  static final int  SPORK_2_INSTANTX_DEFAULT                     =         978307200;  //2001-1-1
+    public  static final int  SPORK_3_INSTANTX_BLOCK_FILTERING_DEFAULT     =         1424217600;  //2015-2-18
+    public  static final int  SPORK_5_MAX_VALUE_DEFAULT                    =         1000;        //1000 DASH
+    public  static final int  SPORK_7_MASTERNODE_SCANNING_DEFAULT          =         978307200;   //2001-1-1
+    public  static final long  SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT=        4070908800L;   //OFF
+    public  static final long  SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT_DEFAULT =        4070908800L;   //OFF
+    public  static final long  SPORK_10_MASTERNODE_PAY_UPDATED_NODES_DEFAULT =        4070908800L;   //OFF
+    public  static final long  SPORK_11_RESET_BUDGET_DEFAULT                 =        0;
+    public  static final int  SPORK_12_RECONSIDER_BLOCKS_DEFAULT            =        0;
+    public  static final long  SPORK_13_ENABLE_SUPERBLOCKS_DEFAULT           =        4070908800L;   //OFF
 
     // grab the spork, otherwise say it's off
-    boolean isSporkActive(int nSporkID)
+    public boolean isSporkActive(int nSporkID)
     {
         long r = -1;
 
@@ -136,7 +136,7 @@ public class SporkManager {
     }
 
     // grab the value of the spork on the network, or the default
-    long GetSporkValue(int nSporkID)
+    public long getSporkValue(int nSporkID)
     {
         long r = -1;
 
@@ -160,7 +160,7 @@ public class SporkManager {
         return r;
     }
 
-    void executeSpork(int nSporkID, long nValue)
+    public void executeSpork(int nSporkID, long nValue)
     {
         if(nSporkID == SPORK_11_RESET_BUDGET && nValue == 1){
             //budget.Clear();

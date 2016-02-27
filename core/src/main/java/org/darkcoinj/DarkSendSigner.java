@@ -7,7 +7,6 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.crypto.params.KeyParameter;
 import org.spongycastle.util.encoders.Base64;
 
 import java.security.SignatureException;
@@ -86,16 +85,58 @@ public class DarkSendSigner {
 
             //ECKey.verify()
 
-            //if(DarkCoinSystem.fDebug && !pubkey.getPublicHash().equals(pubkey2.getPublicHash()))
-            //    log.info("DarkSendSigner.verifyMessage -- keys don't match: " + pubkey2.getPublicHash().toString()+ " " + pubkey.getPublicHash().toString());
+            //if(DarkCoinSystem.fDebug && !pubkey.getId().equals(pubkey2.getId()))
+            //    log.info("DarkSendSigner.verifyMessage -- keys don't match: " + pubkey2.getId().toString()+ " " + pubkey.getId().toString());
 
-            //return pubkey.getPublicHash().equals(pubkey2.getPublicHash());
+            //return pubkey.getId().equals(pubkey2.getId());
             return true;
 
         }
         catch(SignatureException x)
         {
-            errorMessage.append("Error recovering pubkey");
+            errorMessage.append("Error recovering pubkey: "+x.getMessage());
+
+
+            return false;
+        }
+    }
+    public static boolean verifyMessage1(PublicKey pubkey, MasternodeSignature vchSig, byte[] message, StringBuilder errorMessage)
+    {
+        //int length = Utils.BITCOIN_SIGNED_MESSAGE_HEADER.length()+strMessage.length();
+
+        byte dataToHash []; // = (Utils.BITCOIN_SIGNED_MESSAGE_HEADER_BYTES+strMessage).getBytes();
+
+        //ByteOutputStream bos = new ByteOutputStream(message.length + Utils.BITCOIN_SIGNED_MESSAGE_HEADER_BYTES.length);
+        //bos.write(Utils.BITCOIN_SIGNED_MESSAGE_HEADER_BYTES);
+        //bos.write(message);
+        dataToHash = Utils.formatMessageForSigning(message);//bos.getBytes();
+
+        PublicKey pubkey2;
+
+        try {
+           // pubkey2 = PublicKey.recoverCompact(Sha256Hash.twiceOf(dataToHash), vchSig);
+
+
+            //ECKey.verify()
+
+            //if(DarkCoinSystem.fDebug && !pubkey.getId().equals(pubkey2.getId()));
+            //    log.info("DarkSendSigner.verifyMessage -- keys don't match: " + pubkey2.getId().toString()+ " " + pubkey.getId().toString());
+
+            //return pubkey.getId().equals(pubkey2.getId());
+            //return true;
+
+            ECKey pubkey1 = ECKey.fromPublicOnly(pubkey.getBytes());
+
+            pubkey1.verifyMessage(message, vchSig.getBytes());
+
+            return true;
+
+        }
+        catch(SignatureException x)
+        {
+            errorMessage.append("Error recovering pubkey: "+x.getMessage());
+
+
             return false;
         }
     }

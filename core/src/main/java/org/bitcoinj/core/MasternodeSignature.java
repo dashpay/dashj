@@ -74,7 +74,7 @@ public class MasternodeSignature extends ChildMessage {
 
     public String toString()
     {
-        return "public key:  " + Utils.HEX.encode(bytes);
+        return "sig: " + Utils.HEX.encode(bytes);
 
     }
 

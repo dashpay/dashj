@@ -10,3 +10,6 @@ libs/
 *.chain
 *.spvchain
 *.wallet
+*.tmp
+checkpoints
+checkpoints-testnet.txt

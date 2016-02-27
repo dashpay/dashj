@@ -1,56 +1,62 @@
 package org.darkcoinj;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by Eric on 2/8/2015.
  */
 public class DarkSendPool {
     private static final Logger log = LoggerFactory.getLogger(DarkSendPool.class);
+    ReentrantLock lock = Threading.lock("darksendpool");
+
+    // pool states for mixing
+    public static final int POOL_STATUS_UNKNOWN             =       0; // waiting for update
+    public static final int POOL_STATUS_IDLE                 =      1; // waiting for update
+    public static final int POOL_STATUS_QUEUE                 =     2; // waiting in a queue
+    public static final int POOL_STATUS_ACCEPTING_ENTRIES      =    3; // accepting entries
+    public static final int POOL_STATUS_FINALIZE_TRANSACTION    =   4; // master node will broadcast what it accepted
+    public static final int  POOL_STATUS_SIGNING                 =   5; // check inputs/outputs, sign final tx
+    public static final int  POOL_STATUS_TRANSMISSION            =   6; // transmit transaction
+    public static final int  POOL_STATUS_ERROR                   =   7; // error
+    public static final int  POOL_STATUS_SUCCESS                 =   8; // success
+
     static final int MIN_PEER_PROTO_VERSION = 70054;
 
-    // clients entries
-    ArrayList<DarkSendEntry> myEntries;
     // masternode entries
     ArrayList<DarkSendEntry> entries;
     // the finalized transaction ready for signing
     Transaction finalTransaction;
 
     long lastTimeChanged;
-    long lastAutoDenomination;
 
     int state;
     int entriesCount;
     int lastEntryAccepted;
     int countEntriesAccepted;
 
-    // where collateral should be made out to
-    Script collateralPubKey;
+
 
     ArrayList<TransactionInput> lockedCoins;
 
-    Sha256Hash masterNodeBlockHash;
-
     String lastMessage;
-    boolean completedTransaction;
     boolean unitTest;
-    InetSocketAddress submittedToMasternode;
 
     int sessionID;
-    int sessionDenom; //Users must submit an denom matching this
     int sessionUsers; //N Users have said they'll join
     boolean sessionFoundMasternode; //If we've found a compatible masternode
-    long sessionTotalValue; //used for autoDenom
-    ArrayList<Transaction> vecSessionCollateral;
+     ArrayList<Transaction> vecSessionCollateral;
 
     int cachedLastSuccess;
-    int cachedNumBlocks; //used for the overview screen
     int minBlockSpacing; //required blocks between mixes
     Transaction txCollateral;
 
@@ -59,26 +65,36 @@ public class DarkSendPool {
     //debugging data
     String strAutoDenomResult;
 
+    // where collateral should be made out to
+    public Script collateralPubKey;
+
+    Masternode submittedToMasternode;
+    int sessionDenom; //Users must submit an denom matching this
+    int cachedNumBlocks; //used for the overview screen
+
     //incremented whenever a DSQ comes through
     long nDsqCount;
 
-    DarkCoinSystem system;
+    NetworkParameters params;
 
-    DarkSendPool(DarkCoinSystem system)
+    public DarkSendPool(NetworkParameters params)
     {
-        this.system = system;
+        this.params = params;
         /* DarkSend uses collateral addresses to trust parties entering the pool
             to behave themselves. If they don't it takes their money. */
 
         cachedLastSuccess = 0;
-        cachedNumBlocks = 0;
+        cachedNumBlocks = Integer.MAX_VALUE; //std::numeric_limits<int>::max();
         unitTest = false;
-        txCollateral = new Transaction(system.params);
-        minBlockSpacing = 1;
-        nDsqCount = 0;
+        txCollateral = new Transaction(params);
+        minBlockSpacing = 0;
         lastNewBlock = 0;
 
-      //  SetNull();
+        vecSessionCollateral = new ArrayList<Transaction>();
+        entries = new ArrayList<DarkSendEntry>();
+        finalTransaction = new Transaction(params);
+
+        setNull();
     }
     /*
     void InitCollateralAddress(){
@@ -97,8 +113,37 @@ public class DarkSendPool {
 
     bool SetCollateralAddress(std::string strAddress);
     void Reset();
-    void SetNull(bool clearEverything=false);
+    */
+    static SecureRandom secureRandom = new SecureRandom();
 
+    void setNull()
+    {
+        // MN side
+        sessionUsers = 0;
+        vecSessionCollateral.clear();
+
+        // Client side
+        entriesCount = 0;
+        lastEntryAccepted = 0;
+        countEntriesAccepted = 0;
+        sessionFoundMasternode = false;
+
+        // Both sides
+        state = POOL_STATUS_IDLE;
+        sessionID = 0;
+        sessionDenom = 0;
+        entries.clear();
+        finalTransaction.clearInputs();
+        finalTransaction.clearOutputs();
+        lastTimeChanged = Utils.currentTimeMillis();
+
+        // -- seed random number generator (used for ordering output lists)
+        secureRandom.setSeed(secureRandom.generateSeed(12));
+        /*unsigned int seed = 0;
+        RAND_bytes((unsigned char*)&seed, sizeof(seed));
+        std::srand(seed);*/
+    }
+    /*
     void UnlockCoins();
 
     boolean IsNull()

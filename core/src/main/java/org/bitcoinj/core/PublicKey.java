@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.security.SignatureException;
 import java.util.Arrays;
 
@@ -17,9 +18,18 @@ public class PublicKey extends ChildMessage {
     byte [] bytes;
     ECKey key;
 
+    public PublicKey()
+    {
+        bytes = new byte[1];
+    }
+
     PublicKey(NetworkParameters params)
     {
         super(params);
+    }
+    void invalidate()
+    {
+        bytes[0] = (byte)0xFF;
     }
 
     public PublicKey(NetworkParameters params, byte[] payload, int offset) throws ProtocolException {
@@ -64,7 +74,7 @@ public class PublicKey extends ChildMessage {
         cursor = offset;
 
         bytes = readByteArray();
-        //this.key = ECKey.fromPublicOnly(bytes);
+        this.key = ECKey.fromPublicOnly(bytes);
 
         length = cursor - offset;
     }
@@ -112,7 +122,10 @@ public class PublicKey extends ChildMessage {
         int recid = (sig.getBytes()[0] - 27) & 3;
         boolean comp = ((sig.getBytes()[0] - 27) & 4) != 0;
 
-        ECKey.ECDSASignature esig = ECKey.ECDSASignature.decodeFromDER(sig.getBytes());
+        //ECKey.ECDSASignature esig = ECKey.ECDSASignature.decodeFromDER(sig.getBytes());
+        BigInteger r = new BigInteger(1, Arrays.copyOfRange(sig.getBytes(), 1, 33));
+        BigInteger s = new BigInteger(1, Arrays.copyOfRange(sig.getBytes(), 33, 65));
+        ECKey.ECDSASignature esig = new ECKey.ECDSASignature(r, s);
         ECKey ecKey = ECKey.recoverFromSignature(recid, esig, hash, comp);
 
 
@@ -120,9 +133,18 @@ public class PublicKey extends ChildMessage {
         return new PublicKey (ecKey.getPubKey());
     }
 
-    public byte [] getPublicHash()
+    public byte [] getId()
     {
         return key.getPubKeyHash();
+    }
+
+    public ECKey getECKey()
+    {
+        if(key == null) {
+            key = ECKey.fromPublicOnly(bytes);
+        }
+        return key;
+
     }
 
 }

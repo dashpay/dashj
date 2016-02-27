@@ -158,4 +158,7 @@ public class MasternodeAddress extends NetAddress {
     public InetSocketAddress toSocketAddress() {
         return new InetSocketAddress(getAddr(), port);
     }
+
+
+    public MasternodeAddress duplicate() { return new MasternodeAddress(getAddr(), getPort()); }
 }

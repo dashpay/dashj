@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 import org.bitcoinj.utils.*;
+import org.darkcoinj.InstantXSystem;
 
 import javax.annotation.*;
 import java.io.*;
@@ -276,7 +277,7 @@ public class TransactionConfidence implements Serializable {
         if (confidenceType != ConfidenceType.DEAD) {
             overridingTransaction = null;
         }
-        if (confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.INSTANTX_PENDING) {
+        if (confidenceType == ConfidenceType.PENDING/* || confidenceType == ConfidenceType.INSTANTX_PENDING*/) {
             depth = 0;
             appearedAtChainHeight = -1;
         }
@@ -339,7 +340,7 @@ public class TransactionConfidence implements Serializable {
             case PENDING:
                 builder.append("Pending/unconfirmed.");
                 break;
-            case INSTANTX_PENDING:
+            /*case INSTANTX_PENDING:
                 builder.append("InstantX Lock Request");
                 break;
             case INSTANTX_LOCKED:
@@ -347,7 +348,7 @@ public class TransactionConfidence implements Serializable {
                 if(getAppearedAtChainHeight() > 0)
                     builder.append(String.format("Appeared in best chain at height %d, depth %d.",
                             getAppearedAtChainHeight(), getDepthInBlocks()));
-                break;
+                break;*/
             case BUILDING:
                 builder.append(String.format("Appeared in best chain at height %d, depth %d.",
                         getAppearedAtChainHeight(), getDepthInBlocks()));
@@ -499,4 +500,16 @@ public class TransactionConfidence implements Serializable {
     public Sha256Hash getTransactionHash() {
         return hash;
     }
+
+    //Dash Specific Additions
+    boolean instantX = false;
+
+    int consensusVotes = 0;
+
+    public void setIX(boolean isInstantX) { this.instantX = isInstantX; }
+    public boolean isIX() { return instantX; }
+    public int getConsensusVotes() { return consensusVotes; }
+    public void setConsensusVotes(int votes) { consensusVotes = votes; }
+
+    public boolean isTransactionLocked() { return consensusVotes >= InstantXSystem.INSTANTX_SIGNATURES_REQUIRED; }
 }

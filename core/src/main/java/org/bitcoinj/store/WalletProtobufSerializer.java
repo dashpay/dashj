@@ -689,8 +689,8 @@ public class WalletProtobufSerializer {
             // These two are equivalent (must be able to read old wallets).
             case NOT_IN_BEST_CHAIN: confidenceType = ConfidenceType.PENDING; break;
             case PENDING: confidenceType = ConfidenceType.PENDING; break;
-            case INSTANTX_PENDING: confidenceType = ConfidenceType.INSTANTX_PENDING; break;
-            case INSTANTX_LOCKED: confidenceType = ConfidenceType.INSTANTX_LOCKED; break;
+            //case INSTANTX_PENDING: confidenceType = ConfidenceType.INSTANTX_PENDING; break;
+            //case INSTANTX_LOCKED: confidenceType = ConfidenceType.INSTANTX_LOCKED; break;
             case UNKNOWN:
                 // Fall through.
             default:

@@ -25,6 +25,8 @@ import org.bitcoinj.script.ScriptOpCodes;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.darkcoinj.DarkSendPool;
+import org.darkcoinj.InstantXSystem;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
@@ -108,6 +110,12 @@ public abstract class NetworkParameters implements Serializable {
 
 
     public SporkManager sporkManager;
+    public MasternodeManager masternodeManager;
+    public MasternodePayments masternodePayments;
+    public MasternodeSync masternodeSync;
+    public ActiveMasternode activeMasternode;
+    public DarkSendPool darkSendPool;
+    public InstantXSystem instantx;
 
     //Dash Extra Parameters
     String strSporkKey = "04549ac134f694c0243f503e8c8a9a986f5de6610049c40b07816809b0d1d06a21b07be27b9bb555931773f62ba6cf35a25fd52f694d4e1106ccd237a7bb899fdd";
@@ -125,6 +133,12 @@ public abstract class NetworkParameters implements Serializable {
 
         //Dash Specific
         sporkManager = new SporkManager(this);
+        masternodeManager = new MasternodeManager(this);
+        masternodePayments = new MasternodePayments(this);
+        masternodeSync = new MasternodeSync(this);
+        activeMasternode = new ActiveMasternode(this);
+        darkSendPool = new DarkSendPool(this);
+        instantx = new InstantXSystem(this);
     }
     //TODO:  put these bytes into the CoinDefinition
     private static Block createGenesis(NetworkParameters n) {

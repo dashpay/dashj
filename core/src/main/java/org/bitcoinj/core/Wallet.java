@@ -1639,7 +1639,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             tx.verify();
 
             Transaction lockedTx = pending.get(tx.getHash());
-            lockedTx.getConfidence().setConfidenceType(ConfidenceType.INSTANTX_LOCKED);
+            //lockedTx.getConfidence().setConfidenceType(ConfidenceType.INSTANTX_LOCKED);
             confidenceChanged.put(lockedTx, TransactionConfidence.Listener.ChangeReason.TYPE);
 
             //TODO:  this is causing problems later, the transaction doesn't get setAppearedInBlock, etc, Wallet crashes.
@@ -2290,9 +2290,9 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             // Add to the pending pool. It'll be moved out once we receive this transaction on the best chain.
             // This also registers txConfidenceListener so wallet listeners get informed.
             log.info("->pending: {}", tx.getHashAsString());
-            /*if(tx instanceof TransactionLockRequest) //TODO:InstantX
-                tx.getConfidence().setConfidenceType(ConfidenceType.INSTANTX_PENDING);
-            else*/ tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
+            if(tx instanceof TransactionLockRequest) //TODO:InstantX
+                tx.getConfidence().setIX(true);//setConfidenceType(ConfidenceType.INSTANTX_PENDING);
+            //else tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
             confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
             /*if(tx instanceof TransactionLockRequest)  //TODO:InstantX
                 addWalletTransaction(Pool.INSTANTX_PENDING, tx);
@@ -2317,6 +2317,11 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             }
 
             checkState(isConsistent());
+            //Dash Specific
+            if(tx.getConfidence().isIX()) {
+                params.instantx.mapTxLockReq.put(tx.getHash(), tx);
+                params.instantx.createNewLock((TransactionLockRequest)tx);
+            }
             informConfidenceListenersIfNotReorganizing();
             saveNow();
         } finally {
@@ -2525,14 +2530,14 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         transactions.put(tx.getHash(), tx);
         switch (pool) {
         case UNSPENT:
-            case INSTANTX_LOCKED:
+            //case INSTANTX_LOCKED:
             checkState(unspent.put(tx.getHash(), tx) == null);
             break;
         case SPENT:
             checkState(spent.put(tx.getHash(), tx) == null);
             break;
         case PENDING:
-        case INSTANTX_PENDING:
+        //case INSTANTX_PENDING:
 
             checkState(pending.put(tx.getHash(), tx) == null);
             break;
@@ -2614,10 +2619,10 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             switch (pool) {
                 case UNSPENT:
                     return unspent;
-                case INSTANTX_LOCKED:
+                //case INSTANTX_LOCKED:
                 case SPENT:
                     return spent;
-                case INSTANTX_PENDING:
+                //case INSTANTX_PENDING:
                 case PENDING:
                     return pending;
                 case DEAD:
@@ -4835,7 +4840,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         for (Transaction tx : toBroadcast) {
             /*if(tx.getConfidence().getConfidenceType() == ConfidenceType.INSTANTX_LOCKED)
                 continue;*/
-            checkState(tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING || tx.getConfidence().getConfidenceType() == ConfidenceType.INSTANTX_PENDING);
+            checkState(tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING/* || tx.getConfidence().getConfidenceType() == ConfidenceType.INSTANTX_PENDING*/);
             // Re-broadcast even if it's marked as already seen for two reasons
             // 1) Old wallets may have transactions marked as broadcast by 1 peer when in reality the network
             //    never saw it, due to bugs.

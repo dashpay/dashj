@@ -15,33 +15,40 @@
  */
 package org.bitcoinj.core;
 
+import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.Arrays;
 
+import static com.hashengineering.crypto.X11.x11Digest;
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 
 public class MasternodePing extends Message implements Serializable {
 
     private static final Logger log = LoggerFactory.getLogger(MasternodePing.class);
 
+    public static final int  MASTERNODE_MIN_MNP_SECONDS   =          (10*60);
+    public static final int MASTERNODE_MIN_MNB_SECONDS    =         (5*60);
+
     TransactionInput vin;
     Sha256Hash blockHash;
     long sigTime;
-    byte[] vchSig;
+    MasternodeSignature vchSig;
 
     DarkCoinSystem system;
 
     MasternodePing(NetworkParameters params) {
-
-    }
-    MasternodePing(NetworkParameters params, TransactionInput newVin)
-    {
         super(params);
     }
+    /*MasternodePing(NetworkParameters params, AbstractBlockChain blockChain, TransactionInput newVin)
+    {
+        super(params);
+    }*/
 
     MasternodePing(NetworkParameters params, byte[] bytes)
     {
@@ -97,7 +104,8 @@ public class MasternodePing extends Message implements Serializable {
 
         sigTime = readInt64();
 
-        vchSig = readByteArray();
+        vchSig = new MasternodeSignature(params, payload, cursor);
+        cursor += vchSig.getMessageSize();
 
         length = cursor - offset;
 
@@ -111,17 +119,129 @@ public class MasternodePing extends Message implements Serializable {
         int64ToByteStreamLE(sigTime, stream);
 
         stream.write(new VarInt(vchSig.length).encode());
-        stream.write(vchSig);
+        vchSig.bitcoinSerialize(stream);
     }
 
-    int checkAndUpdate(boolean fRequireEnabled)
+    boolean checkAndUpdate(boolean fRequireEnabled)
     {
-        return -1;
+        if (sigTime > Utils.currentTimeSeconds() + 60 * 60) {
+            log.info("CMasternodePing::CheckAndUpdate - Signature rejected, too far into the future "+ vin.toString());
+            //nDos = 1;
+            return false;
+        }
+
+        if (sigTime <= Utils.currentTimeSeconds() - 60 * 60) {
+            log.info("CMasternodePing::CheckAndUpdate - Signature rejected, too far into the past {} - {} {} \n", vin.toString(), sigTime, Utils.currentTimeSeconds());
+            //nDos = 1;
+            return false;
+        }
+
+        log.info("masternode - CMasternodePing::CheckAndUpdate - New Ping - "+ getHash().toString() +" - "+ blockHash.toString()+" - "+ sigTime);
+
+        // see if we have this Masternode
+        Masternode pmn = params.masternodeManager.find(vin);
+        if(pmn != null && pmn.protocolVersion >= params.masternodePayments.getMinMasternodePaymentsProto())
+        {
+            if (fRequireEnabled && !pmn.isEnabled()) return false;
+
+            // LogPrintf("mnping - Found corresponding mn for vin: %s\n", vin.ToString());
+            // update only if there is no known ping for this masternode or
+            // last ping was more then MASTERNODE_MIN_MNP_SECONDS-60 ago comparing to this one
+            if(pmn.isPingedWithin(MASTERNODE_MIN_MNP_SECONDS - 60, sigTime))
+            {
+                String strMessage = vin.toString() + blockHash.toString() + sigTime;
+
+                StringBuilder errorMessage = new StringBuilder();
+                if(!DarkSendSigner.verifyMessage(pmn.pubkey2, vchSig, strMessage, errorMessage))
+                {
+                    log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature "+ vin.toString());
+                    //nDos = 33;
+                    return false;
+                }
+
+                /* TODO:  This may not work with SPV
+                BlockMap::iterator mi = mapBlockIndex.find(blockHash);
+                if (mi != mapBlockIndex.end() && (*mi).second)
+                {
+                    if((*mi).second->nHeight < chainActive.Height() - 24)
+                    {
+                        log.info("CMasternodePing::CheckAndUpdate - Masternode {2} block hash {2} is too old\n", vin.ToString(), blockHash.ToString());
+                        // Do nothing here (no Masternode update, no mnping relay)
+                        // Let this node to be visible but fail to accept mnping
+
+                        return false;
+                    }
+                } else {
+                if (DarkCoinSystem.fDebug) log.info("CMasternodePing::CheckAndUpdate - Masternode %s block hash %s is unknown\n", vin.ToString(), blockHash.ToString());
+                // maybe we stuck so we shouldn't ban this node, just fail to accept it
+                // TODO: or should we also request this block?
+
+                    return false;
+                }
+*/
+                pmn.lastPing = this;
+
+                //mnodeman.mapSeenMasternodeBroadcast.lastPing is probably outdated, so we'll update it
+                MasternodeBroadcast mnb = new MasternodeBroadcast(pmn);
+                Sha256Hash hash = mnb.getHash();
+                if(params.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
+                    params.masternodeManager.mapSeenMasternodeBroadcast.get(hash).lastPing = this;
+                }
+
+                pmn.check(true);
+                if(pmn.isEnabled()) return false;
+
+                log.info("masternode-CMasternodePing::CheckAndUpdate - Masternode ping accepted, vin: "+ vin.toString());
+
+                relay();
+                return true;
+            }
+            log.info("masternode - CMasternodePing::CheckAndUpdate - Masternode ping arrived too early, vin: "+ vin.toString());
+            //nDos = 1; //disable, this is happening frequently and causing banned peers
+            return false;
+        }
+        log.info("masternode - CMasternodePing::CheckAndUpdate - Couldn't find compatible Masternode entry, vin: "+ vin.toString());
+
+        return false;
+    }
+    boolean checkAndUpdate()
+    {
+        return checkAndUpdate(false);
     }
 
-    boolean sign()
+    public boolean equals(Object o)
     {
+        maybeParse();
+        MasternodePing mnp = (MasternodePing)o;
+        if(mnp.sigTime == this.sigTime &&
+                mnp.vin.equals(this.vin) &&
+                mnp.vchSig.equals(this.vchSig) &&
+                mnp.blockHash.equals(this.blockHash))
+        {
+
+                return true;
+        }
         return false;
     }
 
+    static MasternodePing EMPTY = new MasternodePing(null);
+
+    static MasternodePing empty() { return EMPTY; }
+
+    void relay()
+    {
+        //CInv inv(MSG_MASTERNODE_PING, GetHash());
+        //RelayInv(inv);
+    }
+
+    public Sha256Hash getHash(){
+        try {
+            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(vchSig.getBytes().length+8);
+            bos.write(vchSig.getBytes());
+            Utils.int64ToByteStreamLE(sigTime, bos);
+            return Sha256Hash.twiceOf(bos.toByteArray());
+        } catch (IOException e) {
+            throw new RuntimeException(e); // Cannot happen.
+        }
+    }
 }

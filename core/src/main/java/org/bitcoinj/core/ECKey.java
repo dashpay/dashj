@@ -908,6 +908,34 @@ public class ECKey implements EncryptableItem, Serializable {
             throw new SignatureException("Could not recover public key from signature");
         return key;
     }
+    public static ECKey signedMessageToKey(byte [] message, byte [] signatureEncoded) throws SignatureException {
+
+        // Parse the signature bytes into r/s and the selector value.
+        if (signatureEncoded.length < 65)
+            throw new SignatureException("Signature truncated, expected 65 bytes and got " + signatureEncoded.length);
+        int header = signatureEncoded[0] & 0xFF;
+        // The header byte: 0x1B = first key with even y, 0x1C = first key with odd y,
+        //                  0x1D = second key with even y, 0x1E = second key with odd y
+        if (header < 27 || header > 34)
+            throw new SignatureException("Header byte out of range: " + header);
+        BigInteger r = new BigInteger(1, Arrays.copyOfRange(signatureEncoded, 1, 33));
+        BigInteger s = new BigInteger(1, Arrays.copyOfRange(signatureEncoded, 33, 65));
+        ECDSASignature sig = new ECDSASignature(r, s);
+        byte[] messageBytes = Utils.formatMessageForSigning(message);
+        // Note that the C++ code doesn't actually seem to specify any character encoding. Presumably it's whatever
+        // JSON-SPIRIT hands back. Assume UTF-8 for now.
+        Sha256Hash messageHash = Sha256Hash.twiceOf(messageBytes);
+        boolean compressed = false;
+        if (header >= 31) {
+            compressed = true;
+            header -= 4;
+        }
+        int recId = header - 27;
+        ECKey key = ECKey.recoverFromSignature(recId, sig, messageHash, compressed);
+        if (key == null)
+            throw new SignatureException("Could not recover public key from signature");
+        return key;
+    }
 
     /**
      * Convenience wrapper around {@link ECKey#signedMessageToKey(String, String)}. If the key derived from the
@@ -918,7 +946,11 @@ public class ECKey implements EncryptableItem, Serializable {
         if (!key.pub.equals(pub))
             throw new SignatureException("Signature did not match for message");
     }
-
+    public void verifyMessage(byte [] message, byte [] signatureEncoded) throws SignatureException {
+        ECKey key = ECKey.signedMessageToKey(message, signatureEncoded);
+        if (!key.pub.equals(pub))
+            throw new SignatureException("Signature did not match for message");
+    }
     /**
      * <p>Given the components of a signature and a selector value, recover and return the public key
      * that generated the signature according to the algorithm in SEC1v2 section 4.1.6.</p>

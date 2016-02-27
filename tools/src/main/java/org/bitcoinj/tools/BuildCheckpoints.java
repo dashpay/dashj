@@ -19,6 +19,7 @@ package org.bitcoinj.tools;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
@@ -47,7 +48,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class BuildCheckpoints {
 
-    private static final NetworkParameters PARAMS = MainNetParams.get();
+    private static final NetworkParameters PARAMS = TestNet3Params.get();//MainNetParams.get();
     private static final File PLAIN_CHECKPOINTS_FILE = new File("checkpoints");
     private static final File TEXTUAL_CHECKPOINTS_FILE = new File("checkpoints.txt");
 

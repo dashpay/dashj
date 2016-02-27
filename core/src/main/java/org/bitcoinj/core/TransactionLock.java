@@ -24,10 +24,10 @@ public class TransactionLock {
 
     private static final Logger log = LoggerFactory.getLogger(Transaction.class);
     public int blockHeight;
-    Sha256Hash txHash;
-    ArrayList<ConsensusVote> vecConsensusVotes;
+    public Sha256Hash txHash;
+    public ArrayList<ConsensusVote> vecConsensusVotes;
     public int expiration;
-    int timeout;
+    public int timeout;
 
 
     DarkCoinSystem system;
@@ -48,36 +48,13 @@ public class TransactionLock {
 
 
     public String toString() {
-        return "nothing here";
+        return "TransactionLock";
     }
     public Sha256Hash getHash()
     {
         return txHash;
     }
 
-    /*boolean SignaturesValid()
-    {
-        for(ConsensusVote vote : vecConsensusVotes) {
-            int n = system.masternode.getMasterNodeRank(vote.vinMasterNode, vote.getHeight(), InstantXSystem.MIN_INSTANTX_PROTO_VERSION)
-            if(n == -1)
-            {
-                log.warn("InstantX::DoConsensusVote - Unknown Masternode\n");
-                return false;
-            }
-
-            if(n > 10)
-            {
-                log.warn("InstantX::DoConsensusVote - Masternode not in the top 10\n");
-                return false;
-            }
-
-            if(!vote.SignatureValid()){
-                log.warn("InstantX::CTransactionLock::SignaturesValid - Signature not valid\n");
-                return false;
-            }
-        }
-        return true;
-    }*/
 
     public int countSignatures()
     {
@@ -88,10 +65,6 @@ public class TransactionLock {
     {
         vecConsensusVotes.add(cv);
     }
-
-
-    public long getHeight()
-    {return blockHeight;}
 
 
 }

@@ -753,6 +753,10 @@ public class Script {
         return chunks.size() == 2 && chunks.get(0).equalsOpCode(OP_RETURN);
     }
 
+    public boolean isUnspendable() {
+        return chunks.size() > 1 && chunks.get(0).equalsOpCode(OP_RETURN);
+    }
+
     /**
      * Exposes the script interpreter. Normally you should not use this directly, instead use
      * {@link org.bitcoinj.core.TransactionInput#verify(org.bitcoinj.core.TransactionOutput)} or
