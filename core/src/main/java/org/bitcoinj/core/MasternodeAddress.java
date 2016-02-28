@@ -118,6 +118,10 @@ public class MasternodeAddress extends NetAddress {
         length = MESSAGE_SIZE;
         return length;
     }
+    public int calculateMessageSizeInBytes()
+    {
+        return getMessageSize();
+    }
 
     public InetSocketAddress getSocketAddress() {
         return new InetSocketAddress(getAddr(), getPort());

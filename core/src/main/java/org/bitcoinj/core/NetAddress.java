@@ -70,7 +70,6 @@ public class NetAddress extends ChildMessage {
      */
     public NetAddress(InetAddress addr) {
         this.addr = checkNotNull(addr);
-        this.protocolVersion = protocolVersion;
         length = MESSAGE_SIZE;
     }
 

@@ -54,6 +54,11 @@ public class MasternodeSignature extends ChildMessage {
 
         return cursor - offset;
     }
+
+    public int calculateMessageSizeInBytes()
+    {
+        return VarInt.sizeOf(bytes.length) + bytes.length;
+    }
     @Override
     void parse() throws ProtocolException {
         if(parsed)

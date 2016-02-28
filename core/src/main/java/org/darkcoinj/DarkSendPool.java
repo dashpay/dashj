@@ -3,6 +3,7 @@ package org.darkcoinj;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,15 +66,37 @@ public class DarkSendPool {
     //debugging data
     String strAutoDenomResult;
 
+    enum ErrorMessage {
+        ERR_ALREADY_HAVE,
+        ERR_DENOM,
+        ERR_ENTRIES_FULL,
+        ERR_EXISTING_TX,
+        ERR_FEES,
+        ERR_INVALID_COLLATERAL,
+        ERR_INVALID_INPUT,
+        ERR_INVALID_SCRIPT,
+        ERR_INVALID_TX,
+        ERR_MAXIMUM,
+        ERR_MN_LIST,
+        ERR_MODE,
+        ERR_NON_STANDARD_PUBKEY,
+        ERR_NOT_A_MN,
+        ERR_QUEUE_FULL,
+        ERR_RECENT,
+        ERR_SESSION,
+        ERR_MISSING_TX,
+        ERR_VERSION,
+        MSG_NOERR,
+        MSG_SUCCESS,
+        MSG_ENTRIES_ADDED
+    };
+
     // where collateral should be made out to
     public Script collateralPubKey;
 
-    Masternode submittedToMasternode;
+    public Masternode submittedToMasternode;
     int sessionDenom; //Users must submit an denom matching this
     int cachedNumBlocks; //used for the overview screen
-
-    //incremented whenever a DSQ comes through
-    long nDsqCount;
 
     NetworkParameters params;
 
@@ -143,128 +166,68 @@ public class DarkSendPool {
         RAND_bytes((unsigned char*)&seed, sizeof(seed));
         std::srand(seed);*/
     }
-    /*
-    void UnlockCoins();
 
-    boolean IsNull()
-    {
-        return (state == DarkSend.POOL_STATUS_ACCEPTING_ENTRIES && entries.isEmpty() && myEntries.isEmpty());
-    }
+    public Runnable ThreadCheckDarkSendPool = new Runnable() {
+        @Override
+        public void run() {
+            if(DarkCoinSystem.fLiteMode) return; //disable all Darksend/Masternode related functionality
 
-    int GetState()
-    {
-        return state;
-    }
+            // Make this thread recognisable as the wallet flushing thread
+            //RenameThread("dash-darksend");
 
-    int GetEntriesCount()
-    {
-        if(system.fMasterNode){
-            return entries.size();
-        } else {
-            return entriesCount;
-        }
-    }
+            int c = 0;
+            try {
 
-    int GetLastEntryAccepted()
-    {
-        return lastEntryAccepted;
-    }
+                while (true) {
+                    Thread.sleep(1000);
+                    //LogPrintf("ThreadCheckDarkSendPool::check timeout\n");
 
-    int GetCountEntriesAccepted()
-    {
-        return countEntriesAccepted;
-    }
+                    // try to sync from all available nodes, one step at a time
+                    params.masternodeSync.process();
 
-    int GetMyTransactionCount()
-    {
-        return myEntries.size();
-    }
+                    if (params.masternodeSync.isBlockchainSynced()) {
 
-    void UpdateState(int newState)
-    {
-        if (system.fMasterNode && (newState == DarkSend.POOL_STATUS_ERROR || newState == DarkSend.POOL_STATUS_SUCCESS)){
-            log.info("CDarkSendPool::UpdateState() - Can't set state to ERROR or SUCCESS as a masternode. \n");
-            return;
-        }
+                        c++;
 
-        log.info("CDarkSendPool::UpdateState() == %d | %d \n", state, newState);
-        if(state != newState){
-            lastTimeChanged = Utils.currentTimeMillis();
-            if(system.fMasterNode) {
-                RelayDarkSendStatus(system.darkSend.darkSendPool.sessionID, system.darkSend.darkSendPool.GetState(),system.darkSend.darkSendPool.GetEntriesCount(), system.darkSend.MASTERNODE_RESET);
+                        // check if we should activate or ping every few minutes,
+                        // start right after sync is considered to be done
+                        if (c % Masternode.MASTERNODE_PING_SECONDS == 1)
+                            params.activeMasternode.manageStatus();
+
+                        if (c % 60 == 0) {
+                            params.masternodeManager.checkAndRemove();
+                            params.masternodeManager.processMasternodeConnections();
+                            params.masternodePayments.cleanPaymentList();
+                            params.instantx.cleanTransactionLocksList();
+                        }
+
+                        //if(c % MASTERNODES_DUMP_SECONDS == 0) DumpMasternodes();
+
+                        //TODO:  Add if necessary for other DarkSend functions
+                        /*params.darkSendPool.checkTimeout();
+                        params.darkSendPool.checkForCompleteQueue();
+
+                        if (params.darkSendPool.getState() == POOL_STATUS_IDLE && c % 15 == 0) {
+                            params.darkSendPool.DoAutomaticDenominating();
+                        }*/
+                    }
+                }
+            }
+            catch(InterruptedException x)
+            {
+                x.printStackTrace();
             }
         }
-        state = newState;
-    }
+    };
 
-    int GetMaxPoolTransactions()
+    boolean backgroundRunning = false;
+    //dash
+    public void startBackgroundThread()
     {
-        //if we're on testnet, just use two transactions per merge
-        if(system.params.getId() == NetworkParameters.ID_TESTNET || system.params.getId() == NetworkParameters.ID_REGTEST) return 2;
-
-        //use the production amount
-        return system.darkSend.POOL_MAX_TRANSACTIONS;
+        if(!backgroundRunning)
+        {
+            backgroundRunning = true;
+            new ContextPropagatingThreadFactory("dash-darksend").newThread(ThreadCheckDarkSendPool).start();
+        }
     }
-
-    //Do we have enough users to take entries?
-    boolean IsSessionReady(){
-        return sessionUsers >= GetMaxPoolTransactions();
-    }
-
-    // Are these outputs compatible with other client in the pool?
-    boolean IsCompatibleWithEntries(std::vector<CTxOut> vout);
-    // Is this amount compatible with other client in the pool?
-    boolean IsCompatibleWithSession(int64_t nAmount, CTransaction txCollateral, std::string& strReason);
-
-    // Passively run Darksend in the background according to the configuration in settings (only for QT)
-    boolean DoAutomaticDenominating(bool fDryRun=false, bool ready=false);
-    boolean PrepareDarksendDenominate();
-
-
-    // check for process in Darksend
-    void Check();
-    // charge fees to bad actors
-    void ChargeFees();
-    // rarely charge fees to pay miners
-    void ChargeRandomFees();
-    void CheckTimeout();
-    // check to make sure a signature matches an input in the pool
-    bool SignatureValid(const CScript& newSig, const CTxIn& newVin);
-    // if the collateral is valid given by a client
-    bool IsCollateralValid(const CTransaction& txCollateral);
-    // add a clients entry to the pool
-    bool AddEntry(const std::vector<CTxIn>& newInput, const int64_t& nAmount, const CTransaction& txCollateral, const std::vector<CTxOut>& newOutput, std::string& error);
-    // add signature to a vin
-    bool AddScriptSig(const CTxIn& newVin);
-    // are all inputs signed?
-    bool SignaturesComplete();
-    // as a client, send a transaction to a masternode to start the denomination process
-    void SendDarksendDenominate(std::vector<CTxIn>& vin, std::vector<CTxOut>& vout, int64_t amount);
-    // get masternode updates about the progress of darksend
-    bool StatusUpdate(int newState, int newEntriesCount, int newAccepted, std::string& error, int newSessionID=0);
-
-    // as a client, check and sign the final transaction
-    bool SignFinalTransaction(CTransaction& finalTransactionNew, CNode* node);
-
-    // get block hash by height
-    bool GetBlockHash(uint256& hash, int nBlockHeight);
-    // get the last valid block hash for a given modulus
-    bool GetLastValidBlockHash(uint256& hash, int mod=1, int nBlockHeight=0);
-    // process a new block
-    void NewBlock();
-    void CompletedTransaction(bool error, std::string lastMessageNew);
-    void ClearLastMessage();
-    // used for liquidity providers
-    bool SendRandomPaymentToSelf();
-    // split up large inputs or make fee sized inputs
-    bool MakeCollateralAmounts();
-    bool CreateDenominated(int64_t nTotalValue);
-    // get the denominations for a list of outputs (returns a bitshifted integer)
-    int GetDenominations(const std::vector<CTxOut>& vout);
-    void GetDenominationsToString(int nDenom, std::string& strDenom);
-    // get the denominations for a specific amount of darkcoin.
-    int GetDenominationsByAmount(int64_t nAmount, int nDenomTarget=0);
-
-    int GetDenominationsByAmounts(std::vector<int64_t>& vecAmount);
-    */
 }

@@ -84,12 +84,32 @@ public class MasternodePing extends Message implements Serializable {
         //sigTime
         cursor += 8;
         //vchSig
-        varint = new VarInt(buf, cursor);
-        long size = varint.value;
-        cursor += varint.getOriginalSizeInBytes();
-        cursor += size;
+        cursor = MasternodeSignature.calcLength(buf, cursor);
 
         return cursor - offset;
+    }
+
+    public int calculateMessageSizeInBytes()
+    {
+        int cursor = 0;
+
+        //vin
+        cursor += 36;
+
+        long scriptLen = vin.getScriptBytes().length;
+        // 4 = length of sequence field (unint32)
+        cursor += scriptLen + 4 + VarInt.sizeOf(scriptLen);
+
+        //blockHash
+        cursor += 32;
+        //sigTime
+        cursor += 8;
+        //vchSig
+
+        cursor += vchSig.calculateMessageSizeInBytes();
+
+        return cursor;
+
     }
 
     @Override
@@ -115,10 +135,8 @@ public class MasternodePing extends Message implements Serializable {
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
         vin.bitcoinSerialize(stream);
-        stream.write(blockHash.getBytes());
+        stream.write(blockHash.getReversedBytes());
         int64ToByteStreamLE(sigTime, stream);
-
-        stream.write(new VarInt(vchSig.length).encode());
         vchSig.bitcoinSerialize(stream);
     }
 

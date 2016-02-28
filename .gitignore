@@ -11,5 +11,6 @@ libs/
 *.spvchain
 *.wallet
 *.tmp
+*.dat
 checkpoints
 checkpoints-testnet.txt

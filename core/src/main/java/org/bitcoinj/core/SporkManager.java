@@ -56,7 +56,7 @@ public class SporkManager {
             log.info("spork - new "+hash.toString()+" ID "+spork.nSporkID+" Time "+spork.nTimeSigned+" bestHeight" + blockChain.getBestChainHeight());
 
             if (!checkSignature(spork)) {
-                log.info("spork - invalid signature\n");
+                log.info("spork - invalid signature");
                 //Misbehaving(pfrom -> GetId(), 100);
                 return;
             }

@@ -86,6 +86,8 @@ public class WalletAppKit extends AbstractIdleService {
 
     protected volatile Context context;
 
+
+
     /**
      * Creates a new WalletAppKit, with a newly created {@link Context}. Files will be stored in the given directory.
      */
@@ -106,6 +108,8 @@ public class WalletAppKit extends AbstractIdleService {
             if (stream != null)
                 setCheckpoints(stream);
         }
+
+        params.initDash(directory.getAbsolutePath());
     }
 
     /** Will only connect to the given addresses. Cannot be called after startup. */

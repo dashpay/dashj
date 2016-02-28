@@ -21,6 +21,11 @@ public class MasternodeBroadcast extends Masternode {
         super(params, payloadBytes, 0);
     }
 
+    public MasternodeBroadcast(NetworkParameters params, byte [] payloadBytes, int cursor)
+    {
+        super(params, payloadBytes, cursor);
+    }
+
     public MasternodeBroadcast(Masternode masternode)
     {
        super(masternode);
@@ -102,6 +107,8 @@ public class MasternodeBroadcast extends Masternode {
 
         Utils.int64ToByteStreamLE(sigTime, stream);
         Utils.uint32ToByteStreamLE(protocolVersion, stream);
+
+        lastPing.bitcoinSerialize(stream);
 
         Utils.int64ToByteStreamLE(nLastDsq, stream);
 

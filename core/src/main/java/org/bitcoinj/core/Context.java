@@ -1,5 +1,8 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.store.MasternodeDB;
+import org.bitcoinj.utils.ContextPropagatingThreadFactory;
+import org.darkcoinj.DarkSendPool;
 import org.slf4j.*;
 
 import static com.google.common.base.Preconditions.*;
@@ -30,6 +33,9 @@ public class Context {
     private TxConfidenceTable confidenceTable;
     private NetworkParameters params;
     private int eventHorizon = 100;
+
+    //Dash Specific
+    public PeerGroup peerGroup;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -140,4 +146,7 @@ public class Context {
     public int getEventHorizon() {
         return eventHorizon;
     }
+
+
+
 }

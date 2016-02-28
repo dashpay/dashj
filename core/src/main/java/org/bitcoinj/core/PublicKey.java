@@ -66,6 +66,12 @@ public class PublicKey extends ChildMessage {
 
         return cursor - offset;
     }
+
+    public int calculateMessageSizeInBytes()
+    {
+        return VarInt.sizeOf(bytes.length) + bytes.length;
+    }
+
     @Override
     void parse() throws ProtocolException {
         if(parsed)
@@ -74,7 +80,7 @@ public class PublicKey extends ChildMessage {
         cursor = offset;
 
         bytes = readByteArray();
-        this.key = ECKey.fromPublicOnly(bytes);
+        //this.key = ECKey.fromPublicOnly(bytes);
 
         length = cursor - offset;
     }
@@ -105,6 +111,7 @@ public class PublicKey extends ChildMessage {
         return false;
     }
 
+    @Deprecated
     PublicKey duplicate()
     {
         PublicKey copy = new PublicKey(getBytes());
@@ -135,7 +142,7 @@ public class PublicKey extends ChildMessage {
 
     public byte [] getId()
     {
-        return key.getPubKeyHash();
+        return getECKey().getPubKeyHash();
     }
 
     public ECKey getECKey()

@@ -82,6 +82,8 @@ public class PeerGroup implements TransactionBroadcaster {
 
     protected final ReentrantLock lock = Threading.lock("peergroup");
 
+    public ReentrantLock getLock() { return lock; }  //for dash
+
     private final NetworkParameters params;
     @Nullable private final AbstractBlockChain chain;
 
@@ -405,6 +407,8 @@ public class PeerGroup implements TransactionBroadcaster {
         params.masternodeManager.setBlockChain(chain);
         params.masternodeSync.setBlockChain(chain);
         params.instantx.setBlockChain(chain);
+
+        context.peerGroup = this;
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);

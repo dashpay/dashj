@@ -45,11 +45,6 @@ public class InstantXSystem {
     public void setBlockChain(AbstractBlockChain blockChain)
     {
         this.blockChain = blockChain;
-        if(params.getId().equals(NetworkParameters.ID_TESTNET))
-        {
-            INSTANTX_SIGNATURES_REQUIRED = 3;
-            INSTANTX_SIGNATURES_TOTAL = 15;
-        }
     }
     DarkCoinSystem system;
     MasterNodeSystem masterNodes;
@@ -441,8 +436,8 @@ public class InstantXSystem {
     //received a consensus vote
     boolean processConsensusVote(Peer pnode, ConsensusVote ctx)
     {
-        //Since we don't have access to the blockchain, then we will use the transaction hash of the IX to rank the masternodes
-        int n = params.masternodeManager.getMasternodeRank(ctx.vinMasternode, ctx.txHash, MIN_INSTANTX_PROTO_VERSION, true);
+        //Since we don't have access to the blockchain, we will not calculate the rankings.
+        int n = params.masternodeManager.getMasternodeRank(ctx.vinMasternode, ctx.blockHeight, MIN_INSTANTX_PROTO_VERSION, true);
 
         Masternode pmn = params.masternodeManager.find(ctx.vinMasternode);
         if(pmn != null)
@@ -456,11 +451,15 @@ public class InstantXSystem {
             return false;
         }
 
-        if(n > INSTANTX_SIGNATURES_TOTAL)
+        /*if(n == -2)
+        {
+            //We can't determine the hash for blockHeight, but we will proceed anyways;
+        }
+        else if(n > INSTANTX_SIGNATURES_TOTAL)
         {
             log.info("instantx-InstantX::ProcessConsensusVote - Masternode not in the top {} ({}) - {}\n", INSTANTX_SIGNATURES_TOTAL, n, ctx.getHash().toString());
             return false;
-        }
+        }*/
 
         if(!ctx.signatureValid()) {
             log.info("InstantX::ProcessConsensusVote - Signature invalid");
@@ -481,7 +480,7 @@ public class InstantXSystem {
         } else
             log.info("instantx - InstantX::ProcessConsensusVote - Transaction Lock Exists {} !\n", ctx.txHash.toString());
 
-        //compile consessus vote
+        //compile consensus vote
         TransactionLock i = mapTxLocks.get(ctx.txHash);
         if (i != null){
             i.addSignature(ctx);
@@ -592,9 +591,8 @@ public class InstantXSystem {
                 }
 
                 mapTxLocks.remove(tl);
-                tl = it.next();
             } else {
-                tl = it.next();
+
             }
         }
 

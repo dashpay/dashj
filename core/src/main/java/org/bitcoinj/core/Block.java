@@ -572,13 +572,8 @@ public class Block extends Message {
 
     /**
      * Returns the hash of the block (which for a valid, solved block should be below the target) in the form seen on
-<<<<<<< HEAD
-     * the block explorer. If you call this on block 1 in the production chain
-     * you will get "000007d91d1254d60e2dd1ae580383070a4ddffa4c64c2eeb4a2f9ecc0414343".
-=======
      * the block explorer. If you call this on block 1 in the mainnet chain
      * you will get "00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048".
->>>>>>> upstream2/release-0.13
      */
     public String getHashAsString() {
         return getHash().toString();

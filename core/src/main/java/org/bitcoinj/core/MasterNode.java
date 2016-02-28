@@ -170,10 +170,13 @@ public class Masternode extends Message{
         // byte [] sig;
         cursor += MasternodeSignature.calcLength(buf, cursor);
 
-        //public int activeState;
-        cursor += 4;
+
         //long sigTime; //mnb message time
         cursor += 8;
+        //protocol Version
+        cursor += 4;
+        //public int activeState;
+        cursor += 4;
         //        MasternodePing lastPing;
         cursor += MasternodePing.calcLength(buf, offset);
         //int cacheInputAge;
@@ -196,6 +199,59 @@ public class Masternode extends Message{
         cursor += 4;
 
         return cursor - offset;
+    }
+
+    public int calculateMessageSizeInBytes()
+    {
+        int cursor = 0;
+
+        //vin
+        cursor += 36;
+
+        long scriptLen = vin.getScriptBytes().length;
+        // 4 = length of sequence field (unint32)
+        cursor += scriptLen + 4 + VarInt.sizeOf(scriptLen);
+
+        //MasternodeAddress address;
+        cursor += MasternodeAddress.MESSAGE_SIZE;
+        //PublicKey pubkey;
+        cursor += pubkey.calculateMessageSizeInBytes();
+
+        //PublicKey pubkey2;
+        cursor += pubkey2.calculateMessageSizeInBytes();
+
+        // byte [] sig;
+        cursor += sig.calculateMessageSizeInBytes(); //calcLength(buf, cursor);
+
+
+        //long sigTime; //mnb message time
+        cursor += 8;
+        //protocol Version
+        cursor += 4;
+        //public int activeState;
+        cursor += 4;
+        //        MasternodePing lastPing;
+        cursor += lastPing.calculateMessageSizeInBytes();
+        //int cacheInputAge;
+        cursor += 4;
+        //int cacheInputAgeBlock;
+        cursor += 4;
+        //boolean unitTest;
+        cursor += 1;
+        //boolean allowFreeTx;
+        cursor += 1;
+        //int protocolVersion;
+        cursor += 4;
+
+        //the dsq count from the last dsq broadcast of this node
+        //long nLastDsq;
+        cursor += 8;
+        //int nScanningErrorCount;
+        cursor += 4;
+        //int nLastScanningErrorBlockHeight;
+        cursor += 4;
+
+        return cursor;
     }
 
     @Override
@@ -223,10 +279,12 @@ public class Masternode extends Message{
 
         protocolVersion = (int)readUint32();
 
+        activeState = (int)readUint32();
+
         lastPing = new MasternodePing(params, payload, cursor);
         cursor += lastPing.getMessageSize();
 
-        activeState = (int)readUint32();
+
 
         cacheInputAge = (int)readUint32();
         cacheInputAgeBlock = (int)readUint32();
@@ -344,8 +402,10 @@ public class Masternode extends Message{
         //    return Sha256Hash.ZERO_HASH;
 
         //uint256 hash = 0;
-        BigInteger bi_aux = new BigInteger(vin.getOutpoint().getHash().getBytes()).add(BigInteger.valueOf(vin.getOutpoint().getIndex()));
-        Sha256Hash aux = Sha256Hash.of(bi_aux.toByteArray());
+        BigInteger bi_aux = vin.getOutpoint().getHash().toBigInteger().add(BigInteger.valueOf(vin.getOutpoint().getIndex()));
+        byte [] temp = new byte[32];
+        System.arraycopy(bi_aux.toByteArray(), 0, temp, 0, 32);
+        Sha256Hash aux = Sha256Hash.wrap(temp);
 
         //uint256 aux = vin.prevout.hash + vin.prevout.n;
 
@@ -377,13 +437,20 @@ public class Masternode extends Message{
             bos.write(aux.getBytes());
             Sha256Hash hash3 = Sha256Hash.twiceOf(bos.toByteArray());
 
-            BigInteger bhash2 = new BigInteger(hash2.getBytes());
-            BigInteger bhash3 = new BigInteger(hash3.getBytes());
+            BigInteger bhash2 = hash2.toBigInteger();
+            BigInteger bhash3 = hash3.toBigInteger();
 
             //uint256 r = (hash3 > hash2 ? hash3 - hash2 : hash2 - hash3);
             if (bhash3.compareTo(bhash2) > 0)
-                return Sha256Hash.of(bhash3.subtract(bhash2).toByteArray());
-            else return Sha256Hash.of(bhash2.subtract(bhash3).toByteArray());
+            {
+                System.arraycopy(bhash3.subtract(bhash2).toByteArray(), 0, temp, 0, 32);
+                return Sha256Hash.wrap(temp);
+            }
+            else
+            {
+                System.arraycopy(bhash2.subtract(bhash3).toByteArray(), 0, temp, 0, 32);
+                return Sha256Hash.wrap(temp);
+            }
         }
         catch (IOException x)
         {

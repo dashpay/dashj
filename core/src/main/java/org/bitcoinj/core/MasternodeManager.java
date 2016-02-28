@@ -22,6 +22,9 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class MasternodeManager extends Message {
     private static final Logger log = LoggerFactory.getLogger(MasternodeManager.class);
+
+    public static final int MASTERNODES_DUMP_SECONDS =              (15*60);
+    public static final int MASTERNODES_DSEG_SECONDS    =           (3*60*60);
     // critical section to protect the inner data structures
     //mutable CCriticalSection cs;
     ReentrantLock lock = Threading.lock("MasternodeManager");
@@ -31,18 +34,18 @@ public class MasternodeManager extends Message {
     ReentrantLock lock_messages = Threading.lock("MasternodeManager-Messages");
 
     // map to hold all MNs
-    ArrayList<Masternode> vMasternodes = new ArrayList<Masternode>();
+    ArrayList<Masternode> vMasternodes;// = new ArrayList<Masternode>();
     // who's asked for the Masternode list and the last time
-    HashMap<NetAddress, Long> mAskedUsForMasternodeList = new HashMap<NetAddress, Long>();
+    HashMap<NetAddress, Long> mAskedUsForMasternodeList;// = new HashMap<NetAddress, Long>();
     // who we asked for the Masternode list and the last time
-        HashMap<NetAddress, Long> mWeAskedForMasternodeList = new HashMap<NetAddress, Long>();
+        HashMap<NetAddress, Long> mWeAskedForMasternodeList;// = new HashMap<NetAddress, Long>();
     // which Masternodes we've asked for
-    HashMap<TransactionOutPoint, Long> mWeAskedForMasternodeListEntry = new HashMap<TransactionOutPoint, Long>();
+    HashMap<TransactionOutPoint, Long> mWeAskedForMasternodeListEntry;// = new HashMap<TransactionOutPoint, Long>();
 
     // Keep track of all broadcasts I've seen
-    public HashMap<Sha256Hash, MasternodeBroadcast> mapSeenMasternodeBroadcast = new HashMap<Sha256Hash, MasternodeBroadcast>();
+    public HashMap<Sha256Hash, MasternodeBroadcast> mapSeenMasternodeBroadcast;// = new HashMap<Sha256Hash, MasternodeBroadcast>();
     // Keep track of all pings I've seen
-    public HashMap<Sha256Hash, MasternodePing> mapSeenMasternodePing = new HashMap<Sha256Hash, MasternodePing>();
+    public HashMap<Sha256Hash, MasternodePing> mapSeenMasternodePing;// = new HashMap<Sha256Hash, MasternodePing>();
 
     // keep track of dsq count to prevent masternodes from gaming darksend queue
     long nDsqCount;
@@ -51,20 +54,35 @@ public class MasternodeManager extends Message {
     AbstractBlockChain blockChain;
     void setBlockChain(AbstractBlockChain blockChain) { this.blockChain = blockChain; }
 
+    Context context;
+
     public MasternodeManager(NetworkParameters params)
     {
         super(params);
         nDsqCount = 0;
+
+        // map to hold all MNs
+        vMasternodes = new ArrayList<Masternode>();
+        // who's asked for the Masternode list and the last time
+        mAskedUsForMasternodeList = new HashMap<NetAddress, Long>();
+        // who we asked for the Masternode list and the last time
+        mWeAskedForMasternodeList = new HashMap<NetAddress, Long>();
+        // which Masternodes we've asked for
+        mWeAskedForMasternodeListEntry = new HashMap<TransactionOutPoint, Long>();
+
+        // Keep track of all broadcasts I've seen
+        mapSeenMasternodeBroadcast = new HashMap<Sha256Hash, MasternodeBroadcast>();
+        // Keep track of all pings I've seen
+        mapSeenMasternodePing = new HashMap<Sha256Hash, MasternodePing>();
+
+
+        context = Context.get();
     }
 
     public MasternodeManager(NetworkParameters params, byte [] payload, int cursor)
     {
         super(params, payload, cursor);
-    }
-
-    public MasternodeManager(Masternode other)
-    {
-
+        context = Context.get();
     }
 
     @Override
@@ -79,6 +97,25 @@ public class MasternodeManager extends Message {
 
         return cursor - offset;
     }
+
+    public int calculateMessageSizeInBytes()
+    {
+        int size = 0;
+
+        size += VarInt.sizeOf(vMasternodes.size());
+
+        for(Masternode mn : vMasternodes)
+        {
+            size += mn.calculateMessageSizeInBytes();
+        }
+        size += VarInt.sizeOf(mAskedUsForMasternodeList.size());
+        for(NetAddress na: mAskedUsForMasternodeList.keySet())
+        {
+            size += na.MESSAGE_SIZE;
+            size += 8;
+        }
+        return size;
+    }
     @Override
     void parse() throws ProtocolException {
         if(parsed)
@@ -90,8 +127,10 @@ public class MasternodeManager extends Message {
         for (int i = 0; i < size; ++i)
         {
             Masternode mn = new Masternode(params, payload, cursor);
+            cursor += mn.getMessageSize();
             vMasternodes.add(mn);
-            cursor =+ mn.getMessageSize();
+
+            //mn.calculateScore(0, Sha256Hash.twiceOf(mn.pubkey.getBytes()));
         }
 
         size = (int)readVarInt();
@@ -104,24 +143,108 @@ public class MasternodeManager extends Message {
             mAskedUsForMasternodeList.put(ma, x);
         }
         //TODO: add the rest
+        //READWRITE(mWeAskedForMasternodeList);
+        size = (int)readVarInt();
+        mWeAskedForMasternodeList = new HashMap<NetAddress, Long>(size);
+        for(int i = 0; i < size; ++i)
+        {
+            NetAddress ma = new NetAddress(params, payload, cursor, 0);
+            cursor += ma.getMessageSize();
+            long x = readInt64();
+            mAskedUsForMasternodeList.put(ma, x);
+        }
+        //READWRITE(mWeAskedForMasternodeListEntry);
+        size = (int)readVarInt();
+        mWeAskedForMasternodeListEntry = new HashMap<TransactionOutPoint, Long>(size);
+        for(int i = 0; i < size; ++i)
+        {
+            TransactionOutPoint out = new TransactionOutPoint(params, payload, cursor);
+            cursor += out.getMessageSize();
+            long x = readInt64();
+            mWeAskedForMasternodeListEntry.put(out, x);
+        }
+
+        //READWRITE(nDsqCount);
+        nDsqCount = readUint32();
+
+        //READWRITE(mapSeenMasternodeBroadcast);
+        size = (int)readVarInt();
+        mapSeenMasternodeBroadcast = new HashMap<Sha256Hash, MasternodeBroadcast>(size);
+        for(int i = 0; i < size; ++i)
+        {
+            Sha256Hash hash = readHash();
+            MasternodeBroadcast mb = new MasternodeBroadcast(params, payload, cursor);
+            cursor += mb.getMessageSize();
+            mapSeenMasternodeBroadcast.put(hash, mb);
+        }
+        //READWRITE(mapSeenMasternodePing);
+        size = (int)readVarInt();
+        mapSeenMasternodePing = new HashMap<Sha256Hash, MasternodePing>(size);
+        for(int i = 0; i < size; ++i)
+        {
+            Sha256Hash hash = readHash();
+            MasternodePing mb = new MasternodePing(params, payload, cursor);
+            cursor += mb.getMessageSize();
+            mapSeenMasternodePing.put(hash, mb);
+        }
 
         length = cursor - offset;
     }
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
-        stream.write(new VarInt(vMasternodes.size()).encode());
-        for(Masternode mn : vMasternodes)
-        {
-            mn.bitcoinSerialize(stream);
+        lock.lock();
+        try {
+            stream.write(new VarInt(vMasternodes.size()).encode());
+            for (Masternode mn : vMasternodes) {
+                mn.bitcoinSerialize(stream);
+            }
+            stream.write(new VarInt(mAskedUsForMasternodeList.size()).encode());
+            for(Iterator<Map.Entry<NetAddress, Long>> it1= mAskedUsForMasternodeList.entrySet().iterator(); it1.hasNext();)
+            {
+                Map.Entry<NetAddress, Long> entry = it1.next();
+                entry.getKey().bitcoinSerialize(stream);
+                Utils.int64ToByteStreamLE(entry.getValue(), stream);
+            }
+            //READWRITE(mWeAskedForMasternodeList);
+            stream.write(new VarInt(mWeAskedForMasternodeList.size()).encode());
+
+            for(Iterator<Map.Entry<NetAddress, Long>> it1= mWeAskedForMasternodeList.entrySet().iterator(); it1.hasNext();)
+            {
+                Map.Entry<NetAddress, Long> entry = it1.next();
+                entry.getKey().bitcoinSerialize(stream);
+                Utils.int64ToByteStreamLE(entry.getValue(), stream);
+            }
+            //READWRITE(mWeAskedForMasternodeListEntry);
+            stream.write(new VarInt(mWeAskedForMasternodeListEntry.size()).encode());
+            for(Iterator<Map.Entry<TransactionOutPoint, Long>> it1= mWeAskedForMasternodeListEntry.entrySet().iterator(); it1.hasNext();)
+            {
+                Map.Entry<TransactionOutPoint, Long> entry = it1.next();
+                entry.getKey().bitcoinSerialize(stream);
+                Utils.int64ToByteStreamLE(entry.getValue(), stream);
+            }
+            //READWRITE(nDsqCount);
+            Utils.uint32ToByteStreamLE(nDsqCount, stream);
+            //READWRITE(mapSeenMasternodeBroadcast);
+            stream.write(new VarInt(mapSeenMasternodeBroadcast.size()).encode());
+            for(Iterator<Map.Entry<Sha256Hash, MasternodeBroadcast>> it1= mapSeenMasternodeBroadcast.entrySet().iterator(); it1.hasNext();)
+            {
+                Map.Entry<Sha256Hash, MasternodeBroadcast> entry = it1.next();
+                stream.write(entry.getKey().getReversedBytes());
+                entry.getValue().bitcoinSerialize(stream);
+            }
+            //READWRITE(mapSeenMasternodePing);
+            stream.write(new VarInt(mapSeenMasternodePing.size()).encode());
+            for(Iterator<Map.Entry<Sha256Hash, MasternodePing>> it1= mapSeenMasternodePing.entrySet().iterator(); it1.hasNext();)
+            {
+                Map.Entry<Sha256Hash, MasternodePing> entry = it1.next();
+                stream.write(entry.getKey().getReversedBytes());
+                entry.getValue().bitcoinSerialize(stream);
+            }
+            //TODO: add the rest
+        } finally {
+            lock.unlock();
         }
-        stream.write(new VarInt(mAskedUsForMasternodeList.size()).encode());
-        for(NetAddress na: mAskedUsForMasternodeList.keySet())
-        {
-            na.bitcoinSerialize(stream);
-            Utils.int64ToByteStreamLE(mAskedUsForMasternodeList.get(na), stream);
-        }
-        //TODO: add the rest
     }
 
     void processMasternodeBroadcast(MasternodeBroadcast mnb)
@@ -265,6 +388,22 @@ public class MasternodeManager extends Message {
         }
     }
 
+    public int countEnabled() { return countEnabled(-1); }
+    public int countEnabled(int protocolVersion)
+    {
+        int i = 0;
+        protocolVersion = protocolVersion == -1 ? params.masternodePayments.getMinMasternodePaymentsProto() : protocolVersion;
+
+        //BOOST_FOREACH(CMasternode& mn, vMasternodes)
+        for(Masternode mn : vMasternodes){
+            mn.check();
+            if(mn.protocolVersion < protocolVersion || !mn.isEnabled()) continue;
+            i++;
+        }
+
+        return i;
+    }
+
     public void remove(TransactionInput vin)
     {
         try {
@@ -334,18 +473,19 @@ public class MasternodeManager extends Message {
 
             //If header is not stored, then return the tip
             //TODO:  remove this or the whole function;
-            if((head.getHeight() - SPVBlockStore.DEFAULT_NUM_HEADERS) > height)
-                return head.getHeader().getHash();
+            if((head.getHeight() - 2050) > height)
+                return null;
 
             StoredBlock cursor = head;
-            while (head.getHeight() != height) {
+            while (cursor != null && cursor.getHeight() != height) {
                 cursor = cursor.getPrev(blockStore);
             }
-            return cursor.getHeader().getHash();
+
+            return cursor != null ? cursor.getHeader().getHash() : null;
 
         } catch(BlockStoreException x)
         {
-            return blockChain.getChainHead().getHeader().getHash();
+            return null;
         }
     }
 
@@ -379,14 +519,23 @@ public class MasternodeManager extends Message {
         if(blockChain.getChainHead().getHeight() < nBlockHeight)
             return -1;
 
+        //Added to speed things up
+        Masternode mnExisting = find(vin);
+        if(mnExisting == null)
+            return -1;
+
+        Sha256Hash hash = getBlockHash(nBlockHeight);
+        if(hash == null) {
+            return -2;
+        }
          // scan for winner
-        for(Masternode mn : vMasternodes) {
+        else for(Masternode mn : vMasternodes) {
             if(mn.protocolVersion < minProtocol) continue;
             if(fOnlyActive) {
                 mn.check();
                 if(!mn.isEnabled()) continue;
             }
-            Sha256Hash n = mn.calculateScore(1, nBlockHeight);
+            Sha256Hash n = mn.calculateScore(1, hash);
             //int64_t n2 = n.GetCompact(false);
             long n2 = Utils.encodeCompactBits(new BigInteger(n.getBytes()));
 
@@ -416,12 +565,6 @@ public class MasternodeManager extends Message {
         //std::vector<pair<int64_t, CTxIn> > vecMasternodeScores;
         ArrayList<Pair<Long, TransactionInput>> vecMasternodeScores = new ArrayList<Pair<Long, TransactionInput>>(3000);
 
-        //make sure we know about this block
-        //uint256 hash = 0;
-        //if(!GetBlockHash(hash, nBlockHeight)) return -1;
-        //if(blockChain.getChainHead().getHeight() < nBlockHeight)
-        //   return -1;
-
         // scan for winner
         for(Masternode mn : vMasternodes) {
             if(mn.protocolVersion < minProtocol) continue;
@@ -437,12 +580,7 @@ public class MasternodeManager extends Message {
         }
 
 
-        //sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareScoreTxIn());
-        //vecMasternodeScores.sort(new CompareScoreTxIn());
-
         Arrays.sort(vecMasternodeScores.toArray(), new CompareScoreTxIn());
-
-
 
         int rank = 0;
         for (Pair<Long, TransactionInput> s : vecMasternodeScores) {
@@ -466,124 +604,185 @@ public class MasternodeManager extends Message {
 
     }
 
+    public void checkAndRemove() { checkAndRemove(false); }
     public void checkAndRemove(boolean forceExpiredRemoval)
     {
         check();
 
         lock.lock();
+        try {
 
-        //remove inactive and outdated
-        //vector<CMasternode>::iterator it = vMasternodes.begin();
-        Iterator<Masternode> it = vMasternodes.iterator();
+            //remove inactive and outdated
+            //vector<CMasternode>::iterator it = vMasternodes.begin();
+            Iterator<Masternode> it = vMasternodes.iterator();
 
-        while(it.hasNext()){
-            Masternode mn = it.next();
-            if(mn.activeState == Masternode.MASTERNODE_REMOVE ||
-                    mn.activeState == Masternode.MASTERNODE_VIN_SPENT ||
-                    (forceExpiredRemoval && mn.activeState == Masternode.MASTERNODE_EXPIRED) ||
-            mn.protocolVersion < params.masternodePayments.getMinMasternodePaymentsProto()) {
-                log.info("masternode-CMasternodeMan: Removing inactive Masternode {} - {} now", mn.address.toString(), size() - 1);
+            while (it.hasNext()) {
+                Masternode mn = it.next();
+                if (mn.activeState == Masternode.MASTERNODE_REMOVE ||
+                        mn.activeState == Masternode.MASTERNODE_VIN_SPENT ||
+                        (forceExpiredRemoval && mn.activeState == Masternode.MASTERNODE_EXPIRED) ||
+                        mn.protocolVersion < params.masternodePayments.getMinMasternodePaymentsProto()) {
+                    log.info("masternode-CMasternodeMan: Removing inactive Masternode {} - {} now", mn.address.toString(), size() - 1);
 
-                //erase all of the broadcasts we've seen from this vin
-                // -- if we missed a few pings and the node was removed, this will allow is to get it back without them
-                //    sending a brand new mnb
-                //map<uint256, CMasternodeBroadcast>::iterator it3 = mapSeenMasternodeBroadcast.begin();
-                Iterator<Map.Entry<Sha256Hash, MasternodeBroadcast>> it3 = mapSeenMasternodeBroadcast.entrySet().iterator();
-                while(it3.hasNext()){
-                    Map.Entry<Sha256Hash, MasternodeBroadcast> mb = it3.next();
-                    if(mb.getValue().vin == mn.vin){
-                        params.masternodeSync.mapSeenSyncMNB.remove(mb.getKey());
-                        //mapSeenMasternodeBroadcast.remove(mb.getKey(), mb.getValue());
-                        it3.remove();
+                    //erase all of the broadcasts we've seen from this vin
+                    // -- if we missed a few pings and the node was removed, this will allow is to get it back without them
+                    //    sending a brand new mnb
+                    //map<uint256, CMasternodeBroadcast>::iterator it3 = mapSeenMasternodeBroadcast.begin();
+                    Iterator<Map.Entry<Sha256Hash, MasternodeBroadcast>> it3 = mapSeenMasternodeBroadcast.entrySet().iterator();
+                    while (it3.hasNext()) {
+                        Map.Entry<Sha256Hash, MasternodeBroadcast> mb = it3.next();
+                        if (mb.getValue().vin == mn.vin) {
+                            params.masternodeSync.mapSeenSyncMNB.remove(mb.getKey());
+                            //mapSeenMasternodeBroadcast.remove(mb.getKey(), mb.getValue());
+                            it3.remove();
+                        }
+                    }
+
+                    // allow us to ask for this masternode again if we see another ping
+                    //map<COutPoint, int64_t>::iterator it2 = mWeAskedForMasternodeListEntry.begin();
+                    Iterator<Map.Entry<TransactionOutPoint, Long>> it2 = mWeAskedForMasternodeListEntry.entrySet().iterator();
+                    while (it2.hasNext()) {
+                        Map.Entry<TransactionOutPoint, Long> e = it2.next();
+                        if (e.getKey() == mn.vin.getOutpoint()) {
+                            //mWeAskedForMasternodeListEntry.remove(e.getKey(), e.getValue());
+                            it2.remove();
+                        }
+                    }
+
+                    //it = vMasternodes.erase(it);
+                    it.remove();
+                } else {
+                    //++it;
+                }
+            }
+
+            // check who's asked for the Masternode list
+            //map<CNetAddr, int64_t>::iterator it1 = mAskedUsForMasternodeList.begin();
+            Iterator<Map.Entry<NetAddress, Long>> it1 = mAskedUsForMasternodeList.entrySet().iterator();
+            while (it1.hasNext()) {
+                Map.Entry<NetAddress, Long> e = it1.next();
+                if (e.getValue() < Utils.currentTimeSeconds()) {
+                    //mAskedUsForMasternodeList.erase(it1++);
+                    it.remove();
+                } else {
+                    //++it1;
+                }
+            }
+
+            // check who we asked for the Masternode list
+            //it1 = mWeAskedForMasternodeList.begin();
+            it1 = mWeAskedForMasternodeList.entrySet().iterator();
+            while (it1.hasNext()) {
+                Map.Entry<NetAddress, Long> e = it1.next();
+                if (e.getValue() < Utils.currentTimeSeconds()) {
+                    //mWeAskedForMasternodeList.erase(it1++);
+                    it.remove();
+                } else {
+                    //++it1;
+                }
+            }
+
+            // check which Masternodes we've asked for
+            //map<COutPoint, int64_t>::iterator it2 = mWeAskedForMasternodeListEntry.begin();
+            Iterator<Map.Entry<TransactionOutPoint, Long>> it2 = mWeAskedForMasternodeListEntry.entrySet().iterator();
+            while (it2.hasNext()) {
+                Map.Entry<TransactionOutPoint, Long> e = it2.next();
+                if (e.getValue() < Utils.currentTimeSeconds()) {
+                    //mWeAskedForMasternodeListEntry.erase(it2++);
+                    it2.remove();
+                } else {
+                    //++it2;
+                }
+            }
+
+            // remove expired mapSeenMasternodeBroadcast
+            Iterator<Map.Entry<Sha256Hash, MasternodeBroadcast>> it3 = mapSeenMasternodeBroadcast.entrySet().iterator();
+
+            while (it3.hasNext()) {
+                Map.Entry<Sha256Hash, MasternodeBroadcast> mb = it3.next();
+                if (mb.getValue().lastPing.sigTime < Utils.currentTimeSeconds() - (Masternode.MASTERNODE_REMOVAL_SECONDS * 2)) {
+                    //mapSeenMasternodeBroadcast.erase(it3++);
+
+                    params.masternodeSync.mapSeenSyncMNB.remove(mb.getValue().getHash());
+
+                    it3.remove();
+                } else {
+                    //++it3;
+                }
+            }
+
+            // remove expired mapSeenMasternodePing
+            Iterator<Map.Entry<Sha256Hash, MasternodePing>> it4 = mapSeenMasternodePing.entrySet().iterator();
+            while (it4.hasNext()) {
+                Map.Entry<Sha256Hash, MasternodePing> mp = it4.next();
+                if (mp.getValue().sigTime < Utils.currentTimeSeconds() - (Masternode.MASTERNODE_REMOVAL_SECONDS * 2)) {
+                    //mapSeenMasternodePing.erase(it4++);
+                    it4.remove();
+                } else {
+                    //++it4;
+                }
+            }
+        }
+        finally {
+            lock.unlock();
+        }
+
+    }
+
+    void dsegUpdate(Peer pnode)
+    {
+        lock.lock();
+
+        try {
+
+            if (params.getId().equals(NetworkParameters.ID_MAINNET)) {
+                if (!(pnode.getAddress().getAddr().isAnyLocalAddress() || pnode.getAddress().getAddr().isLoopbackAddress())) {
+                   //std::map < CNetAddr, int64_t >::iterator it = mWeAskedForMasternodeList.find(pnode -> addr);
+                    Iterator<Map.Entry<NetAddress, Long>> it = mWeAskedForMasternodeList.entrySet().iterator();
+                    if (it.hasNext()) {
+
+                        if (Utils.currentTimeSeconds() < it.next().getValue()){
+                            log.info("dseg - we already asked {} for the list; skipping...", pnode.getAddress().toString());
+                            return;
+                        }
                     }
                 }
+            }
 
-                // allow us to ask for this masternode again if we see another ping
-                //map<COutPoint, int64_t>::iterator it2 = mWeAskedForMasternodeListEntry.begin();
-                Iterator<Map.Entry<TransactionOutPoint, Long>> it2 = mWeAskedForMasternodeListEntry.entrySet().iterator();
-                while(it2.hasNext()){
-                    Map.Entry<TransactionOutPoint, Long> e = it2.next();
-                    if(e.getKey() == mn.vin.getOutpoint()){
-                        //mWeAskedForMasternodeListEntry.remove(e.getKey(), e.getValue());
-                        it2.remove();
-                    }
+            pnode.sendMessage(new DarkSendEntryGetMessage(new TransactionInput(params,null, new byte[0])));
+            //pnode -> PushMessage("dseg", CTxIn());
+            long askAgain = Utils.currentTimeSeconds() + MasternodeManager.MASTERNODES_DSEG_SECONDS;
+            mWeAskedForMasternodeList.put(new NetAddress(pnode.getAddress().getAddr()),askAgain);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void processMasternodeConnections()
+    {
+        //we don't care about this for regtest
+        if(params.getId().equals(NetworkParameters.ID_REGTEST)) return;
+
+        ReentrantLock nodeLock = context.peerGroup.getLock();
+
+        nodeLock.lock();
+        try {
+
+            //BOOST_FOREACH(CNode * pnode, vNodes)
+            for(Peer pnode : context.peerGroup.getConnectedPeers())
+            {
+                if (pnode.isDarkSendMaster()) {
+                    if (params.darkSendPool.submittedToMasternode != null && pnode.getAddress().getAddr().equals(params.darkSendPool.submittedToMasternode.address.getAddr()))
+                        continue;
+                    log.info("Closing Masternode connection {}", pnode.getAddress());
+                    //pnode -> fDisconnect = true;
+                    //pnode.close();
                 }
 
-                //it = vMasternodes.erase(it);
-                it.remove();
-            } else {
-                //++it;
             }
+        } finally {
+            nodeLock.unlock();
         }
-
-        // check who's asked for the Masternode list
-        //map<CNetAddr, int64_t>::iterator it1 = mAskedUsForMasternodeList.begin();
-        Iterator<Map.Entry<NetAddress, Long>> it1 = mAskedUsForMasternodeList.entrySet().iterator();
-        while(it1.hasNext()){
-            Map.Entry<NetAddress, Long> e = it1.next();
-            if(e.getValue() < Utils.currentTimeSeconds()) {
-                //mAskedUsForMasternodeList.erase(it1++);
-                it.remove();
-            } else {
-                //++it1;
-            }
-        }
-
-        // check who we asked for the Masternode list
-        //it1 = mWeAskedForMasternodeList.begin();
-        it1 = mWeAskedForMasternodeList.entrySet().iterator();
-        while(it1.hasNext()){
-            Map.Entry<NetAddress, Long> e = it1.next();
-            if(e.getValue() < Utils.currentTimeSeconds()){
-                //mWeAskedForMasternodeList.erase(it1++);
-                it.remove();
-            } else {
-                //++it1;
-            }
-        }
-
-        // check which Masternodes we've asked for
-        //map<COutPoint, int64_t>::iterator it2 = mWeAskedForMasternodeListEntry.begin();
-        Iterator<Map.Entry<TransactionOutPoint, Long>> it2 = mWeAskedForMasternodeListEntry.entrySet().iterator();
-        while(it2.hasNext()){
-            Map.Entry<TransactionOutPoint, Long> e = it2.next();
-            if(e.getValue() < Utils.currentTimeSeconds()){
-                //mWeAskedForMasternodeListEntry.erase(it2++);
-                it2.remove();
-            } else {
-                //++it2;
-            }
-        }
-
-        // remove expired mapSeenMasternodeBroadcast
-        Iterator<Map.Entry<Sha256Hash, MasternodeBroadcast>> it3 = mapSeenMasternodeBroadcast.entrySet().iterator();
-
-        while(it3.hasNext()){
-            Map.Entry<Sha256Hash, MasternodeBroadcast> mb = it3.next();
-            if(mb.getValue().lastPing.sigTime < Utils.currentTimeSeconds()-(Masternode.MASTERNODE_REMOVAL_SECONDS*2)){
-                //mapSeenMasternodeBroadcast.erase(it3++);
-
-                params.masternodeSync.mapSeenSyncMNB.remove(mb.getValue().getHash());
-
-                it.remove();
-            } else {
-                //++it3;
-            }
-        }
-
-        // remove expired mapSeenMasternodePing
-        Iterator<Map.Entry<Sha256Hash, MasternodePing>> it4 = mapSeenMasternodePing.entrySet().iterator();
-        while(it4.hasNext()){
-            Map.Entry<Sha256Hash, MasternodePing> mp = it4.next();
-            if(mp.getValue().sigTime < Utils.currentTimeSeconds()-(Masternode.MASTERNODE_REMOVAL_SECONDS*2)){
-                //mapSeenMasternodePing.erase(it4++);
-                it4.remove();
-            } else {
-                //++it4;
-            }
-        }
-        lock.unlock();
-
     }
 
 }

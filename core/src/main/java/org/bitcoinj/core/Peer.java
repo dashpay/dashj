@@ -424,6 +424,9 @@ public class Peer extends PeerSocketHandler {
         else if(m instanceof ConsensusVote) {
             params.instantx.processConsensusVoteMessage(this, (ConsensusVote)m);
         }
+        else if(m instanceof SyncStatusCount) {
+            params.masternodeSync.processSyncStatusCount((SyncStatusCount)m);
+        }
         else
         {
             log.warn("{}: Received unhandled message: {}", this, m);
@@ -2085,4 +2088,36 @@ public class Peer extends PeerSocketHandler {
             }
         }
     }
+    ArrayList<String> vecRequestsFulfilled = new ArrayList<String>();
+
+    boolean hasFulfilledRequest(String strRequest)
+    {
+        //BOOST_FOREACH(std::string& type, vecRequestsFulfilled)
+        for(String type: vecRequestsFulfilled)
+        {
+            if(type.equals(strRequest)) return true;
+        }
+        return false;
+    }
+
+    void clearFulfilledRequest(String strRequest)
+    {
+        //std::vector<std::string>::iterator it = vecRequestsFulfilled.begin();
+        Iterator<String> it = vecRequestsFulfilled.iterator();
+        while(it.hasNext()){
+            if(it.next().equals(strRequest)) {
+                it.remove();
+                return;
+            }
+        }
+    }
+
+    void fulfilledRequest(String strRequest)
+    {
+        if(hasFulfilledRequest(strRequest)) return;
+        vecRequestsFulfilled.add(strRequest);
+    }
+
+    boolean fDarkSendMaster = false;
+    public boolean isDarkSendMaster() { return fDarkSendMaster; }
 }

@@ -84,6 +84,7 @@ public class BitcoinSerializer {
         names.put(SporkMessage.class, "spork");
         names.put(GetSporksMessage.class, "getsporks");
         names.put(DarkSendEntryGetMessage.class, "dseg");
+        names.put(SyncStatusCount.class, "ssc");
 
 
     }
@@ -267,6 +268,8 @@ public class BitcoinSerializer {
             return new MasternodePing(params, payloadBytes);
         } else if (command.equals("spork")) {
             return new SporkMessage(params, payloadBytes, 0);
+        } else if(command.equals("ssc")) {
+            return new SyncStatusCount(params, payloadBytes);
         }
         else{
             log.warn("No support for deserializing message with name {}", command);

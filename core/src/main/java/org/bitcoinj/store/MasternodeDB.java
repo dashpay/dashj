@@ -7,16 +7,17 @@ package org.bitcoinj.store;
 /** Access to the MN database (mncache.dat)
  */
 
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import org.bitcoinj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.Arrays;
 
 public class MasternodeDB {
     private static final Logger log = LoggerFactory.getLogger(MasternodeDB.class);
     private static String pathMN;
+    private static String directory;
     private final static String strMagicMessage = "MasternodeCache";
     public enum ReadResult {
         Ok,
@@ -31,16 +32,50 @@ public class MasternodeDB {
 
     ReadResult lastReadResult = ReadResult.NoResult;
 
-    MasternodeDB(String directory) {
-        pathMN = directory + "mncache.dat";
+    Context context;
+
+    public MasternodeDB()
+    {
+        context = Context.get();
     }
-    boolean Write(MasternodeManager mnodemanToSave) {
+    public MasternodeDB(String directory) {
+        context = Context.get();
+        setPath(directory);
+    }
+
+    String getFileName()
+    {
+        if(context.getParams().getId().equals(NetworkParameters.ID_MAINNET))
+            return "mncache.dat";
+        if(context.getParams().getId().equals(NetworkParameters.ID_TESTNET))
+            return "mncache-testnet.dat";
+        return "mncache-other.dat";
+
+    }
+
+    void setPath(File directory)
+    {
+        this.directory = directory.getAbsolutePath();
+        pathMN = directory.getAbsolutePath() + "/" + getFileName();
+    }
+
+    void setPath(String directory)
+    {
+        this.directory = directory;
+        pathMN = directory + "/" + getFileName();
+    }
+    public String getDirectory()
+    {
+        return directory;
+    }
+
+    public boolean write(MasternodeManager mnodemanToSave) {
 
         try {
             long nStart = Utils.currentTimeMillis();
 
             // serialize, checksum data up to that point, then append checksum
-            UnsafeByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(strMagicMessage.length()+4+mnodemanToSave.getMessageSize());
+            UnsafeByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(mnodemanToSave.calculateMessageSizeInBytes()+4+strMagicMessage.getBytes().length);
             stream.write(strMagicMessage.getBytes());
             Utils.uint32ToByteStreamLE(mnodemanToSave.getParams().getPacketMagic(), stream);
             mnodemanToSave.bitcoinSerialize(stream);
@@ -68,8 +103,8 @@ public class MasternodeDB {
             fileStream.close();
             //fileout.fclose();
 
-            log.info("Written info to mncache.dat  %dms\n", Utils.currentTimeMillis() - nStart);
-            log.info("  %s\n", mnodemanToSave.toString());
+            log.info("Written info to mncache.dat  {}ms\n", Utils.currentTimeMillis() - nStart);
+            log.info("  {}\n", mnodemanToSave.toString());
 
             return true;
 
@@ -80,7 +115,7 @@ public class MasternodeDB {
         }
     }
 
-    MasternodeManager Read(NetworkParameters params, boolean fDryRun) {
+    public MasternodeManager read(NetworkParameters params, boolean fDryRun) {
 
         long nStart = Utils.currentTimeMillis();
         MasternodeManager manager = null;
@@ -129,13 +164,13 @@ public class MasternodeDB {
 
             // verify stored checksum matches input data
             Sha256Hash hashTmp = Sha256Hash.twiceOf(vchData);
-            if (!hashIn.equals(hashTmp)) {
+            if (!Arrays.equals(hashIn, hashTmp.getBytes())) {
                 log.error("Checksum mismatch, data corrupted");
                 lastReadResult = ReadResult.IncorrectHash;
                 return null;
             }
 
-            int pchMsgTmp;
+            long pchMsgTmp;
             String strMagicMessageTmp;
             try {
                 // de-serialize file header (masternode cache file specific magic message) and ..
@@ -144,7 +179,7 @@ public class MasternodeDB {
                 strMagicMessageTmp = new String(vchData, 0, strMagicMessage.length());
 
                 // ... verify the message matches predefined one
-                if (strMagicMessage != strMagicMessageTmp) {
+                if (!strMagicMessage.equals(strMagicMessageTmp)) {
                     log.error("Invalid masternode cache magic message");
                     lastReadResult = ReadResult.IncorrectMagicMessage;
                     return null;
@@ -155,7 +190,7 @@ public class MasternodeDB {
                 pchMsgTmp = (int)Utils.readUint32(vchData, strMagicMessage.length());
 
                 // ... verify the network matches ours
-                if (pchMsgTmp == params.getPacketMagic()) {
+                if (pchMsgTmp != params.getPacketMagic()) {
                     log.error("Invalid network magic number");
                     lastReadResult = ReadResult.IncorrectMagicNumber;
                     return null;
@@ -188,8 +223,41 @@ public class MasternodeDB {
             return null;
         }
     }
-        MasternodeManager Read(NetworkParameters params) {
-            return Read(params, false);
+        MasternodeManager read(NetworkParameters params) {
+            return read(params, false);
         }
+
+    public static void dumpMasternodes()
+    {
+        long nStart = Utils.currentTimeMillis();
+
+        NetworkParameters params = Context.get().getParams();
+
+        MasternodeDB mndb = new MasternodeDB(params.masternodeDB.getDirectory());
+        MasternodeManager tempMnodeman;
+
+        log.info("Verifying mncache.dat format...");
+        //CMasternodeDB::ReadResult readResult =
+        tempMnodeman = mndb.read(params, true);
+        MasternodeDB.ReadResult readResult = mndb.lastReadResult;
+        // there was an error and it was not an error on file opening => do not proceed
+        if (readResult == MasternodeDB.ReadResult.FileError)
+            log.info("Missing masternode cache file - mncache.dat, will try to recreate");
+        else if (readResult != MasternodeDB.ReadResult.Ok)
+        {
+            log.info("Error reading mncache.dat: ");
+            if(readResult == MasternodeDB.ReadResult.IncorrectFormat)
+                log.info("magic is ok but data has invalid format, will try to recreate");
+            else
+            {
+                log.info("file format is unknown or invalid, please fix it manually");
+                return;
+            }
+        }
+        log.info("Writing info to mncache.dat...\n");
+        mndb.write(params.masternodeManager);
+
+        log.info("Masternode dump finished  {}ms", Utils.currentTimeMillis() - nStart);
+    }
 };
 

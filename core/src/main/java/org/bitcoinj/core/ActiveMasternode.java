@@ -57,4 +57,10 @@ public class ActiveMasternode {
 
         return true;
     }
+
+    public void manageStatus() {
+        //std::string errorMessage;
+
+        if (!DarkCoinSystem.fMasterNode) return;
+    }
 }

@@ -24,6 +24,7 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptOpCodes;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.store.MasternodeDB;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.darkcoinj.DarkSendPool;
 import org.darkcoinj.InstantXSystem;
@@ -116,12 +117,33 @@ public abstract class NetworkParameters implements Serializable {
     public ActiveMasternode activeMasternode;
     public DarkSendPool darkSendPool;
     public InstantXSystem instantx;
+    public MasternodeDB masternodeDB;
 
     //Dash Extra Parameters
-    String strSporkKey = "04549ac134f694c0243f503e8c8a9a986f5de6610049c40b07816809b0d1d06a21b07be27b9bb555931773f62ba6cf35a25fd52f694d4e1106ccd237a7bb899fdd";
+    protected String strSporkKey;
     String strMasternodePaymentsPubKey;
     String strDarksendPoolDummyAddress;
     long nStartMasternodePayments;
+
+    public void initDash(String directory)
+    {
+        //Dash Specific
+        sporkManager = new SporkManager(this);
+
+        masternodePayments = new MasternodePayments(this);
+        masternodeSync = new MasternodeSync(this);
+        activeMasternode = new ActiveMasternode(this);
+        darkSendPool = new DarkSendPool(this);
+        instantx = new InstantXSystem(this);
+        masternodeDB = new MasternodeDB(directory);
+
+        masternodeManager = masternodeDB.read(this, false);
+        if(masternodeManager == null)
+            masternodeManager = new MasternodeManager(this);
+
+        //other functions;
+        darkSendPool.startBackgroundThread();
+    }
 
     public String getSporkKey() {
         return strSporkKey;
@@ -130,15 +152,6 @@ public abstract class NetworkParameters implements Serializable {
     protected NetworkParameters() {
         alertSigningKey = SATOSHI_KEY;
         genesisBlock = createGenesis(this);
-
-        //Dash Specific
-        sporkManager = new SporkManager(this);
-        masternodeManager = new MasternodeManager(this);
-        masternodePayments = new MasternodePayments(this);
-        masternodeSync = new MasternodeSync(this);
-        activeMasternode = new ActiveMasternode(this);
-        darkSendPool = new DarkSendPool(this);
-        instantx = new InstantXSystem(this);
     }
     //TODO:  put these bytes into the CoinDefinition
     private static Block createGenesis(NetworkParameters n) {
