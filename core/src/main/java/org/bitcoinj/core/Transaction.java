@@ -606,7 +606,7 @@ public class Transaction extends ChildMessage implements Serializable {
         if (!isCoinBase())
             return true;
 
-        if (getConfidence().getConfidenceType() != ConfidenceType.BUILDING || getConfidence().getConfidenceType() != ConfidenceType.INSTANTX_LOCKED)
+        if (getConfidence().getConfidenceType() != ConfidenceType.BUILDING)
             return false;
 
         return getConfidence().getDepthInBlocks() >= params.getSpendableCoinbaseDepth();
