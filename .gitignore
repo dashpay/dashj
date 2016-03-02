@@ -9,3 +9,8 @@ obj/
 libs/
 *.chain
 *.spvchain
+*.wallet
+checkpoints.txt
+checkpoints-testnet.txt
+*.dat
+*.tmp
