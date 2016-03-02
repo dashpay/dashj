@@ -249,10 +249,12 @@ public class MasternodeManager extends Message {
 
     void processMasternodeBroadcast(MasternodeBroadcast mnb)
     {
+        //log.info("processMasternodeBroadcast:  hash={}", mnb.getHash());
         if(mapSeenMasternodeBroadcast.containsKey(mnb.getHash())) { //seen
             params.masternodeSync.addedMasternodeList(mnb.getHash());
             return;
         }
+
         mapSeenMasternodeBroadcast.put(mnb.getHash(), mnb);
 
         int nDoS = 0;
@@ -279,7 +281,7 @@ public class MasternodeManager extends Message {
             // use this as a peer
             //TODO:  Is this possible?
             //addrman.Add(CAddress(mnb.addr), pfrom->addr, 2*60*60);
-            params.masternodeSync.addedMasternodeList(mnb.getHash());
+            //params.masternodeSync.addedMasternodeList(mnb.getHash());
         } else {
             log.info("mnb - Rejected Masternode entry "+ mnb.address.toString());
 
@@ -289,9 +291,10 @@ public class MasternodeManager extends Message {
     }
     void processMasternodePing(Peer peer, MasternodePing mnp)
     {
-        log.info("masternode - mnp - Masternode ping, vin: " + mnp.vin.toString());
+        //log.info("masternode - mnp - Masternode ping(hash={}, vin: {}", mnp.getHash(), mnp.vin.toString());
 
-        if(mapSeenMasternodePing.containsKey(mnp.getHash())) return; //seen
+        if(mapSeenMasternodePing.containsKey(mnp.getHash()))
+            return; //seen
         mapSeenMasternodePing.put(mnp.getHash(), mnp);
 
         int nDoS = 0;
@@ -394,11 +397,16 @@ public class MasternodeManager extends Message {
         int i = 0;
         protocolVersion = protocolVersion == -1 ? params.masternodePayments.getMinMasternodePaymentsProto() : protocolVersion;
 
-        //BOOST_FOREACH(CMasternode& mn, vMasternodes)
-        for(Masternode mn : vMasternodes){
-            mn.check();
-            if(mn.protocolVersion < protocolVersion || !mn.isEnabled()) continue;
-            i++;
+        lock.lock();
+        try {
+            //BOOST_FOREACH(CMasternode& mn, vMasternodes)
+            for (Masternode mn : vMasternodes) {
+                mn.check();
+                if (mn.protocolVersion < protocolVersion || !mn.isEnabled()) continue;
+                i++;
+            }
+        } finally {
+            lock.unlock();
         }
 
         return i;
@@ -663,7 +671,7 @@ public class MasternodeManager extends Message {
                 Map.Entry<NetAddress, Long> e = it1.next();
                 if (e.getValue() < Utils.currentTimeSeconds()) {
                     //mAskedUsForMasternodeList.erase(it1++);
-                    it.remove();
+                    it1.remove();
                 } else {
                     //++it1;
                 }
@@ -676,7 +684,7 @@ public class MasternodeManager extends Message {
                 Map.Entry<NetAddress, Long> e = it1.next();
                 if (e.getValue() < Utils.currentTimeSeconds()) {
                     //mWeAskedForMasternodeList.erase(it1++);
-                    it.remove();
+                    it1.remove();
                 } else {
                     //++it1;
                 }

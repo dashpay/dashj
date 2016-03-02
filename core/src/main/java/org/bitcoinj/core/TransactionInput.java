@@ -286,6 +286,21 @@ public class TransactionInput extends ChildMessage implements Serializable {
         }
     }
 
+    String toStringCpp()
+    {
+        String str;
+        str = "CTxIn(";
+        str = str + getOutpoint().toStringCpp();
+        if (isCoinBase())
+            str = str + ", coinbase " + scriptSig.toString();
+        else
+            str = str + ", scriptSig="+ (getScriptSig().getChunks().size() != 0 ? getScriptSig().toString().substring(0,24) : "");
+        if (this.sequence != 4294967295L)
+            str = str + ", nSequence=" + sequence;
+        str = str + ")";
+        return str;
+    }
+
     public enum ConnectionResult {
         NO_SUCH_TX,
         ALREADY_SPENT,

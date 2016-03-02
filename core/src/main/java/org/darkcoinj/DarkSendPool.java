@@ -200,6 +200,10 @@ public class DarkSendPool {
                             params.masternodePayments.cleanPaymentList();
                             params.instantx.cleanTransactionLocksList();
                         }
+                        //hashengineering added this
+                        if(c % 30 == 0) {
+                            log.info(params.masternodeManager.toString());
+                        }
 
                         //if(c % MASTERNODES_DUMP_SECONDS == 0) DumpMasternodes();
 
@@ -220,14 +224,16 @@ public class DarkSendPool {
         }
     };
 
-    boolean backgroundRunning = false;
+    Thread backgroundThread;
     //dash
-    public void startBackgroundThread()
+    public boolean startBackgroundProcessing()
     {
-        if(!backgroundRunning)
+        if(backgroundThread == null)
         {
-            backgroundRunning = true;
-            new ContextPropagatingThreadFactory("dash-darksend").newThread(ThreadCheckDarkSendPool).start();
+            backgroundThread = new ContextPropagatingThreadFactory("dash-darksend").newThread(ThreadCheckDarkSendPool);
+            backgroundThread.start();
+            return true;
         }
+        return false;
     }
 }

@@ -119,8 +119,16 @@ public class MasternodeBroadcast extends Masternode {
         byte [] dataToHash = new byte[pubkey.getBytes().length+8];
         Utils.uint32ToByteArrayLE(sigTime, dataToHash, 0);
         System.arraycopy(pubkey.getBytes(), 0, dataToHash, 8, pubkey.getBytes().length);
-
-        return Sha256Hash.twiceOf(dataToHash);
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(8 + pubkey.calculateMessageSizeInBytes());
+            Utils.int64ToByteStreamLE(sigTime, bos);
+            pubkey.bitcoinSerialize(bos);
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice((bos.toByteArray())));
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e); // Cannot happen.
+        }
     }
 
     boolean checkAndUpdate()//int& nDos

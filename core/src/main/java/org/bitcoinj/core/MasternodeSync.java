@@ -1,11 +1,17 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.utils.ListenerRegistration;
+import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.util.HashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Created by Eric on 2/21/2016.
@@ -67,6 +73,8 @@ public class MasternodeSync {
         this.mapSeenSyncMNB = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNW = new HashMap<Sha256Hash, Integer>();
 
+        eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
+
         reset();
     }
 
@@ -100,6 +108,10 @@ public class MasternodeSync {
             if(count != null && count < MASTERNODE_SYNC_THRESHOLD) {
                 lastMasternodeList = Utils.currentTimeSeconds();
                 mapSeenSyncMNB.put(hash, mapSeenSyncMNB.get(hash)+1);
+            }
+            else {
+                mapSeenSyncMNB.put(hash, 1);
+                lastMasternodeList = Utils.currentTimeSeconds();
             }
         } else {
             lastMasternodeList = Utils.currentTimeSeconds();
@@ -162,21 +174,25 @@ public class MasternodeSync {
                 RequestedMasternodeAssets = MASTERNODE_SYNC_LIST;
                 break;
             case(MASTERNODE_SYNC_LIST):
-                RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;
+           /*     RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;  //TODO:  Reactivate when sync needs Winners and Budget
                 break;
             case(MASTERNODE_SYNC_MNW):
                 RequestedMasternodeAssets = MASTERNODE_SYNC_BUDGET;
                 break;
-            case(MASTERNODE_SYNC_BUDGET):
+            case(MASTERNODE_SYNC_BUDGET):*/
                 log.info("CMasternodeSync::GetNextAsset - Sync has finished");
                 RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
                 break;
         }
         RequestedMasternodeAttempt = 0;
         nAssetSyncStarted = Utils.currentTimeSeconds();
+        queueOnSyncStatusChanged(RequestedMasternodeAssets);
     }
 
-    String getSyncStatus()
+    public int getSyncStatusInt()
+    { return RequestedMasternodeAssets; }
+
+    public String getSyncStatus()
     {
         switch (RequestedMasternodeAssets) {
             case MASTERNODE_SYNC_INITIAL: return ("Synchronization pending...");
@@ -229,6 +245,9 @@ public class MasternodeSync {
         //TRY_LOCK(cs_vNodes, lockRecv);
         //if(!lockRecv) return;
 
+        if(context.peerGroup == null)
+            return;
+
         ReentrantLock nodeLock = context.peerGroup.getLock();
 
         if(!nodeLock.tryLock())
@@ -268,6 +287,8 @@ public class MasternodeSync {
         //if(!lockMain) return false;
 
         //CBlockIndex* pindex = chainActive.Tip();
+        if(blockChain == null)
+            return false;
         StoredBlock tip = blockChain.getChainHead();
         if(tip == null) return false;
 
@@ -316,6 +337,9 @@ public class MasternodeSync {
 
         //TRY_LOCK(cs_vNodes, lockRecv);
         //if(!lockRecv) return;
+
+        if(context.peerGroup == null)
+            return;
 
         ReentrantLock nodeLock = context.peerGroup.getLock();
 
@@ -371,7 +395,7 @@ public class MasternodeSync {
                         if (lastMasternodeList == 0 &&
                                 (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || Utils.currentTimeSeconds() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
                             if (params.sporkManager.isSporkActive(SporkManager.SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
-                                log.info("CMasternodeSync::Process - ERROR - Sync has failed, will retry later");
+                                log.info("CMasternodeSync::Process - ERROR - Masternode Sync has failed, will retry later");
                                 RequestedMasternodeAssets = MASTERNODE_SYNC_FAILED;
                                 RequestedMasternodeAttempt = 0;
                                 lastFailure = Utils.currentTimeSeconds();
@@ -402,7 +426,7 @@ public class MasternodeSync {
                         if (lastMasternodeWinner == 0 &&
                                 (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || Utils.currentTimeSeconds() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
                             if (params.sporkManager.isSporkActive(SporkManager.SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
-                                log.info("CMasternodeSync::Process - ERROR - Sync has failed, will retry later");
+                                log.info("CMasternodeSync::Process - ERROR - Masternode Winner Sync has failed, will retry later");
                                 RequestedMasternodeAssets = MASTERNODE_SYNC_FAILED;
                                 RequestedMasternodeAttempt = 0;
                                 lastFailure = Utils.currentTimeSeconds();
@@ -472,6 +496,53 @@ public class MasternodeSync {
             }
         } finally {
             nodeLock.unlock();
+        }
+    }
+
+    /******************************************************************************************************************/
+
+    //region Event listeners
+    private transient CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>> eventListeners;
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addEventListener(MasternodeSyncListener listener) {
+        addEventListener(listener, Threading.USER_THREAD);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addEventListener(MasternodeSyncListener listener, Executor executor) {
+        // This is thread safe, so we don't need to take the lock.
+        eventListeners.add(new ListenerRegistration<MasternodeSyncListener>(listener, executor));
+        //keychain.addEventListener(listener, executor);
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeEventListener(MasternodeSyncListener listener) {
+        //keychain.removeEventListener(listener);
+        return ListenerRegistration.removeFromList(listener, eventListeners);
+    }
+
+    private void queueOnSyncStatusChanged(int newStatus) {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<MasternodeSyncListener> registration : eventListeners) {
+            if (registration.executor == Threading.SAME_THREAD) {
+                registration.listener.onSyncStatusChanged(RequestedMasternodeAssets);
+            } else {
+                registration.executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        registration.listener.onSyncStatusChanged(RequestedMasternodeAssets);
+                    }
+                });
+            }
         }
     }
 }

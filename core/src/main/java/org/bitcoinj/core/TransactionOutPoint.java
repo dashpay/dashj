@@ -196,6 +196,11 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
         return hash + ":" + index;
     }
 
+    public String toStringCpp()
+    {
+        return "COutPoint("+ hash.toString() + ", "+ index +")";
+    }
+
     /**
      * Returns the hash of the transaction this outpoint references/spends/is connected to.
      */

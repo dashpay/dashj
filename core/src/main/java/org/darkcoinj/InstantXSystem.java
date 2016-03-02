@@ -347,6 +347,11 @@ public class InstantXSystem {
            InstantXCoinSelector ixcs = new InstantXCoinSelector(); can help a little
          */
 
+        if(tx.getConfidence().getSource() == TransactionConfidence.Source.SELF)
+        {
+
+
+        }
 
         /*
         Wallet wallet;
@@ -446,20 +451,22 @@ public class InstantXSystem {
         if(n == -1)
         {
             //can be caused by past versions trying to vote with an invalid protocol
-            log.info("instantx - InstantX::ProcessConsensusVote - Unknown Masternode");
+            log.info("instantx - InstantX::ProcessConsensusVote - Unknown Masternode - requesting...");
             params.masternodeManager.askForMN(pnode, ctx.vinMasternode);
             return false;
         }
 
-        /*if(n == -2)
+        if(n == -2)
         {
             //We can't determine the hash for blockHeight, but we will proceed anyways;
         }
         else if(n > INSTANTX_SIGNATURES_TOTAL)
         {
-            log.info("instantx-InstantX::ProcessConsensusVote - Masternode not in the top {} ({}) - {}\n", INSTANTX_SIGNATURES_TOTAL, n, ctx.getHash().toString());
-            return false;
-        }*/
+            log.info("instantx-InstantX::ProcessConsensusVote - Masternode not in the top {} ({}) - {}", INSTANTX_SIGNATURES_TOTAL, n, ctx.getHash().toString());
+            //return false;
+        } else
+            log.info("instantx-InstantX::ProcessConsensusVote - Masternode is the top {} ({}) - {}", INSTANTX_SIGNATURES_TOTAL, n, ctx.getHash());
+
 
         if(!ctx.signatureValid()) {
             log.info("InstantX::ProcessConsensusVote - Signature invalid");
@@ -478,13 +485,17 @@ public class InstantXSystem {
             newLock.txHash = ctx.txHash;
             mapTxLocks.put(ctx.txHash, newLock);
         } else
-            log.info("instantx - InstantX::ProcessConsensusVote - Transaction Lock Exists {} !\n", ctx.txHash.toString());
+            log.info("instantx - InstantX::ProcessConsensusVote - Transaction Lock Exists {} !", ctx.txHash.toString());
 
         //compile consensus vote
         TransactionLock i = mapTxLocks.get(ctx.txHash);
         if (i != null){
             i.addSignature(ctx);
             Transaction tx = mapTxLockReq.get(ctx.txHash);
+            if(tx == null) {
+                log.info("instantx - InstantX::ProcessConsensusVote - Transaction doesn't exist {} mapTxLockReq.size() = {}", ctx.txHash.toString(), mapTxLockReq.size());
+                return false;  //TODO: why is this happening?  Did we not get the "ix"
+            }
             tx.getConfidence().setConsensusVotes(i.countSignatures());
 
             /*#ifdef ENABLE_WALLET
@@ -589,8 +600,7 @@ public class InstantXSystem {
                     tx.getConfidence().setIX(false);
                     tx.getConfidence().setConsensusVotes(0);
                 }
-
-                mapTxLocks.remove(tl);
+                it.remove();
             } else {
 
             }

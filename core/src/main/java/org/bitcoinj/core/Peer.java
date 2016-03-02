@@ -324,8 +324,26 @@ public class Peer extends PeerSocketHandler {
         return versionHandshakeFuture;
     }
 
+    static long startTime = 0;
+    static double dataReceived = 0f;
+    static long count = 1;
     @Override
     protected void processMessage(Message m) throws Exception {
+        if(startTime == 0)
+            startTime = Utils.currentTimeMillis();
+        else
+        {
+            long current = Utils.currentTimeMillis();
+            dataReceived += m.getMessageSize();
+
+            if(count % 50 == 0)
+            {
+                log.info("[bandwidth] " + (dataReceived / 1024 / 1024) + " MiB in " +(current-startTime)/1000 + " s:" + (dataReceived / 1024)/(current-startTime)*1000 + " KB/s");
+            }
+            count++;
+        }
+
+
         // Allow event listeners to filter the message stream. Listeners are allowed to drop messages by
         // returning null.
         for (ListenerRegistration<PeerEventListener> registration : eventListeners) {
@@ -736,250 +754,6 @@ public class Peer extends PeerSocketHandler {
         }
     }
 
-    private void processTransactionLockRequest(TransactionLockRequest tx) throws VerificationException {
-        // Check a few basic syntax issues to ensure the received TX isn't nonsense.
-        tx.verify();
-        final Transaction fTx;
-        lock.lock();
-        InstantXSystem instantx = params.instantx;
-        if(!instantx.isEnabled())
-            return;
-
-        try {
-            log.debug("{}: Received txlreq {}", getAddress(), tx.getHashAsString());
-
-            if(instantx.mapTxLockReq.containsKey(tx.getHash()) || instantx.mapTxLockReqRejected.containsKey(tx.getHash()))
-                return;
-
-            for(TransactionOutput output : tx.getOutputs())
-            {
-                if(!output.getScriptPubKey().isSentToAddress())
-                    throw new VerificationException("Invalid Output on txlreq transaction: " + output.getScriptPubKey().toString());
-            }
-
-            int blockHeight = instantx.createNewLock(tx);
-            //TODO: replace with processTransaction
-            /*if (memoryPool != null) {
-                //We may get back a different transaction object.
-                tx = (TransactionLockRequest)memoryPool.seen(tx, getAddress());
-            }*/
-            fTx = tx;
-            // Label the transaction as coming in from the P2P network (as opposed to being created by us, direct import,
-            // etc). This helps the wallet decide how to risk analyze it later.
-            fTx.getConfidence().setSource(TransactionConfidence.Source.NETWORK);
-            fTx.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.INSTANTX_PENDING);
-            fTx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.TYPE);
-            if (maybeHandleRequestedData(fTx)) {
-                return;
-            }
-
-            instantx.doConsensusVote(tx, blockHeight);
-
-            instantx.mapTxLockReq.put(tx.getHash(), tx);
-
-            log.info("ProcessMessageInstantX::txlreq - Transaction Lock Request: " +
-                    this.getAddress().toString() + " " + this.getVersionMessage().subVer + " : accepted " +
-
-                    tx.getHash()
-            );
-
-            if (currentFilteredBlock != null) {
-                if (!currentFilteredBlock.provideTransaction(tx)) {
-                    // Got a tx that didn't fit into the filtered block, so we must have received everything.
-                    endFilteredBlock(currentFilteredBlock);
-                    currentFilteredBlock = null;
-                }
-                // Don't tell wallets or listeners about this tx as they'll learn about it when the filtered block is
-                // fully downloaded instead.
-                return;
-            }
-            // It's a broadcast transaction. Tell all wallets about this tx so they can check if it's relevant or not.
-            for (final Wallet wallet : wallets) {
-                try {
-                    if (wallet.isPendingTransactionRelevant(fTx)) {
-                        if (vDownloadTxDependencies) {
-                            // This transaction seems interesting to us, so let's download its dependencies. This has
-                            // several purposes: we can check that the sender isn't attacking us by engaging in protocol
-                            // abuse games, like depending on a time-locked transaction that will never confirm, or
-                            // building huge chains of unconfirmed transactions (again - so they don't confirm and the
-                            // money can be taken back with a Finney attack). Knowing the dependencies also lets us
-                            // store them in a serialized wallet so we always have enough data to re-announce to the
-                            // network and get the payment into the chain, in case the sender goes away and the network
-                            // starts to forget.
-                            //
-                            // TODO: Not all the above things are implemented.
-                            //
-                            // Note that downloading of dependencies can end up walking around 15 minutes back even
-                            // through transactions that have confirmed, as getdata on the remote peer also checks
-                            // relay memory not only the mempool. Unfortunately we have no way to know that here. In
-                            // practice it should not matter much.
-                            Futures.addCallback(downloadDependencies(fTx), new FutureCallback<List<Transaction>>() {
-                                @Override
-                                public void onSuccess(List<Transaction> dependencies) {
-                                    try {
-                                        log.info("{}: Dependency download complete!", getAddress());
-                                        wallet.receivePending(fTx, dependencies);
-                                    } catch (VerificationException e) {
-                                        log.error("{}: Wallet failed to process pending transaction {}", getAddress(),
-                                                fTx.getHashAsString());
-                                        log.error("Error was: ", e);
-                                        // Not much more we can do at this point.
-                                    }
-                                }
-
-                                @Override
-                                public void onFailure(Throwable throwable) {
-                                    log.error("Could not download dependencies of tx {}", fTx.getHashAsString());
-                                    log.error("Error was: ", throwable);
-                                    // Not much more we can do at this point.
-                                }
-                            });
-                        } else {
-                            wallet.receivePending(fTx, null);
-                        }
-                    }
-                } catch (VerificationException e) {
-                    log.error("Wallet failed to verify tx", e);
-                    // Carry on, listeners may still want to know.
-                }
-            }
-        } finally {
-            lock.unlock();
-        }
-        // Tell all listeners about this tx so they can decide whether to keep it or not. If no listener keeps a
-        // reference around then the memory pool will forget about it after a while too because it uses weak references.
-        for (final ListenerRegistration<PeerEventListener> registration : eventListeners) {
-            registration.executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    registration.listener.onTransaction(Peer.this, fTx);
-                }
-            });
-        }
-    }
-
-    private void processTransactionLockRequestVote(ConsensusVote ctx) throws VerificationException {
-
-
-        lock.lock();
-        try {
-            InstantXSystem instantx = params.instantx;
-            if(!instantx.isEnabled())
-                return;
-
-            if(instantx.mapTxLockVote.containsKey(ctx.getHash()))
-                return;
-
-            instantx.mapTxLockVote.put(ctx.getHash(), ctx);
-
-            if(true/*instantx.processConsensusVote(ctx)*/) {
-                //Spam/Dos protection
-                /*
-                    Masternodes will sometimes propagate votes before the transaction is known to the client.
-                    This tracks those messages and allows it at the same rate of the rest of the network, if
-                    a peer violates it, it will simply be ignored
-                */
-                if (!instantx.mapTxLockReq.containsKey(ctx.txHash) && !instantx.mapTxLockReqRejected.containsKey(ctx.txHash)) {
-                    if (!instantx.mapUnknownVotes.containsKey(ctx.vinMasternode.getOutpoint().getHash())) {
-                        instantx.mapUnknownVotes.put(ctx.vinMasternode.getOutpoint().getHash(), Utils.currentTimeSeconds() + (60 * 10));
-                    }
-
-                    if (instantx.mapUnknownVotes.get(ctx.vinMasternode.getOutpoint().getHash()) > Utils.currentTimeSeconds() &&
-                            instantx.mapUnknownVotes.get(ctx.vinMasternode.getOutpoint().getHash()) - instantx.getAverageVoteTime() > 60 * 10) {
-                        log.info("ProcessMessageInstantX::txlreq - masternode is spamming transaction votes: %s %s\n",
-                                ctx.vinMasternode.toString(),
-                                ctx.txHash.toString()
-                        );
-                        return;
-                    } else {
-                        instantx.mapUnknownVotes.put(ctx.vinMasternode.getOutpoint().getHash(), Utils.currentTimeMillis() + (60 * 10));
-                    }
-                }
-
-                //vector<CInv> vInv;
-                //vInv.push_back(inv);
-                //LOCK(cs_vNodes);
-                //BOOST_FOREACH(CNode* pnode, vNodes)
-                //pnode->PushMessage("inv", vInv);
-                TransactionLock txl = instantx.mapTxLocks.get(ctx.txHash);
-                if (txl.countSignatures() >= InstantXSystem.INSTANTX_SIGNATURES_REQUIRED) {
-                    final Transaction fTx = instantx.mapTxLockReq.get(txl.txHash);
-                    //fTx.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.INSTANTX_LOCKED);
-                    //fTx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.TYPE);
-
-
-                    for (final Wallet wallet : wallets) {
-                        try {
-                            if (wallet.isPendingTransactionLockRelevant(fTx)) {
-                                wallet.receiveLock(fTx);
-
-                                /*//TODO:?? tx wallet.getTransaction()
-                                if (vDownloadTxDependencies) {
-                                    // This transaction seems interesting to us, so let's download its dependencies. This has
-                                    // several purposes: we can check that the sender isn't attacking us by engaging in protocol
-                                    // abuse games, like depending on a time-locked transaction that will never confirm, or
-                                    // building huge chains of unconfirmed transactions (again - so they don't confirm and the
-                                    // money can be taken back with a Finney attack). Knowing the dependencies also lets us
-                                    // store them in a serialized wallet so we always have enough data to re-announce to the
-                                    // network and get the payment into the chain, in case the sender goes away and the network
-                                    // starts to forget.
-                                    //
-                                    // TODO: Not all the above things are implemented.
-                                    //
-                                    // Note that downloading of dependencies can end up walking around 15 minutes back even
-                                    // through transactions that have confirmed, as getdata on the remote peer also checks
-                                    // relay memory not only the mempool. Unfortunately we have no way to know that here. In
-                                    // practice it should not matter much.
-                                    Futures.addCallback(downloadDependencies(fTx), new FutureCallback<List<Transaction>>() {
-                                        @Override
-                                        public void onSuccess(List<Transaction> dependencies) {
-                                            try {
-                                                log.info("{}: Dependency download complete!", getAddress());
-                                                wallet.receivePending(fTx, dependencies);
-                                            } catch (VerificationException e) {
-                                                log.error("{}: Wallet failed to process pending transaction {}", getAddress(),
-                                                        fTx.getHashAsString());
-                                                log.error("Error was: ", e);
-                                                // Not much more we can do at this point.
-                                            }
-                                        }
-
-                                        @Override
-                                        public void onFailure(Throwable throwable) {
-                                            log.error("Could not download dependencies of tx {}", fTx.getHashAsString());
-                                            log.error("Error was: ", throwable);
-                                            // Not much more we can do at this point.
-                                        }
-                                    });
-                                } else {
-                                    wallet.receivePending(fTx, null);
-                                }
-                                */
-                            }
-                        } catch (VerificationException e) {
-                            log.error("Wallet failed to verify tx", e);
-                            // Carry on, listeners may still want to know.
-                        }
-                    }
-                }
-                // Tell all listeners about this tx so they can decide whether to keep it or not. If no listener keeps a
-                // reference around then the memory pool will forget about it after a while too because it uses weak references.
-                /*for (final ListenerRegistration<PeerEventListener> registration : eventListeners) {
-                    registration.executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            registration.listener.onTransaction(Peer.this, fTx);
-                        }
-                    });
-                }*/
-
-            }
-
-        }  finally {
-                lock.unlock();
-            }
-
-    }
 
 
     /**
@@ -1299,6 +1073,63 @@ public class Peer extends PeerSocketHandler {
         }
     }
 
+    //added for dash
+    boolean alreadyHave(InventoryItem inv)
+    {
+        switch (inv.type)
+        {
+//            case MSG_DSTX:
+  //              return mapDarksendBroadcastTxes.count(inv.hash);
+            case TransactionLockRequest:
+                return params.instantx.mapTxLockReq.containsKey(inv.hash) ||
+                        params.instantx.mapTxLockReqRejected.containsKey(inv.hash);
+            case TransactionLockVote:
+                return  params.instantx.mapTxLockVote.containsKey(inv.hash);
+            case Spork:
+                return params.sporkManager.mapSporks.containsKey(inv.hash);
+            case MasterNodeWinner:
+                /*if(params.masternodePayments.mapMasternodePayeeVotes.containsKey(inv.hash)) {
+                    params.masternodeSync.AddedMasternodeWinner(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case BudgetVote:
+                /*if(budget.mapSeenMasternodeBudgetVotes.containsKey(inv.hash)) {
+                    masternodeSync.AddedBudgetItem(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case BudgetProposal:
+               /*if(budget.mapSeenMasternodeBudgetProposals.containsKey(inv.hash)) {
+                    masternodeSync.AddedBudgetItem(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case BudgetFinalizedVote:
+                /*if(budget.mapSeenFinalizedBudgetVotes.count(inv.hash)) {
+                    masternodeSync.AddedBudgetItem(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case BudgetFinalized:
+                /*if(budget.mapSeenFinalizedBudgets.count(inv.hash)) {
+                    masternodeSync.AddedBudgetItem(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case MasterNodeAnnounce:
+                if(params.masternodeManager.mapSeenMasternodeBroadcast.containsKey(inv.hash)) {
+                    params.masternodeSync.addedMasternodeList(inv.hash);
+                    return true;
+                }
+                return false;
+            case MasterNodePing:
+                return params.masternodeManager.mapSeenMasternodePing.containsKey(inv.hash);
+        }
+        // Don't know what it is, just say we already got one
+        return true;
+    }
+
     private void processInv(InventoryMessage inv) {
         List<InventoryItem> items = inv.getItems();
 
@@ -1416,7 +1247,7 @@ public class Peer extends PeerSocketHandler {
                 it.remove();
             } else if (conf.getSource().equals(TransactionConfidence.Source.SELF)) {
                 // We created this transaction ourselves, so don't download.
-                //it.remove();
+                it.remove();
             } else {
                 log.debug("{}: getdata on tx {}", getAddress(), item.hash);
                 getdata.addItem(item);
@@ -1424,6 +1255,8 @@ public class Peer extends PeerSocketHandler {
                 pendingTxDownloads.add(conf);
             }
         }
+
+
 
         it = instantxLocks.iterator();
         //InstantXSystem instantx = InstantXSystem.get(blockChain);
@@ -1438,38 +1271,32 @@ public class Peer extends PeerSocketHandler {
 
         //masternodepings
 
-        if(blockChain.getBestChainHeight() > (this.getBestHeight() - 100))
+        //if(blockChain.getBestChainHeight() > (this.getBestHeight() - 100))
         {
 
-            it = masternodePings.iterator();
+           //if(params.masternodeSync.isSynced()) {
+                it = masternodePings.iterator();
 
-            while (it.hasNext()) {
-                InventoryItem item = it.next();
-                getdata.addItem(item);
-
-            /*MasternodePing mnp = params.masternodeManager.mapSeenMasternodePing.get(item.hash);
-            if(mnp == null)
-            {
-
-            }
-            else
-            {
-                Masternode mn = params.masternodeManager.find(mnp.vin);
-                if(mn == null)
-                    getdata.addItem(item);
-                else if(mn != null && !mn.isPingedWithin(MasternodePing.MASTERNODE_MIN_MNP_SECONDS - 60, Utils.currentTimeSeconds()))
-                    getdata.addItem(item);
-            }*/
-            }
+                while (it.hasNext()) {
+                    InventoryItem item = it.next();
+                    if (!params.masternodeManager.mapSeenMasternodePing.containsKey(item.hash)) {
+                        log.info("inv - received MasternodePing :" + item.hash + " new ping");
+                        getdata.addItem(item);
+                    } else
+                        log.info("inv - received MasternodePing :" + item.hash + " already seen");
+                }
+           // }
 
             it = masternodeBroadcasts.iterator();
 
             while (it.hasNext()) {
                 InventoryItem item = it.next();
+                log.info("inv - received MasternodeBroadcast :" + item.hash);
 
                 //if(!instantx.mapTxLockVote.containsKey(item.hash))
                 //{
-                getdata.addItem(item);
+                if(!alreadyHave(item))
+                    getdata.addItem(item);
                 //}
             }
         }

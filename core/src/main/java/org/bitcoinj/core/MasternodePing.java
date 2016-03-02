@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.core;
 
+import org.bitcoinj.store.BlockStoreException;
 import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,19 +166,40 @@ public class MasternodePing extends Message implements Serializable {
             // LogPrintf("mnping - Found corresponding mn for vin: %s\n", vin.ToString());
             // update only if there is no known ping for this masternode or
             // last ping was more then MASTERNODE_MIN_MNP_SECONDS-60 ago comparing to this one
-            if(pmn.isPingedWithin(MASTERNODE_MIN_MNP_SECONDS - 60, sigTime))
-            {
-                String strMessage = vin.toString() + blockHash.toString() + sigTime;
+            if(!pmn.isPingedWithin(MASTERNODE_MIN_MNP_SECONDS - 60, sigTime)) {
+                String strMessage = vin.toStringCpp() + blockHash.toString() + sigTime;
 
                 StringBuilder errorMessage = new StringBuilder();
-                if(!DarkSendSigner.verifyMessage(pmn.pubkey2, vchSig, strMessage, errorMessage))
-                {
-                    log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature "+ vin.toString());
+                if (!DarkSendSigner.verifyMessage(pmn.pubkey2, vchSig, strMessage, errorMessage)) {
+                    log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature " + vin.toString());
                     //nDos = 33;
                     return false;
                 }
 
-                /* TODO:  This may not work with SPV
+                try {
+
+                    StoredBlock storedBlock = params.masternodeManager.blockChain.getBlockStore().get(blockHash);
+
+                    if(storedBlock != null) {
+
+                        if (storedBlock.getHeight() < params.masternodeManager.blockChain.getChainHead().getHeight() - 24) {
+                            log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is too old", vin.toString(), blockHash.toString());
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (DarkCoinSystem.fDebug)
+                            log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is unknown", vin.toString(), blockHash.toString());
+                    }
+
+                } catch (BlockStoreException x) {
+                    return false;
+                }
+                catch (Exception x) {
+                    return false;
+                }
+                /* java code is above:
                 BlockMap::iterator mi = mapBlockIndex.find(blockHash);
                 if (mi != mapBlockIndex.end() && (*mi).second)
                 {
@@ -196,6 +218,7 @@ public class MasternodePing extends Message implements Serializable {
 
                     return false;
                 }
+
 */
                 pmn.lastPing = this;
 
@@ -254,10 +277,10 @@ public class MasternodePing extends Message implements Serializable {
 
     public Sha256Hash getHash(){
         try {
-            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(vchSig.getBytes().length+8);
-            bos.write(vchSig.getBytes());
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(vchSig.calculateMessageSizeInBytes()+8);
+            vin.bitcoinSerialize(bos);
             Utils.int64ToByteStreamLE(sigTime, bos);
-            return Sha256Hash.twiceOf(bos.toByteArray());
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException e) {
             throw new RuntimeException(e); // Cannot happen.
         }

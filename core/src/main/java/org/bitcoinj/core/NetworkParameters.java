@@ -125,8 +125,7 @@ public abstract class NetworkParameters implements Serializable {
     String strDarksendPoolDummyAddress;
     long nStartMasternodePayments;
 
-    public void initDash(String directory)
-    {
+    public void initDash() {
         //Dash Specific
         sporkManager = new SporkManager(this);
 
@@ -135,14 +134,25 @@ public abstract class NetworkParameters implements Serializable {
         activeMasternode = new ActiveMasternode(this);
         darkSendPool = new DarkSendPool(this);
         instantx = new InstantXSystem(this);
+        masternodeManager = new MasternodeManager(this);
+    }
+
+    public void initDashSync(String directory)
+    {
         masternodeDB = new MasternodeDB(directory);
 
-        masternodeManager = masternodeDB.read(this, false);
-        if(masternodeManager == null)
-            masternodeManager = new MasternodeManager(this);
+        MasternodeManager masternodeManagerLoaded = masternodeDB.read(this, false);
 
-        //other functions;
-        darkSendPool.startBackgroundThread();
+        //
+        // If loading was successful, replace the default manager
+        //
+        if(masternodeManagerLoaded != null) {
+            masternodeManager = masternodeManagerLoaded;
+            masternodeManager.setBlockChain(sporkManager.blockChain);
+        }
+
+        //other functions
+        darkSendPool.startBackgroundProcessing();
     }
 
     public String getSporkKey() {

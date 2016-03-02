@@ -91,6 +91,7 @@ public class Masternode extends Message{
     public Masternode(NetworkParameters params, byte [] payload, int cursor)
     {
         super(params, payload, cursor);
+        //calculateScoreTest();
     }
 
     public Masternode(Masternode other)
@@ -378,7 +379,7 @@ public class Masternode extends Message{
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
             bos.write(hash.getBytes());
             bos.write(aux.getBytes());
-            Sha256Hash hash3 = Sha256Hash.twiceOf(bos.toByteArray());
+            Sha256Hash hash3 = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
 
             BigInteger bhash2 = new BigInteger(hash2.getBytes());
             BigInteger bhash3 = new BigInteger(hash3.getBytes());
@@ -398,13 +399,50 @@ public class Masternode extends Message{
 
     Sha256Hash calculateScore(int mod, Sha256Hash hash)
     {
+        return calculateScore(vin, hash);
+
+    }
+
+    Sha256Hash calculateScoreTest()
+    {
         //if(blockChain.getChainHead() == null)
         //    return Sha256Hash.ZERO_HASH;
 
+        /*
+CalculateScore:-------
+, vin=CTxIn(COutPoint(b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb, 0), scriptSig=)
+vin.prevout.hash=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
+vin.prevout.n=0
+hash=00000000000642c0b18cafc97a23ffd6e5eeb0a63b600a0d3f9630a93b674ae0
+aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
+2016-03-01 07:37:39 hash2=8802d328293c18864b4c2e5d4de40f21e650ceb3ce55414ce54e2e321d33b75c
+2016-03-01 07:37:39 hash3=0411aaa87e4632a79846ad4a9b69d66cc25b9c69966e913ddaf8997ccc2a0b16
+2016-03-01 07:37:39 r=83f1287faaf5e5deb3058112b27a38b523f5324a37e6b00f0a5594b55109ac46 (hash2-hash3)
+                      83f1287faaf5e5deb3058112b27a38b523f5324a37e6b00f0a5594b55109ac46
+*/
+        TransactionInput vin = new TransactionInput(params,null, new byte[0],
+                new TransactionOutPoint(params, 0,
+                        Sha256Hash.wrap(Utils.HEX.decode("b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb"))));
+
+        Sha256Hash hash;// = params.masternodeManager.getBlockHash(nBlockHeight);
+
+        hash = Sha256Hash.wrap(Utils.HEX.decode("00000000000642c0b18cafc97a23ffd6e5eeb0a63b600a0d3f9630a93b674ae0"));
+
+        return calculateScore(vin, hash);
+
+
+    }
+
+    static Sha256Hash calculateScore(TransactionInput vin, Sha256Hash hash)
+    {
         //uint256 hash = 0;
         BigInteger bi_aux = vin.getOutpoint().getHash().toBigInteger().add(BigInteger.valueOf(vin.getOutpoint().getIndex()));
         byte [] temp = new byte[32];
-        System.arraycopy(bi_aux.toByteArray(), 0, temp, 0, 32);
+        byte [] bi_bytes = bi_aux.toByteArray();
+        int length = bi_bytes[0] == 0 ?
+                java.lang.Math.min(bi_bytes.length -1, 32) :
+                java.lang.Math.min(bi_bytes.length, 32);
+        System.arraycopy(bi_bytes, bi_bytes[0] == 0 ? 1 : 0, temp, 0, length);
         Sha256Hash aux = Sha256Hash.wrap(temp);
 
         //uint256 aux = vin.prevout.hash + vin.prevout.n;
@@ -413,19 +451,20 @@ public class Masternode extends Message{
             log.info("CalculateScore ERROR - nHeight {} - Returned 0", nBlockHeight);
             return 0;
         }*/
-        //Sha256Hash hash = params.masternodeManager.getBlockHash(nBlockHeight);
-        if(hash.equals(Sha256Hash.ZERO_HASH))
+
+/*        if(hash.equals(Sha256Hash.ZERO_HASH))
         {
             log.info("CalculateScore ERROR - Returned 0");
             return Sha256Hash.ZERO_HASH;
-        }
+        }*/
+
 
 
         //CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
         //ss << hash;
         //uint256 hash2 = ss.GetHash();
 
-        Sha256Hash hash2 = Sha256Hash.twiceOf(hash.getBytes());
+        Sha256Hash hash2 = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(hash.getReversedBytes()));
 
         /*CHashWriter ss2(SER_GETHASH, PROTOCOL_VERSION);
         ss2 << hash;
@@ -433,9 +472,9 @@ public class Masternode extends Message{
         uint256 hash3 = ss2.GetHash();*/
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
-            bos.write(hash.getBytes());
-            bos.write(aux.getBytes());
-            Sha256Hash hash3 = Sha256Hash.twiceOf(bos.toByteArray());
+            bos.write(hash.getReversedBytes());
+            bos.write(aux.getReversedBytes());
+            Sha256Hash hash3 = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
 
             BigInteger bhash2 = hash2.toBigInteger();
             BigInteger bhash3 = hash3.toBigInteger();
@@ -443,12 +482,20 @@ public class Masternode extends Message{
             //uint256 r = (hash3 > hash2 ? hash3 - hash2 : hash2 - hash3);
             if (bhash3.compareTo(bhash2) > 0)
             {
-                System.arraycopy(bhash3.subtract(bhash2).toByteArray(), 0, temp, 0, 32);
+                byte [] subtraction = bhash3.subtract(bhash2).toByteArray();
+                length = subtraction[0] == 0 ?
+                        java.lang.Math.min(subtraction.length -1, 32) :
+                        java.lang.Math.min(subtraction.length, 32);
+                System.arraycopy(subtraction, subtraction[0] == 0 ? 1 : 0, temp, 0, length);
                 return Sha256Hash.wrap(temp);
             }
             else
             {
-                System.arraycopy(bhash2.subtract(bhash3).toByteArray(), 0, temp, 0, 32);
+                byte [] subtraction = bhash2.subtract(bhash3).toByteArray();
+                length = subtraction[0] == 0 ?
+                        java.lang.Math.min(subtraction.length -1, 32) :
+                        java.lang.Math.min(subtraction.length, 32);
+                System.arraycopy(subtraction, subtraction[0] == 0 ? 1 : 0, temp, 0, length);
                 return Sha256Hash.wrap(temp);
             }
         }
@@ -557,7 +604,7 @@ public class Masternode extends Message{
 
             return (lastPing.equals(MasternodePing.empty()))
                     ? false
-                    : now - lastPing.sigTime < seconds;
+                    : (now - lastPing.sigTime) < seconds;
         }
         boolean isPingedWithin(int seconds)
         {
