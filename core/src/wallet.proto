@@ -177,8 +177,6 @@ message TransactionConfidence {
     PENDING = 2; // Unconfirmed and sitting in the networks memory pools, waiting to be included in the chain.
     NOT_IN_BEST_CHAIN = 3; // Deprecated: equivalent to PENDING.
     DEAD = 4; // Either if overriding_transaction is present or transaction is dead coinbase
-    INSTANTX_PENDING = 100;
-    INSTANTX_LOCKED = 101;
   }
 
   // This is optional in case we add confidence types to prevent parse errors - backwards compatible.
@@ -212,6 +210,14 @@ message TransactionConfidence {
     // - from a wallet that uses trusted computing/secure hardware that won't create double spends
   }
   optional Source source = 7;
+
+  enum IXType {
+    IX_NONE = 0;
+    IX_REQUEST = 1;
+    IX_LOCKED = 2;
+  }
+
+  optional IXType ixType = 8 [default = IX_NONE];
 }
 
 /** A bitcoin transaction */
@@ -235,9 +241,6 @@ message Transaction {
     DEAD = 10; // Double-spent by a transaction in the best chain
     PENDING = 16; // Our transaction, not in any chain
     PENDING_INACTIVE = 18; // In non-best chain, our transaction
-    INSTANTX_PENDING = 48;
-    INSTANTX_LOCKED = 49;
-
   }
 
   // See Wallet.java for detailed description of pool semantics

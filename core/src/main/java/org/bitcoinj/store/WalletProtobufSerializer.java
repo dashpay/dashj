@@ -325,8 +325,6 @@ public class WalletProtobufSerializer {
             case SPENT: return Protos.Transaction.Pool.SPENT;
             case DEAD: return Protos.Transaction.Pool.DEAD;
             case PENDING: return Protos.Transaction.Pool.PENDING;
-            case INSTANTX_LOCKED: return Protos.Transaction.Pool.INSTANTX_LOCKED;
-            case INSTANTX_PENDING: return Protos.Transaction.Pool.INSTANTX_PENDING;
             default:
                 throw new RuntimeException("Unreachable");
         }
@@ -357,6 +355,14 @@ public class WalletProtobufSerializer {
                     // Fall through.
                 default:
                     confidenceBuilder.setSource(Protos.TransactionConfidence.Source.SOURCE_UNKNOWN); break;
+            }
+            TransactionConfidence.IXType ixType = confidence.getIXType();
+            switch(ixType)
+            {
+                case IX_LOCKED: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_LOCKED); break;
+                case IX_REQUEST: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_REQUEST); break;
+                case IX_NONE:
+                default: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_NONE); break;
             }
         }
 
@@ -640,12 +646,6 @@ public class WalletProtobufSerializer {
             case PENDING_INACTIVE:
                 pool = WalletTransaction.Pool.PENDING;
                 break;
-            case INSTANTX_PENDING:
-                pool = WalletTransaction.Pool.INSTANTX_PENDING;
-                break;
-            case INSTANTX_LOCKED:
-                pool = WalletTransaction.Pool.INSTANTX_LOCKED;
-                break;
             default:
                 throw new UnreadableWalletException("Unknown transaction pool: " + txProto.getPool());
         }
@@ -742,6 +742,15 @@ public class WalletProtobufSerializer {
             case SOURCE_UNKNOWN:
                 // Fall through.
             default: confidence.setSource(TransactionConfidence.Source.UNKNOWN); break;
+        }
+        switch(confidenceProto.getIxType())
+        {
+            case IX_LOCKED: confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED); break;
+            case IX_REQUEST: confidence.setIXType(TransactionConfidence.IXType.IX_REQUEST); break;
+            case IX_NONE:
+            default:
+                confidence.setIXType(TransactionConfidence.IXType.IX_NONE); break;
+
         }
     }
 

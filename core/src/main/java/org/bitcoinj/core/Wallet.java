@@ -2291,7 +2291,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             // This also registers txConfidenceListener so wallet listeners get informed.
             log.info("->pending: {}", tx.getHashAsString());
             if(tx instanceof TransactionLockRequest) //TODO:InstantX
-                tx.getConfidence().setIX(true);//setConfidenceType(ConfidenceType.INSTANTX_PENDING);
+                tx.getConfidence().setIXType(IXType.IX_REQUEST);//setConfidenceType(ConfidenceType.INSTANTX_PENDING);
             //else tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
             confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
             /*if(tx instanceof TransactionLockRequest)  //TODO:InstantX
@@ -4838,9 +4838,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         // Don't hold the wallet lock whilst doing this, so if the broadcaster accesses the wallet at some point there
         // is no inversion.
         for (Transaction tx : toBroadcast) {
-            /*if(tx.getConfidence().getConfidenceType() == ConfidenceType.INSTANTX_LOCKED)
-                continue;*/
-            checkState(tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING/* || tx.getConfidence().getConfidenceType() == ConfidenceType.INSTANTX_PENDING*/);
+            checkState(tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING);
             // Re-broadcast even if it's marked as already seen for two reasons
             // 1) Old wallets may have transactions marked as broadcast by 1 peer when in reality the network
             //    never saw it, due to bugs.

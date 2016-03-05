@@ -100,9 +100,6 @@ public class TransactionConfidence implements Serializable {
          */
         DEAD(4),
 
-        INSTANTX_PENDING (101),
-        INSTANTX_LOCKED (100),
-
         /**
          * If a transaction hasn't been broadcast yet, or there's no record of it, its confidence is UNKNOWN.
          */
@@ -186,6 +183,12 @@ public class TransactionConfidence implements Serializable {
              * is considered relayable and has thus reached the miners.
              */
             SEEN_PEERS,
+            /**
+             * Occurs when the type returned by {@link org.bitcoinj.core.TransactionConfidence#getIXType()}
+             * has changed. For example, if a IX_REQUEST transaction changes to IX_LOCKED, then this reason will
+             * be given.
+             */
+            IX_TYPE,
         }
         void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason);
     }
@@ -241,7 +244,7 @@ public class TransactionConfidence implements Serializable {
      * @throws IllegalStateException if the confidence type is not BUILDING.
      */
     public synchronized int getAppearedAtChainHeight() {
-        if (getConfidenceType() != ConfidenceType.BUILDING && getConfidenceType() != ConfidenceType.INSTANTX_LOCKED) //TODO:InstantX
+        if (getConfidenceType() != ConfidenceType.BUILDING)
             throw new IllegalStateException("Confidence type is " + getConfidenceType() + ", not BUILDING");
         return appearedAtChainHeight;
     }
@@ -255,7 +258,6 @@ public class TransactionConfidence implements Serializable {
             throw new IllegalArgumentException("appearedAtChainHeight out of range");
         this.appearedAtChainHeight = appearedAtChainHeight;
         this.depth = 1;
-        //if(getConfidenceType() != ConfidenceType.INSTANTX_LOCKED)  //TODO:InstantX
             setConfidenceType(ConfidenceType.BUILDING);
     }
 
@@ -277,7 +279,7 @@ public class TransactionConfidence implements Serializable {
         if (confidenceType != ConfidenceType.DEAD) {
             overridingTransaction = null;
         }
-        if (confidenceType == ConfidenceType.PENDING/* || confidenceType == ConfidenceType.INSTANTX_PENDING*/) {
+        if (confidenceType == ConfidenceType.PENDING) {
             depth = 0;
             appearedAtChainHeight = -1;
         }
@@ -340,18 +342,18 @@ public class TransactionConfidence implements Serializable {
             case PENDING:
                 builder.append("Pending/unconfirmed.");
                 break;
-            /*case INSTANTX_PENDING:
-                builder.append("InstantX Lock Request");
-                break;
-            case INSTANTX_LOCKED:
-                builder.append("InstantX Locked");
-                if(getAppearedAtChainHeight() > 0)
-                    builder.append(String.format("Appeared in best chain at height %d, depth %d.",
-                            getAppearedAtChainHeight(), getDepthInBlocks()));
-                break;*/
             case BUILDING:
                 builder.append(String.format("Appeared in best chain at height %d, depth %d.",
                         getAppearedAtChainHeight(), getDepthInBlocks()));
+                break;
+        }
+        switch(getIXType())
+        {
+            case IX_LOCKED:
+                builder.append("  IX Locked.");
+                break;
+            case IX_REQUEST:
+                builder.append("  IX Requested");
                 break;
         }
         return builder.toString();
@@ -502,14 +504,22 @@ public class TransactionConfidence implements Serializable {
     }
 
     //Dash Specific Additions
-    boolean instantX = false;
+    public enum IXType {
+        IX_NONE,
+        IX_REQUEST,
+        IX_LOCKED
+    };
 
-    int consensusVotes = 0;
+    IXType ixType = IXType.IX_NONE;
 
-    public void setIX(boolean isInstantX) { this.instantX = isInstantX; }
-    public boolean isIX() { return instantX; }
-    public int getConsensusVotes() { return consensusVotes; }
-    public void setConsensusVotes(int votes) { consensusVotes = votes; }
+    public void setIXType(IXType ixType) {
+        this.ixType = ixType;
+    }
 
-    public boolean isTransactionLocked() { return consensusVotes >= InstantXSystem.INSTANTX_SIGNATURES_REQUIRED; }
+    public IXType getIXType() {
+        return ixType;
+    }
+
+    public boolean isIX() { return ixType != IXType.IX_NONE; }
+    public boolean isTransactionLocked() { return ixType == IXType.IX_LOCKED; }
 }

@@ -154,6 +154,8 @@ public class Transaction extends ChildMessage implements Serializable {
         ASSURANCE_CONTRACT_STUB,
         /** Raise fee, e.g. child-pays-for-parent. */
         RAISE_FEE,
+
+        USER_PAYMENT_IX
         // In future: de/refragmentation, privacy boosting/mixing, etc.
         // When adding a value, it also needs to be added to wallet.proto, WalletProtobufSerialize.makeTxProto()
         // and WalletProtobufSerializer.readTransaction()!

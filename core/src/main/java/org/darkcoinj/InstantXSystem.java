@@ -177,7 +177,7 @@ public class InstantXSystem {
                     tx.getHash().toString()
             );
 
-            tx.getConfidence().setIX(true);
+            tx.getConfidence().setIXType(TransactionConfidence.IXType.IX_REQUEST);
 
             return;
 
@@ -410,8 +410,8 @@ public class InstantXSystem {
         for(TransactionInput in : tx.getInputs())
         {
         if(mapLockedInputs.containsKey(in.getOutpoint())){
-            if(mapLockedInputs.get(in.getOutpoint()) != tx.getHash()){
-                log.info("InstantX::CheckForConflictingLocks - found two complete conflicting locks - removing both. "+ tx.getHash().toString() + mapLockedInputs.get(in.getOutpoint()).toString());
+            if(!mapLockedInputs.get(in.getOutpoint()).equals(tx.getHash())){
+                log.info("InstantX::CheckForConflictingLocks - found two complete conflicting locks - removing both. "+ tx.getHash().toString() +" "+ mapLockedInputs.get(in.getOutpoint()).toString());
                 if(mapTxLocks.containsKey(tx.getHash()))
                     mapTxLocks.get(tx.getHash()).expiration = (int)Utils.currentTimeSeconds();
                 if(mapTxLocks.containsKey(mapLockedInputs.get(in.getOutpoint())))
@@ -496,7 +496,7 @@ public class InstantXSystem {
                 log.info("instantx - InstantX::ProcessConsensusVote - Transaction doesn't exist {} mapTxLockReq.size() = {}", ctx.txHash.toString(), mapTxLockReq.size());
                 return false;  //TODO: why is this happening?  Did we not get the "ix"
             }
-            tx.getConfidence().setConsensusVotes(i.countSignatures());
+            //tx.getConfidence().setConsensusVotes(i.countSignatures());
 
             /*#ifdef ENABLE_WALLET
             if(pwalletMain){
@@ -515,9 +515,11 @@ public class InstantXSystem {
                 //Transaction tx = mapTxLockReq.get(ctx.txHash);
                 if(!checkForConflictingLocks(tx)){
 
-                    tx.getConfidence().setConsensusVotes(i.countSignatures());
+                    //tx.getConfidence().setConsensusVotes(i.countSignatures());
+                    tx.getConfidence().setIXType(TransactionConfidence.IXType.IX_LOCKED);
+                    tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
 
-                    pnode.notifyLock(tx);
+                    //pnode.notifyLock(tx);
 
                     /*#ifdef ENABLE_WALLET
                     if(pwalletMain){
@@ -597,8 +599,8 @@ public class InstantXSystem {
                         mapTxLockVote.remove(v.getHash());
 
                     //Remove transaction confidence information, after 1 hour this should be a regular transaction
-                    tx.getConfidence().setIX(false);
-                    tx.getConfidence().setConsensusVotes(0);
+                    //tx.getConfidence().setIX(false);
+                    //tx.getConfidence().setConsensusVotes(0);
                 }
                 it.remove();
             } else {
