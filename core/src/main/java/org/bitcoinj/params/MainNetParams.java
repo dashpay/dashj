@@ -45,8 +45,8 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         genesisBlock.setTime(CoinDefinition.genesisBlockTime);
         genesisBlock.setNonce(CoinDefinition.genesisBlockNonce);
 
-        bip32HeaderPub = 0x0488B21E; //The 4 byte header that serializes in base58 to "xpub".
-        bip32HeaderPriv = 0x0488ADE4; //The 4 byte header that serializes in base58 to "xprv"
+        bip32HeaderPub = 0x02fda923; //The 4 byte header that serializes in base58 to "dpub".
+        bip32HeaderPriv = 0x02fda4e8; //The 4 byte header that serializes in base58 to "dprv"
 
         id = ID_MAINNET;
         subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
