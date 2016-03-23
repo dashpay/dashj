@@ -443,7 +443,7 @@ public class Peer extends PeerSocketHandler {
             params.instantx.processConsensusVoteMessage(this, (ConsensusVote)m);
         }
         else if(m instanceof SyncStatusCount) {
-            params.masternodeSync.processSyncStatusCount((SyncStatusCount)m);
+            params.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
         }
         else
         {
@@ -1947,4 +1947,8 @@ public class Peer extends PeerSocketHandler {
 
     boolean fDarkSendMaster = false;
     public boolean isDarkSendMaster() { return fDarkSendMaster; }
+
+    int masternodeListCount = -1;
+    public int getMasternodeListCount() { return masternodeListCount; }
+    public void setMasternodeListCount(int count) { masternodeListCount = count; }
 }

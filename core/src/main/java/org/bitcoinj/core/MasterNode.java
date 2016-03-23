@@ -626,7 +626,7 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
             int nDoS = 0;
             if(mnb.lastPing == new MasternodePing(params) || (!mnb.lastPing.equals(new MasternodePing(params)) && mnb.lastPing.checkAndUpdate(false))) {
                 lastPing = mnb.lastPing;
-                params.masternodeManager.mapSeenMasternodePing.put(lastPing.getHash(), lastPing);
+                params.masternodeManager.updateMasternodePing(lastPing);
             }
             return true;
         }

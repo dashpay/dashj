@@ -206,7 +206,7 @@ public class MasternodeSync {
         return "";
     }
 
-    void processSyncStatusCount(SyncStatusCount ssc)
+    void processSyncStatusCount(Peer peer, SyncStatusCount ssc)
     {
             if(RequestedMasternodeAssets >= MASTERNODE_SYNC_FINISHED) return;
 
@@ -217,6 +217,7 @@ public class MasternodeSync {
                     if(ssc.itemId != RequestedMasternodeAssets) return;
                     sumMasternodeList += ssc.count;
                     countMasternodeList++;
+                    peer.setMasternodeListCount(ssc.count);
                     break;
                 case(MASTERNODE_SYNC_MNW):
                     if(ssc.itemId != RequestedMasternodeAssets) return;

@@ -102,19 +102,23 @@ public class MasternodeManager extends Message {
     {
         int size = 0;
 
-        size += VarInt.sizeOf(vMasternodes.size());
+        lock.lock();
+        try {
+            size += VarInt.sizeOf(vMasternodes.size());
 
-        for(Masternode mn : vMasternodes)
-        {
-            size += mn.calculateMessageSizeInBytes();
+            for (Masternode mn : vMasternodes) {
+                size += mn.calculateMessageSizeInBytes();
+            }
+            size += VarInt.sizeOf(mAskedUsForMasternodeList.size());
+            for (NetAddress na : mAskedUsForMasternodeList.keySet()) {
+                size += na.MESSAGE_SIZE;
+                size += 8;
+            }
+            return size;
         }
-        size += VarInt.sizeOf(mAskedUsForMasternodeList.size());
-        for(NetAddress na: mAskedUsForMasternodeList.keySet())
-        {
-            size += na.MESSAGE_SIZE;
-            size += 8;
+        finally {
+            lock.unlock();
         }
-        return size;
     }
     @Override
     void parse() throws ProtocolException {
@@ -250,12 +254,17 @@ public class MasternodeManager extends Message {
     void processMasternodeBroadcast(MasternodeBroadcast mnb)
     {
         //log.info("processMasternodeBroadcast:  hash={}", mnb.getHash());
-        if(mapSeenMasternodeBroadcast.containsKey(mnb.getHash())) { //seen
-            params.masternodeSync.addedMasternodeList(mnb.getHash());
-            return;
-        }
+        lock.lock();
+        try {
+            if (mapSeenMasternodeBroadcast.containsKey(mnb.getHash())) { //seen
+                params.masternodeSync.addedMasternodeList(mnb.getHash());
+                return;
+            }
 
-        mapSeenMasternodeBroadcast.put(mnb.getHash(), mnb);
+            mapSeenMasternodeBroadcast.put(mnb.getHash(), mnb);
+        } finally {
+            lock.unlock();
+        }
 
         int nDoS = 0;
         if(!mnb.checkAndUpdate()){
@@ -295,7 +304,12 @@ public class MasternodeManager extends Message {
 
         if(mapSeenMasternodePing.containsKey(mnp.getHash()))
             return; //seen
-        mapSeenMasternodePing.put(mnp.getHash(), mnp);
+        lock.lock();
+        try {
+            mapSeenMasternodePing.put(mnp.getHash(), mnp);
+        } finally {
+            lock.unlock();
+        }
 
         int nDoS = 0;
         if(mnp.checkAndUpdate()) return;
@@ -313,6 +327,15 @@ public class MasternodeManager extends Message {
         // something significant is broken or mn is unknown,
         // we might have to ask for a masternode entry once
         askForMN(peer, mnp.vin);
+    }
+    public void updateMasternodePing(MasternodePing lastPing)
+    {
+        lock.lock();
+        try {
+            mapSeenMasternodePing.put(lastPing.getHash(), lastPing);
+        } finally {
+            lock.unlock();
+        }
     }
 
     boolean add(Masternode mn)
@@ -537,17 +560,25 @@ public class MasternodeManager extends Message {
             return -2;
         }
          // scan for winner
-        else for(Masternode mn : vMasternodes) {
-            if(mn.protocolVersion < minProtocol) continue;
-            if(fOnlyActive) {
-                mn.check();
-                if(!mn.isEnabled()) continue;
-            }
-            Sha256Hash n = mn.calculateScore(1, hash);
-            //int64_t n2 = n.GetCompact(false);
-            long n2 = Utils.encodeCompactBits(new BigInteger(n.getBytes()));
+        else
+        {
+            lock.lock();
+            try {
+                for(Masternode mn : vMasternodes) {
+                    if(mn.protocolVersion < minProtocol) continue;
+                    if(fOnlyActive) {
+                        mn.check();
+                        if(!mn.isEnabled()) continue;
+                    }
+                    Sha256Hash n = mn.calculateScore(1, hash);
+                    //int64_t n2 = n.GetCompact(false);
+                    long n2 = Utils.encodeCompactBits(new BigInteger(n.getBytes()));
 
-            vecMasternodeScores.add(new Pair<Long, TransactionInput>(n2, mn.vin));
+                    vecMasternodeScores.add(new Pair<Long, TransactionInput>(n2, mn.vin));
+                }
+            } finally {
+                lock.unlock();
+            }
         }
 
 
