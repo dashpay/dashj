@@ -65,9 +65,12 @@ public class Masternode extends Message{
         DarkSend darkSend;
 
 
-    public Masternode(NetworkParameters params)
+    Context context;
+
+    public Masternode(Context context)
     {
-        super(params);
+        super(context.getParams());
+        this.context = context;
 
         vin = null;
         address = null;
@@ -91,12 +94,21 @@ public class Masternode extends Message{
     public Masternode(NetworkParameters params, byte [] payload, int cursor)
     {
         super(params, payload, cursor);
+        context = Context.get();
+        //calculateScoreTest();
+    }
+
+    public Masternode(Context context, byte [] payload, int cursor)
+    {
+        super(context.getParams(), payload, cursor);
+        this.context = context;
         //calculateScoreTest();
     }
 
     public Masternode(Masternode other)
     {
         super(other.params);
+        this.context = other.context;
         //LOCK(cs);
         this.vin = other.vin;  //TODO:  need to make copies of all these?
         this.address = new MasternodeAddress(other.address.getAddr(), other.address.getPort());
@@ -356,7 +368,7 @@ public class Masternode extends Message{
             log.info("CalculateScore ERROR - nHeight {} - Returned 0", nBlockHeight);
             return 0;
         }*/
-        Sha256Hash hash = params.masternodeManager.getBlockHash(nBlockHeight);
+        Sha256Hash hash = context.masternodeManager.getBlockHash(nBlockHeight);
         if(hash.equals(Sha256Hash.ZERO_HASH))
         {
             log.info("CalculateScore ERROR - nHeight {} - Returned 0", nBlockHeight);
@@ -424,7 +436,7 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
                 new TransactionOutPoint(params, 0,
                         Sha256Hash.wrap(Utils.HEX.decode("b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb"))));
 
-        Sha256Hash hash;// = params.masternodeManager.getBlockHash(nBlockHeight);
+        Sha256Hash hash;// = context.masternodeManager.getBlockHash(nBlockHeight);
 
         hash = Sha256Hash.wrap(Utils.HEX.decode("00000000000642c0b18cafc97a23ffd6e5eeb0a63b600a0d3f9630a93b674ae0"));
 
@@ -555,7 +567,7 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
             //TODO:  Not sure how to impliment this
             /*CValidationState state;
             //CMutableTransaction tx = CMutableTransaction();
-            Transaction tx = new Transaction(params);
+            Transaction tx = new Transaction(context);
             TransactionOutput vout = new TransactionOutput(tx, Coin.valueOf(999, 99), darkSendPool.collateralPubKey);
             tx.addInput(vin);
             tx.addOutput(vout);
@@ -624,9 +636,9 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
             address = mnb.address.duplicate();
             lastTimeChecked = 0;
             int nDoS = 0;
-            if(mnb.lastPing == new MasternodePing(params) || (!mnb.lastPing.equals(new MasternodePing(params)) && mnb.lastPing.checkAndUpdate(false))) {
+            if(mnb.lastPing == new MasternodePing(context) || (!mnb.lastPing.equals(new MasternodePing(context)) && mnb.lastPing.checkAndUpdate(false))) {
                 lastPing = mnb.lastPing;
-                params.masternodeManager.updateMasternodePing(lastPing);
+                context.masternodeManager.updateMasternodePing(lastPing);
             }
             return true;
         }

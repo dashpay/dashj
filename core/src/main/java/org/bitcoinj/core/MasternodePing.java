@@ -41,23 +41,27 @@ public class MasternodePing extends Message implements Serializable {
     long sigTime;
     MasternodeSignature vchSig;
 
-    DarkCoinSystem system;
+    //DarkCoinSystem system;
+    Context context;
 
-    MasternodePing(NetworkParameters params) {
-        super(params);
+    MasternodePing(Context context) {
+        super(context.getParams());
+        this.context = context;
     }
-    /*MasternodePing(NetworkParameters params, AbstractBlockChain blockChain, TransactionInput newVin)
+    /*MasternodePing(NetworkParameters context, AbstractBlockChain blockChain, TransactionInput newVin)
     {
-        super(params);
+        super(context);
     }*/
 
     MasternodePing(NetworkParameters params, byte[] bytes)
     {
         super(params, bytes, 0);
+        this.context = Context.get();
     }
 
     MasternodePing(NetworkParameters params, byte[] bytes, int cursor) {
         super(params, bytes, cursor);
+        this.context = Context.get();
     }
 
     @Override
@@ -158,8 +162,8 @@ public class MasternodePing extends Message implements Serializable {
         log.info("masternode - CMasternodePing::CheckAndUpdate - New Ping - "+ getHash().toString() +" - "+ blockHash.toString()+" - "+ sigTime);
 
         // see if we have this Masternode
-        Masternode pmn = params.masternodeManager.find(vin);
-        if(pmn != null && pmn.protocolVersion >= params.masternodePayments.getMinMasternodePaymentsProto())
+        Masternode pmn = context.masternodeManager.find(vin);
+        if(pmn != null && pmn.protocolVersion >= context.masternodePayments.getMinMasternodePaymentsProto())
         {
             if (fRequireEnabled && !pmn.isEnabled()) return false;
 
@@ -178,11 +182,11 @@ public class MasternodePing extends Message implements Serializable {
 
                 try {
 
-                    StoredBlock storedBlock = params.masternodeManager.blockChain.getBlockStore().get(blockHash);
+                    StoredBlock storedBlock = context.masternodeManager.blockChain.getBlockStore().get(blockHash);
 
                     if(storedBlock != null) {
 
-                        if (storedBlock.getHeight() < params.masternodeManager.blockChain.getChainHead().getHeight() - 24) {
+                        if (storedBlock.getHeight() < context.masternodeManager.blockChain.getChainHead().getHeight() - 24) {
                             log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is too old", vin.toString(), blockHash.toString());
                             return false;
                         }
@@ -225,8 +229,8 @@ public class MasternodePing extends Message implements Serializable {
                 //mnodeman.mapSeenMasternodeBroadcast.lastPing is probably outdated, so we'll update it
                 MasternodeBroadcast mnb = new MasternodeBroadcast(pmn);
                 Sha256Hash hash = mnb.getHash();
-                if(params.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
-                    params.masternodeManager.mapSeenMasternodeBroadcast.get(hash).lastPing = this;
+                if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
+                    context.masternodeManager.mapSeenMasternodeBroadcast.get(hash).lastPing = this;
                 }
 
                 pmn.check(true);
@@ -265,7 +269,7 @@ public class MasternodePing extends Message implements Serializable {
         return false;
     }
 
-    static MasternodePing EMPTY = new MasternodePing(null);
+    static MasternodePing EMPTY = new MasternodePing(Context.get());
 
     static MasternodePing empty() { return EMPTY; }
 

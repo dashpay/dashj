@@ -474,7 +474,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         // New peer with a higher protocol version but same chain height.
         // TODO: When PeerGroup.selectDownloadPeer.PREFERRED_VERSION is not equal to vMinRequiredProtocolVersion,
         // reenable this test
-        /*VersionMessage versionMessage4 = new VersionMessage(params, 3);
+        /*VersionMessage versionMessage4 = new VersionMessage(context, 3);
         versionMessage4.clientVersion = 100000;
         versionMessage4.localServices = VersionMessage.NODE_NETWORK;
         InboundMessageQueuer d = connectPeer(5, versionMessage4);
@@ -724,7 +724,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         // 1. Test are executed on the same machine that is running full node / Satoshi client
         // 2. Test are executed without any full node running locally
         // We have to avoid to connecting to real and external services in unit tests
-        // So we skip this test in case we have already something running on port params.getPort()
+        // So we skip this test in case we have already something running on port context.getPort()
 
         // Check that if we have a localhost port 8333 or 18333 then it's used instead of the p2p network.
         ServerSocket local = null;

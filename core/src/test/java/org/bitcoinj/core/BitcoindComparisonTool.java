@@ -75,7 +75,7 @@ public class BitcoindComparisonTool {
         try {
             H2FullPrunedBlockStore store = new H2FullPrunedBlockStore(params, args.length > 0 ? args[0] : "BitcoindComparisonTool", blockList.maximumReorgBlockCount);
             store.resetStore();
-            //store = new MemoryFullPrunedBlockStore(params, blockList.maximumReorgBlockCount);
+            //store = new MemoryFullPrunedBlockStore(context, blockList.maximumReorgBlockCount);
             chain = new FullPrunedBlockChain(params, store);
         } catch (BlockStoreException e) {
             e.printStackTrace();

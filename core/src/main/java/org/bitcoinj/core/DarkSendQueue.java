@@ -172,7 +172,7 @@ public class DarkSendQueue extends Message implements Serializable {
         ECKey eckey2;
         StringBuilder errorMessage = new StringBuilder();
 
-        if ((eckey2 = DarkSendSigner.setKey(params, system.strMasterNodePrivKey, errorMessage)) == null) {
+        if ((eckey2 = DarkSendSigner.setKey(context, system.strMasterNodePrivKey, errorMessage)) == null) {
             log.warn("CDarksendQueue():Relay - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage);
             return false;
         }

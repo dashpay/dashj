@@ -181,7 +181,7 @@ public class BlockChainTest {
 
     @Test
     public void difficultyTransitions() throws Exception {
-        // Add a bunch of blocks in a loop until we reach a difficulty transition point. The unit test params have an
+        // Add a bunch of blocks in a loop until we reach a difficulty transition point. The unit test context have an
         // artificially shortened period.
         Block prev = unitTestParams.getGenesisBlock();
         Utils.setMockClock(System.currentTimeMillis()/1000);

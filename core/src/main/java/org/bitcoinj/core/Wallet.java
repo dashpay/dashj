@@ -2319,8 +2319,8 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             checkState(isConsistent());
             //Dash Specific
             if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
-                params.instantx.mapTxLockReq.put(tx.getHash(), tx);
-                params.instantx.createNewLock((TransactionLockRequest)tx);
+                context.instantx.mapTxLockReq.put(tx.getHash(), tx);
+                context.instantx.createNewLock((TransactionLockRequest)tx);
             }
             informConfidenceListenersIfNotReorganizing();
             saveNow();

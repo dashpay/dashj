@@ -92,7 +92,7 @@ public class HeadersMessage extends Message {
             /*if(newBlockHeader.shouldHaveMasterNodeVotes())
             {
                 byte[] mnv = readBytes(1);
-                if(mnv[0] != 0 /* && !params.getId().equals(CoinDefinition.ID_MAINNET))
+                if(mnv[0] != 0 /* && !context.getId().equals(CoinDefinition.ID_MAINNET))
                     throw new ProtocolException("Block header does not end with two null bytes");
                 //else cursor--;
             }*/

@@ -3,6 +3,7 @@ package org.bitcoinj.core;
 import org.bitcoinj.store.MasternodeDB;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.darkcoinj.DarkSendPool;
+import org.darkcoinj.InstantXSystem;
 import org.slf4j.*;
 
 import static com.google.common.base.Preconditions.*;
@@ -36,6 +37,14 @@ public class Context {
 
     //Dash Specific
     public PeerGroup peerGroup;
+    public SporkManager sporkManager;
+    public MasternodeManager masternodeManager;
+    public MasternodePayments masternodePayments;
+    public MasternodeSync masternodeSync;
+    public ActiveMasternode activeMasternode;
+    public DarkSendPool darkSendPool;
+    public InstantXSystem instantx;
+    public MasternodeDB masternodeDB;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -105,7 +114,7 @@ public class Context {
             return context;
         }
         if (context.getParams() != params)
-            throw new IllegalStateException("Context does not match implicit network params: " + context.getParams() + " vs " + params);
+            throw new IllegalStateException("Context does not match implicit network context: " + context.getParams() + " vs " + params);
         return context;
     }
 
@@ -149,4 +158,42 @@ public class Context {
 
 
 
+    public void initDash() {
+        //Dash Specific
+        sporkManager = new SporkManager(this);
+
+        masternodePayments = new MasternodePayments(this);
+        masternodeSync = new MasternodeSync(this);
+        activeMasternode = new ActiveMasternode(this);
+        darkSendPool = new DarkSendPool(this);
+        instantx = new InstantXSystem(this);
+        masternodeManager = new MasternodeManager(this);
+    }
+
+    public void initDashSync(String directory)
+    {
+        masternodeDB = new MasternodeDB(directory);
+
+        MasternodeManager masternodeManagerLoaded = masternodeDB.read(this, false);
+
+        //
+        // If loading was successful, replace the default manager
+        //
+        if(masternodeManagerLoaded != null) {
+            masternodeManager = masternodeManagerLoaded;
+            masternodeManager.setBlockChain(sporkManager.blockChain);
+        }
+
+        //other functions
+        darkSendPool.startBackgroundProcessing();
+    }
+
+    public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)
+    {
+        this.peerGroup = peerGroup;
+        sporkManager.setBlockChain(chain);
+        masternodeManager.setBlockChain(chain);
+        masternodeSync.setBlockChain(chain);
+        instantx.setBlockChain(chain);
+    }
 }

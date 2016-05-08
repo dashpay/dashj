@@ -1,8 +1,6 @@
 package org.darkcoinj;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.wallet.InstantXCoinSelector;
-import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +46,7 @@ public class InstantXSystem {
     }
     DarkCoinSystem system;
     MasterNodeSystem masterNodes;
-    NetworkParameters params;
+    Context context;
 
     //static InstantXSystem instantXSystem;
 
@@ -65,9 +63,9 @@ public class InstantXSystem {
         return instantXSystem;
     }*/
 
-    public InstantXSystem(NetworkParameters params)
+    public InstantXSystem(Context context)
     {
-        this.params = params;
+        this.context = context;
         this.mapTxLockReq = new HashMap<Sha256Hash, Transaction>();
         this.mapTxLockReqRejected = new HashMap<Sha256Hash, Transaction>();
         this.mapTxLockVote = new HashMap<Sha256Hash, ConsensusVote>();
@@ -106,8 +104,8 @@ public class InstantXSystem {
     boolean canProcessInstantXMessages()
     {
         if(system.fLiteMode) return false; //disable all darksend/masternode related functionality
-        if(!params.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTX)) return false;
-        if(!params.masternodeSync.isBlockchainSynced()) return false;
+        if(!context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTX)) return false;
+        if(!context.masternodeSync.isBlockchainSynced()) return false;
 
         return true;
     }
@@ -293,7 +291,7 @@ public class InstantXSystem {
             }*/
         }
 
-        if(valueOut.isGreaterThan(Coin.valueOf((int)params.sporkManager.getSporkValue(SporkManager.SPORK_5_MAX_VALUE), 0))){
+        if(valueOut.isGreaterThan(Coin.valueOf((int) context.sporkManager.getSporkValue(SporkManager.SPORK_5_MAX_VALUE), 0))){
             log.info("instantx-IsIXTXValid - Transaction value too high - {}\n", txCollateral.toString());
             return false;
         }
@@ -442,9 +440,9 @@ public class InstantXSystem {
     boolean processConsensusVote(Peer pnode, ConsensusVote ctx)
     {
         //Since we don't have access to the blockchain, we will not calculate the rankings.
-        int n = params.masternodeManager.getMasternodeRank(ctx.vinMasternode, ctx.blockHeight, MIN_INSTANTX_PROTO_VERSION, true);
+        int n = context.masternodeManager.getMasternodeRank(ctx.vinMasternode, ctx.blockHeight, MIN_INSTANTX_PROTO_VERSION, true);
 
-        Masternode pmn = params.masternodeManager.find(ctx.vinMasternode);
+        Masternode pmn = context.masternodeManager.find(ctx.vinMasternode);
         if(pmn != null)
             log.info("instantx-InstantX::ProcessConsensusVote - Masternode ADDR {} {}", pmn.address.toString(), n);
 
@@ -452,7 +450,7 @@ public class InstantXSystem {
         {
             //can be caused by past versions trying to vote with an invalid protocol
             log.info("instantx - InstantX::ProcessConsensusVote - Unknown Masternode - requesting...");
-            params.masternodeManager.askForMN(pnode, ctx.vinMasternode);
+            context.masternodeManager.askForMN(pnode, ctx.vinMasternode);
             return false;
         }
 
@@ -471,7 +469,7 @@ public class InstantXSystem {
         if(!ctx.signatureValid()) {
             log.info("InstantX::ProcessConsensusVote - Signature invalid");
             // don't ban, it could just be a non-synced masternode
-            params.masternodeManager.askForMN(pnode, ctx.vinMasternode);
+            context.masternodeManager.askForMN(pnode, ctx.vinMasternode);
             return false;
         }
 

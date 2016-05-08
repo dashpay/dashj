@@ -143,7 +143,7 @@ public class ConsensusVote extends Message implements Serializable {
         String strMessage = txHash.toString() + blockHeight;
         //LogPrintf("verify strMessage %s \n", strMessage.c_str());
 
-        Masternode pmn = params.masternodeManager.find(vinMasternode);
+        Masternode pmn = Context.get().masternodeManager.find(vinMasternode);
 
         if(pmn == null)
         {

@@ -41,10 +41,10 @@ import static org.bitcoinj.core.Coin.COIN;
 /**
  * <p>NetworkParameters contains the data needed for working with an instantiation of a Bitcoin chain.</p>
  *
- * <p>This is an abstract class, concrete instantiations can be found in the params package. There are four:
+ * <p>This is an abstract class, concrete instantiations can be found in the context package. There are four:
  * one for the main network ({@link MainNetParams}), one for the public test network, and two others that are
  * intended for unit testing and local app development purposes. Although this class contains some aliases for
- * them, you are encouraged to call the static get() methods on each specific params class directly.</p>
+ * them, you are encouraged to call the static get() methods on each specific context class directly.</p>
  */
 public abstract class NetworkParameters implements Serializable {
     /**
@@ -110,14 +110,7 @@ public abstract class NetworkParameters implements Serializable {
     protected Map<Integer, Sha256Hash> checkpoints = new HashMap<Integer, Sha256Hash>();
 
 
-    public SporkManager sporkManager;
-    public MasternodeManager masternodeManager;
-    public MasternodePayments masternodePayments;
-    public MasternodeSync masternodeSync;
-    public ActiveMasternode activeMasternode;
-    public DarkSendPool darkSendPool;
-    public InstantXSystem instantx;
-    public MasternodeDB masternodeDB;
+
 
     //Dash Extra Parameters
     protected String strSporkKey;
@@ -125,35 +118,7 @@ public abstract class NetworkParameters implements Serializable {
     String strDarksendPoolDummyAddress;
     long nStartMasternodePayments;
 
-    public void initDash() {
-        //Dash Specific
-        sporkManager = new SporkManager(this);
 
-        masternodePayments = new MasternodePayments(this);
-        masternodeSync = new MasternodeSync(this);
-        activeMasternode = new ActiveMasternode(this);
-        darkSendPool = new DarkSendPool(this);
-        instantx = new InstantXSystem(this);
-        masternodeManager = new MasternodeManager(this);
-    }
-
-    public void initDashSync(String directory)
-    {
-        masternodeDB = new MasternodeDB(directory);
-
-        MasternodeManager masternodeManagerLoaded = masternodeDB.read(this, false);
-
-        //
-        // If loading was successful, replace the default manager
-        //
-        if(masternodeManagerLoaded != null) {
-            masternodeManager = masternodeManagerLoaded;
-            masternodeManager.setBlockChain(sporkManager.blockChain);
-        }
-
-        //other functions
-        darkSendPool.startBackgroundProcessing();
-    }
 
     public String getSporkKey() {
         return strSporkKey;
@@ -236,13 +201,13 @@ public abstract class NetworkParameters implements Serializable {
         return MainNetParams.get();
     }
 
-    /** Returns a testnet params modified to allow any difficulty target. */
+    /** Returns a testnet context modified to allow any difficulty target. */
     @Deprecated
     public static NetworkParameters unitTests() {
         return UnitTestParams.get();
     }
 
-    /** Returns a standard regression test params (similar to unitTests) */
+    /** Returns a standard regression test context (similar to unitTests) */
     @Deprecated
     public static NetworkParameters regTests() {
         return RegTestParams.get();

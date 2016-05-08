@@ -23,11 +23,12 @@ public class SporkManager {
     HashMap<Integer, SporkMessage> mapSporksActive;
 
     AbstractBlockChain blockChain;
-    NetworkParameters params;
+    //NetworkParameters context;
+    Context context;
 
-    SporkManager(NetworkParameters params)
+    SporkManager(Context context)
     {
-        this.params = params;
+        this.context = context;
         mapSporks = new HashMap<Sha256Hash, SporkMessage>();
         mapSporksActive = new HashMap<Integer, SporkMessage>();
     }
@@ -215,7 +216,7 @@ public class SporkManager {
         //note: need to investigate why this is failing
         //std::string strMessage = boost::lexical_cast<std::string>(spork.nSporkID) + boost::lexical_cast<std::string>(spork.nValue) + boost::lexical_cast<std::string>(spork.nTimeSigned);
         String strMessage = "" + spork.nSporkID + spork.nValue + spork.nTimeSigned;
-        PublicKey pubkey = new PublicKey(Utils.HEX.decode(params.getSporkKey()));
+        PublicKey pubkey = new PublicKey(Utils.HEX.decode(context.getParams().getSporkKey()));
 
         StringBuilder errorMessage = new StringBuilder();
         if(!DarkSendSigner.verifyMessage(pubkey, spork.sig, strMessage, errorMessage)){
@@ -257,7 +258,7 @@ public class SporkManager {
     boolean updateSpork(int nSporkID, long nValue)
     {
 
-        SporkMessage msg = new SporkMessage(params);
+        SporkMessage msg = new SporkMessage(context.getParams());
         msg.nSporkID = nSporkID;
         msg.nValue = nValue;
         msg.nTimeSigned = Utils.currentTimeSeconds();
@@ -280,7 +281,7 @@ public class SporkManager {
 
     boolean setPrivKey(String strPrivKey)
     {
-        SporkMessage msg = new SporkMessage(params);
+        SporkMessage msg = new SporkMessage(context.getParams());
 
         // Test signing successful, proceed
         strMasterPrivKey = strPrivKey;

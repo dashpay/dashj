@@ -138,7 +138,7 @@ public class AddressTest {
             }
         }
         AltNetwork altNetwork = new AltNetwork();
-        // Add new network params
+        // Add new network context
         Networks.register(altNetwork);
         // Check if can parse address
         NetworkParameters params = Address.getParametersFromAddress("LLxSnHLN2CYyzB5eWTR9K9rS9uWtbTQFb6");

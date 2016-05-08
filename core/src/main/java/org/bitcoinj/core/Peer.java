@@ -380,7 +380,7 @@ public class Peer extends PeerSocketHandler {
             startFilteredBlock((FilteredBlock) m);
         } else if (m instanceof TransactionLockRequest) {
             //processTransactionLockRequest((TransactionLockRequest) m);
-            params.instantx.processTransactionLockRequest(this, (TransactionLockRequest)m);
+            context.instantx.processTransactionLockRequest(this, (TransactionLockRequest)m);
             processTransaction((TransactionLockRequest)m);
         } else if (m instanceof Transaction) {
             processTransaction((Transaction) m);
@@ -429,21 +429,21 @@ public class Peer extends PeerSocketHandler {
         } else if(m instanceof DarkSendQueue) {
             //do nothing
         } else if(m instanceof MasternodeBroadcast) {
-            params.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);
+            context.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);
 
         }
         else if(m instanceof MasternodePing) {
-            params.masternodeManager.processMasternodePing(this, (MasternodePing)m);
+            context.masternodeManager.processMasternodePing(this, (MasternodePing)m);
         }
         else if(m instanceof SporkMessage)
         {
-            params.sporkManager.processSpork(this, (SporkMessage)m);
+            context.sporkManager.processSpork(this, (SporkMessage)m);
         }
         else if(m instanceof ConsensusVote) {
-            params.instantx.processConsensusVoteMessage(this, (ConsensusVote)m);
+            context.instantx.processConsensusVoteMessage(this, (ConsensusVote)m);
         }
         else if(m instanceof SyncStatusCount) {
-            params.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
+            context.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
         }
         else
         {
@@ -709,7 +709,7 @@ public class Peer extends PeerSocketHandler {
 
                                         if(tx instanceof TransactionLockRequest)
                                         {
-                                            params.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
+                                            context.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
                                         }
                                     } catch (VerificationException e) {
                                         log.error("{}: Wallet failed to process pending transaction {}", getAddress(), tx.getHash());
@@ -730,7 +730,7 @@ public class Peer extends PeerSocketHandler {
 
                             if(tx instanceof TransactionLockRequest)
                             {
-                                params.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
+                                context.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
                             }
                         }
                     }
@@ -1081,15 +1081,15 @@ public class Peer extends PeerSocketHandler {
 //            case MSG_DSTX:
   //              return mapDarksendBroadcastTxes.count(inv.hash);
             case TransactionLockRequest:
-                return params.instantx.mapTxLockReq.containsKey(inv.hash) ||
-                        params.instantx.mapTxLockReqRejected.containsKey(inv.hash);
+                return context.instantx.mapTxLockReq.containsKey(inv.hash) ||
+                        context.instantx.mapTxLockReqRejected.containsKey(inv.hash);
             case TransactionLockVote:
-                return  params.instantx.mapTxLockVote.containsKey(inv.hash);
+                return  context.instantx.mapTxLockVote.containsKey(inv.hash);
             case Spork:
-                return params.sporkManager.mapSporks.containsKey(inv.hash);
+                return context.sporkManager.mapSporks.containsKey(inv.hash);
             case MasterNodeWinner:
-                /*if(params.masternodePayments.mapMasternodePayeeVotes.containsKey(inv.hash)) {
-                    params.masternodeSync.AddedMasternodeWinner(inv.hash);
+                /*if(context.masternodePayments.mapMasternodePayeeVotes.containsKey(inv.hash)) {
+                    context.masternodeSync.AddedMasternodeWinner(inv.hash);
                     return true;
                 }*/
                 return false;
@@ -1118,13 +1118,13 @@ public class Peer extends PeerSocketHandler {
                 }*/
                 return false;
             case MasterNodeAnnounce:
-                if(params.masternodeManager.mapSeenMasternodeBroadcast.containsKey(inv.hash)) {
-                    params.masternodeSync.addedMasternodeList(inv.hash);
+                if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(inv.hash)) {
+                    context.masternodeSync.addedMasternodeList(inv.hash);
                     return true;
                 }
                 return false;
             case MasterNodePing:
-                return params.masternodeManager.mapSeenMasternodePing.containsKey(inv.hash);
+                return context.masternodeManager.mapSeenMasternodePing.containsKey(inv.hash);
         }
         // Don't know what it is, just say we already got one
         return true;
@@ -1274,16 +1274,16 @@ public class Peer extends PeerSocketHandler {
         //if(blockChain.getBestChainHeight() > (this.getBestHeight() - 100))
         {
 
-           //if(params.masternodeSync.isSynced()) {
+           //if(context.masternodeSync.isSynced()) {
                 it = masternodePings.iterator();
 
                 while (it.hasNext()) {
                     InventoryItem item = it.next();
-                    if (!params.masternodeManager.mapSeenMasternodePing.containsKey(item.hash)) {
-                        log.info("inv - received MasternodePing :" + item.hash + " new ping");
+                    if (!context.masternodeManager.mapSeenMasternodePing.containsKey(item.hash)) {
+                        //log.info("inv - received MasternodePing :" + item.hash + " new ping");
                         getdata.addItem(item);
-                    } else
-                        log.info("inv - received MasternodePing :" + item.hash + " already seen");
+                    } //else
+                        //log.info("inv - received MasternodePing :" + item.hash + " already seen");
                 }
            // }
 
@@ -1291,7 +1291,7 @@ public class Peer extends PeerSocketHandler {
 
             while (it.hasNext()) {
                 InventoryItem item = it.next();
-                log.info("inv - received MasternodeBroadcast :" + item.hash);
+                //log.info("inv - received MasternodeBroadcast :" + item.hash);
 
                 //if(!instantx.mapTxLockVote.containsKey(item.hash))
                 //{

@@ -53,7 +53,7 @@ public class DumpedPrivateKey extends VersionedChecksummedBytes {
      *
      * @param params  The expected network parameters of the key. If you don't care, provide null.
      * @param encoded The base58 encoded string.
-     * @throws AddressFormatException If the string is invalid or the header byte doesn't match the network params.
+     * @throws AddressFormatException If the string is invalid or the header byte doesn't match the network context.
      */
     public DumpedPrivateKey(NetworkParameters params, String encoded) throws AddressFormatException {
         super(encoded);

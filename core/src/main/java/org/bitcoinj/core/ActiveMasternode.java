@@ -20,7 +20,7 @@ public class ActiveMasternode {
     public static final int ACTIVE_MASTERNODE_NOT_CAPABLE           =      3;
     public static final int ACTIVE_MASTERNODE_STARTED               =      4;
 
-    NetworkParameters params;
+    Context context;
 
     // Initialized by init.cpp
     // Keys for the main Masternode
@@ -33,9 +33,9 @@ public class ActiveMasternode {
     public int status;
     public String notCapableReason;
 
-    public ActiveMasternode(NetworkParameters params)
+    public ActiveMasternode(Context context)
     {
-        this.params = params;
+        this.context = context;
 
         status = ACTIVE_MASTERNODE_NOT_CAPABLE;
     }

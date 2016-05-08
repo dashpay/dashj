@@ -74,7 +74,7 @@ public class BlockTest {
 
     @Test
     public void testProofOfWork() throws Exception {
-        // This params accepts any difficulty target.
+        // This context accepts any difficulty target.
         NetworkParameters params = UnitTestParams.get();
         Block block = new Block(params, blockBytes);
         block.setNonce(12346);

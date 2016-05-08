@@ -115,6 +115,7 @@ public class CoinDefinition {
     static public String[] dnsSeeds = new String[] {
             "dnsseed.masternode.io",
             "dnsseed.darkcoin.qa",
+            "dnsseed.fulltimegeek.com",
             //"dnsseed.darkcoin.io",
             "23.23.186.131", //Evan's seed node
             "162.252.83.46",  //drkpool.com

@@ -177,7 +177,7 @@ public class Block extends Message {
      */
 
     public Coin getBlockInflation(int height) {
-        //return Utils.toNanoCoins(50, 0).shiftRight(height / params.getSubsidyDecreaseBlockCount());
+        //return Utils.toNanoCoins(50, 0).shiftRight(height / context.getSubsidyDecreaseBlockCount());
         return /*Utils.toNanoCoins(*/CoinDefinition.GetBlockReward(height)/*, 0)*/;
     }
 

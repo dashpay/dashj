@@ -115,7 +115,7 @@ public class MasternodeDB {
         }
     }
 
-    public MasternodeManager read(NetworkParameters params, boolean fDryRun) {
+    public MasternodeManager read(Context context, boolean fDryRun) {
 
         long nStart = Utils.currentTimeMillis();
         MasternodeManager manager = null;
@@ -190,14 +190,14 @@ public class MasternodeDB {
                 pchMsgTmp = (int)Utils.readUint32(vchData, strMagicMessage.length());
 
                 // ... verify the network matches ours
-                if (pchMsgTmp != params.getPacketMagic()) {
+                if (pchMsgTmp != context.getParams().getPacketMagic()) {
                     log.error("Invalid network magic number");
                     lastReadResult = ReadResult.IncorrectMagicNumber;
                     return null;
                 }
                 // de-serialize data into CMasternodeMan object
 
-                manager = new MasternodeManager(params, vchData, strMagicMessage.length()+ 4);
+                manager = new MasternodeManager(context.getParams(), vchData, strMagicMessage.length()+ 4);
 
             } catch (Exception e){
                 //mnodemanToLoad.Clear();
@@ -223,8 +223,8 @@ public class MasternodeDB {
             return null;
         }
     }
-        MasternodeManager read(NetworkParameters params) {
-            return read(params, false);
+        MasternodeManager read(Context context) {
+            return read(context, false);
         }
 
     public static void dumpMasternodes()
@@ -233,12 +233,12 @@ public class MasternodeDB {
 
         NetworkParameters params = Context.get().getParams();
 
-        MasternodeDB mndb = new MasternodeDB(params.masternodeDB.getDirectory());
+        MasternodeDB mndb = new MasternodeDB(Context.get().masternodeDB.getDirectory());
         MasternodeManager tempMnodeman;
 
         log.info("Verifying mncache.dat format...");
         //CMasternodeDB::ReadResult readResult =
-        tempMnodeman = mndb.read(params, true);
+        tempMnodeman = mndb.read(Context.get(), true);
         MasternodeDB.ReadResult readResult = mndb.lastReadResult;
         // there was an error and it was not an error on file opening => do not proceed
         if (readResult == MasternodeDB.ReadResult.FileError)
@@ -255,7 +255,7 @@ public class MasternodeDB {
             }
         }
         log.info("Writing info to mncache.dat...\n");
-        mndb.write(params.masternodeManager);
+        mndb.write(Context.get().masternodeManager);
 
         log.info("Masternode dump finished  {}ms", Utils.currentTimeMillis() - nStart);
     }

@@ -56,9 +56,9 @@ public class MasternodeManager extends Message {
 
     Context context;
 
-    public MasternodeManager(NetworkParameters params)
+    public MasternodeManager(Context context)
     {
-        super(params);
+        super(context.getParams());
         nDsqCount = 0;
 
         // map to hold all MNs
@@ -257,7 +257,7 @@ public class MasternodeManager extends Message {
         lock.lock();
         try {
             if (mapSeenMasternodeBroadcast.containsKey(mnb.getHash())) { //seen
-                params.masternodeSync.addedMasternodeList(mnb.getHash());
+                context.masternodeSync.addedMasternodeList(mnb.getHash());
                 return;
             }
 
@@ -290,7 +290,7 @@ public class MasternodeManager extends Message {
             // use this as a peer
             //TODO:  Is this possible?
             //addrman.Add(CAddress(mnb.addr), pfrom->addr, 2*60*60);
-            //params.masternodeSync.addedMasternodeList(mnb.getHash());
+            //context.masternodeSync.addedMasternodeList(mnb.getHash());
         } else {
             log.info("mnb - Rejected Masternode entry "+ mnb.address.toString());
 
@@ -418,7 +418,7 @@ public class MasternodeManager extends Message {
     public int countEnabled(int protocolVersion)
     {
         int i = 0;
-        protocolVersion = protocolVersion == -1 ? params.masternodePayments.getMinMasternodePaymentsProto() : protocolVersion;
+        protocolVersion = protocolVersion == -1 ? context.masternodePayments.getMinMasternodePaymentsProto() : protocolVersion;
 
         lock.lock();
         try {
@@ -660,7 +660,7 @@ public class MasternodeManager extends Message {
                 if (mn.activeState == Masternode.MASTERNODE_REMOVE ||
                         mn.activeState == Masternode.MASTERNODE_VIN_SPENT ||
                         (forceExpiredRemoval && mn.activeState == Masternode.MASTERNODE_EXPIRED) ||
-                        mn.protocolVersion < params.masternodePayments.getMinMasternodePaymentsProto()) {
+                        mn.protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
                     log.info("masternode-CMasternodeMan: Removing inactive Masternode {} - {} now", mn.address.toString(), size() - 1);
 
                     //erase all of the broadcasts we've seen from this vin
@@ -671,7 +671,7 @@ public class MasternodeManager extends Message {
                     while (it3.hasNext()) {
                         Map.Entry<Sha256Hash, MasternodeBroadcast> mb = it3.next();
                         if (mb.getValue().vin == mn.vin) {
-                            params.masternodeSync.mapSeenSyncMNB.remove(mb.getKey());
+                            context.masternodeSync.mapSeenSyncMNB.remove(mb.getKey());
                             //mapSeenMasternodeBroadcast.remove(mb.getKey(), mb.getValue());
                             it3.remove();
                         }
@@ -742,7 +742,7 @@ public class MasternodeManager extends Message {
                 if (mb.getValue().lastPing.sigTime < Utils.currentTimeSeconds() - (Masternode.MASTERNODE_REMOVAL_SECONDS * 2)) {
                     //mapSeenMasternodeBroadcast.erase(it3++);
 
-                    params.masternodeSync.mapSeenSyncMNB.remove(mb.getValue().getHash());
+                    context.masternodeSync.mapSeenSyncMNB.remove(mb.getValue().getHash());
 
                     it3.remove();
                 } else {
@@ -811,7 +811,7 @@ public class MasternodeManager extends Message {
             for(Peer pnode : context.peerGroup.getConnectedPeers())
             {
                 if (pnode.isDarkSendMaster()) {
-                    if (params.darkSendPool.submittedToMasternode != null && pnode.getAddress().getAddr().equals(params.darkSendPool.submittedToMasternode.address.getAddr()))
+                    if (context.darkSendPool.submittedToMasternode != null && pnode.getAddress().getAddr().equals(context.darkSendPool.submittedToMasternode.address.getAddr()))
                         continue;
                     log.info("Closing Masternode connection {}", pnode.getAddress());
                     //pnode -> fDisconnect = true;

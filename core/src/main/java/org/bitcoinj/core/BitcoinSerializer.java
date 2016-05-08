@@ -37,7 +37,7 @@ import static org.bitcoinj.core.Utils.*;
  *
  * <ul>
  * <li>The proper Class instance needs to be mapped to its message name in the names variable below</li>
- * <li>There needs to be a constructor matching: NetworkParameters params, byte[] payload</li>
+ * <li>There needs to be a constructor matching: NetworkParameters context, byte[] payload</li>
  * <li>Message.bitcoinSerializeToStream() needs to be properly subclassed</li>
  * </ul>
  */

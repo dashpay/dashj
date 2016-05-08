@@ -403,12 +403,10 @@ public class PeerGroup implements TransactionBroadcaster {
         bloomFilterMerger = new FilterMerger(DEFAULT_BLOOM_FILTER_FP_RATE);
 
         //DashSpecific
-        params.sporkManager.setBlockChain(chain);
-        params.masternodeManager.setBlockChain(chain);
-        params.masternodeSync.setBlockChain(chain);
-        params.instantx.setBlockChain(chain);
 
-        context.peerGroup = this;
+
+
+        context.setPeerGroupAndBlockChain(this, chain);
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);
@@ -769,7 +767,7 @@ public class PeerGroup implements TransactionBroadcaster {
         }
     }
 
-    /** Convenience method for addAddress(new PeerAddress(address, params.port)); */
+    /** Convenience method for addAddress(new PeerAddress(address, context.port)); */
     public void addAddress(InetAddress address) {
         addAddress(new PeerAddress(address, params.getPort()));
     }

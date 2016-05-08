@@ -58,16 +58,15 @@ public class MasternodeSync {
     // Time when current masternode asset sync started
     long nAssetSyncStarted;
 
-    NetworkParameters params;
+    //NetworkParameters params;
     AbstractBlockChain blockChain;
     Context context;
 
     void setBlockChain(AbstractBlockChain blockChain) { this.blockChain = blockChain; }
 
-    public MasternodeSync(NetworkParameters params)
+    public MasternodeSync(Context context)
     {
-        this.params = params;
-        context = Context.get();
+        this.context = context;
 
         this.mapSeenSyncBudget = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNB = new HashMap<Sha256Hash, Integer>();
@@ -103,7 +102,7 @@ public class MasternodeSync {
 
     void addedMasternodeList(Sha256Hash hash)
     {
-        if(params.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
+        if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
             Integer count = mapSeenSyncMNB.get(hash);
             if(count != null && count < MASTERNODE_SYNC_THRESHOLD) {
                 lastMasternodeList = Utils.currentTimeSeconds();
@@ -314,7 +313,7 @@ public class MasternodeSync {
         /*
             Resync if we lose all masternodes from sleep/wake or failure to sync originally
         */
-            if(params.masternodeManager.countEnabled() == 0) {
+            if(context.masternodeManager.countEnabled() == 0) {
                 reset();
             } else
                 return;
@@ -333,7 +332,7 @@ public class MasternodeSync {
             getNextAsset();
 
         // sporks synced but blockchain is not, wait until we're almost at a recent block to continue
-        if(params.getId().equals(NetworkParameters.ID_REGTEST) &&
+        if(context.getParams().getId().equals(NetworkParameters.ID_REGTEST) &&
                 !isBlockchainSynced() && RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS) return;
 
         //TRY_LOCK(cs_vNodes, lockRecv);
@@ -351,15 +350,15 @@ public class MasternodeSync {
 
             //BOOST_FOREACH(CNode* pnode, vNodes)
             for (Peer pnode : context.peerGroup.getConnectedPeers()) {
-                if (params.getId().equals(NetworkParameters.ID_REGTEST)) {
+                if (context.getParams().getId().equals(NetworkParameters.ID_REGTEST)) {
                     if (RequestedMasternodeAttempt <= 2) {
-                        pnode.sendMessage(new GetSporksMessage(params)); //get current network sporks
+                        pnode.sendMessage(new GetSporksMessage(context.getParams())); //get current network sporks
                     } else if (RequestedMasternodeAttempt < 4) {
-                        params.masternodeManager.dsegUpdate(pnode);
+                        context.masternodeManager.dsegUpdate(pnode);
                     } else if (RequestedMasternodeAttempt < 6) {
-                        int nMnCount = params.masternodeManager.countEnabled();
-                        pnode.sendMessage(new GetMasternodePaymentRequestSyncMessage(params, nMnCount)); //sync payees
-                        pnode.sendMessage(new GetMasternodeVoteSyncMessage(params, Sha256Hash.ZERO_HASH)); //sync masternode votes
+                        int nMnCount = context.masternodeManager.countEnabled();
+                        pnode.sendMessage(new GetMasternodePaymentRequestSyncMessage(context.getParams(), nMnCount)); //sync payees
+                        pnode.sendMessage(new GetMasternodeVoteSyncMessage(context.getParams(), Sha256Hash.ZERO_HASH)); //sync masternode votes
                     } else {
                         RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
                     }
@@ -372,14 +371,14 @@ public class MasternodeSync {
                     if (pnode.hasFulfilledRequest("getspork")) continue;
                     pnode.fulfilledRequest("getspork");
 
-                    pnode.sendMessage(new GetSporksMessage(params)); //get current network sporks
+                    pnode.sendMessage(new GetSporksMessage(context.getParams())); //get current network sporks
                     if (RequestedMasternodeAttempt >= 2) getNextAsset();
                     RequestedMasternodeAttempt++;
 
                     return;
                 }
 
-                if (pnode.getPeerVersionMessage().clientVersion >= params.masternodePayments.getMinMasternodePaymentsProto()) {
+                if (pnode.getPeerVersionMessage().clientVersion >= context.masternodePayments.getMinMasternodePaymentsProto()) {
 
                     if (RequestedMasternodeAssets == MASTERNODE_SYNC_LIST) {
                         if (DarkCoinSystem.fDebug)
@@ -395,7 +394,7 @@ public class MasternodeSync {
                         // timeout
                         if (lastMasternodeList == 0 &&
                                 (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || Utils.currentTimeSeconds() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
-                            if (params.sporkManager.isSporkActive(SporkManager.SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
+                            if (context.sporkManager.isSporkActive(SporkManager.SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
                                 log.info("CMasternodeSync::Process - ERROR - Masternode Sync has failed, will retry later");
                                 RequestedMasternodeAssets = MASTERNODE_SYNC_FAILED;
                                 RequestedMasternodeAttempt = 0;
@@ -409,7 +408,7 @@ public class MasternodeSync {
 
                         if (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3) return;
 
-                        params.masternodeManager.dsegUpdate(pnode);
+                        context.masternodeManager.dsegUpdate(pnode);
                         RequestedMasternodeAttempt++;
                         return;
                     }
@@ -426,7 +425,7 @@ public class MasternodeSync {
                         // timeout
                         if (lastMasternodeWinner == 0 &&
                                 (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || Utils.currentTimeSeconds() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
-                            if (params.sporkManager.isSporkActive(SporkManager.SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
+                            if (context.sporkManager.isSporkActive(SporkManager.SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
                                 log.info("CMasternodeSync::Process - ERROR - Masternode Winner Sync has failed, will retry later");
                                 RequestedMasternodeAssets = MASTERNODE_SYNC_FAILED;
                                 RequestedMasternodeAttempt = 0;
@@ -444,8 +443,8 @@ public class MasternodeSync {
                         StoredBlock prev = blockChain.getChainHead();
                         if (prev == null) return;
 
-                        int nMnCount = params.masternodeManager.countEnabled();
-                        pnode.sendMessage(new GetMasternodePaymentRequestSyncMessage(params, nMnCount)); //sync payees
+                        int nMnCount = context.masternodeManager.countEnabled();
+                        pnode.sendMessage(new GetMasternodePaymentRequestSyncMessage(context.getParams(), nMnCount)); //sync payees
                         RequestedMasternodeAttempt++;
 
                         return;
@@ -462,7 +461,7 @@ public class MasternodeSync {
                             getNextAsset();
 
                             //try to activate our masternode if possible
-                            params.activeMasternode.manageStatus();
+                            context.activeMasternode.manageStatus();
                             // } else { //we've failed to sync, this state will reject the next budget block
                             //     LogPrintf("CMasternodeSync::Process - ERROR - Sync has failed, will retry later\n");
                             //     RequestedMasternodeAssets = MASTERNODE_SYNC_FAILED;
@@ -478,7 +477,7 @@ public class MasternodeSync {
                                 (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || Utils.currentTimeSeconds() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
                             // maybe there is no budgets at all, so just finish syncing
                             getNextAsset();
-                            params.activeMasternode.manageStatus();
+                            context.activeMasternode.manageStatus();
                             return;
                         }
 
@@ -487,7 +486,7 @@ public class MasternodeSync {
 
                         if (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3) return;
 
-                        pnode.sendMessage(new GetMasternodeVoteSyncMessage(params, Sha256Hash.ZERO_HASH)); //sync masternode votes
+                        pnode.sendMessage(new GetMasternodeVoteSyncMessage(context.getParams(), Sha256Hash.ZERO_HASH)); //sync masternode votes
                         RequestedMasternodeAttempt++;
 
                         return;

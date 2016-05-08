@@ -1,5 +1,6 @@
 package org.bitcoinj.core;
 
+import com.squareup.okhttp.internal.Network;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.darkcoinj.DarkSend;
@@ -50,7 +51,7 @@ public class MasternodeBroadcast extends Masternode {
         cursor += 36;
         varint = new VarInt(buf, cursor);
         long scriptLen = varint.value;
-        // 4 = length of sequence field (unint32)
+        // 4 = length of sequence field (uint32)
         cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
 
         varint = new VarInt(buf, cursor);
@@ -153,7 +154,7 @@ public class MasternodeBroadcast extends Masternode {
 
             byte[] message = bos.toByteArray();
 
-            if (protocolVersion < params.masternodePayments.getMinMasternodePaymentsProto()) {
+            if (protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
                 log.info("mnb - ignoring outdated Masternode " + vin.toString() + " protocol version " + protocolVersion);
                 return false;
             }
@@ -197,7 +198,7 @@ public class MasternodeBroadcast extends Masternode {
             } else if (address.getPort() == 9999) return false;
 
             //search existing Masternode list, this is where we update existing Masternodes with new mnb broadcasts
-            Masternode pmn = params.masternodeManager.find(vin);
+            Masternode pmn = context.masternodeManager.find(vin);
 
             // no such masternode or it's not enabled already, nothing to update
             if (pmn == null || (pmn != null && !pmn.isEnabled())) return true;
@@ -211,7 +212,7 @@ public class MasternodeBroadcast extends Masternode {
                     pmn.check();
                     if (pmn.isEnabled()) relay();
                 }
-                params.masternodeSync.addedMasternodeList(getHash());
+                context.masternodeSync.addedMasternodeList(getHash());
             }
 
             return true;
@@ -231,23 +232,23 @@ public class MasternodeBroadcast extends Masternode {
     {
         // we are a masternode with the same vin (i.e. already activated) and this mnb is ours (matches our Masternode privkey)
         // so nothing to do here for us
-        if(DarkCoinSystem.fMasterNode && vin.getOutpoint().equals(params.activeMasternode.vin.getOutpoint()) && pubkey2.equals(params.activeMasternode.pubKeyMasternode))
+        if(DarkCoinSystem.fMasterNode && vin.getOutpoint().equals(context.activeMasternode.vin.getOutpoint()) && pubkey2.equals(context.activeMasternode.pubKeyMasternode))
             return true;
 
         // search existing Masternode list
-        Masternode pmn = params.masternodeManager.find(vin);
+        Masternode pmn = context.masternodeManager.find(vin);
 
         if(pmn != null) {
             // nothing to do here if we already know about this masternode and it's enabled
             if(pmn.isEnabled()) return true;
                 // if it's not enabled, remove old MN first and continue
-            else params.masternodeManager.remove(pmn.vin);
+            else context.masternodeManager.remove(pmn.vin);
         }
 
         /*  TODO:  Will this work?
         CValidationState state;
         CMutableTransaction tx = CMutableTransaction();
-        TransactionOutput vout = new TransactionOutput(params, Coin.valueOf(999,99), params.darkSendPool.collateralPubKey);
+        TransactionOutput vout = new TransactionOutput(context, Coin.valueOf(999,99), context.darkSendPool.collateralPubKey);
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
 
@@ -255,8 +256,8 @@ public class MasternodeBroadcast extends Masternode {
             TRY_LOCK(cs_main, lockMain);
             if(!lockMain) {
                 // not mnb fault, let it to be checked again later
-                params.masternodeManager.mapSeenMasternodeBroadcast.remove(getHash());
-                params.masternodeSync.mapSeenSyncMNB.remove(getHash());
+                context.masternodeManager.mapSeenMasternodeBroadcast.remove(getHash());
+                context.masternodeSync.mapSeenSyncMNB.remove(getHash());
                 return false;
             }
 
@@ -302,11 +303,11 @@ public class MasternodeBroadcast extends Masternode {
         */
         log.info("mnb - Got NEW Masternode entry - {} - {} - {} - {} ", getHash().toString(), address.toString(), vin.toString(), sigTime);
         Masternode mn = new Masternode(this);
-        params.masternodeManager.add(mn);
+        context.masternodeManager.add(mn);
 
         // if it matches our Masternode privkey, then we've been remotely activated
-        if(pubkey2.equals(params.activeMasternode.pubKeyMasternode) && protocolVersion == NetworkParameters.PROTOCOL_VERSION){
-            params.activeMasternode.enableHotColdMasterNode(vin, address);
+        if(pubkey2.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion == NetworkParameters.PROTOCOL_VERSION){
+            context.activeMasternode.enableHotColdMasterNode(vin, address);
         }
 
         boolean isLocal = address.getAddr().isSiteLocalAddress() || address.getAddr().isLoopbackAddress();

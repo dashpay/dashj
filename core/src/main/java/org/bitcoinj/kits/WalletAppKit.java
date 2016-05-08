@@ -109,8 +109,8 @@ public class WalletAppKit extends AbstractIdleService {
                 setCheckpoints(stream);
         }
 
-        params.initDash();
-        params.initDashSync(directory.getAbsolutePath());
+        context.initDash();
+        context.initDashSync(directory.getAbsolutePath());
     }
 
     /** Will only connect to the given addresses. Cannot be called after startup. */

@@ -1,14 +1,12 @@
 package org.darkcoinj;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantLock;
@@ -98,31 +96,31 @@ public class DarkSendPool {
     int sessionDenom; //Users must submit an denom matching this
     int cachedNumBlocks; //used for the overview screen
 
-    NetworkParameters params;
+    Context context;
 
-    public DarkSendPool(NetworkParameters params)
+    public DarkSendPool(Context context)
     {
-        this.params = params;
+        this.context = context;
         /* DarkSend uses collateral addresses to trust parties entering the pool
             to behave themselves. If they don't it takes their money. */
 
         cachedLastSuccess = 0;
         cachedNumBlocks = Integer.MAX_VALUE; //std::numeric_limits<int>::max();
         unitTest = false;
-        txCollateral = new Transaction(params);
+        txCollateral = new Transaction(context.getParams());
         minBlockSpacing = 0;
         lastNewBlock = 0;
 
         vecSessionCollateral = new ArrayList<Transaction>();
         entries = new ArrayList<DarkSendEntry>();
-        finalTransaction = new Transaction(params);
+        finalTransaction = new Transaction(context.getParams());
 
         setNull();
     }
     /*
     void InitCollateralAddress(){
         String strAddress = "";
-        if(system.params.getId() == NetworkParameters.ID_MAINNET) {
+        if(system.context.getId() == NetworkParameters.ID_MAINNET) {
             strAddress = "Xq19GqFvajRrEdDHYRKGYjTsQfpV5jyipF";
         } else {
             strAddress = "y1EZuxhhNMAUofTBEeLqGE1bJrpC2TWRNp";
@@ -183,36 +181,36 @@ public class DarkSendPool {
                     //LogPrintf("ThreadCheckDarkSendPool::check timeout\n");
 
                     // try to sync from all available nodes, one step at a time
-                    params.masternodeSync.process();
+                    context.masternodeSync.process();
 
-                    if (params.masternodeSync.isBlockchainSynced()) {
+                    if (context.masternodeSync.isBlockchainSynced()) {
 
                         c++;
 
                         // check if we should activate or ping every few minutes,
                         // start right after sync is considered to be done
                         if (c % Masternode.MASTERNODE_PING_SECONDS == 1)
-                            params.activeMasternode.manageStatus();
+                            context.activeMasternode.manageStatus();
 
                         if (c % 60 == 0) {
-                            params.masternodeManager.checkAndRemove();
-                            params.masternodeManager.processMasternodeConnections();
-                            params.masternodePayments.cleanPaymentList();
-                            params.instantx.cleanTransactionLocksList();
+                            context.masternodeManager.checkAndRemove();
+                            context.masternodeManager.processMasternodeConnections();
+                            context.masternodePayments.cleanPaymentList();
+                            context.instantx.cleanTransactionLocksList();
                         }
                         //hashengineering added this
                         if(c % 30 == 0) {
-                            log.info(params.masternodeManager.toString());
+                            log.info(context.masternodeManager.toString());
                         }
 
                         //if(c % MASTERNODES_DUMP_SECONDS == 0) DumpMasternodes();
 
                         //TODO:  Add if necessary for other DarkSend functions
-                        /*params.darkSendPool.checkTimeout();
-                        params.darkSendPool.checkForCompleteQueue();
+                        /*context.darkSendPool.checkTimeout();
+                        context.darkSendPool.checkForCompleteQueue();
 
-                        if (params.darkSendPool.getState() == POOL_STATUS_IDLE && c % 15 == 0) {
-                            params.darkSendPool.DoAutomaticDenominating();
+                        if (context.darkSendPool.getState() == POOL_STATUS_IDLE && c % 15 == 0) {
+                            context.darkSendPool.DoAutomaticDenominating();
                         }*/
                     }
                 }
