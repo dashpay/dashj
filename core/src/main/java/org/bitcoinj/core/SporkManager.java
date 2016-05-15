@@ -1,11 +1,9 @@
 package org.bitcoinj.core;
 
-import com.squareup.okhttp.internal.Network;
-import oracle.jrockit.jfr.StringConstantPool;
+
 import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.text.resources.ar.FormatData_ar_JO;
 
 import java.util.HashMap;
 
@@ -39,7 +37,7 @@ public class SporkManager {
     }
 
     void processSpork(Peer from, SporkMessage spork) {
-        if (DarkCoinSystem.fLiteMode) return; //disable all darksend/masternode related functionality
+        if (context.isLiteMode() && !context.allowInstantXinLiteMode()) return; //disable all darksend/masternode related functionality
 
             //if (chainActive.Tip() == NULL) return;
 

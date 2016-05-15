@@ -103,7 +103,7 @@ public class InstantXSystem {
 
     boolean canProcessInstantXMessages()
     {
-        if(system.fLiteMode) return false; //disable all darksend/masternode related functionality
+        if(context.isLiteMode() && !context.allowInstantXinLiteMode()) return false; //disable all darksend/masternode related functionality
         if(!context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTX)) return false;
         if(!context.masternodeSync.isBlockchainSynced()) return false;
 
@@ -454,7 +454,7 @@ public class InstantXSystem {
             return false;
         }
 
-        if(n == -2)
+        if(n == -2 || n == -3)
         {
             //We can't determine the hash for blockHeight, but we will proceed anyways;
         }
@@ -466,7 +466,7 @@ public class InstantXSystem {
             log.info("instantx-InstantX::ProcessConsensusVote - Masternode is the top {} ({}) - {}", INSTANTX_SIGNATURES_TOTAL, n, ctx.getHash());
 
 
-        if(!ctx.signatureValid()) {
+        if(n != -3 && !ctx.signatureValid()) {
             log.info("InstantX::ProcessConsensusVote - Signature invalid");
             // don't ban, it could just be a non-synced masternode
             context.masternodeManager.askForMN(pnode, ctx.vinMasternode);

@@ -168,11 +168,11 @@ public class DarkSendPool {
     public Runnable ThreadCheckDarkSendPool = new Runnable() {
         @Override
         public void run() {
-            if(DarkCoinSystem.fLiteMode) return; //disable all Darksend/Masternode related functionality
+            if(context.isLiteMode() && !context.allowInstantXinLiteMode()) return; //disable all Darksend/Masternode related functionality
 
             // Make this thread recognisable as the wallet flushing thread
             //RenameThread("dash-darksend");
-
+            log.info("--------------------------------------\nstarting dash-darksend thread");
             int c = 0;
             try {
 
@@ -182,6 +182,11 @@ public class DarkSendPool {
 
                     // try to sync from all available nodes, one step at a time
                     context.masternodeSync.process();
+
+                    if(context.isLiteMode() && context.allowInstantXinLiteMode() && context.masternodeSync.getSyncStatusInt() == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
+                        log.info("closing thread: " + Thread.currentThread().getName());
+                        return; // if in LiteMode and allowing instantX and the Sporks are synced, then close this thread.
+                    }
 
                     if (context.masternodeSync.isBlockchainSynced()) {
 
@@ -232,6 +237,12 @@ public class DarkSendPool {
             backgroundThread.start();
             return true;
         }
+        else if(backgroundThread.getState() == Thread.State.TERMINATED) {
+            //if the thread was stopped, start it again
+            backgroundThread = new ContextPropagatingThreadFactory("dash-darksend").newThread(ThreadCheckDarkSendPool);
+            backgroundThread.start();
+        }
         return false;
     }
+    public boolean isBackgroundRunning() { return backgroundThread == null ? false : backgroundThread.getState() != Thread.State.TERMINATED; }
 }

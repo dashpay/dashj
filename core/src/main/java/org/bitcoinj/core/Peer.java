@@ -429,11 +429,13 @@ public class Peer extends PeerSocketHandler {
         } else if(m instanceof DarkSendQueue) {
             //do nothing
         } else if(m instanceof MasternodeBroadcast) {
-            context.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);
+            if(!context.isLiteMode())
+                context.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);
 
         }
         else if(m instanceof MasternodePing) {
-            context.masternodeManager.processMasternodePing(this, (MasternodePing)m);
+            if(!context.isLiteMode())
+                context.masternodeManager.processMasternodePing(this, (MasternodePing)m);
         }
         else if(m instanceof SporkMessage)
         {
@@ -1173,9 +1175,11 @@ public class Peer extends PeerSocketHandler {
                 case    BudgetFinalizedVote: break;
                 case    MasterNodeQuarum: break;
                 case    MasterNodeAnnounce:
+                    if(context.isLiteMode()) break;
                     masternodeBroadcasts.add(item);
                     break;
                 case    MasterNodePing:
+                    if(context.isLiteMode()) break;
                     masternodePings.add(item);
                     break;
                 case DarkSendTransaction:

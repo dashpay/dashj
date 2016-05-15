@@ -5,6 +5,7 @@ import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
+import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 import org.darkcoinj.DarkSendSigner;
@@ -15,6 +16,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -77,12 +80,16 @@ public class MasternodeManager extends Message {
 
 
         context = Context.get();
+
+        eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeManagerListener>>();
     }
 
     public MasternodeManager(NetworkParameters params, byte [] payload, int cursor)
     {
         super(params, payload, cursor);
         context = Context.get();
+
+        eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeManagerListener>>();
     }
 
     @Override
@@ -350,6 +357,7 @@ public class MasternodeManager extends Message {
             if (pmn == null) {
                 log.info("masternode - MasternodeMan: Adding new Masternode "+mn.address.toString()+" - "+(size() + 1)+" now");
                 vMasternodes.add(mn);
+                queueOnSyncStatusChanged();
                 return true;
             }
 
@@ -448,7 +456,9 @@ public class MasternodeManager extends Message {
                 if (mn.vin.equals(vin)){
                     log.info("masternode - CMasternodeMan: Removing Masternode %s "+mn.address.toString()+"- "+(size()-1)+" now");
 
-                    vMasternodes.remove(mn);
+                    //vMasternodes.remove(mn);
+                    it.remove();
+                    queueOnSyncStatusChanged();
                     break;
                 }
 
@@ -551,6 +561,9 @@ public class MasternodeManager extends Message {
             return -1;
 
         //Added to speed things up
+        if(context.isLiteMode())
+            return -3; // We don't have a masternode list
+
         Masternode mnExisting = find(vin);
         if(mnExisting == null)
             return -1;
@@ -690,6 +703,7 @@ public class MasternodeManager extends Message {
 
                     //it = vMasternodes.erase(it);
                     it.remove();
+                    queueOnSyncStatusChanged();
                 } else {
                     //++it;
                 }
@@ -821,6 +835,54 @@ public class MasternodeManager extends Message {
             }
         } finally {
             nodeLock.unlock();
+        }
+    }
+
+
+    /******************************************************************************************************************/
+
+    //region Event listeners
+    private transient CopyOnWriteArrayList<ListenerRegistration<MasternodeManagerListener>> eventListeners;
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addEventListener(MasternodeManagerListener listener) {
+        addEventListener(listener, Threading.USER_THREAD);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addEventListener(MasternodeManagerListener listener, Executor executor) {
+        // This is thread safe, so we don't need to take the lock.
+        eventListeners.add(new ListenerRegistration<MasternodeManagerListener>(listener, executor));
+        //keychain.addEventListener(listener, executor);
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeEventListener(MasternodeManagerListener listener) {
+        //keychain.removeEventListener(listener);
+        return ListenerRegistration.removeFromList(listener, eventListeners);
+    }
+
+    private void queueOnSyncStatusChanged() {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<MasternodeManagerListener> registration : eventListeners) {
+            if (registration.executor == Threading.SAME_THREAD) {
+                registration.listener.onMasternodeCountChanged(vMasternodes.size());
+            } else {
+                registration.executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        registration.listener.onMasternodeCountChanged(vMasternodes.size());
+                    }
+                });
+            }
         }
     }
 

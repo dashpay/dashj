@@ -62,6 +62,8 @@ public class MasternodeSync {
     AbstractBlockChain blockChain;
     Context context;
 
+    public int masterNodeCountFromNetwork() { return countMasternodeList != 0 ? sumMasternodeList / countMasternodeList : 0; }
+
     void setBlockChain(AbstractBlockChain blockChain) { this.blockChain = blockChain; }
 
     public MasternodeSync(Context context)
@@ -171,6 +173,10 @@ public class MasternodeSync {
                 break;
             case(MASTERNODE_SYNC_SPORKS):
                 RequestedMasternodeAssets = MASTERNODE_SYNC_LIST;
+
+                //If we are in lite mode and allowing InstantX, then only sync the sporks
+                if(context.isLiteMode() && context.allowInstantXinLiteMode())
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
                 break;
             case(MASTERNODE_SYNC_LIST):
            /*     RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;  //TODO:  Reactivate when sync needs Winners and Budget
@@ -236,6 +242,7 @@ public class MasternodeSync {
             }
 
             log.info("CMasternodeSync:ProcessMessage - ssc - got inventory count {} {}\n", ssc.itemId, ssc.count);
+        queueOnSyncStatusChanged(getSyncStatusInt());
 
     }
 

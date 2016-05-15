@@ -36,6 +36,8 @@ public class Context {
     private int eventHorizon = 100;
 
     //Dash Specific
+    private boolean liteMode = true;
+    private boolean allowInstantX = true; //allow InstantX in litemode
     public PeerGroup peerGroup;
     public SporkManager sporkManager;
     public MasternodeManager masternodeManager;
@@ -156,9 +158,14 @@ public class Context {
         return eventHorizon;
     }
 
+    //
+    // Dash Specific
+    //
 
+    public void initDash(boolean liteMode, boolean allowInstantX) {
+        this.liteMode = liteMode;
+        this.allowInstantX = allowInstantX;
 
-    public void initDash() {
         //Dash Specific
         sporkManager = new SporkManager(this);
 
@@ -195,5 +202,24 @@ public class Context {
         masternodeManager.setBlockChain(chain);
         masternodeSync.setBlockChain(chain);
         instantx.setBlockChain(chain);
+    }
+
+    public boolean isLiteMode() { return liteMode; }
+    public void setLiteMode(boolean liteMode)
+    {
+        boolean current = this.liteMode;
+        if(current == liteMode)
+            return;
+
+        this.liteMode = liteMode;
+        if(liteMode == false)
+        {
+            darkSendPool.startBackgroundProcessing();
+        }
+    }
+    public boolean allowInstantXinLiteMode() { return allowInstantX; }
+    public void setAllowInstantXinLiteMode(boolean allow)
+    {
+        this.allowInstantX = allow;
     }
 }
