@@ -29,7 +29,7 @@ public class InstantXCoinSelector extends DefaultCoinSelector {
         // Only pick chain-included transactions, or transactions that are ours and pending.
         TransactionConfidence confidence = tx.getConfidence();
         TransactionConfidence.ConfidenceType type = confidence.getConfidenceType();
-        return (type.equals(TransactionConfidence.ConfidenceType.BUILDING) && ( usingInstantX ? confidence.getDepthInBlocks() > 6 : true))||
+        return (type.equals(TransactionConfidence.ConfidenceType.BUILDING) && ( usingInstantX ? confidence.getDepthInBlocks() >= 6 : true))||
                 //type.equals(TransactionConfidence.ConfidenceType.INSTANTX_LOCKED) || //TODO:InstantX
                 type.equals(TransactionConfidence.ConfidenceType.PENDING) &&
                         confidence.getSource().equals(TransactionConfidence.Source.SELF) && ( usingInstantX ? false : true) &&
