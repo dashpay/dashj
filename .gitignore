@@ -7,3 +7,9 @@ target
 Thumbs.db
 obj/
 libs/
+checkpoints-testnet.txt
+*.wallet
+*.spvchain
+mncache-testnet.dat
+mncache.dat
+*.tmp
