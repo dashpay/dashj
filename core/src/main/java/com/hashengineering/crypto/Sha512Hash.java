@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.core;
+package com.hashengineering.crypto;
 
 import com.google.common.io.ByteStreams;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Utils;
 import org.spongycastle.util.encoders.Hex;
 
 import java.io.File;
@@ -68,13 +70,6 @@ public class Sha512Hash implements Serializable, Comparable {
     }
 
     /**
-     * Calculates the hash of the hash of the contents. This is a standard operation in Bitcoin.
-     */
-    public static Sha512Hash createDouble(byte[] contents) {
-        return new Sha512Hash(Utils.doubleDigest(contents));
-    }
-
-    /**
      * Returns a hash of the given files contents. Reads the file fully into memory before hashing so only use with
      * small files.
      * @throws java.io.IOException
@@ -110,7 +105,7 @@ public class Sha512Hash implements Serializable, Comparable {
 
     @Override
     public String toString() {
-        return Utils.bytesToHexString(bytes);
+        return Utils.HEX.encode(bytes);
     }
 
     /**

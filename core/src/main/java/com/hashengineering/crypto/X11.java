@@ -1,7 +1,7 @@
 package com.hashengineering.crypto;
 
-import com.google.bitcoin.core.Sha256Hash;
-import com.google.bitcoin.core.Sha512Hash;
+import org.bitcoinj.core.Sha256Hash;
+
 import fr.cryptohash.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

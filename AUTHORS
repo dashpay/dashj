@@ -1,35 +1,71 @@
 --------------darkcoinj
 HashEngineering <hashengineeringsolutions@gmail.com>
 
---------------digitalcoinj
-HashEngineering <hashengineeringsolutions@gmail.com>
+$ git log --format='%aN' | sort -u
 
---------------bitcoinj
-Mike Hearn <mike@plan99.net>
-Miron Cuperman (a.k.a. devrandom) <c1.devrandom@niftybox.net>
-Xiaofeng Guo <xiaofengguo@google.com>
-Thilo Planz <thilo@cpan.org>
-Micheal Swiggs <bobby.simpson87@gmail.com>
-Gary Rowe <g.rowe@froot.co.uk>
-Noa Resare <noa@resare.com>
-John Sample <jwsample@gmail.com>
-Jan Møller <jan.moller@gmail.com>
-Wolfgang Nagele <wolfgang.nagele@gmail.com>
-Jonny Heggheim <hegjon@gmail.com>
-Steve Coughlan <shadders.del@gmail.com>
-Roman Mandeleil <roman.mandeleil@gmail.com>
-Chris Rico <chrisrico@gmail.com>
-Vasile Rotaru <vrotaru.md@gmail.com>
-Joseph Gleason <fireduck@gmail.com>
-Mark van Cuijk <phedny@gmail.com>
-Matt Corallo <git@bluematt.me>
-Alexander Lolis <alexander.lolis@gmail.com>
-Matija Mazi <matija.mazi@gmail.com>
-Eric William Dickerson <eric.w.dickerson@gmail.com>
-Ken Sedgwick <ken@bonsai.com>
-Mike Rosseel <mike.rosseel@gmx.net>
-Mike Belshe <mike@belshe.com>
-Kevin Greene <kgreenek@gmail.com>
-Alex Taylor <alex@bitpos.me>
-Andreas Schildbach <andreas@schildbach.de>
-Eric Tierney <eztierney@circle.com>
+Aaron Voisine
+Adam Mackler
+Alexander Lolis
+Alex Taylor
+Alon Muroch
+Amichai Rothman
+Andreas Schildbach
+Bennett Hoffman
+Carlos Lopez-Camey
+Carsten Otto
+cyberzac
+Dave Collins
+Diego Basch
+elbandi
+eleetas
+En-Ran Zhou
+Erik Tierney
+Fireduck
+freak
+Gary Rowe
+Giannis Dzegoutanis
+gubatron
+Harald Hoyer
+Jakob Stuber
+Jameson Lopp
+Jarl Fransson
+Jim Burton
+Jiri Peinlich
+Johnathan
+Jonny Heggheim
+Justas
+Kalpesh Parmar
+Ken Sedgwick
+Kevin Greene
+Kosta Korenkov
+Loco
+Manfred Karrer
+Martin Zachrison
+matija.mazi@gmail.com
+Matt Corallo
+Michael Bell
+Michael Bumann
+Mike Hearn
+Mike Rosseel
+Miron Cuperman
+monk
+Mora Zyx
+ollekullberg
+Oscar Guindzberg
+Pavol Rusnak
+Peter Dettman
+Peter Stockli
+Peter Todd
+Piotr Włodarek
+Richard Green
+Ross Nicoll
+Sean Gilligan
+Sebastian Ortega
+Simon de la Rouviere
+Simon Vermeersch
+Stephen Reed
+troggy
+Tyler Houlihan
+Wojciech Langiewicz
+Xiaofeng Guo
+Ximo Guanter
