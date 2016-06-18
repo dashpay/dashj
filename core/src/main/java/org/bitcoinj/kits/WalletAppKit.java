@@ -109,7 +109,7 @@ public class WalletAppKit extends AbstractIdleService {
                 setCheckpoints(stream);
         }
 
-        context.initDash(true, true);
+        context.initDash(false, true);
         context.initDashSync(directory.getAbsolutePath());
     }
 
