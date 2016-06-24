@@ -2,9 +2,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.bitcoinj</groupId>
-  <artifactId>darkcoinj-parent</artifactId>
-  <version>0.13.2.rix</version>
+  <groupId>org.dashj</groupId>
+  <artifactId>dashj-parent</artifactId>
+  <version>0.13.2.12.1</version>
   <packaging>pom</packaging>
 
   <modules>
@@ -27,8 +27,8 @@
     <url>scm:git:https://github.com/bitcoinj/darkcoinj</url>
   </scm>
 
-  <name>darkcoinj Parent</name>
-  <description>Provides the common configuration for the darkcoinj modules</description>
+  <name>dashj Parent</name>
+  <description>Provides the common configuration for the dashj modules</description>
   <url>http://www.bitcoinj.org/</url>
 
   <licenses>
@@ -159,7 +159,7 @@
         <artifactId>slf4j-api</artifactId>
         <version>1.7.7</version>
       </dependency>
-      <!-- darkcoinj consumers are expected to provide their own SLF4J adapters
+      <!-- dashj consumers are expected to provide their own SLF4J adapters
     such as logback, slf4j-log4j12, slf4j-jcl and so on
     see http://www.slf4j.org/faq.html -->
       <dependency>

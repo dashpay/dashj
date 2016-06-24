@@ -4,15 +4,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.bitcoinj</groupId>
-        <artifactId>darkcoinj-parent</artifactId>
-        <version>0.13.2.rix</version>
+        <groupId>org.dashj</groupId>
+        <artifactId>dashj-parent</artifactId>
+        <version>0.13.2.12.1</version>
     </parent>
 
-    <groupId>org.darkcoinj</groupId>
+    <groupId>org.dashj</groupId>
     <artifactId>wallettemplate</artifactId>
 
-    <name>bitcoinj Wallet-Template</name>
+    <name>dashj Wallet-Template</name>
 
     <build>
         <plugins>
@@ -57,8 +57,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.bitcoinj</groupId>
-            <artifactId>darkcoinj-core</artifactId>
+            <groupId>org.dashj</groupId>
+            <artifactId>dashj-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>

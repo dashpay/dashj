@@ -19,16 +19,16 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <groupId>org.bitcoinj</groupId>
-    <artifactId>darkcoinj-parent</artifactId>
-    <version>0.13.2.rix</version>
+    <groupId>org.dashj</groupId>
+    <artifactId>dashj-parent</artifactId>
+    <version>0.13.2.12.1</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>darkcoinj-tools</artifactId>
+  <artifactId>dashj-tools</artifactId>
 
-  <name>darkcoinj Tools</name>
-  <description>A collection of useful tools that use the darkcoinj library to perform wallet operations</description>
+  <name>dashj Tools</name>
+  <description>A collection of useful tools that use the dashj library to perform wallet operations</description>
 
   <build>
 
@@ -74,8 +74,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.bitcoinj</groupId>
-      <artifactId>darkcoinj-core</artifactId>
+      <groupId>org.dashj</groupId>
+      <artifactId>dashj-core</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
