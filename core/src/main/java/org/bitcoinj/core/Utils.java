@@ -336,6 +336,27 @@ public class Utils {
     }
 
     /**
+     * @see Utils#decodeCompactBits(long)
+     */
+    public static long encodeCompactBits(BigInteger value, boolean negative) {
+        long result;
+        int size = value.toByteArray().length;
+        if (size <= 3)
+            result = value.longValue() << 8 * (3 - size);
+        else
+            result = value.shiftRight(8 * (size - 3)).longValue();
+        // The 0x00800000 bit denotes the sign.
+        // Thus, if it is already set, divide the mantissa by 256 and increase the exponent.
+        if ((result & 0x00800000L) != 0) {
+            result >>= 8;
+            size++;
+        }
+        result |= size << 24;
+        //result |= value.signum() == -1 ? 0x00800000 : 0;
+        result |= (negative && (result & 0x007fffff) !=0 ? 0x00800000 : 0);
+        return result;
+    }
+    /**
      * If non-null, overrides the return value of now().
      */
     public static volatile Date mockTime;
@@ -655,5 +676,50 @@ public class Utils {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    static final String CHARS_ALPHA_NUM = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    static final String SAFE_CHARS[] =
+            {
+                    CHARS_ALPHA_NUM + " .,;-_/:?@()", // SAFE_CHARS_DEFAULT
+                    CHARS_ALPHA_NUM + " .,;-_?@" // SAFE_CHARS_UA_COMMENT
+            };
+
+    static public String sanitizeString(String str, int rule)
+    {
+        StringBuilder strResult = new StringBuilder();
+        for (int i = 0; i < str.length(); i++)
+        {
+            if (SAFE_CHARS[rule].indexOf(str.charAt(i)) != -1)
+            strResult.append(str.charAt(i));
+        }
+        return strResult.toString();
+    }
+    static public String sanitizeString(String str) { return sanitizeString(str, 0); }
+
+    public static long getTotalCoinEstimate(int nHeight)
+    {
+        long nTotalCoins = 0;
+
+        // TODO: This could be vastly improved, look at GetBlockValue for a better method
+
+    /* these values are taken from the block explorer */
+        if(nHeight > 5076) nTotalCoins += 2021642;
+        if(nHeight > 17000) nTotalCoins += 3267692-2021642;
+        if(nHeight > 34000) nTotalCoins += 3688775-3267692;
+        if(nHeight > 68000) nTotalCoins += 4277615-3688775;
+
+        if(nHeight > 68000*2) {
+            nTotalCoins += 4649913.99999995-4277615;
+        } else {
+            return nTotalCoins;
+        }
+
+        //5.383754730451325 per block average after this
+        nTotalCoins += ((nHeight-68000*2)*((5382104.64334133-4649913.99999995)/(68000*2)));
+
+        // TODO: this should include the 7.1% decline too
+        return nTotalCoins;
     }
 }

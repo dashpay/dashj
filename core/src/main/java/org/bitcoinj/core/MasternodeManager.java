@@ -20,10 +20,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.common.base.Preconditions.checkState;
+
 /**
  * Created by Hash Engineering on 2/20/2016.
  */
-public class MasternodeManager extends Message {
+public class MasternodeManager extends AbstractManager {
     private static final Logger log = LoggerFactory.getLogger(MasternodeManager.class);
 
     public static final int MASTERNODES_DUMP_SECONDS =              (15*60);
@@ -57,11 +59,11 @@ public class MasternodeManager extends Message {
     AbstractBlockChain blockChain;
     void setBlockChain(AbstractBlockChain blockChain) { this.blockChain = blockChain; }
 
-    Context context;
+    //Context context;
 
     public MasternodeManager(Context context)
     {
-        super(context.getParams());
+        super(context);
         nDsqCount = 0;
 
         // map to hold all MNs
@@ -79,7 +81,7 @@ public class MasternodeManager extends Message {
         mapSeenMasternodePing = new HashMap<Sha256Hash, MasternodePing>();
 
 
-        context = Context.get();
+        //context = Context.get();
 
         eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeManagerListener>>();
     }
@@ -258,10 +260,73 @@ public class MasternodeManager extends Message {
         }
     }
 
+    public void clear()
+    {
+        lock.lock();
+        try {
+            vMasternodes.clear();
+            mAskedUsForMasternodeList.clear();
+            mWeAskedForMasternodeList.clear();
+            mWeAskedForMasternodeListEntry.clear();
+            mapSeenMasternodeBroadcast.clear();
+            mapSeenMasternodePing.clear();
+            nDsqCount = 0;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    boolean checkMnbAndUpdateMasternodeList(MasternodeBroadcast mnb) {
+        log.info("masternode-CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: {}\n", mnb.vin.toString());
+
+        lock.lock();
+        try {
+            if (mapSeenMasternodeBroadcast.containsKey(mnb.getHash())) { //seen
+                context.masternodeSync.addedMasternodeList(mnb.getHash());
+                return true;
+            }
+
+            mapSeenMasternodeBroadcast.put(mnb.getHash(), mnb);
+        } finally {
+            lock.unlock();
+        }
+
+        log.info("masternode-CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: {} new\n", mnb.vin.toString());
+
+        if(!mnb.checkAndUpdate()){
+            log.info("masternode-CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: {} CheckAndUpdate failed\n", mnb.vin.toString());
+            return false;
+        }
+
+        // make sure it's still unspent
+        //  - this is checked later by .check() in many places and by ThreadCheckDarkSendPool()
+        if(mnb.checkInputsAndAdd()) {
+            context.masternodeSync.addedMasternodeList(mnb.getHash());
+        } else {
+            log.info("CMasternodeMan::CheckMnbAndUpdateMasternodeList - Rejected Masternode entry {}", mnb.address.toString());
+            return false;
+        }
+
+        return true;
+    }
+
     void processMasternodeBroadcast(MasternodeBroadcast mnb)
     {
         //log.info("processMasternodeBroadcast:  hash={}", mnb.getHash());
-        lock.lock();
+
+        if(checkMnbAndUpdateMasternodeList(mnb))
+        {
+
+        } else {
+
+            //if (nDoS > 0)
+//                Misbehaving(pfrom->GetId(), nDoS);
+        }
+    }
+    void processMasternodeBroadcast_old(MasternodeBroadcast mnb)
+    {
+        //log.info("processMasternodeBroadcast:  hash={}", mnb.getHash());
+        //lock.lock();
         try {
             if (mapSeenMasternodeBroadcast.containsKey(mnb.getHash())) { //seen
                 context.masternodeSync.addedMasternodeList(mnb.getHash());
@@ -317,6 +382,7 @@ public class MasternodeManager extends Message {
         } finally {
             lock.unlock();
         }
+        log.info("masternode-mnp - Masternode ping, vin: {} new\n", mnp.vin.toString());
 
         int nDoS = 0;
         if(mnp.checkAndUpdate()) return;
@@ -350,7 +416,7 @@ public class MasternodeManager extends Message {
         try {
             lock.lock();
 
-            if (!mn.isEnabled())
+            if (!mn.isEnabled() && !mn.isPreEnabled())
                 return false;
 
             Masternode pmn = find(mn.vin);
@@ -503,7 +569,7 @@ public class MasternodeManager extends Message {
         mWeAskedForMasternodeListEntry.put(vin.getOutpoint(), askAgain);
     }
 
-    Sha256Hash getBlockHash(long height)
+    Sha256Hash _getBlockHash(long height)
     {
         try {
             StoredBlock head = blockChain.getChainHead();
@@ -518,7 +584,7 @@ public class MasternodeManager extends Message {
                 return null;
 
             StoredBlock cursor = head;
-            while (cursor != null && cursor.getHeight() != height) {
+            while (cursor != null && cursor.getHeight() != (height-1)) {
                 cursor = cursor.getPrev(blockStore);
             }
 
@@ -530,7 +596,7 @@ public class MasternodeManager extends Message {
         }
     }
 
-    public int getMasternodeRank(TransactionInput vin, long nBlockHeight, int minProtocol)
+    public int getMasternodeRank(TransactionInput vin, int nBlockHeight, int minProtocol)
     {
         return getMasternodeRank(vin, nBlockHeight, minProtocol, true);
     }
@@ -539,7 +605,7 @@ public class MasternodeManager extends Message {
     {
         public int compare(Object t1, Object t2) {
             Pair<Long, TransactionInput> p1 = (Pair<Long, TransactionInput>)t1;
-            Pair<Long, TransactionInput> p2 = (Pair<Long, TransactionInput>)t1;
+            Pair<Long, TransactionInput> p2 = (Pair<Long, TransactionInput>)t2;
 
             if(p1.getFirst() < p2.getFirst())
                 return -1;
@@ -547,18 +613,32 @@ public class MasternodeManager extends Message {
                 return 0;
             else return 1;
         }
-    };
+    }
 
-    public int getMasternodeRank(TransactionInput vin, long nBlockHeight, int minProtocol, boolean fOnlyActive)
+    class CompareScoreMn<Object> implements Comparator<Object>
+    {
+        public int compare(Object t1, Object t2) {
+            Pair<Long, Masternode> p1 = (Pair<Long, Masternode>)t1;
+            Pair<Long, Masternode> p2 = (Pair<Long, Masternode>)t2;
+
+            if(p1.getFirst() < p2.getFirst())
+                return -1;
+            if(p1.getFirst() == p2.getFirst())
+                return 0;
+            else return 1;
+        }
+    }
+
+    public int getMasternodeRank(TransactionInput vin, int nBlockHeight, int minProtocol, boolean fOnlyActive)
     {
         //std::vector<pair<int64_t, CTxIn> > vecMasternodeScores;
-        ArrayList<Pair<Long, TransactionInput>> vecMasternodeScores = new ArrayList<Pair<Long, TransactionInput>>(3000);
+        ArrayList<Pair<Long, TransactionInput>> vecMasternodeScores = new ArrayList<Pair<Long, TransactionInput>>(size());
 
         //make sure we know about this block
         //uint256 hash = 0;
         //if(!GetBlockHash(hash, nBlockHeight)) return -1;
         if(blockChain.getChainHead().getHeight() < nBlockHeight)
-            return -1;
+            return -1; //Blockheight is above what the store has.
 
         //Added to speed things up
         if(context.isLiteMode())
@@ -568,9 +648,9 @@ public class MasternodeManager extends Message {
         if(mnExisting == null)
             return -1;
 
-        Sha256Hash hash = getBlockHash(nBlockHeight);
+        Sha256Hash hash = context.hashStore.getBlockHash(nBlockHeight);
         if(hash == null) {
-            return -2;
+            return -2; //we don't have the block in our store
         }
          // scan for winner
         else
@@ -585,7 +665,7 @@ public class MasternodeManager extends Message {
                     }
                     Sha256Hash n = mn.calculateScore(1, hash);
                     //int64_t n2 = n.GetCompact(false);
-                    long n2 = Utils.encodeCompactBits(new BigInteger(n.getBytes()));
+                    long n2 = Utils.encodeCompactBits(n.toBigInteger(), false);
 
                     vecMasternodeScores.add(new Pair<Long, TransactionInput>(n2, mn.vin));
                 }
@@ -597,7 +677,7 @@ public class MasternodeManager extends Message {
 
         //sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareScoreTxIn());
         //vecMasternodeScores.sort(new CompareScoreTxIn());
-        Arrays.sort(vecMasternodeScores.toArray(), new CompareScoreTxIn());
+        Collections.sort(vecMasternodeScores, Collections.reverseOrder(new CompareScoreTxIn()));
 
 
 
@@ -612,7 +692,7 @@ public class MasternodeManager extends Message {
         return -1;
     }
 
-    public int getMasternodeRank(TransactionInput vin, Sha256Hash hash, int minProtocol, boolean fOnlyActive)
+    /*public int getMasternodeRank(TransactionInput vin, Sha256Hash hash, int minProtocol, boolean fOnlyActive)
     {
         //std::vector<pair<int64_t, CTxIn> > vecMasternodeScores;
         ArrayList<Pair<Long, TransactionInput>> vecMasternodeScores = new ArrayList<Pair<Long, TransactionInput>>(3000);
@@ -632,7 +712,8 @@ public class MasternodeManager extends Message {
         }
 
 
-        Arrays.sort(vecMasternodeScores.toArray(), new CompareScoreTxIn());
+        Collections.sort(vecMasternodeScores, Collections.reverseOrder(new CompareScoreTxIn()));
+        //Arrays.sort(vecMasternodeScores.toArray(), new CompareScoreTxIn());
 
         int rank = 0;
         for (Pair<Long, TransactionInput> s : vecMasternodeScores) {
@@ -643,7 +724,7 @@ public class MasternodeManager extends Message {
         }
 
         return -1;
-    }
+    }*/
     void check()
     {
         lock.lock();
@@ -654,6 +735,55 @@ public class MasternodeManager extends Message {
         }
         lock.unlock();
 
+    }
+
+    //std::vector<pair<int, CMasternode> >
+    public ArrayList<Pair<Integer, Masternode>> getMasternodeRanks(int nBlockHeight, int minProtocol)
+    {
+
+            //std::vector<pair<int64_t, CMasternode> > vecMasternodeScores;
+            ArrayList<Pair<Long, Masternode>> vecMasternodeScores = new ArrayList<Pair<Long, Masternode>>();
+            //std::vector<pair<int, CMasternode> > vecMasternodeRanks;
+            ArrayList<Pair<Integer, Masternode>> vecMasternodeRanks = new ArrayList<Pair<Integer, Masternode>>();
+            //make sure we know about this block
+            //uint256 hash = uint256();
+            //if(!GetBlockHash(hash, nBlockHeight)) return vecMasternodeRanks;
+            Sha256Hash hash = context.hashStore.getBlockHash(nBlockHeight);
+            if (hash == null)
+                return vecMasternodeRanks;
+        lock.lock();
+        try {
+            // scan for winner
+            for (Masternode mn : vMasternodes) {
+
+                mn.check();
+
+                if (mn.protocolVersion < minProtocol) continue;
+                if (!mn.isEnabled()) {
+                    continue;
+                }
+
+                Sha256Hash n = mn.calculateScore(1, nBlockHeight);
+                //long n2 = UintToArith256(n).GetCompact(false);
+                long n2 = Utils.encodeCompactBits(n.toBigInteger(), false);
+
+                vecMasternodeScores.add(new Pair(n2, mn));
+            }
+        } finally {
+            lock.unlock();
+        }
+
+        //sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareScoreMN());
+        Collections.sort(vecMasternodeScores, Collections.reverseOrder(new CompareScoreMn()));
+        //Arrays.sort(vecMasternodeScores.toArray(), new CompareScoreMn());
+        int rank = 0;
+        //BOOST_FOREACH (PAIRTYPE(int64_t, CMasternode)& s, vecMasternodeScores){
+        for(Pair<Long, Masternode> s: vecMasternodeScores) {
+            rank++;
+            vecMasternodeRanks.add(new Pair(rank, s.getSecond()));
+        }
+
+        return vecMasternodeRanks;
     }
 
     public void checkAndRemove() { checkAndRemove(false); }
@@ -670,10 +800,9 @@ public class MasternodeManager extends Message {
 
             while (it.hasNext()) {
                 Masternode mn = it.next();
-                if (mn.activeState == Masternode.MASTERNODE_REMOVE ||
-                        mn.activeState == Masternode.MASTERNODE_VIN_SPENT ||
-                        (forceExpiredRemoval && mn.activeState == Masternode.MASTERNODE_EXPIRED) ||
-                        mn.protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
+                if (mn.activeState == Masternode.State.MASTERNODE_REMOVE ||
+                        mn.activeState == Masternode.State.MASTERNODE_VIN_SPENT ||
+                        (forceExpiredRemoval && mn.activeState == Masternode.State.MASTERNODE_EXPIRED)) {
                     log.info("masternode-CMasternodeMan: Removing inactive Masternode {} - {} now", mn.address.toString(), size() - 1);
 
                     //erase all of the broadcasts we've seen from this vin
@@ -683,7 +812,7 @@ public class MasternodeManager extends Message {
                     Iterator<Map.Entry<Sha256Hash, MasternodeBroadcast>> it3 = mapSeenMasternodeBroadcast.entrySet().iterator();
                     while (it3.hasNext()) {
                         Map.Entry<Sha256Hash, MasternodeBroadcast> mb = it3.next();
-                        if (mb.getValue().vin == mn.vin) {
+                        if (mb.getValue().vin.equals(mn.vin)) {
                             context.masternodeSync.mapSeenSyncMNB.remove(mb.getKey());
                             //mapSeenMasternodeBroadcast.remove(mb.getKey(), mb.getValue());
                             it3.remove();
@@ -695,7 +824,7 @@ public class MasternodeManager extends Message {
                     Iterator<Map.Entry<TransactionOutPoint, Long>> it2 = mWeAskedForMasternodeListEntry.entrySet().iterator();
                     while (it2.hasNext()) {
                         Map.Entry<TransactionOutPoint, Long> e = it2.next();
-                        if (e.getKey() == mn.vin.getOutpoint()) {
+                        if (e.getKey().equals(mn.vin.getOutpoint())) {
                             //mWeAskedForMasternodeListEntry.remove(e.getKey(), e.getValue());
                             it2.remove();
                         }
@@ -755,7 +884,7 @@ public class MasternodeManager extends Message {
                 Map.Entry<Sha256Hash, MasternodeBroadcast> mb = it3.next();
                 if (mb.getValue().lastPing.sigTime < Utils.currentTimeSeconds() - (Masternode.MASTERNODE_REMOVAL_SECONDS * 2)) {
                     //mapSeenMasternodeBroadcast.erase(it3++);
-
+                    log.info("masternode-CMasternodeMan::CheckAndRemove - Removing expired Masternode broadcast {}", mb.getValue().getHash().toString());
                     context.masternodeSync.mapSeenSyncMNB.remove(mb.getValue().getHash());
 
                     it3.remove();
@@ -770,6 +899,7 @@ public class MasternodeManager extends Message {
                 Map.Entry<Sha256Hash, MasternodePing> mp = it4.next();
                 if (mp.getValue().sigTime < Utils.currentTimeSeconds() - (Masternode.MASTERNODE_REMOVAL_SECONDS * 2)) {
                     //mapSeenMasternodePing.erase(it4++);
+                    log.info("masternode-CMasternodeMan::CheckAndRemove - Removing expired Masternode ping {}", mp.getValue().getHash().toString());
                     it4.remove();
                 } else {
                     //++it4;
@@ -828,8 +958,9 @@ public class MasternodeManager extends Message {
                     if (context.darkSendPool.submittedToMasternode != null && pnode.getAddress().getAddr().equals(context.darkSendPool.submittedToMasternode.address.getAddr()))
                         continue;
                     log.info("Closing Masternode connection {}", pnode.getAddress());
-                    //pnode -> fDisconnect = true;
-                    //pnode.close();
+                    pnode.fDarkSendMaster = false;
+                    //pnode.release();???
+                    //TODO:  not finished
                 }
 
             }
@@ -884,6 +1015,35 @@ public class MasternodeManager extends Message {
                 });
             }
         }
+    }
+    public int getEstimatedMasternodes(int nBlock)
+    {
+    /*
+        Masternodes = (Coins/1000)*X on average
+
+        *X = nPercentage, starting at 0.52
+        nPercentage goes up 0.01 each period
+        Period starts at 35040, which has exponential slowing growth
+
+    */
+
+        int nPercentage = 52; //0.52
+        int nPeriod = 35040;
+        int nCollateral = 1000;
+
+        for(int i = nPeriod; i <= nBlock; i += nPeriod)
+        {
+            nPercentage++;
+            nPeriod*=2;
+        }
+        return (int)(Utils.getTotalCoinEstimate(nBlock)/100*nPercentage/nCollateral);
+    }
+
+
+
+    public AbstractManager createEmpty()
+    {
+        return new MasternodeManager(context);
     }
 
 }

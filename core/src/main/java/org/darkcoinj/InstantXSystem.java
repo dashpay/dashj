@@ -177,6 +177,15 @@ public class InstantXSystem {
 
             tx.getConfidence().setIXType(TransactionConfidence.IXType.IX_REQUEST);
 
+            // Masternodes will sometimes propagate votes before the transaction is known to the client.
+            // If this just happened - update transaction status, try forcing external script notification,
+            // lock inputs and resolve conflicting locks
+            if(isLockedIXTransaction(tx.getHash())) {
+                updateLockedTransaction(tx, true);
+                lockTransactionInputs(tx);
+                resolveConflicts(tx);
+            }
+
             return;
 
         } else {
@@ -189,29 +198,8 @@ public class InstantXSystem {
                     tx.getHash().toString()
             );
 
-            //BOOST_FOREACH(const CTxIn& in, tx.vin)
-            for (TransactionInput in : tx.getInputs()){
-                if(!mapLockedInputs.containsKey(in.getOutpoint())){
-                    mapLockedInputs.put(in.getOutpoint(), tx.getHash());
-                }
-            }
-
-            // resolve conflicts
-            //std::map<uint256, CTransactionLock>::iterator i = mapTxLocks.find(tx.GetHash());
-            TransactionLock i = mapTxLocks.get(tx.getHash());
-            if (i != null){
-                //we only care if we have a complete tx lock
-                if(i.countSignatures() >= INSTANTX_SIGNATURES_REQUIRED){
-                    if(!checkForConflictingLocks(tx)){
-                        log.info("ProcessMessageInstantX::ix - Found Existing Complete IX Lock");
-
-                        //reprocess the last 15 blocks
-                        //TODO:  How to handle the last 15 blocks?
-                        //ReprocessBlocks(15);
-                       // mapTxLockReq.put(tx.getHash(), tx);
-                    }
-                }
-            }
+            lockTransactionInputs(tx);
+            resolveConflicts(tx);
 
             return;
         }
@@ -223,7 +211,7 @@ public class InstantXSystem {
         if (!canProcessInstantXMessages())
             return;
 
-
+        //Adding to known inventory in Dash Core, we will skip that.
 
         if(mapTxLockVote.containsKey(ctx.getHash())){
             return;
@@ -262,7 +250,11 @@ public class InstantXSystem {
 
     boolean isIXTXValid(Transaction txCollateral){
         if(txCollateral.getOutputs().size() < 1) return false;
-        if(txCollateral.getLockTime() != 0) return false;
+        if(txCollateral.getLockTime() != 0)
+        {
+            log.info("instantsend - IsIXTXValid - Transaction is not final - {}", txCollateral.toString());
+            return false;
+        }
 
         Coin valueIn = Coin.ZERO;
         Coin valueOut = Coin.ZERO;
@@ -292,12 +284,12 @@ public class InstantXSystem {
         }
 
         if(valueOut.isGreaterThan(Coin.valueOf((int) context.sporkManager.getSporkValue(SporkManager.SPORK_5_MAX_VALUE), 0))){
-            log.info("instantx-IsIXTXValid - Transaction value too high - {}\n", txCollateral.toString());
+            log.info("instantsend-IsIXTXValid - Transaction value too high - {}\n", txCollateral.toString());
             return false;
         }
 
         if(missingTx){
-            log.info("instantx-IsIXTXValid - Unknown inputs in IX transaction - {}\n", txCollateral.toString());
+            log.info("instantsend-IsIXTXValid - Unknown inputs in IX transaction - {}\n", txCollateral.toString());
         /*
             This happens sometimes for an unknown reason, so we'll return that it's a valid transaction.
             If someone submits an invalid transaction it will be rejected by the network anyway and this isn't
@@ -307,31 +299,13 @@ public class InstantXSystem {
         }
 
         if(valueIn.subtract(valueOut).isLessThan(Coin.CENT)) {
-            log.info("instantx-IsIXTXValid - did not include enough fees in transaction {}\n{}", valueOut.subtract(valueIn).toFriendlyString(), txCollateral.toString());
+            log.info("instantsend-IsIXTXValid - did not include enough fees in transaction {}\n{}", valueOut.subtract(valueIn).toFriendlyString(), txCollateral.toString());
             return false;
         }
 
         return true;
     }
 
-    // keep transaction locks in memory for an hour
-    void CleanTransactionLocksList()
-    {
-        if(blockChain.getChainHead() == null) return;
-
-        //std::map<uint256, CTransactionLock>::iterator it = mapTxLocks.begin();
-
-        for(Map.Entry<Sha256Hash, TransactionLock> it : mapTxLocks.entrySet())
-
-        /*while(it != mapTxLocks.end())*/ {
-            if((blockChain.getChainHead().getHeight() - it.getValue().blockHeight) > 3)
-            /*if(chainActive.Tip()->nHeight - it->second.nBlockHeight > 3)*/{ //keep them for an hour
-                log.info("Removing old transaction lock "+ it.getValue().getHash().toString());
-                mapTxLocks.remove(it);
-            }
-        }
-
-    }
     public int createNewLock(TransactionLockRequest tx)
     {
         //We don't have the ability to determine the age of the inputs.
@@ -393,6 +367,7 @@ public class InstantXSystem {
 
         return blockHeight;
     }
+    @Deprecated
     boolean checkForConflictingLocks(Transaction tx)
     {
     /*
@@ -440,16 +415,20 @@ public class InstantXSystem {
     boolean processConsensusVote(Peer pnode, ConsensusVote ctx)
     {
         //Since we don't have access to the blockchain, we will not calculate the rankings.
+        // if n = -1, then masternodes are loaded, but this masternode cannot be found
+        // if n = -2, then the block hash cannot be found in the Block Store
+        // if n = -3, then Lite Mode is ON - we will not verify any thing.
+
         int n = context.masternodeManager.getMasternodeRank(ctx.vinMasternode, ctx.blockHeight, MIN_INSTANTX_PROTO_VERSION, true);
 
         Masternode pmn = context.masternodeManager.find(ctx.vinMasternode);
         if(pmn != null)
-            log.info("instantx-InstantX::ProcessConsensusVote - Masternode ADDR {} {}", pmn.address.toString(), n);
+            log.info("instantsend-InstantX::ProcessConsensusVote - Masternode ADDR {} {}", pmn.address.toString(), n);
 
         if(n == -1)
         {
             //can be caused by past versions trying to vote with an invalid protocol
-            log.info("instantx - InstantX::ProcessConsensusVote - Unknown Masternode - requesting...");
+            log.info("instantsend - InstantX::ProcessConsensusVote - Unknown Masternode - requesting...");
             context.masternodeManager.askForMN(pnode, ctx.vinMasternode);
             return false;
         }
@@ -460,10 +439,11 @@ public class InstantXSystem {
         }
         else if(n > INSTANTX_SIGNATURES_TOTAL)
         {
-            log.info("instantx-InstantX::ProcessConsensusVote - Masternode not in the top {} ({}) - {}", INSTANTX_SIGNATURES_TOTAL, n, ctx.getHash().toString());
-            //return false;
+            //we have enough information to determine the masternode rank, we will make sure it is correct or we will return false.
+            log.info("instantsend-InstantX::ProcessConsensusVote - Masternode not in the top {} ({}) - {}", INSTANTX_SIGNATURES_TOTAL, n, ctx.getHash().toString());
+            return false;
         } else
-            log.info("instantx-InstantX::ProcessConsensusVote - Masternode is the top {} ({}) - {}", INSTANTX_SIGNATURES_TOTAL, n, ctx.getHash());
+            log.info("instantsend-InstantX::ProcessConsensusVote - Masternode is the top {} ({}) - {}", INSTANTX_SIGNATURES_TOTAL, n, ctx.getHash());
 
 
         if(n != -3 && !ctx.signatureValid()) {
@@ -483,68 +463,33 @@ public class InstantXSystem {
             newLock.txHash = ctx.txHash;
             mapTxLocks.put(ctx.txHash, newLock);
         } else
-            log.info("instantx - InstantX::ProcessConsensusVote - Transaction Lock Exists {} !", ctx.txHash.toString());
+            log.info("instantsend - InstantX::ProcessConsensusVote - Transaction Lock Exists {} !", ctx.txHash.toString());
 
         //compile consensus vote
         TransactionLock i = mapTxLocks.get(ctx.txHash);
         if (i != null){
             i.addSignature(ctx);
-            Transaction tx = mapTxLockReq.get(ctx.txHash);
-            if(tx == null) {
-                log.info("instantx - InstantX::ProcessConsensusVote - Transaction doesn't exist {} mapTxLockReq.size() = {}", ctx.txHash.toString(), mapTxLockReq.size());
-                return false;  //TODO: why is this happening?  Did we not get the "ix"
-            }
-            //tx.getConfidence().setConsensusVotes(i.countSignatures());
 
-            /*#ifdef ENABLE_WALLET
-            if(pwalletMain){
-                //when we get back signatures, we'll count them as requests. Otherwise the client will think it didn't propagate.
-                if(pwalletMain->mapRequestCount.count(ctx.txHash))
-                    pwalletMain->mapRequestCount[ctx.txHash]++;
-            }
-            #endif
-            */
+            int nSignatures = i.countSignatures();
+            log.info("instantsend - InstantX::ProcessConsensusVote - Transaction Lock Votes {} - {} !", nSignatures, ctx.getHash().toString());
 
-            log.info("instantx-InstantX::ProcessConsensusVote - Transaction Lock Votes {} - {} !", i.countSignatures(), ctx.getHash().toString());
+            if(nSignatures >= INSTANTX_SIGNATURES_REQUIRED){
+                log.info("instantsend - InstantX::ProcessConsensusVote - Transaction Lock Is Complete {} !", ctx.txHash.toString());
 
-            if(i.countSignatures() >= INSTANTX_SIGNATURES_REQUIRED){
-                log.info("instantx - InstantX::ProcessConsensusVote - Transaction Lock Is Complete {} !", i.getHash().toString());
+                // Masternodes will sometimes propagate votes before the transaction is known to the client,
+                // will check for conflicting locks and update transaction status on a new vote message
+                // only after the lock itself has arrived
+                if(!mapTxLockReq.containsKey(ctx.txHash) && !mapTxLockReqRejected.containsKey(ctx.txHash)) return true;
 
-                //Transaction tx = mapTxLockReq.get(ctx.txHash);
-                if(!checkForConflictingLocks(tx)){
-
-                    //tx.getConfidence().setConsensusVotes(i.countSignatures());
-                    tx.getConfidence().setIXType(TransactionConfidence.IXType.IX_LOCKED);
-                    tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
-
-                    //pnode.notifyLock(tx);
-
-                    /*#ifdef ENABLE_WALLET
-                    if(pwalletMain){
-                        if(pwalletMain->UpdatedTransaction((*i).second.txHash)){
-                            nCompleteTXLocks++;
-                        }
+                if(!findConflictingLocks(mapTxLockReq.get(ctx.txHash))) { //?????
+                    if(mapTxLockReq.containsKey(ctx.txHash)) {
+                        updateLockedTransaction(mapTxLockReq.get(ctx.txHash));
+                        lockTransactionInputs(mapTxLockReq.get(ctx.txHash));
+                    } else if(mapTxLockReqRejected.containsKey(ctx.txHash)) {
+                        resolveConflicts(mapTxLockReqRejected.get(ctx.txHash)); ///?????
+                    } else {
+                        log.info("instantsend - InstantX::ProcessConsensusVote - Transaction Lock Request is missing {} ! votes {}", ctx.getHash().toString(), nSignatures);
                     }
-                    #endif*/
-
-                    if(mapTxLockReq.containsKey(ctx.txHash)){
-                        for (TransactionInput in : tx.getInputs()){
-                            if(!mapLockedInputs.containsKey(in.getOutpoint())){
-                                mapLockedInputs.put(in.getOutpoint(), ctx.txHash);
-                            }
-                        }
-                    }
-
-                    // resolve conflicts
-
-                    //if this tx lock was rejected, we need to remove the conflicting blocks
-                    if(mapTxLockReqRejected.containsKey(i.txHash)){
-                        //reprocess the last 15 blocks
-                        //ReprocessBlocks(15);
-                        //TODO: Not sure how to do this
-
-                    }
-
                 }
             }
             return true;
@@ -607,4 +552,113 @@ public class InstantXSystem {
         }
 
     }
+
+    public boolean isLockedIXTransaction(Sha256Hash txHash) {
+        // there must be a successfully verified lock request...
+        if (!mapTxLockReq.containsKey(txHash)) return false;
+        // ...and corresponding lock must have enough signatures
+        TransactionLock tlock = mapTxLocks.get(txHash);
+        return tlock != null && tlock.countSignatures() > INSTANTX_SIGNATURES_REQUIRED;
+    }
+
+    public int getTransactionLockSignatures(Sha256Hash txHash)
+    {
+        //if(fLargeWorkForkFound || fLargeWorkInvalidChainFound) return -2;
+        if(!context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTX)) return -3;
+        if(!context.allowInstantXinLiteMode()) return -1;
+
+        TransactionLock tlock = mapTxLocks.get(txHash);
+        if (tlock != null){
+            return tlock.countSignatures();
+        }
+
+        return -1;
+    }
+
+    public boolean isTransactionLockTimedOut(Sha256Hash txHash)
+    {
+        if(!context.allowInstantXinLiteMode()) return false;
+
+        TransactionLock tlock = mapTxLocks.get(txHash);
+        if (tlock != null){
+            return Utils.currentTimeSeconds() > tlock.timeout;
+        }
+
+        return false;
+    }
+
+
+
+    void lockTransactionInputs(Transaction tx) {
+        if(mapTxLockReq.containsKey(tx.getHash())){
+            for(TransactionInput in : tx.getInputs()) {
+                if(!mapLockedInputs.containsKey(in.getOutpoint())){
+                    mapLockedInputs.put(in.getOutpoint(), tx.getHash());
+                }
+            }
+        }
+    }
+
+    boolean findConflictingLocks(Transaction tx)
+    {
+    /*
+        It's possible (very unlikely though) to get 2 conflicting transaction locks approved by the network.
+        In that case, they will cancel each other out.
+
+        Blocks could have been rejected during this time, which is OK. After they cancel out, the client will
+        rescan the blocks and find they're acceptable and then take the chain with the most work.
+    */
+        for(TransactionInput in : tx.getInputs()){
+            if(mapLockedInputs.containsKey(in.getOutpoint())){
+                if(mapLockedInputs.get(in.getOutpoint()) != tx.getHash()){
+                    log.info("InstantX::FindConflictingLocks - found two complete conflicting locks - removing both. {} {}", tx.getHash().toString(), mapLockedInputs.get(in.getOutpoint()).toString());
+                    if(mapTxLocks.containsKey(tx.getHash()))
+                        mapTxLocks.get(tx.getHash()).expiration = (int)Utils.currentTimeSeconds();
+                    if(mapTxLocks.containsKey(mapLockedInputs.get(in.getOutpoint())))
+                        mapTxLocks.get(mapLockedInputs.get(in.getOutpoint())).expiration = (int)Utils.currentTimeSeconds();
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    void resolveConflicts(Transaction tx) {
+        // resolve conflicts
+        if (isLockedIXTransaction(tx.getHash()) && !findConflictingLocks(tx)){ //?????
+            log.info("ResolveConflicts - Found Existing Complete IX Lock, resolving...");
+
+            //reprocess the last 15 blocks
+            //ReprocessBlocks(15);
+            if(!mapTxLockReq.containsKey(tx.getHash()))
+                mapTxLockReq.put(tx.getHash(), tx); //?????
+        }
+    }
+
+    void updateLockedTransaction(Transaction tx) { updateLockedTransaction(tx, true);}
+
+    void updateLockedTransaction(Transaction tx, boolean fForceNotification) {
+        // there should be no conflicting locks
+        if(findConflictingLocks(tx)) return;
+        Sha256Hash txHash = tx.getHash();
+        // there must be a successfully verified lock request
+        if (!mapTxLockReq.containsKey(txHash)) return;
+
+        //#ifdef ENABLE_WALLET
+        //if(pwalletMain && pwalletMain->UpdatedTransaction(txHash)){
+            // bumping this to update UI
+        nCompleteTXLocks++;
+        int nSignatures = getTransactionLockSignatures(txHash);
+        // a transaction lock must have enough signatures to trigger this notification
+        if(nSignatures == INSTANTX_SIGNATURES_REQUIRED || (fForceNotification && nSignatures > INSTANTX_SIGNATURES_REQUIRED)) {
+
+
+            tx.getConfidence().setIXType(TransactionConfidence.IXType.IX_LOCKED);
+            tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
+            // notify an external script once threshold is reached
+
+        }
+    }
 }
+

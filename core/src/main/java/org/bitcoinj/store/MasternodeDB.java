@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.Arrays;
-
+@Deprecated
 public class MasternodeDB {
     private static final Logger log = LoggerFactory.getLogger(MasternodeDB.class);
     private static String pathMN;

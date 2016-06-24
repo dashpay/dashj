@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
@@ -23,13 +25,37 @@ public class Masternode extends Message{
     ReentrantLock lock = Threading.lock("Masternode");
     long lastTimeChecked;
 
-    public static int MASTERNODE_ENABLED = 1;
-    public static int MASTERNODE_EXPIRED = 2;
-    public static int MASTERNODE_VIN_SPENT = 3;
-    public static int MASTERNODE_REMOVE = 4;
-    public static int MASTERNODE_POS_ERROR = 5;
+    enum State {
+        MASTERNODE_PRE_ENABLED(0),
+        MASTERNODE_ENABLED(1),
+        MASTERNODE_EXPIRED(2),
+        MASTERNODE_VIN_SPENT(3),
+        MASTERNODE_REMOVE(4),
+        MASTERNODE_POS_ERROR(5);
 
-    public static int  MASTERNODE_MIN_CONFIRMATIONS    =       15;
+         State(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+
+        private static final Map<Integer, State> typesByValue = new HashMap<Integer, State>();
+
+        static {
+            for (State type : State.values()) {
+                typesByValue.put(type.value, type);
+            }
+        }
+
+        private final int value;
+
+        public static State forValue(int value) {
+            return typesByValue.get(value);
+        }
+    }
+
     public static int  MASTERNODE_MIN_MNP_SECONDS      =       (10*60);
     public static int  MASTERNODE_MIN_MNB_SECONDS      =       (5*60);
     public static int  MASTERNODE_PING_SECONDS         =       (5*60);
@@ -42,7 +68,7 @@ public class Masternode extends Message{
     public PublicKey pubkey;
     public PublicKey pubkey2;
     public MasternodeSignature sig;
-    public int activeState;
+    public State activeState;
     public long sigTime; //mnb message time
 
     int cacheInputAge;
@@ -77,7 +103,7 @@ public class Masternode extends Message{
         pubkey = new PublicKey();
         pubkey2 = new PublicKey();
         sig = null;
-        activeState = MASTERNODE_ENABLED;
+        activeState = State.MASTERNODE_ENABLED;
         sigTime = Utils.currentTimeSeconds();
         lastPing = MasternodePing.EMPTY;
         cacheInputAge = 0;
@@ -133,12 +159,13 @@ public class Masternode extends Message{
     {
         //LOCK(cs);
         super(mnb.params);
+        context = Context.get();
         vin = mnb.vin;
         address = mnb.address;
         pubkey = mnb.pubkey;
         pubkey2 = mnb.pubkey2;
         sig = mnb.sig;
-        activeState = MASTERNODE_ENABLED;
+        activeState = State.MASTERNODE_ENABLED;
         sigTime = mnb.sigTime;
         lastPing = mnb.lastPing;
         cacheInputAge = 0;
@@ -292,7 +319,7 @@ public class Masternode extends Message{
 
         protocolVersion = (int)readUint32();
 
-        activeState = (int)readUint32();
+        activeState = State.forValue((int)readUint32());
 
         lastPing = new MasternodePing(params, payload, cursor);
         cursor += lastPing.getMessageSize();
@@ -328,7 +355,7 @@ public class Masternode extends Message{
         Utils.int64ToByteStreamLE(sigTime, stream);
         Utils.uint32ToByteStreamLE(protocolVersion, stream);
 
-        Utils.uint32ToByteStreamLE(activeState, stream);
+        Utils.uint32ToByteStreamLE(activeState.getValue(), stream);
 
         lastPing.bitcoinSerialize(stream);
 
@@ -353,95 +380,25 @@ public class Masternode extends Message{
     // the proof of work for that block. The further away they are the better, the furthest will win the election
     // and get paid this block
     //
-    Sha256Hash calculateScore(int mod, long nBlockHeight)
+    Sha256Hash calculateScore(int mod, int nBlockHeight)
     {
         //if(blockChain.getChainHead() == null)
         //    return Sha256Hash.ZERO_HASH;
 
         //uint256 hash = 0;
-        BigInteger bi_aux = new BigInteger(vin.getOutpoint().getHash().getBytes()).add(BigInteger.valueOf(vin.getOutpoint().getIndex()));
-        Sha256Hash aux = Sha256Hash.of(bi_aux.toByteArray());
-
-        //uint256 aux = vin.prevout.hash + vin.prevout.n;
-
-        /*if(!GetBlockHash(hash, nBlockHeight)) {
-            log.info("CalculateScore ERROR - nHeight {} - Returned 0", nBlockHeight);
-            return 0;
-        }*/
-        Sha256Hash hash = context.masternodeManager.getBlockHash(nBlockHeight);
+        Sha256Hash hash = context.hashStore.getBlockHash(nBlockHeight);
         if(hash.equals(Sha256Hash.ZERO_HASH))
         {
             log.info("CalculateScore ERROR - nHeight {} - Returned 0", nBlockHeight);
             return Sha256Hash.ZERO_HASH;
         }
 
-
-        //CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
-        //ss << hash;
-        //uint256 hash2 = ss.GetHash();
-
-        Sha256Hash hash2 = Sha256Hash.twiceOf(hash.getBytes());
-
-        /*CHashWriter ss2(SER_GETHASH, PROTOCOL_VERSION);
-        ss2 << hash;
-        ss2 << aux;
-        uint256 hash3 = ss2.GetHash();*/
-
-        try {
-            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
-            bos.write(hash.getBytes());
-            bos.write(aux.getBytes());
-            Sha256Hash hash3 = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
-
-            BigInteger bhash2 = new BigInteger(hash2.getBytes());
-            BigInteger bhash3 = new BigInteger(hash3.getBytes());
-
-            //uint256 r = (hash3 > hash2 ? hash3 - hash2 : hash2 - hash3);
-            if(bhash3.compareTo(bhash2) > 0)
-                return Sha256Hash.of(bhash3.subtract(bhash2).toByteArray());
-            else return Sha256Hash.of(bhash2.subtract(bhash3).toByteArray());
-        }
-        catch (IOException x)
-        {
-            return Sha256Hash.ZERO_HASH;
-        }
-
-
+        return calculateScore(mod, hash);
     }
 
     Sha256Hash calculateScore(int mod, Sha256Hash hash)
     {
         return calculateScore(vin, hash);
-
-    }
-
-    Sha256Hash calculateScoreTest()
-    {
-        //if(blockChain.getChainHead() == null)
-        //    return Sha256Hash.ZERO_HASH;
-
-        /*
-CalculateScore:-------
-, vin=CTxIn(COutPoint(b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb, 0), scriptSig=)
-vin.prevout.hash=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
-vin.prevout.n=0
-hash=00000000000642c0b18cafc97a23ffd6e5eeb0a63b600a0d3f9630a93b674ae0
-aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
-2016-03-01 07:37:39 hash2=8802d328293c18864b4c2e5d4de40f21e650ceb3ce55414ce54e2e321d33b75c
-2016-03-01 07:37:39 hash3=0411aaa87e4632a79846ad4a9b69d66cc25b9c69966e913ddaf8997ccc2a0b16
-2016-03-01 07:37:39 r=83f1287faaf5e5deb3058112b27a38b523f5324a37e6b00f0a5594b55109ac46 (hash2-hash3)
-                      83f1287faaf5e5deb3058112b27a38b523f5324a37e6b00f0a5594b55109ac46
-*/
-        TransactionInput vin = new TransactionInput(params,null, new byte[0],
-                new TransactionOutPoint(params, 0,
-                        Sha256Hash.wrap(Utils.HEX.decode("b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb"))));
-
-        Sha256Hash hash;// = context.masternodeManager.getBlockHash(nBlockHeight);
-
-        hash = Sha256Hash.wrap(Utils.HEX.decode("00000000000642c0b18cafc97a23ffd6e5eeb0a63b600a0d3f9630a93b674ae0"));
-
-        return calculateScore(vin, hash);
-
 
     }
 
@@ -550,16 +507,26 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
 
 
         //once spent, stop doing the checks
-        if(activeState == MASTERNODE_VIN_SPENT) return;
+        if(activeState == State.MASTERNODE_VIN_SPENT) return;
 
-
-        if(!isPingedWithin(MASTERNODE_REMOVAL_SECONDS)){
-            activeState = MASTERNODE_REMOVE;
+        // If there are no pings for quite a long time ...
+        if(!isPingedWithin(MASTERNODE_REMOVAL_SECONDS)
+                // or doesn't meet payments requirements ...
+                || protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()
+                // or it's our own node and we just updated it to the new protocol but we are still waiting for activation -
+                || (pubkey2.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion < NetworkParameters.PROTOCOL_VERSION)){
+            activeState = State.MASTERNODE_REMOVE;
             return;
         }
 
         if(!isPingedWithin(MASTERNODE_EXPIRATION_SECONDS)){
-            activeState = MASTERNODE_EXPIRED;
+            activeState = State.MASTERNODE_EXPIRED;
+            return;
+        }
+
+
+        if(lastPing.sigTime - sigTime < MASTERNODE_MIN_MNP_SECONDS){
+            activeState = State.MASTERNODE_PRE_ENABLED;
             return;
         }
 
@@ -584,7 +551,7 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
             */
         }
 
-        activeState = MASTERNODE_ENABLED; // OK
+        activeState = State.MASTERNODE_ENABLED; // OK
     }
 
         public boolean UpdatedWithin(int seconds)
@@ -602,8 +569,25 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
         public boolean isEnabled()
         {
             /*return enabled == 1;*/
-            return activeState == MASTERNODE_ENABLED;
+            return activeState == State.MASTERNODE_ENABLED;
         }
+        public boolean isPreEnabled()
+        {
+            return activeState == State.MASTERNODE_PRE_ENABLED;
+        }
+
+    public String status() {
+        String strStatus = "unknown";
+
+        if(activeState == State.MASTERNODE_PRE_ENABLED) strStatus = "PRE_ENABLED";
+        if(activeState == State.MASTERNODE_ENABLED) strStatus     = "ENABLED";
+        if(activeState == State.MASTERNODE_EXPIRED) strStatus     = "EXPIRED";
+        if(activeState == State.MASTERNODE_VIN_SPENT) strStatus   = "VIN_SPENT";
+        if(activeState == State.MASTERNODE_REMOVE) strStatus      = "REMOVE";
+        if(activeState == State.MASTERNODE_POS_ERROR) strStatus   = "POS_ERROR";
+
+        return strStatus;
+    }
 
         boolean isBroadcastedWithin(int seconds)
         {

@@ -24,13 +24,16 @@ import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.MasternodeDB;
 import org.bitcoinj.utils.BriefLogFormatter;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.bitcoinj.utils.Pair;
 
 import java.io.File;
+import java.util.ArrayList;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -116,6 +119,19 @@ public class ForwardingService {
         System.out.println("Send coins to: " + sendToAddress);
         System.out.println("Waiting for coins to arrive. Press Ctrl-C to quit.");
 
+        Context.get().masternodeSync.addEventListener(new MasternodeSyncListener() {
+            @Override
+            public void onSyncStatusChanged(int newStatus, double syncStatus) {
+                if(newStatus == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
+                    FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(kit.directory().getAbsolutePath(), "mncache.dat", "magicMasternodeCache");
+                    mndb.dump(Context.get().masternodeManager);
+                    //ArrayList<Pair<Integer, Masternode>> results = Context.get().masternodeManager.getMasternodeRanks(27143, 0);
+                    //System.out.println(results.toString());
+                }
+
+            }
+        });
+
         try {
             Thread.sleep(Long.MAX_VALUE);
         } catch (InterruptedException ignored) {}
@@ -141,7 +157,9 @@ public class ForwardingService {
                 }
             }, MoreExecutors.sameThreadExecutor());
 
-            MasternodeDB.dumpMasternodes();
+            //MasternodeDB.dumpMasternodes();
+            FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(kit.directory().getAbsolutePath(),"mncache.dat", "magicMasternodeCache");
+            mndb.dump(Context.get().masternodeManager);
         } catch (KeyCrypterException | InsufficientMoneyException e) {
             // We don't use encrypted wallets in this example - can never happen.
             throw new RuntimeException(e);

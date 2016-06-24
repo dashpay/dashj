@@ -29,7 +29,6 @@ import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
-import org.darkcoinj.InstantXSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1095,13 +1094,13 @@ public class Peer extends PeerSocketHandler {
                     return true;
                 }*/
                 return false;
-            case BudgetVote:
+            case GovernanceVote:
                 /*if(budget.mapSeenMasternodeBudgetVotes.containsKey(inv.hash)) {
                     masternodeSync.AddedBudgetItem(inv.hash);
                     return true;
                 }*/
                 return false;
-            case BudgetProposal:
+            case GovernanceObject:
                /*if(budget.mapSeenMasternodeBudgetProposals.containsKey(inv.hash)) {
                     masternodeSync.AddedBudgetItem(inv.hash);
                     return true;
@@ -1169,8 +1168,8 @@ public class Peer extends PeerSocketHandler {
                 case MasterNodeWinner:
                     break;
                 case MasterNodeScanningError: break;
-                case BudgetVote: break;
-                case    BudgetProposal: break;
+                case GovernanceVote: break;
+                case GovernanceObject: break;
                 case    BudgetFinalized: break;
                 case    BudgetFinalizedVote: break;
                 case    MasterNodeQuarum: break;

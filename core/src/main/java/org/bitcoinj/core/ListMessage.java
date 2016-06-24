@@ -116,10 +116,10 @@ public abstract class ListMessage extends Message {
                     type = InventoryItem.Type.MasterNodeScanningError;
                     break;
                 case 9:
-                    type = InventoryItem.Type.BudgetVote;
+                    type = InventoryItem.Type.GovernanceVote;
                     break;
                 case 10:
-                    type = InventoryItem.Type.BudgetProposal;
+                    type = InventoryItem.Type.GovernanceObject;
                     break;
                 case 11:
                     type = InventoryItem.Type.BudgetFinalized;

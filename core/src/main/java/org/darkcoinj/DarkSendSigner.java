@@ -72,16 +72,16 @@ public class DarkSendSigner {
     {
         //int length = Utils.BITCOIN_SIGNED_MESSAGE_HEADER.length()+strMessage.length();
 
-        byte dataToHash [] = (Utils.BITCOIN_SIGNED_MESSAGE_HEADER_BYTES+strMessage).getBytes();
+        //byte dataToHash [] = (Utils.BITCOIN_SIGNED_MESSAGE_HEADER_BYTES+strMessage).getBytes();
 
-        PublicKey pubkey2;
+        ECKey pubkey2 = null;
 
         try {
             //pubkey2 = PublicKey.recoverCompact(Sha256Hash.twiceOf(dataToHash), vchSig);
 
-            ECKey pubkey1 = ECKey.fromPublicOnly(pubkey.getBytes());
+            pubkey2 = ECKey.fromPublicOnly(pubkey.getBytes());
 
-            pubkey1.verifyMessage(strMessage, Base64.toBase64String(vchSig.getBytes()));
+            pubkey2.verifyMessage(strMessage.getBytes(), vchSig.getBytes());
 
             //ECKey.verify()
 
@@ -94,8 +94,10 @@ public class DarkSendSigner {
         }
         catch(SignatureException x)
         {
-            errorMessage.append("Error recovering pubkey: "+x.getMessage());
-
+            errorMessage.append("keys don't match - input: "+Utils.HEX.encode(pubkey.getId()));
+            errorMessage.append(", recovered: " + (pubkey2 != null ? Utils.HEX.encode(pubkey2.getPubKeyHash()) : "null"));
+            errorMessage.append(",\nmessage: "+ String.valueOf(strMessage));
+            errorMessage.append(", sig: \n" + Base64.toBase64String(vchSig.getBytes())+ "\n" + x.getMessage());
 
             return false;
         }
@@ -111,8 +113,8 @@ public class DarkSendSigner {
         //bos.write(message);
         dataToHash = Utils.formatMessageForSigning(message);//bos.getBytes();
 
-        PublicKey pubkey2;
-
+        //PublicKey pubkey2;
+        ECKey pubkey2 = null;
         try {
            // pubkey2 = PublicKey.recoverCompact(Sha256Hash.twiceOf(dataToHash), vchSig);
 
@@ -125,17 +127,19 @@ public class DarkSendSigner {
             //return pubkey.getId().equals(pubkey2.getId());
             //return true;
 
-            ECKey pubkey1 = ECKey.fromPublicOnly(pubkey.getBytes());
+            pubkey2 = ECKey.fromPublicOnly(pubkey.getBytes());
 
-            pubkey1.verifyMessage(message, vchSig.getBytes());
+            pubkey2.verifyMessage(message, vchSig.getBytes());
 
             return true;
 
         }
         catch(SignatureException x)
         {
-            errorMessage.append("Error recovering pubkey: "+x.getMessage());
-
+            errorMessage.append("keys don't match - input: "+Utils.HEX.encode(pubkey.getId()));
+            errorMessage.append(", recovered: " + (pubkey2 != null ? Utils.HEX.encode(pubkey2.getPubKeyHash()) : "null"));
+            errorMessage.append(", message: "+ Utils.sanitizeString(new String(message)));
+            errorMessage.append(", sig:  not impl!\n" + x.getMessage());
 
             return false;
         }

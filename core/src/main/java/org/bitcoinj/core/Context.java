@@ -1,10 +1,14 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.store.FlatDB;
+import org.bitcoinj.store.HashStore;
 import org.bitcoinj.store.MasternodeDB;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.darkcoinj.DarkSendPool;
 import org.darkcoinj.InstantXSystem;
 import org.slf4j.*;
+
+import java.util.List;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -39,6 +43,7 @@ public class Context {
     private boolean liteMode = true;
     private boolean allowInstantX = true; //allow InstantX in litemode
     public PeerGroup peerGroup;
+    public AbstractBlockChain blockChain;
     public SporkManager sporkManager;
     public MasternodeManager masternodeManager;
     public MasternodePayments masternodePayments;
@@ -46,6 +51,7 @@ public class Context {
     public ActiveMasternode activeMasternode;
     public DarkSendPool darkSendPool;
     public InstantXSystem instantx;
+    public HashStore hashStore;
     public MasternodeDB masternodeDB;
 
     /**
@@ -179,15 +185,19 @@ public class Context {
 
     public void initDashSync(String directory)
     {
-        masternodeDB = new MasternodeDB(directory);
+        //masternodeDB = new MasternodeDB(directory);
 
-        MasternodeManager masternodeManagerLoaded = masternodeDB.read(this, false);
+        //MasternodeManager masternodeManagerLoaded = masternodeDB.read(this, false);
+
+        FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(directory, "mncache.dat", "magicMasternodeCache");
+
+        boolean success = mndb.load(masternodeManager);
 
         //
         // If loading was successful, replace the default manager
         //
-        if(masternodeManagerLoaded != null) {
-            masternodeManager = masternodeManagerLoaded;
+        if(/*!masternodeManagerLoaded != null!*/ success) {
+            //masternodeManager = masternodeManagerLoaded;
             masternodeManager.setBlockChain(sporkManager.blockChain);
         }
 
@@ -198,6 +208,9 @@ public class Context {
     public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)
     {
         this.peerGroup = peerGroup;
+        this.blockChain = chain;
+        hashStore = new HashStore(chain.getBlockStore());
+        chain.addListener(updateHeadListener);
         sporkManager.setBlockChain(chain);
         masternodeManager.setBlockChain(chain);
         masternodeSync.setBlockChain(chain);
@@ -222,4 +235,35 @@ public class Context {
     {
         this.allowInstantX = allow;
     }
+
+    BlockChainListener updateHeadListener = new BlockChainListener () {
+        public void notifyNewBestBlock(StoredBlock block) throws VerificationException
+        {
+            masternodeSync.updateBlockTip(block);
+        }
+
+        public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks,
+                        List<StoredBlock> newBlocks) throws VerificationException{}
+
+        public boolean isTransactionRelevant(Transaction tx) throws ScriptException
+        {
+            return false;
+        }
+
+        public void receiveFromBlock(Transaction tx, StoredBlock block,
+                              BlockChain.NewBlockType blockType,
+                              int relativityOffset) throws VerificationException
+        {
+
+        }
+
+
+
+        public boolean notifyTransactionIsInBlock(Sha256Hash txHash, StoredBlock block,
+                                           BlockChain.NewBlockType blockType,
+                                           int relativityOffset) throws VerificationException
+        {
+            return false;
+        }
+    };
 }

@@ -164,13 +164,17 @@ public class DarkSendPool {
         RAND_bytes((unsigned char*)&seed, sizeof(seed));
         std::srand(seed);*/
     }
-
+    static boolean oneThread = false;
     public Runnable ThreadCheckDarkSendPool = new Runnable() {
         @Override
         public void run() {
             if(context.isLiteMode() && !context.allowInstantXinLiteMode()) return; //disable all Darksend/Masternode related functionality
 
+            if(oneThread)
+                return;
+            oneThread = true;
             // Make this thread recognisable as the wallet flushing thread
+
             //RenameThread("dash-darksend");
             log.info("--------------------------------------\nstarting dash-darksend thread");
             int c = 0;
@@ -185,6 +189,7 @@ public class DarkSendPool {
 
                     if(context.isLiteMode() && context.allowInstantXinLiteMode() && context.masternodeSync.getSyncStatusInt() == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
                         log.info("closing thread: " + Thread.currentThread().getName());
+                        oneThread = false;
                         return; // if in LiteMode and allowing instantX and the Sporks are synced, then close this thread.
                     }
 
@@ -200,7 +205,7 @@ public class DarkSendPool {
                         if (c % 60 == 0) {
                             context.masternodeManager.checkAndRemove();
                             context.masternodeManager.processMasternodeConnections();
-                            context.masternodePayments.cleanPaymentList();
+                            context.masternodePayments.checkAndRemove();
                             context.instantx.cleanTransactionLocksList();
                         }
                         //hashengineering added this

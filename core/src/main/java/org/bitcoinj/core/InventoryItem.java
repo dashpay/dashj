@@ -28,13 +28,13 @@ public class InventoryItem {
         Transaction,
         Block,
         FilteredBlock,
-        TransactionLockRequest, //Darkcoin InstantX
-        TransactionLockVote,         //Darkcoin InstantX
+        TransactionLockRequest, //Dash InstantSend
+        TransactionLockVote,         //Dash InstantSend
         Spork,
         MasterNodeWinner,
-        MasterNodeScanningError,
-        BudgetVote,
-        BudgetProposal,
+        MasterNodeScanningError, // not implemented
+        GovernanceVote,
+        GovernanceObject,
         BudgetFinalized,
         BudgetFinalizedVote,
         MasterNodeQuarum,

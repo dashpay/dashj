@@ -161,9 +161,9 @@ public class SporkManager {
 
     public void executeSpork(int nSporkID, long nValue)
     {
-        if(nSporkID == SPORK_11_RESET_BUDGET && nValue == 1){
-            //budget.Clear();
-        }
+        //if(nSporkID == SPORK_11_RESET_BUDGET && nValue == 1){
+        //   //budget.Clear();
+        //}
 
         //correct fork via spork technology
         if(nSporkID == SPORK_12_RECONSIDER_BLOCKS && nValue > 0) {
