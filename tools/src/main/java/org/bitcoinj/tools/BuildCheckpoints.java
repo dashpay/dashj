@@ -48,7 +48,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class BuildCheckpoints {
 
-    private static final NetworkParameters PARAMS = TestNet3Params.get();//MainNetParams.get();
+    private static final NetworkParameters PARAMS = MainNetParams.get();
     private static final File PLAIN_CHECKPOINTS_FILE = new File("checkpoints");
     private static final File TEXTUAL_CHECKPOINTS_FILE = new File("checkpoints.txt");
 
@@ -60,6 +60,7 @@ public class BuildCheckpoints {
 
         // Configure bitcoinj to fetch only headers, not save them to disk, connect to a local fully synced/validated
         // node and to save block headers that are on interval boundaries, as long as they are <1 month old.
+        Context.getOrCreate(PARAMS).initDash(true, false);
         final BlockStore store = new MemoryBlockStore(PARAMS);
         final BlockChain chain = new BlockChain(PARAMS, store);
         final PeerGroup peerGroup = new PeerGroup(PARAMS, chain);
