@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
  *
@@ -17,8 +17,11 @@
 
 package org.bitcoinj.core;
 
+/**
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
+ */
 public class UnknownMessage extends EmptyMessage {
-    private static final long serialVersionUID = 3614705938207918775L;
+
     private String name;
 
     public UnknownMessage(NetworkParameters params, String name, byte[] payloadBytes) throws ProtocolException {

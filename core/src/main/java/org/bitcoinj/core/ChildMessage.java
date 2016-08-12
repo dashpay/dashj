@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Steve Coughlan.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,19 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.bitcoinj.core;
 
 import javax.annotation.Nullable;
 
 /**
- * Represents a Message type that can be contained within another Message.  ChildMessages that have a cached
- * backing byte array need to invalidate their parent's caches as well as their own if they are modified.
+ * <p>Represents a Message type that can be contained within another Message.  ChildMessages that have a cached
+ * backing byte array need to invalidate their parent's caches as well as their own if they are modified.</p>
+ * 
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public abstract class ChildMessage extends Message {
-    private static final long serialVersionUID = -7657113383624517931L;
 
     @Nullable protected Message parent;
 
+    /**
+     * @deprecated Use {@link #ChildMessage(NetworkParameters) instead.
+     */
+    @Deprecated
     protected ChildMessage() {
     }
 
@@ -37,9 +43,8 @@ public abstract class ChildMessage extends Message {
         super(params, payload, offset, protocolVersion);
     }
 
-    public ChildMessage(NetworkParameters params, byte[] payload, int offset, int protocolVersion, Message parent, boolean parseLazy,
-                        boolean parseRetain, int length) throws ProtocolException {
-        super(params, payload, offset, protocolVersion, parseLazy, parseRetain, length);
+    public ChildMessage(NetworkParameters params, byte[] payload, int offset, int protocolVersion, Message parent, MessageSerializer setSerializer, int length) throws ProtocolException {
+        super(params, payload, offset, protocolVersion, setSerializer, length);
         this.parent = parent;
     }
 
@@ -47,13 +52,13 @@ public abstract class ChildMessage extends Message {
         super(params, payload, offset);
     }
 
-    public ChildMessage(NetworkParameters params, byte[] payload, int offset, @Nullable Message parent, boolean parseLazy, boolean parseRetain, int length)
+    public ChildMessage(NetworkParameters params, byte[] payload, int offset, @Nullable Message parent, MessageSerializer setSerializer, int length)
             throws ProtocolException {
-        super(params, payload, offset, parseLazy, parseRetain, length);
+        super(params, payload, offset, setSerializer, length);
         this.parent = parent;
     }
 
-    public void setParent(@Nullable Message parent) {
+    public final void setParent(@Nullable Message parent) {
         if (this.parent != null && this.parent != parent && parent != null) {
             // After old parent is unlinked it won't be able to receive notice if this ChildMessage
             // changes internally.  To be safe we invalidate the parent cache to ensure it rebuilds

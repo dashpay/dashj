@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
  *
@@ -36,15 +36,17 @@ import static com.google.common.base.Preconditions.checkArgument;
  * map. It also checks that the length is correct and provides a bit more type safety.
  */
 public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
+    public static final int LENGTH = 32; // bytes
+    public static final Sha256Hash ZERO_HASH = wrap(new byte[LENGTH]);
+
     private final byte[] bytes;
-    public static final Sha256Hash ZERO_HASH = wrap(new byte[32]);
 
     /**
      * Use {@link #wrap(byte[])} instead.
      */
     @Deprecated
     public Sha256Hash(byte[] rawHashBytes) {
-        checkArgument(rawHashBytes.length == 32);
+        checkArgument(rawHashBytes.length == LENGTH);
         this.bytes = rawHashBytes;
     }
 
@@ -53,7 +55,7 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      */
     @Deprecated
     public Sha256Hash(String hexString) {
-        checkArgument(hexString.length() == 64);
+        checkArgument(hexString.length() == LENGTH * 2);
         this.bytes = Utils.HEX.decode(hexString);
     }
 
@@ -223,7 +225,9 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
 
     @Override
     public boolean equals(Object o) {
-        return this == o || o != null && getClass() == o.getClass() && Arrays.equals(bytes, ((Sha256Hash)o).bytes);
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return Arrays.equals(bytes, ((Sha256Hash)o).bytes);
     }
 
     /**
@@ -234,7 +238,7 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
     @Override
     public int hashCode() {
         // Use the last 4 bytes, not the first 4 which are often zeros in Bitcoin.
-        return Ints.fromBytes(bytes[28], bytes[29], bytes[30], bytes[31]);
+        return Ints.fromBytes(bytes[LENGTH - 4], bytes[LENGTH - 3], bytes[LENGTH - 2], bytes[LENGTH - 1]);
     }
 
     @Override
@@ -264,7 +268,15 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
     }
 
     @Override
-    public int compareTo(Sha256Hash o) {
-        return this.hashCode() - o.hashCode();
+    public int compareTo(final Sha256Hash other) {
+        for (int i = LENGTH - 1; i >= 0; i--) {
+            final int thisByte = this.bytes[i] & 0xff;
+            final int otherByte = other.bytes[i] & 0xff;
+            if (thisByte > otherByte)
+                return 1;
+            if (thisByte < otherByte)
+                return -1;
+        }
+        return 0;
     }
 }

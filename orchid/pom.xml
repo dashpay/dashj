@@ -4,13 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.bitcoinj</groupId>
-        <artifactId>bitcoinj-parent</artifactId>
-        <version>0.13.1</version>
+        <groupId>org.dashj</groupId>
+        <artifactId>dashj-parent</artifactId>
+        <version>0.14.3</version>
     </parent>
 
     <artifactId>orchid</artifactId>
-    <version>1.1.1</version>
+    <version>1.2.1</version>
 
     <name>Orchid</name>
     <description>Tor library</description>
@@ -149,7 +149,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>16.0.1</version>
+            <version>18.0</version>
         </dependency>
     </dependencies>
 

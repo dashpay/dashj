@@ -22,15 +22,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
-import java.io.Serializable;
 import java.util.*;
 
 /**
  * Used as a key for memory map (to avoid having to think about NetworkParameters,
  * which is required for {@link TransactionOutPoint}
  */
-class StoredTransactionOutPoint implements Serializable {
-    private static final long serialVersionUID = -4064230006297064377L;
+class StoredTransactionOutPoint {
 
     /** Hash of the transaction to which we refer. */
     Sha256Hash hash;
@@ -63,7 +61,7 @@ class StoredTransactionOutPoint implements Serializable {
 
     @Override
     public int hashCode() {
-        return this.hash.hashCode() + (int)index;
+        return Objects.hashCode(getIndex(), getHash());
     }
     
     @Override
@@ -76,8 +74,7 @@ class StoredTransactionOutPoint implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         StoredTransactionOutPoint other = (StoredTransactionOutPoint) o;
-        return getIndex() == other.getIndex() &&
-               Objects.equal(getHash(), other.getHash());
+        return getIndex() == other.getIndex() && Objects.equal(getHash(), other.getHash());
     }
 }
 
@@ -285,7 +282,7 @@ public class MemoryFullPrunedBlockStore implements FullPrunedBlockStore {
     }
     
     @Override
-    public synchronized void put(StoredBlock storedBlock, StoredUndoableBlock undoableBlock) throws BlockStoreException {
+    public synchronized final void put(StoredBlock storedBlock, StoredUndoableBlock undoableBlock) throws BlockStoreException {
         Preconditions.checkNotNull(blockMap, "MemoryFullPrunedBlockStore is closed");
         Sha256Hash hash = storedBlock.getHeader().getHash();
         fullBlockMap.put(hash, storedBlock.getHeight(), undoableBlock);
@@ -322,7 +319,7 @@ public class MemoryFullPrunedBlockStore implements FullPrunedBlockStore {
     }
 
     @Override
-    public synchronized void setChainHead(StoredBlock chainHead) throws BlockStoreException {
+    public synchronized final void setChainHead(StoredBlock chainHead) throws BlockStoreException {
         Preconditions.checkNotNull(blockMap, "MemoryFullPrunedBlockStore is closed");
         this.chainHead = chainHead;
     }
@@ -334,7 +331,7 @@ public class MemoryFullPrunedBlockStore implements FullPrunedBlockStore {
     }
 
     @Override
-    public synchronized void setVerifiedChainHead(StoredBlock chainHead) throws BlockStoreException {
+    public synchronized final void setVerifiedChainHead(StoredBlock chainHead) throws BlockStoreException {
         Preconditions.checkNotNull(blockMap, "MemoryFullPrunedBlockStore is closed");
         this.verifiedChainHead = chainHead;
         if (this.chainHead.getHeight() < chainHead.getHeight())

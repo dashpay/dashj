@@ -92,13 +92,7 @@ public class MasternodeManager extends Message {
         eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeManagerListener>>();
     }
 
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
+
     protected static int calcLength(byte[] buf, int offset) {
         int cursor = 0;
 
@@ -128,9 +122,8 @@ public class MasternodeManager extends Message {
         }
     }
     @Override
-    void parse() throws ProtocolException {
-        if(parsed)
-            return;
+    protected void parse() throws ProtocolException {
+
 
         int size = (int)readVarInt();
 

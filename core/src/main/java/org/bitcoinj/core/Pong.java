@@ -1,5 +1,6 @@
-/**
+/*
  * Copyright 2012 Matt Corallo
+ * Copyright 2015 Andreas Schildbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +20,10 @@ package org.bitcoinj.core;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
+ */
 public class Pong extends Message {
-    /** The smallest protocol version that supports the pong response (BIP 31). Anything beyond version 60000. */
-    public static final int MIN_PROTOCOL_VERSION = 60001;
-
     private long nonce;
 
     public Pong(NetworkParameters params, byte[] payloadBytes) throws ProtocolException {
@@ -38,7 +39,7 @@ public class Pong extends Message {
     }
     
     @Override
-    void parse() throws ProtocolException {
+    protected void parse() throws ProtocolException {
         nonce = readInt64();
         length = 8;
     }
@@ -48,10 +49,6 @@ public class Pong extends Message {
         Utils.int64ToByteStreamLE(nonce, stream);
     }
     
-    @Override
-    protected void parseLite() {
-    }
-
     /** Returns the nonce sent by the remote peer. */
     public long getNonce() {
         return nonce;

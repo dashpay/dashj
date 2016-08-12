@@ -46,25 +46,25 @@ public class H2FullPrunedBlockStore extends DatabaseFullPrunedBlockStore {
 
     private static final String CREATE_HEADERS_TABLE = "CREATE TABLE headers ( "
             + "hash BINARY(28) NOT NULL CONSTRAINT headers_pk PRIMARY KEY,"
-            + "chainWork BLOB NOT NULL,"
+            + "chainwork BLOB NOT NULL,"
             + "height INT NOT NULL,"
             + "header BLOB NOT NULL,"
-            + "wasUndoable BOOL NOT NULL"
+            + "wasundoable BOOL NOT NULL"
             + ")";
 
-    private static final String CREATE_UNDOABLE_TABLE = "CREATE TABLE undoableBlocks ( "
-            + "hash BINARY(28) NOT NULL CONSTRAINT undoableBlocks_pk PRIMARY KEY,"
+    private static final String CREATE_UNDOABLE_TABLE = "CREATE TABLE undoableblocks ( "
+            + "hash BINARY(28) NOT NULL CONSTRAINT undoableblocks_pk PRIMARY KEY,"
             + "height INT NOT NULL,"
-            + "txOutChanges BLOB,"
+            + "txoutchanges BLOB,"
             + "transactions BLOB"
             + ")";
 
-    private static final String CREATE_OPEN_OUTPUT_TABLE = "CREATE TABLE openOutputs ("
+    private static final String CREATE_OPEN_OUTPUT_TABLE = "CREATE TABLE openoutputs ("
             + "hash BINARY(32) NOT NULL,"
             + "index INT NOT NULL,"
             + "height INT NOT NULL,"
             + "value BIGINT NOT NULL,"
-            + "scriptBytes BLOB NOT NULL,"
+            + "scriptbytes BLOB NOT NULL,"
             + "toaddress VARCHAR(35),"
             + "addresstargetable TINYINT,"
             + "coinbase BOOLEAN,"
@@ -76,7 +76,21 @@ public class H2FullPrunedBlockStore extends DatabaseFullPrunedBlockStore {
     private static final String CREATE_OUTPUTS_TOADDRESS_INDEX          = "CREATE INDEX openoutputs_toaddress_idx ON openoutputs (toaddress)";
     private static final String CREATE_OUTPUTS_ADDRESSTARGETABLE_INDEX  = "CREATE INDEX openoutputs_addresstargetable_idx ON openoutputs (addresstargetable)";
     private static final String CREATE_OUTPUTS_HASH_INDEX               = "CREATE INDEX openoutputs_hash_idx ON openoutputs (hash)";
-    private static final String CREATE_UNDOABLE_TABLE_INDEX             = "CREATE INDEX undoableblocks_height_idx ON undoableBlocks (height)";
+    private static final String CREATE_UNDOABLE_TABLE_INDEX             = "CREATE INDEX undoableblocks_height_idx ON undoableblocks (height)";
+
+    /**
+     * Creates a new H2FullPrunedBlockStore, with given credentials for H2 database
+     * @param params A copy of the NetworkParameters used
+     * @param dbName The path to the database on disk
+     * @param username The username to use in the database
+     * @param password The username's password to use in the database
+     * @param fullStoreDepth The number of blocks of history stored in full (something like 1000 is pretty safe)
+     * @throws BlockStoreException if the database fails to open for any reason
+     */
+    public H2FullPrunedBlockStore(NetworkParameters params, String dbName, String username, String password,
+            int fullStoreDepth) throws BlockStoreException {
+        super(params, DATABASE_CONNECTION_URL_PREFIX + dbName + ";create=true;LOCK_TIMEOUT=60000;DB_CLOSE_ON_EXIT=FALSE", fullStoreDepth, username, password, null);
+    }
 
     /**
      * Creates a new H2FullPrunedBlockStore
@@ -85,8 +99,9 @@ public class H2FullPrunedBlockStore extends DatabaseFullPrunedBlockStore {
      * @param fullStoreDepth The number of blocks of history stored in full (something like 1000 is pretty safe)
      * @throws BlockStoreException if the database fails to open for any reason
      */
-    public H2FullPrunedBlockStore(NetworkParameters params, String dbName, int fullStoreDepth) throws BlockStoreException {
-        super(params, DATABASE_CONNECTION_URL_PREFIX + dbName + ";create=true;LOCK_TIMEOUT=60000;DB_CLOSE_ON_EXIT=FALSE", fullStoreDepth, null, null, null);
+    public H2FullPrunedBlockStore(NetworkParameters params, String dbName, int fullStoreDepth)
+            throws BlockStoreException {
+        this(params, dbName, null, null, fullStoreDepth);
     }
 
     /**
@@ -99,7 +114,8 @@ public class H2FullPrunedBlockStore extends DatabaseFullPrunedBlockStore {
      *                  and below 4MB sees a sharp drop in performance)
      * @throws BlockStoreException if the database fails to open for any reason
      */
-    public H2FullPrunedBlockStore(NetworkParameters params, String dbName, int fullStoreDepth, int cacheSize) throws BlockStoreException {
+    public H2FullPrunedBlockStore(NetworkParameters params, String dbName, int fullStoreDepth, int cacheSize)
+            throws BlockStoreException {
         this(params, dbName, fullStoreDepth);
         try {
             Statement s = conn.get().createStatement();

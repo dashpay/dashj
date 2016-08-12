@@ -17,28 +17,20 @@
 
 package org.bitcoinj.core;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.SettableFuture;
-import com.google.common.util.concurrent.Uninterruptibles;
-import org.bitcoinj.net.NioClient;
-import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.FullPrunedBlockStore;
-import org.bitcoinj.store.H2FullPrunedBlockStore;
-import org.bitcoinj.store.MemoryBlockStore;
-import org.bitcoinj.utils.BlockFileLoader;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.utils.Threading;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.google.common.base.*;
+import com.google.common.collect.*;
+import com.google.common.util.concurrent.*;
+import org.bitcoinj.core.listeners.*;
+import org.bitcoinj.net.*;
+import org.bitcoinj.params.*;
+import org.bitcoinj.store.*;
+import org.bitcoinj.utils.*;
+import org.slf4j.*;
 
-import java.io.File;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import java.io.*;
+import java.net.*;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.*;
 
 /**
  * A tool for comparing the blocks which are accepted/rejected by bitcoind/digitalcoinj
@@ -63,6 +55,7 @@ public class BitcoindComparisonTool {
         boolean runExpensiveTests = args.length > 1 && Integer.parseInt(args[1]) == 1;
 
         params = RegTestParams.get();
+        Context ctx = new Context(params);
 
         File blockFile = File.createTempFile("testBlocks", ".dat");
         blockFile.deleteOnExit();
@@ -85,7 +78,7 @@ public class BitcoindComparisonTool {
         VersionMessage ver = new VersionMessage(params, 42);
         ver.appendToSubVer("BlockAcceptanceComparisonTool", "1.1", null);
         ver.localServices = VersionMessage.NODE_NETWORK;
-        final Peer bitcoind = new Peer(params, ver, new BlockChain(params, new MemoryBlockStore(params)), new PeerAddress(InetAddress.getLocalHost()));
+        final Peer bitcoind = new Peer(params, ver, new BlockChain(params, new MemoryBlockStore(params)), new PeerAddress(params, InetAddress.getLocalHost()));
         Preconditions.checkState(bitcoind.getVersionMessage().hasBlockChain());
 
         final BlockWrapper currentBlock = new BlockWrapper();
@@ -94,7 +87,7 @@ public class BitcoindComparisonTool {
         final Set<Sha256Hash> blocksPendingSend = Collections.synchronizedSet(new HashSet<Sha256Hash>());
         final AtomicInteger unexpectedInvs = new AtomicInteger(0);
         final SettableFuture<Void> connectedFuture = SettableFuture.create();
-        bitcoind.addEventListener(new AbstractPeerEventListener() {
+        bitcoind.addConnectedEventListener(Threading.SAME_THREAD, new PeerConnectedEventListener() {
             @Override
             public void onPeerConnected(Peer peer, int peerCount) {
                 if (!peer.getPeerVersionMessage().subVer.contains("Satoshi")) {
@@ -107,8 +100,6 @@ public class BitcoindComparisonTool {
                                        "and starting with this tester as a way to try to do so will simply end in pain and lost coins.\n" +
                                        "************************************************************************************************************************");
                     System.out.println();
-                    System.out.println("Giving you 30 seconds to think about the above warning...");
-                    Uninterruptibles.sleepUninterruptibly(30, TimeUnit.SECONDS);
                 }
                 log.info("bitcoind connected");
                 // Make sure bitcoind has no blocks
@@ -116,13 +107,17 @@ public class BitcoindComparisonTool {
                 bitcoind.startBlockChainDownload();
                 connectedFuture.set(null);
             }
+        });
 
+        bitcoind.addDisconnectedEventListener(Threading.SAME_THREAD, new PeerDisconnectedEventListener() {
             @Override
             public void onPeerDisconnected(Peer peer, int peerCount) {
                 log.error("bitcoind node disconnected!");
                 System.exit(1);
             }
+        });
 
+        bitcoind.addPreMessageReceivedEventListener(Threading.SAME_THREAD, new PreMessageReceivedEventListener() {
             @Override
             public Message onPreMessageReceived(Peer peer, Message m) {
                 if (m instanceof HeadersMessage) {
@@ -203,8 +198,7 @@ public class BitcoindComparisonTool {
                 }
                 return m;
             }
-        }, Threading.SAME_THREAD);
-
+        });
         
         bitcoindChainHead = params.getGenesisBlock().getHash();
         

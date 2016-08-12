@@ -25,9 +25,9 @@ import java.math.BigInteger;
  * {@link org.bitcoinj.core.Block#solve()} by setting difficulty to the easiest possible.
  */
 public class UnitTestParams extends AbstractBitcoinNetParams {
-    // A simple static key/address for re-use in unit tests, to speed things up.
-    public static ECKey TEST_KEY = new ECKey();
-    public static Address TEST_ADDRESS;
+    public static final int UNITNET_MAJORITY_WINDOW = 8;
+    public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 6;
+    public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 4;
 
     public UnitTestParams() {
         super();
@@ -50,13 +50,16 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         addrSeeds = null;
         bip32HeaderPub = 0x043587CF;
         bip32HeaderPriv = 0x04358394;
+
+        majorityEnforceBlockUpgrade = 3;
+        majorityRejectBlockOutdated = 4;
+        majorityWindow = 7;
     }
 
     private static UnitTestParams instance;
     public static synchronized UnitTestParams get() {
         if (instance == null) {
             instance = new UnitTestParams();
-            TEST_ADDRESS = TEST_KEY.toAddress(instance);
         }
         return instance;
     }

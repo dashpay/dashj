@@ -1,5 +1,6 @@
-/**
+/*
  * Copyright 2011 Google Inc.
+ * Copyright 2015 Andreas Schildbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.base.Objects;
 import org.bitcoinj.script.*;
 import org.bitcoinj.wallet.*;
 
@@ -25,10 +27,11 @@ import java.io.*;
 import static com.google.common.base.Preconditions.*;
 
 /**
- * This message is a reference or pointer to an output of a different transaction.
+ * <p>This message is a reference or pointer to an output of a different transaction.</p>
+ * 
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
-public class TransactionOutPoint extends ChildMessage implements Serializable {
-    private static final long serialVersionUID = -6320880638344662579L;
+public class TransactionOutPoint extends ChildMessage {
 
     static final int MESSAGE_LENGTH = 36;
 
@@ -37,8 +40,7 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
     /** Which output of that transaction we are talking about. */
     private long index;
 
-    // This is not part of Bitcoin serialization. It's included in Java serialization.
-    // It points to the connected transaction.
+    // This is not part of bitcoin serialization. It points to the connected transaction.
     Transaction fromTx;
 
     // The connected output.
@@ -81,33 +83,18 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
      * Deserializes the message. This is usually part of a transaction message.
      * @param params NetworkParameters object.
      * @param offset The location of the first payload byte within the array.
-     * @param parseLazy Whether to perform a full parse immediately or delay until a read is requested.
-     * @param parseRetain Whether to retain the backing byte array for quick reserialization.  
-     * If true and the backing byte array is invalidated due to modification of a field then 
-     * the cached bytes may be repopulated and retained if the message is serialized again in the future.
+     * @param serializer the serializer to use for this message.
      * @throws ProtocolException
      */
-    public TransactionOutPoint(NetworkParameters params, byte[] payload, int offset, Message parent, boolean parseLazy, boolean parseRetain) throws ProtocolException {
-        super(params, payload, offset, parent, parseLazy, parseRetain, MESSAGE_LENGTH);
+    public TransactionOutPoint(NetworkParameters params, byte[] payload, int offset, Message parent, MessageSerializer serializer) throws ProtocolException {
+        super(params, payload, offset, parent, serializer, MESSAGE_LENGTH);
     }
 
     @Override
-    protected void parseLite() throws ProtocolException {
+    protected void parse() throws ProtocolException {
         length = MESSAGE_LENGTH;
-    }
-
-    @Override
-    void parse() throws ProtocolException {
         hash = readHash();
         index = readUint32();
-    }
-
-    /* (non-Javadoc)
-      * @see Message#getMessageSize()
-      */
-    @Override
-    public int getMessageSize() {
-        return MESSAGE_LENGTH;
     }
 
     @Override
@@ -206,7 +193,6 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
      */
     @Override
     public Sha256Hash getHash() {
-        maybeParse();
         return hash;
     }
 
@@ -215,7 +201,6 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
     }
 
     public long getIndex() {
-        maybeParse();
         return index;
     }
     
@@ -223,27 +208,16 @@ public class TransactionOutPoint extends ChildMessage implements Serializable {
         this.index = index;
     }
 
-    /**
-     * Ensure object is fully parsed before invoking java serialization.  The backing byte array
-     * is transient so if the object has parseLazy = true and hasn't invoked checkParse yet
-     * then data will be lost during serialization.
-     */
-    private void writeObject(ObjectOutputStream out) throws IOException {
-        maybeParse();
-        out.defaultWriteObject();
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TransactionOutPoint other = (TransactionOutPoint) o;
-        return getIndex() == other.getIndex() &&
-               getHash().equals(other.getHash());
+        return getIndex() == other.getIndex() && getHash().equals(other.getHash());
     }
 
     @Override
     public int hashCode() {
-        return 31 * hash.hashCode() + (int) (index ^ (index >>> 32));
+        return Objects.hashCode(getIndex(), getHash());
     }
 }

@@ -28,17 +28,18 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.NoSuchElementException;
 
 /**
- * <p>This class reads block files stored in the reference/Satoshi client format. This is simply a way to concatenate
+ * <p>This class reads block files stored in the Bitcoin Core format. This is simply a way to concatenate
  * blocks together. Importing block data with this tool can be a lot faster than syncing over the network, if you
  * have the files available.</p>
  * 
  * <p>In order to comply with Iterator&lt;Block>, this class swallows a lot of IOExceptions, which may result in a few
  * blocks being missed followed by a huge set of orphan blocks.</p>
  * 
- * <p>To blindly import all files which can be found in a reference client (version >= 0.8) datadir automatically,
+ * <p>To blindly import all files which can be found in Bitcoin Core (version >= 0.8) datadir automatically,
  * try this code fragment:<br>
  * BlockFileLoader loader = new BlockFileLoader(BlockFileLoader.getReferenceClientBlockFileList());<br>
  * for (Block block : loader) {<br>
@@ -47,7 +48,7 @@ import java.util.NoSuchElementException;
  */
 public class BlockFileLoader implements Iterable<Block>, Iterator<Block> {
     /**
-     * Gets the list of files which contain blocks from the Satoshi client.
+     * Gets the list of files which contain blocks from Bitcoin Core.
      */
     public static List<File> getReferenceClientBlockFileList() {
         String defaultDataDir;
@@ -62,7 +63,7 @@ public class BlockFileLoader implements Iterable<Block>, Iterator<Block> {
         
         List<File> list = new LinkedList<File>();
         for (int i = 0; true; i++) {
-            File file = new File(defaultDataDir + String.format("blk%05d.dat", i));
+            File file = new File(defaultDataDir + String.format(Locale.US, "blk%05d.dat", i));
             if (!file.exists())
                 break;
             list.add(file);
@@ -150,7 +151,7 @@ public class BlockFileLoader implements Iterable<Block>, Iterator<Block> {
                 bytes = new byte[(int) size];
                 currentFileStream.read(bytes, 0, (int) size);
                 try {
-                    nextBlock = new Block(params, bytes);
+                    nextBlock = params.getDefaultSerializer().makeBlock(bytes);
                 } catch (ProtocolException e) {
                     nextBlock = null;
                     continue;

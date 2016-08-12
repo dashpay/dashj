@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,14 @@
 package org.bitcoinj.core;
 
 /**
- * Represents the "getaddr" P2P protocol message, which requests network {@link AddressMessage}s from a peer. Not to
- * be confused with {@link Address} which is sort of like an account number.
+ * <p>Represents the "getaddr" P2P protocol message, which requests network {@link AddressMessage}s from a peer. Not to
+ * be confused with {@link Address} which is sort of like an account number.</p>
+ * 
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class GetAddrMessage extends EmptyMessage {
-    private static final long serialVersionUID = 6204437624599661503L;
 
     public GetAddrMessage(NetworkParameters params) {
         super(params);
     }
-
 }

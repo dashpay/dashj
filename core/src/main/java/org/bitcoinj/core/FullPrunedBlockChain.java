@@ -22,12 +22,12 @@ import org.bitcoinj.script.Script.VerifyFlag;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
 import org.bitcoinj.utils.*;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -41,8 +41,8 @@ import static com.google.common.base.Preconditions.checkState;
  * Bitcoin system, with the downside being a large cost in system resources. Fully verifying means all unspent
  * transaction outputs are stored. Once a transaction output is spent and that spend is buried deep enough, the data
  * related to it is deleted to ensure disk space usage doesn't grow forever. For this reason a pruning node cannot
- * serve the full block chain to other clients, but it nevertheless provides the same security guarantees as a regular
- * Satoshi client does.</p>
+ * serve the full block chain to other clients, but it nevertheless provides the same security guarantees as Bitcoin
+ * Core does.</p>
  */
 public class FullPrunedBlockChain extends AbstractBlockChain {
     private static final Logger log = LoggerFactory.getLogger(FullPrunedBlockChain.class);
@@ -61,7 +61,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
      * {@link Wallet#loadFromFile(java.io.File, WalletExtension...)}
      */
     public FullPrunedBlockChain(Context context, Wallet wallet, FullPrunedBlockStore blockStore) throws BlockStoreException {
-        this(context, new ArrayList<BlockChainListener>(), blockStore);
+        this(context, new ArrayList<Wallet>(), blockStore);
         addWallet(wallet);
     }
 
@@ -78,7 +78,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
      * Constructs a block chain connected to the given store.
      */
     public FullPrunedBlockChain(Context context, FullPrunedBlockStore blockStore) throws BlockStoreException {
-        this(context, new ArrayList<BlockChainListener>(), blockStore);
+        this(context, new ArrayList<Wallet>(), blockStore);
     }
 
     /**
@@ -91,7 +91,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
     /**
      * Constructs a block chain connected to the given list of wallets and a store.
      */
-    public FullPrunedBlockChain(Context context, List<BlockChainListener> listeners, FullPrunedBlockStore blockStore) throws BlockStoreException {
+    public FullPrunedBlockChain(Context context, List<Wallet> listeners, FullPrunedBlockStore blockStore) throws BlockStoreException {
         super(context, listeners, blockStore);
         this.blockStore = blockStore;
         // Ignore upgrading for now
@@ -101,7 +101,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
     /**
      * See {@link #FullPrunedBlockChain(Context, List, FullPrunedBlockStore)}
      */
-    public FullPrunedBlockChain(NetworkParameters params, List<BlockChainListener> listeners,
+    public FullPrunedBlockChain(NetworkParameters params, List<Wallet> listeners,
                                 FullPrunedBlockStore blockStore) throws BlockStoreException {
         this(Context.getOrCreate(params), listeners, blockStore);
     }
@@ -220,9 +220,6 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
         LinkedList<UTXO> txOutsSpent = new LinkedList<UTXO>();
         LinkedList<UTXO> txOutsCreated = new LinkedList<UTXO>();
         long sigOps = 0;
-        final Set<VerifyFlag> verifyFlags = EnumSet.noneOf(VerifyFlag.class);
-        if (block.getTimeSeconds() >= NetworkParameters.BIP16_ENFORCE_TIME)
-            verifyFlags.add(VerifyFlag.P2SH);
 
         if (scriptVerificationExecutor.isShutdown())
             scriptVerificationExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -234,6 +231,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 // checkpoints list and we therefore only check non-checkpoints for duplicated transactions here. See the
                 // BIP30 document for more details on this: https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki
                 for (Transaction tx : block.transactions) {
+                    final Set<VerifyFlag> verifyFlags = params.getTransactionVerificationFlags(block, tx, getVersionTally(), height);
                     Sha256Hash hash = tx.getHash();
                     // If we already have unspent outputs for this hash, we saw the tx already. Either the block is
                     // being added twice (bug) or the block is a BIP30 violator.
@@ -250,6 +248,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 Coin valueIn = Coin.ZERO;
                 Coin valueOut = Coin.ZERO;
                 final List<Script> prevOutScripts = new LinkedList<Script>();
+                final Set<VerifyFlag> verifyFlags = params.getTransactionVerificationFlags(block, tx, getVersionTally(), height);
                 if (!isCoinBase) {
                     // For each input of the transaction remove the corresponding output from the set of unspent
                     // outputs.
@@ -267,7 +266,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                                 throw new VerificationException("Tried to spend coinbase at depth " + (height - prevOut.getHeight()));
                             }
                         }
-                        // TODO: Check we're not spending the genesis transaction here. Satoshis code won't allow it.
+                        // TODO: Check we're not spending the genesis transaction here. Bitcoin Core won't allow it.
                         valueIn = valueIn.add(prevOut.getValue());
                         if (verifyFlags.contains(VerifyFlag.P2SH)) {
                             if (prevOut.getScript().isPayToScriptHash())
@@ -365,9 +364,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 LinkedList<UTXO> txOutsSpent = new LinkedList<UTXO>();
                 LinkedList<UTXO> txOutsCreated = new LinkedList<UTXO>();
                 long sigOps = 0;
-                final Set<VerifyFlag> verifyFlags = EnumSet.noneOf(VerifyFlag.class);
-                if (newBlock.getHeader().getTimeSeconds() >= NetworkParameters.BIP16_ENFORCE_TIME)
-                    verifyFlags.add(VerifyFlag.P2SH);
+
                 if (!params.isCheckpoint(newBlock.getHeight())) {
                     for (Transaction tx : transactions) {
                         Sha256Hash hash = tx.getHash();
@@ -382,10 +379,13 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     scriptVerificationExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
                 List<Future<VerificationException>> listScriptVerificationResults = new ArrayList<Future<VerificationException>>(transactions.size());
                 for (final Transaction tx : transactions) {
+                    final Set<VerifyFlag> verifyFlags =
+                        params.getTransactionVerificationFlags(newBlock.getHeader(), tx, getVersionTally(), Integer.SIZE);
                     boolean isCoinBase = tx.isCoinBase();
                     Coin valueIn = Coin.ZERO;
                     Coin valueOut = Coin.ZERO;
                     final List<Script> prevOutScripts = new LinkedList<Script>();
+
                     if (!isCoinBase) {
                         for (int index = 0; index < tx.getInputs().size(); index++) {
                             final TransactionInput in = tx.getInputs().get(index);
@@ -402,6 +402,8 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                                 if (sigOps > Block.MAX_BLOCK_SIGOPS)
                                     throw new VerificationException("Too many P2SH SigOps in block");
                             }
+
+                            // TODO: Enforce DER signature format
 
                             prevOutScripts.add(prevOut.getScript());
 

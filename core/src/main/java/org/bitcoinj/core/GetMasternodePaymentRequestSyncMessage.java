@@ -24,14 +24,6 @@ public class GetMasternodePaymentRequestSyncMessage extends Message{
         this.countNeeded = countNeeded;
     }
 
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
-
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
 
@@ -43,9 +35,7 @@ public class GetMasternodePaymentRequestSyncMessage extends Message{
     }
 
     @Override
-    void parse() throws ProtocolException {
-        if (parsed)
-            return;
+    protected void parse() throws ProtocolException {
 
         countNeeded = (int)readUint32();
 

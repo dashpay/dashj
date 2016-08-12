@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Noa Resare.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,10 @@
 package org.bitcoinj.core;
 
 /**
- * The verack message, sent by a client accepting the version message they
- * received from their peer.
+ * <p>The verack message, sent by a client accepting the version message they
+ * received from their peer.</p>
+ * 
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class VersionAck extends EmptyMessage {
     public VersionAck() {

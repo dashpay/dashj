@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,5 +26,9 @@ public class BlockStoreException extends Exception {
 
     public BlockStoreException(Throwable t) {
         super(t);
+    }
+
+    public BlockStoreException(String message, Throwable t) {
+        super(message, t);
     }
 }

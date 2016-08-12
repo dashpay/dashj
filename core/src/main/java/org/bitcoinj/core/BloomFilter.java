@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 Matt Corallo
+ * Copyright 2015 Andreas Schildbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +40,8 @@ import static java.lang.Math.*;
  * match transactions that weren't inserted into it, but it will never fail to match transactions that were. This is
  * a useful privacy feature - if you have spare bandwidth the false positive rate can be increased so the remote peer
  * gets a noisy picture of what transactions are relevant to your wallet.</p>
+ * 
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class BloomFilter extends Message {
     /** The BLOOM_UPDATE_* constants control when the bloom filter is auto-updated by the peer using
@@ -55,7 +58,7 @@ public class BloomFilter extends Message {
     private long nTweak;
     private byte nFlags;
 
-    // Same value as the reference client
+    // Same value as Bitcoin Core
     // A filter of 20,000 items and a false positive rate of 0.1% or one of 10,000 items and 0.0001% is just under 36,000 bytes
     private static final long MAX_FILTER_SIZE = 36000;
     // There is little reason to ever have more hash functions than 50 given a limit of 36,000 bytes
@@ -130,7 +133,7 @@ public class BloomFilter extends Message {
     }
 
     @Override
-    void parse() throws ProtocolException {
+    protected void parse() throws ProtocolException {
         data = readByteArray();
         if (data.length > MAX_FILTER_SIZE)
             throw new ProtocolException ("Bloom filter out of size range.");
@@ -146,17 +149,12 @@ public class BloomFilter extends Message {
      * Serializes this message to the provided stream. If you just want the raw bytes use bitcoinSerialize().
      */
     @Override
-    void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         stream.write(new VarInt(data.length).encode());
         stream.write(data);
         Utils.uint32ToByteStreamLE(hashFuncs, stream);
         Utils.uint32ToByteStreamLE(nTweak, stream);
         stream.write(nFlags);
-    }
-
-    @Override
-    protected void parseLite() throws ProtocolException {
-        // Do nothing, lazy parsing isn't useful for bloom filters.
     }
 
     private static int rotateLeft32(int x, int r) {
@@ -165,7 +163,7 @@ public class BloomFilter extends Message {
 
     /**
      * Applies the MurmurHash3 (x86_32) algorithm to the given data.
-     * See this <a href="http://code.google.com/p/smhasher/source/browse/trunk/MurmurHash3.cpp">C++ code for the original.</a>
+     * See this <a href="https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp">C++ code for the original.</a>
      */
     public static int murmurHash3(byte[] data, long nTweak, int hashNum, byte[] object) {
         int h1 = (int)(hashNum * 0xFBA4C795L + nTweak);
@@ -334,14 +332,14 @@ public class BloomFilter extends Message {
                 if (contains(chunk.data)) {
                     boolean isSendingToPubKeys = script.isSentToRawPubKey() || script.isSentToMultiSig();
                     if (flag == BloomUpdate.UPDATE_ALL || (flag == BloomUpdate.UPDATE_P2PUBKEY_ONLY && isSendingToPubKeys))
-                        insert(output.getOutPointFor().bitcoinSerialize());
+                        insert(output.getOutPointFor().unsafeBitcoinSerialize());
                     found = true;
                 }
             }
         }
         if (found) return true;
         for (TransactionInput input : tx.getInputs()) {
-            if (contains(input.getOutpoint().bitcoinSerialize())) {
+            if (contains(input.getOutpoint().unsafeBitcoinSerialize())) {
                 return true;
             }
             for (ScriptChunk chunk : input.getScriptSig().getChunks()) {
@@ -357,9 +355,7 @@ public class BloomFilter extends Message {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         BloomFilter other = (BloomFilter) o;
-        return hashFuncs == other.hashFuncs &&
-               nTweak == other.nTweak &&
-               Arrays.equals(data, other.data);
+        return hashFuncs == other.hashFuncs && nTweak == other.nTweak && Arrays.equals(data, other.data);
     }
 
     @Override

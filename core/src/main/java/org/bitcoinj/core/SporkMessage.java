@@ -31,14 +31,6 @@ public class SporkMessage extends Message{
         super(params, payload, cursor);
     }
 
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
-
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
 
@@ -69,9 +61,8 @@ public class SporkMessage extends Message{
     }
 
     @Override
-    void parse() throws ProtocolException {
-        if (parsed)
-            return;
+    protected void parse() throws ProtocolException {
+
 
         nSporkID = (int)readUint32();
 

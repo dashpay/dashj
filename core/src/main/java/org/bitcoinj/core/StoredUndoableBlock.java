@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  * Copyright 2012 Matt Corallo.
  *
@@ -17,7 +17,6 @@
 
 package org.bitcoinj.core;
 
-import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -27,8 +26,7 @@ import java.util.List;
  * or the set of transaction outputs created/destroyed when the block is
  * connected.
  */
-public class StoredUndoableBlock implements Serializable {
-    private static final long serialVersionUID = 5127353027086786117L;
+public class StoredUndoableBlock {
     
     Sha256Hash blockHash;
     
@@ -80,8 +78,7 @@ public class StoredUndoableBlock implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        StoredUndoableBlock other = (StoredUndoableBlock) o;
-        return getHash().equals(other.getHash());
+        return getHash().equals(((StoredUndoableBlock)o).getHash());
     }
 
     @Override

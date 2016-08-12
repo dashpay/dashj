@@ -42,17 +42,10 @@ public class ConsensusVote extends Message implements Serializable {
 
     ConsensusVote(NetworkParameters params, byte[] payload)
     {
-        super(params, payload, 0, false, false, payload.length);
+        super(params, payload, 0);
       //  this.system = MasterNodeSystem.get();
     }
 
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
         // jump past version (uint32)
@@ -79,15 +72,13 @@ public class ConsensusVote extends Message implements Serializable {
         return cursor - offset;
     }
     @Override
-    void parse() throws ProtocolException {
-        if(parsed)
-            return;
+    protected void parse() throws ProtocolException {
 
         cursor = offset;
 
         txHash = readHash();
 
-        TransactionOutPoint outpoint = new TransactionOutPoint(params, payload, cursor, this, parseLazy, parseRetain);
+        TransactionOutPoint outpoint = new TransactionOutPoint(params, payload, cursor);
         cursor += outpoint.getMessageSize();
         int scriptLen = (int) readVarInt();
         byte [] scriptBytes = readBytes(scriptLen);

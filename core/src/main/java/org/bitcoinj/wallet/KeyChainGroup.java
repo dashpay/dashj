@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2014 Mike Hearn
  * Copyright 2014 Andreas Schildbach
  *
@@ -17,14 +17,13 @@
 
 package org.bitcoinj.wallet;
 
-import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.google.protobuf.*;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.script.*;
-import org.bitcoinj.store.*;
 import org.bitcoinj.utils.*;
+import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.slf4j.*;
 import org.spongycastle.crypto.params.*;
 
@@ -36,7 +35,7 @@ import java.util.concurrent.*;
 import static com.google.common.base.Preconditions.*;
 
 /**
- * <p>A KeyChainGroup is used by the {@link org.bitcoinj.core.Wallet} and
+ * <p>A KeyChainGroup is used by the {@link org.bitcoinj.wallet.Wallet} and
  * manages: a {@link BasicKeyChain} object (which will normally be empty), and zero or more
  * {@link DeterministicKeyChain}s. A deterministic key chain will be created lazily/on demand
  * when a fresh or current key is requested, possibly being initialized from the private key bytes of the earliest non
@@ -91,15 +90,6 @@ public class KeyChainGroup implements KeyBag {
      */
     public KeyChainGroup(NetworkParameters params, DeterministicKey watchKey) {
         this(params, null, ImmutableList.of(DeterministicKeyChain.watch(watchKey)), null, null);
-    }
-
-    /**
-     * Creates a keychain group with no basic chain, and an HD chain that is watching the given watching key which
-     * was assumed to be first used at the given UNIX time.
-     * This HAS to be an account key as returned by {@link DeterministicKeyChain#getWatchingKey()}.
-     */
-    public KeyChainGroup(NetworkParameters params, DeterministicKey watchKey, long creationTimeSecondsSecs) {
-        this(params, null, ImmutableList.of(DeterministicKeyChain.watch(watchKey, creationTimeSecondsSecs)), null, null);
     }
 
     // Used for deserialization.
@@ -249,7 +239,7 @@ public class KeyChainGroup implements KeyBag {
     }
 
     /** Returns the key chain that's used for generation of fresh/current keys. This is always the newest HD chain. */
-    public DeterministicKeyChain getActiveKeyChain() {
+    public final DeterministicKeyChain getActiveKeyChain() {
         if (chains.isEmpty()) {
             if (basic.numKeys() > 0) {
                 log.warn("No HD chain present but random keys are: you probably deserialized an old wallet.");
@@ -345,6 +335,7 @@ public class KeyChainGroup implements KeyBag {
         return importKeys(encryptedKeys);
     }
 
+    @Override
     @Nullable
     public RedeemData findRedeemDataFromScriptHash(byte[] scriptHash) {
         // Iterate in reverse order, since the active keychain is the one most likely to have the hit
@@ -358,7 +349,6 @@ public class KeyChainGroup implements KeyBag {
     }
 
     public void markP2SHAddressAsUsed(Address address) {
-        checkState(isMarried());
         checkArgument(address.isP2SHAddress());
         RedeemData data = findRedeemDataFromScriptHash(address.getHash160());
         if (data == null)
@@ -402,7 +392,6 @@ public class KeyChainGroup implements KeyBag {
 
     /** If the given P2SH address is "current", advance it to a new one. */
     private void maybeMarkCurrentAddressAsUsed(Address address) {
-        checkState(isMarried());
         checkArgument(address.isP2SHAddress());
         for (Map.Entry<KeyChain.KeyPurpose, Address> entry : currentAddresses.entrySet()) {
             if (entry.getValue() != null && entry.getValue().equals(address)) {
@@ -485,7 +474,7 @@ public class KeyChainGroup implements KeyBag {
      * from multiple keychains in a multisig relationship.
      * @see org.bitcoinj.wallet.MarriedKeyChain
      */
-    public boolean isMarried() {
+    public final boolean isMarried() {
         return !chains.isEmpty() && getActiveKeyChain().isMarried();
     }
 
@@ -805,11 +794,8 @@ public class KeyChainGroup implements KeyBag {
             for (ECKey key : keys)
                 key.formatKeyWithAddress(includePrivateKeys, builder, params);
         }
-        List<String> chainStrs = Lists.newLinkedList();
-        for (DeterministicKeyChain chain : chains) {
-            chainStrs.add(chain.toString(includePrivateKeys, params));
-        }
-        builder.append(Joiner.on(String.format("%n")).join(chainStrs));
+        for (DeterministicKeyChain chain : chains)
+            builder.append(chain.toString(includePrivateKeys, params)).append('\n');
         return builder.toString();
     }
 

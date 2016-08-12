@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
  *
@@ -185,35 +185,40 @@ public class Utils {
             }
         }
         return rev;
-}
+    }
 
+    /** Parse 4 bytes from the byte array (starting at the offset) as unsigned 32-bit integer in little endian format. */
     public static long readUint32(byte[] bytes, int offset) {
-        return (bytes[offset++] & 0xFFL) |
-                ((bytes[offset++] & 0xFFL) << 8) |
-                ((bytes[offset++] & 0xFFL) << 16) |
-                ((bytes[offset] & 0xFFL) << 24);
+        return (bytes[offset] & 0xffl) |
+                ((bytes[offset + 1] & 0xffl) << 8) |
+                ((bytes[offset + 2] & 0xffl) << 16) |
+                ((bytes[offset + 3] & 0xffl) << 24);
     }
-    
+
+    /** Parse 8 bytes from the byte array (starting at the offset) as signed 64-bit integer in little endian format. */
     public static long readInt64(byte[] bytes, int offset) {
-        return (bytes[offset++] & 0xFFL) |
-               ((bytes[offset++] & 0xFFL) << 8) |
-               ((bytes[offset++] & 0xFFL) << 16) |
-               ((bytes[offset++] & 0xFFL) << 24) |
-               ((bytes[offset++] & 0xFFL) << 32) |
-               ((bytes[offset++] & 0xFFL) << 40) |
-               ((bytes[offset++] & 0xFFL) << 48) |
-               ((bytes[offset] & 0xFFL) << 56);
+        return (bytes[offset] & 0xffl) |
+               ((bytes[offset + 1] & 0xffl) << 8) |
+               ((bytes[offset + 2] & 0xffl) << 16) |
+               ((bytes[offset + 3] & 0xffl) << 24) |
+               ((bytes[offset + 4] & 0xffl) << 32) |
+               ((bytes[offset + 5] & 0xffl) << 40) |
+               ((bytes[offset + 6] & 0xffl) << 48) |
+               ((bytes[offset + 7] & 0xffl) << 56);
     }
 
+    /** Parse 4 bytes from the byte array (starting at the offset) as unsigned 32-bit integer in big endian format. */
     public static long readUint32BE(byte[] bytes, int offset) {
-        return ((bytes[offset] & 0xFFL) << 24) |
-                ((bytes[offset + 1] & 0xFFL) << 16) |
-                ((bytes[offset + 2] & 0xFFL) << 8) |
-                (bytes[offset + 3] & 0xFFL);
+        return ((bytes[offset] & 0xffl) << 24) |
+                ((bytes[offset + 1] & 0xffl) << 16) |
+                ((bytes[offset + 2] & 0xffl) << 8) |
+                (bytes[offset + 3] & 0xffl);
     }
 
+    /** Parse 2 bytes from the byte array (starting at the offset) as unsigned 16-bit integer in big endian format. */
     public static int readUint16BE(byte[] bytes, int offset) {
-        return ((bytes[offset] & 0xff) << 8) | bytes[offset + 1] & 0xff;
+        return ((bytes[offset] & 0xff) << 8) |
+                (bytes[offset + 1] & 0xff);
     }
 
     /**
@@ -594,6 +599,7 @@ public class Utils {
     private static class Pair implements Comparable<Pair> {
         int item, count;
         public Pair(int item, int count) { this.count = count; this.item = item; }
+        // note that in this implementation compareTo() is not consistent with equals()
         @Override public int compareTo(Pair o) { return -Ints.compare(count, o.count); }
     }
 

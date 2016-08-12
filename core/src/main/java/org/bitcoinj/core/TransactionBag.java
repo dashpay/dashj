@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2014 Giannis Dzegoutanis
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@ import org.bitcoinj.wallet.WalletTransaction;
 import java.util.Map;
 
 /**
- * This interface is used to abstract the {@link org.bitcoinj.core.Wallet} and the {@link org.bitcoinj.core.Transaction}
+ * This interface is used to abstract the {@link org.bitcoinj.wallet.Wallet} and the {@link org.bitcoinj.core.Transaction}
  */
 public interface TransactionBag {
     /** Returns true if this wallet contains a public key which hashes to the given hash. */

@@ -43,31 +43,12 @@ public class MasterNodeVote  extends ChildMessage implements Serializable {
         pubkey = null;
         blockHeight = 0;
     }
-    MasterNodeVote(NetworkParameters params, byte [] bytes, int cursor, Message parent, boolean parseLazy, boolean parseRetain, int length)
+    /*MasterNodeVote(NetworkParameters params, byte [] bytes, int cursor, Message parent, boolean parseLazy, boolean parseRetain, int length)
     {
         super(params, bytes, cursor, parent, parseLazy, parseRetain, length);
-    }
+    }*/
 
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            //If length hasn't been provided this tx is probably contained within a block.
-            //In parseRetain mode the block needs to know how long the transaction is
-            //unfortunately this requires a fairly deep (though not total) parse.
-            //This is due to the fact that transactions in the block's list do not include a
-            //size header and inputs/outputs are also variable length due the contained
-            //script so each must be instantiated so the scriptlength varint can be read
-            //to calculate total length of the transaction.
-            //We will still persist will this semi-light parsing because getting the lengths
-            //of the various components gains us the ability to cache the backing bytearrays
-            //so that only those subcomponents that have changed will need to be reserialized.
 
-            //parse();
-            //parsed = true;
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
         // jump past version (uint32)
@@ -88,9 +69,7 @@ public class MasterNodeVote  extends ChildMessage implements Serializable {
         return cursor - offset + 4;
     }
     @Override
-    void parse() throws ProtocolException {
-        if(parsed)
-            return;
+    protected void parse() throws ProtocolException {
 
         cursor = offset;
         version = CURRENT_VERSION;

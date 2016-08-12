@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
  *
@@ -20,6 +20,7 @@ package org.bitcoinj.examples;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.store.MemoryBlockStore;
+import org.bitcoinj.wallet.Wallet;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -43,7 +44,7 @@ public class PrivateKeys {
             // compressed pub key. Otherwise assume it's a raw key.
             ECKey key;
             if (args[0].length() == 51 || args[0].length() == 52) {
-                DumpedPrivateKey dumpedPrivateKey = new DumpedPrivateKey(params, args[0]);
+                DumpedPrivateKey dumpedPrivateKey = DumpedPrivateKey.fromBase58(params, args[0]);
                 key = dumpedPrivateKey.getKey();
             } else {
                 BigInteger privKey = Base58.decodeToBigInteger(args[0]);
@@ -51,7 +52,7 @@ public class PrivateKeys {
             }
             System.out.println("Address from private key is: " + key.toAddress(params).toString());
             // And the address ...
-            Address destination = new Address(params, args[1]);
+            Address destination = Address.fromBase58(params, args[1]);
 
             // Import the private key to a fresh wallet.
             Wallet wallet = new Wallet(params);

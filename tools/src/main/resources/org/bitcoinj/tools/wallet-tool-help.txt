@@ -10,6 +10,9 @@ Usage: wallet-tool --flags action-name
   create               Makes a new wallet in the file specified by --wallet.
                        Will complain and require --force if the wallet already exists.
                        If --seed is present, it should specify either a mnemonic code or hex/base58 raw seed bytes.
+                       If --watchkey is present, it creates a watching wallet using the specified base58 xpub.
+                       If --seed or --watchkey is combined with either --date or --unixtime, use that as a birthdate for
+                       the wallet. See the set-creation-time action for the meaning of these flags.
   marry                Makes the wallet married with other parties, requiring multisig to spend funds.
                        External public keys for other signing parties must be specified with --xpubkeys (comma separated).
   add-key              Adds a new key to the wallet, either specified or freshly generated.
@@ -24,7 +27,7 @@ Usage: wallet-tool --flags action-name
   current-receive-addr Prints the current receive address, deriving one if needed. Addresses derived with this action are
                        independent of addresses derived with the add-key action.
   sync                 Sync the wallet with the latest block chain (download new transactions).
-                       If the chain file does not exist this will RESET the wallet.
+                       If the chain file does not exist or if --force is present, this will RESET the wallet.
   reset                Deletes all transactions from the wallet, for if you want to replay the chain.
   send                 Creates and broadcasts a transaction from the given wallet.
                        Requires either --output or --payment-request to be specified.
@@ -45,7 +48,7 @@ Usage: wallet-tool --flags action-name
                          --payment-request=http://merchant.com/pay.php?123
 
                        Other options include:
-                          --fee=0.01  sets the tx fee
+                          --fee-per-kb=0.0005 sets the tx fee
                           --locktime=1234  sets the lock time to block 1234
                           --locktime=2013/01/01  sets the lock time to 1st Jan 2013
                           --allow-unconfirmed will let you create spends of pending non-change outputs.
@@ -56,6 +59,36 @@ Usage: wallet-tool --flags action-name
                        created before this date will be re-spent to a key (from an HD tree) that was created after it.
                        If --date is missing, the current time is assumed. If the time covers all keys, a new HD tree
                        will be created from a new random seed.
+  set-creation-time    Modify the creation time of the active chain of this wallet. This is useful for repairing
+                       wallets that accidently have been created "in the future". Currently, watching wallets are not
+                       supported.
+                       If --date is specified, that's the creation date.
+                       If --unixtime is specified, that's the creation time and it overrides --date.
+                       If you omit both options, the creation time is being cleared (set to 0).
+  send-cltvpaymentchannel
+                       Creates and broadcasts a transaction paying to a CHECKLOCKTIMEVERIFY micropayment channel.
+                       Requires a public key for the money recipient, public key to create the transactions (the
+                       "return" address) and an expiry time.
+                       Options:
+                          --output=pubkey:value sets the amount to lock and the recipient
+                          --refund-to=pubkey sets "our" public key
+                          --fee-per-kb=value sets the network fee
+                          --locktime=YYYY/MM/DD sets the expiry time for the channel
+  settle-cltvpaymentchannel
+                       Creates and broadcasts a transaction settling a previous micropayment channel.
+                       This tool, for testing, requires the presence of both private keys.
+                       Options:
+                          --output=pubkey:value sets the destination for the money
+                          --fee-per-kb=value sets the network fee
+                          --txhash=hash sets the transaction to spend
+  refund-cltvpaymentchannel
+                       Creates and broadcasts a transaction refunding a previous micropayment channel.
+                       This command can only be called once the expiry for the micropayment channel has passed -
+                       the created transaction won't be accepted into the mempool until that point.
+                       Options:
+                          --output=pubkey:value sets the destination for the money
+                          --fee-per-kb=value sets the network fee
+                          --txhash=hash sets the transaction to spend
 
 >>> GENERAL OPTIONS
   --debuglog           Enables logging from the core library.

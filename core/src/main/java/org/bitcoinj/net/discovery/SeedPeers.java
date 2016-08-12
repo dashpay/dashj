@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Micheal Swiggs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.bitcoinj.net.discovery;
 
 import org.bitcoinj.core.NetworkParameters;
@@ -83,7 +84,9 @@ public class SeedPeers implements PeerDiscovery {
      * Returns an array containing all the Bitcoin nodes within the list.
      */
     @Override
-    public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+    public InetSocketAddress[] getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+        if (services != 0)
+            throw new PeerDiscoveryException("Pre-determined peers cannot be filtered by services: " + services);
         try {
             return allPeers();
         } catch (UnknownHostException e) {

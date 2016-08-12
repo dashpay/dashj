@@ -1,6 +1,5 @@
 package org.bitcoinj.core;
 
-import com.squareup.okhttp.internal.Network;
 import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Threading;
 import org.darkcoinj.DarkSend;
@@ -152,14 +151,6 @@ public class Masternode extends Message{
         lastTimeChecked = 0;
     }
 
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
-
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
 
@@ -268,10 +259,7 @@ public class Masternode extends Message{
     }
 
     @Override
-    void parse() throws ProtocolException {
-        if (parsed)
-            return;
-
+    protected void parse() throws ProtocolException {
 
         vin = new TransactionInput(params, null, payload, cursor);
         cursor += vin.getMessageSize();

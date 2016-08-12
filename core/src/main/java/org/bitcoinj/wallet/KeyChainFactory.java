@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2014 devrandom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,6 @@ package org.bitcoinj.wallet;
 
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
-import org.bitcoinj.store.UnreadableWalletException;
 
 /**
  * Factory interface for creation keychains while de-serializing a wallet.

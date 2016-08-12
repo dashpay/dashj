@@ -1,3 +1,17 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.core;
 
 import com.google.common.collect.ImmutableList;
@@ -177,13 +191,13 @@ public class FullBlockTestGenerator {
         Queue<TransactionOutPointWithValue> spendableOutputs = new LinkedList<TransactionOutPointWithValue>();
 
         int chainHeadHeight = 1;
-        Block chainHead = params.getGenesisBlock().createNextBlockWithCoinbase(coinbaseOutKeyPubKey);
+        Block chainHead = params.getGenesisBlock().createNextBlockWithCoinbase(Block.BLOCK_VERSION_GENESIS, coinbaseOutKeyPubKey, chainHeadHeight);
         blocks.add(new BlockAndValidity(chainHead, true, false, chainHead.getHash(), 1, "Initial Block"));
         spendableOutputs.offer(new TransactionOutPointWithValue(
                 new TransactionOutPoint(params, 0, chainHead.getTransactions().get(0).getHash()),
                 FIFTY_COINS, chainHead.getTransactions().get(0).getOutputs().get(0).getScriptPubKey()));
         for (int i = 1; i < params.getSpendableCoinbaseDepth(); i++) {
-            chainHead = chainHead.createNextBlockWithCoinbase(coinbaseOutKeyPubKey);
+            chainHead = chainHead.createNextBlockWithCoinbase(Block.BLOCK_VERSION_GENESIS, coinbaseOutKeyPubKey, chainHeadHeight);
             chainHeadHeight++;
             blocks.add(new BlockAndValidity(chainHead, true, false, chainHead.getHash(), i+1, "Initial Block chain output generation"));
             spendableOutputs.offer(new TransactionOutPointWithValue(
@@ -472,7 +486,7 @@ public class FullBlockTestGenerator {
         //
         NewBlock b26 = createNextBlock(b15, chainHeadHeight + 7, out6, null);
         // 1 is too small, but we already generate every other block with 2, so that is tested
-        b26.block.getTransactions().get(0).getInputs().get(0).setScriptBytes(new byte[] {0});
+        b26.block.getTransactions().get(0).getInputs().get(0).clearScriptBytes();
         b26.block.setMerkleRoot(null);
         b26.solve();
         blocks.add(new BlockAndValidity(b26, false, true, b23.getHash(), chainHeadHeight + 7, "b26"));
@@ -759,7 +773,7 @@ public class FullBlockTestGenerator {
                     try {
                         ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(73);
                         bos.write(coinbaseOutKey.sign(hash).encodeToDER());
-                        bos.write(SigHash.SINGLE.ordinal() + 1);
+                        bos.write(SigHash.SINGLE.value);
                         byte[] signature = bos.toByteArray();
 
                         ByteArrayOutputStream scriptSigBos = new UnsafeByteArrayOutputStream(signature.length + b39p2shScriptPubKey.length + 3);
@@ -830,7 +844,7 @@ public class FullBlockTestGenerator {
                             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(
                                     73);
                             bos.write(coinbaseOutKey.sign(hash).encodeToDER());
-                            bos.write(SigHash.SINGLE.ordinal() + 1);
+                            bos.write(SigHash.SINGLE.value);
                             byte[] signature = bos.toByteArray();
 
                             ByteArrayOutputStream scriptSigBos = new UnsafeByteArrayOutputStream(
@@ -890,11 +904,11 @@ public class FullBlockTestGenerator {
         TransactionOutPointWithValue out14 = spendableOutputs.poll();
 
         // A valid block created exactly like b44 to make sure the creation itself works
-        Block b44 = new Block(params);
+        Block b44 = new Block(params, Block.BLOCK_VERSION_GENESIS);
         byte[] outScriptBytes = ScriptBuilder.createOutputScript(ECKey.fromPublicOnly(coinbaseOutKeyPubKey)).getProgram();
         {
             b44.setDifficultyTarget(b43.block.getDifficultyTarget());
-            b44.addCoinbaseTransaction(coinbaseOutKeyPubKey, ZERO);
+            b44.addCoinbaseTransaction(coinbaseOutKeyPubKey, ZERO, chainHeadHeight + 15);
 
             Transaction t = new Transaction(params);
             // Entirely invalid scriptPubKey to ensure we aren't pre-verifying too much
@@ -914,7 +928,7 @@ public class FullBlockTestGenerator {
         TransactionOutPointWithValue out15 = spendableOutputs.poll();
 
         // A block with a non-coinbase as the first tx
-        Block b45 = new Block(params);
+        Block b45 = new Block(params, Block.BLOCK_VERSION_GENESIS);
         {
             b45.setDifficultyTarget(b44.getDifficultyTarget());
             //b45.addCoinbaseTransaction(pubKey, coinbaseValue);
@@ -940,7 +954,7 @@ public class FullBlockTestGenerator {
         blocks.add(new BlockAndValidity(b45, false, true, b44.getHash(), chainHeadHeight + 15, "b45"));
 
         // A block with no txn
-        Block b46 = new Block(params);
+        Block b46 = new Block(params, Block.BLOCK_VERSION_GENESIS);
         {
             b46.transactions = new ArrayList<Transaction>();
             b46.setDifficultyTarget(b44.getDifficultyTarget());
@@ -1058,7 +1072,7 @@ public class FullBlockTestGenerator {
 
         Block b56;
         try {
-            b56 = new Block(params, b57.block.bitcoinSerialize());
+            b56 = params.getDefaultSerializer().makeBlock(b57.block.bitcoinSerialize());
         } catch (ProtocolException e) {
             throw new RuntimeException(e); // Cannot happen.
         }
@@ -1099,7 +1113,7 @@ public class FullBlockTestGenerator {
 
         Block b56p2;
         try {
-            b56p2 = new Block(params, b57p2.block.bitcoinSerialize());
+            b56p2 = params.getDefaultSerializer().makeBlock(b57p2.block.bitcoinSerialize());
         } catch (ProtocolException e) {
             throw new RuntimeException(e); // Cannot happen.
         }
@@ -1218,7 +1232,7 @@ public class FullBlockTestGenerator {
 
             for (Transaction transaction : b64Original.block.getTransactions())
                 transaction.bitcoinSerialize(stream);
-            b64 = new Block(params, stream.toByteArray(), false, true, stream.size());
+            b64 = params.getSerializer(true).makeBlock(stream.toByteArray(), stream.size());
 
             // The following checks are checking to ensure block serialization functions in the way needed for this test
             // If they fail, it is likely not an indication of error, but an indication that this test needs rewritten
@@ -1346,7 +1360,7 @@ public class FullBlockTestGenerator {
         }
         b72.solve();
 
-        Block b71 = new Block(params, b72.block.bitcoinSerialize());
+        Block b71 = params.getDefaultSerializer().makeBlock(b72.block.bitcoinSerialize());
         b71.addTransaction(b72.block.getTransactions().get(2));
         checkState(b71.getHash().equals(b72.getHash()));
         blocks.add(new BlockAndValidity(b71, false, true, b69.getHash(), chainHeadHeight + 21, "b71"));
@@ -1768,7 +1782,7 @@ public class FullBlockTestGenerator {
         Coin coinbaseValue = FIFTY_COINS.shiftRight(nextBlockHeight / params.getSubsidyDecreaseBlockCount())
                 .add((prevOut != null ? prevOut.value.subtract(SATOSHI) : ZERO))
                 .add(additionalCoinbaseValue == null ? ZERO : additionalCoinbaseValue);
-        Block block = baseBlock.createNextBlockWithCoinbase(coinbaseOutKeyPubKey, coinbaseValue);
+        Block block = baseBlock.createNextBlockWithCoinbase(Block.BLOCK_VERSION_GENESIS, coinbaseOutKeyPubKey, coinbaseValue, nextBlockHeight);
         Transaction t = new Transaction(params);
         if (prevOut != null) {
             // Entirely invalid scriptPubKey to ensure we aren't pre-verifying too much

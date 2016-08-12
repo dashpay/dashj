@@ -17,15 +17,19 @@
 
 package org.bitcoinj.examples;
 
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+import joptsimple.OptionSpec;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.WalletExtension;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.protocols.channels.*;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.WalletExtension;
+
 import com.google.common.collect.ImmutableList;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -46,11 +50,20 @@ public class ExamplePaymentChannelServer implements PaymentChannelServerListener
 
     public static void main(String[] args) throws Exception {
         BriefLogFormatter.init();
-        new ExamplePaymentChannelServer().run();
+        OptionParser parser = new OptionParser();
+        OptionSpec<NetworkEnum> net = parser.accepts("net", "The network to run the examples on").withRequiredArg().ofType(NetworkEnum.class).defaultsTo(NetworkEnum.TEST);
+        parser.accepts("help", "Displays program options");
+        OptionSet opts = parser.parse(args);
+        if (opts.has("help") || !opts.has(net)) {
+            System.err.println("usage: ExamplePaymentChannelServer --net=MAIN/TEST/REGTEST");
+            parser.printHelpOn(System.err);
+            return;
+        }
+        NetworkParameters params = net.value(opts).get();
+        new ExamplePaymentChannelServer().run(params);
     }
 
-    public void run() throws Exception {
-        NetworkParameters params = RegTestParams.get();
+    public void run(NetworkParameters params) throws Exception {
 
         // Bring up all the objects we need, create/load a wallet, sync the chain, etc. We override WalletAppKit so we
         // can customize it by adding the extension objects - we have to do this before the wallet file is loaded so
@@ -64,7 +77,11 @@ public class ExamplePaymentChannelServer implements PaymentChannelServerListener
                 return ImmutableList.<WalletExtension>of(new StoredPaymentChannelServerStates(null));
             }
         };
-        appKit.connectToLocalHost();
+        // Broadcasting can take a bit of time so we up the timeout for "real" networks
+        final int timeoutSeconds = params.getId().equals(NetworkParameters.ID_REGTEST) ? 15 : 150;
+        if (params == RegTestParams.get()) {
+            appKit.connectToLocalHost();
+        }
         appKit.startAsync();
         appKit.awaitRunning();
 
@@ -72,7 +89,7 @@ public class ExamplePaymentChannelServer implements PaymentChannelServerListener
 
         // We provide a peer group, a wallet, a timeout in seconds, the amount we require to start a channel and
         // an implementation of HandlerFactory, which we just implement ourselves.
-        new PaymentChannelServerListener(appKit.peerGroup(), appKit.wallet(), 15, Coin.valueOf(100000), this).bindAndStart(4242);
+        new PaymentChannelServerListener(appKit.peerGroup(), appKit.wallet(), timeoutSeconds, Coin.valueOf(100000), this).bindAndStart(4242);
     }
 
     @Override
@@ -97,10 +114,10 @@ public class ExamplePaymentChannelServer implements PaymentChannelServerListener
                 log.info("   with a maximum value of {}, expiring at UNIX timestamp {}.",
                         // The channel's maximum value is the value of the multisig contract which locks in some
                         // amount of money to the channel
-                        state.getMultisigContract().getOutput(0).getValue(),
+                        state.getContract().getOutput(0).getValue(),
                         // The channel expires at some offset from when the client's refund transaction becomes
                         // spendable.
-                        state.getRefundTransactionUnlockTime() + StoredPaymentChannelServerStates.CHANNEL_EXPIRE_OFFSET);
+                        state.getExpiryTime() + StoredPaymentChannelServerStates.CHANNEL_EXPIRE_OFFSET);
             }
 
             @Override

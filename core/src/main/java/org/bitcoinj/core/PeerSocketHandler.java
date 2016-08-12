@@ -18,7 +18,7 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.net.AbstractTimeoutHandler;
 import org.bitcoinj.net.MessageWriteTarget;
-import org.bitcoinj.net.StreamParser;
+import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.utils.Threading;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -39,10 +39,10 @@ import static com.google.common.base.Preconditions.*;
  * Handles high-level message (de)serialization for peers, acting as the bridge between the
  * {@link org.bitcoinj.net} classes and {@link Peer}.
  */
-public abstract class PeerSocketHandler extends AbstractTimeoutHandler implements StreamParser {
+public abstract class PeerSocketHandler extends AbstractTimeoutHandler implements StreamConnection {
     private static final Logger log = LoggerFactory.getLogger(PeerSocketHandler.class);
 
-    private final BitcoinSerializer serializer;
+    private final MessageSerializer serializer;
     protected PeerAddress peerAddress;
     // If we close() before we know our writeTarget, set this to true to call writeTarget.closeConnection() right away.
     private boolean closePending = false;
@@ -59,12 +59,14 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
     private Lock lock = Threading.lock("PeerSocketHandler");
 
     public PeerSocketHandler(NetworkParameters params, InetSocketAddress remoteIp) {
-        serializer = new BitcoinSerializer(checkNotNull(params));
-        this.peerAddress = new PeerAddress(remoteIp);
+        checkNotNull(params);
+        serializer = params.getDefaultSerializer();
+        this.peerAddress = new PeerAddress(params, remoteIp);
     }
 
     public PeerSocketHandler(NetworkParameters params, PeerAddress peerAddress) {
-        serializer = new BitcoinSerializer(checkNotNull(params));
+        checkNotNull(params);
+        serializer = params.getDefaultSerializer();
         this.peerAddress = checkNotNull(peerAddress);
     }
 

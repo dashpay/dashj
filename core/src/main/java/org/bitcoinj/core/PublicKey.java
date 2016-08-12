@@ -36,10 +36,10 @@ public class PublicKey extends ChildMessage {
         super(params, payload, offset);
     }
 
-    public PublicKey(NetworkParameters params, byte[] payloadBytes, int cursor, Message parent, boolean parseLazy, boolean parseRetain)
+    /*public PublicKey(NetworkParameters params, byte[] payloadBytes, int cursor, Message parent, boolean parseLazy, boolean parseRetain)
     {
         super(params, payloadBytes, cursor, parent, parseLazy, parseRetain, payloadBytes.length);
-    }
+    }*/
     public PublicKey(byte [] key)
     {
         super();
@@ -48,13 +48,6 @@ public class PublicKey extends ChildMessage {
         this.key = ECKey.fromPublicOnly(bytes);
     }
 
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
 
@@ -73,9 +66,7 @@ public class PublicKey extends ChildMessage {
     }
 
     @Override
-    void parse() throws ProtocolException {
-        if(parsed)
-            return;
+    protected void parse() throws ProtocolException {
 
         cursor = offset;
 
@@ -97,11 +88,10 @@ public class PublicKey extends ChildMessage {
 
     }
 
-    public byte [] getBytes() { maybeParse(); return bytes; }
+    public byte [] getBytes() { return bytes; }
 
     public boolean equals(Object o)
     {
-        maybeParse();
        PublicKey key = (PublicKey)o;
         if(key.bytes.length == this.bytes.length)
         {

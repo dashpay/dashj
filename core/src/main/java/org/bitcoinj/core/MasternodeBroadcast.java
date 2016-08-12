@@ -1,6 +1,5 @@
 package org.bitcoinj.core;
 
-import com.squareup.okhttp.internal.Network;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.darkcoinj.DarkSend;
@@ -34,13 +33,7 @@ public class MasternodeBroadcast extends Masternode {
 
 
     private transient int optimalEncodingMessageSize;
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
+
 
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
@@ -63,10 +56,7 @@ public class MasternodeBroadcast extends Masternode {
     }
 
     @Override
-    void parse() throws ProtocolException {
-        if (parsed)
-            return;
-
+    protected void parse() throws ProtocolException {
 
         vin = new TransactionInput(params, null, payload, cursor);
         cursor += vin.getMessageSize();
@@ -306,7 +296,7 @@ public class MasternodeBroadcast extends Masternode {
         context.masternodeManager.add(mn);
 
         // if it matches our Masternode privkey, then we've been remotely activated
-        if(pubkey2.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion == NetworkParameters.PROTOCOL_VERSION){
+        if(pubkey2.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion == CoinDefinition.PROTOCOL_VERSION){
             context.activeMasternode.enableHotColdMasterNode(vin, address);
         }
 
