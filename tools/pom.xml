@@ -92,8 +92,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.bitcoinj</groupId>
-      <artifactId>darkcoinj-core</artifactId>
+      <groupId>org.dashj</groupId>
+      <artifactId>dashj-core</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
