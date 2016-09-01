@@ -1,9 +1,6 @@
 package org.bitcoinj.core;
 
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
 import org.darkcoinj.ActiveMasterNode;
-import org.darkcoinj.DarkSendSigner;
 import org.darkcoinj.MasterNodePayments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +34,7 @@ public class MasterNodeSystem {
 
     /** The list of active masternodes */
     //std::vector<CMasterNode> vecMasternodes;
-    public ArrayList<Masternode> vecMasternodes;
+    public ArrayList<MasterNode> vecMasternodes;
     /** Object for who's going to get paid on which blocks */
     //CMasternodePayments masternodePayments;
     MasterNodePayments masternodePayments;
@@ -137,7 +134,7 @@ public class MasterNodeSystem {
         int i = 0;
 
 
-        for(Masternode mn : vecMasternodes) {
+        for(MasterNode mn : vecMasternodes) {
             if (mn.vin == vin) return i;
             i++;
         }
