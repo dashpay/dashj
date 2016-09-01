@@ -442,7 +442,7 @@ public class InstantXSystem {
         //Since we don't have access to the blockchain, we will not calculate the rankings.
         int n = context.masternodeManager.getMasternodeRank(ctx.vinMasternode, ctx.blockHeight, MIN_INSTANTX_PROTO_VERSION, true);
 
-        Masternode pmn = context.masternodeManager.find(ctx.vinMasternode);
+        MasterNode pmn = context.masternodeManager.find(ctx.vinMasternode);
         if(pmn != null)
             log.info("instantx-InstantX::ProcessConsensusVote - Masternode ADDR {} {}", pmn.address.toString(), n);
 

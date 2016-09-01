@@ -1,9 +1,7 @@
 package org.bitcoinj.core;
 
-import com.squareup.okhttp.internal.Network;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
-import org.darkcoinj.DarkSend;
 import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +12,7 @@ import java.io.OutputStream;
 /**
  * Created by Hash Engineering on 2/20/2015.
  */
-public class MasternodeBroadcast extends Masternode {
+public class MasternodeBroadcast extends MasterNode {
     private static final Logger log = LoggerFactory.getLogger(MasternodeBroadcast.class);
 
     public MasternodeBroadcast(NetworkParameters params, byte [] payloadBytes)
@@ -27,7 +25,7 @@ public class MasternodeBroadcast extends Masternode {
         super(params, payloadBytes, cursor);
     }
 
-    public MasternodeBroadcast(Masternode masternode)
+    public MasternodeBroadcast(MasterNode masternode)
     {
        super(masternode);
     }
@@ -155,7 +153,7 @@ public class MasternodeBroadcast extends Masternode {
             byte[] message = bos.toByteArray();
 
             if (protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
-                log.info("mnb - ignoring outdated Masternode " + vin.toString() + " protocol version " + protocolVersion);
+                log.info("mnb - ignoring outdated MasterNode " + vin.toString() + " protocol version " + protocolVersion);
                 return false;
             }
 
@@ -188,7 +186,7 @@ public class MasternodeBroadcast extends Masternode {
             StringBuilder errorMessage = new StringBuilder();
             if (!DarkSendSigner.verifyMessage1(pubkey, sig, message, errorMessage)) {
                 //if(!DarkSendSigner.verifyMessage(pubkey, sig, strMessage, errorMessage)){
-                log.info("mnb - Got bad Masternode address signature: " + errorMessage);
+                log.info("mnb - Got bad MasterNode address signature: " + errorMessage);
                 //nDos = 100;
                 return false;
             }
@@ -197,8 +195,8 @@ public class MasternodeBroadcast extends Masternode {
                 if (address.getPort() != 9999) return false;
             } else if (address.getPort() == 9999) return false;
 
-            //search existing Masternode list, this is where we update existing Masternodes with new mnb broadcasts
-            Masternode pmn = context.masternodeManager.find(vin);
+            //search existing MasterNode list, this is where we update existing Masternodes with new mnb broadcasts
+            MasterNode pmn = context.masternodeManager.find(vin);
 
             // no such masternode or it's not enabled already, nothing to update
             if (pmn == null || (pmn != null && !pmn.isEnabled())) return true;
@@ -230,13 +228,13 @@ public class MasternodeBroadcast extends Masternode {
 
     boolean checkInputsAndAdd()
     {
-        // we are a masternode with the same vin (i.e. already activated) and this mnb is ours (matches our Masternode privkey)
+        // we are a masternode with the same vin (i.e. already activated) and this mnb is ours (matches our MasterNode privkey)
         // so nothing to do here for us
         if(DarkCoinSystem.fMasterNode && vin.getOutpoint().equals(context.activeMasternode.vin.getOutpoint()) && pubkey2.equals(context.activeMasternode.pubKeyMasternode))
             return true;
 
-        // search existing Masternode list
-        Masternode pmn = context.masternodeManager.find(vin);
+        // search existing MasterNode list
+        MasterNode pmn = context.masternodeManager.find(vin);
 
         if(pmn != null) {
             // nothing to do here if we already know about this masternode and it's enabled
@@ -269,7 +267,7 @@ public class MasternodeBroadcast extends Masternode {
         }
         */
 
-        log.info("masternode - mnb - Accepted Masternode entry\n");
+        log.info("masternode - mnb - Accepted MasterNode entry\n");
 
         /* TODO:  Will this work?
         if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
@@ -294,18 +292,18 @@ public class MasternodeBroadcast extends Masternode {
             CBlockIndex* pConfIndex = chainActive[pMNIndex->nHeight + MASTERNODE_MIN_CONFIRMATIONS - 1]; // block where tx got MASTERNODE_MIN_CONFIRMATIONS
             if(pConfIndex->GetBlockTime() > sigTime)
             {
-                LogPrintf("mnb - Bad sigTime %d for Masternode %20s %105s (%i conf block is at %d)\n",
+                LogPrintf("mnb - Bad sigTime %d for MasterNode %20s %105s (%i conf block is at %d)\n",
                         sigTime, addr.ToString(), vin.ToString(), MASTERNODE_MIN_CONFIRMATIONS, pConfIndex->GetBlockTime());
                 return false;
             }
         }
 
         */
-        log.info("mnb - Got NEW Masternode entry - {} - {} - {} - {} ", getHash().toString(), address.toString(), vin.toString(), sigTime);
-        Masternode mn = new Masternode(this);
+        log.info("mnb - Got NEW MasterNode entry - {} - {} - {} - {} ", getHash().toString(), address.toString(), vin.toString(), sigTime);
+        MasterNode mn = new MasterNode(this);
         context.masternodeManager.add(mn);
 
-        // if it matches our Masternode privkey, then we've been remotely activated
+        // if it matches our MasterNode privkey, then we've been remotely activated
         if(pubkey2.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion == NetworkParameters.PROTOCOL_VERSION){
             context.activeMasternode.enableHotColdMasterNode(vin, address);
         }

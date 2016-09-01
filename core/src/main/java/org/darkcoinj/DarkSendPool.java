@@ -92,7 +92,7 @@ public class DarkSendPool {
     // where collateral should be made out to
     public Script collateralPubKey;
 
-    public Masternode submittedToMasternode;
+    public MasterNode submittedToMasternode;
     int sessionDenom; //Users must submit an denom matching this
     int cachedNumBlocks; //used for the overview screen
 
@@ -194,7 +194,7 @@ public class DarkSendPool {
 
                         // check if we should activate or ping every few minutes,
                         // start right after sync is considered to be done
-                        if (c % Masternode.MASTERNODE_PING_SECONDS == 1)
+                        if (c % MasterNode.MASTERNODE_PING_SECONDS == 1)
                             context.activeMasternode.manageStatus();
 
                         if (c % 60 == 0) {

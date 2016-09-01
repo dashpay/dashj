@@ -1,7 +1,5 @@
 package org.bitcoinj.core;
 
-import com.squareup.okhttp.internal.Network;
-import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Threading;
 import org.darkcoinj.DarkSend;
 import org.slf4j.Logger;
@@ -10,17 +8,14 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.net.InetAddress;
 import java.util.concurrent.locks.ReentrantLock;
-
-import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 
 /**
  * Created by Eric on 2/8/2015.
  */
-public class Masternode extends Message{
-    private static final Logger log = LoggerFactory.getLogger(Masternode.class);
-    ReentrantLock lock = Threading.lock("Masternode");
+public class MasterNode extends Message{
+    private static final Logger log = LoggerFactory.getLogger(MasterNode.class);
+    ReentrantLock lock = Threading.lock("MasterNode");
     long lastTimeChecked;
 
     public static int MASTERNODE_ENABLED = 1;
@@ -67,7 +62,7 @@ public class Masternode extends Message{
 
     Context context;
 
-    public Masternode(Context context)
+    public MasterNode(Context context)
     {
         super(context.getParams());
         this.context = context;
@@ -91,21 +86,21 @@ public class Masternode extends Message{
         lastTimeChecked = 0;
     }
 
-    public Masternode(NetworkParameters params, byte [] payload, int cursor)
+    public MasterNode(NetworkParameters params, byte [] payload, int cursor)
     {
         super(params, payload, cursor);
         context = Context.get();
         //calculateScoreTest();
     }
 
-    public Masternode(Context context, byte [] payload, int cursor)
+    public MasterNode(Context context, byte [] payload, int cursor)
     {
         super(context.getParams(), payload, cursor);
         this.context = context;
         //calculateScoreTest();
     }
 
-    public Masternode(Masternode other)
+    public MasterNode(MasterNode other)
     {
         super(other.params);
         this.context = other.context;
@@ -129,7 +124,7 @@ public class Masternode extends Message{
         this.nLastScanningErrorBlockHeight = other.nLastScanningErrorBlockHeight;
     }
 
-    public Masternode(MasternodeBroadcast mnb)
+    public MasterNode(MasternodeBroadcast mnb)
     {
         //LOCK(cs);
         super(mnb.params);

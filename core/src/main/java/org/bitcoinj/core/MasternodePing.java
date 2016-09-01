@@ -20,13 +20,10 @@ import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.Arrays;
 
-import static com.hashengineering.crypto.X11.x11Digest;
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 
 public class MasternodePing extends Message implements Serializable {
@@ -162,7 +159,7 @@ public class MasternodePing extends Message implements Serializable {
         log.info("masternode - CMasternodePing::CheckAndUpdate - New Ping - "+ getHash().toString() +" - "+ blockHash.toString()+" - "+ sigTime);
 
         // see if we have this Masternode
-        Masternode pmn = context.masternodeManager.find(vin);
+        MasterNode pmn = context.masternodeManager.find(vin);
         if(pmn != null && pmn.protocolVersion >= context.masternodePayments.getMinMasternodePaymentsProto())
         {
             if (fRequireEnabled && !pmn.isEnabled()) return false;

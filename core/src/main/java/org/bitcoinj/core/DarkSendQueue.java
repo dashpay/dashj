@@ -15,8 +15,6 @@
  */
 package org.bitcoinj.core;
 
-import org.darkcoinj.DarkSend;
-import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,7 +144,7 @@ public class DarkSendQueue extends Message implements Serializable {
     }
 
     boolean getAddress(MasternodeAddress address) {
-        for (Masternode mn : system.masternode.vecMasternodes) {
+        for (MasterNode mn : system.masternode.vecMasternodes) {
             if (mn.vin == vin) {
                 address = mn.address;
                 return true;
@@ -156,7 +154,7 @@ public class DarkSendQueue extends Message implements Serializable {
     }
 
     int getProtocolVersion() {
-        for (Masternode mn : system.masternode.vecMasternodes) {
+        for (MasterNode mn : system.masternode.vecMasternodes) {
             if (mn.vin == vin) {
                 return mn.protocolVersion;
             }

@@ -4,7 +4,6 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -37,10 +36,10 @@ public class MasternodeManager extends Message {
     ReentrantLock lock_messages = Threading.lock("MasternodeManager-Messages");
 
     // map to hold all MNs
-    ArrayList<Masternode> vMasternodes;// = new ArrayList<Masternode>();
-    // who's asked for the Masternode list and the last time
+    ArrayList<MasterNode> vMasternodes;// = new ArrayList<MasterNode>();
+    // who's asked for the MasterNode list and the last time
     HashMap<NetAddress, Long> mAskedUsForMasternodeList;// = new HashMap<NetAddress, Long>();
-    // who we asked for the Masternode list and the last time
+    // who we asked for the MasterNode list and the last time
         HashMap<NetAddress, Long> mWeAskedForMasternodeList;// = new HashMap<NetAddress, Long>();
     // which Masternodes we've asked for
     HashMap<TransactionOutPoint, Long> mWeAskedForMasternodeListEntry;// = new HashMap<TransactionOutPoint, Long>();
@@ -65,10 +64,10 @@ public class MasternodeManager extends Message {
         nDsqCount = 0;
 
         // map to hold all MNs
-        vMasternodes = new ArrayList<Masternode>();
-        // who's asked for the Masternode list and the last time
+        vMasternodes = new ArrayList<MasterNode>();
+        // who's asked for the MasterNode list and the last time
         mAskedUsForMasternodeList = new HashMap<NetAddress, Long>();
-        // who we asked for the Masternode list and the last time
+        // who we asked for the MasterNode list and the last time
         mWeAskedForMasternodeList = new HashMap<NetAddress, Long>();
         // which Masternodes we've asked for
         mWeAskedForMasternodeListEntry = new HashMap<TransactionOutPoint, Long>();
@@ -113,7 +112,7 @@ public class MasternodeManager extends Message {
         try {
             size += VarInt.sizeOf(vMasternodes.size());
 
-            for (Masternode mn : vMasternodes) {
+            for (MasterNode mn : vMasternodes) {
                 size += mn.calculateMessageSizeInBytes();
             }
             size += VarInt.sizeOf(mAskedUsForMasternodeList.size());
@@ -134,10 +133,10 @@ public class MasternodeManager extends Message {
 
         int size = (int)readVarInt();
 
-        vMasternodes = new ArrayList<Masternode>(size);
+        vMasternodes = new ArrayList<MasterNode>(size);
         for (int i = 0; i < size; ++i)
         {
-            Masternode mn = new Masternode(params, payload, cursor);
+            MasterNode mn = new MasterNode(params, payload, cursor);
             cursor += mn.getMessageSize();
             vMasternodes.add(mn);
 
@@ -207,7 +206,7 @@ public class MasternodeManager extends Message {
         lock.lock();
         try {
             stream.write(new VarInt(vMasternodes.size()).encode());
-            for (Masternode mn : vMasternodes) {
+            for (MasterNode mn : vMasternodes) {
                 mn.bitcoinSerialize(stream);
             }
             stream.write(new VarInt(mAskedUsForMasternodeList.size()).encode());
@@ -283,8 +282,8 @@ public class MasternodeManager extends Message {
             return;
         }
 
-        // make sure the vout that was signed is related to the transaction that spawned the Masternode
-        //  - this is expensive, so it's only done once per Masternode
+        // make sure the vout that was signed is related to the transaction that spawned the MasterNode
+        //  - this is expensive, so it's only done once per MasterNode
         if(!DarkSendSigner.isVinAssociatedWithPubkey(params, mnb.vin, mnb.pubkey)) {
             log.info("mnb - Got mismatched pubkey and vin");
             //Misbehaving(pfrom->GetId(), 33);
@@ -299,7 +298,7 @@ public class MasternodeManager extends Message {
             //addrman.Add(CAddress(mnb.addr), pfrom->addr, 2*60*60);
             //context.masternodeSync.addedMasternodeList(mnb.getHash());
         } else {
-            log.info("mnb - Rejected Masternode entry "+ mnb.address.toString());
+            log.info("mnb - Rejected MasterNode entry "+ mnb.address.toString());
 
             //if (nDoS > 0)
 //                Misbehaving(pfrom->GetId(), nDoS);
@@ -307,7 +306,7 @@ public class MasternodeManager extends Message {
     }
     void processMasternodePing(Peer peer, MasternodePing mnp)
     {
-        //log.info("masternode - mnp - Masternode ping(hash={}, vin: {}", mnp.getHash(), mnp.vin.toString());
+        //log.info("masternode - mnp - MasterNode ping(hash={}, vin: {}", mnp.getHash(), mnp.vin.toString());
 
         if(mapSeenMasternodePing.containsKey(mnp.getHash()))
             return; //seen
@@ -325,8 +324,8 @@ public class MasternodeManager extends Message {
             // if anything significant failed, mark that node
             //Misbehaving(pfrom->GetId(), nDoS);
         } else {
-            // if nothing significant failed, search existing Masternode list
-            Masternode pmn = find(mnp.vin);
+            // if nothing significant failed, search existing MasterNode list
+            MasterNode pmn = find(mnp.vin);
             // if it's known, don't ask for the mnb, just return
             if(pmn != null) return;
         }
@@ -345,7 +344,7 @@ public class MasternodeManager extends Message {
         }
     }
 
-    boolean add(Masternode mn)
+    boolean add(MasterNode mn)
     {
         try {
             lock.lock();
@@ -353,9 +352,9 @@ public class MasternodeManager extends Message {
             if (!mn.isEnabled())
                 return false;
 
-            Masternode pmn = find(mn.vin);
+            MasterNode pmn = find(mn.vin);
             if (pmn == null) {
-                log.info("masternode - MasternodeMan: Adding new Masternode "+mn.address.toString()+" - "+(size() + 1)+" now");
+                log.info("masternode - MasternodeMan: Adding new MasterNode "+mn.address.toString()+" - "+(size() + 1)+" now");
                 vMasternodes.add(mn);
                 queueOnSyncStatusChanged();
                 return true;
@@ -367,7 +366,7 @@ public class MasternodeManager extends Message {
         }
     }
 
-    Masternode find(Script payee)
+    MasterNode find(Script payee)
     {
         //LOCK(cs);
         lock.lock();
@@ -375,7 +374,7 @@ public class MasternodeManager extends Message {
             Script payee2;
 
             //BOOST_FOREACH(CMasternode& mn, vMasternodes)
-            for (Masternode mn : vMasternodes) {
+            for (MasterNode mn : vMasternodes) {
                 //payee2 = GetScriptForDestination(mn.pubkey.GetID());
                 payee2 = ScriptBuilder.createOutputScript(mn.pubkey.getECKey());
 
@@ -388,13 +387,13 @@ public class MasternodeManager extends Message {
         }
     }
 
-    public Masternode find(TransactionInput vin)
+    public MasterNode find(TransactionInput vin)
     {
         lock.lock();
         try {
 
             //BOOST_FOREACH(CMasternode & mn, vMasternodes)
-            for (Masternode mn : vMasternodes)
+            for (MasterNode mn : vMasternodes)
             {
                 if (mn.vin.getOutpoint().equals(vin.getOutpoint()))
                     return mn;
@@ -406,12 +405,12 @@ public class MasternodeManager extends Message {
     }
 
 
-    Masternode find(PublicKey pubKeyMasternode)
+    MasterNode find(PublicKey pubKeyMasternode)
     {
         lock.lock();
         try {
             //BOOST_FOREACH(CMasternode & mn, vMasternodes)
-            for (Masternode mn : vMasternodes)
+            for (MasterNode mn : vMasternodes)
             {
                 if (mn.pubkey2.equals(pubKeyMasternode))
                     return mn;
@@ -431,7 +430,7 @@ public class MasternodeManager extends Message {
         lock.lock();
         try {
             //BOOST_FOREACH(CMasternode& mn, vMasternodes)
-            for (Masternode mn : vMasternodes) {
+            for (MasterNode mn : vMasternodes) {
                 mn.check();
                 if (mn.protocolVersion < protocolVersion || !mn.isEnabled()) continue;
                 i++;
@@ -450,11 +449,11 @@ public class MasternodeManager extends Message {
 
 
             //vector<CMasternode>::iterator it = vMasternodes.begin();
-            Iterator<Masternode> it = vMasternodes.iterator();
+            Iterator<MasterNode> it = vMasternodes.iterator();
             while (it.hasNext()) {
-                Masternode mn = it.next();
+                MasterNode mn = it.next();
                 if (mn.vin.equals(vin)){
-                    log.info("masternode - CMasternodeMan: Removing Masternode %s "+mn.address.toString()+"- "+(size()-1)+" now");
+                    log.info("masternode - CMasternodeMan: Removing MasterNode %s "+mn.address.toString()+"- "+(size()-1)+" now");
 
                     //vMasternodes.remove(mn);
                     it.remove();
@@ -474,9 +473,9 @@ public class MasternodeManager extends Message {
         String result;
 
         result = "Masternodes: " + (int)vMasternodes.size() +
-                ", peers who asked us for Masternode list: " + (int)mAskedUsForMasternodeList.size() +
-                ", peers we asked for Masternode list: " + (int)mWeAskedForMasternodeList.size() +
-                ", entries in Masternode list we asked for: " + (int)mWeAskedForMasternodeListEntry.size() +
+                ", peers who asked us for MasterNode list: " + (int)mAskedUsForMasternodeList.size() +
+                ", peers we asked for MasterNode list: " + (int)mWeAskedForMasternodeList.size() +
+                ", entries in MasterNode list we asked for: " + (int)mWeAskedForMasternodeListEntry.size() +
                 ", nDsqCount: " + (int)nDsqCount;
 
         return result;
@@ -564,7 +563,7 @@ public class MasternodeManager extends Message {
         if(context.isLiteMode())
             return -3; // We don't have a masternode list
 
-        Masternode mnExisting = find(vin);
+        MasterNode mnExisting = find(vin);
         if(mnExisting == null)
             return -1;
 
@@ -577,7 +576,7 @@ public class MasternodeManager extends Message {
         {
             lock.lock();
             try {
-                for(Masternode mn : vMasternodes) {
+                for(MasterNode mn : vMasternodes) {
                     if(mn.protocolVersion < minProtocol) continue;
                     if(fOnlyActive) {
                         mn.check();
@@ -618,7 +617,7 @@ public class MasternodeManager extends Message {
         ArrayList<Pair<Long, TransactionInput>> vecMasternodeScores = new ArrayList<Pair<Long, TransactionInput>>(3000);
 
         // scan for winner
-        for(Masternode mn : vMasternodes) {
+        for(MasterNode mn : vMasternodes) {
             if(mn.protocolVersion < minProtocol) continue;
             if(fOnlyActive) {
                 mn.check();
@@ -649,7 +648,7 @@ public class MasternodeManager extends Message {
         lock.lock();
 
 
-        for(Masternode mn : vMasternodes){
+        for(MasterNode mn : vMasternodes){
             mn.check();
         }
         lock.unlock();
@@ -665,16 +664,16 @@ public class MasternodeManager extends Message {
         try {
 
             //remove inactive and outdated
-            //vector<CMasternode>::iterator it = vMasternodes.begin();
-            Iterator<Masternode> it = vMasternodes.iterator();
+            //vector<CMasterNode>::iterator it = vMasternodes.begin();
+            Iterator<MasterNode> it = vMasternodes.iterator();
 
             while (it.hasNext()) {
-                Masternode mn = it.next();
-                if (mn.activeState == Masternode.MASTERNODE_REMOVE ||
-                        mn.activeState == Masternode.MASTERNODE_VIN_SPENT ||
-                        (forceExpiredRemoval && mn.activeState == Masternode.MASTERNODE_EXPIRED) ||
+                MasterNode mn = it.next();
+                if (mn.activeState == MasterNode.MASTERNODE_REMOVE ||
+                        mn.activeState == MasterNode.MASTERNODE_VIN_SPENT ||
+                        (forceExpiredRemoval && mn.activeState == MasterNode.MASTERNODE_EXPIRED) ||
                         mn.protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
-                    log.info("masternode-CMasternodeMan: Removing inactive Masternode {} - {} now", mn.address.toString(), size() - 1);
+                    log.info("masternode-CMasternodeMan: Removing inactive MasterNode {} - {} now", mn.address.toString(), size() - 1);
 
                     //erase all of the broadcasts we've seen from this vin
                     // -- if we missed a few pings and the node was removed, this will allow is to get it back without them
@@ -709,7 +708,7 @@ public class MasternodeManager extends Message {
                 }
             }
 
-            // check who's asked for the Masternode list
+            // check who's asked for the MasterNode list
             //map<CNetAddr, int64_t>::iterator it1 = mAskedUsForMasternodeList.begin();
             Iterator<Map.Entry<NetAddress, Long>> it1 = mAskedUsForMasternodeList.entrySet().iterator();
             while (it1.hasNext()) {
@@ -722,7 +721,7 @@ public class MasternodeManager extends Message {
                 }
             }
 
-            // check who we asked for the Masternode list
+            // check who we asked for the MasterNode list
             //it1 = mWeAskedForMasternodeList.begin();
             it1 = mWeAskedForMasternodeList.entrySet().iterator();
             while (it1.hasNext()) {
@@ -753,7 +752,7 @@ public class MasternodeManager extends Message {
 
             while (it3.hasNext()) {
                 Map.Entry<Sha256Hash, MasternodeBroadcast> mb = it3.next();
-                if (mb.getValue().lastPing.sigTime < Utils.currentTimeSeconds() - (Masternode.MASTERNODE_REMOVAL_SECONDS * 2)) {
+                if (mb.getValue().lastPing.sigTime < Utils.currentTimeSeconds() - (MasterNode.MASTERNODE_REMOVAL_SECONDS * 2)) {
                     //mapSeenMasternodeBroadcast.erase(it3++);
 
                     context.masternodeSync.mapSeenSyncMNB.remove(mb.getValue().getHash());
@@ -768,7 +767,7 @@ public class MasternodeManager extends Message {
             Iterator<Map.Entry<Sha256Hash, MasternodePing>> it4 = mapSeenMasternodePing.entrySet().iterator();
             while (it4.hasNext()) {
                 Map.Entry<Sha256Hash, MasternodePing> mp = it4.next();
-                if (mp.getValue().sigTime < Utils.currentTimeSeconds() - (Masternode.MASTERNODE_REMOVAL_SECONDS * 2)) {
+                if (mp.getValue().sigTime < Utils.currentTimeSeconds() - (MasterNode.MASTERNODE_REMOVAL_SECONDS * 2)) {
                     //mapSeenMasternodePing.erase(it4++);
                     it4.remove();
                 } else {
@@ -827,7 +826,7 @@ public class MasternodeManager extends Message {
                 if (pnode.isDarkSendMaster()) {
                     if (context.darkSendPool.submittedToMasternode != null && pnode.getAddress().getAddr().equals(context.darkSendPool.submittedToMasternode.address.getAddr()))
                         continue;
-                    log.info("Closing Masternode connection {}", pnode.getAddress());
+                    log.info("Closing MasterNode connection {}", pnode.getAddress());
                     //pnode -> fDisconnect = true;
                     //pnode.close();
                 }
