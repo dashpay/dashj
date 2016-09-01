@@ -214,7 +214,18 @@ public class TransactionOutput extends ChildMessage implements Serializable {
         throw new IllegalStateException("Output linked to wrong parent transaction?");
     }
 
-    /**
+	/**
+	 * Will this transaction be relayable and mined by default miners?
+	 */
+	public boolean isDust() {
+		// Transactions that are OP_RETURN can't be dust regardless of their value.
+		if (getScriptPubKey().isOpReturn()) {
+			return false;
+		}
+		return getValue().isLessThan(getMinNonDustValue());
+	}
+
+	/**
      * <p>Gets the minimum value for a txout of this size to be considered non-dust by a reference client
      * (and thus relayed). See: CTxOut::IsDust() in the reference client. The assumption is that any output that would
      * consume more than a third of its value in fees is not something the Bitcoin system wants to deal with right now,
