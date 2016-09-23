@@ -5118,10 +5118,13 @@ public class Wallet extends BaseTaggableObject
         // is no inversion.
         for (Transaction tx : toBroadcast) {
             ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
-            if(confidenceType == ConfidenceType.UNKNOWN && tx.getConfidence().getSource() == Source.SELF)
+            if(confidenceType == ConfidenceType.UNKNOWN /*&& tx.getConfidence().getSource() == Source.SELF*/)
             {
-                log.warn("A pending transaction from SELF is of type UNKNOWN {}\nSetting to PENDING", tx.toString());
-                tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
+                log.error("A pending transaction of type UNKNOWN {}\nDeleting", tx.toString());
+                //tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
+                //pending.remove(tx.getHash());
+                continue;
+
             }
             checkState(confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.IN_CONFLICT,
                     "Expected PENDING or IN_CONFLICT, was %s.", confidenceType);
