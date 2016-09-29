@@ -359,8 +359,8 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         setAccountPath(watchingKey.getPath());
         basicKeyChain = new BasicKeyChain();
         this.seed = null;
-        rootKey = null;
-        addToBasicChain(watchingKey);
+        this.rootKey = null;
+        basicKeyChain.importKey(watchingKey);
         hierarchy = new DeterministicHierarchy(watchingKey);
         initializeHierarchyUnencrypted(watchingKey);
     }
@@ -410,10 +410,10 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         if (!seed.isEncrypted()) {
             rootKey = HDKeyDerivation.createMasterPrivateKey(checkNotNull(seed.getSeedBytes()));
             rootKey.setCreationTimeSeconds(seed.getCreationTimeSeconds());
-            addToBasicChain(rootKey);
+            basicKeyChain.importKey(rootKey);
             hierarchy = new DeterministicHierarchy(rootKey);
             for (int i = 1; i <= getAccountPath().size(); i++) {
-                addToBasicChain(hierarchy.get(getAccountPath().subList(0, i), false, true));
+                basicKeyChain.importKey(hierarchy.get(getAccountPath().subList(0, i), false, true));
             }
             initializeHierarchyUnencrypted(rootKey);
         }
@@ -495,8 +495,8 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     private void initializeHierarchyUnencrypted(DeterministicKey baseKey) {
         externalParentKey = hierarchy.deriveChild(getAccountPath(), false, false, ChildNumber.ZERO);
         internalParentKey = hierarchy.deriveChild(getAccountPath(), false, false, ChildNumber.ONE);
-        addToBasicChain(externalParentKey);
-        addToBasicChain(internalParentKey);
+        basicKeyChain.importKey(externalParentKey);
+        basicKeyChain.importKey(internalParentKey);
     }
 
     /** Returns a freshly derived key that has not been returned by this method before. */
@@ -570,10 +570,6 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         byte[] actual = k.getPubKey();
         if (!Arrays.equals(rederived, actual))
             throw new IllegalStateException(String.format(Locale.US, "Bit-flip check failed: %s vs %s", Arrays.toString(rederived), Arrays.toString(actual)));
-    }
-
-    private void addToBasicChain(DeterministicKey key) {
-        basicKeyChain.importKeys(ImmutableList.of(key));
     }
 
     /**
