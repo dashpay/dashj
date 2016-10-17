@@ -74,6 +74,7 @@ public class BitcoinURI {
     public static final String FIELD_AMOUNT = "amount";
     public static final String FIELD_ADDRESS = "address";
     public static final String FIELD_PAYMENT_REQUEST_URL = "r";
+    public static final String FIELD_INSTANTSEND = "is";
 
     /**
      * URI for Bitcoin network. Use {@link org.bitcoinj.params.AbstractBitcoinNetParams#BITCOIN_SCHEME} if you specifically
@@ -276,6 +277,13 @@ public class BitcoinURI {
      */
     public String getMessage() {
         return (String) parameterMap.get(FIELD_MESSAGE);
+    }
+    /**
+     * @return The message from the URI.
+     */
+    public boolean getRequestInstantSend() {
+        String value = (String)parameterMap.get(FIELD_INSTANTSEND);
+        return value != null ? value.equals("1") : false;
     }
 
     /**

@@ -421,10 +421,12 @@ public class PaymentProtocol {
     public static class Output implements Serializable {
         @Nullable public final Coin amount;
         public final byte[] scriptData;
+        public final boolean useInstantSend;
 
         public Output(@Nullable Coin amount, byte[] scriptData) {
             this.amount = amount;
             this.scriptData = scriptData;
+            this.useInstantSend = false;
         }
     }
 }
