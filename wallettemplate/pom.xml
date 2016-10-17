@@ -9,10 +9,10 @@
         <version>0.14.3</version>
     </parent>
 
-    <groupId>org.darkcoinj</groupId>
+    <groupId>org.dashj</groupId>
     <artifactId>wallettemplate</artifactId>
 
-    <name>bitcoinj Wallet-Template</name>
+    <name>dashj Wallet-Template</name>
 
     <build>
         <plugins>
@@ -57,8 +57,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.bitcoinj</groupId>
-            <artifactId>darkcoinj-core</artifactId>
+            <groupId>org.dashj</groupId>
+            <artifactId>dashj-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
