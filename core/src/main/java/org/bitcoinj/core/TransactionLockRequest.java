@@ -39,18 +39,18 @@ public class TransactionLockRequest extends Transaction {
      * as the length will be provided as part of the header.  If unknown then set to Message.UNKNOWN_LENGTH
      * @throws ProtocolException
      */
-    public TransactionLockRequest(NetworkParameters params, byte[] payload, int offset, @Nullable Message parent, boolean parseLazy, boolean parseRetain, int length)
+    /*public TransactionLockRequest(NetworkParameters params, byte[] payload, int offset, @Nullable Message parent, boolean parseLazy, boolean parseRetain, int length)
             throws ProtocolException {
         super(params, payload, offset, parent, parseLazy, parseRetain, length);
-    }
+    }*/
 
     /**
      * Creates a transaction by reading payload starting from offset bytes in. Length of a transaction is fixed.
      */
-    public TransactionLockRequest(NetworkParameters params, byte[] payload, @Nullable Message parent, boolean parseLazy, boolean parseRetain, int length)
+    /*public TransactionLockRequest(NetworkParameters params, byte[] payload, @Nullable Message parent, boolean parseLazy, boolean parseRetain, int length)
             throws ProtocolException {
         super(params, payload, 0, parent, parseLazy, parseRetain, length);
-    }
+    }*/
 
     public String toString(@Nullable AbstractBlockChain chain) {
         return "Transaction Lock Request:\n" + super.toString(chain);
@@ -58,7 +58,6 @@ public class TransactionLockRequest extends Transaction {
 
     public void verify() throws VerificationException {
         super.verify();
-        maybeParse();
 
         Coin valueOut = Coin.valueOf(0);
         Coin valueIn = Coin.valueOf(0);

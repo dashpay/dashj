@@ -1,12 +1,27 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.examples;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.bitcoinj.core.*;
-import org.bitcoinj.core.Wallet.BalanceType;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
 
 import java.io.File;
 
@@ -32,7 +47,7 @@ public class SendRequest {
 
         // To which address you want to send the coins?
         // The Address class represents a Bitcoin address.
-        Address to = new Address(params, "mupBAFeT63hXfeeT4rnAUcpKHDkz1n4fdw");
+        Address to = Address.fromBase58(params, "mupBAFeT63hXfeeT4rnAUcpKHDkz1n4fdw");
 
         // There are different ways to create and publish a SendRequest. This is probably the easiest one.
         // Have a look at the code of the SendRequest class to see what's happening and what other options you have: https://bitcoinj.github.io/javadoc/0.11/com/google/bitcoin/core/Wallet.SendRequest.html
@@ -50,13 +65,15 @@ public class SendRequest {
 
             // Bitcoinj allows you to define a BalanceFuture to execute a callback once your wallet has a certain balance.
             // Here we wait until the we have enough balance and display a notice.
-            // Bitcoinj is using the ListenableFutures of the Guava library. Have a look here for more information: https://code.google.com/p/guava-libraries/wiki/ListenableFutureExplained
+            // Bitcoinj is using the ListenableFutures of the Guava library. Have a look here for more information: https://github.com/google/guava/wiki/ListenableFutureExplained
             ListenableFuture<Coin> balanceFuture = kit.wallet().getBalanceFuture(value, BalanceType.AVAILABLE);
             FutureCallback<Coin> callback = new FutureCallback<Coin>() {
+                @Override
                 public void onSuccess(Coin balance) {
                     System.out.println("coins arrived and the wallet now has enough balance");
                 }
 
+                @Override
                 public void onFailure(Throwable t) {
                     System.out.println("something went wrong");
                 }

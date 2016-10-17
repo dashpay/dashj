@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2013 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 package org.bitcoinj.utils;
 
 import org.bitcoinj.core.Utils;
+import com.google.common.primitives.Longs;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -72,7 +73,7 @@ public class ExponentialBackoff implements Comparable<ExponentialBackoff> {
     }
 
     /** Track a success - reset back off interval to the initial value */
-    public void trackSuccess() {
+    public final void trackSuccess() {
         backoff = params.initial;
         retryTime = Utils.currentTimeMillis();
     }
@@ -90,11 +91,8 @@ public class ExponentialBackoff implements Comparable<ExponentialBackoff> {
 
     @Override
     public int compareTo(ExponentialBackoff other) {
-        if (retryTime < other.retryTime)
-            return -1;
-        if (retryTime > other.retryTime)
-            return 1;
-        return 0;
+        // note that in this implementation compareTo() is not consistent with equals()
+        return Longs.compare(retryTime, other.retryTime);
     }
 
     @Override

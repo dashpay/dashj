@@ -72,6 +72,14 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         bip32HeaderPriv = 0x3a58f342;
 
         strSporkKey = "046f78dcf911fbd61910136f7f0f8d90578f68d0b3ac973b5040fb7afb501b5939f39b108b0569dca71488f5bbf498d92e4d1194f6f941307ffd95f75e76869f0e";
+
+     //   bip32HeaderPub = 0x043587CF;
+     //   bip32HeaderPriv = 0x04358394;
+
+        majorityEnforceBlockUpgrade = TestNet2Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
+        majorityRejectBlockOutdated = TestNet2Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
+        majorityWindow = TestNet2Params.TESTNET_MAJORITY_WINDOW;
+
     }
 
     private static TestNet3Params instance;

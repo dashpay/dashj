@@ -1,6 +1,7 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
+ * Copyright 2014-2016 the libsecp256k1 contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +20,16 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.crypto.*;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
-import com.google.common.base.Objects.ToStringHelper;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.UnsignedBytes;
 import org.bitcoin.NativeSecp256k1;
+import org.bitcoin.NativeSecp256k1Util;
+import org.bitcoin.Secp256k1Context;
 import org.bitcoinj.wallet.Protos;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.asn1.*;
@@ -47,7 +52,6 @@ import org.spongycastle.util.encoders.Base64;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.Serializable;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.security.SecureRandom;
@@ -88,7 +92,7 @@ import static com.google.common.base.Preconditions.*;
  * this class so round-tripping preserves state. Unless you're working with old software or doing unusual things, you
  * can usually ignore the compressed/uncompressed distinction.</p>
  */
-public class ECKey implements EncryptableItem, Serializable {
+public class ECKey implements EncryptableItem {
     private static final Logger log = LoggerFactory.getLogger(ECKey.class);
 
     /** Sorts oldest keys first, newest last. */
@@ -126,7 +130,6 @@ public class ECKey implements EncryptableItem, Serializable {
     public static final BigInteger HALF_CURVE_ORDER;
 
     private static final SecureRandom secureRandom;
-    private static final long serialVersionUID = -728224901792295832L;
 
     static {
         // Init proper random number generator, as some old Android installations have bugs that make it unsecure.
@@ -155,8 +158,7 @@ public class ECKey implements EncryptableItem, Serializable {
     protected KeyCrypter keyCrypter;
     protected EncryptedData encryptedPrivateKey;
 
-    // Transient because it's calculated on demand/cached.
-    private transient byte[] pubKeyHash;
+    private byte[] pubKeyHash;
 
     /**
      * Generates an entirely new keypair. Point compression is used so the resulting public key will be 33 bytes
@@ -233,8 +235,8 @@ public class ECKey implements EncryptableItem, Serializable {
     }
 
     /**
-     * Construct an ECKey from an ASN.1 encoded private key. These are produced by OpenSSL and stored by the Bitcoin
-     * reference implementation in its wallet. Note that this is slow because it requires an EC point multiply.
+     * Construct an ECKey from an ASN.1 encoded private key. These are produced by OpenSSL and stored by Bitcoin
+     * Core in its wallet. Note that this is slow because it requires an EC point multiply.
      */
     public static ECKey fromASN1(byte[] asn1privkey) {
         return extractKeyFromASN1(asn1privkey);
@@ -416,8 +418,8 @@ public class ECKey implements EncryptableItem, Serializable {
     }
 
     /**
-     * Output this ECKey as an ASN.1 encoded private key, as understood by OpenSSL or used by the Bitcoin reference
-     * implementation in its wallet storage format.
+     * Output this ECKey as an ASN.1 encoded private key, as understood by OpenSSL or used by Bitcoin Core
+     * in its wallet storage format.
      * @throws org.bitcoinj.core.ECKey.MissingPrivateKeyException if the private key is missing or encrypted.
      */
     public byte[] toASN1() {
@@ -612,15 +614,12 @@ public class ECKey implements EncryptableItem, Serializable {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             ECDSASignature other = (ECDSASignature) o;
-            return r.equals(other.r) &&
-                   s.equals(other.s);
+            return r.equals(other.r) && s.equals(other.s);
         }
 
         @Override
         public int hashCode() {
-            int result = r.hashCode();
-            result = 31 * result + s.hashCode();
-            return result;
+            return Objects.hashCode(r, s);
         }
     }
 
@@ -668,6 +667,18 @@ public class ECKey implements EncryptableItem, Serializable {
     }
 
     protected ECDSASignature doSign(Sha256Hash input, BigInteger privateKeyForSigning) {
+        if (Secp256k1Context.isEnabled()) {
+            try {
+                byte[] signature = NativeSecp256k1.sign(
+                        input.getBytes(),
+                        Utils.bigIntegerToBytes(privateKeyForSigning, 32)
+                );
+                return ECDSASignature.decodeFromDER(signature);
+            } catch (NativeSecp256k1Util.AssertFailException e) {
+                log.error("Caught AssertFailException inside secp256k1", e);
+                throw new RuntimeException(e);
+            }
+        }
         if (FAKE_SIGNATURES)
             return TransactionSignature.dummy();
         checkNotNull(privateKeyForSigning);
@@ -692,8 +703,14 @@ public class ECKey implements EncryptableItem, Serializable {
         if (FAKE_SIGNATURES)
             return true;
 
-        if (NativeSecp256k1.enabled)
-            return NativeSecp256k1.verify(data, signature.encodeToDER(), pub);
+        if (Secp256k1Context.isEnabled()) {
+            try {
+                return NativeSecp256k1.verify(data, signature.encodeToDER(), pub);
+            } catch (NativeSecp256k1Util.AssertFailException e) {
+                log.error("Caught AssertFailException inside secp256k1", e);
+                return false;
+            }
+        }
 
         ECDSASigner signer = new ECDSASigner();
         ECPublicKeyParameters params = new ECPublicKeyParameters(CURVE.getCurve().decodePoint(pub), CURVE);
@@ -703,8 +720,7 @@ public class ECKey implements EncryptableItem, Serializable {
         } catch (NullPointerException e) {
             // Bouncy Castle contains a bug that can cause NPEs given specially crafted signatures. Those signatures
             // are inherently invalid/attack sigs so we just fail them here rather than crash the thread.
-            log.error("Caught NPE inside bouncy castle");
-            e.printStackTrace();
+            log.error("Caught NPE inside bouncy castle", e);
             return false;
         }
     }
@@ -717,8 +733,14 @@ public class ECKey implements EncryptableItem, Serializable {
      * @param pub       The public key bytes to use.
      */
     public static boolean verify(byte[] data, byte[] signature, byte[] pub) {
-        if (NativeSecp256k1.enabled)
-            return NativeSecp256k1.verify(data, signature, pub);
+        if (Secp256k1Context.isEnabled()) {
+            try {
+                return NativeSecp256k1.verify(data, signature, pub);
+            } catch (NativeSecp256k1Util.AssertFailException e) {
+                log.error("Caught AssertFailException inside secp256k1", e);
+                return false;
+            }
+        }
         return verify(data, ECDSASignature.decodeFromDER(signature), pub);
     }
 
@@ -1038,7 +1060,7 @@ public class ECKey implements EncryptableItem, Serializable {
     }
 
     /**
-     * Exports the private key in the form used by the Satoshi client "dumpprivkey" and "importprivkey" commands. Use
+     * Exports the private key in the form used by Bitcoin Core's "dumpprivkey" and "importprivkey" commands. Use
      * the {@link org.bitcoinj.core.DumpedPrivateKey#toString()} method to get the string.
      *
      * @param params The network this key is intended for use on.
@@ -1219,9 +1241,7 @@ public class ECKey implements EncryptableItem, Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || !(o instanceof ECKey)) return false;
-
         ECKey other = (ECKey) o;
-
         return Objects.equal(this.priv, other.priv)
                 && Objects.equal(this.pub, other.pub)
                 && Objects.equal(this.creationTimeSeconds, other.creationTimeSeconds)
@@ -1234,7 +1254,7 @@ public class ECKey implements EncryptableItem, Serializable {
         // Public keys are random already so we can just use a part of them as the hashcode. Read from the start to
         // avoid picking up the type code (compressed vs uncompressed) which is tacked on the end.
         byte[] bits = getPubKey();
-        return (bits[0] & 0xFF) | ((bits[1] & 0xFF) << 8) | ((bits[2] & 0xFF) << 16) | ((bits[3] & 0xFF) << 24);
+        return Ints.fromBytes(bits[0], bits[1], bits[2], bits[3]);
     }
 
     @Override
@@ -1263,7 +1283,7 @@ public class ECKey implements EncryptableItem, Serializable {
     }
 
     private String toString(boolean includePrivate, NetworkParameters params) {
-        final ToStringHelper helper = Objects.toStringHelper(this).omitNullValues();
+        final MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
         helper.add("pub HEX", getPublicKeyAsHex());
         if (includePrivate) {
             try {

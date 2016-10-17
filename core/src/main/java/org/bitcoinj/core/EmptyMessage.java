@@ -1,5 +1,6 @@
-/**
+/*
  * Copyright 2011 Steve Coughlan.
+ * Copyright 2015 Andreas Schildbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.bitcoinj.core;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * Parent class for header only messages that don't have a payload.
- * Currently this includes getaddr, verack and special bitcoinj class UnknownMessage.
+ * <p>Parent class for header only messages that don't have a payload.
+ * Currently this includes getaddr, verack and special bitcoinj class UnknownMessage.</p>
+ * 
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public abstract class EmptyMessage extends Message {
-    private static final long serialVersionUID = 8240801253854151802L;
 
     public EmptyMessage() {
         length = 0;
@@ -44,31 +47,7 @@ public abstract class EmptyMessage extends Message {
     }
 
     @Override
-    public int getMessageSize() {
-        return 0;
-    }
-
-    /* (non-Javadoc)
-      * @see Message#parse()
-      */
-    @Override
-    void parse() throws ProtocolException {
-    }
-
-    /* (non-Javadoc)
-      * @see Message#parseLite()
-      */
-    @Override
-    protected void parseLite() throws ProtocolException {
-        length = 0;
-    }
-
-    /* (non-Javadoc)
-      * @see Message#ensureParsed()
-      */
-    @Override
-    public void ensureParsed() throws ProtocolException {
-        parsed = true;
+    protected void parse() throws ProtocolException {
     }
 
     /* (non-Javadoc)
@@ -78,6 +57,4 @@ public abstract class EmptyMessage extends Message {
     public byte[] bitcoinSerialize() {
         return new byte[0];
     }
-
-
 }

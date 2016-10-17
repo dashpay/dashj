@@ -30,14 +30,6 @@ public class SyncStatusCount extends Message {
         super(params, payloadBytes, cursor);
     }
 
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
-
     protected static int calcLength(byte[] buf, int offset) {
 
         int cursor = offset;
@@ -49,9 +41,8 @@ public class SyncStatusCount extends Message {
     }
 
     @Override
-    void parse() throws ProtocolException {
-        if (parsed)
-            return;
+    protected void parse() throws ProtocolException {
+
 
         itemId = (int)readUint32();
         count = (int)readUint32();

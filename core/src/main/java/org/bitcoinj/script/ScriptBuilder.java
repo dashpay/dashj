@@ -23,10 +23,12 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.TransactionSignature;
 
 import javax.annotation.Nullable;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Stack;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -105,16 +107,106 @@ public class ScriptBuilder {
         return addChunk(index, new ScriptChunk(opcode, copy));
     }
 
-    /** Adds the given number as a OP_N opcode to the end of the program. */
+    /**
+     * Adds the given number to the end of the program. Automatically uses
+     * shortest encoding possible.
+     */
+    public ScriptBuilder number(long num) {
+        if (num >= 0 && num < 16) {
+            return smallNum((int) num);
+        } else {
+            return bigNum(num);
+        }
+    }
+
+    /**
+     * Adds the given number to the given index in the program. Automatically
+     * uses shortest encoding possible.
+     */
+    public ScriptBuilder number(int index, long num) {
+        if (num >= 0 && num < 16) {
+            return addChunk(index, new ScriptChunk(Script.encodeToOpN((int) num), null));
+        } else {
+            return bigNum(index, num);
+        }
+    }
+
+    /**
+     * Adds the given number as a OP_N opcode to the end of the program.
+     * Only handles values 0-16 inclusive.
+     * 
+     * @see #number(int)
+     */
     public ScriptBuilder smallNum(int num) {
         return smallNum(chunks.size(), num);
     }
 
-    /** Adds the given number as a OP_N opcode to the given index in the program. */
+    /** Adds the given number as a push data chunk.
+     * This is intended to use for negative numbers or values > 16, and although
+     * it will accept numbers in the range 0-16 inclusive, the encoding would be
+     * considered non-standard.
+     * 
+     * @see #number(int)
+     */
+    protected ScriptBuilder bigNum(long num) {
+        return bigNum(chunks.size(), num);
+    }
+
+    /**
+     * Adds the given number as a OP_N opcode to the given index in the program.
+     * Only handles values 0-16 inclusive.
+     * 
+     * @see #number(int)
+     */
     public ScriptBuilder smallNum(int index, int num) {
         checkArgument(num >= 0, "Cannot encode negative numbers with smallNum");
         checkArgument(num <= 16, "Cannot encode numbers larger than 16 with smallNum");
         return addChunk(index, new ScriptChunk(Script.encodeToOpN(num), null));
+    }
+
+    /**
+     * Adds the given number as a push data chunk to the given index in the program.
+     * This is intended to use for negative numbers or values > 16, and although
+     * it will accept numbers in the range 0-16 inclusive, the encoding would be
+     * considered non-standard.
+     * 
+     * @see #number(int)
+     */
+    protected ScriptBuilder bigNum(int index, long num) {
+        final byte[] data;
+
+        if (num == 0) {
+            data = new byte[0];
+        } else {
+            Stack<Byte> result = new Stack<Byte>();
+            final boolean neg = num < 0;
+            long absvalue = Math.abs(num);
+
+            while (absvalue != 0) {
+                result.push((byte) (absvalue & 0xff));
+                absvalue >>= 8;
+            }
+
+            if ((result.peek() & 0x80) != 0) {
+                // The most significant byte is >= 0x80, so push an extra byte that
+                // contains just the sign of the value.
+                result.push((byte) (neg ? 0x80 : 0));
+            } else if (neg) {
+                // The most significant byte is < 0x80 and the value is negative,
+                // set the sign bit so it is subtracted and interpreted as a
+                // negative when converting back to an integral.
+                result.push((byte) (result.pop() | 0x80));
+            }
+
+            data = new byte[result.size()];
+            for (int byteIdx = 0; byteIdx < data.length; byteIdx++) {
+                data[byteIdx] = result.get(byteIdx);
+            }
+        }
+
+        // At most the encoded value could take up to 8 bytes, so we don't need
+        // to use OP_PUSHDATA opcodes
+        return addChunk(index, new ScriptChunk(data.length, data));
     }
 
     /** Creates a new immutable Script based on the state of the builder. */
@@ -341,7 +433,56 @@ public class ScriptBuilder {
      * the ledger.
      */
     public static Script createOpReturnScript(byte[] data) {
-        checkArgument(data.length <= 40);
+        checkArgument(data.length <= 80);
         return new ScriptBuilder().op(OP_RETURN).data(data).build();
+    }
+
+    public static Script createCLTVPaymentChannelOutput(BigInteger time, ECKey from, ECKey to) {
+        byte[] timeBytes = Utils.reverseBytes(Utils.encodeMPI(time, false));
+        if (timeBytes.length > 5) {
+            throw new RuntimeException("Time too large to encode as 5-byte int");
+        }
+        return new ScriptBuilder().op(OP_IF)
+                .data(to.getPubKey()).op(OP_CHECKSIGVERIFY)
+                .op(OP_ELSE)
+                .data(timeBytes).op(OP_CHECKLOCKTIMEVERIFY).op(OP_DROP)
+                .op(OP_ENDIF)
+                .data(from.getPubKey()).op(OP_CHECKSIG).build();
+    }
+
+    public static Script createCLTVPaymentChannelRefund(TransactionSignature signature) {
+        ScriptBuilder builder = new ScriptBuilder();
+        builder.data(signature.encodeToBitcoin());
+        builder.data(new byte[] { 0 }); // Use the CHECKLOCKTIMEVERIFY if branch
+        return builder.build();
+    }
+
+    public static Script createCLTVPaymentChannelP2SHRefund(TransactionSignature signature, Script redeemScript) {
+        ScriptBuilder builder = new ScriptBuilder();
+        builder.data(signature.encodeToBitcoin());
+        builder.data(new byte[] { 0 }); // Use the CHECKLOCKTIMEVERIFY if branch
+        builder.data(redeemScript.getProgram());
+        return builder.build();
+    }
+
+    public static Script createCLTVPaymentChannelP2SHInput(byte[] from, byte[] to, Script redeemScript) {
+        ScriptBuilder builder = new ScriptBuilder();
+        builder.data(from);
+        builder.data(to);
+        builder.smallNum(1); // Use the CHECKLOCKTIMEVERIFY if branch
+        builder.data(redeemScript.getProgram());
+        return builder.build();
+    }
+
+    public static Script createCLTVPaymentChannelInput(TransactionSignature from, TransactionSignature to) {
+        return createCLTVPaymentChannelInput(from.encodeToBitcoin(), to.encodeToBitcoin());
+    }
+
+    public static Script createCLTVPaymentChannelInput(byte[] from, byte[] to) {
+        ScriptBuilder builder = new ScriptBuilder();
+        builder.data(from);
+        builder.data(to);
+        builder.smallNum(1); // Use the CHECKLOCKTIMEVERIFY if branch
+        return builder.build();
     }
 }

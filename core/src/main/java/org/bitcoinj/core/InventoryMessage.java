@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,9 +23,10 @@ import static com.google.common.base.Preconditions.checkArgument;
  * a bandwidth optimization - on receiving some data, a (fully validating) peer sends every connected peer an inv
  * containing the hash of what it saw. It'll only transmit the full thing if a peer asks for it with a
  * {@link GetDataMessage}.</p>
+ * 
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class InventoryMessage extends ListMessage {
-    private static final long serialVersionUID = -7050246551646107066L;
 
     /** A hard coded constant in the protocol. */
     public static final int MAX_INV_SIZE = 50000;
@@ -38,17 +39,14 @@ public class InventoryMessage extends ListMessage {
      * Deserializes an 'inv' message.
      * @param params NetworkParameters object.
      * @param payload Bitcoin protocol formatted byte array containing message content.
-     * @param parseLazy Whether to perform a full parse immediately or delay until a read is requested.
-     * @param parseRetain Whether to retain the backing byte array for quick reserialization.  
-     * If true and the backing byte array is invalidated due to modification of a field then 
-     * the cached bytes may be repopulated and retained if the message is serialized again in the future.
+     * @param serializer the serializer to use for this message.
      * @param length The length of message if known.  Usually this is provided when deserializing of the wire
      * as the length will be provided as part of the header.  If unknown then set to Message.UNKNOWN_LENGTH
      * @throws ProtocolException
      */
-    public InventoryMessage(NetworkParameters params, byte[] payload, boolean parseLazy, boolean parseRetain, int length)
+    public InventoryMessage(NetworkParameters params, byte[] payload, MessageSerializer serializer, int length)
             throws ProtocolException {
-        super(params, payload, parseLazy, parseRetain, length);
+        super(params, payload, serializer, length);
     }
 
     public InventoryMessage(NetworkParameters params) {

@@ -2438,8 +2438,8 @@ public final class Protos {
      * <code>optional int64 creation_timestamp = 5;</code>
      *
      * <pre>
-     * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. Only reason it's
-     * optional is that some very old wallets don't have this data.
+     * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. The reason it's
+     * optional is that keys derived from a parent don't have this data.
      * </pre>
      */
     boolean hasCreationTimestamp();
@@ -2447,8 +2447,8 @@ public final class Protos {
      * <code>optional int64 creation_timestamp = 5;</code>
      *
      * <pre>
-     * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. Only reason it's
-     * optional is that some very old wallets don't have this data.
+     * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. The reason it's
+     * optional is that keys derived from a parent don't have this data.
      * </pre>
      */
     long getCreationTimestamp();
@@ -3000,8 +3000,8 @@ public final class Protos {
      * <code>optional int64 creation_timestamp = 5;</code>
      *
      * <pre>
-     * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. Only reason it's
-     * optional is that some very old wallets don't have this data.
+     * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. The reason it's
+     * optional is that keys derived from a parent don't have this data.
      * </pre>
      */
     public boolean hasCreationTimestamp() {
@@ -3011,8 +3011,8 @@ public final class Protos {
      * <code>optional int64 creation_timestamp = 5;</code>
      *
      * <pre>
-     * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. Only reason it's
-     * optional is that some very old wallets don't have this data.
+     * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. The reason it's
+     * optional is that keys derived from a parent don't have this data.
      * </pre>
      */
     public long getCreationTimestamp() {
@@ -3953,8 +3953,8 @@ public final class Protos {
        * <code>optional int64 creation_timestamp = 5;</code>
        *
        * <pre>
-       * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. Only reason it's
-       * optional is that some very old wallets don't have this data.
+       * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. The reason it's
+       * optional is that keys derived from a parent don't have this data.
        * </pre>
        */
       public boolean hasCreationTimestamp() {
@@ -3964,8 +3964,8 @@ public final class Protos {
        * <code>optional int64 creation_timestamp = 5;</code>
        *
        * <pre>
-       * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. Only reason it's
-       * optional is that some very old wallets don't have this data.
+       * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. The reason it's
+       * optional is that keys derived from a parent don't have this data.
        * </pre>
        */
       public long getCreationTimestamp() {
@@ -3975,8 +3975,8 @@ public final class Protos {
        * <code>optional int64 creation_timestamp = 5;</code>
        *
        * <pre>
-       * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. Only reason it's
-       * optional is that some very old wallets don't have this data.
+       * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. The reason it's
+       * optional is that keys derived from a parent don't have this data.
        * </pre>
        */
       public Builder setCreationTimestamp(long value) {
@@ -3989,8 +3989,8 @@ public final class Protos {
        * <code>optional int64 creation_timestamp = 5;</code>
        *
        * <pre>
-       * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. Only reason it's
-       * optional is that some very old wallets don't have this data.
+       * Timestamp stored as millis since epoch. Useful for skipping block bodies before this point. The reason it's
+       * optional is that keys derived from a parent don't have this data.
        * </pre>
        */
       public Builder clearCreationTimestamp() {
@@ -4935,7 +4935,7 @@ public final class Protos {
      * <code>optional uint32 sequence = 4;</code>
      *
      * <pre>
-     * Sequence number. Currently unused, but intended for contracts in future.
+     * Sequence number.
      * </pre>
      */
     boolean hasSequence();
@@ -4943,7 +4943,7 @@ public final class Protos {
      * <code>optional uint32 sequence = 4;</code>
      *
      * <pre>
-     * Sequence number. Currently unused, but intended for contracts in future.
+     * Sequence number.
      * </pre>
      */
     int getSequence();
@@ -5161,7 +5161,7 @@ public final class Protos {
      * <code>optional uint32 sequence = 4;</code>
      *
      * <pre>
-     * Sequence number. Currently unused, but intended for contracts in future.
+     * Sequence number.
      * </pre>
      */
     public boolean hasSequence() {
@@ -5171,7 +5171,7 @@ public final class Protos {
      * <code>optional uint32 sequence = 4;</code>
      *
      * <pre>
-     * Sequence number. Currently unused, but intended for contracts in future.
+     * Sequence number.
      * </pre>
      */
     public int getSequence() {
@@ -5680,7 +5680,7 @@ public final class Protos {
        * <code>optional uint32 sequence = 4;</code>
        *
        * <pre>
-       * Sequence number. Currently unused, but intended for contracts in future.
+       * Sequence number.
        * </pre>
        */
       public boolean hasSequence() {
@@ -5690,7 +5690,7 @@ public final class Protos {
        * <code>optional uint32 sequence = 4;</code>
        *
        * <pre>
-       * Sequence number. Currently unused, but intended for contracts in future.
+       * Sequence number.
        * </pre>
        */
       public int getSequence() {
@@ -5700,7 +5700,7 @@ public final class Protos {
        * <code>optional uint32 sequence = 4;</code>
        *
        * <pre>
-       * Sequence number. Currently unused, but intended for contracts in future.
+       * Sequence number.
        * </pre>
        */
       public Builder setSequence(int value) {
@@ -5713,7 +5713,7 @@ public final class Protos {
        * <code>optional uint32 sequence = 4;</code>
        *
        * <pre>
-       * Sequence number. Currently unused, but intended for contracts in future.
+       * Sequence number.
        * </pre>
        */
       public Builder clearSequence() {
@@ -6646,6 +6646,24 @@ public final class Protos {
     org.bitcoinj.wallet.Protos.PeerAddressOrBuilder getBroadcastByOrBuilder(
         int index);
 
+    // optional int64 last_broadcasted_at = 8;
+    /**
+     * <code>optional int64 last_broadcasted_at = 8;</code>
+     *
+     * <pre>
+     * Millis since epoch the transaction was last announced to us.
+     * </pre>
+     */
+    boolean hasLastBroadcastedAt();
+    /**
+     * <code>optional int64 last_broadcasted_at = 8;</code>
+     *
+     * <pre>
+     * Millis since epoch the transaction was last announced to us.
+     * </pre>
+     */
+    long getLastBroadcastedAt();
+
     // optional .wallet.TransactionConfidence.Source source = 7;
     /**
      * <code>optional .wallet.TransactionConfidence.Source source = 7;</code>
@@ -6656,13 +6674,13 @@ public final class Protos {
      */
     org.bitcoinj.wallet.Protos.TransactionConfidence.Source getSource();
 
-    // optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];
+    // optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];
     /**
-     * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+     * <code>optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];</code>
      */
     boolean hasIxType();
     /**
-     * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+     * <code>optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];</code>
      */
     org.bitcoinj.wallet.Protos.TransactionConfidence.IXType getIxType();
   }
@@ -6765,18 +6783,23 @@ public final class Protos {
               if (value == null) {
                 unknownFields.mergeVarintField(7, rawValue);
               } else {
-                bitField0_ |= 0x00000010;
+                bitField0_ |= 0x00000020;
                 source_ = value;
               }
               break;
             }
             case 64: {
+              bitField0_ |= 0x00000010;
+              lastBroadcastedAt_ = input.readInt64();
+              break;
+            }
+            case 152: {
               int rawValue = input.readEnum();
               org.bitcoinj.wallet.Protos.TransactionConfidence.IXType value = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.valueOf(rawValue);
               if (value == null) {
-                unknownFields.mergeVarintField(8, rawValue);
+                unknownFields.mergeVarintField(19, rawValue);
               } else {
-                bitField0_ |= 0x00000020;
+                bitField0_ |= 0x00000040;
                 ixType_ = value;
               }
               break;
@@ -6830,6 +6853,10 @@ public final class Protos {
         implements com.google.protobuf.ProtocolMessageEnum {
       /**
        * <code>UNKNOWN = 0;</code>
+       *
+       * <pre>
+       * See TransactionConfidence.java for a more thorough explanation of these types.
+       * </pre>
        */
       UNKNOWN(0, 0),
       /**
@@ -6860,14 +6887,26 @@ public final class Protos {
        * <code>DEAD = 4;</code>
        *
        * <pre>
-       * Either if overriding_transaction is present or transaction is dead coinbase
+       * Either if overriding_transaction is present or transaction is dead coinbase.
        * </pre>
        */
       DEAD(4, 4),
+      /**
+       * <code>IN_CONFLICT = 5;</code>
+       *
+       * <pre>
+       * There is another transaction spending one of this transaction inputs.
+       * </pre>
+       */
+      IN_CONFLICT(5, 5),
       ;
 
       /**
        * <code>UNKNOWN = 0;</code>
+       *
+       * <pre>
+       * See TransactionConfidence.java for a more thorough explanation of these types.
+       * </pre>
        */
       public static final int UNKNOWN_VALUE = 0;
       /**
@@ -6898,10 +6937,18 @@ public final class Protos {
        * <code>DEAD = 4;</code>
        *
        * <pre>
-       * Either if overriding_transaction is present or transaction is dead coinbase
+       * Either if overriding_transaction is present or transaction is dead coinbase.
        * </pre>
        */
       public static final int DEAD_VALUE = 4;
+      /**
+       * <code>IN_CONFLICT = 5;</code>
+       *
+       * <pre>
+       * There is another transaction spending one of this transaction inputs.
+       * </pre>
+       */
+      public static final int IN_CONFLICT_VALUE = 5;
 
 
       public final int getNumber() { return value; }
@@ -6913,6 +6960,7 @@ public final class Protos {
           case 2: return PENDING;
           case 3: return NOT_IN_BEST_CHAIN;
           case 4: return DEAD;
+          case 5: return IN_CONFLICT;
           default: return null;
         }
       }
@@ -7313,6 +7361,30 @@ public final class Protos {
       return broadcastBy_.get(index);
     }
 
+    // optional int64 last_broadcasted_at = 8;
+    public static final int LAST_BROADCASTED_AT_FIELD_NUMBER = 8;
+    private long lastBroadcastedAt_;
+    /**
+     * <code>optional int64 last_broadcasted_at = 8;</code>
+     *
+     * <pre>
+     * Millis since epoch the transaction was last announced to us.
+     * </pre>
+     */
+    public boolean hasLastBroadcastedAt() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional int64 last_broadcasted_at = 8;</code>
+     *
+     * <pre>
+     * Millis since epoch the transaction was last announced to us.
+     * </pre>
+     */
+    public long getLastBroadcastedAt() {
+      return lastBroadcastedAt_;
+    }
+
     // optional .wallet.TransactionConfidence.Source source = 7;
     public static final int SOURCE_FIELD_NUMBER = 7;
     private org.bitcoinj.wallet.Protos.TransactionConfidence.Source source_;
@@ -7320,7 +7392,7 @@ public final class Protos {
      * <code>optional .wallet.TransactionConfidence.Source source = 7;</code>
      */
     public boolean hasSource() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
      * <code>optional .wallet.TransactionConfidence.Source source = 7;</code>
@@ -7329,17 +7401,17 @@ public final class Protos {
       return source_;
     }
 
-    // optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];
-    public static final int IXTYPE_FIELD_NUMBER = 8;
+    // optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];
+    public static final int IXTYPE_FIELD_NUMBER = 19;
     private org.bitcoinj.wallet.Protos.TransactionConfidence.IXType ixType_;
     /**
-     * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+     * <code>optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];</code>
      */
     public boolean hasIxType() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return ((bitField0_ & 0x00000040) == 0x00000040);
     }
     /**
-     * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+     * <code>optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];</code>
      */
     public org.bitcoinj.wallet.Protos.TransactionConfidence.IXType getIxType() {
       return ixType_;
@@ -7351,6 +7423,7 @@ public final class Protos {
       overridingTransaction_ = com.google.protobuf.ByteString.EMPTY;
       depth_ = 0;
       broadcastBy_ = java.util.Collections.emptyList();
+      lastBroadcastedAt_ = 0L;
       source_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Source.SOURCE_UNKNOWN;
       ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
     }
@@ -7387,11 +7460,14 @@ public final class Protos {
       for (int i = 0; i < broadcastBy_.size(); i++) {
         output.writeMessage(6, broadcastBy_.get(i));
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeEnum(7, source_.getNumber());
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeEnum(8, ixType_.getNumber());
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeInt64(8, lastBroadcastedAt_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeEnum(19, ixType_.getNumber());
       }
       getUnknownFields().writeTo(output);
     }
@@ -7422,13 +7498,17 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(6, broadcastBy_.get(i));
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(7, source_.getNumber());
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(8, ixType_.getNumber());
+          .computeInt64Size(8, lastBroadcastedAt_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(19, ixType_.getNumber());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -7569,10 +7649,12 @@ public final class Protos {
         } else {
           broadcastByBuilder_.clear();
         }
-        source_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Source.SOURCE_UNKNOWN;
+        lastBroadcastedAt_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000020);
-        ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
+        source_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Source.SOURCE_UNKNOWN;
         bitField0_ = (bitField0_ & ~0x00000040);
+        ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
@@ -7629,9 +7711,13 @@ public final class Protos {
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000010;
         }
-        result.source_ = source_;
+        result.lastBroadcastedAt_ = lastBroadcastedAt_;
         if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
           to_bitField0_ |= 0x00000020;
+        }
+        result.source_ = source_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000040;
         }
         result.ixType_ = ixType_;
         result.bitField0_ = to_bitField0_;
@@ -7687,6 +7773,9 @@ public final class Protos {
               broadcastByBuilder_.addAllMessages(other.broadcastBy_);
             }
           }
+        }
+        if (other.hasLastBroadcastedAt()) {
+          setLastBroadcastedAt(other.getLastBroadcastedAt());
         }
         if (other.hasSource()) {
           setSource(other.getSource());
@@ -8181,13 +8270,62 @@ public final class Protos {
         return broadcastByBuilder_;
       }
 
+      // optional int64 last_broadcasted_at = 8;
+      private long lastBroadcastedAt_ ;
+      /**
+       * <code>optional int64 last_broadcasted_at = 8;</code>
+       *
+       * <pre>
+       * Millis since epoch the transaction was last announced to us.
+       * </pre>
+       */
+      public boolean hasLastBroadcastedAt() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>optional int64 last_broadcasted_at = 8;</code>
+       *
+       * <pre>
+       * Millis since epoch the transaction was last announced to us.
+       * </pre>
+       */
+      public long getLastBroadcastedAt() {
+        return lastBroadcastedAt_;
+      }
+      /**
+       * <code>optional int64 last_broadcasted_at = 8;</code>
+       *
+       * <pre>
+       * Millis since epoch the transaction was last announced to us.
+       * </pre>
+       */
+      public Builder setLastBroadcastedAt(long value) {
+        bitField0_ |= 0x00000020;
+        lastBroadcastedAt_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 last_broadcasted_at = 8;</code>
+       *
+       * <pre>
+       * Millis since epoch the transaction was last announced to us.
+       * </pre>
+       */
+      public Builder clearLastBroadcastedAt() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        lastBroadcastedAt_ = 0L;
+        onChanged();
+        return this;
+      }
+
       // optional .wallet.TransactionConfidence.Source source = 7;
       private org.bitcoinj.wallet.Protos.TransactionConfidence.Source source_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Source.SOURCE_UNKNOWN;
       /**
        * <code>optional .wallet.TransactionConfidence.Source source = 7;</code>
        */
       public boolean hasSource() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return ((bitField0_ & 0x00000040) == 0x00000040);
       }
       /**
        * <code>optional .wallet.TransactionConfidence.Source source = 7;</code>
@@ -8202,7 +8340,7 @@ public final class Protos {
         if (value == null) {
           throw new NullPointerException();
         }
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000040;
         source_ = value;
         onChanged();
         return this;
@@ -8211,43 +8349,43 @@ public final class Protos {
        * <code>optional .wallet.TransactionConfidence.Source source = 7;</code>
        */
       public Builder clearSource() {
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000040);
         source_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Source.SOURCE_UNKNOWN;
         onChanged();
         return this;
       }
 
-      // optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];
+      // optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];
       private org.bitcoinj.wallet.Protos.TransactionConfidence.IXType ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
       /**
-       * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+       * <code>optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];</code>
        */
       public boolean hasIxType() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
+        return ((bitField0_ & 0x00000080) == 0x00000080);
       }
       /**
-       * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+       * <code>optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];</code>
        */
       public org.bitcoinj.wallet.Protos.TransactionConfidence.IXType getIxType() {
         return ixType_;
       }
       /**
-       * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+       * <code>optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];</code>
        */
       public Builder setIxType(org.bitcoinj.wallet.Protos.TransactionConfidence.IXType value) {
         if (value == null) {
           throw new NullPointerException();
         }
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000080;
         ixType_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+       * <code>optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];</code>
        */
       public Builder clearIxType() {
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000080);
         ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
         onChanged();
         return this;
@@ -19215,62 +19353,63 @@ public final class Protos {
       "\030\004 \001(\r\022\r\n\005value\030\005 \001(\003\"\177\n\021TransactionOutp" +
       "ut\022\r\n\005value\030\001 \002(\003\022\024\n\014script_bytes\030\002 \002(\014\022" +
       "!\n\031spent_by_transaction_hash\030\003 \001(\014\022\"\n\032sp" +
-      "ent_by_transaction_index\030\004 \001(\005\"\376\003\n\025Trans" +
+      "ent_by_transaction_index\030\004 \001(\005\"\254\004\n\025Trans" +
       "actionConfidence\0220\n\004type\030\001 \001(\0162\".wallet." +
       "TransactionConfidence.Type\022\032\n\022appeared_a" +
       "t_height\030\002 \001(\005\022\036\n\026overriding_transaction",
       "\030\003 \001(\014\022\r\n\005depth\030\004 \001(\005\022)\n\014broadcast_by\030\006 " +
-      "\003(\0132\023.wallet.PeerAddress\0224\n\006source\030\007 \001(\016" +
-      "2$.wallet.TransactionConfidence.Source\022=" +
-      "\n\006ixType\030\010 \001(\0162$.wallet.TransactionConfi" +
-      "dence.IXType:\007IX_NONE\"O\n\004Type\022\013\n\007UNKNOWN" +
-      "\020\000\022\014\n\010BUILDING\020\001\022\013\n\007PENDING\020\002\022\025\n\021NOT_IN_" +
-      "BEST_CHAIN\020\003\022\010\n\004DEAD\020\004\"A\n\006Source\022\022\n\016SOUR" +
-      "CE_UNKNOWN\020\000\022\022\n\016SOURCE_NETWORK\020\001\022\017\n\013SOUR" +
-      "CE_SELF\020\002\"4\n\006IXType\022\013\n\007IX_NONE\020\000\022\016\n\nIX_R" +
-      "EQUEST\020\001\022\r\n\tIX_LOCKED\020\002\"\303\005\n\013Transaction\022",
-      "\017\n\007version\030\001 \002(\005\022\014\n\004hash\030\002 \002(\014\022&\n\004pool\030\003" +
-      " \001(\0162\030.wallet.Transaction.Pool\022\021\n\tlock_t" +
-      "ime\030\004 \001(\r\022\022\n\nupdated_at\030\005 \001(\003\0223\n\021transac" +
-      "tion_input\030\006 \003(\0132\030.wallet.TransactionInp" +
-      "ut\0225\n\022transaction_output\030\007 \003(\0132\031.wallet." +
-      "TransactionOutput\022\022\n\nblock_hash\030\010 \003(\014\022 \n" +
-      "\030block_relativity_offsets\030\013 \003(\005\0221\n\nconfi" +
-      "dence\030\t \001(\0132\035.wallet.TransactionConfiden" +
-      "ce\0225\n\007purpose\030\n \001(\0162\033.wallet.Transaction" +
-      ".Purpose:\007UNKNOWN\022+\n\rexchange_rate\030\014 \001(\013",
-      "2\024.wallet.ExchangeRate\022\014\n\004memo\030\r \001(\t\"Y\n\004" +
-      "Pool\022\013\n\007UNSPENT\020\004\022\t\n\005SPENT\020\005\022\014\n\010INACTIVE" +
-      "\020\002\022\010\n\004DEAD\020\n\022\013\n\007PENDING\020\020\022\024\n\020PENDING_INA" +
-      "CTIVE\020\022\"\243\001\n\007Purpose\022\013\n\007UNKNOWN\020\000\022\020\n\014USER" +
-      "_PAYMENT\020\001\022\020\n\014KEY_ROTATION\020\002\022\034\n\030ASSURANC" +
-      "E_CONTRACT_CLAIM\020\003\022\035\n\031ASSURANCE_CONTRACT" +
-      "_PLEDGE\020\004\022\033\n\027ASSURANCE_CONTRACT_STUB\020\005\022\r" +
-      "\n\tRAISE_FEE\020\006\"N\n\020ScryptParameters\022\014\n\004sal" +
-      "t\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\0018\022" +
-      "\014\n\001p\030\004 \001(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001 \002(\t\022\014",
-      "\n\004data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022\013" +
-      "\n\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"5\n\021Transaction" +
-      "Signer\022\022\n\nclass_name\030\001 \002(\t\022\014\n\004data\030\002 \001(\014" +
-      "\"\351\004\n\006Wallet\022\032\n\022network_identifier\030\001 \002(\t\022" +
-      "\034\n\024last_seen_block_hash\030\002 \001(\014\022\036\n\026last_se" +
-      "en_block_height\030\014 \001(\r\022!\n\031last_seen_block" +
-      "_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013.wallet.K" +
-      "ey\022(\n\013transaction\030\004 \003(\0132\023.wallet.Transac" +
-      "tion\022&\n\016watched_script\030\017 \003(\0132\016.wallet.Sc" +
-      "ript\022C\n\017encryption_type\030\005 \001(\0162\035.wallet.W",
-      "allet.EncryptionType:\013UNENCRYPTED\0227\n\025enc" +
-      "ryption_parameters\030\006 \001(\0132\030.wallet.Scrypt" +
-      "Parameters\022\022\n\007version\030\007 \001(\005:\0011\022$\n\textens" +
-      "ion\030\n \003(\0132\021.wallet.Extension\022\023\n\013descript" +
-      "ion\030\013 \001(\t\022\031\n\021key_rotation_time\030\r \001(\004\022\031\n\004" +
-      "tags\030\020 \003(\0132\013.wallet.Tag\0226\n\023transaction_s" +
-      "igners\030\021 \003(\0132\031.wallet.TransactionSigner\"" +
-      ";\n\016EncryptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024EN" +
-      "CRYPTED_SCRYPT_AES\020\002\"R\n\014ExchangeRate\022\022\n\n" +
-      "coin_value\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n\022",
-      "fiat_currency_code\030\003 \002(\tB\035\n\023org.bitcoinj" +
-      ".walletB\006Protos"
+      "\003(\0132\023.wallet.PeerAddress\022\033\n\023last_broadca" +
+      "sted_at\030\010 \001(\003\0224\n\006source\030\007 \001(\0162$.wallet.T" +
+      "ransactionConfidence.Source\022=\n\006ixType\030\023 " +
+      "\001(\0162$.wallet.TransactionConfidence.IXTyp" +
+      "e:\007IX_NONE\"`\n\004Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILD" +
+      "ING\020\001\022\013\n\007PENDING\020\002\022\025\n\021NOT_IN_BEST_CHAIN\020" +
+      "\003\022\010\n\004DEAD\020\004\022\017\n\013IN_CONFLICT\020\005\"A\n\006Source\022\022" +
+      "\n\016SOURCE_UNKNOWN\020\000\022\022\n\016SOURCE_NETWORK\020\001\022\017" +
+      "\n\013SOURCE_SELF\020\002\"4\n\006IXType\022\013\n\007IX_NONE\020\000\022\016",
+      "\n\nIX_REQUEST\020\001\022\r\n\tIX_LOCKED\020\002\"\303\005\n\013Transa" +
+      "ction\022\017\n\007version\030\001 \002(\005\022\014\n\004hash\030\002 \002(\014\022&\n\004" +
+      "pool\030\003 \001(\0162\030.wallet.Transaction.Pool\022\021\n\t" +
+      "lock_time\030\004 \001(\r\022\022\n\nupdated_at\030\005 \001(\003\0223\n\021t" +
+      "ransaction_input\030\006 \003(\0132\030.wallet.Transact" +
+      "ionInput\0225\n\022transaction_output\030\007 \003(\0132\031.w" +
+      "allet.TransactionOutput\022\022\n\nblock_hash\030\010 " +
+      "\003(\014\022 \n\030block_relativity_offsets\030\013 \003(\005\0221\n" +
+      "\nconfidence\030\t \001(\0132\035.wallet.TransactionCo" +
+      "nfidence\0225\n\007purpose\030\n \001(\0162\033.wallet.Trans",
+      "action.Purpose:\007UNKNOWN\022+\n\rexchange_rate" +
+      "\030\014 \001(\0132\024.wallet.ExchangeRate\022\014\n\004memo\030\r \001" +
+      "(\t\"Y\n\004Pool\022\013\n\007UNSPENT\020\004\022\t\n\005SPENT\020\005\022\014\n\010IN" +
+      "ACTIVE\020\002\022\010\n\004DEAD\020\n\022\013\n\007PENDING\020\020\022\024\n\020PENDI" +
+      "NG_INACTIVE\020\022\"\243\001\n\007Purpose\022\013\n\007UNKNOWN\020\000\022\020" +
+      "\n\014USER_PAYMENT\020\001\022\020\n\014KEY_ROTATION\020\002\022\034\n\030AS" +
+      "SURANCE_CONTRACT_CLAIM\020\003\022\035\n\031ASSURANCE_CO" +
+      "NTRACT_PLEDGE\020\004\022\033\n\027ASSURANCE_CONTRACT_ST" +
+      "UB\020\005\022\r\n\tRAISE_FEE\020\006\"N\n\020ScryptParameters\022" +
+      "\014\n\004salt\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001",
+      "(\005:\0018\022\014\n\001p\030\004 \001(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001" +
+      " \002(\t\022\014\n\004data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n" +
+      "\003Tag\022\013\n\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"5\n\021Trans" +
+      "actionSigner\022\022\n\nclass_name\030\001 \002(\t\022\014\n\004data" +
+      "\030\002 \001(\014\"\351\004\n\006Wallet\022\032\n\022network_identifier\030" +
+      "\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022\036\n\026l" +
+      "ast_seen_block_height\030\014 \001(\r\022!\n\031last_seen" +
+      "_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013.wa" +
+      "llet.Key\022(\n\013transaction\030\004 \003(\0132\023.wallet.T" +
+      "ransaction\022&\n\016watched_script\030\017 \003(\0132\016.wal",
+      "let.Script\022C\n\017encryption_type\030\005 \001(\0162\035.wa" +
+      "llet.Wallet.EncryptionType:\013UNENCRYPTED\022" +
+      "7\n\025encryption_parameters\030\006 \001(\0132\030.wallet." +
+      "ScryptParameters\022\022\n\007version\030\007 \001(\005:\0011\022$\n\t" +
+      "extension\030\n \003(\0132\021.wallet.Extension\022\023\n\013de" +
+      "scription\030\013 \001(\t\022\031\n\021key_rotation_time\030\r \001" +
+      "(\004\022\031\n\004tags\030\020 \003(\0132\013.wallet.Tag\0226\n\023transac" +
+      "tion_signers\030\021 \003(\0132\031.wallet.TransactionS" +
+      "igner\";\n\016EncryptionType\022\017\n\013UNENCRYPTED\020\001" +
+      "\022\030\n\024ENCRYPTED_SCRYPT_AES\020\002\"R\n\014ExchangeRa",
+      "te\022\022\n\ncoin_value\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002" +
+      "(\003\022\032\n\022fiat_currency_code\030\003 \002(\tB\035\n\023org.bi" +
+      "tcoinj.walletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -19324,7 +19463,7 @@ public final class Protos {
           internal_static_wallet_TransactionConfidence_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_wallet_TransactionConfidence_descriptor,
-              new java.lang.String[] { "Type", "AppearedAtHeight", "OverridingTransaction", "Depth", "BroadcastBy", "Source", "IxType", });
+              new java.lang.String[] { "Type", "AppearedAtHeight", "OverridingTransaction", "Depth", "BroadcastBy", "LastBroadcastedAt", "Source", "IxType", });
           internal_static_wallet_Transaction_descriptor =
             getDescriptor().getMessageTypes().get(8);
           internal_static_wallet_Transaction_fieldAccessorTable = new

@@ -19,9 +19,9 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <groupId>org.dashj</groupId>
-    <artifactId>dashj-parent</artifactId>
-    <version>0.13.2.12.1</version>
+      <groupId>org.dashj</groupId>
+      <artifactId>dashj-parent</artifactId>
+      <version>0.14.3</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -52,19 +52,37 @@
                           </excludes>
                       </filter>
                   </filters>
-                  <transformers>
-                      <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                          <mainClass>org.bitcoinj.tools.WalletTool</mainClass>
-                      </transformer>
-                  </transformers>
-                  <outputFile>target/wallet-tool.jar</outputFile>
               </configuration>
               <executions>
                   <execution>
+                      <id>shade-wallet-tool</id>
                       <phase>package</phase>
                       <goals>
                           <goal>shade</goal>
                       </goals>
+                      <configuration>
+                          <transformers>
+                              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                  <mainClass>org.bitcoinj.tools.WalletTool</mainClass>
+                              </transformer>
+                          </transformers>
+                          <outputFile>target/wallet-tool.jar</outputFile>
+                      </configuration>
+                  </execution>
+                  <execution>
+                      <id>shade-build-checkpoints</id>
+                      <phase>package</phase>
+                      <goals>
+                          <goal>shade</goal>
+                      </goals>
+                      <configuration>
+                          <transformers>
+                              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                  <mainClass>org.bitcoinj.tools.BuildCheckpoints</mainClass>
+                              </transformer>
+                          </transformers>
+                          <outputFile>target/build-checkpoints.jar</outputFile>
+                      </configuration>
                   </execution>
               </executions>
           </plugin>
@@ -86,7 +104,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-jdk14</artifactId>
-      <version>1.7.7</version>
+      <version>1.7.20</version>
     </dependency>
     <dependency>
       <groupId>com.h2database</groupId>

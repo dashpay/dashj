@@ -27,26 +27,26 @@ public abstract class AbstractManager extends Message {
 
     public void load(byte [] payload, int offset)
     {
-        this.protocolVersion = NetworkParameters.PROTOCOL_VERSION;
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
         this.payload = payload;
         this.cursor = this.offset = offset;
         this.length = payload.length;
-        this.parsed = false;
+        /*this.parsed = false;
         if (parseLazy) {
             parseLite();
         } else {
             parseLite();
             parse();
             parsed = true;
-        }
+        }*/
 
         if (this.length == UNKNOWN_LENGTH)
             checkState(false, "Length field has not been set in constructor for %s after %s parse. " +
                             "Refer to Message.parseLite() for detail of required Length field contract.",
-                    getClass().getSimpleName(), parseLazy ? "lite" : "full");
+                    getClass().getSimpleName(), /*parseLazy ? "lite" :*/ "full");
 
-        if (parseRetain || !parsed)
-            return;
+        //if (parseRetain || !parsed)
+        //    return;
         this.payload = null;
         parse();
     }

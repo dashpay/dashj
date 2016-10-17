@@ -16,6 +16,7 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 
 import java.io.IOException;
@@ -36,12 +37,14 @@ import java.util.List;
  * space and time. If you want to look up unspent outputs by address, you can either query a block explorer site,
  * or you can use the {@link FullPrunedBlockChain} class to build the required indexes yourself. Bear in that it will
  * be quite slow and disk intensive to do that!</p>
+ * 
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class GetUTXOsMessage extends Message {
     public static final int MIN_PROTOCOL_VERSION = 70002;
 
     /** Bitmask of service flags required for a node to support this command (0x3) */
-    public static final int SERVICE_FLAGS_REQUIRED = 3;
+    public static final long SERVICE_FLAGS_REQUIRED = 3;
 
     private boolean includeMempool;
     private ImmutableList<TransactionOutPoint> outPoints;
@@ -79,13 +82,8 @@ public class GetUTXOsMessage extends Message {
     }
 
     @Override
-    protected void parseLite() throws ProtocolException {
-        // Not needed.
-    }
-
-    @Override
-    void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        stream.write(new byte[]{1});  // include mempool.
+    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        stream.write(new byte[]{includeMempool ? (byte) 1 : 0});  // include mempool.
         stream.write(new VarInt(outPoints.size()).encode());
         for (TransactionOutPoint outPoint : outPoints) {
             outPoint.bitcoinSerializeToStream(stream);
@@ -96,19 +94,12 @@ public class GetUTXOsMessage extends Message {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
-        GetUTXOsMessage that = (GetUTXOsMessage) o;
-
-        if (includeMempool != that.includeMempool) return false;
-        if (!outPoints.equals(that.outPoints)) return false;
-
-        return true;
+        GetUTXOsMessage other = (GetUTXOsMessage) o;
+        return includeMempool == other.includeMempool && outPoints.equals(other.outPoints);
     }
 
     @Override
     public int hashCode() {
-        int result = (includeMempool ? 1 : 0);
-        result = 31 * result + outPoints.hashCode();
-        return result;
+        return Objects.hashCode(includeMempool, outPoints);
     }
 }

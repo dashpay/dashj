@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,8 @@ import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.protocols.payments.PaymentProtocol.PkiVerificationData;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.SendRequest;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -291,13 +293,13 @@ public class PaymentSession {
     }
 
     /**
-     * Returns a {@link Wallet.SendRequest} suitable for broadcasting to the network.
+     * Returns a {@link SendRequest} suitable for broadcasting to the network.
      */
-    public Wallet.SendRequest getSendRequest() {
+    public SendRequest getSendRequest() {
         Transaction tx = new Transaction(params);
         for (Protos.Output output : paymentDetails.getOutputsList())
             tx.addOutput(new TransactionOutput(params, tx, Coin.valueOf(output.getAmount()), output.getScript().toByteArray()));
-        return Wallet.SendRequest.forTx(tx).fromPaymentDetails(paymentDetails);
+        return SendRequest.forTx(tx).fromPaymentDetails(paymentDetails);
     }
 
     /**

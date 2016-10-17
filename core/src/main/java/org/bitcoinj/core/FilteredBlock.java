@@ -1,5 +1,6 @@
-/**
+/*
  * Copyright 2012 Matt Corallo
+ * Copyright 2015 Andreas Schildbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.base.Objects;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
@@ -23,10 +25,10 @@ import java.util.*;
 /**
  * <p>A FilteredBlock is used to relay a block with its transactions filtered using a {@link BloomFilter}. It consists
  * of the block header and a {@link PartialMerkleTree} which contains the transactions which matched the filter.</p>
+ * 
+ * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class FilteredBlock extends Message {
-    /** The protocol version at which Bloom filtering started to be supported. */
-    public static final int MIN_PROTOCOL_VERSION = 70000;
     private Block header;
 
     private PartialMerkleTree merkleTree;
@@ -56,19 +58,14 @@ public class FilteredBlock extends Message {
     }
 
     @Override
-    void parse() throws ProtocolException {
+    protected void parse() throws ProtocolException {
         byte[] headerBytes = new byte[Block.HEADER_SIZE];
         System.arraycopy(payload, 0, headerBytes, 0, Block.HEADER_SIZE);
-        header = new Block(params, headerBytes);
+        header = params.getDefaultSerializer().makeBlock(headerBytes);
         
         merkleTree = new PartialMerkleTree(params, payload, Block.HEADER_SIZE);
         
         length = Block.HEADER_SIZE + merkleTree.getMessageSize();
-    }
-    
-    @Override
-    protected void parseLite() throws ProtocolException {
-
     }
     
     /**
@@ -132,22 +129,14 @@ public class FilteredBlock extends Message {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
-        FilteredBlock block = (FilteredBlock) o;
-
-        if (!associatedTransactions.equals(block.associatedTransactions)) return false;
-        if (!header.equals(block.header)) return false;
-        if (!merkleTree.equals(block.merkleTree)) return false;
-
-        return true;
+        FilteredBlock other = (FilteredBlock) o;
+        return associatedTransactions.equals(other.associatedTransactions)
+            && header.equals(other.header) && merkleTree.equals(other.merkleTree);
     }
 
     @Override
     public int hashCode() {
-        int result = header.hashCode();
-        result = 31 * result + merkleTree.hashCode();
-        result = 31 * result + associatedTransactions.hashCode();
-        return result;
+        return Objects.hashCode(associatedTransactions, header, merkleTree);
     }
 
     @Override

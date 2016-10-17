@@ -1,6 +1,5 @@
 package org.bitcoinj.core;
 
-import com.squareup.okhttp.internal.Network;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.darkcoinj.DarkSend;
@@ -38,13 +37,7 @@ public class MasternodeBroadcast extends Masternode {
 
 
     private transient int optimalEncodingMessageSize;
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
+
 
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
@@ -67,10 +60,7 @@ public class MasternodeBroadcast extends Masternode {
     }
 
     @Override
-    void parse() throws ProtocolException {
-        if (parsed)
-            return;
-
+    protected void parse() throws ProtocolException {
 
         vin = new TransactionInput(params, null, payload, cursor);
         cursor += vin.getMessageSize();
@@ -445,13 +435,13 @@ public class MasternodeBroadcast extends Masternode {
 
         // if it matches our Masternode privkey...
         if(DarkCoinSystem.fMasterNode && pubkey2 == context.activeMasternode.pubKeyMasternode) {
-            if(protocolVersion == NetworkParameters.PROTOCOL_VERSION) {
+            if(protocolVersion == params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT)) {
                 // ... and PROTOCOL_VERSION, then we've been remotely activated ...
                 context.activeMasternode.enableHotColdMasterNode(vin, address);
             } else {
                 // ... otherwise we need to reactivate our node, don not add it to the list and do not relay
                 // but also do not ban the node we get this message from
-                log.info("CMasternodeBroadcast::CheckInputsAndAdd - wrong PROTOCOL_VERSION, announce message: "+protocolVersion+" MN: "+NetworkParameters.PROTOCOL_VERSION+" - re-activate your MN");
+                log.info("CMasternodeBroadcast::CheckInputsAndAdd - wrong PROTOCOL_VERSION, announce message: "+protocolVersion+" MN: "+params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT)+" - re-activate your MN");
                 return false;
             }
         }
@@ -461,7 +451,7 @@ public class MasternodeBroadcast extends Masternode {
         context.masternodeManager.add(mn);
 
         // if it matches our Masternode privkey, then we've been remotely activated
-        if(pubkey2.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion == NetworkParameters.PROTOCOL_VERSION){
+        if(pubkey2.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion == CoinDefinition.PROTOCOL_VERSION){
             context.activeMasternode.enableHotColdMasterNode(vin, address);
         }
 

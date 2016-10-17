@@ -64,13 +64,6 @@ public class MasternodePing extends Message implements Serializable {
         this.context = Context.get();
     }
 
-    @Override
-    protected void parseLite() throws ProtocolException {
-        if (parseLazy && length == UNKNOWN_LENGTH) {
-            length = calcLength(payload, offset);
-            cursor = offset + length;
-        }
-    }
 
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
@@ -118,9 +111,7 @@ public class MasternodePing extends Message implements Serializable {
     }
 
     @Override
-    void parse() throws ProtocolException {
-        if (parsed)
-            return;
+    protected void parse() throws ProtocolException {
 
         vin = new TransactionInput(params, null, payload, cursor);
         cursor += vin.getMessageSize();
@@ -282,7 +273,6 @@ public class MasternodePing extends Message implements Serializable {
 
     public boolean equals(Object o)
     {
-        maybeParse();
         MasternodePing mnp = (MasternodePing)o;
         if(mnp.sigTime == this.sigTime &&
                 mnp.vin.equals(this.vin) &&

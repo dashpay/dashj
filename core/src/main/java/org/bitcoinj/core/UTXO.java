@@ -1,12 +1,12 @@
-/**
+/*
  * Copyright 2012 Matt Corallo.
- * <p/>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p/>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,9 +17,11 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.script.*;
+import com.google.common.base.Objects;
 
 import java.io.*;
 import java.math.*;
+import java.util.Locale;
 
 // TODO: Fix this class: should not talk about addresses, height should be optional/support mempool height etc
 
@@ -28,8 +30,7 @@ import java.math.*;
  * It avoids having to store the entire parentTransaction just to get the hash and index.
  * Useful when working with free standing outputs.
  */
-public class UTXO implements Serializable {
-    private static final long serialVersionUID = -8744924157056340509L;
+public class UTXO {
 
     private Coin value;
     private Script script;
@@ -156,12 +157,12 @@ public class UTXO implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("Stored TxOut of %s (%s:%d)", value.toFriendlyString(), hash, index);
+        return String.format(Locale.US, "Stored TxOut of %s (%s:%d)", value.toFriendlyString(), hash, index);
     }
 
     @Override
     public int hashCode() {
-        return hash.hashCode() + (int) index;
+        return Objects.hashCode(getIndex(), getHash());
     }
 
     @Override
@@ -169,8 +170,7 @@ public class UTXO implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         UTXO other = (UTXO) o;
-        return getHash().equals(other.getHash()) &&
-                getIndex() == other.getIndex();
+        return getIndex() == other.getIndex() && getHash().equals(other.getHash());
     }
 
     public void serializeToStream(OutputStream bos) throws IOException {

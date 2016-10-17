@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +42,6 @@ public class VerificationException extends RuntimeException {
         }
     }
 
-
     public static class DuplicatedOutPoint extends VerificationException {
         public DuplicatedOutPoint() {
             super("Duplicated outpoint");
@@ -68,9 +67,23 @@ public class VerificationException extends RuntimeException {
         }
     }
 
+
+    public static class BlockVersionOutOfDate extends VerificationException {
+        public BlockVersionOutOfDate(final long version) {
+            super("Block version #"
+                + version + " is outdated.");
+        }
+    }
+
     public static class UnexpectedCoinbaseInput extends VerificationException {
         public UnexpectedCoinbaseInput() {
             super("Coinbase input as input in non-coinbase transaction");
+        }
+    }
+
+    public static class CoinbaseHeightMismatch extends VerificationException {
+        public CoinbaseHeightMismatch(final String message) {
+            super(message);
         }
     }
 }

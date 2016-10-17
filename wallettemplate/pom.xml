@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.dashj</groupId>
         <artifactId>dashj-parent</artifactId>
-        <version>0.13.2.12.1</version>
+        <version>0.14.3</version>
     </parent>
 
     <groupId>org.dashj</groupId>
@@ -64,7 +64,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>16.0.1</version>
+            <version>18.0</version>
         </dependency>
         <!-- Native Mac skin (there's also AeroFX, MetroFX, etc)
         <dependency>

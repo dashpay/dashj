@@ -22,13 +22,13 @@
     <parent>
         <groupId>org.dashj</groupId>
         <artifactId>dashj-parent</artifactId>
-        <version>0.13.2.12.1</version>
+        <version>0.14.3</version>
     </parent>
 
     <artifactId>dashj-core</artifactId>
 
     <name>dashj</name>
-    <description>A Java darkcoin library</description>
+    <description>A Java Dash library</description>
 
     <packaging>jar</packaging>
 
@@ -187,8 +187,8 @@
                                         <urn>com.fasterxml.jackson.core:jackson-core:2.5.1:jar:null:test:e2a00ad1d7e540ec395e9296a34da484c8888d4d</urn>
                                         <urn>com.fasterxml.jackson.core:jackson-databind:2.5.2:jar:null:test:2b4dd13fbe6f8c6b146d4c3b7fd70862f136802d</urn>
                                         <urn>com.google.code.findbugs:jsr305:2.0.1:jar:null:compile:516c03b21d50a644d538de0f0369c620989cd8f0</urn>
-                                        <urn>com.google.guava:guava:16.0.1:jar:null:compile:5fa98cd1a63c99a44dd8d3b77e4762b066a5d0c5</urn>
-                                        <urn>com.google.protobuf:protobuf-java:2.5.0:jar:null:compile:a10732c76bfacdbd633a7eb0f7968b1059a65dfa</urn>
+                                        <urn>com.google.guava:guava:18.0:jar:null:compile:cce0823396aa693798f8882e64213b1772032b09</urn>
+                                        <urn>com.google.protobuf:protobuf-java:2.6.1:jar:null:compile:d9521f2aecb909835746b7a5facf612af5e890e8</urn>
                                         <urn>com.h2database:h2:1.3.167:jar:null:compile:d3867d586f087e53eb12fc65e5693d8ee9a5da17</urn>
                                         <urn>com.lambdaworks:scrypt:1.4.0:jar:null:compile:906506b74f30c8c20bccd9ed4a11112d8941fe87</urn>
                                         <urn>com.madgag.spongycastle:core:1.51.0.0:jar:null:compile:0f642963312ea0e615ad65f28adc5a5b3a2a0862</urn>
@@ -197,7 +197,6 @@
                                         <urn>net.jcip:jcip-annotations:1.0:jar:null:compile:afba4942caaeaf46aab0b976afd57cc7c181467e</urn>
                                         <urn>org.apache.maven.plugins:maven-clean-plugin:2.6.1:maven-plugin:null:runtime:bfdf7d6c2f8fc8759457e9d54f458ba56ac7b30f</urn>
                                         <urn>org.apache.maven.plugins:maven-compiler-plugin:3.2:maven-plugin:null:runtime:aec10f274ac07fafab8906cb1aa69669d753b2c2</urn>
-                                        <urn>org.apache.maven.plugins:maven-dependency-plugin:2.10:maven-plugin:null:runtime:af87ceeb71c6499147c5d27f74c9317bf707538e</urn>
                                         <urn>org.apache.maven.plugins:maven-deploy-plugin:2.8.2:maven-plugin:null:runtime:3c2d83ecd387e9843142ae92a0439792c1500319</urn>
                                         <urn>org.apache.maven.plugins:maven-enforcer-plugin:1.0:maven-plugin:null:runtime:ad032b7593576e9fe9305c73865633e163895b29</urn>
                                         <urn>org.apache.maven.plugins:maven-install-plugin:2.5.2:maven-plugin:null:runtime:8a67631619fc3c1d1f036e59362ddce71e1e496f</urn>
@@ -207,17 +206,17 @@
                                         <urn>org.apache.maven.plugins:maven-shade-plugin:2.3:maven-plugin:null:runtime:d136adc7abccc9c12adcad6ae7a9bc51b2b7184b</urn>
                                         <urn>org.apache.maven.plugins:maven-site-plugin:3.4:maven-plugin:null:runtime:659cd5f1dd8bff554cf52603339494cbf7f283c5</urn>
                                         <urn>org.apache.maven.plugins:maven-source-plugin:2.4:maven-plugin:null:runtime:46f0d7f7823d729ba300d3f8929900c7e9cb5ac0</urn>
-                                        <urn>org.apache.maven.plugins:maven-surefire-plugin:2.18.1:maven-plugin:null:runtime:402fd3066fd6d85ea4a1a3e7cd82a7e35037e6e8</urn>
+                                        <urn>org.apache.maven.plugins:maven-surefire-plugin:2.19.1:maven-plugin:null:runtime:e2ee016ce9183ffa9e86c543690cadda7b3aea15</urn>
                                         <urn>org.easymock:easymock:3.2:jar:null:test:00c82f7fa3ef377d8954b1db25123944b5af2ba4</urn>
                                         <urn>org.eluder.coveralls:coveralls-maven-plugin:3.1.0:maven-plugin:null:runtime:ca9d2915e2b1e99f15c9f54ad653eda893d42a69</urn>
                                         <urn>org.fusesource.leveldbjni:leveldbjni-all:1.8:jar:null:compile:707350a2eeb1fa2ed77a32ddb3893ed308e941db</urn>
                                         <urn>org.hamcrest:hamcrest-core:1.3:jar:null:test:42a25dc3219429f0e5d060061f71acb49bf010a0</urn>
                                         <urn>org.jacoco:jacoco-maven-plugin:0.7.5.201505241946:maven-plugin:null:runtime:0a5e4dbbcd9b00e5ee42d928e10ab84f6f0b0835</urn>
                                         <urn>org.objenesis:objenesis:1.2:jar:null:test:bfcb0539a071a4c5a30690388903ac48c0667f2a</urn>
-                                        <urn>com.squareup.okhttp:okhttp:2.2.0:jar:null:runtime:959c454243581fdf730abfd4f4745441724bcf2c</urn>
-                                        <urn>com.squareup.okio:okio:1.2.0:jar:null:runtime:c0b52915a48fa91b1b94a28d4a2997bac5f524df</urn>
-                                        <urn>org.slf4j:slf4j-api:1.7.7:jar:null:compile:2b8019b6249bb05d81d3a3094e468753e2b21311</urn>
-                                        <urn>org.slf4j:slf4j-jdk14:1.7.7:jar:null:test:25d160723ea37a6cb84e87cd70773ff02997e857</urn>
+                                        <urn>com.squareup.okhttp:okhttp:2.7.2:jar:null:runtime:20f6463eb19ac61960c5d91a094c2f4f0727dc2e</urn>
+                                        <urn>com.squareup.okio:okio:1.6.0:jar:null:runtime:98476622f10715998eacf9240d6b479f12c66143</urn>
+                                        <urn>org.slf4j:slf4j-api:1.7.20:jar:null:compile:867d63093eff0a0cb527bf13d397d850af3dcae3</urn>
+                                        <urn>org.slf4j:slf4j-jdk14:1.7.20:jar:null:test:b568c92eec50edc922c52b3e759982579170c2be</urn>
                                         <urn>org.sonatype.plugins:nexus-staging-maven-plugin:1.6.5:maven-plugin:null:runtime:455ca2aa8cd14a06608f1538bd6a1efd09561563</urn>
                                         <urn>postgresql:postgresql:9.1-901.jdbc4:jar:null:compile:153f2f92a786f12fc111d0111f709012df87c808</urn>
                                         <!-- A check for the rules themselves -->
@@ -321,8 +320,14 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>${surefireArgLine}</argLine> <!-- This is required for code coverage to work. -->
+                    <argLine>-Xmx1024m ${surefireArgLine}</argLine><!-- Last argument is required for code coverage to work. -->
                     <runOrder>alphabetical</runOrder>
+                    <systemProperties>
+                        <property>
+                            <name>java.util.logging.config.file</name>
+                            <value>src/test/resources/logging.properties</value>
+                        </property>
+                    </systemProperties>
                 </configuration>
             </plugin>
 
@@ -331,78 +336,6 @@
                 <groupId>org.eluder.coveralls</groupId>
                 <artifactId>coveralls-maven-plugin</artifactId>
                 <version>3.1.0</version>
-            </plugin>
-
-            <!-- Create a bundled executable test jar that runs the regtester/pulltester.
-                 The comparison tool is kind of messy and badly needs a seriously refactoring.
-                 It depends on classes which are only in the test tree so we must do some
-                 Maven kung fu here to create a bundle of it, as I couldn't make Maven Shade
-                 do bundling on the test jar for some reason. Maven kind of sucks ...
-              -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>unzip-lib</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>unpack</goal>
-                        </goals>
-                        <configuration>
-                            <overWriteReleases>false</overWriteReleases>
-                            <overWriteSnapshots>false</overWriteSnapshots>
-                            <overWriteIfNewer>true</overWriteIfNewer>
-                            <artifactItems>
-                                <artifactItem>
-                                    <outputDirectory>target/test-classes/</outputDirectory>
-                                    <groupId>org.dashj</groupId>
-                                    <artifactId>dashj-core</artifactId>
-                                    <version>${project.version}</version>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>unzip-deps</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>unpack-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>target/test-classes/</outputDirectory>
-                            <overWriteReleases>false</overWriteReleases>
-                            <overWriteSnapshots>false</overWriteSnapshots>
-                            <overWriteIfNewer>true</overWriteIfNewer>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>test-jar</goal>
-                        </goals>
-                        <configuration>
-                            <archive>
-                                <manifest>
-                                    <mainClass>org.bitcoinj.core.BitcoindComparisonTool</mainClass>
-                                    <addClasspath>false</addClasspath>
-                                </manifest>
-                            </archive>
-                            <finalName>pull</finalName>    <!-- becomes pull-tests.jar on disk (hacky) -->
-                            <excludes>
-                                <exclude>META-INF/*.SF</exclude>
-                                <exclude>META-INF/*.DSA</exclude>
-                                <exclude>META-INF/*.RSA</exclude>
-                            </excludes>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
@@ -426,7 +359,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
-            <version>1.7.7</version>
+            <version>1.7.20</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -449,12 +382,12 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>2.5.0</version>
+            <version>2.6.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>16.0.1</version>
+            <version>18.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
@@ -496,12 +429,12 @@
         <dependency>
             <groupId>org.bitcoinj</groupId>
             <artifactId>orchid</artifactId>
-            <version>1.1.1</version>
+            <version>1.2.1</version>
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp</groupId>
             <artifactId>okhttp</artifactId>
-            <version>2.2.0</version>
+            <version>2.7.2</version>
         </dependency>
     </dependencies>
 

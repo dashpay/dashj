@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  * Copyright 2012 Matt Corallo.
  * Copyright 2014 Andreas Schildbach
@@ -62,10 +62,20 @@ public class Script {
         P2SH
     }
 
-    /** Flags to pass to {@link Script#correctlySpends(Transaction, long, Script, Set)}. */
+    /** Flags to pass to {@link Script#correctlySpends(Transaction, long, Script, Set)}.
+     * Note currently only P2SH, DERSIG and NULLDUMMY are actually supported.
+     */
     public enum VerifyFlag {
         P2SH, // Enable BIP16-style subscript evaluation.
-        NULLDUMMY // Verify dummy stack item consumed by CHECKMULTISIG is of zero-length.
+        STRICTENC, // Passing a non-strict-DER signature or one with undefined hashtype to a checksig operation causes script failure.
+        DERSIG, // Passing a non-strict-DER signature to a checksig operation causes script failure (softfork safe, BIP66 rule 1)
+        LOW_S, // Passing a non-strict-DER signature or one with S > order/2 to a checksig operation causes script failure
+        NULLDUMMY, // Verify dummy stack item consumed by CHECKMULTISIG is of zero-length.
+        SIGPUSHONLY, // Using a non-push operator in the scriptSig causes script failure (softfork safe, BIP62 rule 2).
+        MINIMALDATA, // Require minimal encodings for all push operations
+        DISCOURAGE_UPGRADABLE_NOPS, // Discourage use of NOPs reserved for upgrades (NOP1-10)
+        CLEANSTACK, // Require that only a single stack element remains after evaluation.
+        CHECKLOCKTIMEVERIFY // Enable CHECKLOCKTIMEVERIFY operation
     }
     public static final EnumSet<VerifyFlag> ALL_VERIFY_FLAGS = EnumSet.allOf(VerifyFlag.class);
 
@@ -131,7 +141,7 @@ public class Script {
     /** Returns the serialized program as a newly created byte array. */
     public byte[] getProgram() {
         try {
-            // Don't round-trip as Satoshi's code doesn't and it would introduce a mismatch.
+            // Don't round-trip as Bitcoin Core doesn't and it would introduce a mismatch.
             if (program != null)
                 return Arrays.copyOf(program, program.length);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -164,7 +174,7 @@ public class Script {
      * <p>The reason for this split, instead of just interpreting directly, is to make it easier
      * to reach into a programs structure and pull out bits of data without having to run it.
      * This is necessary to render the to/from addresses of transactions in a user interface.
-     * The official client does something similar.</p>
+     * Bitcoin Core does something similar.</p>
      */
     private void parse(byte[] program) throws ScriptException {
         chunks = new ArrayList<ScriptChunk>(5);   // Common size.
@@ -290,6 +300,37 @@ public class Script {
         } else {
             throw new ScriptException("Script did not match expected form: " + this);
         }
+    }
+
+    /**
+     * Retrieves the sender public key from a LOCKTIMEVERIFY transaction
+     * @return
+     * @throws ScriptException
+     */
+    public byte[] getCLTVPaymentChannelSenderPubKey() throws ScriptException {
+        if (!isSentToCLTVPaymentChannel()) {
+            throw new ScriptException("Script not a standard CHECKLOCKTIMVERIFY transaction: " + this);
+        }
+        return chunks.get(8).data;
+    }
+
+    /**
+     * Retrieves the recipient public key from a LOCKTIMEVERIFY transaction
+     * @return
+     * @throws ScriptException
+     */
+    public byte[] getCLTVPaymentChannelRecipientPubKey() throws ScriptException {
+        if (!isSentToCLTVPaymentChannel()) {
+            throw new ScriptException("Script not a standard CHECKLOCKTIMVERIFY transaction: " + this);
+        }
+        return chunks.get(1).data;
+    }
+
+    public BigInteger getCLTVPaymentChannelExpiry() {
+        if (!isSentToCLTVPaymentChannel()) {
+            throw new ScriptException("Script not a standard CHECKLOCKTIMEVERIFY transaction: " + this);
+        }
+        return castToBigInteger(chunks.get(4).data, 5);
     }
 
     /**
@@ -630,7 +671,7 @@ public class Script {
      * <p>Whether or not this is a scriptPubKey representing a pay-to-script-hash output. In such outputs, the logic that
      * controls reclamation is not actually in the output at all. Instead there's just a hash, and it's up to the
      * spending input to provide a program matching that hash. This rule is "soft enforced" by the network as it does
-     * not exist in Satoshis original implementation. It means blocks containing P2SH transactions that don't match
+     * not exist in Bitcoin Core. It means blocks containing P2SH transactions that don't match
      * correctly are considered valid, but won't be mined upon, so they'll be rapidly re-orgd out of the chain. This
      * logic is defined by <a href="https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki">BIP 16</a>.</p>
      *
@@ -673,6 +714,22 @@ public class Script {
         } catch (IllegalStateException e) {
             return false;   // Not an OP_N opcode.
         }
+        return true;
+    }
+
+    public boolean isSentToCLTVPaymentChannel() {
+        if (chunks.size() != 10) return false;
+        // Check that opcodes match the pre-determined format.
+        if (!chunks.get(0).equalsOpCode(OP_IF)) return false;
+        // chunk[1] = recipient pubkey
+        if (!chunks.get(2).equalsOpCode(OP_CHECKSIGVERIFY)) return false;
+        if (!chunks.get(3).equalsOpCode(OP_ELSE)) return false;
+        // chunk[4] = locktime
+        if (!chunks.get(5).equalsOpCode(OP_CHECKLOCKTIMEVERIFY)) return false;
+        if (!chunks.get(6).equalsOpCode(OP_DROP)) return false;
+        if (!chunks.get(7).equalsOpCode(OP_ENDIF)) return false;
+        // chunk[8] = sender pubkey
+        if (!chunks.get(9).equalsOpCode(OP_CHECKSIG)) return false;
         return true;
     }
 
@@ -736,21 +793,43 @@ public class Script {
     private static boolean castToBool(byte[] data) {
         for (int i = 0; i < data.length; i++)
         {
-            // "Can be negative zero" -reference client (see OpenSSL's BN_bn2mpi)
+            // "Can be negative zero" - Bitcoin Core (see OpenSSL's BN_bn2mpi)
             if (data[i] != 0)
                 return !(i == data.length - 1 && (data[i] & 0xFF) == 0x80);
         }
         return false;
     }
     
+    /**
+     * Cast a script chunk to a BigInteger.
+     *
+     * @see #castToBigInteger(byte[], int) for values with different maximum
+     * sizes.
+     * @throws ScriptException if the chunk is longer than 4 bytes.
+     */
     private static BigInteger castToBigInteger(byte[] chunk) throws ScriptException {
         if (chunk.length > 4)
             throw new ScriptException("Script attempted to use an integer larger than 4 bytes");
         return Utils.decodeMPI(Utils.reverseBytes(chunk), false);
     }
 
+    /**
+     * Cast a script chunk to a BigInteger. Normally you would want
+     * {@link #castToBigInteger(byte[])} instead, this is only for cases where
+     * the normal maximum length does not apply (i.e. CHECKLOCKTIMEVERIFY).
+     *
+     * @param maxLength the maximum length in bytes.
+     * @throws ScriptException if the chunk is longer than the specified maximum.
+     */
+    private static BigInteger castToBigInteger(final byte[] chunk, final int maxLength) throws ScriptException {
+        if (chunk.length > maxLength)
+            throw new ScriptException("Script attempted to use an integer larger than "
+                + maxLength + " bytes");
+        return Utils.decodeMPI(Utils.reverseBytes(chunk), false);
+    }
+
     public boolean isOpReturn() {
-        return chunks.size() == 2 && chunks.get(0).equalsOpCode(OP_RETURN);
+        return chunks.size() > 0 && chunks.get(0).equalsOpCode(OP_RETURN);
     }
 
     public boolean isUnspendable() {
@@ -763,9 +842,29 @@ public class Script {
      * {@link org.bitcoinj.script.Script#correctlySpends(org.bitcoinj.core.Transaction, long, Script)}. This method
      * is useful if you need more precise control or access to the final state of the stack. This interface is very
      * likely to change in future.
+     *
+     * @deprecated Use {@link #executeScript(org.bitcoinj.core.Transaction, long, org.bitcoinj.script.Script, java.util.LinkedList, java.util.Set)}
+     * instead.
      */
+    @Deprecated
     public static void executeScript(@Nullable Transaction txContainingThis, long index,
                                      Script script, LinkedList<byte[]> stack, boolean enforceNullDummy) throws ScriptException {
+        final EnumSet<VerifyFlag> flags = enforceNullDummy
+            ? EnumSet.of(VerifyFlag.NULLDUMMY)
+            : EnumSet.noneOf(VerifyFlag.class);
+
+        executeScript(txContainingThis, index, script, stack, flags);
+    }
+
+    /**
+     * Exposes the script interpreter. Normally you should not use this directly, instead use
+     * {@link org.bitcoinj.core.TransactionInput#verify(org.bitcoinj.core.TransactionOutput)} or
+     * {@link org.bitcoinj.script.Script#correctlySpends(org.bitcoinj.core.Transaction, long, Script)}. This method
+     * is useful if you need more precise control or access to the final state of the stack. This interface is very
+     * likely to change in future.
+     */
+    public static void executeScript(@Nullable Transaction txContainingThis, long index,
+                                     Script script, LinkedList<byte[]> stack, Set<VerifyFlag> verifyFlags) throws ScriptException {
         int opCount = 0;
         int lastCodeSepLocation = 0;
         
@@ -774,8 +873,13 @@ public class Script {
         
         for (ScriptChunk chunk : script.chunks) {
             boolean shouldExecute = !ifStack.contains(false);
-            
-            if (!chunk.isOpCode()) {
+
+            if (chunk.opcode == OP_0) {
+                if (!shouldExecute)
+                    continue;
+
+                stack.add(new byte[] {});
+            } else if (!chunk.isOpCode()) {
                 if (chunk.data.length > MAX_SCRIPT_ELEMENT_SIZE)
                     throw new ScriptException("Attempted to push a data string larger than 520 bytes");
                 
@@ -1026,7 +1130,7 @@ public class Script {
                 case OP_EQUAL:
                     if (stack.size() < 2)
                         throw new ScriptException("Attempted OP_EQUALVERIFY on a stack with size < 2");
-                    stack.add(Arrays.equals(stack.pollLast(), stack.pollLast()) ? new byte[] {1} : new byte[] {0});
+                    stack.add(Arrays.equals(stack.pollLast(), stack.pollLast()) ? new byte[] {1} : new byte[] {});
                     break;
                 case OP_EQUALVERIFY:
                     if (stack.size() < 2)
@@ -1237,16 +1341,25 @@ public class Script {
                 case OP_CHECKSIGVERIFY:
                     if (txContainingThis == null)
                         throw new IllegalStateException("Script attempted signature check but no tx was provided");
-                    executeCheckSig(txContainingThis, (int) index, script, stack, lastCodeSepLocation, opcode);
+                    executeCheckSig(txContainingThis, (int) index, script, stack, lastCodeSepLocation, opcode, verifyFlags);
                     break;
                 case OP_CHECKMULTISIG:
                 case OP_CHECKMULTISIGVERIFY:
                     if (txContainingThis == null)
                         throw new IllegalStateException("Script attempted signature check but no tx was provided");
-                    opCount = executeMultiSig(txContainingThis, (int) index, script, stack, opCount, lastCodeSepLocation, opcode, enforceNullDummy);
+                    opCount = executeMultiSig(txContainingThis, (int) index, script, stack, opCount, lastCodeSepLocation, opcode, verifyFlags);
+                    break;
+                case OP_CHECKLOCKTIMEVERIFY:
+                    if (!verifyFlags.contains(VerifyFlag.CHECKLOCKTIMEVERIFY)) {
+                        // not enabled; treat as a NOP2
+                        if (verifyFlags.contains(VerifyFlag.DISCOURAGE_UPGRADABLE_NOPS)) {
+                            throw new ScriptException("Script used a reserved opcode " + opcode);
+                        }
+                        break;
+                    }
+                    executeCheckLockTimeVerify(txContainingThis, (int) index, script, stack, lastCodeSepLocation, opcode, verifyFlags);
                     break;
                 case OP_NOP1:
-                case OP_NOP2:
                 case OP_NOP3:
                 case OP_NOP4:
                 case OP_NOP5:
@@ -1255,6 +1368,9 @@ public class Script {
                 case OP_NOP8:
                 case OP_NOP9:
                 case OP_NOP10:
+                    if (verifyFlags.contains(VerifyFlag.DISCOURAGE_UPGRADABLE_NOPS)) {
+                        throw new ScriptException("Script used a reserved opcode " + opcode);
+                    }
                     break;
                     
                 default:
@@ -1270,8 +1386,52 @@ public class Script {
             throw new ScriptException("OP_IF/OP_NOTIF without OP_ENDIF");
     }
 
+    // This is more or less a direct translation of the code in Bitcoin Core
+    private static void executeCheckLockTimeVerify(Transaction txContainingThis, int index, Script script, LinkedList<byte[]> stack,
+                                        int lastCodeSepLocation, int opcode,
+                                        Set<VerifyFlag> verifyFlags) throws ScriptException {
+        if (stack.size() < 1)
+            throw new ScriptException("Attempted OP_CHECKLOCKTIMEVERIFY on a stack with size < 1");
+
+        // Thus as a special case we tell CScriptNum to accept up
+        // to 5-byte bignums to avoid year 2038 issue.
+        final BigInteger nLockTime = castToBigInteger(stack.getLast(), 5);
+
+        if (nLockTime.compareTo(BigInteger.ZERO) < 0)
+            throw new ScriptException("Negative locktime");
+
+        // There are two kinds of nLockTime, need to ensure we're comparing apples-to-apples
+        if (!(
+            ((txContainingThis.getLockTime() <  Transaction.LOCKTIME_THRESHOLD) && (nLockTime.compareTo(Transaction.LOCKTIME_THRESHOLD_BIG)) < 0) ||
+            ((txContainingThis.getLockTime() >= Transaction.LOCKTIME_THRESHOLD) && (nLockTime.compareTo(Transaction.LOCKTIME_THRESHOLD_BIG)) >= 0))
+        )
+            throw new ScriptException("Locktime requirement type mismatch");
+
+        // Now that we know we're comparing apples-to-apples, the
+        // comparison is a simple numeric one.
+        if (nLockTime.compareTo(BigInteger.valueOf(txContainingThis.getLockTime())) > 0)
+            throw new ScriptException("Locktime requirement not satisfied");
+
+        // Finally the nLockTime feature can be disabled and thus
+        // CHECKLOCKTIMEVERIFY bypassed if every txin has been
+        // finalized by setting nSequence to maxint. The
+        // transaction would be allowed into the blockchain, making
+        // the opcode ineffective.
+        //
+        // Testing if this vin is not final is sufficient to
+        // prevent this condition. Alternatively we could test all
+        // inputs, but testing just this input minimizes the data
+        // required to prove correct CHECKLOCKTIMEVERIFY execution.
+        if (!txContainingThis.getInput(index).hasSequence())
+            throw new ScriptException("Transaction contains a final transaction input for a CHECKLOCKTIMEVERIFY script.");
+    }
+
     private static void executeCheckSig(Transaction txContainingThis, int index, Script script, LinkedList<byte[]> stack,
-                                        int lastCodeSepLocation, int opcode) throws ScriptException {
+                                        int lastCodeSepLocation, int opcode, 
+                                        Set<VerifyFlag> verifyFlags) throws ScriptException {
+        final boolean requireCanonical = verifyFlags.contains(VerifyFlag.STRICTENC)
+            || verifyFlags.contains(VerifyFlag.DERSIG)
+            || verifyFlags.contains(VerifyFlag.LOW_S);
         if (stack.size() < 2)
             throw new ScriptException("Attempted OP_CHECKSIG(VERIFY) on a stack with size < 2");
         byte[] pubKey = stack.pollLast();
@@ -1291,7 +1451,10 @@ public class Script {
         // TODO: Use int for indexes everywhere, we can't have that many inputs/outputs
         boolean sigValid = false;
         try {
-            TransactionSignature sig  = TransactionSignature.decodeFromBitcoin(sigBytes, false);
+            TransactionSignature sig  = TransactionSignature.decodeFromBitcoin(sigBytes, requireCanonical,
+                verifyFlags.contains(VerifyFlag.LOW_S));
+
+            // TODO: Should check hash type is known
             Sha256Hash hash = txContainingThis.hashForSignature(index, connectedScript, (byte) sig.sighashFlags);
             sigValid = ECKey.verify(hash.getBytes(), sig, pubKey);
         } catch (Exception e1) {
@@ -1301,18 +1464,22 @@ public class Script {
             // This RuntimeException occurs when signing as we run partial/invalid scripts to see if they need more
             // signing work to be done inside LocalTransactionSigner.signInputs.
             if (!e1.getMessage().contains("Reached past end of ASN.1 stream"))
-                log.warn("Signature checking failed! {}", e1.toString());
+                log.warn("Signature checking failed!", e1);
         }
 
         if (opcode == OP_CHECKSIG)
-            stack.add(sigValid ? new byte[] {1} : new byte[] {0});
+            stack.add(sigValid ? new byte[] {1} : new byte[] {});
         else if (opcode == OP_CHECKSIGVERIFY)
             if (!sigValid)
                 throw new ScriptException("Script failed OP_CHECKSIGVERIFY");
     }
 
     private static int executeMultiSig(Transaction txContainingThis, int index, Script script, LinkedList<byte[]> stack,
-                                       int opCount, int lastCodeSepLocation, int opcode, boolean enforceNullDummy) throws ScriptException {
+                                       int opCount, int lastCodeSepLocation, int opcode, 
+                                       Set<VerifyFlag> verifyFlags) throws ScriptException {
+        final boolean requireCanonical = verifyFlags.contains(VerifyFlag.STRICTENC)
+            || verifyFlags.contains(VerifyFlag.DERSIG)
+            || verifyFlags.contains(VerifyFlag.LOW_S);
         if (stack.size() < 2)
             throw new ScriptException("Attempted OP_CHECKMULTISIG(VERIFY) on a stack with size < 2");
         int pubKeyCount = castToBigInteger(stack.pollLast()).intValue();
@@ -1361,7 +1528,7 @@ public class Script {
             // We could reasonably move this out of the loop, but because signature verification is significantly
             // more expensive than hashing, its not a big deal.
             try {
-                TransactionSignature sig = TransactionSignature.decodeFromBitcoin(sigs.getFirst(), false);
+                TransactionSignature sig = TransactionSignature.decodeFromBitcoin(sigs.getFirst(), requireCanonical);
                 Sha256Hash hash = txContainingThis.hashForSignature(index, connectedScript, (byte) sig.sighashFlags);
                 if (ECKey.verify(hash.getBytes(), sig, pubKey))
                     sigs.pollFirst();
@@ -1376,13 +1543,13 @@ public class Script {
             }
         }
 
-        // We uselessly remove a stack object to emulate a reference client bug.
+        // We uselessly remove a stack object to emulate a Bitcoin Core bug.
         byte[] nullDummy = stack.pollLast();
-        if (enforceNullDummy && nullDummy.length > 0)
+        if (verifyFlags.contains(VerifyFlag.NULLDUMMY) && nullDummy.length > 0)
             throw new ScriptException("OP_CHECKMULTISIG(VERIFY) with non-null nulldummy: " + Arrays.toString(nullDummy));
 
         if (opcode == OP_CHECKMULTISIG) {
-            stack.add(valid ? new byte[] {1} : new byte[] {0});
+            stack.add(valid ? new byte[] {1} : new byte[] {});
         } else if (opcode == OP_CHECKMULTISIGVERIFY) {
             if (!valid)
                 throw new ScriptException("Script failed OP_CHECKMULTISIGVERIFY");
@@ -1397,7 +1564,11 @@ public class Script {
      *                         Accessing txContainingThis from another thread while this method runs results in undefined behavior.
      * @param scriptSigIndex The index in txContainingThis of the scriptSig (note: NOT the index of the scriptPubKey).
      * @param scriptPubKey The connected scriptPubKey containing the conditions needed to claim the value.
+     * @deprecated Use {@link #correctlySpends(org.bitcoinj.core.Transaction, long, org.bitcoinj.script.Script, java.util.Set)}
+     * instead so that verification flags do not change as new verification options
+     * are added.
      */
+    @Deprecated
     public void correctlySpends(Transaction txContainingThis, long scriptSigIndex, Script scriptPubKey)
             throws ScriptException {
         correctlySpends(txContainingThis, scriptSigIndex, scriptPubKey, ALL_VERIFY_FLAGS);
@@ -1417,7 +1588,7 @@ public class Script {
         // Clone the transaction because executing the script involves editing it, and if we die, we'll leave
         // the tx half broken (also it's not so thread safe to work on it directly.
         try {
-            txContainingThis = new Transaction(txContainingThis.getParams(), txContainingThis.bitcoinSerialize());
+            txContainingThis = txContainingThis.getParams().getDefaultSerializer().makeTransaction(txContainingThis.bitcoinSerialize());
         } catch (ProtocolException e) {
             throw new RuntimeException(e);   // Should not happen unless we were given a totally broken transaction.
         }
@@ -1427,10 +1598,10 @@ public class Script {
         LinkedList<byte[]> stack = new LinkedList<byte[]>();
         LinkedList<byte[]> p2shStack = null;
         
-        executeScript(txContainingThis, scriptSigIndex, this, stack, verifyFlags.contains(VerifyFlag.NULLDUMMY));
+        executeScript(txContainingThis, scriptSigIndex, this, stack, verifyFlags);
         if (verifyFlags.contains(VerifyFlag.P2SH))
             p2shStack = new LinkedList<byte[]>(stack);
-        executeScript(txContainingThis, scriptSigIndex, scriptPubKey, stack, verifyFlags.contains(VerifyFlag.NULLDUMMY));
+        executeScript(txContainingThis, scriptSigIndex, scriptPubKey, stack, verifyFlags);
         
         if (stack.size() == 0)
             throw new ScriptException("Stack empty at end of script execution.");
@@ -1459,7 +1630,7 @@ public class Script {
             byte[] scriptPubKeyBytes = p2shStack.pollLast();
             Script scriptPubKeyP2SH = new Script(scriptPubKeyBytes);
             
-            executeScript(txContainingThis, scriptSigIndex, scriptPubKeyP2SH, p2shStack, verifyFlags.contains(VerifyFlag.NULLDUMMY));
+            executeScript(txContainingThis, scriptSigIndex, scriptPubKeyP2SH, p2shStack, verifyFlags);
             
             if (p2shStack.size() == 0)
                 throw new ScriptException("P2SH stack empty at end of script execution.");
@@ -1496,13 +1667,11 @@ public class Script {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Script other = (Script) o;
-        return Arrays.equals(getQuickProgram(), other.getQuickProgram());
+        return Arrays.equals(getQuickProgram(), ((Script)o).getQuickProgram());
     }
 
     @Override
     public int hashCode() {
-        byte[] bytes = getQuickProgram();
-        return Arrays.hashCode(bytes);
+        return Arrays.hashCode(getQuickProgram());
     }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2013 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -150,7 +150,7 @@ public class SPVBlockStore implements BlockStore {
     }
 
     /** Returns the size in bytes of the file that is used to store the chain with the current parameters. */
-    public int getFileSize() {
+    public final int getFileSize() {
         return RECORD_SIZE * numHeaders + FILE_PROLOGUE_BYTES /* extra kilobyte for stuff */;
     }
 

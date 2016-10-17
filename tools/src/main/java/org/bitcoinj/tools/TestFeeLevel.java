@@ -1,9 +1,27 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.tools;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.listeners.PeerConnectedEventListener;
+import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.SendRequest;
+import org.bitcoinj.wallet.Wallet;
 
 import java.io.File;
 
@@ -12,7 +30,8 @@ import java.io.File;
  */
 public class TestFeeLevel {
 
-    public static final MainNetParams PARAMS = MainNetParams.get();
+    private static final MainNetParams PARAMS = MainNetParams.get();
+    private static final int NUM_OUTPUTS = 2;
     private static WalletAppKit kit;
 
     public static void main(String[] args) throws Exception {
@@ -29,20 +48,18 @@ public class TestFeeLevel {
         kit.startAsync();
         kit.awaitRunning();
         try {
-            go(feeToTest);
+            go(feeToTest, NUM_OUTPUTS);
         } finally {
             kit.stopAsync();
             kit.awaitTerminated();
         }
     }
 
-    private static void go(Coin feeToTest) throws InterruptedException, java.util.concurrent.ExecutionException, InsufficientMoneyException {
-        kit.peerGroup().setMaxConnections(50);
-
-        final Address address = kit.wallet().currentReceiveKey().toAddress(PARAMS);
+    private static void go(Coin feeToTest, int numOutputs) throws InterruptedException, java.util.concurrent.ExecutionException, InsufficientMoneyException {
+        kit.peerGroup().setMaxConnections(25);
 
         if (kit.wallet().getBalance().compareTo(feeToTest) < 0) {
-            System.out.println("Send some money to " + address);
+            System.out.println("Send some money to " + kit.wallet().currentReceiveAddress());
             System.out.println("... and wait for it to confirm");
             kit.wallet().getBalanceFuture(feeToTest, Wallet.BalanceType.AVAILABLE).get();
         }
@@ -50,12 +67,33 @@ public class TestFeeLevel {
         int heightAtStart = kit.chain().getBestChainHeight();
         System.out.println("Height at start is " + heightAtStart);
 
-        Wallet.SendRequest request = Wallet.SendRequest.to(address, kit.wallet().getBalance().subtract(feeToTest));
+        Coin value = kit.wallet().getBalance().subtract(feeToTest);
+        Coin outputValue = value.divide(numOutputs);
+        Transaction transaction = new Transaction(PARAMS);
+        for (int i = 0; i < numOutputs - 1; i++) {
+            transaction.addOutput(outputValue, kit.wallet().freshReceiveAddress());
+            value = value.subtract(outputValue);
+        }
+        transaction.addOutput(value, kit.wallet().freshReceiveAddress());
+        SendRequest request = SendRequest.forTx(transaction);
         request.feePerKb = feeToTest;
         request.ensureMinRequiredFee = false;
         kit.wallet().completeTx(request);
-        System.out.println("Fee paid is " + request.fee.toFriendlyString());
+        System.out.println("Size in bytes is " + request.tx.unsafeBitcoinSerialize().length);
         System.out.println("TX is " + request.tx);
+        System.out.println("Waiting for " + kit.peerGroup().getMaxConnections() + " connected peers");
+        kit.peerGroup().addDisconnectedEventListener(new PeerDisconnectedEventListener() {
+            @Override
+            public void onPeerDisconnected(Peer peer, int peerCount) {
+                System.out.println(peerCount + " peers connected");
+            }
+        });
+        kit.peerGroup().addConnectedEventListener(new PeerConnectedEventListener() {
+            @Override
+            public void onPeerConnected(Peer peer, int peerCount) {
+                System.out.println(peerCount + " peers connected");
+            }
+        });
         kit.peerGroup().broadcastTransaction(request.tx).future().get();
         System.out.println("Send complete, waiting for confirmation");
         request.tx.getConfidence().getDepthFuture(1).get();

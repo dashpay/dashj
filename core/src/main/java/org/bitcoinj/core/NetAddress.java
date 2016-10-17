@@ -50,18 +50,11 @@ public class NetAddress extends ChildMessage {
      * @param payload Bitcoin protocol formatted byte array containing message content.
      * @param offset The location of the first payload byte within the array.
      * @param protocolVersion Bitcoin protocol version.
-     * @param parseLazy Whether to perform a full parse immediately or delay until a read is requested.
-     * @param parseRetain Whether to retain the backing byte array for quick reserialization.
-     * If true and the backing byte array is invalidated due to modification of a field then
-     * the cached bytes may be repopulated and retained if the message is serialized again in the future.
+     * @param serializer the serializer to use for this message.
      * @throws ProtocolException
      */
-    public NetAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion, Message parent, boolean parseLazy,
-                      boolean parseRetain) throws ProtocolException {
-        super(params, payload, offset, protocolVersion, parent, parseLazy, parseRetain, UNKNOWN_LENGTH);
-        // Message length is calculated in parseLite which is guaranteed to be called before it is ever read.
-        // Even though message length is static for a PeerAddress it is safer to leave it there
-        // as it will be set regardless of which constructor was used.
+    public NetAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion, Message parent, MessageSerializer serializer) throws ProtocolException {
+        super(params, payload, offset, protocolVersion, parent, serializer, UNKNOWN_LENGTH);
     }
 
 
@@ -92,11 +85,6 @@ public class NetAddress extends ChildMessage {
     }
 
     @Override
-    protected void parseLite() {
-        length = MESSAGE_SIZE;
-    }
-
-    @Override
     protected void parse() throws ProtocolException {
         // Format of a serialized address:
         //   16 bytes ip address
@@ -105,19 +93,13 @@ public class NetAddress extends ChildMessage {
         byte[] addrBytes = readBytes(16);
         try {
             addr = InetAddress.getByAddress(addrBytes);
+            length = MESSAGE_SIZE;
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);  // Cannot happen.
         }
     }
 
-    @Override
-    public int getMessageSize() {
-        length = MESSAGE_SIZE;
-        return length;
-    }
-
     public InetAddress getAddr() {
-        maybeParse();
         return addr;
     }
 

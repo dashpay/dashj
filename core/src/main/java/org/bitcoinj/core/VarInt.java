@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2011 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,7 +67,7 @@ public class VarInt {
     /**
      * Returns the minimum encoded size of the value.
      */
-    public int getSizeInBytes() {
+    public final int getSizeInBytes() {
         return sizeOf(value);
     }
 

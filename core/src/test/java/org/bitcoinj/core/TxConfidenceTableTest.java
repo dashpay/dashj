@@ -27,7 +27,7 @@ import static org.bitcoinj.core.Coin.*;
 import static org.junit.Assert.*;
 
 public class TxConfidenceTableTest {
-    private NetworkParameters params = UnitTestParams.get();
+    private static final NetworkParameters PARAMS = UnitTestParams.get();
     private Transaction tx1, tx2;
     private PeerAddress address1, address2, address3;
     private TxConfidenceTable table;
@@ -35,34 +35,34 @@ public class TxConfidenceTableTest {
     @Before
     public void setup() throws Exception {
         BriefLogFormatter.init();
-        Context context = new Context(params);
+        Context context = new Context(PARAMS);
         table = context.getConfidenceTable();
 
-        Address to = new ECKey().toAddress(params);
-        Address change = new ECKey().toAddress(params);
+        Address to = new ECKey().toAddress(PARAMS);
+        Address change = new ECKey().toAddress(PARAMS);
 
-        tx1 = FakeTxBuilder.createFakeTxWithChangeAddress(params, COIN, to, change);
-        tx2 = FakeTxBuilder.createFakeTxWithChangeAddress(params, COIN, to, change);
+        tx1 = FakeTxBuilder.createFakeTxWithChangeAddress(PARAMS, COIN, to, change);
+        tx2 = FakeTxBuilder.createFakeTxWithChangeAddress(PARAMS, COIN, to, change);
         assertEquals(tx1.getHash(), tx2.getHash());
 
-        address1 = new PeerAddress(InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }));
-        address2 = new PeerAddress(InetAddress.getByAddress(new byte[] { 127, 0, 0, 2 }));
-        address3 = new PeerAddress(InetAddress.getByAddress(new byte[] { 127, 0, 0, 3 }));
+        address1 = new PeerAddress(PARAMS, InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }));
+        address2 = new PeerAddress(PARAMS, InetAddress.getByAddress(new byte[] { 127, 0, 0, 2 }));
+        address3 = new PeerAddress(PARAMS, InetAddress.getByAddress(new byte[] { 127, 0, 0, 3 }));
     }
 
     @Test
     public void pinHandlers() throws Exception {
-        Transaction tx = new Transaction(params, tx1.bitcoinSerialize());
+        Transaction tx = PARAMS.getDefaultSerializer().makeTransaction(tx1.bitcoinSerialize());
         Sha256Hash hash = tx.getHash();
         table.seen(hash, address1);
         assertEquals(1, tx.getConfidence().numBroadcastPeers());
         final int[] seen = new int[1];
-        tx.getConfidence().addEventListener(new TransactionConfidence.Listener() {
+        tx.getConfidence().addEventListener(Threading.SAME_THREAD, new TransactionConfidence.Listener() {
             @Override
             public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
                 seen[0] = confidence.numBroadcastPeers();
             }
-        }, Threading.SAME_THREAD);
+        });
         tx = null;
         System.gc();
         table.seen(hash, address2);
@@ -72,12 +72,12 @@ public class TxConfidenceTableTest {
     @Test
     public void events() throws Exception {
         final TransactionConfidence.Listener.ChangeReason[] run = new TransactionConfidence.Listener.ChangeReason[1];
-        tx1.getConfidence().addEventListener(new TransactionConfidence.Listener() {
+        tx1.getConfidence().addEventListener(Threading.SAME_THREAD, new TransactionConfidence.Listener() {
             @Override
             public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
                 run[0] = reason;
             }
-        }, Threading.SAME_THREAD);
+        });
         table.seen(tx1.getHash(), address1);
         assertEquals(TransactionConfidence.Listener.ChangeReason.SEEN_PEERS, run[0]);
         run[0] = null;

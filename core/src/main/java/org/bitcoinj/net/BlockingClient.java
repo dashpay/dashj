@@ -30,7 +30,7 @@ import java.util.*;
 import static com.google.common.base.Preconditions.*;
 
 /**
- * <p>Creates a simple connection to a server using a {@link StreamParser} to process data.</p>
+ * <p>Creates a simple connection to a server using a {@link StreamConnection} to process data.</p>
  *
  * <p>Generally, using {@link NioClient} and {@link NioClientManager} should be preferred over {@link BlockingClient}
  * and {@link BlockingClientManager}, unless you wish to connect over a proxy or use some other network settings that
@@ -42,16 +42,15 @@ public class BlockingClient implements MessageWriteTarget {
     private static final int BUFFER_SIZE_LOWER_BOUND = 4096;
     private static final int BUFFER_SIZE_UPPER_BOUND = 65536;
 
-    private final ByteBuffer dbuf;
     private Socket socket;
     private volatile boolean vCloseRequested = false;
     private SettableFuture<SocketAddress> connectFuture;
 
     /**
-     * <p>Creates a new client to the given server address using the given {@link StreamParser} to decode the data.
-     * The given parser <b>MUST</b> be unique to this object. This does not block while waiting for the connection to
-     * open, but will call either the {@link StreamParser#connectionOpened()} or
-     * {@link StreamParser#connectionClosed()} callback on the created network event processing thread.</p>
+     * <p>Creates a new client to the given server address using the given {@link StreamConnection} to decode the data.
+     * The given connection <b>MUST</b> be unique to this object. This does not block while waiting for the connection to
+     * open, but will call either the {@link StreamConnection#connectionOpened()} or
+     * {@link StreamConnection#connectionClosed()} callback on the created network event processing thread.</p>
      *
      * @param connectTimeoutMillis The connect timeout set on the connection (in milliseconds). 0 is interpreted as no
      *                             timeout.
@@ -59,13 +58,13 @@ public class BlockingClient implements MessageWriteTarget {
      *                      how this client connects to the internet. If not sure, use SocketFactory.getDefault()
      * @param clientSet A set which this object will add itself to after initialization, and then remove itself from
      */
-    public BlockingClient(final SocketAddress serverAddress, final StreamParser parser,
-                          final int connectTimeoutMillis, final SocketFactory socketFactory, @Nullable final Set<BlockingClient> clientSet) throws IOException {
+    public BlockingClient(final SocketAddress serverAddress, final StreamConnection connection,
+                          final int connectTimeoutMillis, final SocketFactory socketFactory,
+                          @Nullable final Set<BlockingClient> clientSet) throws IOException {
         connectFuture = SettableFuture.create();
         // Try to fit at least one message in the network buffer, but place an upper and lower limit on its size to make
         // sure it doesnt get too large or have to call read too often.
-        dbuf = ByteBuffer.allocateDirect(Math.min(Math.max(parser.getMaxMessageSize(), BUFFER_SIZE_LOWER_BOUND), BUFFER_SIZE_UPPER_BOUND));
-        parser.setWriteTarget(this);
+        connection.setWriteTarget(this);
         socket = socketFactory.createSocket();
         final Context context = Context.get();
         Thread t = new Thread() {
@@ -76,28 +75,10 @@ public class BlockingClient implements MessageWriteTarget {
                     clientSet.add(BlockingClient.this);
                 try {
                     socket.connect(serverAddress, connectTimeoutMillis);
-                    parser.connectionOpened();
+                    connection.connectionOpened();
                     connectFuture.set(serverAddress);
                     InputStream stream = socket.getInputStream();
-                    byte[] readBuff = new byte[dbuf.capacity()];
-
-                    while (true) {
-                        // TODO Kill the message duplication here
-                        checkState(dbuf.remaining() > 0 && dbuf.remaining() <= readBuff.length);
-                        int read = stream.read(readBuff, 0, Math.max(1, Math.min(dbuf.remaining(), stream.available())));
-                        if (read == -1)
-                            return;
-                        dbuf.put(readBuff, 0, read);
-                        // "flip" the buffer - setting the limit to the current position and setting position to 0
-                        dbuf.flip();
-                        // Use parser.receiveBytes's return value as a double-check that it stopped reading at the right
-                        // location
-                        int bytesConsumed = parser.receiveBytes(dbuf);
-                        checkState(dbuf.position() == bytesConsumed);
-                        // Now drop the bytes which were read by compacting dbuf (resetting limit and keeping relative
-                        // position)
-                        dbuf.compact();
-                    }
+                    runReadLoop(stream, connection);
                 } catch (Exception e) {
                     if (!vCloseRequested) {
                         log.error("Error trying to open/read from connection: {}: {}", serverAddress, e.getMessage());
@@ -111,7 +92,7 @@ public class BlockingClient implements MessageWriteTarget {
                     }
                     if (clientSet != null)
                         clientSet.remove(BlockingClient.this);
-                    parser.connectionClosed();
+                    connection.connectionClosed();
                 }
             }
         };
@@ -121,7 +102,33 @@ public class BlockingClient implements MessageWriteTarget {
     }
 
     /**
-     * Closes the connection to the server, triggering the {@link StreamParser#connectionClosed()}
+     * A blocking call that never returns, except by throwing an exception. It reads bytes from the input stream
+     * and feeds them to the provided {@link StreamConnection}, for example, a {@link Peer}.
+     */
+    public static void runReadLoop(InputStream stream, StreamConnection connection) throws Exception {
+        ByteBuffer dbuf = ByteBuffer.allocateDirect(Math.min(Math.max(connection.getMaxMessageSize(), BUFFER_SIZE_LOWER_BOUND), BUFFER_SIZE_UPPER_BOUND));
+        byte[] readBuff = new byte[dbuf.capacity()];
+        while (true) {
+            // TODO Kill the message duplication here
+            checkState(dbuf.remaining() > 0 && dbuf.remaining() <= readBuff.length);
+            int read = stream.read(readBuff, 0, Math.max(1, Math.min(dbuf.remaining(), stream.available())));
+            if (read == -1)
+                return;
+            dbuf.put(readBuff, 0, read);
+            // "flip" the buffer - setting the limit to the current position and setting position to 0
+            dbuf.flip();
+            // Use connection.receiveBytes's return value as a double-check that it stopped reading at the right
+            // location
+            int bytesConsumed = connection.receiveBytes(dbuf);
+            checkState(dbuf.position() == bytesConsumed);
+            // Now drop the bytes which were read by compacting dbuf (resetting limit and keeping relative
+            // position)
+            dbuf.compact();
+        }
+    }
+
+    /**
+     * Closes the connection to the server, triggering the {@link StreamConnection#connectionClosed()}
      * event on the network-handling thread where all callbacks occur.
      */
     @Override
