@@ -23,7 +23,6 @@ import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.subgraph.orchid.TorClient;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -473,13 +472,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
 
 
     protected PeerGroup createPeerGroup() throws TimeoutException {
-        if (useTor) {
-            TorClient torClient = new TorClient();
-            torClient.getConfig().setDataDirectory(directory);
-            return PeerGroup.newWithTor(params, vChain, torClient);
-        }
-        else
-            return new PeerGroup(params, vChain);
+        return new PeerGroup(params, vChain);
     }
 
     private void installShutdownHook() {

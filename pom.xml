@@ -13,7 +13,6 @@
     <module>tools</module>
     <module>wallettemplate</module>
     <module>bls</module>
-    <module>orchid</module>
   </modules>
 
   <parent>
