@@ -79,7 +79,7 @@ public class MasternodeManager extends Message {
         mapSeenMasternodePing = new HashMap<Sha256Hash, MasternodePing>();
 
 
-        context = Context.get();
+        this.context = Context.get();
 
         eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeManagerListener>>();
     }
