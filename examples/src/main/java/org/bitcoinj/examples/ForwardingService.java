@@ -17,17 +17,21 @@
 
 package org.bitcoinj.examples;
 
-import org.bitcoinj.core.*;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.InsufficientMoneyException;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.kits.LevelDBWalletAppKit;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.SendRequest;
+import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 
 import com.google.common.util.concurrent.FutureCallback;
@@ -76,10 +80,11 @@ public class ForwardingService {
         // Parse the address given as the first parameter.
         forwardingAddress = Address.fromBase58(params, args[0]);
 
+        System.out.println("Network: " + params.getId());
+        System.out.println("Forwarding address: " + forwardingAddress);
+
         // Start up a basic app using a class that automates some boilerplate.
         kit = new WalletAppKit(params, new File("."), filePrefix);
-
-        //kit = new LevelDBWalletAppKit(params, new File("."), filePrefix);
 
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.
@@ -115,6 +120,7 @@ public class ForwardingService {
                 Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>() {
                     @Override
                     public void onSuccess(TransactionConfidence result) {
+                        System.out.println("Confirmation received.");
                         forwardCoins(tx);
                     }
 
@@ -131,19 +137,6 @@ public class ForwardingService {
         System.out.println("Send coins to: " + sendToAddress);
         System.out.println("Waiting for coins to arrive. Press Ctrl-C to quit.");
 
-        Context.get().masternodeSync.addEventListener(new MasternodeSyncListener() {
-            @Override
-            public void onSyncStatusChanged(int newStatus, double syncStatus) {
-                if(newStatus == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
-                    FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(kit.directory().getAbsolutePath(), "mncache.dat", "magicMasternodeCache");
-                    mndb.dump(Context.get().masternodeManager);
-                    //ArrayList<Pair<Integer, Masternode>> results = Context.get().masternodeManager.getMasternodeRanks(27143, 0);
-                    //System.out.println(results.toString());
-                }
-
-            }
-        });
-
         try {
             Thread.sleep(Long.MAX_VALUE);
         } catch (InterruptedException ignored) {}
@@ -151,11 +144,9 @@ public class ForwardingService {
 
     private static void forwardCoins(Transaction tx) {
         try {
-            Coin value = tx.getValueSentToMe(kit.wallet());
-            System.out.println("Forwarding " + value.toFriendlyString());
-            // Now send the coins back! Empty the wallet to send all the coins.
-            SendRequest req = SendRequest.emptyWallet(forwardingAddress);
-            final Wallet.SendResult sendResult = kit.wallet().sendCoins(kit.peerGroup(), req);
+            // Now send the coins onwards.
+            SendRequest sendRequest = SendRequest.emptyWallet(forwardingAddress);
+            Wallet.SendResult sendResult = kit.wallet().sendCoins(sendRequest);
             checkNotNull(sendResult);  // We should never try to send more coins than we have!
             System.out.println("Sending ...");
             // Register a callback that is invoked when the transaction has propagated across the network.
@@ -168,9 +159,7 @@ public class ForwardingService {
                     System.out.println("Sent coins onwards! Transaction hash is " + sendResult.tx.getHashAsString());
                 }
             }, MoreExecutors.directExecutor());
-        //MasternodeDB.dumpMasternodes();
-            FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(kit.directory().getAbsolutePath(),"mncache.dat", "magicMasternodeCache");
-            mndb.dump(Context.get().masternodeManager);
+
         } catch (KeyCrypterException | InsufficientMoneyException e) {
             // We don't use encrypted wallets in this example - can never happen.
             throw new RuntimeException(e);
