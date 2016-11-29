@@ -262,6 +262,8 @@ public class BitcoinSerializer extends MessageSerializer {
             return new SyncStatusCount(params, payloadBytes);
         } else if(command.equals("sendheaders")) {
             return new SendHeadersMessage(params);
+        } else if(command.equals("getsporks")) {
+            return new GetSporksMessage(params);
         }
         else{
             log.warn("No support for deserializing message with name {}", command);
