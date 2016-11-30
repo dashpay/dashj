@@ -256,8 +256,8 @@ public class Transaction extends ChildMessage {
     public Transaction(NetworkParameters params) {
         super(params);
         version = 1;
-        inputs = new ArrayList<TransactionInput>();
-        outputs = new ArrayList<TransactionOutput>();
+        inputs = new ArrayList<>();
+        outputs = new ArrayList<>();
         // We don't initialize appearsIn deliberately as it's only useful for transactions stored in the wallet.
         length = 8; // 8 for std fields
     }
@@ -412,7 +412,7 @@ public class Transaction extends ChildMessage {
     public void addBlockAppearance(final Sha256Hash blockHash, int relativityOffset) {
         if (appearsInHashes == null) {
             // TODO: This could be a lot more memory efficient as we'll typically only store one element.
-            appearsInHashes = new TreeMap<Sha256Hash, Integer>();
+            appearsInHashes = new TreeMap<>();
         }
         appearsInHashes.put(blockHash, relativityOffset);
     }
@@ -627,7 +627,7 @@ public class Transaction extends ChildMessage {
         // First come the inputs.
         long numInputs = readVarInt();
         optimalEncodingMessageSize += VarInt.sizeOf(numInputs);
-        inputs = new ArrayList<TransactionInput>(Math.min((int) numInputs, MAX_INITIAL_INPUTS_OUTPUTS_SIZE));
+        inputs = new ArrayList<>(Math.min((int) numInputs, MAX_INITIAL_INPUTS_OUTPUTS_SIZE));
         for (long i = 0; i < numInputs; i++) {
             TransactionInput input = new TransactionInput(params, this, payload, cursor, serializer);
             inputs.add(input);
@@ -638,7 +638,7 @@ public class Transaction extends ChildMessage {
         // Now the outputs
         long numOutputs = readVarInt();
         optimalEncodingMessageSize += VarInt.sizeOf(numOutputs);
-        outputs = new ArrayList<TransactionOutput>(Math.min((int) numOutputs, MAX_INITIAL_INPUTS_OUTPUTS_SIZE));
+        outputs = new ArrayList<>(Math.min((int) numOutputs, MAX_INITIAL_INPUTS_OUTPUTS_SIZE));
         for (long i = 0; i < numOutputs; i++) {
             TransactionOutput output = new TransactionOutput(params, this, payload, cursor, serializer);
             outputs.add(output);
@@ -1148,7 +1148,7 @@ public class Transaction extends ChildMessage {
 
             if ((sigHashType & 0x1f) == SigHash.NONE.value) {
                 // SIGHASH_NONE means no outputs are signed at all - the signature is effectively for a "blank cheque".
-                tx.outputs = new ArrayList<TransactionOutput>(0);
+                tx.outputs = new ArrayList<>(0);
                 // The signature isn't broken by new versions of the transaction issued by other parties.
                 for (int i = 0; i < tx.inputs.size(); i++)
                     if (i != inputIndex)
@@ -1168,7 +1168,7 @@ public class Transaction extends ChildMessage {
                 }
                 // In SIGHASH_SINGLE the outputs after the matching input index are deleted, and the outputs before
                 // that position are "nulled out". Unintuitively, the value in a "null" transaction is set to -1.
-                tx.outputs = new ArrayList<TransactionOutput>(tx.outputs.subList(0, inputIndex + 1));
+                tx.outputs = new ArrayList<>(tx.outputs.subList(0, inputIndex + 1));
                 for (int i = 0; i < inputIndex; i++)
                     tx.outputs.set(i, new TransactionOutput(tx.params, tx, Coin.NEGATIVE_SATOSHI, new byte[] {}));
                 // The signature isn't broken by new versions of the transaction issued by other parties.
@@ -1316,7 +1316,7 @@ public class Transaction extends ChildMessage {
      * @return linked list of outputs relevant to the wallet in this transaction
      */
     public List<TransactionOutput> getWalletOutputs(TransactionBag transactionBag){
-        List<TransactionOutput> walletOutputs = new LinkedList<TransactionOutput>();
+        List<TransactionOutput> walletOutputs = new LinkedList<>();
         for (TransactionOutput o : outputs) {
             if (!o.isMineOrWatched(transactionBag)) continue;
             walletOutputs.add(o);
@@ -1442,7 +1442,7 @@ public class Transaction extends ChildMessage {
             throw new VerificationException.LargerThanMaxBlockSize();
 
         Coin valueOut = Coin.ZERO;
-        HashSet<TransactionOutPoint> outpoints = new HashSet<TransactionOutPoint>();
+        HashSet<TransactionOutPoint> outpoints = new HashSet<>();
         for (TransactionInput input : inputs) {
             if (outpoints.contains(input.getOutpoint()))
                 throw new VerificationException.DuplicatedOutPoint();
