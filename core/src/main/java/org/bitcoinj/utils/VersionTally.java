@@ -114,7 +114,7 @@ public class VersionTally {
             return;
         }
         StoredBlock versionBlock = chainHead;
-        final Stack<Long> versions = new Stack<Long>();
+        final Stack<Long> versions = new Stack<>();
 
         // We don't know how many blocks back we can go, so load what we can first
         versions.push(versionBlock.getHeader().getVersion());

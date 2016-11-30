@@ -610,7 +610,7 @@ public class Utils {
     /** Enable or disable mock sleep.  If enabled, set mock time to current time. */
     public static void setMockSleep(boolean isEnable) {
         if (isEnable) {
-            mockSleepQueue = new ArrayBlockingQueue<Boolean>(1);
+            mockSleepQueue = new ArrayBlockingQueue<>(1);
             mockTime = new Date(System.currentTimeMillis());
         } else {
             mockSleepQueue = null;
@@ -647,7 +647,7 @@ public class Utils {
 
     public static int maxOfMostFreq(int... items) {
         // Java 6 sucks.
-        ArrayList<Integer> list = new ArrayList<Integer>(items.length);
+        ArrayList<Integer> list = new ArrayList<>(items.length);
         for (int item : items) list.add(item);
         return maxOfMostFreq(list);
     }

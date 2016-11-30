@@ -96,7 +96,7 @@ public class Threading {
         public UserThread() {
             super(CoinDefinition.coinURIScheme + "j user thread");      //Modified for CoinDefinition
             setDaemon(true);
-            tasks = new LinkedBlockingQueue<Runnable>();
+            tasks = new LinkedBlockingQueue<>();
             start();
         }
 

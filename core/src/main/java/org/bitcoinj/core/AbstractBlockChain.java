@@ -122,7 +122,7 @@ public abstract class AbstractBlockChain {
     }
     // Holds blocks that we have received but can't plug into the chain yet, eg because they were created whilst we
     // were downloading the block chain.
-    private final LinkedHashMap<Sha256Hash, OrphanBlock> orphanBlocks = new LinkedHashMap<Sha256Hash, OrphanBlock>();
+    private final LinkedHashMap<Sha256Hash, OrphanBlock> orphanBlocks = new LinkedHashMap<>();
 
     /** False positive estimation uses a double exponential moving average. */
     public static final double FP_ESTIMATOR_ALPHA = 0.0001;
@@ -151,9 +151,9 @@ public abstract class AbstractBlockChain {
         log.info("chain head is at height {}:\n{}", chainHead.getHeight(), chainHead.getHeader());
         this.params = context.getParams();
 
-        this.newBestBlockListeners = new CopyOnWriteArrayList<ListenerRegistration<NewBestBlockListener>>();
-        this.reorganizeListeners = new CopyOnWriteArrayList<ListenerRegistration<ReorganizeListener>>();
-        this.transactionReceivedListeners = new CopyOnWriteArrayList<ListenerRegistration<TransactionReceivedInBlockListener>>();
+        this.newBestBlockListeners = new CopyOnWriteArrayList<>();
+        this.reorganizeListeners = new CopyOnWriteArrayList<>();
+        this.transactionReceivedListeners = new CopyOnWriteArrayList<>();
         for (NewBestBlockListener l : wallets) addNewBestBlockListener(Threading.SAME_THREAD, l);
         for (ReorganizeListener l : wallets) addReorganizeListener(Threading.SAME_THREAD, l);
         for (TransactionReceivedInBlockListener l : wallets) addTransactionReceivedListener(Threading.SAME_THREAD, l);
@@ -231,7 +231,7 @@ public abstract class AbstractBlockChain {
      * Adds a {@link NewBestBlockListener} listener to the chain.
      */
     public final void addNewBestBlockListener(Executor executor, NewBestBlockListener listener) {
-        newBestBlockListeners.add(new ListenerRegistration<NewBestBlockListener>(listener, executor));
+        newBestBlockListeners.add(new ListenerRegistration<>(listener, executor));
     }
 
     /**
@@ -245,7 +245,7 @@ public abstract class AbstractBlockChain {
      * Adds a generic {@link ReorganizeListener} listener to the chain.
      */
     public final void addReorganizeListener(Executor executor, ReorganizeListener listener) {
-        reorganizeListeners.add(new ListenerRegistration<ReorganizeListener>(listener, executor));
+        reorganizeListeners.add(new ListenerRegistration<>(listener, executor));
     }
 
     /**
@@ -259,7 +259,7 @@ public abstract class AbstractBlockChain {
      * Adds a generic {@link TransactionReceivedInBlockListener} listener to the chain.
      */
     public final void addTransactionReceivedListener(Executor executor, TransactionReceivedInBlockListener listener) {
-        transactionReceivedListeners.add(new ListenerRegistration<TransactionReceivedInBlockListener>(listener, executor));
+        transactionReceivedListeners.add(new ListenerRegistration<>(listener, executor));
     }
 
     /**
@@ -508,7 +508,7 @@ public abstract class AbstractBlockChain {
     public Set<Sha256Hash> drainOrphanBlocks() {
         lock.lock();
         try {
-            Set<Sha256Hash> hashes = new HashSet<Sha256Hash>(orphanBlocks.keySet());
+            Set<Sha256Hash> hashes = new HashSet<>(orphanBlocks.keySet());
             orphanBlocks.clear();
             return hashes;
         } finally {
@@ -820,7 +820,7 @@ public abstract class AbstractBlockChain {
      */
     private static LinkedList<StoredBlock> getPartialChain(StoredBlock higher, StoredBlock lower, BlockStore store) throws BlockStoreException {
         checkArgument(higher.getHeight() > lower.getHeight(), "higher and lower are reversed");
-        LinkedList<StoredBlock> results = new LinkedList<StoredBlock>();
+        LinkedList<StoredBlock> results = new LinkedList<>();
         StoredBlock cursor = higher;
         while (true) {
             results.add(cursor);
