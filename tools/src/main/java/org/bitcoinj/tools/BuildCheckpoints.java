@@ -236,7 +236,7 @@ public class BuildCheckpoints {
     }
 
     private static void startPeerGroup(PeerGroup peerGroup, InetAddress ipAddress) {
-        final PeerAddress peerAddress = new PeerAddress(ipAddress, params.getPort());
+        final PeerAddress peerAddress = new PeerAddress(params, ipAddress);
         Context.getOrCreate(params).initDash(true, false);
         System.out.println("Connecting to " + peerAddress + "...");
         peerGroup.addAddress(peerAddress);
