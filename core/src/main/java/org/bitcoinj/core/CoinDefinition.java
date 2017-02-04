@@ -113,44 +113,16 @@ public class CoinDefinition {
 
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
-            "dnsseed.darkcoin.io",
-            "dnsseed.darkcoin.qa",
             "dnsseed.masternode.io",
             "dnsseed.dashpay.io",
-            "dnsseed.masternode.io",
-            "dnsseed.darkcoin.qa",
-            "dnsseed.fulltimegeek.com",
-            //"dnsseed.darkcoin.io",
-            "23.23.186.131", //Evan's seed node
-            "162.252.83.46",  //drkpool.com
-            /*"107.155.71.72",
-            "50.16.206.102",
-            "50.19.116.123",
-            "98.165.130.67",
-            "23.23.186.131",
-            "50.16.206.102",
-            "50.19.116.123",
-            "50.19.116.123",
-            "23.21.204.34",
-            "188.142.39.105",
-            "50.16.206.102", //InternetApe's seed node
-            "23.23.186.131",
-            "50.19.116.123",
-            "54.248.227.151",
-            "42.121.58.91",
-            "50.81.192.39",
-            "54.193.124.32",
-            "62.141.39.175",
-            "5.254.96.3",
-            "175.115.201.44",
-            "208.53.191.2",
-            "162.243.33.16",*/
+            "dnsseed.dash.org",
+            "dnsseed.dashdot.io"
     };
 
     public static int minBroadcastConnections = 0;   //0 for default; we need more peers.
 
     //
-    // TestNet - dimecoin - not tested
+    // TestNet - DASH
     //
     public static final boolean supportsTestNet = true;
     public static final int testnetAddressHeader = 140;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS_TEST
