@@ -73,7 +73,8 @@ public class CoinDefinition {
 
     public static final long DEFAULT_MIN_TX_FEE = 100000;   // MIN_TX_FEE
     public static final long DUST_LIMIT = 1000; //main.h CTransaction::GetMinFee        0.01 coins
-    public static final long INSTANTX_FEE = 1000000;
+    public static final long INSTANTX_FEE = 100000; //0.001 DASH (updated for 12.1)
+    public static final boolean feeCanBeRaised = false;
 
     //
     // Dash 0.12
@@ -95,7 +96,6 @@ public class CoinDefinition {
     //
     public static final int AddressHeader = 76;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS
     public static final int p2shHeader = 16;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS
-    public static final boolean allowBitcoinPrivateKey = false; //for backward compatibility with previous version of digitalcoin
     public static final int dumpedPrivateKeyHeader = 128;   //common to all coins
     public static final long oldPacketMagic = 0xfbc0b6db;      //0xfb, 0xc0, 0xb6, 0xdb
     public static final long PacketMagic = 0xbf0c6bbd;
