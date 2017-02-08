@@ -83,30 +83,29 @@ public class SporkManager {
 
     }*/
 
-    public static final int  SPORK_START              =                             10001;
-    public static final int  SPORK_END           =                                  10012;
+    static final int SPORK_START                                            = 10001;
+    static final int SPORK_END                                              = 10013;
 
-    public  static final int  SPORK_2_INSTANTX     =                                 10001;
-    public  static final int  SPORK_3_INSTANTX_BLOCK_FILTERING =                     10002;
-    public  static final int  SPORK_5_MAX_VALUE                            =         10004;
-    public  static final int  SPORK_7_MASTERNODE_SCANNING                  =         10006;
-    public  static final int  SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT       =         10007;
-    public  static final int  SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT        =         10008;
-    public  static final int  SPORK_10_MASTERNODE_PAY_UPDATED_NODES        =         10009;
-    public  static final int  SPORK_11_RESET_BUDGET                        =         10010;
-    public  static final int  SPORK_12_RECONSIDER_BLOCKS                   =         10011;
-    public  static final int  SPORK_13_ENABLE_SUPERBLOCKS                  =         10012;
+    public static final int SPORK_2_INSTANTSEND_ENABLED                            = 10001;
+    public static final int SPORK_3_INSTANTSEND_BLOCK_FILTERING                    = 10002;
+    public static final int SPORK_5_INSTANTSEND_MAX_VALUE                          = 10004;
+    public static final int SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT                 = 10007;
+    public static final int SPORK_9_SUPERBLOCKS_ENABLED                            = 10008;
+    public static final int SPORK_10_MASTERNODE_PAY_UPDATED_NODES                  = 10009;
+    public static final int SPORK_12_RECONSIDER_BLOCKS                             = 10011;
+    public static final int SPORK_13_OLD_SUPERBLOCK_FLAG                           = 10012;
+    public static final int SPORK_14_REQUIRE_SENTINEL_FLAG                         = 10013;
 
-    public  static final int  SPORK_2_INSTANTX_DEFAULT                     =         978307200;  //2001-1-1
-    public  static final int  SPORK_3_INSTANTX_BLOCK_FILTERING_DEFAULT     =         1424217600;  //2015-2-18
-    public  static final int  SPORK_5_MAX_VALUE_DEFAULT                    =         1000;        //1000 DASH
-    public  static final int  SPORK_7_MASTERNODE_SCANNING_DEFAULT          =         978307200;   //2001-1-1
-    public  static final long  SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT=        4070908800L;   //OFF
-    public  static final long  SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT_DEFAULT =        4070908800L;   //OFF
-    public  static final long  SPORK_10_MASTERNODE_PAY_UPDATED_NODES_DEFAULT =        4070908800L;   //OFF
-    public  static final long  SPORK_11_RESET_BUDGET_DEFAULT                 =        0;
-    public  static final int  SPORK_12_RECONSIDER_BLOCKS_DEFAULT            =        0;
-    public  static final long  SPORK_13_ENABLE_SUPERBLOCKS_DEFAULT           =        4070908800L;   //OFF
+    public static final long SPORK_2_INSTANTSEND_ENABLED_DEFAULT                = 0;            // ON
+    public static final long SPORK_3_INSTANTSEND_BLOCK_FILTERING_DEFAULT        = 0;            // ON
+    public static final long SPORK_5_INSTANTSEND_MAX_VALUE_DEFAULT              = 1000;         // 1000 DASH
+    public static final long SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT     = 4070908800L;// OFF
+    public static final long SPORK_9_SUPERBLOCKS_ENABLED_DEFAULT                = 4070908800L;// OFF
+    public static final long SPORK_10_MASTERNODE_PAY_UPDATED_NODES_DEFAULT      = 4070908800L;// OFF
+    public static final long SPORK_12_RECONSIDER_BLOCKS_DEFAULT                 = 0;            // 0 BLOCKS
+    public static final long SPORK_13_OLD_SUPERBLOCK_FLAG_DEFAULT               = 4070908800L;// OFF
+    public static final long SPORK_14_REQUIRE_SENTINEL_FLAG_DEFAULT             = 4070908800L;// OFF
+
 
     // grab the spork, otherwise say it's off
     public boolean isSporkActive(int nSporkID)
@@ -116,20 +115,22 @@ public class SporkManager {
         if(mapSporksActive.containsKey(nSporkID)){
             r = mapSporksActive.get(nSporkID).nValue;
         } else {
-            if(nSporkID == SPORK_2_INSTANTX) r = SPORK_2_INSTANTX_DEFAULT;
-            if(nSporkID == SPORK_3_INSTANTX_BLOCK_FILTERING) r = SPORK_3_INSTANTX_BLOCK_FILTERING_DEFAULT;
-            if(nSporkID == SPORK_5_MAX_VALUE) r = SPORK_5_MAX_VALUE_DEFAULT;
-            if(nSporkID == SPORK_7_MASTERNODE_SCANNING) r = SPORK_7_MASTERNODE_SCANNING_DEFAULT;
-            if(nSporkID == SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) r = SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT;
-            if(nSporkID == SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT) r = SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT_DEFAULT;
-            if(nSporkID == SPORK_10_MASTERNODE_PAY_UPDATED_NODES) r = SPORK_10_MASTERNODE_PAY_UPDATED_NODES_DEFAULT;
-            if(nSporkID == SPORK_11_RESET_BUDGET) r = SPORK_11_RESET_BUDGET_DEFAULT;
-            if(nSporkID == SPORK_12_RECONSIDER_BLOCKS) r = SPORK_12_RECONSIDER_BLOCKS_DEFAULT;
-            if(nSporkID == SPORK_13_ENABLE_SUPERBLOCKS) r = SPORK_13_ENABLE_SUPERBLOCKS_DEFAULT;
-
-            if(r == -1) log.info("GetSpork::Unknown Spork "+ nSporkID);
+            switch (nSporkID) {
+                case SPORK_2_INSTANTSEND_ENABLED:               r = SPORK_2_INSTANTSEND_ENABLED_DEFAULT; break;
+                case SPORK_3_INSTANTSEND_BLOCK_FILTERING:       r = SPORK_3_INSTANTSEND_BLOCK_FILTERING_DEFAULT; break;
+                case SPORK_5_INSTANTSEND_MAX_VALUE:             r = SPORK_5_INSTANTSEND_MAX_VALUE_DEFAULT; break;
+                case SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT:    r = SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT; break;
+                case SPORK_9_SUPERBLOCKS_ENABLED:               r = SPORK_9_SUPERBLOCKS_ENABLED_DEFAULT; break;
+                case SPORK_10_MASTERNODE_PAY_UPDATED_NODES:     r = SPORK_10_MASTERNODE_PAY_UPDATED_NODES_DEFAULT; break;
+                case SPORK_12_RECONSIDER_BLOCKS:                r = SPORK_12_RECONSIDER_BLOCKS_DEFAULT; break;
+                case SPORK_13_OLD_SUPERBLOCK_FLAG:              r = SPORK_13_OLD_SUPERBLOCK_FLAG_DEFAULT; break;
+                case SPORK_14_REQUIRE_SENTINEL_FLAG:            r = SPORK_14_REQUIRE_SENTINEL_FLAG_DEFAULT; break;
+                default:
+                    log.info("spork", "CSporkManager::IsSporkActive -- Unknown Spork ID" + nSporkID);
+                    r = 4070908800L; // 2099-1-1 i.e. off by default
+                    break;
+            }
         }
-        if(r == -1) r = 4070908800L; //return 2099-1-1 by default
 
         return r < Utils.currentTimeSeconds();
     }
@@ -140,23 +141,23 @@ public class SporkManager {
         long r = -1;
 
         if(mapSporksActive.containsKey(nSporkID)){
-            r = mapSporksActive.get(nSporkID).nValue;
+            return mapSporksActive.get(nSporkID).nValue;
         } else {
-            if(nSporkID == SPORK_2_INSTANTX) r = SPORK_2_INSTANTX_DEFAULT;
-            if(nSporkID == SPORK_3_INSTANTX_BLOCK_FILTERING) r = SPORK_3_INSTANTX_BLOCK_FILTERING_DEFAULT;
-            if(nSporkID == SPORK_5_MAX_VALUE) r = SPORK_5_MAX_VALUE_DEFAULT;
-            if(nSporkID == SPORK_7_MASTERNODE_SCANNING) r = SPORK_7_MASTERNODE_SCANNING_DEFAULT;
-            if(nSporkID == SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) r = SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT;
-            if(nSporkID == SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT) r = SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT_DEFAULT;
-            if(nSporkID == SPORK_10_MASTERNODE_PAY_UPDATED_NODES) r = SPORK_10_MASTERNODE_PAY_UPDATED_NODES_DEFAULT;
-            if(nSporkID == SPORK_11_RESET_BUDGET) r = SPORK_11_RESET_BUDGET_DEFAULT;
-            if(nSporkID == SPORK_12_RECONSIDER_BLOCKS) r = SPORK_12_RECONSIDER_BLOCKS_DEFAULT;
-            if(nSporkID == SPORK_13_ENABLE_SUPERBLOCKS) r = SPORK_13_ENABLE_SUPERBLOCKS_DEFAULT;
-
-            if(r == -1) log.info("GetSpork::Unknown Spork "+  nSporkID);
+            switch (nSporkID) {
+                case SPORK_2_INSTANTSEND_ENABLED:               return SPORK_2_INSTANTSEND_ENABLED_DEFAULT;
+                case SPORK_3_INSTANTSEND_BLOCK_FILTERING:       return SPORK_3_INSTANTSEND_BLOCK_FILTERING_DEFAULT;
+                case SPORK_5_INSTANTSEND_MAX_VALUE:             return SPORK_5_INSTANTSEND_MAX_VALUE_DEFAULT;
+                case SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT:    return SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT;
+                case SPORK_9_SUPERBLOCKS_ENABLED:               return SPORK_9_SUPERBLOCKS_ENABLED_DEFAULT;
+                case SPORK_10_MASTERNODE_PAY_UPDATED_NODES:     return SPORK_10_MASTERNODE_PAY_UPDATED_NODES_DEFAULT;
+                case SPORK_12_RECONSIDER_BLOCKS:                return SPORK_12_RECONSIDER_BLOCKS_DEFAULT;
+                case SPORK_13_OLD_SUPERBLOCK_FLAG:              return SPORK_13_OLD_SUPERBLOCK_FLAG_DEFAULT;
+                case SPORK_14_REQUIRE_SENTINEL_FLAG:            return SPORK_14_REQUIRE_SENTINEL_FLAG_DEFAULT;
+                default:
+                    log.info("spork", "CSporkManager::GetSporkValue -- Unknown Spork ID "+ nSporkID);
+                    return -1;
+            }
         }
-
-        return r;
     }
 
     public void executeSpork(int nSporkID, long nValue)
@@ -178,7 +179,7 @@ public class SporkManager {
         //DashJ will not do this for now.
 
         /*
-        std::map<uint256, int64_t>::iterator it = mapRejectedBlocks.begin();
+        std::map<uint256, long>::iterator it = mapRejectedBlocks.begin();
         while(it != mapRejectedBlocks.end()){
             //use a window twice as large as is usual for the nBlocks we want to reset
             if((*it).second  > GetTime() - (nBlocks*60*5)) {
@@ -296,33 +297,35 @@ public class SporkManager {
 
     int getSporkIDByName(String strName)
     {
-        if(strName == "SPORK_2_INSTANTX") return SPORK_2_INSTANTX;
-        if(strName == "SPORK_3_INSTANTX_BLOCK_FILTERING") return SPORK_3_INSTANTX_BLOCK_FILTERING;
-        if(strName == "SPORK_5_MAX_VALUE") return SPORK_5_MAX_VALUE;
-        if(strName == "SPORK_7_MASTERNODE_SCANNING") return SPORK_7_MASTERNODE_SCANNING;
-        if(strName == "SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT") return SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT;
-        if(strName == "SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT") return SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT;
-        if(strName == "SPORK_10_MASTERNODE_PAY_UPDATED_NODES") return SPORK_10_MASTERNODE_PAY_UPDATED_NODES;
-        if(strName == "SPORK_11_RESET_BUDGET") return SPORK_11_RESET_BUDGET;
-        if(strName == "SPORK_12_RECONSIDER_BLOCKS") return SPORK_12_RECONSIDER_BLOCKS;
-        if(strName == "SPORK_13_ENABLE_SUPERBLOCKS") return SPORK_13_ENABLE_SUPERBLOCKS;
+        if (strName == "SPORK_2_INSTANTSEND_ENABLED")               return SPORK_2_INSTANTSEND_ENABLED;
+        if (strName == "SPORK_3_INSTANTSEND_BLOCK_FILTERING")       return SPORK_3_INSTANTSEND_BLOCK_FILTERING;
+        if (strName == "SPORK_5_INSTANTSEND_MAX_VALUE")             return SPORK_5_INSTANTSEND_MAX_VALUE;
+        if (strName == "SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT")    return SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT;
+        if (strName == "SPORK_9_SUPERBLOCKS_ENABLED")               return SPORK_9_SUPERBLOCKS_ENABLED;
+        if (strName == "SPORK_10_MASTERNODE_PAY_UPDATED_NODES")     return SPORK_10_MASTERNODE_PAY_UPDATED_NODES;
+        if (strName == "SPORK_12_RECONSIDER_BLOCKS")                return SPORK_12_RECONSIDER_BLOCKS;
+        if (strName == "SPORK_13_OLD_SUPERBLOCK_FLAG")              return SPORK_13_OLD_SUPERBLOCK_FLAG;
+        if (strName == "SPORK_14_REQUIRE_SENTINEL_FLAG")            return SPORK_14_REQUIRE_SENTINEL_FLAG;
 
+        log.info("spork", "CSporkManager::GetSporkIDByName -- Unknown Spork name: "+ strName);
         return -1;
     }
 
     String getSporkNameByID(int id)
     {
-        if(id == SPORK_2_INSTANTX) return "SPORK_2_INSTANTX";
-        if(id == SPORK_3_INSTANTX_BLOCK_FILTERING) return "SPORK_3_INSTANTX_BLOCK_FILTERING";
-        if(id == SPORK_5_MAX_VALUE) return "SPORK_5_MAX_VALUE";
-        if(id == SPORK_7_MASTERNODE_SCANNING) return "SPORK_7_MASTERNODE_SCANNING";
-        if(id == SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) return "SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT";
-        if(id == SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT) return "SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT";
-        if(id == SPORK_10_MASTERNODE_PAY_UPDATED_NODES) return "SPORK_10_MASTERNODE_PAY_UPDATED_NODES";
-        if(id == SPORK_11_RESET_BUDGET) return "SPORK_11_RESET_BUDGET";
-        if(id == SPORK_12_RECONSIDER_BLOCKS) return "SPORK_12_RECONSIDER_BLOCKS";
-        if(id == SPORK_13_ENABLE_SUPERBLOCKS) return "SPORK_13_ENABLE_SUPERBLOCKS";
-
-        return "Unknown";
+        switch (id) {
+            case SPORK_2_INSTANTSEND_ENABLED:               return "SPORK_2_INSTANTSEND_ENABLED";
+            case SPORK_3_INSTANTSEND_BLOCK_FILTERING:       return "SPORK_3_INSTANTSEND_BLOCK_FILTERING";
+            case SPORK_5_INSTANTSEND_MAX_VALUE:             return "SPORK_5_INSTANTSEND_MAX_VALUE";
+            case SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT:    return "SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT";
+            case SPORK_9_SUPERBLOCKS_ENABLED:               return "SPORK_9_SUPERBLOCKS_ENABLED";
+            case SPORK_10_MASTERNODE_PAY_UPDATED_NODES:     return "SPORK_10_MASTERNODE_PAY_UPDATED_NODES";
+            case SPORK_12_RECONSIDER_BLOCKS:                return "SPORK_12_RECONSIDER_BLOCKS";
+            case SPORK_13_OLD_SUPERBLOCK_FLAG:              return "SPORK_13_OLD_SUPERBLOCK_FLAG";
+            case SPORK_14_REQUIRE_SENTINEL_FLAG:            return "SPORK_14_REQUIRE_SENTINEL_FLAG";
+            default:
+                log.info("spork", "CSporkManager::GetSporkNameByID -- Unknown Spork ID "+ id);
+                return "Unknown";
+        }
     }
 }

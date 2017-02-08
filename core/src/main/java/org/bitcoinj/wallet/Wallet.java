@@ -24,7 +24,6 @@ import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
-import org.bitcoin.protocols.payments.Protos.*;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.listeners.*;
@@ -2507,8 +2506,7 @@ public class Wallet extends BaseTaggableObject
 
             //Dash Specific
             if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
-                context.instantx.mapTxLockReq.put(tx.getHash(), tx);
-                context.instantx.createNewLock((TransactionLockRequest)tx);
+                context.instantx.processTxLockRequest((TransactionLockRequest)tx);
             }
 
             informConfidenceListenersIfNotReorganizing();

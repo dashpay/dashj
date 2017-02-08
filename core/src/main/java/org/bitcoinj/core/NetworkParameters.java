@@ -24,14 +24,10 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptOpCodes;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.MasternodeDB;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.darkcoinj.DarkSendPool;
-import org.darkcoinj.InstantXSystem;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
-import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;

@@ -10,7 +10,7 @@ public class MasternodePayments {
     // V1 - Last protocol version before update
     // V2 - Newest protocol version
     static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70103;
-    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70201;
+    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70204;
 
     MasternodePayments(Context context)
     {

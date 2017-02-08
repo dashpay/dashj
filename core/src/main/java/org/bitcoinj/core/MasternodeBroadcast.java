@@ -84,7 +84,7 @@ public class MasternodeBroadcast extends Masternode {
         lastPing = new MasternodePing(params, payload, cursor);
         cursor += lastPing.getMessageSize();
 
-        nLastDsq = readInt64();
+        //nLastDsq = readInt64();
 
         length = cursor - offset;
 

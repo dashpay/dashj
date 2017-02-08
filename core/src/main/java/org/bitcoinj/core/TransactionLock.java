@@ -25,7 +25,7 @@ public class TransactionLock {
     private static final Logger log = LoggerFactory.getLogger(Transaction.class);
     public int blockHeight;
     public Sha256Hash txHash;
-    public ArrayList<ConsensusVote> vecConsensusVotes;
+    public ArrayList<TransactionLockVote> vecConsensusVotes;
     public int expiration;
     public int timeout;
 
@@ -34,7 +34,7 @@ public class TransactionLock {
 
     public TransactionLock()
     {
-        vecConsensusVotes = new ArrayList<ConsensusVote>();
+        vecConsensusVotes = new ArrayList<TransactionLockVote>();
     }
     public TransactionLock(int blockHeight, int expiration, int timeout, Sha256Hash txHash)
     {
@@ -42,7 +42,7 @@ public class TransactionLock {
         this.txHash = txHash;
         this.expiration = expiration;
         this.timeout = timeout;
-        vecConsensusVotes = new ArrayList<ConsensusVote>();
+        vecConsensusVotes = new ArrayList<TransactionLockVote>();
     }
 
 
@@ -61,7 +61,7 @@ public class TransactionLock {
         return vecConsensusVotes.size();
     }
 
-    public void addSignature(ConsensusVote cv)
+    public void addSignature(TransactionLockVote cv)
     {
         vecConsensusVotes.add(cv);
     }

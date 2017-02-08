@@ -34,10 +34,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import net.jcip.annotations.GuardedBy;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -517,8 +513,9 @@ public class Peer extends PeerSocketHandler {
             startFilteredBlock((FilteredBlock) m);
         } else if (m instanceof TransactionLockRequest) {
             //processTransactionLockRequest((TransactionLockRequest) m);
-            context.instantx.processTransactionLockRequest(this, (TransactionLockRequest)m);
+            context.instantx.processTxLockRequest((TransactionLockRequest)m);
             processTransaction((TransactionLockRequest)m);
+
         } else if (m instanceof Transaction) {
             processTransaction((Transaction) m);
         } else if (m instanceof GetDataMessage) {
@@ -555,8 +552,8 @@ public class Peer extends PeerSocketHandler {
         {
             context.sporkManager.processSpork(this, (SporkMessage)m);
         }
-        else if(m instanceof ConsensusVote) {
-            context.instantx.processConsensusVoteMessage(this, (ConsensusVote)m);
+        else if(m instanceof TransactionLockVote) {
+            context.instantx.processTransactionLockVoteMessage(this, (TransactionLockVote)m);
         }
         else if(m instanceof SyncStatusCount) {
             context.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
@@ -861,7 +858,7 @@ public class Peer extends PeerSocketHandler {
 
                                         if(tx instanceof TransactionLockRequest)
                                         {
-                                            context.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
+                                            context.instantx.acceptLockRequest((TransactionLockRequest)tx);
                                         }
                                     } catch (VerificationException e) {
                                         log.error("{}: Wallet failed to process pending transaction {}", getAddress(), tx.getHash());
@@ -882,7 +879,7 @@ public class Peer extends PeerSocketHandler {
 
                             if(tx instanceof TransactionLockRequest)
                             {
-                                context.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
+                                context.instantx.acceptLockRequest((TransactionLockRequest)tx);
                             }
                         }
                     }
@@ -1233,10 +1230,10 @@ public class Peer extends PeerSocketHandler {
 //            case MSG_DSTX:
   //              return mapDarksendBroadcastTxes.count(inv.hash);
             case TransactionLockRequest:
-                return context.instantx.mapTxLockReq.containsKey(inv.hash) ||
-                        context.instantx.mapTxLockReqRejected.containsKey(inv.hash);
+                return context.instantx.mapLockRequestAccepted.containsKey(inv.hash) ||
+                        context.instantx.mapLockRequestRejected.containsKey(inv.hash);
             case TransactionLockVote:
-                return  context.instantx.mapTxLockVote.containsKey(inv.hash);
+                return  context.instantx.mapTxLockVotes.containsKey(inv.hash);
             case Spork:
                 return context.sporkManager.mapSporks.containsKey(inv.hash);
             case MasterNodeWinner:
@@ -1294,7 +1291,7 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> masternodeBroadcasts = new LinkedList<InventoryItem>();
         List<InventoryItem> sporks = new LinkedList<InventoryItem>();
 
-        //InstantXSystem instantx = InstantXSystem.get(blockChain);
+        //InstantSend instantx = InstantSend.get(blockChain);
 
         for (InventoryItem item : items) {
             switch (item.type) {
@@ -1413,11 +1410,11 @@ public class Peer extends PeerSocketHandler {
 
 
         it = instantxLocks.iterator();
-        //InstantXSystem instantx = InstantXSystem.get(blockChain);
+        //InstantSend instantx = InstantSend.get(blockChain);
         while (it.hasNext()) {
             InventoryItem item = it.next();
 
-//            if(!instantx.mapTxLockVote.containsKey(item.hash))
+//            if(!instantx.mapTxLockVotes.containsKey(item.hash))
             {
                 getdata.addItem(item);
             }
@@ -1447,7 +1444,7 @@ public class Peer extends PeerSocketHandler {
                 InventoryItem item = it.next();
                 //log.info("inv - received MasternodeBroadcast :" + item.hash);
 
-                //if(!instantx.mapTxLockVote.containsKey(item.hash))
+                //if(!instantx.mapTxLockVotes.containsKey(item.hash))
                 //{
                 if(!alreadyHave(item))
                     getdata.addItem(item);
@@ -1459,7 +1456,7 @@ public class Peer extends PeerSocketHandler {
         while (it.hasNext()) {
             InventoryItem item = it.next();
 
-            //if(!instantx.mapTxLockVote.containsKey(item.hash))
+            //if(!instantx.mapTxLockVotes.containsKey(item.hash))
             //{
             getdata.addItem(item);
             //}

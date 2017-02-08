@@ -480,6 +480,13 @@ public class MasternodeManager extends AbstractManager {
             lock.unlock();
         }
     }
+    public boolean has(TransactionOutPoint outpoint)
+    {
+        TransactionInput txin = new TransactionInput(params, null, null, outpoint);
+        Masternode mn = find(txin);
+
+        return mn != null;
+    }
 
     public int countEnabled() { return countEnabled(-1); }
     public int countEnabled(int protocolVersion)
@@ -1032,6 +1039,10 @@ public class MasternodeManager extends AbstractManager {
         return (int)(Utils.getTotalCoinEstimate(nBlock)/100*nPercentage/nCollateral);
     }
 
+    /*MasternodeInfo getMasternodeInfo(TransactionOutPoint outpoint)
+    {
+
+    }*/
 
 
     public AbstractManager createEmpty()

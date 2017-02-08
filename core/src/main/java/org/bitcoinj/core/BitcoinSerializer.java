@@ -76,7 +76,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(DarkSendElectionEntryPingMessage.class, "dseep");
 
         names.put(TransactionLockRequest.class, "ix");
-        names.put(ConsensusVote.class, "txlvote");
+        names.put(TransactionLockVote.class, "txlvote");
 
         names.put(MasternodeBroadcast.class, "mnb");
         names.put(MasternodePing.class, "mnp");
@@ -249,7 +249,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if (command.equals("ix")) {
             return new TransactionLockRequest(params, payloadBytes);
         } else if (command.equals("txlvote")) {
-            return new ConsensusVote(params, payloadBytes);
+            return new TransactionLockVote(params, payloadBytes);
         } else if (command.equals("dsq")) {
             return new DarkSendQueue(params, payloadBytes);
         } else if (command.equals("mnb")) {

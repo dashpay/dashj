@@ -18,9 +18,8 @@ import org.bitcoinj.core.listeners.BlockChainListener;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.bitcoinj.store.MasternodeDB;
-import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.darkcoinj.DarkSendPool;
-import org.darkcoinj.InstantXSystem;
+import org.darkcoinj.InstantSend;
 import org.slf4j.*;
 
 import java.util.List;
@@ -67,7 +66,7 @@ public class Context {
     public MasternodeSync masternodeSync;
     public ActiveMasternode activeMasternode;
     public DarkSendPool darkSendPool;
-    public InstantXSystem instantx;
+    public InstantSend instantx;
     public HashStore hashStore;
     public MasternodeDB masternodeDB;
 
@@ -215,7 +214,7 @@ public class Context {
         masternodeSync = new MasternodeSync(this);
         activeMasternode = new ActiveMasternode(this);
         darkSendPool = new DarkSendPool(this);
-        instantx = new InstantXSystem(this);
+        instantx = new InstantSend(this);
         masternodeManager = new MasternodeManager(this);
     }
 
