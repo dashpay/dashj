@@ -17,8 +17,11 @@ import static org.bitcoinj.core.DarkCoinSystem.fMasterNode;
 public class InstantSend {
     private static final Logger log = LoggerFactory.getLogger(InstantSend.class);
     public static final int MIN_INSTANTSEND_PROTO_VERSION = 70205;
+    private static final int ORPHAN_VOTE_SECONDS            = 60;
 
     ReentrantLock lock = Threading.lock("InstantSend");
+
+    StoredBlock currentBlock;
 
     public HashMap<Sha256Hash, TransactionLockRequest> mapLockRequestAccepted;
     public HashMap<Sha256Hash, TransactionLockRequest> mapLockRequestRejected;
@@ -32,7 +35,7 @@ public class InstantSend {
     public HashMap<TransactionOutPoint, Sha256Hash> mapLockedOutpoints;
     public HashMap<TransactionOutPoint, Long> mapMasternodeOrphanVotes; //track votes with no tx for DOS
 
-    int nInstantSendKeepLock = 24;
+    public static int nInstantSendKeepLock = 24;
     int nCompleteTXLocks;
 
     //our internal stuff
@@ -451,7 +454,7 @@ public class InstantSend {
 
             Sha256Hash txHash = vote.getTxHash();
 
-            if(!vote.isValid())
+            if(!vote.isValid(pnode))
             {
                 // could be because of missing MN
                 log.info("instantsend - CInstantSend::ProcessTxLockVote -- Vote is invalid, txid="+ txHash.toString());
@@ -496,7 +499,7 @@ public class InstantSend {
                 } else {
                     long nPrevOrphanVote = mapMasternodeOrphanVotes.get(vote.getOutpointMasternode());
                     if(nPrevOrphanVote > Utils.currentTimeSeconds() && nPrevOrphanVote > getAverageMasternodeOrphanVoteTime()) {
-                        log.info("instantsend--CInstantSend::ProcessTxLockVote -- masternode is spamming orphan Transaction Lock Votes: txid="+txHash+"  masternode=", vote.getOutpointMasternode().toString());
+                        log.info("instantsend--CInstantSend::ProcessTxLockVote -- masternode is spamming orphan Transaction Lock Votes: txid="+txHash+"  masternode=", vote.getOutpointMasternode().toStringShort());
                         // Misbehaving(pfrom->id, 1);
                         return false;
                     }
@@ -525,7 +528,7 @@ public class InstantSend {
                             // NOTE: if we decide to apply pose ban score here, this vote must be relayed further
                             // to let all other nodes know about this node's misbehaviour and let them apply
                             // pose ban score too.
-                            log.info("CInstantSend::ProcessTxLockVote -- masternode sent conflicting votes! "+ vote.getOutpointMasternode().toString());
+                            log.info("CInstantSend::ProcessTxLockVote -- masternode sent conflicting votes! "+ vote.getOutpointMasternode().toStringShort());
                             return false;
                         }
                     }
@@ -683,7 +686,7 @@ public class InstantSend {
                     for(Sha256Hash hash : it)
                     {
                         if (!hash.equals(txLockRequest.getHash())) {
-                            log.info("instantsend", "CInstantSend::ProcessTxLockRequest -- Double spend attempt! %s"+ txin.getOutpoint().toString());
+                            log.info("instantsend", "CInstantSend::ProcessTxLockRequest -- Double spend attempt! %s"+ txin.getOutpoint().toStringShort());
                             // do not fail here, let it go and see which one will get the votes to be locked
                         }
                     }
@@ -963,6 +966,152 @@ public class InstantSend {
 
     }
 
+    public void checkAndRemove()
+    {
+        if(currentBlock == null) return;
+
+        try {
+            lock.lock();
+
+            Iterator<Map.Entry<Sha256Hash, TransactionLockCandidate>> itLockCandidate = mapTxLockCandidates.entrySet().iterator();
+
+
+            // remove expired candidates
+            while(itLockCandidate.hasNext()) {
+                Map.Entry<Sha256Hash, TransactionLockCandidate> txLockCandidateEntry = itLockCandidate.next();
+
+                TransactionLockCandidate txLockCandidate = txLockCandidateEntry.getValue();
+
+                Sha256Hash txHash = txLockCandidate.getHash();
+                if (txLockCandidate.isExpired(currentBlock.getHeight())) {
+                    log.info("CInstantSend::CheckAndRemove -- Removing expired Transaction Lock Candidate: txid="+ txHash);
+
+                    Iterator<Map.Entry<TransactionOutPoint, TransactionOutPointLock>> itOutpointLock = txLockCandidate.mapOutPointLocks.entrySet().iterator();
+
+                    while(itOutpointLock.hasNext())
+                    {
+                        TransactionOutPoint outpoint = itOutpointLock.next().getKey();
+                        mapLockedOutpoints.remove(outpoint);
+                        mapVotedOutpoints.remove(outpoint);
+                        //++itOutpointLock;
+                    }
+                    mapLockRequestAccepted.remove(txHash);
+                    mapLockRequestRejected.remove(txHash);
+                    mapTxLockCandidates.remove(itLockCandidate);
+                } else {
+                    //++itLockCandidate;
+                }
+            }
+
+            // remove expired votes
+            Iterator<Map.Entry<Sha256Hash, TransactionLockVote>> itVote = mapTxLockVotes.entrySet().iterator();
+            while (itVote.hasNext())
+            {
+                Map.Entry<Sha256Hash, TransactionLockVote> vote = itVote.next();
+                if (vote.getValue().isExpired(currentBlock.getHeight())) {
+                    log.info("instantsend--CInstantSend::CheckAndRemove -- Removing expired vote: txid="+vote.getValue().getTxHash()+"  masternode=" + vote.getValue().getOutpointMasternode().toStringShort());
+                    mapTxLockVotes.remove(itVote);
+                } else {
+                    //++itVote;
+                }
+            }
+
+            // remove expired orphan votes
+            Iterator<Map.Entry<Sha256Hash, TransactionLockVote>> itOrphanVote = mapTxLockVotes.entrySet().iterator();
+            while (itOrphanVote.hasNext())
+            {
+                Map.Entry<Sha256Hash, TransactionLockVote> vote = itOrphanVote.next();
+                if (Utils.currentTimeSeconds() - vote.getValue().getTimeCreated() > ORPHAN_VOTE_SECONDS) {
+                    log.info("instantsend--CInstantSend::CheckAndRemove -- Removing expired orphan vote: txid="+vote.getValue().getTxHash()+"  masternode="+ vote.getValue().getOutpointMasternode().toStringShort());
+                    mapTxLockVotes.remove(vote.getKey());
+                    mapTxLockVotesOrphan.remove(itOrphanVote);
+                } else {
+                    //++itOrphanVote;
+                }
+            }
+
+            // remove expired masternode orphan votes (DOS protection)
+            Iterator<Map.Entry<TransactionOutPoint, Long>> itMasternodeOrphan = mapMasternodeOrphanVotes.entrySet().iterator();
+            while (itMasternodeOrphan.hasNext()) {
+                Map.Entry<TransactionOutPoint, Long> masterNodeOrphan = itMasternodeOrphan.next();
+                if (masterNodeOrphan.getValue() < Utils.currentTimeSeconds()) {
+                    log.info("instantsend", "CInstantSend::CheckAndRemove -- Removing expired orphan masternode vote: masternode=%s\n",
+                            masterNodeOrphan.getKey().toString());
+                    mapMasternodeOrphanVotes.remove(itMasternodeOrphan);
+                } else {
+                    //++itMasternodeOrphan;
+                }
+            }
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+    public void updatedChainHead(StoredBlock chainHead)
+    {
+        currentBlock = chainHead;
+    }
+
+    public void syncTransaction(Transaction tx, StoredBlock block)
+    {
+        // Update lock candidates and votes if corresponding tx confirmed
+        // or went from confirmed to 0-confirmed or conflicted.
+
+        if (tx.isCoinBase()) return;
+
+        try {
+            lock.lock();
+
+            Sha256Hash txHash = tx.getHash();
+
+            // When tx is 0-confirmed or conflicted, pblock is NULL and nHeightNew should be set to -1
+            //CBlockIndex * pblockindex = pblock ? mapBlockIndex[pblock -> GetHash()] : NULL;
+            int nHeightNew = block != null ? block.getHeight() : -1;//pblockindex ? pblockindex -> nHeight : -1;
+
+            log.info("instantsend--CInstantSend::SyncTransaction -- txid="+txHash+" nHeightNew="+ nHeightNew);
+
+            // Check lock candidates
+
+            TransactionLockCandidate txLockCandidate = mapTxLockCandidates.get(txHash);
+            if (txLockCandidate != null) {
+                log.info("instantsend", "CInstantSend::SyncTransaction -- txid="+txHash+" nHeightNew="+nHeightNew+" lock candidate updated");
+                txLockCandidate.setConfirmedHeight(nHeightNew);
+                // Loop through outpoint locks
+
+                Iterator<Map.Entry<TransactionOutPoint, TransactionOutPointLock>> itOutpointLock = txLockCandidate.mapOutPointLocks.entrySet().iterator();
+                while (itOutpointLock.hasNext()) {
+                    // Check corresponding lock votes
+                    Collection<TransactionLockVote> vVotes = itOutpointLock.next().getValue().getVotes();
+
+                    //Map.Entry<Sha256Hash, TransactionLockVote> it = null;
+                    for (TransactionLockVote vote: vVotes)
+                    {
+                        Sha256Hash nVoteHash = vote.getHash();
+                        log.info("instantsend--CInstantSend::SyncTransaction -- txid="+txHash+" nHeightNew="+nHeightNew+" vote "+nVoteHash+" updated");
+                        TransactionLockVote it = mapTxLockVotes.get(nVoteHash);
+                        if (it != null) {
+                            it.setConfirmedHeight(nHeightNew);
+                        }
+                    }
+                }
+            }
+
+            // check orphan votes
+            Iterator<Map.Entry<Sha256Hash, TransactionLockVote>> itOrphanVote = mapTxLockVotesOrphan.entrySet().iterator();
+            while (itOrphanVote.hasNext()) {
+                Map.Entry<Sha256Hash, TransactionLockVote> orphanVote = itOrphanVote.next();
+                if (orphanVote.getValue().getTxHash().equals(txHash)) {
+                    log.info("instantsend--CInstantSend::SyncTransaction -- txid="+txHash+" nHeightNew="+nHeightNew+" vote "+orphanVote.getKey()+" updated");
+                    mapTxLockVotes.get(orphanVote.getKey()).setConfirmedHeight(nHeightNew);
+                }
+                //++itOrphanVote;
+            }
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
     public boolean isLockedIXTransaction(Sha256Hash txHash) {
         // there must be a successfully verified lock request...
         if (!mapLockRequestAccepted.containsKey(txHash)) return false;
@@ -1017,7 +1166,7 @@ public class InstantSend {
 
                 mapLockedOutpoints.put(tt.getKey(), txHash);
             }
-            log.info("instantsend--CInstantSend::LockTransactionInputs -- done, txid=", txHash);
+            log.info("instantsend--CInstantSend::LockTransactionInputs -- done, txid="+ txHash);
         }finally {
             lock.unlock();
         }

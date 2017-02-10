@@ -1,5 +1,7 @@
 package org.bitcoinj.core;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 
 /**
@@ -32,6 +34,11 @@ public class TransactionOutPointLock { //COutPointLock
             return false;
         mapMasternodeVotes.put(vote.getOutpointMasternode(), vote);
         return true;
+    }
+
+    public Collection<TransactionLockVote> getVotes()
+    {
+        return mapMasternodeVotes.values();
     }
 
     public int countVotes() { return mapMasternodeVotes.size(); }

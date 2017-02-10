@@ -1992,6 +1992,8 @@ public class Wallet extends BaseTaggableObject
             // Mark the tx as appearing in this block so we can find it later after a re-org. This also tells the tx
             // confidence object about the block and sets its depth appropriately.
             tx.setBlockAppearance(block, bestChain, relativityOffset);
+            //added for Dash
+            context.instantSend.syncTransaction(tx, block);
             if (bestChain) {
                 // Don't notify this tx of work done in notifyNewBestBlock which will be called immediately after
                 // this method has been called by BlockChain for all relevant transactions. Otherwise we'd double
@@ -2506,7 +2508,7 @@ public class Wallet extends BaseTaggableObject
 
             //Dash Specific
             if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
-                context.instantx.processTxLockRequest((TransactionLockRequest)tx);
+                context.instantSend.processTxLockRequest((TransactionLockRequest)tx);
             }
 
             informConfidenceListenersIfNotReorganizing();
@@ -4890,7 +4892,7 @@ public class Wallet extends BaseTaggableObject
 
             //Dash instantSend
             if(req.useInstantSend)
-                fees = Coin.CENT;
+                fees = TransactionLockRequest.MIN_FEE;
 
             valueNeeded = value.add(fees);
             if (additionalValueForNextCategory != null)

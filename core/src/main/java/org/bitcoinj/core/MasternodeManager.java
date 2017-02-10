@@ -4,7 +4,6 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -14,13 +13,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
+import static org.bitcoinj.core.MasterNodeSystem.MASTERNODE_REMOVAL_SECONDS;
 
 /**
  * Created by Hash Engineering on 2/20/2016.
@@ -343,7 +342,7 @@ public class MasternodeManager extends AbstractManager {
 
         // make sure the vout that was signed is related to the transaction that spawned the Masternode
         //  - this is expensive, so it's only done once per Masternode
-        if(!DarkSendSigner.isVinAssociatedWithPubkey(params, mnb.vin, mnb.pubkey)) {
+        if(!DarkSendSigner.isVinAssociatedWithPubkey(params, mnb.vin, mnb.pubKeyCollateralAddress)) {
             log.info("mnb - Got mismatched pubkey and vin");
             //Misbehaving(pfrom->GetId(), 33);
             return;
@@ -436,7 +435,7 @@ public class MasternodeManager extends AbstractManager {
             //BOOST_FOREACH(CMasternode& mn, vMasternodes)
             for (Masternode mn : vMasternodes) {
                 //payee2 = GetScriptForDestination(mn.pubkey.GetID());
-                payee2 = ScriptBuilder.createOutputScript(mn.pubkey.getECKey());
+                payee2 = ScriptBuilder.createOutputScript(mn.pubKeyCollateralAddress.getECKey());
 
                 if (payee2 == payee)
                     return mn;
@@ -472,7 +471,7 @@ public class MasternodeManager extends AbstractManager {
             //BOOST_FOREACH(CMasternode & mn, vMasternodes)
             for (Masternode mn : vMasternodes)
             {
-                if (mn.pubkey2.equals(pubKeyMasternode))
+                if (mn.pubKeyMasternode.equals(pubKeyMasternode))
                     return mn;
             }
             return null;
@@ -546,6 +545,11 @@ public class MasternodeManager extends AbstractManager {
                 ", nDsqCount: " + (int)nDsqCount;
 
         return result;
+    }
+    public void askForMN(Peer pnode, TransactionOutPoint outPoint)
+    {
+        TransactionInput input = new TransactionInput(params, null, null, outPoint);
+        askForMN(pnode, input);
     }
 
     public void askForMN(Peer pnode, TransactionInput vin)
@@ -882,7 +886,7 @@ public class MasternodeManager extends AbstractManager {
 
             while (it3.hasNext()) {
                 Map.Entry<Sha256Hash, MasternodeBroadcast> mb = it3.next();
-                if (mb.getValue().lastPing.sigTime < Utils.currentTimeSeconds() - (Masternode.MASTERNODE_REMOVAL_SECONDS * 2)) {
+                if (mb.getValue().lastPing.sigTime < Utils.currentTimeSeconds() - (MASTERNODE_REMOVAL_SECONDS * 2)) {
                     //mapSeenMasternodeBroadcast.erase(it3++);
                     log.info("masternode-CMasternodeMan::CheckAndRemove - Removing expired Masternode broadcast {}", mb.getValue().getHash().toString());
                     context.masternodeSync.mapSeenSyncMNB.remove(mb.getValue().getHash());
@@ -897,7 +901,7 @@ public class MasternodeManager extends AbstractManager {
             Iterator<Map.Entry<Sha256Hash, MasternodePing>> it4 = mapSeenMasternodePing.entrySet().iterator();
             while (it4.hasNext()) {
                 Map.Entry<Sha256Hash, MasternodePing> mp = it4.next();
-                if (mp.getValue().sigTime < Utils.currentTimeSeconds() - (Masternode.MASTERNODE_REMOVAL_SECONDS * 2)) {
+                if (mp.getValue().sigTime < Utils.currentTimeSeconds() - (MASTERNODE_REMOVAL_SECONDS * 2)) {
                     //mapSeenMasternodePing.erase(it4++);
                     log.info("masternode-CMasternodeMan::CheckAndRemove - Removing expired Masternode ping {}", mp.getValue().getHash().toString());
                     it4.remove();
@@ -1050,4 +1054,37 @@ public class MasternodeManager extends AbstractManager {
         return new MasternodeManager(context);
     }
 
+    TransactionInput getInputFromOutPoint(TransactionOutPoint outPoint)
+    {
+        return new TransactionInput(params, null, null, outPoint);
+    }
+
+    public MasternodeInfo getMasternodeInfo(TransactionOutPoint outPoint)
+    {
+        return getMasternodeInfo(getInputFromOutPoint(outPoint));
+    }
+
+    public MasternodeInfo getMasternodeInfo(TransactionInput vin)
+    {
+        MasternodeInfo info = new MasternodeInfo();
+        //LOCK(cs);
+        Masternode pMN = find(vin);
+        if(pMN == null)  {
+            return info;
+        }
+        info = pMN.getInfo();
+        return info;
+    }
+
+    public MasternodeInfo getMasternodeInfo(PublicKey pubKeyMasternode)
+    {
+        MasternodeInfo info = new MasternodeInfo();
+        //LOCK(cs);
+        Masternode pMN = find(pubKeyMasternode);
+        if(pMN == null)  {
+            return info;
+        }
+        info = pMN.getInfo();
+        return info;
+    }
 }

@@ -296,7 +296,7 @@ public class MasterNodeSystem {
                 String strMessage = mn.address.toString() + m.sigTime + m.stop;
 
                 StringBuilder errorMessage = new StringBuilder();
-                if(!DarkSendSigner.verifyMessage(ECKey.fromPublicOnly(mn.pubkey2.getBytes()), m.vchSig, strMessage, errorMessage)){
+                if(!DarkSendSigner.verifyMessage(ECKey.fromPublicOnly(mn.pubKeyMasternode.getBytes()), m.vchSig, strMessage, errorMessage)){
                     log.info("dseep - Got bad masternode address signature %s \n", m.vin.toString());
                     //Misbehaving(pfrom->GetId(), 100);
                     return;
@@ -394,18 +394,18 @@ public class MasterNodeSystem {
             if(mn.IsEnabled()) {
                 if(DarkCoinSystem.fDebug) log.info("dseg - Sending masternode entry - "+ mn.address.toString());
 
-                    DarkSendElectionEntryMessage dsee = new DarkSendElectionEntryMessage(context, mn.vin, mn.address, mn.sig, mn.now, mn.pubkey, mn.pubkey2, count, i, mn.lastTimeSeen, mn.protocolVersion);
+                    DarkSendElectionEntryMessage dsee = new DarkSendElectionEntryMessage(context, mn.vin, mn.address, mn.sig, mn.now, mn.pubkey, mn.pubKeyMasternode, count, i, mn.lastTimeSeen, mn.protocolVersion);
                     peer.sendMessage(dsee);
 
 
-                //pfrom->PushMessage("dsee", mn.vin, mn.addr, mn.sig, mn.now, mn.pubkey, mn.pubkey2, count, i, mn.lastTimeSeen, mn.protocolVersion);
+                //pfrom->PushMessage("dsee", mn.vin, mn.addr, mn.sig, mn.now, mn.pubkey, mn.pubKeyMasternode, count, i, mn.lastTimeSeen, mn.protocolVersion);
             }
         } else if (m.vin == mn.vin) {
             if(DarkCoinSystem.fDebug) log.info("dseg - Sending masternode entry - "+ peer.getAddress().toString());
 
-            DarkSendElectionEntryMessage dsee = new DarkSendElectionEntryMessage(context, mn.vin, mn.address, mn.sig, mn.now, mn.pubkey, mn.pubkey2, count, i, mn.lastTimeSeen, mn.protocolVersion);
+            DarkSendElectionEntryMessage dsee = new DarkSendElectionEntryMessage(context, mn.vin, mn.address, mn.sig, mn.now, mn.pubkey, mn.pubKeyMasternode, count, i, mn.lastTimeSeen, mn.protocolVersion);
             peer.sendMessage(dsee);
-            //pfrom->PushMessage("dsee", mn.vin, mn.addr, mn.sig, mn.now, mn.pubkey, mn.pubkey2, count, i, mn.lastTimeSeen, mn.protocolVersion);
+            //pfrom->PushMessage("dsee", mn.vin, mn.addr, mn.sig, mn.now, mn.pubkey, mn.pubKeyMasternode, count, i, mn.lastTimeSeen, mn.protocolVersion);
 
             log.info("dseg - Sent 1 masternode entries to "+  peer.getAddress().toString());
             return;
@@ -430,7 +430,7 @@ public class MasterNodeSystem {
         if(context.getId().equals(NetworkParameters.ID_REGTEST)) isLocal = false;
 
         String vchPubKey = new String(m.pubkey.getBytes());
-        String vchPubKey2 = new String(m.pubkey2.getBytes());
+        String vchPubKey2 = new String(m.pubKeyMasternode.getBytes());
 
         String strMessage = m.addr.toString() + m.sigTime + vchPubKey + vchPubKey2 + m.protocolVersion;
 
@@ -452,13 +452,13 @@ public class MasterNodeSystem {
         }
 
         //CScript pubkeyScript2;
-        //pubkeyScript2.SetDestination(pubkey2.GetID());
-        ECKey pubkey2 = ECKey.fromPublicOnly(m.pubkey2.getBytes());
-        Address address2 = new Address(context, pubkey2.getPubKeyHash());
+        //pubkeyScript2.SetDestination(pubKeyMasternode.GetID());
+        ECKey pubKeyMasternode = ECKey.fromPublicOnly(m.pubKeyMasternode.getBytes());
+        Address address2 = new Address(context, pubKeyMasternode.getPubKeyHash());
         Script pubkeyScript2 = ScriptBuilder.createOutputScript(address2);
 
         if(pubkeyScript.getProgram().length != 25) {
-            log.info("dsee - pubkey2 the wrong size\n");
+            log.info("dsee - pubKeyMasternode the wrong size\n");
             //Misbehaving(pfrom->GetId(), 100);
             return;
         }
@@ -488,13 +488,13 @@ public class MasterNodeSystem {
 
                 if(mn.now < m.sigTime){ //take the newest entry
                     log.info("dsee - Got updated entry for ", m.addr.toString());
-                    mn.pubkey2 = m.pubkey2;
+                    mn.pubKeyMasternode = m.pubKeyMasternode;
                     mn.now = m.sigTime;
                     mn.sig = m.vchSig;
                     mn.protocolVersion = m.protocolVersion;
                     mn.address = m.addr;
 
-                    //RelayDarkSendElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
+                    //RelayDarkSendElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubKeyMasternode, count, current, lastUpdated, protocolVersion);
                 }
             }
 
@@ -538,17 +538,17 @@ public class MasterNodeSystem {
             //addrman.Add(CAddress(addr), pfrom->addr, 2*60*60);
 
             // add our masternode
-            Masternode mn = new Masternode(m.addr, m.vin, m.pubkey, m.vchSig, m.sigTime, m.pubkey2, m.protocolVersion);
+            Masternode mn = new Masternode(m.addr, m.vin, m.pubkey, m.vchSig, m.sigTime, m.pubKeyMasternode, m.protocolVersion);
             mn.UpdateLastSeen(m.lastUpdated);
             vecMasternodes.add(mn);
 
             // if it matches our masternodeprivkey, then we've been remotely activated
-            if(m.pubkey2 == activeMasternode.pubKeyMasternode && m.protocolVersion == NetworkParameters.PROTOCOL_VERSION){
+            if(m.pubKeyMasternode == activeMasternode.pubKeyMasternode && m.protocolVersion == NetworkParameters.PROTOCOL_VERSION){
                 activeMasternode.EnableHotColdMasterNode(m.vin, m.addr);
             }
 
            //if(count == -1 && !isLocal)
-           //     RelayDarkSendElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
+           //     RelayDarkSendElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubKeyMasternode, count, current, lastUpdated, protocolVersion);
 
         } else {
             log.info("dsee - Rejected masternode entry %s"+ m.addr.toString());

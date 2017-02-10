@@ -66,7 +66,7 @@ public class Context {
     public MasternodeSync masternodeSync;
     public ActiveMasternode activeMasternode;
     public DarkSendPool darkSendPool;
-    public InstantSend instantx;
+    public InstantSend instantSend;
     public HashStore hashStore;
     public MasternodeDB masternodeDB;
 
@@ -214,7 +214,7 @@ public class Context {
         masternodeSync = new MasternodeSync(this);
         activeMasternode = new ActiveMasternode(this);
         darkSendPool = new DarkSendPool(this);
-        instantx = new InstantSend(this);
+        instantSend = new InstantSend(this);
         masternodeManager = new MasternodeManager(this);
     }
 
@@ -249,7 +249,7 @@ public class Context {
         sporkManager.setBlockChain(chain);
         masternodeManager.setBlockChain(chain);
         masternodeSync.setBlockChain(chain);
-        instantx.setBlockChain(chain);
+        instantSend.setBlockChain(chain);
     }
 
     public boolean isLiteMode() { return liteMode; }
@@ -313,5 +313,18 @@ public class Context {
      */
     public boolean isEnsureMinRequiredFee() {
         return ensureMinRequiredFee;
+    }
+
+    public void updatedChainHead(StoredBlock chainHead)
+    {
+        instantSend.updatedChainHead(chainHead);
+
+        /*
+        mnodeman.UpdatedBlockTip(pindex);
+        darkSendPool.UpdatedBlockTip(pindex);
+        instantsend.UpdatedBlockTip(pindex);
+        mnpayments.UpdatedBlockTip(pindex);
+        governance.UpdatedBlockTip(pindex);
+        masternodeSync.UpdatedBlockTip(pindex);*/
     }
 }

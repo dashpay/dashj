@@ -227,7 +227,7 @@ public class MasternodeDB {
             return read(context, false);
         }
 
-    public static void dumpMasternodes()
+    /*public static void dumpMasternodes()
     {
         long nStart = Utils.currentTimeMillis();
 
@@ -258,6 +258,6 @@ public class MasternodeDB {
         mndb.write(Context.get().masternodeManager);
 
         log.info("Masternode dump finished  {}ms", Utils.currentTimeMillis() - nStart);
-    }
+    }*/
 };
 

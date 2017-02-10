@@ -337,7 +337,7 @@ public class MasternodeSync {
     }
     static int tick = 0;
 
-    public void process()
+    public void processTick()
     {
 
         if(tick++ %6 != 0) return;

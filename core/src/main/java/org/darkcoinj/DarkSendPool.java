@@ -177,7 +177,7 @@ public class DarkSendPool {
 
             //RenameThread("dash-darksend");
             log.info("--------------------------------------\nstarting dash-darksend thread");
-            int c = 0;
+            int tick = 0;
             try {
 
                 while (true) {
@@ -185,7 +185,7 @@ public class DarkSendPool {
                     //LogPrintf("ThreadCheckDarkSendPool::check timeout\n");
 
                     // try to sync from all available nodes, one step at a time
-                    context.masternodeSync.process();
+                    context.masternodeSync.processTick();
 
                     if(context.isLiteMode() && context.allowInstantXinLiteMode() && context.masternodeSync.getSyncStatusInt() == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
                         log.info("closing thread: " + Thread.currentThread().getName());
@@ -195,32 +195,34 @@ public class DarkSendPool {
 
                     if (context.masternodeSync.isBlockchainSynced()) {
 
-                        c++;
+                        tick++;
 
                         // check if we should activate or ping every few minutes,
                         // start right after sync is considered to be done
-                        if (c % Masternode.MASTERNODE_PING_SECONDS == 1)
+                        if (tick % Masternode.MASTERNODE_MIN_MNP_SECONDS == 15)
                             context.activeMasternode.manageStatus();
 
-                        if (c % 60 == 0) {
-                            context.masternodeManager.checkAndRemove();
+                        if (tick % 60 == 0) {
                             context.masternodeManager.processMasternodeConnections();
+                            context.masternodeManager.checkAndRemove();
                             context.masternodePayments.checkAndRemove();
-                            context.instantx.cleanTransactionLocksList();
+                            context.instantSend.checkAndRemove();
                         }
                         //hashengineering added this
-                        if(c % 30 == 0) {
+                        if(tick % 30 == 0) {
                             log.info(context.masternodeManager.toString());
                         }
 
                         //if(c % MASTERNODES_DUMP_SECONDS == 0) DumpMasternodes();
 
                         //TODO:  Add if necessary for other DarkSend functions
-                        /*context.darkSendPool.checkTimeout();
-                        context.darkSendPool.checkForCompleteQueue();
+                        /*
+                        darkSendPool.CheckTimeout();
+                        darkSendPool.CheckForCompleteQueue();
 
-                        if (context.darkSendPool.getState() == POOL_STATUS_IDLE && c % 15 == 0) {
-                            context.darkSendPool.DoAutomaticDenominating();
+                        if(nDoAutoNextRun == nTick) {
+                            darkSendPool.DoAutomaticDenominating();
+                            nDoAutoNextRun = nTick + PRIVATESEND_AUTO_TIMEOUT_MIN + GetRandInt(PRIVATESEND_AUTO_TIMEOUT_MAX - PRIVATESEND_AUTO_TIMEOUT_MIN);
                         }*/
                     }
                 }
@@ -238,13 +240,13 @@ public class DarkSendPool {
     {
         if(backgroundThread == null)
         {
-            backgroundThread = new ContextPropagatingThreadFactory("dash-darksend").newThread(ThreadCheckDarkSendPool);
+            backgroundThread = new ContextPropagatingThreadFactory("dash-privatesend").newThread(ThreadCheckDarkSendPool);
             backgroundThread.start();
             return true;
         }
         else if(backgroundThread.getState() == Thread.State.TERMINATED) {
             //if the thread was stopped, start it again
-            backgroundThread = new ContextPropagatingThreadFactory("dash-darksend").newThread(ThreadCheckDarkSendPool);
+            backgroundThread = new ContextPropagatingThreadFactory("dash-privatesend").newThread(ThreadCheckDarkSendPool);
             backgroundThread.start();
         }
         return false;

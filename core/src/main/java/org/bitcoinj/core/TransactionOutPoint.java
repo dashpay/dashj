@@ -188,6 +188,11 @@ public class TransactionOutPoint extends ChildMessage {
         return "COutPoint("+ hash.toString() + ", "+ index +")";
     }
 
+    public String toStringShort()
+    {
+        return hash.toString().substring(0, 64) + "-"+ index;
+    }
+
     /**
      * Returns the hash of the transaction this outpoint references/spends/is connected to.
      */

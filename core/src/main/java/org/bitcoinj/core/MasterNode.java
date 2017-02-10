@@ -1,20 +1,17 @@
 package org.bitcoinj.core;
 
-import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Threading;
-import org.darkcoinj.DarkSend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
+import static org.bitcoinj.core.MasterNodeSystem.MASTERNODE_REMOVAL_SECONDS;
 
 /**
  * Created by Eric on 2/8/2015.
@@ -55,40 +52,47 @@ public class Masternode extends Message{
         }
     }
 
-    public static int  MASTERNODE_MIN_MNP_SECONDS      =       (10*60);
-    public static int  MASTERNODE_MIN_MNB_SECONDS      =       (5*60);
-    public static int  MASTERNODE_PING_SECONDS         =       (5*60);
-    public static int  MASTERNODE_EXPIRATION_SECONDS   =       (65*60);
-    public static int  MASTERNODE_REMOVAL_SECONDS      =       (75*60);
-    public static int  MASTERNODE_CHECK_SECONDS        =       5;
+    public static final int MASTERNODE_CHECK_SECONDS               =   5;
+    public static final int MASTERNODE_MIN_MNB_SECONDS             =   5 * 60;
+    public static final int MASTERNODE_MIN_MNP_SECONDS             =  10 * 60;
+    public static final int MASTERNODE_EXPIRATION_SECONDS          =  65 * 60;
+    public static final int MASTERNODE_WATCHDOG_MAX_SECONDS        = 120 * 60;
+    public static final int MASTERNODE_NEW_START_REQUIRED_SECONDS  = 180 * 60;
+
+    public static final int MASTERNODE_POSE_BAN_MAX_SCORE          = 5;
 
     public TransactionInput vin;
     public MasternodeAddress address;
-    public PublicKey pubkey;
-    public PublicKey pubkey2;
+    public PublicKey pubKeyCollateralAddress;
+    public PublicKey pubKeyMasternode;
     public MasternodeSignature sig;
-    public State activeState;
     public long sigTime; //mnb message time
+    long nLastDsq;
+    public long nTimeLastChecked;
+    public long nTimeLastPaid;
+    public long nTimeLastWatchdogVote;
+    public State activeState;
+    public int nCacheCollateralBlock;
+    public int nBlockLastPaid;
+    public int protocolVersion;
+    public int nPoSeBanScore;
+    public int nPoSeBanHeight;
+    boolean fAllowMixingTx;
+    boolean unitTest;
+
+    HashMap<Sha256Hash, Integer> mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
 
     int cacheInputAge;
     int cacheInputAgeBlock;
-    boolean unitTest;
+
     boolean allowFreeTx;
-    public int protocolVersion;
+
 
     //the dsq count from the last dsq broadcast of this node
-    long nLastDsq;
+
     int nScanningErrorCount;
     int nLastScanningErrorBlockHeight;
     MasternodePing lastPing;
-
-    public long lastDseep;// temporary, do not save. Remove after migration to v12
-    long lastDSeep;// temporary, do not save. Remove after migration to v12
-
-        //other variables
-
-        DarkSend darkSend;
-
 
     Context context;
 
@@ -99,8 +103,8 @@ public class Masternode extends Message{
 
         vin = null;
         address = null;
-        pubkey = new PublicKey();
-        pubkey2 = new PublicKey();
+        pubKeyCollateralAddress = new PublicKey();
+        pubKeyMasternode = new PublicKey();
         sig = null;
         activeState = State.MASTERNODE_ENABLED;
         sigTime = Utils.currentTimeSeconds();
@@ -137,8 +141,8 @@ public class Masternode extends Message{
         //LOCK(cs);
         this.vin = other.vin;  //TODO:  need to make copies of all these?
         this.address = new MasternodeAddress(other.address.getAddr(), other.address.getPort());
-        this.pubkey = other.pubkey.duplicate();
-        this.pubkey2 = other.pubkey2.duplicate();
+        this.pubKeyCollateralAddress = other.pubKeyCollateralAddress.duplicate();
+        this.pubKeyMasternode = other.pubKeyMasternode.duplicate();
 
         //These are good
         this.sig = other.sig.duplicate();
@@ -161,8 +165,8 @@ public class Masternode extends Message{
         context = Context.get();
         vin = mnb.vin;
         address = mnb.address;
-        pubkey = mnb.pubkey;
-        pubkey2 = mnb.pubkey2;
+        pubKeyCollateralAddress = mnb.pubKeyCollateralAddress;
+        pubKeyMasternode = mnb.pubKeyMasternode;
         sig = mnb.sig;
         activeState = State.MASTERNODE_ENABLED;
         sigTime = mnb.sigTime;
@@ -195,7 +199,7 @@ public class Masternode extends Message{
         //PublicKey pubkey;
         cursor += PublicKey.calcLength(buf, cursor);
 
-        //PublicKey pubkey2;
+        //PublicKey pubKeyMasternode;
         cursor += PublicKey.calcLength(buf, cursor);
 
         // byte [] sig;
@@ -246,10 +250,10 @@ public class Masternode extends Message{
         //MasternodeAddress address;
         cursor += MasternodeAddress.MESSAGE_SIZE;
         //PublicKey pubkey;
-        cursor += pubkey.calculateMessageSizeInBytes();
+        cursor += pubKeyCollateralAddress.calculateMessageSizeInBytes();
 
-        //PublicKey pubkey2;
-        cursor += pubkey2.calculateMessageSizeInBytes();
+        //PublicKey pubKeyMasternode;
+        cursor += pubKeyMasternode.calculateMessageSizeInBytes();
 
         // byte [] sig;
         cursor += sig.calculateMessageSizeInBytes(); //calcLength(buf, cursor);
@@ -294,37 +298,44 @@ public class Masternode extends Message{
         address = new MasternodeAddress(params, payload, cursor, CoinDefinition.PROTOCOL_VERSION);
         cursor += address.getMessageSize();
 
-        pubkey = new PublicKey(params, payload, cursor);
-        cursor += pubkey.getMessageSize();
+        pubKeyCollateralAddress = new PublicKey(params, payload, cursor);
+        cursor += pubKeyCollateralAddress.getMessageSize();
 
-        pubkey2 = new PublicKey(params, payload, cursor);
-        cursor += pubkey2.getMessageSize();
+        pubKeyMasternode = new PublicKey(params, payload, cursor);
+        cursor += pubKeyMasternode.getMessageSize();
 
         sig = new MasternodeSignature(params, payload, cursor);
         cursor += sig.getMessageSize();
 
         sigTime = readInt64();
+        nLastDsq = readInt64();
 
-        protocolVersion = (int)readUint32();
+        nTimeLastChecked = readInt64();
+        nTimeLastPaid = readInt64();
+        nTimeLastWatchdogVote = readInt64();
 
         activeState = State.forValue((int)readUint32());
 
-        lastPing = new MasternodePing(params, payload, cursor);
-        cursor += lastPing.getMessageSize();
+        nCacheCollateralBlock = (int) readUint32();
+        nBlockLastPaid = (int)readUint32();
+        protocolVersion = (int)readUint32();
 
+        nPoSeBanScore = (int)readUint32();
+        nPoSeBanHeight = (int)readUint32();
 
-
-        cacheInputAge = (int)readUint32();
-        cacheInputAgeBlock = (int)readUint32();
-
+        fAllowMixingTx = readBytes(1)[0] == 1;
         unitTest = readBytes(1)[0] == 1;
 
-        allowFreeTx = readBytes(1)[0] == 1;
+        long entries = readVarInt();
 
-        nLastDsq = readInt64();
 
-        nScanningErrorCount = (int)readUint32();
-        nLastScanningErrorBlockHeight = (int)readUint32();
+        for(long i = 0; i < entries; ++i)
+        {
+            mapGovernanceObjectsVotedOn.put(readHash(), (int)readUint32());
+        }
+
+
+
 
         length = cursor - offset;
 
@@ -335,32 +346,39 @@ public class Masternode extends Message{
 
         vin.bitcoinSerialize(stream);
         address.bitcoinSerialize(stream);
-        pubkey.bitcoinSerialize(stream);
-        pubkey2.bitcoinSerialize(stream);
+        pubKeyCollateralAddress.bitcoinSerialize(stream);
+        pubKeyMasternode.bitcoinSerialize(stream);
 
         sig.bitcoinSerialize(stream);
 
         Utils.int64ToByteStreamLE(sigTime, stream);
-        Utils.uint32ToByteStreamLE(protocolVersion, stream);
-
+        Utils.int64ToByteStreamLE(nLastDsq, stream);
+        Utils.int64ToByteStreamLE(nTimeLastChecked, stream);
+        Utils.int64ToByteStreamLE(nTimeLastPaid, stream);
+        Utils.int64ToByteStreamLE(nTimeLastWatchdogVote, stream);
         Utils.uint32ToByteStreamLE(activeState.getValue(), stream);
 
-        lastPing.bitcoinSerialize(stream);
-
-        Utils.uint32ToByteStreamLE(cacheInputAge, stream);
-        Utils.uint32ToByteStreamLE(cacheInputAgeBlock, stream);
+        Utils.uint32ToByteStreamLE(nCacheCollateralBlock, stream);
+        Utils.uint32ToByteStreamLE(nBlockLastPaid, stream);
+        Utils.uint32ToByteStreamLE(protocolVersion, stream);
+        Utils.uint32ToByteStreamLE(nPoSeBanScore, stream);
+        Utils.uint32ToByteStreamLE(nPoSeBanHeight, stream);
 
         byte value [] = new byte[1];
+
+        value[0] = (byte)(fAllowMixingTx ? 1 : 0);
+        stream.write(value);
+
         value[0] = (byte)(unitTest ? 1 : 0);
         stream.write(value);
 
-        value[0] = (byte)(allowFreeTx ? 1 : 0);
-        stream.write(value);
+        stream.write(new VarInt(mapGovernanceObjectsVotedOn.size()).encode());
+        for(Map.Entry<Sha256Hash, Integer> e: mapGovernanceObjectsVotedOn.entrySet())
+        {
+            stream.write(e.getKey().getReversedBytes());
+            Utils.uint32ToByteStreamLE(e.getValue(), stream);
+        }
 
-        Utils.int64ToByteStreamLE(nLastDsq, stream);
-
-        Utils.uint32ToByteStreamLE(nScanningErrorCount, stream);
-        Utils.uint32ToByteStreamLE(nLastScanningErrorBlockHeight, stream);
     }
 
     //
@@ -502,7 +520,7 @@ public class Masternode extends Message{
                 // or doesn't meet payments requirements ...
                 || protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()
                 // or it's our own node and we just updated it to the new protocol but we are still waiting for activation -
-                || (pubkey2.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion < params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT))){
+                || (pubKeyMasternode.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion < params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT))){
             activeState = State.MASTERNODE_REMOVE;
             return;
         }
@@ -601,7 +619,7 @@ public class Masternode extends Message{
     boolean updateFromNewBroadcast(MasternodeBroadcast mnb)
     {
         if(mnb.sigTime > sigTime) {
-            pubkey2 = mnb.pubkey2;
+            pubKeyMasternode = mnb.pubKeyMasternode;
             sigTime = mnb.sigTime;
             sig = mnb.sig;
             protocolVersion = mnb.protocolVersion;
@@ -630,4 +648,22 @@ public class Masternode extends Message{
             return cacheInputAge+(chainActive.Tip()->nHeight-cacheInputAgeBlock);
         }
         */
+
+    public MasternodeInfo getInfo()
+    {
+        MasternodeInfo info = new MasternodeInfo();
+        info.vin = vin;
+        info.addr = address;
+        info.pubKeyCollateralAddress = pubKeyCollateralAddress;
+        info.pubKeyMasternode = pubKeyMasternode;
+        info.sigTime = sigTime;
+        info.nLastDsq = nLastDsq;
+        info.nTimeLastChecked = nTimeLastChecked;
+        info.nTimeLastPaid = nTimeLastPaid;
+        info.nTimeLastWatchdogVote = nTimeLastWatchdogVote;
+        info.nActiveState = activeState;
+        info.nProtocolVersion = protocolVersion;
+        info.fInfoValid = true;
+        return info;
+    }
 }

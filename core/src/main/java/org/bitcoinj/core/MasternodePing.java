@@ -20,11 +20,9 @@ import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.Arrays;
 
 import static com.hashengineering.crypto.X11.x11Digest;
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
@@ -152,7 +150,7 @@ public class MasternodePing extends Message implements Serializable {
 
         if(fCheckSigTimeOnly) {
             Masternode pmn = context.masternodeManager.find(vin);
-            if(pmn != null) return verifySignature(pmn.pubkey2);
+            if(pmn != null) return verifySignature(pmn.pubKeyMasternode);
             return true;
         }
 
@@ -168,13 +166,13 @@ public class MasternodePing extends Message implements Serializable {
             // update only if there is no known ping for this masternode or
             // last ping was more then MASTERNODE_MIN_MNP_SECONDS-60 ago comparing to this one
             if(!pmn.isPingedWithin(MASTERNODE_MIN_MNP_SECONDS - 60, sigTime)) {
-                if(!verifySignature(pmn.pubkey2))
+                if(!verifySignature(pmn.pubKeyMasternode))
                     return false;
 
                 String strMessage = vin.toStringCpp() + blockHash.toString() + sigTime;
 
                 StringBuilder errorMessage = new StringBuilder();
-                if (!DarkSendSigner.verifyMessage(pmn.pubkey2, vchSig, strMessage, errorMessage)) {
+                if (!DarkSendSigner.verifyMessage(pmn.pubKeyMasternode, vchSig, strMessage, errorMessage)) {
                     log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature " + vin.toString());
                     //nDos = 33;
                     return false;

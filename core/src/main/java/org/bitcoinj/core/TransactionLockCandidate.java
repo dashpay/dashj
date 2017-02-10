@@ -1,5 +1,7 @@
 package org.bitcoinj.core;
 
+import org.darkcoinj.InstantSend;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -67,5 +69,11 @@ public class TransactionLockCandidate {
     public void addOutPointLock(TransactionOutPoint outpoint)
     {
         mapOutPointLocks.put(outpoint, new TransactionOutPointLock(params, outpoint));
+    }
+    public void setConfirmedHeight(int confirmedHeight) { this.confirmedHeight = confirmedHeight; }
+    public boolean isExpired(int height)
+    {
+        // Locks and votes expire nInstantSendKeepLock blocks after the block corresponding tx was included into.
+        return (confirmedHeight != -1) && (height - confirmedHeight > InstantSend.nInstantSendKeepLock);
     }
 }

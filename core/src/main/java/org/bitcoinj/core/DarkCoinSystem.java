@@ -44,7 +44,7 @@ public class DarkCoinSystem {
         this.blockChain = blockChain;
         this.blockStore = blockStore;
 
-        //instantx = new InstantSend(this);
+        //instantSend = new InstantSend(this);
         masternode = new MasterNodeSystem();
         darkSend = new DarkSend();
     }
