@@ -66,28 +66,6 @@ public class TransactionLockRequest extends Transaction {
         return "Transaction Lock Request:\n" + super.toString(chain);
     }
 
-    public void verify() throws VerificationException {
-        super.verify();
-
-        Coin valueOut = Coin.valueOf(0);
-        Coin valueIn = Coin.valueOf(0);
-
-        for (TransactionOutput output : getOutputs()) {
-            valueOut = valueOut.add(output.getValue());
-        }
-
-        if(valueOut.compareTo(Coin.valueOf(1000, 0)) > 0)
-            throw new VerificationException("InstantX transaction of more than 1000");
-
-        Coin fee = getFee();
-        if(fee != null) {
-            if (fee.compareTo(Coin.valueOf(0, 1)) < 0)
-                throw new VerificationException("InstantX transaction with fee less than 0.01");
-        }
-
-
-    }
-
     public boolean isValid(boolean fRequireUnspent)
     {
         if(getOutputs().size() < 1) return false;
@@ -161,7 +139,14 @@ public class TransactionLockRequest extends Transaction {
             return false;
         }
 
-        /*if(nValueIn.subtract(nValueOut).isLessThan(getMinFee())) {
+        Coin fee = getFee();
+        if(fee != null) {
+            if (fee.compareTo(MIN_FEE) < 0) {
+                log.info("instantsend", "CTxLockRequest::IsValid -- did not include enough fees in transaction: fees=" + nValueOut.subtract(nValueIn) + ", tx=" + toString());
+                return false;
+            }
+        }
+        /*if(get.isLessThan(getMinFee())) {
             log.info("instantsend", "CTxLockRequest::IsValid -- did not include enough fees in transaction: fees="+nValueOut.subtract(nValueIn)+", tx="+toString());
             return false;
         }*/
