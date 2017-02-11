@@ -815,6 +815,10 @@ public class Peer extends PeerSocketHandler {
             // and so on.
             TransactionConfidence confidence = tx.getConfidence();
             confidence.setSource(TransactionConfidence.Source.NETWORK);
+
+            //Dash Specific
+            context.instantSend.syncTransaction(tx, null);
+
             pendingTxDownloads.remove(confidence);
             if (maybeHandleRequestedData(tx)) {
                 return;
