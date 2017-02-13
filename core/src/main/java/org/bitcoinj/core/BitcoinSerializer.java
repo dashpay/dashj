@@ -265,6 +265,9 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("getsporks")) {
             return new GetSporksMessage(params);
         }
+        else if(command.equals("govsync")) {
+            return new GovernanceSyncMessage(params);
+        }
         else{
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);
