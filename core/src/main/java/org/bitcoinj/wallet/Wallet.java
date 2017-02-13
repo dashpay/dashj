@@ -53,6 +53,8 @@ import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.*;
 
 import static com.google.common.base.Preconditions.*;
+import static java.lang.Math.max;
+
 
 // To do list:
 //
@@ -4136,7 +4138,7 @@ public class Wallet extends BaseTaggableObject
         if (ensureMinRequiredFee && fee.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
             fee = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
         if(useInstantSend)
-            fee = Coin.CENT;
+            fee = TransactionLockRequest.MIN_FEE.multiply(tx.getInputs().size());
         TransactionOutput output = tx.getOutput(0);
         output.setValue(output.getValue().subtract(fee));
         return !output.isDust();
@@ -4882,6 +4884,7 @@ public class Wallet extends BaseTaggableObject
         // We keep track of the last size of the transaction we calculated but only if the act of adding inputs and
         // change resulted in the size crossing a 1000 byte boundary. Otherwise it stays at zero.
         int lastCalculatedSize = 0;
+        int lastCalculatedInputs = 0;
         Coin valueNeeded, valueMissing = null;
         while (true) {
             resetTxInputs(req, originalInputs);
@@ -4891,8 +4894,9 @@ public class Wallet extends BaseTaggableObject
                 fees = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
 
             //Dash instantSend
-            if(req.useInstantSend)
-                fees = TransactionLockRequest.MIN_FEE;
+            if(req.useInstantSend) {
+                fees = Coin.valueOf(max(TransactionLockRequest.MIN_FEE.getValue(), TransactionLockRequest.MIN_FEE.multiply(lastCalculatedInputs).getValue()));
+            }
 
             valueNeeded = value.add(fees);
             if (additionalValueForNextCategory != null)
@@ -4934,6 +4938,7 @@ public class Wallet extends BaseTaggableObject
             }
 
             int size = 0;
+            int inputs = 0;
             TransactionOutput changeOutput = null;
             if (change.signum() > 0) {
                 // The value of the inputs is greater than what we want to send. Just like in real life then,
@@ -4974,8 +4979,10 @@ public class Wallet extends BaseTaggableObject
             // include things we haven't added yet like input signatures/scripts or the change output.
             size += req.tx.unsafeBitcoinSerialize().length;
             size += estimateBytesForSigning(selection);
-            if (size > lastCalculatedSize && req.feePerKb.signum() > 0) {
+            inputs = req.tx.getInputs().size();
+            if (size > lastCalculatedSize && req.feePerKb.signum() > 0 || req.useInstantSend && inputs > lastCalculatedInputs) {
                 lastCalculatedSize = size;
+                lastCalculatedInputs = inputs;
                 // We need more fees anyway, just try again with the same additional value
                 additionalValueForNextCategory = additionalValueSelected;
                 continue;

@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 
+import static java.lang.Math.max;
+
 /**
  * Created by Hash Engineering Solutions on 2/22/2015.
  */
@@ -146,7 +148,7 @@ public class TransactionLockRequest extends Transaction {
                 return false;
             }
         }
-        /*if(get.isLessThan(getMinFee())) {
+        /*if(getFee().isLessThan(getMinFee())) {
             log.info("instantsend", "CTxLockRequest::IsValid -- did not include enough fees in transaction: fees="+nValueOut.subtract(nValueIn)+", tx="+toString());
             return false;
         }*/
@@ -156,9 +158,7 @@ public class TransactionLockRequest extends Transaction {
 
     public Coin getMinFee()
     {
-        Coin nMinFee = MIN_FEE;
-        Coin nMinFeeX = nMinFee.multiply(getInputs().size());
-        return nMinFee.compareTo(nMinFeeX) > 0 ? nMinFee : nMinFeeX;
+        return Coin.valueOf(max(MIN_FEE.getValue(), MIN_FEE.getValue() * getInputs().size()));
     }
 
     public int getMaxSignatures()
