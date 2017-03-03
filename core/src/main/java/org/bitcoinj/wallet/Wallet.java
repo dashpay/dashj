@@ -3308,16 +3308,17 @@ public class Wallet extends BaseTaggableObject
 
         for (Transaction tx : txns) {
             try {
-                builder.append("Sends ");
+                builder.append(tx.getValue(this).toFriendlyString());
+                builder.append(" total value (sends ");
                 builder.append(tx.getValueSentFromMe(this).toFriendlyString());
                 builder.append(" and receives ");
                 builder.append(tx.getValueSentToMe(this).toFriendlyString());
-                builder.append(", total value ");
-                builder.append(tx.getValue(this).toFriendlyString());
-                builder.append(".\n");
+                builder.append(")\n");
             } catch (ScriptException e) {
                 // Ignore and don't print this line.
             }
+            if (tx.hasConfidence())
+                builder.append("  confidence: ").append(tx.getConfidence()).append('\n');
             builder.append(tx.toString(chain));
         }
     }
@@ -3972,8 +3973,8 @@ public class Wallet extends BaseTaggableObject
                 value = value.add(output.getValue());
             }
 
-            log.info("Completing send tx with {} outputs totalling {} (not including fees)",
-                    req.tx.getOutputs().size(), value.toFriendlyString());
+            log.info("Completing send tx with {} outputs totalling {} and a fee of {}/kB", req.tx.getOutputs().size(),
+                    value.toFriendlyString(), req.feePerKb.toFriendlyString());
 
             // If any inputs have already been added, we don't need to get their value from wallet
             Coin totalInput = Coin.ZERO;
@@ -4049,12 +4050,6 @@ public class Wallet extends BaseTaggableObject
             final int size = req.tx.unsafeBitcoinSerialize().length;
             if (size > Transaction.MAX_STANDARD_TX_SIZE)
                 throw new ExceededMaxTransactionSize();
-
-            final Coin calculatedFee = req.tx.getFee();
-            if (calculatedFee != null)
-                log.info("  with a fee of {}/kB, {} for {} bytes",
-                        calculatedFee.multiply(1000).divide(size).toFriendlyString(), calculatedFee.toFriendlyString(),
-                        size);
 
             // Label the transaction as being self created. We can use this later to spend its change output even before
             // the transaction is confirmed. We deliberately won't bother notifying listeners here as there's not much

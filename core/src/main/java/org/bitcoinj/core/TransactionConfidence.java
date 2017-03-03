@@ -341,7 +341,10 @@ public class TransactionConfidence {
         StringBuilder builder = new StringBuilder();
         int peers = numBroadcastPeers();
         if (peers > 0) {
-            builder.append("Seen by ").append(peers).append(peers > 1 ? " peers. " : " peer. ");
+            builder.append("Seen by ").append(peers).append(peers > 1 ? " peers" : " peer");
+            if (lastBroadcastedAt != null)
+                builder.append(" (most recently: ").append(Utils.dateTimeFormat(lastBroadcastedAt)).append(")");
+            builder.append(". ");
         }
         switch (getConfidenceType()) {
             case UNKNOWN:
@@ -370,6 +373,9 @@ public class TransactionConfidence {
                 builder.append("  IX Requested");
                 break;
         }
+
+        if (source != Source.UNKNOWN)
+            builder.append(" Source: ").append(source);
         return builder.toString();
     }
 

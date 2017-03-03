@@ -636,8 +636,10 @@ public class Transaction extends ChildMessage {
     public String toString(@Nullable AbstractBlockChain chain) {
         StringBuilder s = new StringBuilder();
         s.append("  ").append(getHashAsString()).append('\n');
-        if (hasConfidence())
-            s.append("  confidence: ").append(getConfidence()).append('\n');
+        if (updatedAt != null)
+            s.append("  updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
+        if (version != 1)
+            s.append("  version ").append(version).append('\n');
         if (isTimeLocked()) {
             s.append("  time locked until ");
             if (lockTime < LOCKTIME_THRESHOLD) {
@@ -1093,11 +1095,13 @@ public class Transaction extends ChildMessage {
         this.lockTime = lockTime;
     }
 
-    /**
-     * @return the version
-     */
     public long getVersion() {
         return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+        unCache();
     }
 
     /** Returns an unmodifiable view of all inputs. */

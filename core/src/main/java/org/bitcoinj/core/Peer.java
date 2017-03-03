@@ -752,7 +752,9 @@ public class Peer extends PeerSocketHandler {
                 } else {
                     lock.lock();
                     try {
-                        log.info("Passed the fast catchup time, discarding {} headers and requesting full blocks",
+                        log.info(
+                                "Passed the fast catchup time ({}) at height {}, discarding {} headers and requesting full blocks",
+                                Utils.dateTimeFormat(fastCatchupTimeSecs * 1000), blockChain.getBestChainHeight() + 1,
                                 m.getBlockHeaders().size() - i);
                         this.downloadBlockBodies = true;
                         // Prevent this request being seen as a duplicate.
@@ -1020,7 +1022,7 @@ public class Peer extends PeerSocketHandler {
             // Start the operation.
             sendMessage(getdata);
         } catch (Exception e) {
-            log.error("{}: Couldn't send getdata in downloadDependencies({})", this, tx.getHash());
+            log.error("{}: Couldn't send getdata in downloadDependencies({})", this, tx.getHash(), e);
             resultFuture.setException(e);
             return resultFuture;
         } finally {
