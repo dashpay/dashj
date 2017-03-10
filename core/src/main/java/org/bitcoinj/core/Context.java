@@ -204,7 +204,7 @@ public class Context {
     //
 
     public void initDash(boolean liteMode, boolean allowInstantX) {
-        this.liteMode = liteMode;
+        this.liteMode = true; //liteMode; //Disable since non-lite mode is not working well in 12.1
         this.allowInstantX = allowInstantX;
 
         //Dash Specific
