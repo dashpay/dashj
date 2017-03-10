@@ -119,7 +119,7 @@ public class CoinDefinition {
             "dnsseed.dashdot.io"
     };
 
-    public static int minBroadcastConnections = 0;   //0 for default; we need more peers.
+    public static int minBroadcastConnections = 3;   //0 for default; Using 3 like BreadWallet.
 
     //
     // TestNet - DASH
