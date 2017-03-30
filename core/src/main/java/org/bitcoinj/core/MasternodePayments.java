@@ -9,8 +9,8 @@ public class MasternodePayments {
     //! minimum peer version that can receive masternode payments
     // V1 - Last protocol version before update
     // V2 - Newest protocol version
-    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70103;
-    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70204;
+    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70206;
+    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70206;
 
     MasternodePayments(Context context)
     {
