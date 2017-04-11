@@ -40,14 +40,14 @@ public class AddressTest {
 
     @Test
     public void testJavaSerialization() throws Exception {
-        Address testAddress = Address.fromBase58(testParams, "n4eA2nbYqErp7H6jebchxAN59DmNpksexv");
+        Address testAddress = Address.fromBase58(testParams, "ydzm4Uvr2GkLxTwQnwiyijYUukk1eweBo4");
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         new ObjectOutputStream(os).writeObject(testAddress);
         VersionedChecksummedBytes testAddressCopy = (VersionedChecksummedBytes) new ObjectInputStream(
                 new ByteArrayInputStream(os.toByteArray())).readObject();
         assertEquals(testAddress, testAddressCopy);
 
-        Address mainAddress = Address.fromBase58(mainParams, "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
+        Address mainAddress = Address.fromBase58(mainParams, "Xtqn4ks8sJS7iG7S7r1Jf37eFFSJGwh8a8");
         os = new ByteArrayOutputStream();
         new ObjectOutputStream(os).writeObject(mainAddress);
         VersionedChecksummedBytes mainAddressCopy = (VersionedChecksummedBytes) new ObjectInputStream(
@@ -60,7 +60,7 @@ public class AddressTest {
         if(CoinDefinition.supportsTestNet) {
         // Test a testnet address.
             Address a = new Address(testParams, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
-            assertEquals("n4eA2nbYqErp7H6jebchxAN59DmNpksexv", a.toString());
+            assertEquals("ydzm4Uvr2GkLxTwQnwiyijYUukk1eweBo4", a.toString());
             assertFalse(a.isP2SHAddress());
         }
         Address b = new Address(mainParams, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
@@ -71,10 +71,10 @@ public class AddressTest {
     
     @Test
     public void decoding() throws Exception {
-        Address a = Address.fromBase58(testParams, "n4eA2nbYqErp7H6jebchxAN59DmNpksexv");
+        Address a = Address.fromBase58(testParams, "ydzm4Uvr2GkLxTwQnwiyijYUukk1eweBo4");
         assertEquals("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc", Utils.HEX.encode(a.getHash160()));
 
-        Address b = Address.fromBase58(mainParams, "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
+        Address b = Address.fromBase58(mainParams, "Xtqn4ks8sJS7iG7S7r1Jf37eFFSJGwh8a8");
         assertEquals("4a22c3c4cbb31e4d03b15550636762bda0baf85a", Utils.HEX.encode(b.getHash160()));
     }
     @Test
@@ -101,7 +101,7 @@ public class AddressTest {
 
         // Check the case of a mismatched network.
         try {
-            Address.fromBase58(testParams, "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
+            Address.fromBase58(testParams, "Xtqn4ks8sJS7iG7S7r1Jf37eFFSJGwh8a8");
             fail();
         } catch (WrongNetworkException e) {
             // Success.
@@ -118,7 +118,7 @@ public class AddressTest {
         assertEquals(MainNetParams.get().getId(), params.getId());
         if(CoinDefinition.supportsTestNet)
         {
-            params = Address.getParametersFromAddress("n4eA2nbYqErp7H6jebchxAN59DmNpksexv");
+            params = Address.getParametersFromAddress("ydzm4Uvr2GkLxTwQnwiyijYUukk1eweBo4");
             assertEquals(TestNet3Params.get().getId(), params.getId());
         }
     }
@@ -142,7 +142,7 @@ public class AddressTest {
         NetworkParameters params = Address.getParametersFromAddress("LLxSnHLN2CYyzB5eWTR9K9rS9uWtbTQFb6");
         assertEquals(altNetwork.getId(), params.getId());
         // Check if main network works as before
-        params = Address.getParametersFromAddress("17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
+        params = Address.getParametersFromAddress("Xtqn4ks8sJS7iG7S7r1Jf37eFFSJGwh8a8");
         assertEquals(MainNetParams.get().getId(), params.getId());
         // Unregister network
         Networks.unregister(altNetwork);
@@ -205,7 +205,7 @@ public class AddressTest {
 
     @Test
     public void roundtripBase58() throws Exception {
-        String base58 = "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL";
+        String base58 = "Xtqn4ks8sJS7iG7S7r1Jf37eFFSJGwh8a8";
         assertEquals(base58, Address.fromBase58(null, base58).toBase58());
     }
 
