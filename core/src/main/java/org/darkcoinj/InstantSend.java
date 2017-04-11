@@ -16,7 +16,7 @@ import static org.bitcoinj.core.DarkCoinSystem.fMasterNode;
  */
 public class InstantSend {
     private static final Logger log = LoggerFactory.getLogger(InstantSend.class);
-    public static final int MIN_INSTANTSEND_PROTO_VERSION = 70205;
+    public static final int MIN_INSTANTSEND_PROTO_VERSION = 70206;
     private static final int ORPHAN_VOTE_SECONDS            = 60;
 
     ReentrantLock lock = Threading.lock("InstantSend");

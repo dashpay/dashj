@@ -79,8 +79,8 @@ public class CoinDefinition {
     //
     // Dash 0.12
     //
-    public static final int PROTOCOL_VERSION = 70205;          //version.h PROTOCOL_VERSION
-    public static final int MIN_PROTOCOL_VERSION = 70103;        //version.h MIN_PROTO_VERSION
+    public static final int PROTOCOL_VERSION = 70206;          //version.h PROTOCOL_VERSION
+    public static final int MIN_PROTOCOL_VERSION = 70206;        //version.h MIN_PROTO_VERSION
 
     public static final int BLOCK_CURRENTVERSION = 2;   //CBlock::CURRENT_VERSION
     public static final int MAX_BLOCK_SIZE = 1 * 1000 * 1000;
@@ -119,7 +119,7 @@ public class CoinDefinition {
             "dnsseed.dashdot.io"
     };
 
-    public static int minBroadcastConnections = 3;   //0 for default; Using 3 like BreadWallet.
+    public static int minBroadcastConnections = 0;   //0 for default; Using 3 like BreadWallet.
 
     //
     // TestNet - DASH

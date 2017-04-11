@@ -29,7 +29,7 @@
 
   <name>dashj Parent</name>
   <description>Provides the common configuration for the dashj modules</description>
-  <url>http://www.bitcoinj.org/</url>
+  <url>http://dash.org/dashj/</url>
 
   <licenses>
     <license>
@@ -53,16 +53,12 @@
   </mailingLists>
 
   <distributionManagement>
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-    </snapshotRepository>
     <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+      <id>bintray-dash-Dashj</id>
+      <name>dash-Dashj</name>
+      <url>https://api.bintray.com/maven/dash/Dashj/org.dashj/;publish=1</url>
     </repository>
   </distributionManagement>
-
 
   <!-- Common build plugin configuration -->
   <build>
@@ -78,33 +74,6 @@
         </configuration>
       </plugin>
 
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <addMavenDescriptor>false</addMavenDescriptor>
-          </archive>
-        </configuration>
-      </plugin>
-
-      <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <notimestamp>true</notimestamp>
-        </configuration>
-      </plugin>
-
-      <plugin>
-        <groupId>org.sonatype.plugins</groupId>
-        <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.6.5</version>
-        <extensions>true</extensions>
-        <configuration>
-            <serverId>ossrh</serverId>
-            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-            <autoReleaseAfterClose>false</autoReleaseAfterClose>
-        </configuration>
-      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
