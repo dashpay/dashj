@@ -272,7 +272,7 @@ public class ForwardingServiceDash {
                     // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
                     System.out.println("SubTxRegister! Transaction hash is " + sendResult.tx.getHashAsString());
                 }
-            }, MoreExecutors.sameThreadExecutor());
+            }, MoreExecutors.directExecutor());
 
             FlatDB<EvolutionUserManager> mndb = new FlatDB<EvolutionUserManager>(kit.directory().getAbsolutePath(),"user.dat", "magicMasternodeCache");
             mndb.dump(Context.get().evoUserManager);
@@ -298,7 +298,7 @@ public class ForwardingServiceDash {
                     // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
                     System.out.println("SubTxTopup! Transaction hash is " + sendResult.tx.getHashAsString());
                 }
-            }, MoreExecutors.sameThreadExecutor());
+            }, MoreExecutors.directExecutor());
 
             FlatDB<EvolutionUserManager> mndb = new FlatDB<EvolutionUserManager>(kit.directory().getAbsolutePath(),"user.dat", "magicMasternodeCache");
             mndb.dump(Context.get().evoUserManager);
@@ -322,7 +322,7 @@ public class ForwardingServiceDash {
                     // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
                     System.out.println("SubTxResetKey! Transaction hash is " + sendResult.tx.getHashAsString());
                 }
-            }, MoreExecutors.sameThreadExecutor());
+            }, MoreExecutors.directExecutor());
 
             FlatDB<EvolutionUserManager> mndb = new FlatDB<EvolutionUserManager>(kit.directory().getAbsolutePath(),"user.dat", "magicMasternodeCache");
             mndb.dump(Context.get().evoUserManager);
@@ -352,7 +352,7 @@ public class ForwardingServiceDash {
                     // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
                     System.out.println("Sent coins onwards! Transaction hash is " + sendResult.tx.getHashAsString());
                 }
-            }, MoreExecutors.sameThreadExecutor());
+            }, MoreExecutors.directExecutor());
 
             //MasternodeDB.dumpMasternodes();
             FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(kit.directory().getAbsolutePath(),"mncache.dat", "magicMasternodeCache");
