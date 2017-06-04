@@ -1237,7 +1237,7 @@ public abstract class AbstractBlockChain {
             // TODO: Refactor this hack after 0.5 is released and we stop supporting deserialization compatibility.
             // This should be a method of the NetworkParameters, which should in turn be using singletons and a subclass
             // for each network type. Then each network can define its own difficulty transition rules.
-            if (params.getId().equals(NetworkParameters.ID_TESTNET) && nextBlock.getTime().after(testnetDiffDate)) {
+            if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
                 checkTestnetDifficulty(storedPrev, prev, nextBlock);
                 return;
             }
@@ -1582,7 +1582,12 @@ public abstract class AbstractBlockChain {
         final long timeDelta = next.getTimeSeconds() - prev.getTimeSeconds();
         // There is an integer underflow bug in bitcoin-qt that means mindiff blocks are accepted when time
         // goes backwards.
-        if (timeDelta >= 0 && timeDelta <= NetworkParameters.TARGET_SPACING * 2) {
+        if (timeDelta >= 0 && timeDelta > NetworkParameters.TARGET_SPACING * 2) {
+            if (next.getDifficultyTargetAsInteger().equals(params.getMaxTarget()))
+                return;
+            else throw new VerificationException("Unexpected change in difficulty");
+        }
+        else {
             // Walk backwards until we find a block that doesn't have the easiest proof of work, then check
             // that difficulty is equal to that one.
             StoredBlock cursor = storedPrev;
@@ -1655,7 +1660,7 @@ public abstract class AbstractBlockChain {
         synchronized (chainHeadLock) {
             long offset = height - chainHead.getHeight();
             long headTime = chainHead.getHeader().getTimeSeconds();
-            long estimated = (headTime * 1000) + (1000L * 60L * 10L * offset);
+            long estimated = (headTime * 1000) + (1000L * 60L * 5L / 2L * offset);
             return new Date(estimated);
         }
     }
