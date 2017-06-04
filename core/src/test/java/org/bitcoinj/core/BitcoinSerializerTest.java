@@ -30,11 +30,11 @@ import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.*;
 
 public class BitcoinSerializerTest {
-    private static final byte[] ADDRESS_MESSAGE_BYTES = HEX.decode("f9beb4d96164647200000000000000001f000000" +
+    private static final byte[] ADDRESS_MESSAGE_BYTES = HEX.decode("bf0c6bbd6164647200000000000000001f000000" +
             "ed52399b01e215104d010000000000000000000000000000000000ffff0a000001208d");
 
     private static final byte[] TRANSACTION_MESSAGE_BYTES = HEX.withSeparator(" ", 2).decode(
-            "f9 be b4 d9 74 78 00 00  00 00 00 00 00 00 00 00" +
+            "bf 0c 6b bd 74 78 00 00  00 00 00 00 00 00 00 00" +
             "02 01 00 00 e2 93 cd be  01 00 00 00 01 6d bd db" +
             "08 5b 1d 8a f7 51 84 f0  bc 01 fa d5 8d 12 66 e9" +
             "b6 3b 50 88 19 90 e4 b4  0d 6a ee 36 29 00 00 00" +
@@ -52,6 +52,12 @@ public class BitcoinSerializerTest {
             "22 5e 88 ac 80 fa e9 c7  00 00 00 00 19 76 a9 14" +
             "0e ab 5b ea 43 6a 04 84  cf ab 12 48 5e fd a0 b7" +
             "8b 4e cc 52 88 ac 00 00  00 00");
+    private static final byte[] TRANSACTION_MESSAGE_BYTES1 = HEX.decode(
+            "bf0c6bbd"+ //magic
+                    "747800000000000000000000" +//tx
+                    "e1000000"+ //size 225
+                    "" + //checksum
+                    "0100000001926cdbfc59ae9276e09658759baf1792fa91636511fd639aaced4db2157c081d000000006a473044022063e34eb24f1af68166aa5fe3cbfd86e50cea0ecdd2c08a2a72d52f15ff97f0bc02200fc944e5bad0dda595c2a63f07c7ed3423bc54b2358af6b16c7373135f2678be012102bc42016328bfa02822955ff7490fc963318350779537875e82ce155338f9656fffffffff02c0047700000000001976a91420804bbc0868bda507f436e4aeec0c813ff26de188acc08c6c05000000001976a91465d5ed3c9ed684c3fe6e0bc48a164557a6892cd488ac00000000");
 
     @Test
     public void testAddr() throws Exception {
@@ -137,18 +143,21 @@ public class BitcoinSerializerTest {
     public void testHeaders1() throws Exception {
         MessageSerializer serializer = MainNetParams.get().getDefaultSerializer();
 
-        byte[] headersMessageBytes = HEX.decode("f9beb4d9686561" +
+        byte[] headersMessageBytes1 = HEX.decode("bf0c6bbd686561" +
                 "646572730000000000520000005d4fab8101010000006fe28c0ab6f1b372c1a6a246ae6" +
                 "3f74f931e8365e15a089c68d6190000000000982051fd1e4ba744bbbe680e1fee14677b" +
                 "a1a3c3540bf7b1cdb606e857233e0e61bc6649ffff001d01e3629900");
+        byte[] headersMessageBytes = HEX.decode("bf0c6bbd686561" +
+                "64657273000000000052000000aaf4d8a1"+
+                "0102000000b67a40f3cd5804437a108f105533739c37e6229bc1adcab385140b59fd0f0000a71c1aade44bf8425bec0deb611c20b16da3442818ef20489ca1e2512be43eef814cdb52f0ff0f1edbf7010000");
         HeadersMessage headersMessage = (HeadersMessage) serializer.deserialize(ByteBuffer.wrap(headersMessageBytes));
 
         // The first block after the genesis
         // http://blockexplorer.com/b/1
         Block block = headersMessage.getBlockHeaders().get(0);
-        assertEquals("00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048", block.getHashAsString());
+        assertEquals("000007d91d1254d60e2dd1ae580383070a4ddffa4c64c2eeb4a2f9ecc0414343", block.getHashAsString());
         assertNotNull(block.transactions);
-        assertEquals("0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098", Utils.HEX.encode(block.getMerkleRoot().getBytes()));
+        assertEquals("ef3ee42b51e2a19c4820ef182844a36db1201c61eb0dec5b42f84be4ad1a1ca7", Utils.HEX.encode(block.getMerkleRoot().getBytes()));
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         serializer.serialize(headersMessage, byteArrayOutputStream);
@@ -163,7 +172,7 @@ public class BitcoinSerializerTest {
     public void testHeaders2() throws Exception {
         MessageSerializer serializer = MainNetParams.get().getDefaultSerializer();
 
-        byte[] headersMessageBytes = HEX.decode("f9beb4d96865616465" +
+        byte[] headersMessageBytes1 = HEX.decode("f9beb4d96865616465" +
                 "72730000000000e701000085acd4ea06010000006fe28c0ab6f1b372c1a6a246ae63f74f931e" +
                 "8365e15a089c68d6190000000000982051fd1e4ba744bbbe680e1fee14677ba1a3c3540bf7b1c" +
                 "db606e857233e0e61bc6649ffff001d01e3629900010000004860eb18bf1b1620e37e9490fc8a" +
@@ -177,6 +186,16 @@ public class BitcoinSerializerTest {
                 "370c9a38bf91ac5cae88019bee94d24528526344c36649ffff001d1d03e4770001000000fc33f5" +
                 "96f822a0a1951ffdbf2a897b095636ad871707bf5d3162729b00000000379dfb96a5ea8c81700ea4" +
                 "ac6b97ae9a9312b2d4301a29580e924ee6761a2520adc46649ffff001d189c4c9700");
+        byte[] headersMessageBytes = HEX.decode("bf0c6bbd6865616465" +
+                "72730000000000e7010000d8ee9a83"+
+                "06"+
+                "02000000b67a40f3cd5804437a108f105533739c37e6229bc1adcab385140b59fd0f0000a71c1aade44bf8425bec0deb611c20b16da3442818ef20489ca1e2512be43eef814cdb52f0ff0f1edbf7010000"+
+                "02000000434341c0ecf9a2b4eec2644cfadf4d0a07830358aed12d0ed654121dd90700004bdcd337231c40e16ad4d46356dd3369d69acb46f9647106a52c03b0ce973a3b864cdb52f0ff0f1ef7d2010000"+
+                "02000000aefe1eef743a873769ccf70ee174b541ef4775886f435c7cce1e57ccaf0b0000386851f9d572dce5b95554329a2f6706b0d4d3dcaaf291735479c8151d3329ec954cdb52f0ff0f1e8f07060000"+
+                "02000000ffe08d0dce84f320f81eed925141b231909b2ca0e1d2c67bd956557069020000ae075ab56576f7f01000970ebd7c4b9e21bd90bd51ba62471552ca7db956026e9e4cdb52f0ff0f1e3c27030000"+
+                "02000000e4679be8b765214df4923942bd37dccc2c629210a1d96e9925be6ce4fc06000025a0c01db1cfa0db1847bce702e92e0905d814f3a8fb6f04e0060d75765efd17a14cdb52f0ff0f1e2120010000"+
+                "02000000a210ba37364085b6482d437071506c0b5e722604ccacfa687f2f15567f090000c125f400644f069983dac9a19d85a6cf65026ce6ca036cb4eadccf567fbedf95aa4cdb52f0ff0f1e079f030000");
+
         HeadersMessage headersMessage = (HeadersMessage) serializer.deserialize(ByteBuffer.wrap(headersMessageBytes));
 
         assertEquals(6, headersMessage.getBlockHeaders().size());
@@ -184,16 +203,16 @@ public class BitcoinSerializerTest {
         // index 0 block is the number 1 block in the block chain
         // http://blockexplorer.com/b/1
         Block zeroBlock = headersMessage.getBlockHeaders().get(0);
-        assertEquals("00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048",
+        assertEquals("000007d91d1254d60e2dd1ae580383070a4ddffa4c64c2eeb4a2f9ecc0414343",
                 zeroBlock.getHashAsString());
-        assertEquals(2573394689L, zeroBlock.getNonce());
+        assertEquals(128987, zeroBlock.getNonce());
 
         // index 3 block is the number 4 block in the block chain
         // http://blockexplorer.com/b/4
         Block thirdBlock = headersMessage.getBlockHeaders().get(3);
-        assertEquals("000000004ebadb55ee9096c9a2f8880e09da59c0d68b1c228da88e48844a1485",
+        assertEquals("000006fce46cbe25996ed9a11092622cccdc37bd423992f44d2165b7e89b67e4",
                 thirdBlock.getHashAsString());
-        assertEquals(2850094635L, thirdBlock.getNonce());
+        assertEquals(206652, thirdBlock.getNonce());
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         serializer.serialize(headersMessage, byteArrayOutputStream);

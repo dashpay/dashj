@@ -93,6 +93,7 @@ public class BlockChainTest {
         chain = new BlockChain(PARAMS, wallet, blockStore);
 
         coinbaseTo = wallet.currentReceiveKey().toAddress(PARAMS);
+        Context.get().initDash(false, true);
     }
 
     @Test
@@ -182,12 +183,12 @@ public class BlockChainTest {
         assertTrue(testNetChain.add(getBlock1()));
         Block b2 = getBlock2();
         assertTrue(testNetChain.add(b2));
-        Block bad = new Block(testNet, Block.BLOCK_VERSION_GENESIS);
+        Block bad = new Block(testNet, 2 /*Block.BLOCK_VERSION_GENESIS*/);
         // Merkle root can be anything here, doesn't matter.
         bad.setMerkleRoot(Sha256Hash.wrap("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
         // Nonce was just some number that made the hash < difficulty limit set below, it can be anything.
         bad.setNonce(140548933);
-        bad.setTime(1279242649);
+        bad.setTime(1399712874L);
         bad.setPrevBlockHash(b2.getHash());
         // We're going to make this block so easy 50% of solutions will pass, and check it gets rejected for having a
         // bad difficulty target. Unfortunately the encoding mechanism means we cannot make one that accepts all
@@ -394,23 +395,24 @@ public class BlockChainTest {
 
     // Some blocks from the test net.
     private static Block getBlock2() throws Exception {
-        Block b2 = new Block(testNet, Block.BLOCK_VERSION_GENESIS);
-        b2.setMerkleRoot(Sha256Hash.wrap("addc858a17e21e68350f968ccd384d6439b64aafa6c193c8b9dd66320470838b"));
-        b2.setNonce(2642058077L);
-        b2.setTime(1296734343L);
-        b2.setPrevBlockHash(Sha256Hash.wrap("000000033cc282bc1fa9dcae7a533263fd7fe66490f550d80076433340831604"));
-        assertEquals("000000037b21cac5d30fc6fda2581cf7b2612908aed2abbcc429c45b0557a15f", b2.getHashAsString());
+        Block b2 = new Block(testNet, 2 /*Block.BLOCK_VERSION_GENESIS*/);
+        b2.setMerkleRoot(Sha256Hash.wrap("0d6d332e68eb8ecc66a5baaa95dc4b10c0b32841aed57dc99a5ae0b2f9e4294d"));
+        b2.setNonce(6523);
+        b2.setTime(1398712772L);
+        b2.setDifficultyTarget(0x1e0ffff0);
+        b2.setPrevBlockHash(Sha256Hash.wrap("0000047d24635e347be3aaaeb66c26be94901a2f962feccd4f95090191f208c1"));
+        assertEquals("00000c6264fab4ba2d23990396f42a76aa4822f03cbc7634b79f4dfea36fccc2", b2.getHashAsString());
         b2.verifyHeader();
         return b2;
     }
 
     private static Block getBlock1() throws Exception {
-        Block b1 = new Block(testNet, Block.BLOCK_VERSION_GENESIS);
-        b1.setMerkleRoot(Sha256Hash.wrap("0e8e58ecdacaa7b3c6304a35ae4ffff964816d2b80b62b58558866ce4e648c10"));
-        b1.setNonce(236038445);
-        b1.setTime(1296734340);
-        b1.setPrevBlockHash(Sha256Hash.wrap("00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008"));
-        assertEquals("000000033cc282bc1fa9dcae7a533263fd7fe66490f550d80076433340831604", b1.getHashAsString());
+        Block b1 = new Block(testNet, 2/*Block.BLOCK_VERSION_GENESIS*/);
+        b1.setMerkleRoot(Sha256Hash.wrap("b4fd581bc4bfe51a5a66d8b823bd6ee2b492f0ddc44cf7e820550714cedc117f"));
+        b1.setNonce(31475);
+        b1.setTime(1398712771);
+        b1.setPrevBlockHash(Sha256Hash.wrap("00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c"));
+        assertEquals("0000047d24635e347be3aaaeb66c26be94901a2f962feccd4f95090191f208c1", b1.getHashAsString());
         b1.verifyHeader();
         return b1;
     }
@@ -420,8 +422,8 @@ public class BlockChainTest {
         NetworkParameters params = MainNetParams.get();
         BlockChain prod = new BlockChain(new Context(params), new MemoryBlockStore(params));
         Date d = prod.estimateBlockTime(200000);
-        // The actual date of block 200,000 was 2012-09-22 10:47:00
-        assertEquals(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US).parse("2012-10-23T08:35:05.000-0700"), d);
+        // The actual date of block 200,000 was 2015-01-09 02:02:54
+        assertEquals(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US).parse("2014-12-31T23:00:18.000-0800"), d);
     }
 
     @Test

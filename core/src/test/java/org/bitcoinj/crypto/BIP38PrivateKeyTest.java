@@ -38,7 +38,7 @@ public class BIP38PrivateKeyTest {
     @Test
     public void bip38testvector_noCompression_noEcMultiply_test1() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PRVWUbkzzsbcVac2qwfssoUJAN1Xhrg6bNk8J7Nzm5H7kxEbn2Nh2ZoGg");
+                "6PfRq3VAQFLFJ5nmo9XZ5KWzfny47MZc8v7tTX9SCENkWpQjtpXRxxnfNk");
         ECKey key = encryptedKey.decrypt("TestingOneTwoThree");
         assertEquals("5KN7MzqK5wt2TP1fQCYyHBtDrXdJuXbUzm4A9rKAteGu3Qi5CVR", key.getPrivateKeyEncoded(MAINNET)
                 .toString());

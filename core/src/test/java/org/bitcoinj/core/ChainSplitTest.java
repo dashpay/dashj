@@ -68,6 +68,7 @@ public class ChainSplitTest {
         coinsTo = key1.toAddress(PARAMS);
         coinsTo2 = key2.toAddress(PARAMS);
         someOtherGuy = new ECKey().toAddress(PARAMS);
+        Context.get().initDash(false, true);
     }
 
     @Test
