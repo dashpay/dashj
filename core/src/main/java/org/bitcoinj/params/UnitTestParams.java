@@ -42,7 +42,7 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         genesisBlock.solve();
         port = CoinDefinition.TestPort;
         interval = 10;
-        dumpedPrivateKeyHeader = 128 + CoinDefinition.testnetAddressHeader;
+        dumpedPrivateKeyHeader = 239;
         targetTimespan = 200000000;  // 6 years. Just a very big number.
         spendableCoinbaseDepth = 5;
         subsidyDecreaseBlockCount = 100;

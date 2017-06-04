@@ -53,7 +53,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         addressHeader = CoinDefinition.testnetAddressHeader;
         p2shHeader = CoinDefinition.testnetp2shHeader;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
-        dumpedPrivateKeyHeader = 128 + CoinDefinition.testnetAddressHeader;
+        dumpedPrivateKeyHeader = 239;
         genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime);
         genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget);
         genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce);

@@ -37,7 +37,7 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
         maxTarget = CoinDefinition.proofOfWorkLimit;
-        dumpedPrivateKeyHeader = 128 + CoinDefinition.AddressHeader;
+        dumpedPrivateKeyHeader = 204;
         addressHeader = CoinDefinition.AddressHeader;
         p2shHeader = CoinDefinition.p2shHeader;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader};
