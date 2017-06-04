@@ -17,16 +17,19 @@ public class X11 {
     static {
 
         try {
+            log.info("Loading x11 native library...");
             System.loadLibrary("x11");
             native_library_loaded = true;
+            log.info("Loaded x11 successfully.");
         }
         catch(UnsatisfiedLinkError x)
         {
-
+            log.info("Loading x11 failed: " + x.getMessage());
         }
         catch(Exception e)
         {
             native_library_loaded = false;
+            log.info("Loading x11 failed: " + e.getMessage());
         }
     }
 
