@@ -202,7 +202,7 @@ public class Context {
     //
     // Dash Specific
     //
-
+    private boolean initializedDash = false;
     public void initDash(boolean liteMode, boolean allowInstantX) {
         this.liteMode = true;//liteMode; --TODO: currently only lite mode has been tested and works with 12.1
         this.allowInstantX = allowInstantX;
@@ -216,6 +216,7 @@ public class Context {
         darkSendPool = new DarkSendPool(this);
         instantSend = new InstantSend(this);
         masternodeManager = new MasternodeManager(this);
+        initializedDash = true;
     }
 
     public void initDashSync(String directory)
@@ -246,10 +247,12 @@ public class Context {
         this.blockChain = chain;
         hashStore = new HashStore(chain.getBlockStore());
         chain.addListener(updateHeadListener);
-        sporkManager.setBlockChain(chain);
-        masternodeManager.setBlockChain(chain);
-        masternodeSync.setBlockChain(chain);
-        instantSend.setBlockChain(chain);
+        if(initializedDash) {
+            sporkManager.setBlockChain(chain);
+            masternodeManager.setBlockChain(chain);
+            masternodeSync.setBlockChain(chain);
+            instantSend.setBlockChain(chain);
+        }
     }
 
     public boolean isLiteMode() { return liteMode; }
@@ -317,7 +320,8 @@ public class Context {
 
     public void updatedChainHead(StoredBlock chainHead)
     {
-        instantSend.updatedChainHead(chainHead);
+        if(initializedDash) {
+            instantSend.updatedChainHead(chainHead);
 
         /*
         mnodeman.UpdatedBlockTip(pindex);
@@ -326,5 +330,6 @@ public class Context {
         mnpayments.UpdatedBlockTip(pindex);
         governance.UpdatedBlockTip(pindex);
         masternodeSync.UpdatedBlockTip(pindex);*/
+        }
     }
 }
