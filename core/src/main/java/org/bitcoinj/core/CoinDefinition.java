@@ -54,7 +54,7 @@ public class CoinDefinition {
 
     public static final int TARGET_TIMESPAN = (int)(24 * 60 * 60);  // 24 hours per difficulty cycle, on average.
     public static final int TARGET_SPACING = (int)(2.5 * 60);  // 2.5 minutes seconds per block.
-    public static final int INTERVAL = TARGET_TIMESPAN / TARGET_SPACING;  //36 blocks
+    public static final int INTERVAL = TARGET_TIMESPAN / TARGET_SPACING;  //57 blocks
 
     public static final int getInterval(int height, boolean testNet) {
             return INTERVAL;      //108
@@ -77,7 +77,7 @@ public class CoinDefinition {
     public static final boolean feeCanBeRaised = false;
 
     //
-    // Dash 0.12
+    // Dash 0.12.1.x
     //
     public static final int PROTOCOL_VERSION = 70206;          //version.h PROTOCOL_VERSION
     public static final int MIN_PROTOCOL_VERSION = 70206;        //version.h MIN_PROTO_VERSION
