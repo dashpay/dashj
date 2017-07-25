@@ -3516,7 +3516,7 @@ public class Wallet extends BaseTaggableObject
     }
 
     /**
-     * Get the description of the wallet. See {@link Wallet#setDescription(String))}
+     * Get the description of the wallet. See {@link Wallet#setDescription(String)}
      */
     public String getDescription() {
         return description;
@@ -3793,7 +3793,7 @@ public class Wallet extends BaseTaggableObject
         USE_DUMMY_SIG,
         /**
          * If signature is missing, {@link org.bitcoinj.signers.TransactionSigner.MissingSignatureException}
-         * will be thrown for P2SH and {@link ECKey.MissingPrivateKeyException} for other tx types.
+         * will be thrown for P2SH and {@link org.bitcoinj.core.ECKey.MissingPrivateKeyException} for other tx types.
          */
         THROW
     }
@@ -4774,8 +4774,8 @@ public class Wallet extends BaseTaggableObject
      *
      * <p>This is used to generate a BloomFilter which can be {@link BloomFilter#merge(BloomFilter)}d with another.
      * It could also be used if you have a specific target for the filter's size.</p>
-     *
-     * <p>See the docs for {@link BloomFilter(int, double)} for a brief explanation of anonymity when using bloom
+     * 
+     * <p>See the docs for {@link BloomFilter#BloomFilter(int, double, long, org.bitcoinj.core.BloomFilter.BloomUpdate)} for a brief explanation of anonymity when using bloom
      * filters.</p>
      */
     @Override @GuardedBy("keyChainGroupLock")

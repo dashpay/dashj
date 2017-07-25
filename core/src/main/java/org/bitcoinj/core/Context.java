@@ -26,6 +26,7 @@ import org.bitcoinj.quorums.*;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.dashj.bls.BLS;
+import org.bitcoinj.wallet.SendRequest;
 import org.slf4j.*;
 
 import java.util.EnumSet;
