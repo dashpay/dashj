@@ -602,7 +602,6 @@ public class KeyChainGroup implements KeyBag {
         return filter;
     }
 
-    /** {@inheritDoc} */
     public boolean isRequiringUpdateAllBloomFilter() {
         throw new UnsupportedOperationException();   // Unused.
     }

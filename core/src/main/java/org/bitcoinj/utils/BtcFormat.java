@@ -1375,7 +1375,6 @@ public abstract class BtcFormat extends Format {
      *
      * @param scale Number of places the decimal point will be shifted when formatting
      *              a quantity of satoshis.
-     * @return The DecimalFormatSymbols before changing
      */
     protected static void prefixUnitsIndicator(DecimalFormat numberFormat, int scale) {
         checkState(Thread.holdsLock(numberFormat)); // make sure caller intends to reset before changing
