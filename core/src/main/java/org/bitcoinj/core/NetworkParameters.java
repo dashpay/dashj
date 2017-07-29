@@ -100,6 +100,7 @@ public abstract class NetworkParameters {
      */
     protected int spendableCoinbaseDepth;
     protected int subsidyDecreaseBlockCount;
+    protected int budgetPaymentsStartBlock;
     
     protected int[] acceptableAddressCodes;
     protected String[] dnsSeeds;
@@ -294,6 +295,10 @@ public abstract class NetworkParameters {
 
     public int getSubsidyDecreaseBlockCount() {
         return subsidyDecreaseBlockCount;
+    }
+
+    public int getBudgetPaymentsStartBlock() {
+        return budgetPaymentsStartBlock;
     }
 
     /** Returns DNS names that when resolved, give IP addresses of active peers. */

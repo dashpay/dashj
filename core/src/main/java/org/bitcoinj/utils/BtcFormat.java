@@ -497,9 +497,9 @@ public abstract class BtcFormat extends Format {
     /** The conventional international currency code for bitcoins: "BTC" */
     private static final String COIN_CODE = CoinDefinition.coinTicker;
     /** The default currency symbols for bitcoins */
-    private static final String COIN_SYMBOL = "D";
+    private static final String COIN_SYMBOL = "Đ"; //"฿" đ
     /** An alternative currency symbol to use in locales where the default symbol is used for the national currency. */
-    protected static final String COIN_SYMBOL_ALT = "D";
+    protected static final String COIN_SYMBOL_ALT = "D"; //"Ƀ"
 
     protected final DecimalFormat numberFormat; // warning: mutable
     protected final int minimumFractionDigits;

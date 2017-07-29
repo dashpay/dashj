@@ -33,8 +33,8 @@ import java.util.*;
 import java.util.concurrent.atomic.*;
 
 /**
- * A tool for comparing the blocks which are accepted/rejected by bitcoind/digitalcoinj
- * It is designed to run as a testnet-in-a-box network between a single bitcoind node and digitalcoinj
+ * A tool for comparing the blocks which are accepted/rejected by dashd/dashj
+ * It is designed to run as a testnet-in-a-box network between a single dashd node and dashj
  * It is not an automated unit-test because it requires a bit more set-up...read comments below
  */
 public class BitcoindComparisonTool {
@@ -51,7 +51,7 @@ public class BitcoindComparisonTool {
 
     public static void main(String[] args) throws Exception {
         BriefLogFormatter.init();
-        System.out.println("USAGE: bitcoinjBlockStoreLocation runExpensiveTests(1/0) [port=18444]");
+        System.out.println("USAGE: dashjBlockStoreLocation runExpensiveTests(1/0) [port=18444]");
         boolean runExpensiveTests = args.length > 1 && Integer.parseInt(args[1]) == 1;
 
         params = RegTestParams.get();
