@@ -2119,7 +2119,7 @@ public class PeerGroup implements TransactionBroadcaster {
                 if (max <= 1)
                     return max;
                 else
-                    return (int) Math.round(getMaxConnections() * 0.8);
+                    return (int) Math.round(getMaxConnections() * 0.5);  //originally 0.8
             }
             return minBroadcastConnections;
         } finally {
