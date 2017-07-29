@@ -207,7 +207,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
     }
 
     @Override
-    protected TransactionOutputChanges connectTransactions(int height, Block block)
+    protected TransactionOutputChanges connectTransactions(int height, Block block, StoredBlock storedPrev)
             throws VerificationException, BlockStoreException {
         checkState(lock.isHeldByCurrentThread());
         if (block.transactions == null)
@@ -313,7 +313,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     listScriptVerificationResults.add(future);
                 }
             }
-            if (totalFees.compareTo(params.getMaxMoney()) > 0 || block.getBlockInflation(height).add(totalFees).compareTo(coinbaseValue) < 0)
+            if (totalFees.compareTo(params.getMaxMoney()) > 0 || block.getBlockInflation(height, storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0)
                 throw new VerificationException("Transaction fees out of range");
             for (Future<VerificationException> future : listScriptVerificationResults) {
                 VerificationException e;
@@ -344,7 +344,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
     /**
      * Used during reorgs to connect a block previously on a fork
      */
-    protected synchronized TransactionOutputChanges connectTransactions(StoredBlock newBlock)
+    protected synchronized TransactionOutputChanges connectTransactions(StoredBlock newBlock, StoredBlock storedPrev)
             throws VerificationException, BlockStoreException, PrunedException {
         checkState(lock.isHeldByCurrentThread());
         if (!params.passesCheckpoint(newBlock.getHeight(), newBlock.getHeader().getHash()))
@@ -445,7 +445,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     }
                 }
                 if (totalFees.compareTo(params.getMaxMoney()) > 0 ||
-                        newBlock.getHeader().getBlockInflation(newBlock.getHeight()).add(totalFees).compareTo(coinbaseValue) < 0)
+                        newBlock.getHeader().getBlockInflation(newBlock.getHeight(), storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0)
                     throw new VerificationException("Transaction fees out of range");
                 txOutChanges = new TransactionOutputChanges(txOutsCreated, txOutsSpent);
                 for (Future<VerificationException> future : listScriptVerificationResults) {
