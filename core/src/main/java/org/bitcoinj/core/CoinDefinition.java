@@ -147,7 +147,7 @@ public class CoinDefinition {
         return nSubsidy;
     }
 
-    public static int subsidyDecreaseBlockCount = 4730400;     //main.cpp GetBlockValue(height, fee)
+    public static int subsidyDecreaseBlockCount = 210240;     //main.cpp GetBlockValue(height, fee)
 
     public static BigInteger proofOfWorkLimit = Utils.decodeCompactBits(0x1e0fffffL);  //main.cpp bnProofOfWorkLimit (~uint256(0) >> 20); // digitalcoin: starting difficulty is 1 / 2^12
 
