@@ -17,17 +17,13 @@
 
 package org.bitcoinj.params;
 
-import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.core.*;
+
 import static org.bitcoinj.core.Utils.HEX;
 
 import java.math.BigInteger;
 import java.util.Date;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 
@@ -67,6 +63,13 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
 
         dnsSeeds = CoinDefinition.testnetDnsSeeds;
 
+        checkpoints.put(    261, Sha256Hash.wrap("0x00000c26026d0815a7e2ce4fa270775f61403c040647ff2c3091f99e894a4618"));
+        checkpoints.put(   1999, Sha256Hash.wrap("0x00000052e538d27fa53693efe6fb6892a0c1d26c0235f599171c48a3cce553b1"));
+        checkpoints.put(   2999, Sha256Hash.wrap("0x0000024bc3f4f4cb30d29827c13d921ad77d2c6072e586c7f60d83c2722cdcc5"));
+        checkpoints.put(  12907, Sha256Hash.wrap("0x00000067de20fd6d276ee0839a3187b203accaa5aad04ca5c17c2997e2730e4c"));
+        checkpoints.put(  15590, Sha256Hash.wrap("0x00000009df8f2ee9c230aef9dad257d82bde20ca83378a208ce5d95d29a78852"));
+        checkpoints.put(  65900, Sha256Hash.wrap("0x00000063e4e94d75d0dc075e93898444c8ef50655990dfff7c32d92a7efff671"));
+        checkpoints.put( 127618, Sha256Hash.wrap("0x0000002104a2c1fc923b0e3b74b1860236fbc2b4479a833c28abaf456ea4e466"));
 
         addrSeeds = null;
         bip32HeaderPub = 0x043587cf;
