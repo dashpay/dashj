@@ -5128,6 +5128,11 @@ public class Wallet extends BaseTaggableObject
                 continue;
 
             }
+            //Dash Specific
+            if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
+                //This transaction was stuck and we need to track it once again with InstantSend
+                context.instantSend.processTxLockRequest((TransactionLockRequest)tx);
+            }
             checkState(confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.IN_CONFLICT,
                     "Expected PENDING or IN_CONFLICT, was %s.", confidenceType);
             // Re-broadcast even if it's marked as already seen for two reasons
