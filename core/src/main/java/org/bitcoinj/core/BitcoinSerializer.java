@@ -102,6 +102,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(QuorumSendRecoveredSignatures.class, "qsendrecsigs");
         names.put(InstantSendLock.class, "islock");
         names.put(ChainLockSignature.class, "clsig");
+        names.put(SendHeadersMessage.class, "sendheaders");
         names.put(GetMasternodePaymentRequestSyncMessage.class, "mnget");
     }
 
@@ -280,7 +281,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("ssc")) {
             return new SyncStatusCount(params, payloadBytes);
         } else if(command.equals("sendheaders")) {
-            return new SendHeadersMessage(params);
+            return new SendHeadersMessage(params, payloadBytes);
         } else if(command.equals("sendcmpct")) {
             return new SendCompactBlocksMessage(params);
         } else if(command.equals("getsporks")) {
