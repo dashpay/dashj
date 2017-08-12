@@ -12,7 +12,6 @@ The dashj library is a Java implementation of the Dash protocol, which allows it
 
 * Java 6 for the core modules, Java 8 for everything else
 * [Maven 3+](http://maven.apache.org) - for building the project
-* [Orchid](https://github.com/subgraph/Orchid) - for secure communications over [TOR](https://www.torproject.org)
 * [Google Protocol Buffers](https://github.com/google/protobuf) - for use with serialization and hardware communications
 
 ### Getting started
