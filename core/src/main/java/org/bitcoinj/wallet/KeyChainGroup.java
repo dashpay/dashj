@@ -25,7 +25,7 @@ import org.bitcoinj.script.*;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.slf4j.*;
-import org.spongycastle.crypto.params.*;
+import org.bouncycastle.crypto.params.*;
 
 import javax.annotation.*;
 import java.security.*;

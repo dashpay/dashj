@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import com.google.common.primitives.UnsignedLongs;
-import org.spongycastle.crypto.digests.RIPEMD160Digest;
+import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
