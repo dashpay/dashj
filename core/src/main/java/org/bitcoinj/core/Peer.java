@@ -464,7 +464,7 @@ public class Peer extends PeerSocketHandler {
             long current = Utils.currentTimeMillis();
             dataReceived += m.getMessageSize();
 
-            if(count % 50 == 0)
+            if(count % 100 == 0)
             {
                 log.info("[bandwidth] " + (dataReceived / 1024 / 1024) + " MiB in " +(current-startTime)/1000 + " s:" + (dataReceived / 1024)/(current-startTime)*1000 + " KB/s");
             }
