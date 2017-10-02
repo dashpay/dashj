@@ -165,7 +165,10 @@ public class DarkSendPool {
         std::srand(seed);*/
     }
     static boolean oneThread = false;
-    public Runnable ThreadCheckDarkSendPool = new Runnable() {
+    class ThreadCheckDarkSendPool implements Runnable {
+        public volatile boolean exit = false;
+
+        public void stop() { exit = true; }
         @Override
         public void run() {
             if(context.isLiteMode() && !context.allowInstantXinLiteMode()) return; //disable all Darksend/Masternode related functionality
@@ -180,18 +183,18 @@ public class DarkSendPool {
             int tick = 0;
             try {
 
-                while (true) {
+                while (true && !exit) {
                     Thread.sleep(1000);
                     //LogPrintf("ThreadCheckDarkSendPool::check timeout\n");
 
                     // try to sync from all available nodes, one step at a time
                     context.masternodeSync.processTick();
 
-                    if(context.isLiteMode() && context.allowInstantXinLiteMode() && context.masternodeSync.getSyncStatusInt() == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
+                    /*if(context.isLiteMode() && context.allowInstantXinLiteMode() && context.masternodeSync.getSyncStatusInt() == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
                         log.info("closing thread: " + Thread.currentThread().getName());
                         oneThread = false;
                         return; // if in LiteMode and allowing instantX and the Sporks are synced, then close this thread.
-                    }
+                    }*/
 
                     if (context.masternodeSync.isBlockchainSynced()) {
 
@@ -235,21 +238,28 @@ public class DarkSendPool {
     };
 
     Thread backgroundThread;
+    ThreadCheckDarkSendPool threadCheckDarkSendPool = null;
     //dash
     public boolean startBackgroundProcessing()
     {
         if(backgroundThread == null)
         {
-            backgroundThread = new ContextPropagatingThreadFactory("dash-privatesend").newThread(ThreadCheckDarkSendPool);
+            threadCheckDarkSendPool = new ThreadCheckDarkSendPool();
+            backgroundThread = new ContextPropagatingThreadFactory("dash-privatesend").newThread(threadCheckDarkSendPool);
             backgroundThread.start();
             return true;
         }
         else if(backgroundThread.getState() == Thread.State.TERMINATED) {
             //if the thread was stopped, start it again
-            backgroundThread = new ContextPropagatingThreadFactory("dash-privatesend").newThread(ThreadCheckDarkSendPool);
+            backgroundThread = new ContextPropagatingThreadFactory("dash-privatesend").newThread(threadCheckDarkSendPool);
             backgroundThread.start();
         }
         return false;
     }
     public boolean isBackgroundRunning() { return backgroundThread == null ? false : backgroundThread.getState() != Thread.State.TERMINATED; }
+
+    public void close()
+    {
+        threadCheckDarkSendPool.stop();
+    }
 }

@@ -349,7 +349,7 @@ public class MasternodeSync {
         /*
             Resync if we lose all masternodes from sleep/wake or failure to sync originally
         */
-            if(context.masternodeManager.countEnabled() == 0) {
+            if(!context.isLiteMode() && context.masternodeManager.countEnabled() == 0) {
                 reset();
             } else
                 //if syncing is complete and we have masternodes, return

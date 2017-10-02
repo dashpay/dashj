@@ -219,6 +219,20 @@ public class Context {
         initializedDash = true;
     }
 
+    public void closeDash() {
+        //Dash Specific
+        sporkManager = null;
+
+        masternodePayments = null;
+        masternodeSync = null;
+        activeMasternode = null;
+        darkSendPool.close();
+        darkSendPool = null;
+        instantSend = null;
+        masternodeManager = null;
+        initializedDash = false;
+    }
+
     public void initDashSync(String directory)
     {
         //masternodeDB = new MasternodeDB(directory);

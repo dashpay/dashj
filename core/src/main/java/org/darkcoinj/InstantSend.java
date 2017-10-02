@@ -1017,14 +1017,14 @@ public class InstantSend {
             }
 
             // remove expired orphan votes
-            Iterator<Map.Entry<Sha256Hash, TransactionLockVote>> itOrphanVote = mapTxLockVotes.entrySet().iterator();
+            Iterator<Map.Entry<Sha256Hash, TransactionLockVote>> itOrphanVote = mapTxLockVotesOrphan.entrySet().iterator();
             while (itOrphanVote.hasNext())
             {
                 Map.Entry<Sha256Hash, TransactionLockVote> vote = itOrphanVote.next();
                 if (Utils.currentTimeSeconds() - vote.getValue().getTimeCreated() > ORPHAN_VOTE_SECONDS) {
                     log.info("instantsend--CInstantSend::CheckAndRemove -- Removing expired orphan vote: txid="+vote.getValue().getTxHash()+"  masternode="+ vote.getValue().getOutpointMasternode().toStringShort());
                     mapTxLockVotes.remove(vote.getKey());
-                    mapTxLockVotesOrphan.remove(itOrphanVote);
+                    itOrphanVote.remove();
                 } else {
                     //++itOrphanVote;
                 }
@@ -1035,9 +1035,9 @@ public class InstantSend {
             while (itMasternodeOrphan.hasNext()) {
                 Map.Entry<TransactionOutPoint, Long> masterNodeOrphan = itMasternodeOrphan.next();
                 if (masterNodeOrphan.getValue() < Utils.currentTimeSeconds()) {
-                    log.info("instantsend", "CInstantSend::CheckAndRemove -- Removing expired orphan masternode vote: masternode=%s\n",
+                    log.info("instantsend--CInstantSend::CheckAndRemove -- Removing expired orphan masternode vote: masternode="+
                             masterNodeOrphan.getKey().toString());
-                    mapMasternodeOrphanVotes.remove(itMasternodeOrphan);
+                    itMasternodeOrphan.remove();
                 } else {
                     //++itMasternodeOrphan;
                 }
