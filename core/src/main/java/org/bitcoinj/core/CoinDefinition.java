@@ -72,7 +72,7 @@ public class CoinDefinition {
 
 
     public static final long DEFAULT_MIN_TX_FEE = 10000;   // MIN_TX_FEE
-    public static final long DUST_LIMIT = 30000; //main.h CTransaction::GetMinFee        0.01 coins
+    public static final long DUST_LIMIT = 5460; //Transaction.h CTransaction::GetDustThreshold for 10000 MIN_TX_FEE
     public static final long INSTANTX_FEE = 100000; //0.001 DASH (updated for 12.1)
     public static final boolean feeCanBeRaised = false;
 
