@@ -18,9 +18,6 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.net.discovery.*;
-
-import java.net.*;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -31,6 +28,9 @@ public class MainNetParams extends AbstractBitcoinNetParams {
     public static final int MAINNET_MAJORITY_WINDOW = 1000;
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
+
+    public static final int MAINNET_MAJORITY_DIP0001_WINDOW = 4032;
+    public static final int MAINNET_MAJORITY_DIP0001_THRESHOLD = 3226;
 
     public MainNetParams() {
         super();
@@ -154,6 +154,9 @@ public class MainNetParams extends AbstractBitcoinNetParams {
 
         strSporkKey = "04549ac134f694c0243f503e8c8a9a986f5de6610049c40b07816809b0d1d06a21b07be27b9bb555931773f62ba6cf35a25fd52f694d4e1106ccd237a7bb899fdd";
         budgetPaymentsStartBlock = 328008;
+
+        DIP0001Window = MAINNET_MAJORITY_DIP0001_WINDOW;
+        DIP0001Upgrade = MAINNET_MAJORITY_DIP0001_THRESHOLD;
     }
 
     private static MainNetParams instance;
