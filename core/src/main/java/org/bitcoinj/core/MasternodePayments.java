@@ -31,7 +31,7 @@ public class MasternodePayments {
     {
 
     }
-    boolean isEnoughData(int nMnCount) {
+    boolean isEnoughData() {
         /*if(GetBlockCount() > nMnCount * nStorageCoeff && GetBlockCount() > nMinBlocksToStore)
         {
             float nAverageVotes = (MNPAYMENTS_SIGNATURES_TOTAL + MNPAYMENTS_SIGNATURES_REQUIRED) / 2;

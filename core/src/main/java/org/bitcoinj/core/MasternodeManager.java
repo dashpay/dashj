@@ -1087,4 +1087,27 @@ public class MasternodeManager extends AbstractManager {
         info = pMN.getInfo();
         return info;
     }
+
+    public boolean poSeBan(TransactionOutPoint outPoint)
+    {
+
+        try {
+            lock.lock();
+            Masternode pmn = find(outPoint);
+            if (pmn == null) {
+                return false;
+            }
+            pmn.poSeBan();
+
+            return true;
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
+    Masternode find(TransactionOutPoint outPoint)
+    {
+        return null;
+    }
 }

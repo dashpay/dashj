@@ -666,4 +666,8 @@ public class Masternode extends Message{
         info.fInfoValid = true;
         return info;
     }
+
+    void poSeBan() {
+
+    }
 }

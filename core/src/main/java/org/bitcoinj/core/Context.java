@@ -291,7 +291,7 @@ public class Context {
     BlockChainListener updateHeadListener = new BlockChainListener () {
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException
         {
-            masternodeSync.updateBlockTip(block);
+            masternodeSync.updateBlockTip(block, false);
         }
 
         public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks,
