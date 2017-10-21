@@ -6,12 +6,15 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import static org.darkcoinj.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
+
 /**
  * Created by Eric on 2/7/2017.
  */
 public class TransactionLockCandidate {
     NetworkParameters params;
     int confirmedHeight;
+    long timeCreated;
 
     public TransactionLockRequest txLockRequest;
     public HashMap<TransactionOutPoint, TransactionOutPointLock> mapOutPointLocks;
@@ -20,6 +23,7 @@ public class TransactionLockCandidate {
     {
         this.params = params;
         this.confirmedHeight = -1;
+        timeCreated = Utils.currentTimeSeconds();
         this.txLockRequest = txLockRequest;
         mapOutPointLocks = new HashMap<TransactionOutPoint, TransactionOutPointLock>();
     }
@@ -75,5 +79,16 @@ public class TransactionLockCandidate {
     {
         // Locks and votes expire nInstantSendKeepLock blocks after the block corresponding tx was included into.
         return (confirmedHeight != -1) && (height - confirmedHeight > InstantSend.nInstantSendKeepLock);
+    }
+
+    public boolean isTimedOut()
+    {
+        return Utils.currentTimeSeconds() - timeCreated > INSTANTSEND_TIMEOUT_SECONDS;
+    }
+    public void markOutpointAsAttacked(TransactionOutPoint outPoint)
+    {
+        TransactionOutPointLock lock = mapOutPointLocks.get(outPoint);
+        if(lock != null)
+            lock.markAsAttacked();
     }
 }

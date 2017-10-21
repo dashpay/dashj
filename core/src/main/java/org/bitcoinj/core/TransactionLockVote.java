@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
+import static org.darkcoinj.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
+
 public class TransactionLockVote extends Message implements Serializable {
 
     private static final Logger log = LoggerFactory.getLogger(TransactionLockVote.class);
@@ -153,45 +155,29 @@ public class TransactionLockVote extends Message implements Serializable {
             return false;
         }
 
-        /*int nPrevoutHeight = GetUTXOHeight(outpoint);
-        if(nPrevoutHeight == -1) {
+        /*CCoins coins;
+        if(!GetUTXOCoins(outpoint, coins)) {
             LogPrint("instantsend", "CTxLockVote::IsValid -- Failed to find UTXO %s\n", outpoint.ToStringShort());
-            // Validating utxo set is not enough, votes can arrive after outpoint was already spent,
-            // if lock request was mined. We should process them too to count them later if they are legit.
-            CTransaction txOutpointCreated;
-            uint256 nHashOutpointConfirmed;
-            if(!GetTransaction(outpoint.hash, txOutpointCreated, Params().GetConsensus(), nHashOutpointConfirmed, true) || nHashOutpointConfirmed == uint256()) {
-                LogPrint("instantsend", "CTxLockVote::IsValid -- Failed to find outpoint %s\n", outpoint.ToStringShort());
-                return false;
-            }
-            LOCK(cs_main);
-            BlockMap::iterator mi = mapBlockIndex.find(nHashOutpointConfirmed);
-            if(mi == mapBlockIndex.end() || !mi->second) {
-                // not on this chain?
-                LogPrint("instantsend", "CTxLockVote::IsValid -- Failed to find block %s for outpoint %s\n", nHashOutpointConfirmed.ToString(), outpoint.ToStringShort());
-                return false;
-            }
-            nPrevoutHeight = mi->second->nHeight;
-        }
-
-        int nLockInputHeight = nPrevoutHeight + 4;
-
-        int n = mnodeman.GetMasternodeRank(CTxIn(outpointMasternode), nLockInputHeight, MIN_INSTANTSEND_PROTO_VERSION);
-
-        if(n == -1) {
-            //can be caused by past versions trying to vote with an invalid protocol
-            LogPrint("instantsend", "CTxLockVote::IsValid -- Outdated masternode %s\n", outpointMasternode.ToStringShort());
             return false;
         }
-        LogPrint("instantsend", "CTxLockVote::IsValid -- Masternode %s, rank=%d\n", outpointMasternode.ToStringShort(), n);
+
+        int nLockInputHeight = coins.nHeight + 4;
+
+        int nRank;
+        if(!mnodeman.GetMasternodeRank(outpointMasternode, nRank, nLockInputHeight, MIN_INSTANTSEND_PROTO_VERSION)) {
+            //can be caused by past versions trying to vote with an invalid protocol
+            LogPrint("instantsend", "CTxLockVote::IsValid -- Can't calculate rank for masternode %s\n", outpointMasternode.ToStringShort());
+            return false;
+        }
+        LogPrint("instantsend", "CTxLockVote::IsValid -- Masternode %s, rank=%d\n", outpointMasternode.ToStringShort(), nRank);
 
         int nSignaturesTotal = COutPointLock::SIGNATURES_TOTAL;
-        if(n > nSignaturesTotal) {
+        if(nRank > nSignaturesTotal) {
             LogPrint("instantsend", "CTxLockVote::IsValid -- Masternode %s is not in the top %d (%d), vote hash=%s\n",
-                    outpointMasternode.ToStringShort(), nSignaturesTotal, n, GetHash().ToString());
+                    outpointMasternode.ToStringShort(), nSignaturesTotal, nRank, GetHash().ToString());
             return false;
         }
-*/
+    */
         if(!checkSignature()) {
             log.info("CTxLockVote::IsValid -- Signature invalid");
             return false;
@@ -231,4 +217,10 @@ public class TransactionLockVote extends Message implements Serializable {
         // Locks and votes expire nInstantSendKeepLock blocks after the block corresponding tx was included into.
         return (confirmedHeight != -1) && (height - confirmedHeight > InstantSend.nInstantSendKeepLock);
     }
+    public boolean isTimedOut()
+    {
+        return Utils.currentTimeSeconds() - timeCreated > INSTANTSEND_TIMEOUT_SECONDS;
+    }
+
+    public void relay() {}
 }

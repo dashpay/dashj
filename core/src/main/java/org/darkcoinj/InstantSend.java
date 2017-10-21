@@ -5,23 +5,29 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.security.provider.SHA;
 
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.core.DarkCoinSystem.fMasterNode;
+import static org.bitcoinj.core.SporkManager.SPORK_2_INSTANTSEND_ENABLED;
+import static org.bitcoinj.core.SporkManager.SPORK_3_INSTANTSEND_BLOCK_FILTERING;
 
 /**
  * Created by Eric on 2/8/2015.
  */
 public class InstantSend {
     private static final Logger log = LoggerFactory.getLogger(InstantSend.class);
-    public static final int MIN_INSTANTSEND_PROTO_VERSION = 70206;
-    private static final int ORPHAN_VOTE_SECONDS            = 60;
+    public static final int MIN_INSTANTSEND_PROTO_VERSION = 70208;
+    public static final int INSTANTSEND_TIMEOUT_SECONDS        = 65;
+    //private static final int ORPHAN_VOTE_SECONDS            = 60;
+
 
     ReentrantLock lock = Threading.lock("InstantSend");
 
-    StoredBlock currentBlock;
+    //StoredBlock currentBlock;
+    int cachedBlockHeight;
 
     public HashMap<Sha256Hash, TransactionLockRequest> mapLockRequestAccepted;
     public HashMap<Sha256Hash, TransactionLockRequest> mapLockRequestRejected;
@@ -123,7 +129,7 @@ public class InstantSend {
     boolean canProcessInstantXMessages()
     {
         if(context.isLiteMode() && !context.allowInstantXinLiteMode()) return false; //disable all darksend/masternode related functionality
-        if(!context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED)) return false;
+        if(!context.sporkManager.isSporkActive(SPORK_2_INSTANTSEND_ENABLED)) return false;
         if(!context.masternodeSync.isBlockchainSynced()) return false;
 
         return true;
@@ -461,12 +467,18 @@ public class InstantSend {
                 return false;
             }
 
+            // relay valid, vote asap
+            vote.relay();
+
             // Masternodes will sometimes propagate votes before the transaction is known to the client,
             // will actually process only after the lock request itself has arrived
 
             TransactionLockCandidate it = mapTxLockCandidates.get(txHash);
-            if(!mapTxLockCandidates.containsKey(txHash)) {
+            if(mapTxLockCandidates.containsKey(txHash) && it.txLockRequest == null) {
                 if(!mapTxLockVotesOrphan.containsKey(vote.getHash())) {
+                    // start timeout countdown after the very first vote
+                    createEmptyTxLockCandidate(txHash);
+
                     mapTxLockVotesOrphan.put(vote.getHash(), vote);
                     log.info("instantsend--CInstantSend::ProcessTxLockVote -- Orphan vote: txid="+txHash.toString()+"  masternode="+vote.getOutpointMasternode().toString()+" new\n");
                     boolean fReprocess = true;
@@ -510,6 +522,18 @@ public class InstantSend {
                 return true;
             }
 
+            TransactionLockCandidate txLockCandidate = it;
+            if(txLockCandidate == null)
+            {
+                log.info("instantsend--CInstantSend::ProcessTxLockVote -- txLockCandidate does not exist for txid="+ txHash.toString());
+                return false;
+            }
+            if(txLockCandidate.isTimedOut())
+            {
+                log.info("instantsend--CInstantSend::ProcessTxLockVote -- too late, Transaction Lock timed out, txid="+ txHash.toString());
+                return false;
+            }
+
             log.info("instantsend--CInstantSend::ProcessTxLockVote -- Transaction Lock Vote, txid="+txHash.toString());
 
             Set<Sha256Hash> it1 = mapVotedOutpoints.get(vote.getOutpoint());
@@ -519,9 +543,10 @@ public class InstantSend {
                 {
                     if(hash != txHash) {
                         // same outpoint was already voted to be locked by another tx lock request,
-                        // find out if the same mn voted on this outpoint before
+                        // let's see if it was the same masternode who voted on this outpoint
+                        // for another tx lock request
                         TransactionLockCandidate it2 = mapTxLockCandidates.get(hash);
-                        if(it2.hasMasternodeVoted(vote.getOutpoint(), vote.getOutpointMasternode())) {
+                        if(it2 != null && it2.hasMasternodeVoted(vote.getOutpoint(), vote.getOutpointMasternode())) {
                             // yes, it did, refuse to accept a vote to include the same outpoint in another tx
                             // from the same masternode.
                             // TODO: apply pose ban score to this masternode?
@@ -529,7 +554,17 @@ public class InstantSend {
                             // to let all other nodes know about this node's misbehaviour and let them apply
                             // pose ban score too.
                             log.info("CInstantSend::ProcessTxLockVote -- masternode sent conflicting votes! "+ vote.getOutpointMasternode().toStringShort());
-                            return false;
+
+                            // mark both Lock Candidates as attacked, none of them should complete,
+                            // or at least the new (current) one shouldn't even
+                            // if the second one was already completed earlier
+                            txLockCandidate.markOutpointAsAttacked(vote.getOutpoint());
+                            it2.markOutpointAsAttacked(vote.getOutpoint());
+                            // apply maximum PoSe ban score to this masternode i.e. PoSe-ban it instantly
+                            context.masternodeManager.poSeBan(vote.getOutpointMasternode());
+                            // NOTE: This vote must be relayed further to let all other nodes know about such
+                            // misbehaviour of this masternode. This way they should also be able to construct
+                            // conflicting lock and PoSe-ban this masternode.
                         }
                     }
                 }
@@ -541,8 +576,6 @@ public class InstantSend {
                 mapVotedOutpoints.put(vote.getOutpoint(), setHashes);
             }
 
-            TransactionLockCandidate txLockCandidate = it;
-
             if(!txLockCandidate.addVote(vote)) {
                 // this should never happen
                 return false;
@@ -553,8 +586,6 @@ public class InstantSend {
             log.info("instantsend--CInstantSend::ProcessTxLockVote -- Transaction Lock signatures count: "+nSignatures+"/"+nSignaturesMax+", vote hash="+ vote.getHash());
 
             tryToFinalizeLockCandidate(txLockCandidate);
-
-            //vote.relay();
 
             return true;
 
@@ -663,17 +694,15 @@ public class InstantSend {
 
             Sha256Hash txHash = txLockRequest.getHash();
 
-            // Check to see if we conflict with existing completed lock,
-            // fail if so, there can't be 2 completed locks for the same outpoint
+            // Check to see if we conflict with existing completed lock
             for(TransactionInput txin : txLockRequest.getInputs())
             {
                 Sha256Hash it = mapLockedOutpoints.get(txin.getOutpoint());
-                if (it != null) {
-                    // Conflicting with complete lock, ignore this one
+                if (it != null && it.equals(txLockRequest.getHash())) {
+                    // Conflicting with complete lock, proceed to see if we should cancel them both
                     // (this could be the one we have but we don't want to try to lock it twice anyway)
-                    log.info("CInstantSend::ProcessTxLockRequest -- WARNING: Found conflicting completed Transaction Lock, skipping current one, txid="+txLockRequest.getHash()+", completed lock txid="+
+                    log.info("CInstantSend::ProcessTxLockRequest -- WARNING: Found conflicting completed Transaction Lock, txid="+txLockRequest.getHash()+", completed lock txid="+
                             it.toString());
-                    return false;
                 }
             }
 
@@ -686,7 +715,7 @@ public class InstantSend {
                     for(Sha256Hash hash : it)
                     {
                         if (!hash.equals(txLockRequest.getHash())) {
-                            log.info("instantsend", "CInstantSend::ProcessTxLockRequest -- Double spend attempt! %s"+ txin.getOutpoint().toStringShort());
+                            log.info("instantsend--CInstantSend::ProcessTxLockRequest -- Double spend attempt! %s"+ txin.getOutpoint().toStringShort());
                             // do not fail here, let it go and see which one will get the votes to be locked
                         }
                     }
@@ -739,14 +768,11 @@ public class InstantSend {
 
     boolean createTxLockCandidate(TransactionLockRequest txLockRequest)
     {
-        // Normally we should require all outpoints to be unspent, but in case we are reprocessing
-        // because of a lot of legit orphan votes we should also check already spent outpoints.
-        Sha256Hash txHash = txLockRequest.getHash();
-        if(!txLockRequest.isValid(!isEnoughOrphanVotesForTx(txLockRequest))) return false;
+        if(!txLockRequest.isValid()) return false;
 
         try {
             lock.lock();
-
+            Sha256Hash txHash = txLockRequest.getHash();
 
             TransactionLockCandidate lockCandidate = mapTxLockCandidates.get(txHash);
             if (lockCandidate == null) {
@@ -762,7 +788,24 @@ public class InstantSend {
                     txLockCandidate.addOutPointLock(txin.getOutpoint());
                 }
                 mapTxLockCandidates.put(txHash, txLockCandidate);
-            } else {
+            }
+            else if (lockCandidate.txLockRequest == null)
+            {
+                lockCandidate.txLockRequest = txLockRequest;
+                if(lockCandidate.isTimedOut())
+                {
+                    log.info("CInstantSend::CreateTxLockCandidate -- timed out, txid="+ txHash.toString());
+                    return false;
+                }
+                log.info("CInstantSend::CreateTxLockCandidate -- update empty, txid="+ txHash.toString());
+
+                List<TransactionInput> inputs = Lists.reverse(txLockRequest.getInputs());
+                for(TransactionInput txin : inputs)
+                {
+                    lockCandidate.addOutPointLock(txin.getOutpoint());
+                }
+            }
+            else {
                 log.info("instantsend--CInstantSend::CreateTxLockCandidate -- seen, txid="+ txHash.toString());
             }
 
@@ -773,6 +816,16 @@ public class InstantSend {
         }
     }
 
+    void createEmptyTxLockCandidate(Sha256Hash txHash)
+    {
+        if(mapTxLockCandidates.containsKey(txHash))
+            return;
+        log.info("CInstantSend::CreateEmptyTxLockCandidate -- new, txid=%s"+ txHash.toString());
+        TransactionLockRequest txLockRequest = null;
+        mapTxLockCandidates.put(txHash, new TransactionLockCandidate(context.getParams(), txLockRequest));
+
+    }
+
     void vote(TransactionLockCandidate txLockCandidate) {
         if (!fMasterNode) return;
         else return;
@@ -780,14 +833,17 @@ public class InstantSend {
 
     void tryToFinalizeLockCandidate(TransactionLockCandidate txLockCandidate)
     {
+        if(!context.sporkManager.isSporkActive(SPORK_2_INSTANTSEND_ENABLED))
+            return;
+
          try {
             lock.lock();
 
             Sha256Hash txHash = txLockCandidate.txLockRequest.getHash();
             if (txLockCandidate.isAllOutPointsReady() && !isLockedInstantSendTransaction(txHash)) {
                 // we have enough votes now
-                log.info("instantsend--CInstantSend::TryToFinalizeLockCandidate -- Transaction Lock is ready to complete, txid=", txHash);
-                if (resolveConflicts(txLockCandidate, nInstantSendKeepLock)) {
+                log.info("instantsend--CInstantSend::TryToFinalizeLockCandidate -- Transaction Lock is ready to complete, txid="+ txHash);
+                if (resolveConflicts(txLockCandidate)) {
                     lockTransactionInputs(txLockCandidate);
                     updateLockedTransaction(txLockCandidate);
                 }
@@ -800,7 +856,7 @@ public class InstantSend {
     boolean isLockedInstantSendTransaction(Sha256Hash txHash)
     {
         if(!context.allowInstantXinLiteMode() /*|| fLargeWorkForkFound || fLargeWorkInvalidChainFound */||
-                !context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED)) return false;
+                !context.sporkManager.isSporkActive(SPORK_3_INSTANTSEND_BLOCK_FILTERING)) return false;
 
        try {
            lock.lock();
@@ -968,7 +1024,7 @@ public class InstantSend {
 
     public void checkAndRemove()
     {
-        if(currentBlock == null) return;
+        if(!context.masternodeSync.isMasternodeListSynced()) return;
 
         try {
             lock.lock();
@@ -983,7 +1039,7 @@ public class InstantSend {
                 TransactionLockCandidate txLockCandidate = txLockCandidateEntry.getValue();
 
                 Sha256Hash txHash = txLockCandidate.getHash();
-                if (txLockCandidate.isExpired(currentBlock.getHeight())) {
+                if (txLockCandidate.isExpired(cachedBlockHeight)) {
                     log.info("CInstantSend::CheckAndRemove -- Removing expired Transaction Lock Candidate: txid="+ txHash);
 
                     Iterator<Map.Entry<TransactionOutPoint, TransactionOutPointLock>> itOutpointLock = txLockCandidate.mapOutPointLocks.entrySet().iterator();
@@ -1008,7 +1064,7 @@ public class InstantSend {
             while (itVote.hasNext())
             {
                 Map.Entry<Sha256Hash, TransactionLockVote> vote = itVote.next();
-                if (vote.getValue().isExpired(currentBlock.getHeight())) {
+                if (vote.getValue().isExpired(cachedBlockHeight)) {
                     log.info("instantsend--CInstantSend::CheckAndRemove -- Removing expired vote: txid="+vote.getValue().getTxHash()+"  masternode=" + vote.getValue().getOutpointMasternode().toStringShort());
                     mapTxLockVotes.remove(itVote);
                 } else {
@@ -1021,8 +1077,8 @@ public class InstantSend {
             while (itOrphanVote.hasNext())
             {
                 Map.Entry<Sha256Hash, TransactionLockVote> vote = itOrphanVote.next();
-                if (Utils.currentTimeSeconds() - vote.getValue().getTimeCreated() > ORPHAN_VOTE_SECONDS) {
-                    log.info("instantsend--CInstantSend::CheckAndRemove -- Removing expired orphan vote: txid="+vote.getValue().getTxHash()+"  masternode="+ vote.getValue().getOutpointMasternode().toStringShort());
+                if (vote.getValue().isTimedOut()) {
+                    log.info("instantsend--CInstantSend::CheckAndRemove -- Removing timed out orphan vote: txid="+vote.getValue().getTxHash()+"  masternode="+ vote.getValue().getOutpointMasternode().toStringShort());
                     mapTxLockVotes.remove(vote.getKey());
                     itOrphanVote.remove();
                 } else {
@@ -1042,6 +1098,8 @@ public class InstantSend {
                     //++itMasternodeOrphan;
                 }
             }
+
+            log.info("CInstantSend::CheckAndRemove -- "+ toString());
         }
         finally {
             lock.unlock();
@@ -1049,7 +1107,7 @@ public class InstantSend {
     }
     public void updatedChainHead(StoredBlock chainHead)
     {
-        currentBlock = chainHead;
+        cachedBlockHeight = chainHead.getHeight();
     }
 
     public void syncTransaction(Transaction tx, StoredBlock block)
@@ -1074,7 +1132,7 @@ public class InstantSend {
 
             TransactionLockCandidate txLockCandidate = mapTxLockCandidates.get(txHash);
             if (txLockCandidate != null) {
-                log.info("instantsend", "CInstantSend::SyncTransaction -- txid="+txHash+" nHeightNew="+nHeightNew+" lock candidate updated");
+                log.info("instantsend--CInstantSend::SyncTransaction -- txid="+txHash+" nHeightNew="+nHeightNew+" lock candidate updated");
                 txLockCandidate.setConfirmedHeight(nHeightNew);
                 // Loop through outpoint locks
 
@@ -1112,6 +1170,16 @@ public class InstantSend {
         }
     }
 
+    public String toString() {
+        try {
+            lock.lock();
+            return "Lock Candidates: "+mapTxLockCandidates.size()+", Votes "+ mapTxLockVotes.size();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
     public boolean isLockedIXTransaction(Sha256Hash txHash) {
         // there must be a successfully verified lock request...
         if (!mapLockRequestAccepted.containsKey(txHash)) return false;
@@ -1123,7 +1191,7 @@ public class InstantSend {
     public int getTransactionLockSignatures(Sha256Hash txHash)
     {
         //if(fLargeWorkForkFound || fLargeWorkInvalidChainFound) return -2;
-        if(!context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED)) return -3;
+        if(!context.sporkManager.isSporkActive(SPORK_2_INSTANTSEND_ENABLED)) return -3;
         if(!context.allowInstantXinLiteMode()) return -1;
 
         TransactionLock tlock = mapTxLocks.get(txHash);
@@ -1137,18 +1205,29 @@ public class InstantSend {
     public boolean isTransactionLockTimedOut(Sha256Hash txHash)
     {
         if(!context.allowInstantXinLiteMode()) return false;
+        try {
+            lock.lock();
 
-        TransactionLock tlock = mapTxLocks.get(txHash);
-        if (tlock != null){
-            return Utils.currentTimeSeconds() > tlock.timeout;
+            TransactionLockCandidate lockCandidate = mapTxLockCandidates.get(txHash);
+            if (lockCandidate != null) {
+                return !lockCandidate.isAllOutPointsReady() &&
+                        lockCandidate.isTimedOut();
+            }
+
+            return false;
         }
-
-        return false;
+        finally {
+            lock.unlock();
+        }
     }
 
 
 
     void lockTransactionInputs(TransactionLockCandidate txLockCandidate) {
+
+        if(!context.sporkManager.isSporkActive(SPORK_2_INSTANTSEND_ENABLED))
+            return;
+
         try {
             lock.lock();
 
@@ -1197,9 +1276,7 @@ public class InstantSend {
         return false;
     }
 
-    boolean resolveConflicts(TransactionLockCandidate txLockCandidate, int nMaxBlocks) {
-        // resolve conflicts
-        if(nMaxBlocks < 1) return false;
+    boolean resolveConflicts(TransactionLockCandidate txLockCandidate) {
 
         try {
             lock.lock();
@@ -1207,87 +1284,74 @@ public class InstantSend {
             Sha256Hash txHash = txLockCandidate.getHash();
 
             // make sure the lock is ready
-            if (!txLockCandidate.isAllOutPointsReady()) return true; // not an error
+            if (!txLockCandidate.isAllOutPointsReady()) return false;
 
 
             //LOCK(mempool.cs); // protect mempool.mapNextTx, mempool.mapTx
-/*
-            boolean fMempoolConflict = false;
 
             for(TransactionInput txin : txLockCandidate.txLockRequest.getInputs())
             {
                 Sha256Hash hashConflicting = getLockedOutPointTxHash(txin.getOutpoint());
                 if (hashConflicting != null && txHash != hashConflicting) {
-                    // conflicting with complete lock, ignore current one
-                    log.info("CInstantSend::ResolveConflicts -- WARNING: Found conflicting completed Transaction Lock, skipping current one, txid="+txHash+", conflicting txid=%s"+
-                            hashConflicting.toString());
-                    return false; // can't/shouldn't do anything
-                } else if (mempool.mapNextTx.count(txin.prevout)) {
+                    // completed lock which conflicts with another completed one?
+                    // this means that majority of MNs in the quorum for this specific tx input are malicious!
+                    TransactionLockCandidate lockCandidate = mapTxLockCandidates.get(txHash);
+                    TransactionLockCandidate lockCandidateConflicting = mapTxLockCandidates.get(hashConflicting);
+                    if(lockCandidate == null || lockCandidateConflicting == null) {
+                        // safety check, should never really happen
+                        log.info("CInstantSend::ResolveConflicts -- ERROR: Found conflicting completed Transaction Lock, but one of txLockCandidate-s is missing, txid=" +
+                                txHash.toString() + " conflicting txid="+ hashConflicting.toString());
+                        return false;
+                    }
+                    log.info("CInstantSend::ResolveConflicts -- WARNING: Found conflicting completed Transaction Lock, dropping both, txid="+
+                            txHash.toString() + " conflicting txid="+  hashConflicting.toString());
+                    TransactionLockRequest txLockRequest = lockCandidate.txLockRequest;
+                    TransactionLockRequest txLockRequestConflicting = lockCandidateConflicting.txLockRequest;
+                    lockCandidate.setConfirmedHeight(0); // expired
+                    lockCandidateConflicting.setConfirmedHeight(0); // expired
+                    checkAndRemove(); // clean up
+                    // AlreadyHave should still return "true" for both of them
+                    mapLockRequestRejected.put(txHash, txLockRequest);
+                    mapLockRequestRejected.put(hashConflicting, txLockRequestConflicting);
+
+                    // TODO: clean up mapLockRequestRejected later somehow
+                    //       (not a big issue since we already PoSe ban malicious masternodes
+                    //        and they won't be able to spam)
+                    // TODO: ban all malicious masternodes permanently, do not accept anything from them, ever
+
+                    // TODO: notify zmq+script about this double-spend attempt
+                    //       and let merchant cancel/hold the order if it's not too late...
+
+                    // can't do anything else, fallback to regular txes
+                    return false;
+                } /*else if (mempool.mapNextTx.count(txin.prevout)) {
                     // check if it's in mempool
                     hashConflicting = mempool.mapNextTx[txin.prevout].ptx->GetHash();
-                    if (txHash == hashConflicting) continue; // matches current, not a conflict, skip to next txin
-                    // conflicting with tx in mempool
-                    fMempoolConflict = true;
-                    if (HasTxLockRequest(hashConflicting)) {
-                        // There can be only one completed lock, the other lock request should never complete
-                        LogPrintf("CInstantSend::ResolveConflicts -- WARNING: Found conflicting Transaction Lock Request, replacing by completed Transaction Lock, txid=%s, conflicting txid=%s\n",
-                                txHash.ToString(), hashConflicting.ToString());
-                    } else {
-                        // If this lock is completed, we don't really care about normal conflicting txes.
-                        LogPrintf("CInstantSend::ResolveConflicts -- WARNING: Found conflicting transaction, replacing by completed Transaction Lock, txid=%s, conflicting txid=%s\n",
-                                txHash.ToString(), hashConflicting.ToString());
-                    }
-                }
-            } // FOREACH
-            if (fMempoolConflict) {
-                std::list < CTransaction > removed;
-                // remove every tx conflicting with current Transaction Lock Request
-                mempool.removeConflicts(txLockCandidate.txLockRequest, removed);
-                // and try to accept it in mempool again
-                CValidationState state;
-                bool fMissingInputs = false;
-                if (!AcceptToMemoryPool(mempool, state, txLockCandidate.txLockRequest, true, & fMissingInputs)){
-                    LogPrintf("CInstantSend::ResolveConflicts -- ERROR: Failed to accept completed Transaction Lock to mempool, txid=%s\n", txHash.ToString());
+                    if(txHash == hashConflicting) continue; // matches current, not a conflict, skip to next txin
+                    // conflicts with tx in mempool
+                    log.info("CInstantSend::ResolveConflicts -- ERROR: Failed to complete Transaction Lock, conflicts with mempool, txid="+ txHash.toString());
                     return false;
-                }
-                LogPrintf("CInstantSend::ResolveConflicts -- Accepted completed Transaction Lock, txid=%s\n", txHash.ToString());
-                return true;
-            }
-            */
+                }*/
+            } // FOREACH
+            //TODO:  Update this as much as possible
             // No conflicts were found so far, check to see if it was already included in block
-            /*
-            CTransaction txTmp;
+            /*CTransaction txTmp;
             uint256 hashBlock;
-            if (GetTransaction(txHash, txTmp, Params().GetConsensus(), hashBlock, true) && hashBlock != uint256()) {
+            if(GetTransaction(txHash, txTmp, Params().GetConsensus(), hashBlock, true) && hashBlock != uint256()) {
                 LogPrint("instantsend", "CInstantSend::ResolveConflicts -- Done, %s is included in block %s\n", txHash.ToString(), hashBlock.ToString());
                 return true;
-            }*/
+            }
             // Not in block yet, make sure all its inputs are still unspent
-            /*
-            BOOST_FOREACH(const CTxIn & txin, txLockCandidate.txLockRequest.vin){
+            BOOST_FOREACH(const CTxIn& txin, txLockCandidate.txLockRequest.vin) {
                 CCoins coins;
-                if (!pcoinsTip -> GetCoins(txin.prevout.hash, coins) ||
-                        (unsigned int)txin.prevout.n >= coins.vout.size() ||
-                        coins.vout[txin.prevout.n].IsNull()){
+                if(!GetUTXOCoins(txin.prevout, coins)) {
                     // Not in UTXO anymore? A conflicting tx was mined while we were waiting for votes.
-                    // Reprocess tip to make sure tx for this lock is included.
-                    LogPrintf("CTxLockRequest::ResolveConflicts -- Failed to find UTXO %s - disconnecting tip...\n", txin.prevout.ToStringShort());
-                    if (!DisconnectBlocks(1)) {
-                        return false;
-                    }
-                    // Recursively check at "new" old height. Conflicting tx should be rejected by AcceptToMemoryPool.
-                    ResolveConflicts(txLockCandidate, nMaxBlocks - 1);
-                    LogPrintf("CTxLockRequest::ResolveConflicts -- Failed to find UTXO %s - activating best chain...\n", txin.prevout.ToStringShort());
-                    // Activate best chain, block which includes conflicting tx should be rejected by ConnectBlock.
-                    CValidationState state;
-                    if (!ActivateBestChain(state, Params()) || !state.IsValid()) {
-                        LogPrintf("CTxLockRequest::ResolveConflicts -- ActivateBestChain failed, txid=%s\n", txin.prevout.ToStringShort());
-                        return false;
-                    }
-                    LogPrintf("CTxLockRequest::ResolveConflicts -- Failed to find UTXO %s - fixed!\n", txin.prevout.ToStringShort());
+                    LogPrintf("CInstantSend::ResolveConflicts -- ERROR: Failed to find UTXO %s, can't complete Transaction Lock\n", txin.prevout.ToStringShort());
+                    return false;
                 }
             }*/
-            //log.info("instantsend--CInstantSend::ResolveConflicts -- Done, txid=%s"+ txHash.toString());
+
+            log.info("instantsend--CInstantSend::ResolveConflicts -- Done, txid="+ txHash.toString());
 
             return true;
         }
@@ -1328,7 +1392,7 @@ public class InstantSend {
             tx.getConfidence().setIXType(TransactionConfidence.IXType.IX_LOCKED);
             tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
 
-            log.info("instantsend", "CInstantSend::UpdateLockedTransaction -- done, txid="+ txHash);
+            log.info("instantsend--CInstantSend::UpdateLockedTransaction -- done, txid="+ txHash);
 
         }
         finally {

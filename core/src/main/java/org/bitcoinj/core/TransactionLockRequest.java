@@ -15,7 +15,6 @@ public class TransactionLockRequest extends Transaction {
     public static final int TIMEOUT_SECONDS = 5 * 60;
     public static final Coin MIN_FEE = Coin.valueOf(100000);
 
-    long timeCreated;
     public static final int WARN_MANY_INPUTS = 100;
 
     public TransactionLockRequest(NetworkParameters params)
@@ -35,7 +34,6 @@ public class TransactionLockRequest extends Transaction {
     public TransactionLockRequest(NetworkParameters params, byte[] payload, int offset) throws ProtocolException {
         super(params, payload, offset);
         // inputs/outputs will be created in parse()
-        timeCreated = Utils.currentTimeSeconds();
     }
 
     /**
@@ -68,7 +66,7 @@ public class TransactionLockRequest extends Transaction {
         return "Transaction Lock Request:\n" + super.toString(chain);
     }
 
-    public boolean isValid(boolean fRequireUnspent)
+    public boolean isValid()
     {
         if(getOutputs().size() < 1) return false;
 
@@ -86,88 +84,64 @@ public class TransactionLockRequest extends Transaction {
         Coin nValueOut = Coin.ZERO;
 
         for(TransactionOutput txout: getOutputs()) {
-        // InstantSend supports normal scripts and unspendable (i.e. data) scripts.
-        // TODO: Look into other script types that are normal and can be included
-        if(!txout.getScriptPubKey().isSentToAddress() && !txout.getScriptPubKey().isOpReturn()) {
-            log.info("instantsend", "CTxLockRequest::IsValid -- Invalid Script "+ toString());
-            return false;
+            // InstantSend supports normal scripts and unspendable (i.e. data) scripts.
+            // TODO: Look into other script types that are normal and can be included
+            if(!txout.getScriptPubKey().isSentToAddress() && !txout.getScriptPubKey().isOpReturn()) {
+                log.info("instantsend--CTxLockRequest::IsValid -- Invalid Script "+ toString());
+                return false;
+            }
+            nValueOut = nValueOut.add(txout.getValue());
         }
-        nValueOut = nValueOut.add(txout.getValue());
-    }
 
         for(TransactionInput txin: getInputs())  {
 
-        /*CCoins coins;
-        int nPrevoutHeight = 0;
-        if(!pcoinsTip->GetCoins(txin.prevout.hash, coins) ||
-                (unsigned int)txin.prevout.n>=coins.vout.size() ||
-                coins.vout[txin.prevout.n].IsNull()) {
-            LogPrint("instantsend", "CTxLockRequest::IsValid -- Failed to find UTXO %s\n", txin.prevout.ToStringShort());
-            // Normally above should be enough, but in case we are reprocessing this because of
-            // a lot of legit orphan votes we should also check already spent outpoints.
-            if(fRequireUnspent) return false;
-            CTransaction txOutpointCreated;
-            uint256 nHashOutpointConfirmed;
-            if(!GetTransaction(txin.prevout.hash, txOutpointCreated, Params().GetConsensus(), nHashOutpointConfirmed, true) || nHashOutpointConfirmed == uint256()) {
-                LogPrint("instantsend", "txLockRequest::IsValid -- Failed to find outpoint %s\n", txin.prevout.ToStringShort());
+            /*CCoins coins;
+
+            if(!GetUTXOCoins(txin.prevout, coins)) {
+                LogPrint("instantsend", "CTxLockRequest::IsValid -- Failed to find UTXO %s\n", txin.prevout.ToStringShort());
                 return false;
             }
-            LOCK(cs_main);
-            BlockMap::iterator mi = mapBlockIndex.find(nHashOutpointConfirmed);
-            if(mi == mapBlockIndex.end()) {
-                // not on this chain?
-                LogPrint("instantsend", "txLockRequest::IsValid -- Failed to find block %s for outpoint %s\n", nHashOutpointConfirmed.ToString(), txin.prevout.ToStringShort());
+
+            int nTxAge = chainActive.Height() - coins.nHeight + 1;
+            // 1 less than the "send IX" gui requires, in case of a block propagating the network at the time
+            int nConfirmationsRequired = INSTANTSEND_CONFIRMATIONS_REQUIRED - 1;
+
+            if(nTxAge < nConfirmationsRequired) {
+                LogPrint("instantsend", "CTxLockRequest::IsValid -- outpoint %s too new: nTxAge=%d, nConfirmationsRequired=%d, txid=%s\n",
+                        txin.prevout.ToStringShort(), nTxAge, nConfirmationsRequired, GetHash().ToString());
                 return false;
             }
-            nPrevoutHeight = mi->second ? mi->second->nHeight : 0;
+
+            nValueIn += coins.vout[txin.prevout.n].nValue;
+    */
+            Coin value = txin.getValue();
+            if(value != null)
+                nValueIn = nValueIn.add(value);
         }
 
-        int nTxAge = chainActive.Height() - (nPrevoutHeight ? nPrevoutHeight : coins.nHeight) + 1;
-        // 1 less than the "send IX" gui requires, in case of a block propagating the network at the time
-        int nConfirmationsRequired = INSTANTSEND_CONFIRMATIONS_REQUIRED - 1;
-
-        if(nTxAge < nConfirmationsRequired) {
-            LogPrint("instantsend", "CTxLockRequest::IsValid -- outpoint %s too new: nTxAge=%d, nConfirmationsRequired=%d, txid=%s\n",
-                    txin.prevout.ToStringShort(), nTxAge, nConfirmationsRequired, GetHash().ToString());
-            return false;
-        }
-
-        nValueIn += coins.vout[txin.prevout.n].nValue;
-        */
-    }
-
-        if(nValueOut.isGreaterThan(Coin.valueOf((int)Context.get().sporkManager.getSporkValue(SporkManager.SPORK_5_INSTANTSEND_MAX_VALUE), 0))) {
+        if(nValueIn.isGreaterThan(Coin.valueOf((int)Context.get().sporkManager.getSporkValue(SporkManager.SPORK_5_INSTANTSEND_MAX_VALUE), 0))) {
             log.info("instantsend--CTxLockRequest::IsValid -- Transaction value too high: nValueOut="+nValueOut+", tx="+toString());
             return false;
         }
 
         Coin fee = getFee();
-        if(fee != null) {
-            if (fee.compareTo(MIN_FEE) < 0) {
-                log.info("instantsend", "CTxLockRequest::IsValid -- did not include enough fees in transaction: fees=" + nValueOut.subtract(nValueIn) + ", tx=" + toString());
-                return false;
-            }
-        }
-        /*if(getFee().isLessThan(getMinFee())) {
-            log.info("instantsend", "CTxLockRequest::IsValid -- did not include enough fees in transaction: fees="+nValueOut.subtract(nValueIn)+", tx="+toString());
+
+        if(fee != null && fee.isLessThan(getMinFee())) {
+            log.info("instantsend--CTxLockRequest::IsValid -- did not include enough fees in transaction: fees="+nValueOut.subtract(nValueIn)+", tx="+toString());
             return false;
-        }*/
+        }
 
         return true;
     }
 
     public Coin getMinFee()
     {
-        return Coin.valueOf(max(MIN_FEE.getValue(), MIN_FEE.getValue() * getInputs().size()));
+        Coin nMinFee = Context.get().DIP0001ActiveAtTip ? MIN_FEE.div(10) : MIN_FEE;
+        return Coin.valueOf(max(nMinFee.getValue(), getInputs().size() * nMinFee.getValue()));
     }
 
     public int getMaxSignatures()
     {
         return getInputs().size() * TransactionOutPointLock.SIGNATURES_TOTAL;
-    }
-
-    public boolean isTimedOut()
-    {
-        return Utils.currentTimeSeconds() - timeCreated > TIMEOUT_SECONDS;
     }
 }
