@@ -212,8 +212,6 @@ public class SporkManager {
 
     boolean checkSignature(SporkMessage spork)
     {
-        //note: need to investigate why this is failing
-        //std::string strMessage = boost::lexical_cast<std::string>(spork.nSporkID) + boost::lexical_cast<std::string>(spork.nValue) + boost::lexical_cast<std::string>(spork.nTimeSigned);
         String strMessage = "" + spork.nSporkID + spork.nValue + spork.nTimeSigned;
         PublicKey pubkey = new PublicKey(Utils.HEX.decode(context.getParams().getSporkKey()));
 
@@ -227,7 +225,6 @@ public class SporkManager {
 
     boolean sign(SporkMessage spork)
     {
-        //std::string strMessage = boost::lexical_cast<std::string>(spork.nSporkID) + boost::lexical_cast<std::string>(spork.nValue) + boost::lexical_cast<std::string>(spork.nTimeSigned);
         String strMessage = "" + spork.nSporkID + spork.nValue + spork.nTimeSigned;
 
         ECKey key2;
