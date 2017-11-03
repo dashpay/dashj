@@ -69,7 +69,7 @@ public class DumpedPrivateKeyTest {
 
     @Test
     public void roundtripBase58() throws Exception {
-        String base58 = "7rZrMXc6R9TeuMa5UCX8i9Ffn1r3d8ypp6dJkmg1JEPZNhQodL8";  // 32-bytes key
+        String base58 = "5HtUCLMFWNueqN9unpgX2DzjMg6SDNZyKRb8s3LJgpFg5ubuMrk"; // 32-bytes key
         DumpedPrivateKey dumpedPrivateKey = DumpedPrivateKey.fromBase58(null, base58);
         assertFalse(dumpedPrivateKey.isPubKeyCompressed());
         assertEquals(base58, dumpedPrivateKey.toBase58());
