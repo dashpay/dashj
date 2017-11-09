@@ -80,7 +80,7 @@ public class CoinDefinition {
     // Dash 0.12.1.x
     //
     public static final int PROTOCOL_VERSION = 70208;          //version.h PROTOCOL_VERSION
-    public static final int MIN_PROTOCOL_VERSION = 70208;        //version.h MIN_PROTO_VERSION
+    public static final int MIN_PROTOCOL_VERSION = 70206;        //version.h MIN_PROTO_VERSION
 
     public static final int BLOCK_CURRENTVERSION = 2;   //CBlock::CURRENT_VERSION
     public static final int MAX_BLOCK_SIZE = 1 * 1000 * 1000;
