@@ -2442,7 +2442,7 @@ public class WalletTest extends TestWithWallet {
         request15.feePerKb = Transaction.DEFAULT_TX_FEE;
         request15.ensureMinRequiredFee = true;
         wallet.completeTx(request15);
-        assertEquals(Coin.valueOf(60650), request15.tx.getFee());
+        assertEquals(Coin.valueOf(12130), request15.tx.getFee());
         Transaction spend15 = request15.tx;
         // If a transaction is over 1kb, 2 satoshis should be added.
         assertEquals(31, spend15.getOutputs().size());
@@ -2474,7 +2474,7 @@ public class WalletTest extends TestWithWallet {
         request17.feePerKb = Transaction.DEFAULT_TX_FEE;
         request17.ensureMinRequiredFee = true;
         wallet.completeTx(request17);
-        assertEquals(Coin.valueOf(49950), request17.tx.getFee());
+        assertEquals(Coin.valueOf(10000), request17.tx.getFee());
         assertEquals(1, request17.tx.getInputs().size());
         // Calculate its max length to make sure it is indeed 999
         int theoreticalMaxLength17 = request17.tx.unsafeBitcoinSerialize().length + myKey.getPubKey().length + 75;
@@ -2501,7 +2501,7 @@ public class WalletTest extends TestWithWallet {
         request18.feePerKb = Transaction.DEFAULT_TX_FEE;
         request18.ensureMinRequiredFee = true;
         wallet.completeTx(request18);
-        assertEquals(Coin.valueOf(50050), request18.tx.getFee());
+        assertEquals(Coin.valueOf(10010), request18.tx.getFee());
         assertEquals(1, request18.tx.getInputs().size());
         // Calculate its max length to make sure it is indeed 1001
         Transaction spend18 = request18.tx;
@@ -2535,7 +2535,7 @@ public class WalletTest extends TestWithWallet {
         request19.feePerKb = Transaction.DEFAULT_TX_FEE;
         request19.shuffleOutputs = false;
         wallet.completeTx(request19);
-        assertEquals(Coin.valueOf(187100), request19.tx.getFee());
+        assertEquals(Coin.valueOf(37420), request19.tx.getFee());
         assertEquals(2, request19.tx.getInputs().size());
         assertEquals(COIN, request19.tx.getInput(0).getValue());
         assertEquals(CENT, request19.tx.getInput(1).getValue());
@@ -2556,7 +2556,7 @@ public class WalletTest extends TestWithWallet {
         request20.feePerKb = Transaction.DEFAULT_TX_FEE;
         wallet.completeTx(request20);
         // 4kb tx.
-        assertEquals(Coin.valueOf(187100), request20.tx.getFee());
+        assertEquals(Coin.valueOf(37420), request20.tx.getFee());
         assertEquals(2, request20.tx.getInputs().size());
         assertEquals(COIN, request20.tx.getInput(0).getValue());
         assertEquals(CENT, request20.tx.getInput(1).getValue());
@@ -2592,7 +2592,7 @@ public class WalletTest extends TestWithWallet {
         request25.feePerKb = Transaction.DEFAULT_TX_FEE;
         request25.shuffleOutputs = false;
         wallet.completeTx(request25);
-        assertEquals(Coin.valueOf(139500), request25.tx.getFee());
+        assertEquals(Coin.valueOf(27900), request25.tx.getFee());
         assertEquals(2, request25.tx.getInputs().size());
         assertEquals(COIN, request25.tx.getInput(0).getValue());
         assertEquals(CENT, request25.tx.getInput(1).getValue());
@@ -2743,7 +2743,7 @@ public class WalletTest extends TestWithWallet {
         SendRequest request = SendRequest.to(OTHER_ADDRESS, CENT);
         request.feePerKb = Transaction.DEFAULT_TX_FEE;
         wallet.completeTx(request);
-        assertEquals(Coin.valueOf(11350), request.tx.getFee());
+        assertEquals(Coin.valueOf(2270), request.tx.getFee());
     }
 
     @Test
@@ -2754,7 +2754,7 @@ public class WalletTest extends TestWithWallet {
         SendRequest req = SendRequest.to(myAddress, Coin.CENT);
         req.feePerKb = fee;
         wallet.completeTx(req);
-        assertEquals(Coin.valueOf(11350).divide(feeFactor), req.tx.getFee());
+        assertEquals(Coin.valueOf(2270).divide(feeFactor), req.tx.getFee());
         wallet.commitTx(req.tx);
         SendRequest emptyReq = SendRequest.emptyWallet(myAddress);
         emptyReq.feePerKb = fee;
@@ -2774,14 +2774,14 @@ public class WalletTest extends TestWithWallet {
         SendRequest req = SendRequest.to(myAddress, Coin.CENT);
         req.feePerKb = fee;
         wallet.completeTx(req);
-        assertEquals(Coin.valueOf(11350).multiply(feeFactor), req.tx.getFee());
+        assertEquals(Coin.valueOf(2270).multiply(feeFactor), req.tx.getFee());
         wallet.commitTx(req.tx);
         SendRequest emptyReq = SendRequest.emptyWallet(myAddress);
         emptyReq.feePerKb = fee;
         emptyReq.emptyWallet = true;
         emptyReq.coinSelector = AllowUnconfirmedCoinSelector.get();
         wallet.completeTx(emptyReq);
-        assertEquals(Coin.valueOf(171000), emptyReq.tx.getFee());
+        assertEquals(Coin.valueOf(34200), emptyReq.tx.getFee());
         wallet.commitTx(emptyReq.tx);
     }
 
@@ -2980,7 +2980,7 @@ public class WalletTest extends TestWithWallet {
 
         Transaction tx = broadcaster.waitForTransactionAndSucceed();
         final Coin THREE_CENTS = CENT.add(CENT).add(CENT);
-        assertEquals(Coin.valueOf(24550), tx.getFee());
+        assertEquals(Coin.valueOf(10000), tx.getFee());
         assertEquals(THREE_CENTS, tx.getValueSentFromMe(wallet));
         assertEquals(THREE_CENTS.subtract(tx.getFee()), tx.getValueSentToMe(wallet));
         // TX sends to one of our addresses (for now we ignore married wallets).
@@ -3003,7 +3003,7 @@ public class WalletTest extends TestWithWallet {
         tx = broadcaster.waitForTransactionAndSucceed();
         assertNotNull(wallet.findKeyFromPubHash(tx.getOutput(0).getScriptPubKey().getPubKeyHash()));
         log.info("Unexpected thing: {}", tx);
-        assertEquals(Coin.valueOf(9650), tx.getFee());
+        assertEquals(Coin.valueOf(10000), tx.getFee());
         assertEquals(1, tx.getInputs().size());
         assertEquals(1, tx.getOutputs().size());
         assertEquals(CENT, tx.getValueSentFromMe(wallet));
@@ -3095,7 +3095,7 @@ public class WalletTest extends TestWithWallet {
         ECKey usedKey = wallet.findKeyFromPubHash(output.getHash160());
         assertEquals(goodKey.getCreationTimeSeconds(), usedKey.getCreationTimeSeconds());
         assertEquals(goodKey.getCreationTimeSeconds(), wallet.freshReceiveKey().getCreationTimeSeconds());
-        assertEquals("mrM3TpCnav5YQuVA1xLercCGJH4DXujMtv", usedKey.toAddress(PARAMS).toString());
+        assertEquals("yX9Y1xr9B9Wx8UXfj7ztvF65YuXaAWeAwu", usedKey.toAddress(PARAMS).toString());
         DeterministicKeyChain c = fChains.get().get(1);
         assertEquals(c.getEarliestKeyCreationTime(), goodKey.getCreationTimeSeconds());
         assertEquals(2, fChains.get().size());

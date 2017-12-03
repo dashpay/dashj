@@ -1779,7 +1779,7 @@ public class FullBlockTestGenerator {
         Integer height = blockToHeightMap.get(baseBlock.getHash());
         if (height != null)
             checkState(height == nextBlockHeight - 1);
-        Coin coinbaseValue = FIFTY_COINS.shiftRight(nextBlockHeight / params.getSubsidyDecreaseBlockCount())
+        Coin coinbaseValue = baseBlock.getBlockInflation(nextBlockHeight, baseBlock.getDifficultyTarget(), false)
                 .add((prevOut != null ? prevOut.value.subtract(SATOSHI) : ZERO))
                 .add(additionalCoinbaseValue == null ? ZERO : additionalCoinbaseValue);
         Block block = baseBlock.createNextBlockWithCoinbase(Block.BLOCK_VERSION_GENESIS, coinbaseOutKeyPubKey, coinbaseValue, nextBlockHeight);
