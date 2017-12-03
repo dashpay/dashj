@@ -256,7 +256,7 @@ public class Block extends Message {
         }
 
         // LogPrintf("height %u diff %4.2f reward %d\n", nPrevHeight, dDiff, nSubsidyBase);
-        Coin nSubsidy = Coin.valueOf(nSubsidyBase);
+        Coin nSubsidy = Coin.valueOf(nSubsidyBase * 100000000);
 
         // yearly decline of production by ~7.1% per year, projected ~18M coins max by year 2050+.
         for (int i = params.getSubsidyDecreaseBlockCount(); i <= nPrevHeight; i += params.getSubsidyDecreaseBlockCount()) {
