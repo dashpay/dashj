@@ -92,6 +92,8 @@ public abstract class NetworkParameters {
     /** Used to check for DIP0001 upgrade */
     protected int DIP0001Window;
     protected int DIP0001Upgrade;
+    protected int DIP0001BlockHeight;
+    protected boolean DIP0001ActiveAtTip = false;
 
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
@@ -568,4 +570,9 @@ public abstract class NetworkParameters {
             return bitcoinProtocol;
         }
     }
+
+    //DASH Specific
+    public boolean isDIP0001ActiveAtTip() { return DIP0001ActiveAtTip; }
+    public void setDIPActiveAtTip(boolean active) { DIP0001ActiveAtTip = active; }
+    public int getDIP0001BlockHeight() { return DIP0001BlockHeight; }
 }

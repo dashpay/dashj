@@ -271,7 +271,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                         if (verifyFlags.contains(VerifyFlag.P2SH)) {
                             if (prevOut.getScript().isPayToScriptHash())
                                 sigOps += Script.getP2SHSigOpCount(in.getScriptBytes());
-                            if (sigOps > Block.MAX_BLOCK_SIGOPS)
+                            if (sigOps > (height >= params.getDIP0001BlockHeight() ? Block.MAX_BLOCK_SIGOPS_DIP00001 :Block.MAX_BLOCK_SIGOPS))
                                 throw new VerificationException("Too many P2SH SigOps in block");
                         }
 
@@ -399,7 +399,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                             if (verifyFlags.contains(VerifyFlag.P2SH)) {
                                 if (prevOut.getScript().isPayToScriptHash())
                                     sigOps += Script.getP2SHSigOpCount(in.getScriptBytes());
-                                if (sigOps > Block.MAX_BLOCK_SIGOPS)
+                                if (sigOps > (newBlock.getHeight() >= params.getDIP0001BlockHeight() ? Block.MAX_BLOCK_SIGOPS_DIP00001 :Block.MAX_BLOCK_SIGOPS))
                                     throw new VerificationException("Too many P2SH SigOps in block");
                             }
 

@@ -136,7 +136,7 @@ public class TransactionLockRequest extends Transaction {
 
     public Coin getMinFee()
     {
-        Coin nMinFee = /*Context.get().DIP0001ActiveAtTip ? MIN_FEE.div(10) :*/ MIN_FEE;
+        Coin nMinFee = params.isDIP0001ActiveAtTip() ? MIN_FEE.div(10) : MIN_FEE;
         return Coin.valueOf(max(nMinFee.getValue(), getInputs().size() * nMinFee.getValue()));
     }
 

@@ -86,6 +86,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
 
         DIP0001Window = TESTNET_MAJORITY_DIP0001_WINDOW;
         DIP0001Upgrade = TESTNET_MAJORITY_DIP0001_THRESHOLD;
+        DIP0001BlockHeight = 15000;
 
     }
 

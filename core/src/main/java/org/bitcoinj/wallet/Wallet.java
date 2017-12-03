@@ -3762,7 +3762,7 @@ public class Wallet extends BaseTaggableObject
      * and lets you see the proposed transaction before anything is done with it.</p>
      *
      * <p>This is a helper method that is equivalent to using {@link SendRequest#to(Address, Coin)}
-     * followed by {@link Wallet#completeTx(Wallet.SendRequest)} and returning the requests transaction object.
+     * followed by {@link Wallet#completeTx(SendRequest)} and returning the requests transaction object.
      * Note that this means a fee may be automatically added if required, if you want more control over the process,
      * just do those two steps yourself.</p>
      *
@@ -3795,7 +3795,7 @@ public class Wallet extends BaseTaggableObject
      * Sends coins to the given address but does not broadcast the resulting pending transaction. It is still stored
      * in the wallet, so when the wallet is added to a {@link PeerGroup} or {@link Peer} the transaction will be
      * announced to the network. The given {@link SendRequest} is completed first using
-     * {@link Wallet#completeTx(Wallet.SendRequest)} to make it valid.
+     * {@link Wallet#completeTx(SendRequest)} to make it valid.
      *
      * @return the Transaction that was created
      * @throws InsufficientMoneyException if the request could not be completed due to not enough balance.
@@ -4130,8 +4130,8 @@ public class Wallet extends BaseTaggableObject
             boolean ensureMinRequiredFee, boolean useInstantSend) {
         final int size = tx.unsafeBitcoinSerialize().length + estimateBytesForSigning(coinSelection);
         Coin fee = feePerKb.multiply(size).divide(1000);
-        if (ensureMinRequiredFee && fee.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
-            fee = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+        if (ensureMinRequiredFee && fee.compareTo(params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
+            fee = params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
         if(useInstantSend)
             fee = TransactionLockRequest.MIN_FEE.multiply(tx.getInputs().size());
         TransactionOutput output = tx.getOutput(0);
@@ -4881,16 +4881,19 @@ public class Wallet extends BaseTaggableObject
         int lastCalculatedSize = 0;
         int lastCalculatedInputs = 0;
         Coin valueNeeded, valueMissing = null;
+        //is DIP0001 Fee Active?
+        boolean dip0001Active = params.isDIP0001ActiveAtTip();
         while (true) {
             resetTxInputs(req, originalInputs);
 
             Coin fees = req.feePerKb.multiply(lastCalculatedSize).divide(1000);
-            if (needAtLeastReferenceFee && fees.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
-                fees = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+            if (needAtLeastReferenceFee && fees.compareTo(dip0001Active ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
+                fees = dip0001Active ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
 
             //Dash instantSend
             if(req.useInstantSend) {
-                fees = Coin.valueOf(max(TransactionLockRequest.MIN_FEE.getValue(), TransactionLockRequest.MIN_FEE.multiply(lastCalculatedInputs).getValue()));
+                Coin ixFee = dip0001Active ? TransactionLockRequest.MIN_FEE.div(10) : TransactionLockRequest.MIN_FEE;
+                fees = Coin.valueOf(max(ixFee.getValue(), ixFee.multiply(lastCalculatedInputs).getValue()));
             }
 
             valueNeeded = value.add(fees);
@@ -4924,12 +4927,12 @@ public class Wallet extends BaseTaggableObject
 
             // If change is < 0.01 BTC, we will need to have at least minfee to be accepted by the network
             if (req.ensureMinRequiredFee && !change.equals(Coin.ZERO) &&
-                    change.compareTo(Coin.CENT) < 0 && fees.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0) {
+                    change.compareTo(Coin.CENT) < 0 && fees.compareTo(params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0) {
                 // This solution may fit into category 2, but it may also be category 3, we'll check that later
                 eitherCategory2Or3 = true;
                 additionalValueForNextCategory = Coin.CENT;
                 // If the change is smaller than the fee we want to add, this will be negative
-                change = change.subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.subtract(fees));
+                change = change.subtract(params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE);
             }
 
             int size = 0;
@@ -4947,7 +4950,7 @@ public class Wallet extends BaseTaggableObject
                 if (req.ensureMinRequiredFee && changeOutput.isDust()) {
                     // This solution definitely fits in category 3
                     isCategory3 = true;
-                    additionalValueForNextCategory = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.add(
+                    additionalValueForNextCategory = (params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE).add(
                                                      changeOutput.getMinNonDustValue().add(Coin.SATOSHI));
                 } else {
                     size += changeOutput.unsafeBitcoinSerialize().length + VarInt.sizeOf(req.tx.getOutputs().size()) - VarInt.sizeOf(req.tx.getOutputs().size() - 1);
@@ -4959,7 +4962,7 @@ public class Wallet extends BaseTaggableObject
                 if (eitherCategory2Or3) {
                     // This solution definitely fits in category 3 (we threw away change because it was smaller than MIN_TX_FEE)
                     isCategory3 = true;
-                    additionalValueForNextCategory = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.add(Coin.SATOSHI);
+                    additionalValueForNextCategory = (params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE).add(Coin.SATOSHI);
                 }
             }
 
