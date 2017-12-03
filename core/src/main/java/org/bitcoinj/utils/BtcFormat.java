@@ -253,8 +253,8 @@ import java.util.regex.Pattern;
  * deferential to ISO 4217, you might construct a formatter in a single line this way:
  *
  * <blockquote><pre>
- * BtcFormat f = BtcFormat.builder().style(CODE).code("XBT").build();
- * String out = f.format(COIN); <strong>// "XBT 1.00"</strong>
+ * BtcFormat f = BtcFormat.builder().style(CODE).code("XDC").build();
+ * String out = f.format(COIN); <strong>// "XDC 1.00"</strong>
  * </pre></blockquote>
  *
  * <p>See the documentation of the {@link BtcFormat.Builder} class for details.
@@ -495,11 +495,11 @@ public abstract class BtcFormat extends Format {
      */
 
     /** The conventional international currency code for bitcoins: "BTC" */
-    private static final String COIN_CODE = CoinDefinition.coinTicker;
+    private static final String COIN_CODE = "DASH";
     /** The default currency symbols for bitcoins */
-    private static final String COIN_SYMBOL = "Đ"; //"฿" đ
+    private static final String COIN_SYMBOL = "Đ"; //U+0110, formerly "฿"
     /** An alternative currency symbol to use in locales where the default symbol is used for the national currency. */
-    protected static final String COIN_SYMBOL_ALT = "D"; //"Ƀ"
+    protected static final String COIN_SYMBOL_ALT = "Ḏ"; //U+1E0E, formerly "Ƀ"
 
     protected final DecimalFormat numberFormat; // warning: mutable
     protected final int minimumFractionDigits;
@@ -1315,7 +1315,7 @@ public abstract class BtcFormat extends Format {
 
     /* Lazy initialization;  No reason to create all these objects unless needed for parsing */
     // coin indicator regex String; TODO: does this need to be volatile?
-    private volatile String ci = "(" + COIN_SYMBOL + "|" + COIN_SYMBOL_ALT + "|B⃦|" + COIN_CODE + "|XBT)";
+    private volatile String ci = "(" + COIN_SYMBOL + "|" + COIN_SYMBOL_ALT + "|D⃦|" + COIN_CODE + "|XDC)";
     private Pattern coinPattern;
     private volatile ScaleMatcher[] denoms;
     ScaleMatcher[] denomMatchers() {
