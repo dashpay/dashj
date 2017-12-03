@@ -821,7 +821,8 @@ public class Peer extends PeerSocketHandler {
             confidence.setSource(TransactionConfidence.Source.NETWORK);
 
             //Dash Specific
-            context.instantSend.syncTransaction(tx, null);
+            if(context != null && context.instantSend != null) // for unit tests that are not initialized.
+                context.instantSend.syncTransaction(tx, null);
 
             pendingTxDownloads.remove(confidence);
             if (maybeHandleRequestedData(tx)) {
