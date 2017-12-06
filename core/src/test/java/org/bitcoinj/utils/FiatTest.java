@@ -25,10 +25,10 @@ public class FiatTest {
 
     @Test
     public void testParseAndValueOf() {
-        assertEquals(Fiat.valueOf("EUR", 10000), parseFiat("EUR", "1"));
-        assertEquals(Fiat.valueOf("EUR", 100), parseFiat("EUR", "0.01"));
-        assertEquals(Fiat.valueOf("EUR", 1), parseFiat("EUR", "0.0001"));
-        assertEquals(Fiat.valueOf("EUR", -10000), parseFiat("EUR", "-1"));
+        assertEquals(Fiat.valueOf("EUR", 100000000), parseFiat("EUR", "1"));
+        assertEquals(Fiat.valueOf("EUR", 1000000), parseFiat("EUR", "0.01"));
+        assertEquals(Fiat.valueOf("EUR", 10000), parseFiat("EUR", "0.0001"));
+        assertEquals(Fiat.valueOf("EUR", -100000000), parseFiat("EUR", "-1"));
     }
 
     @Test
@@ -41,7 +41,7 @@ public class FiatTest {
 
     @Test
     public void testToPlainString() {
-        assertEquals("0.0015", Fiat.valueOf("EUR", 15).toPlainString());
+        assertEquals("0.0015", Fiat.valueOf("EUR", 150000).toPlainString());
         assertEquals("1.23", parseFiat("EUR", "1.23").toPlainString());
 
         assertEquals("0.1", parseFiat("EUR", "0.1").toPlainString());
