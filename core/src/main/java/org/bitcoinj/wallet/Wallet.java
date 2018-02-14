@@ -5358,4 +5358,25 @@ public class Wallet extends BaseTaggableObject
         }
     }
     //endregion
+
+    /**
+     * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
+     */
+    public void addKeyChain(ImmutableList<ChildNumber> path)
+    {
+        try {
+            keyChainGroupLock.lock();
+            boolean hasPath = false;
+            for(DeterministicKeyChain chain : keyChainGroup.getDeterministicKeyChains())
+            {
+                if(chain.getAccountPath().equals(path))
+                    hasPath = true;
+            }
+            if(!hasPath)
+                keyChainGroup.addAndActivateHDChain(new DeterministicKeyChain(getKeyChainSeed(), path));
+        }
+        finally {
+            keyChainGroupLock.unlock();
+        }
+    }
 }
