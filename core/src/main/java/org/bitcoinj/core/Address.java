@@ -67,7 +67,7 @@ public class Address extends VersionedChecksummedBytes {
         checkNotNull(params);
         checkArgument(hash160.length == 20, "Addresses are 160-bit hashes, so you must provide 20 bytes");
         if (!isAcceptableVersion(params, version))
-            throw new WrongNetworkException(version, params.getAcceptableAddressCodes());
+            throw new WrongNetworkException(version);
         this.params = params;
     }
 
@@ -159,7 +159,7 @@ public class Address extends VersionedChecksummedBytes {
         super(address);
         if (params != null) {
             if (!isAcceptableVersion(params, version)) {
-                throw new WrongNetworkException(version, params.getAcceptableAddressCodes());
+                throw new WrongNetworkException(version);
             }
             this.params = params;
         } else {
