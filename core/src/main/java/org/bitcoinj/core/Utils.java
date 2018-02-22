@@ -54,6 +54,7 @@ public class Utils {
     public static final String BITCOIN_SIGNED_MESSAGE_HEADER = "DarkCoin Signed Message:\n";  //Dash use DarkCoin here
     public static final byte[] BITCOIN_SIGNED_MESSAGE_HEADER_BYTES = BITCOIN_SIGNED_MESSAGE_HEADER.getBytes(Charsets.UTF_8);
 
+    /** Joiner for concatenating words with a space inbetween. */
     public static final Joiner SPACE_JOINER = Joiner.on(" ");
 
     private static BlockingQueue<Boolean> mockSleepQueue;
@@ -89,6 +90,7 @@ public class Utils {
         return dest;
     }
 
+    /** Write 4 bytes to the byte array (starting at the offset) as unsigned 32-bit integer in big endian format. */
     public static void uint32ToByteArrayBE(long val, byte[] out, int offset) {
         out[offset] = (byte) (0xFF & (val >> 24));
         out[offset + 1] = (byte) (0xFF & (val >> 16));
@@ -96,6 +98,7 @@ public class Utils {
         out[offset + 3] = (byte) (0xFF & val);
     }
 
+    /** Write 4 bytes to the byte array (starting at the offset) as unsigned 32-bit integer in little endian format. */
     public static void uint32ToByteArrayLE(long val, byte[] out, int offset) {
         out[offset] = (byte) (0xFF & val);
         out[offset + 1] = (byte) (0xFF & (val >> 8));
@@ -103,6 +106,7 @@ public class Utils {
         out[offset + 3] = (byte) (0xFF & (val >> 24));
     }
 
+    /** Write 8 bytes to the byte array (starting at the offset) as signed 64-bit integer in little endian format. */
     public static void int64ToByteArrayLE(long val, byte[] out, int offset) {
         out[offset] = (byte) (0xFF & val);
         out[offset + 1] = (byte) (0xFF & (val >> 8));
@@ -114,11 +118,13 @@ public class Utils {
         out[offset + 7] = (byte) (0xFF & (val >> 56));
     }
 
+    /** Write 2 bytes to the output stream as unsigned 16-bit integer in little endian format. */
     public static void uint16ToByteStreamLE(int val, OutputStream stream) throws IOException {
         stream.write((int) (0xFF & val));
         stream.write((int) (0xFF & (val >> 8)));
     }
 
+    /** Write 4 bytes to the output stream as unsigned 32-bit integer in little endian format. */
     public static void uint32ToByteStreamLE(long val, OutputStream stream) throws IOException {
         stream.write((int) (0xFF & val));
         stream.write((int) (0xFF & (val >> 8)));
@@ -126,6 +132,7 @@ public class Utils {
         stream.write((int) (0xFF & (val >> 24)));
     }
     
+    /** Write 8 bytes to the output stream as signed 64-bit integer in little endian format. */
     public static void int64ToByteStreamLE(long val, OutputStream stream) throws IOException {
         stream.write((int) (0xFF & val));
         stream.write((int) (0xFF & (val >> 8)));
@@ -137,6 +144,7 @@ public class Utils {
         stream.write((int) (0xFF & (val >> 56)));
     }
 
+    /** Write 8 bytes to the output stream as unsigned 64-bit integer in little endian format. */
     public static void uint64ToByteStreamLE(BigInteger val, OutputStream stream) throws IOException {
         byte[] bytes = val.toByteArray();
         if (bytes.length > 8) {
