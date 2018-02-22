@@ -21,6 +21,8 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Charsets;
+
 import java.io.*;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -359,7 +361,7 @@ public abstract class Message {
 
     protected String readStr() throws ProtocolException {
         long length = readVarInt();
-        return length == 0 ? "" : Utils.toString(readBytes((int) length), "UTF-8"); // optimization for empty strings
+        return length == 0 ? "" : new String(readBytes((int) length), Charsets.UTF_8); // optimization for empty strings
     }
 
     protected Sha256Hash readHash() throws ProtocolException {
