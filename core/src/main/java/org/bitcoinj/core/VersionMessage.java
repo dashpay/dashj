@@ -16,6 +16,7 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 import com.google.common.net.InetAddresses;
 
@@ -179,7 +180,7 @@ public class VersionMessage extends Message {
         Utils.uint32ToByteStreamLE(0, buf);
         Utils.uint32ToByteStreamLE(0, buf);
         // Now comes subVer.
-        byte[] subVerBytes = subVer.getBytes("UTF-8");
+        byte[] subVerBytes = subVer.getBytes(Charsets.UTF_8);
         buf.write(new VarInt(subVerBytes.length).encode());
         buf.write(subVerBytes);
         // Size of known block chain.
