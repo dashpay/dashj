@@ -41,7 +41,6 @@ import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.bitcoinj.wallet.listeners.WalletEventListener;
 import org.bitcoinj.wallet.listeners.WalletReorganizeEventListener;
-import org.bitcoinj.core.InstantSend;
 import org.slf4j.*;
 import org.spongycastle.crypto.params.*;
 
