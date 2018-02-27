@@ -58,12 +58,12 @@ public class AddressTest {
     @Test
     public void stringification() throws Exception {
         // Test a testnet address.
-        Address a = new Address(TESTNET, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
-        assertEquals("yjSeawEuRUJDpr9FMmGx1oFtPrEjQG3vkg", a.toString());
+        Address a = Address.fromPubKeyHash(TESTNET, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
+        assertEquals("n4eA2nbYqErp7H6jebchxAN59DmNpksexv", a.toString());
         assertFalse(a.isP2SHAddress());
 
-        Address b = new Address(MAINNET, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
-        assertEquals("XhSqUwiG6PGjRCXD5sksyvRNE1ZV8jkaVC", b.toString());
+        Address b = Address.fromPubKeyHash(MAINNET, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
+        assertEquals("17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL", b.toString());
         assertFalse(b.isP2SHAddress());
     }
     
@@ -192,7 +192,7 @@ public class AddressTest {
 
     @Test
     public void cloning() throws Exception {
-        Address a = new Address(TESTNET, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
+        Address a = Address.fromPubKeyHash(TESTNET, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
         Address b = a.clone();
 
         assertEquals(a, b);

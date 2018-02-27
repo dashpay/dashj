@@ -79,8 +79,8 @@ public class ScriptTest {
         byte[] pubkeyBytes = HEX.decode(pubkeyProg);
         Script pubkey = new Script(pubkeyBytes);
         assertEquals("DUP HASH160 PUSHDATA(20)[33e81a941e64cda12c6a299ed322ddbdd03f8d0e] EQUALVERIFY CHECKSIG", pubkey.toString());
-        Address toAddr = new Address(PARAMS, ScriptPattern.extractHashFromPayToPubKeyHash(pubkey));
-        assertEquals("yR3uMqqBZFidFRFTgXWnPiKhvVF1EtUZ16", toAddr.toString());
+        Address toAddr = Address.fromPubKeyHash(PARAMS, ScriptPattern.extractHashFromPayToPubKeyHash(pubkey));
+        assertEquals("mkFQohBpy2HDXrCwyMrYL5RtfrmeiuuPY2", toAddr.toString());
     }
 
     @Test
