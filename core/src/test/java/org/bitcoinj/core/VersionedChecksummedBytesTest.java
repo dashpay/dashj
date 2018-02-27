@@ -25,26 +25,23 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
-/**
- *
- */
 public class VersionedChecksummedBytesTest {
-    static final NetworkParameters testParams = TestNet3Params.get();
-    static final NetworkParameters mainParams = MainNetParams.get();
+    private static final NetworkParameters TESTNET = TestNet3Params.get();
+    private static final NetworkParameters MAINNET = MainNetParams.get();
 
     @Test
     public void stringification() throws Exception {
         // Test a testnet address.
-        VersionedChecksummedBytes a = new VersionedChecksummedBytes(testParams.getAddressHeader(), HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
+        VersionedChecksummedBytes a = new VersionedChecksummedBytes(TESTNET.getAddressHeader(), HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
         assertEquals("yjSeawEuRUJDpr9FMmGx1oFtPrEjQG3vkg", a.toString());
 
-        VersionedChecksummedBytes b = new VersionedChecksummedBytes(mainParams.getAddressHeader(), HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
+        VersionedChecksummedBytes b = new VersionedChecksummedBytes(MAINNET.getAddressHeader(), HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
         assertEquals("XhSqUwiG6PGjRCXD5sksyvRNE1ZV8jkaVC", b.toString());
     }
 
     @Test
     public void cloning() throws Exception {
-        VersionedChecksummedBytes a = new VersionedChecksummedBytes(testParams.getAddressHeader(), HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
+        VersionedChecksummedBytes a = new VersionedChecksummedBytes(TESTNET.getAddressHeader(), HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
         VersionedChecksummedBytes b = a.clone();
 
         assertEquals(a, b);
@@ -53,7 +50,7 @@ public class VersionedChecksummedBytesTest {
 
     @Test
     public void comparisonCloneEqualTo() throws Exception {
-        VersionedChecksummedBytes a = new VersionedChecksummedBytes(testParams.getAddressHeader(), HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
+        VersionedChecksummedBytes a = new VersionedChecksummedBytes(TESTNET.getAddressHeader(), HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
         VersionedChecksummedBytes b = a.clone();
 
         assertTrue(a.compareTo(b) == 0);
