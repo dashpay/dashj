@@ -39,7 +39,10 @@ import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.*;
 
 public class BlockTest {
-    private static final NetworkParameters PARAMS = TestNet2Params.get();
+    private static final NetworkParameters TESTNET2 = TestNet2Params.get();
+    private static final NetworkParameters TESTNET3 = TestNet3Params.get();
+    private static final NetworkParameters UNITTEST = UnitTestParams.get();
+    private static final NetworkParameters MAINNET = MainNetParams.get();
 
     public static final byte[] blockBytes;
 
@@ -51,12 +54,12 @@ public class BlockTest {
 
     @Before
     public void setUp() throws Exception {
-        Context context = new Context(PARAMS);
+        Context context = new Context(TESTNET2);
     }
 
     @Test
     public void testWork() throws Exception {
-        BigInteger work = PARAMS.getGenesisBlock().getWork();
+        BigInteger work = TESTNET2.getGenesisBlock().getWork();
         // This number is printed by Dash Core at startup as the calculated value of chainWork on testnet:
         //
         // 2017-04-22 19:20:20 UpdateTip: new best=00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c  height=0  log2_work=20.000022  tx=1  date=2014-01-25 16:10:06 progress=0.000002
@@ -66,7 +69,7 @@ public class BlockTest {
 
     @Test
     public void testBlockVerification() throws Exception {
-        Block block = PARAMS.getDefaultSerializer().makeBlock(blockBytes);
+        Block block = TESTNET2.getDefaultSerializer().makeBlock(blockBytes);
         block.verify(Block.BLOCK_HEIGHT_GENESIS, EnumSet.noneOf(Block.VerifyFlag.class));
         assertEquals("000000000fba0622132b6acd887021db720c541590d0408bc3ae525277fb2636", block.getHashAsString());
     }
@@ -74,15 +77,14 @@ public class BlockTest {
     @SuppressWarnings("deprecation")
     @Test
     public void testDate() throws Exception {
-        Block block = PARAMS.getDefaultSerializer().makeBlock(blockBytes);
+        Block block = TESTNET2.getDefaultSerializer().makeBlock(blockBytes);
         assertEquals("21 Apr 2017 05:01:31 GMT", block.getTime().toGMTString());
     }
 
     @Test
     public void testProofOfWork() throws Exception {
-        // This context accepts any difficulty target.
-        NetworkParameters params = UnitTestParams.get();
-        Block block = params.getDefaultSerializer().makeBlock(blockBytes);
+        // This params accepts any difficulty target.
+        Block block = UNITTEST.getDefaultSerializer().makeBlock(blockBytes);
         block.setNonce(55584);
         try {
             block.verify(Block.BLOCK_HEIGHT_GENESIS, EnumSet.noneOf(Block.VerifyFlag.class));
@@ -111,7 +113,7 @@ public class BlockTest {
 
     @Test
     public void testBadTransactions() throws Exception {
-        Block block = PARAMS.getDefaultSerializer().makeBlock(blockBytes);
+        Block block = TESTNET2.getDefaultSerializer().makeBlock(blockBytes);
         // Re-arrange so the coinbase transaction is not first.
         Transaction tx1 = block.transactions.get(0);
         Transaction tx2 = block.transactions.get(1);
@@ -127,9 +129,9 @@ public class BlockTest {
 
     @Test
     public void testHeaderParse() throws Exception {
-        Block block = PARAMS.getDefaultSerializer().makeBlock(blockBytes);
+        Block block = TESTNET2.getDefaultSerializer().makeBlock(blockBytes);
         Block header = block.cloneAsHeader();
-        Block reparsed = PARAMS.getDefaultSerializer().makeBlock(header.bitcoinSerialize());
+        Block reparsed = TESTNET2.getDefaultSerializer().makeBlock(header.bitcoinSerialize());
         assertEquals(reparsed, header);
     }
 
@@ -139,24 +141,23 @@ public class BlockTest {
         // proves that transaction serialization works, along with all its subobjects like scripts and in/outpoints.
         //
         // NB: This tests the bitcoin serialization protocol.
-        Block block = PARAMS.getDefaultSerializer().makeBlock(blockBytes);
+        Block block = TESTNET2.getDefaultSerializer().makeBlock(blockBytes);
         assertTrue(Arrays.equals(blockBytes, block.bitcoinSerialize()));
     }
     
     @Test
     public void testUpdateLength() {
-        NetworkParameters params = UnitTestParams.get();
-        Block block = params.getGenesisBlock().createNextBlockWithCoinbase(Block.BLOCK_VERSION_GENESIS, new ECKey().getPubKey(), Block.BLOCK_HEIGHT_GENESIS);
+        Block block = UNITTEST.getGenesisBlock().createNextBlockWithCoinbase(Block.BLOCK_VERSION_GENESIS, new ECKey().getPubKey(), Block.BLOCK_HEIGHT_GENESIS);
         assertEquals(block.bitcoinSerialize().length, block.length);
         final int origBlockLen = block.length;
-        Transaction tx = new Transaction(params);
+        Transaction tx = new Transaction(UNITTEST);
         // this is broken until the transaction has > 1 input + output (which is required anyway...)
         //assertTrue(tx.length == tx.bitcoinSerialize().length && tx.length == 8);
         byte[] outputScript = new byte[10];
         Arrays.fill(outputScript, (byte) ScriptOpCodes.OP_FALSE);
-        tx.addOutput(new TransactionOutput(params, null, Coin.SATOSHI, outputScript));
-        tx.addInput(new TransactionInput(params, null, new byte[] {(byte) ScriptOpCodes.OP_FALSE},
-                new TransactionOutPoint(params, 0, Sha256Hash.of(new byte[] { 1 }))));
+        tx.addOutput(new TransactionOutput(UNITTEST, null, Coin.SATOSHI, outputScript));
+        tx.addInput(new TransactionInput(UNITTEST, null, new byte[] {(byte) ScriptOpCodes.OP_FALSE},
+                new TransactionOutPoint(UNITTEST, 0, Sha256Hash.of(new byte[] { 1 }))));
         int origTxLength = 8 + 2 + 8 + 1 + 10 + 40 + 1 + 1;
         assertEquals(tx.unsafeBitcoinSerialize().length, tx.length);
         assertEquals(origTxLength, tx.length);
@@ -170,8 +171,8 @@ public class BlockTest {
         assertEquals(block.length, block.unsafeBitcoinSerialize().length);
         assertEquals(block.length, origBlockLen + tx.length);
         assertEquals(tx.length, origTxLength - 1);
-        block.getTransactions().get(1).addInput(new TransactionInput(params, null, new byte[] {(byte) ScriptOpCodes.OP_FALSE},
-                new TransactionOutPoint(params, 0, Sha256Hash.of(new byte[] { 1 }))));
+        block.getTransactions().get(1).addInput(new TransactionInput(UNITTEST, null, new byte[] {(byte) ScriptOpCodes.OP_FALSE},
+                new TransactionOutPoint(UNITTEST, 0, Sha256Hash.of(new byte[] { 1 }))));
         assertEquals(block.length, origBlockLen + tx.length);
         assertEquals(tx.length, origTxLength + 41); // - 1 + 40 + 1 + 1
     }
@@ -182,7 +183,7 @@ public class BlockTest {
         // contains a coinbase transaction whose height is two bytes, which is
         // shorter than we see in most other cases.
 
-        //Block block = TestNet3Params.get().getDefaultSerializer().makeBlock(
+        //Block block = TESTNET.getDefaultSerializer().makeBlock(
         //    ByteStreams.toByteArray(getClass().getResourceAsStream("block_testnet21066.dat")));
 
         Block block = TestNet3Params.get().getDefaultSerializer().makeBlock(blockBytes);
@@ -197,7 +198,7 @@ public class BlockTest {
 
         //block = TestNet3Params.get().getDefaultSerializer().makeBlock(
         //    ByteStreams.toByteArray(getClass().getResourceAsStream("block_testnet32768.dat")));
-        block = TestNet3Params.get().getDefaultSerializer().makeBlock(HEX.decode("04000000ad7226a87e8c16a4de493320a6f55535903b13dae0689bc6a76255ad0400000068208963dae191aa15c11dd82adfd7ba7184716b9acc649805904ec9a9d564079a3036578798311d3909b8000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff050288130101ffffffff0100743ba40b0000002321033de1afba2a2aa9f88f06912a4b51d386af3142e89f3b1a69741cb62f3dd47cdaac00000000"));
+        block = TESTNET3.getDefaultSerializer().makeBlock(HEX.decode("04000000ad7226a87e8c16a4de493320a6f55535903b13dae0689bc6a76255ad0400000068208963dae191aa15c11dd82adfd7ba7184716b9acc649805904ec9a9d564079a3036578798311d3909b8000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff050288130101ffffffff0100743ba40b0000002321033de1afba2a2aa9f88f06912a4b51d386af3142e89f3b1a69741cb62f3dd47cdaac00000000"));
         // Check block.
         assertEquals("0000001d3f1f66dd3b276f7fddaae344973e9ddf1179d904b0798bcfc503cd94", block.getHashAsString());
         block.verify(5000, EnumSet.of(Block.VerifyFlag.HEIGHT_IN_COINBASE));
@@ -214,9 +215,7 @@ public class BlockTest {
 
         final long BLOCK_NONCE = 3973947400L;
         final Coin BALANCE_AFTER_BLOCK = Coin.valueOf(22223642);
-        final NetworkParameters PARAMS = MainNetParams.get();
-
-        Block block169482 = PARAMS.getDefaultSerializer().makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block169482.dat")));
+        Block block169482 = MAINNET.getDefaultSerializer().makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block169482.dat")));
 
         // Check block.
         assertNotNull(block169482);
@@ -226,9 +225,9 @@ public class BlockTest {
         StoredBlock storedBlock = new StoredBlock(block169482, BigInteger.ONE, 169482); // Nonsense work - not used in test.
 
         // Create a wallet contain the miner's key that receives a spend from a coinbase.
-        ECKey miningKey = DumpedPrivateKey.fromBase58(PARAMS, MINING_PRIVATE_KEY).getKey();
+        ECKey miningKey = DumpedPrivateKey.fromBase58(MAINNET, MINING_PRIVATE_KEY).getKey();
         assertNotNull(miningKey);
-        Context context = new Context(PARAMS);
+        Context context = new Context(MAINNET);
         Wallet wallet = new Wallet(context);
         wallet.importKey(miningKey);
 
@@ -247,42 +246,41 @@ public class BlockTest {
 
     @Test
     public void isBIPs() throws Exception {
-        final MainNetParams mainnet = MainNetParams.get();
-        final Block genesis = mainnet.getGenesisBlock();
+        final Block genesis = MAINNET.getGenesisBlock();
         assertFalse(genesis.isBIP34());
         assertFalse(genesis.isBIP66());
         assertFalse(genesis.isBIP65());
 
         // 227835/00000000000001aa077d7aa84c532a4d69bdbff519609d1da0835261b7a74eb6: last version 1 block
-        final Block block227835 = mainnet.getDefaultSerializer()
+        final Block block227835 = MAINNET.getDefaultSerializer()
                 .makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block227835.dat")));
         assertFalse(block227835.isBIP34());
         assertFalse(block227835.isBIP66());
         assertFalse(block227835.isBIP65());
 
         // 227836/00000000000000d0dfd4c9d588d325dce4f32c1b31b7c0064cba7025a9b9adcc: version 2 block
-        final Block block227836 = mainnet.getDefaultSerializer()
+        final Block block227836 = MAINNET.getDefaultSerializer()
                 .makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block227836.dat")));
         assertTrue(block227836.isBIP34());
         assertFalse(block227836.isBIP66());
         assertFalse(block227836.isBIP65());
 
         // 363703/0000000000000000011b2a4cb91b63886ffe0d2263fd17ac5a9b902a219e0a14: version 3 block
-        final Block block363703 = mainnet.getDefaultSerializer()
+        final Block block363703 = MAINNET.getDefaultSerializer()
                 .makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block363703.dat")));
         assertTrue(block363703.isBIP34());
         assertTrue(block363703.isBIP66());
         assertFalse(block363703.isBIP65());
 
         // 383616/00000000000000000aab6a2b34e979b09ca185584bd1aecf204f24d150ff55e9: version 4 block
-        final Block block383616 = mainnet.getDefaultSerializer()
+        final Block block383616 = MAINNET.getDefaultSerializer()
                 .makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block383616.dat")));
         assertTrue(block383616.isBIP34());
         assertTrue(block383616.isBIP66());
         assertTrue(block383616.isBIP65());
 
         // 370661/00000000000000001416a613602d73bbe5c79170fd8f39d509896b829cf9021e: voted for BIP101
-        final Block block370661 = mainnet.getDefaultSerializer()
+        final Block block370661 = MAINNET.getDefaultSerializer()
                 .makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block370661.dat")));
         assertTrue(block370661.isBIP34());
         assertTrue(block370661.isBIP66());
@@ -299,13 +297,13 @@ public class BlockTest {
         String block842284hash = "000000000000000cdf5cc24c3beb0669b31e942d1301e07b53d6f0c7db10860d";
 
         Sha256Hash firstBlockHash = Sha256Hash.wrap(block842285hash);
-        Block firstBlock = new Block(PARAMS, Utils.HEX.decode(block842285));
+        Block firstBlock = new Block(TESTNET3, Utils.HEX.decode(block842285));
         assertEquals(firstBlockHash, firstBlock.getHash());
         assertEquals(12, firstBlock.getTransactions().size());
         assertEquals(1, firstBlock.getTransactions().get(0).getVersion());
 
         Sha256Hash secondBlockHash = Sha256Hash.wrap(block842284hash);
-        Block secondBlock = new Block(PARAMS, Utils.HEX.decode(block842284));
+        Block secondBlock = new Block(TESTNET3, Utils.HEX.decode(block842284));
         assertEquals(secondBlockHash, secondBlock.getHash());
         assertEquals(14, secondBlock.getTransactions().size());
 

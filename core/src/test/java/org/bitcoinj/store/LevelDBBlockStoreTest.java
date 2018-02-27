@@ -1,4 +1,6 @@
 /*
+ * Copyright by the original author or authors.
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,23 +25,24 @@ import java.io.*;
 import static org.junit.Assert.assertEquals;
 
 public class LevelDBBlockStoreTest {
+    private static final NetworkParameters UNITTEST = UnitTestParams.get();
+
     @Test
     public void basics() throws Exception {
         File f = File.createTempFile("leveldbblockstore", null);
         f.delete();
 
-        NetworkParameters params = UnitTestParams.get();
-        Context context = new Context(params);
+        Context context = new Context(UNITTEST);
         LevelDBBlockStore store = new LevelDBBlockStore(context, f);
         store.reset();
 
         // Check the first block in a new store is the genesis block.
         StoredBlock genesis = store.getChainHead();
-        assertEquals(params.getGenesisBlock(), genesis.getHeader());
+        assertEquals(UNITTEST.getGenesisBlock(), genesis.getHeader());
         assertEquals(0, genesis.getHeight());
 
         // Build a new block.
-        Address to = Address.fromBase58(params, "yXXWsFYKL2TouBVHcLeXnhg2GRzntvs5oy");
+        Address to = Address.fromBase58(UNITTEST, "yXXWsFYKL2TouBVHcLeXnhg2GRzntvs5oy");
         StoredBlock b1 = genesis.build(genesis.getHeader().createNextBlock(to).cloneAsHeader());
         store.put(b1);
         store.setChainHead(b1);
