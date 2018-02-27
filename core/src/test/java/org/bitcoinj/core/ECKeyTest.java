@@ -61,6 +61,9 @@ public class ECKeyTest {
 
     private static CharSequence PASSWORD1 = "my hovercraft has eels";
     private static CharSequence WRONG_PASSWORD = "it is a snowy day today";
+    private static final NetworkParameters TESTNET = TestNet3Params.get();
+    private static final NetworkParameters MAINNET = MainNetParams.get();
+    private static final NetworkParameters UNITTEST = UnitTestParams.get();
 
     @Before
     public void setUp() throws Exception {
@@ -192,8 +195,8 @@ public class ECKeyTest {
     @Test
     public void base58Encoding_leadingZero() throws Exception {
         String privkey = "91axuYLa8xK796DnBXXsMbjuc8pDYxYgJyQMvFzrZ6UfXaGYuqL";
-        ECKey key = DumpedPrivateKey.fromBase58(TestNet3Params.get(), privkey).getKey();
-        assertEquals(privkey, key.getPrivateKeyEncoded(TestNet3Params.get()).toString());
+        ECKey key = DumpedPrivateKey.fromBase58(TESTNET, privkey).getKey();
+        assertEquals(privkey, key.getPrivateKeyEncoded(TESTNET).toString());
         assertEquals(0, key.getPrivKeyBytes()[0]);
     }
 
@@ -202,8 +205,8 @@ public class ECKeyTest {
         // Replace the loop bound with 1000 to get some keys with leading zero byte
         for (int i = 0 ; i < 20 ; i++) {
             ECKey key = new ECKey();
-            ECKey key1 = DumpedPrivateKey.fromBase58(TestNet3Params.get(),
-                    key.getPrivateKeyEncoded(TestNet3Params.get()).toString()).getKey();
+            ECKey key1 = DumpedPrivateKey.fromBase58(TESTNET,
+                    key.getPrivateKeyEncoded(TESTNET).toString()).getKey();
             assertEquals(Utils.HEX.encode(key.getPrivKeyBytes()),
                     Utils.HEX.encode(key1.getPrivKeyBytes()));
         }
@@ -214,7 +217,7 @@ public class ECKeyTest {
         ECKey key = new ECKey();
         String message = "聡中本";
         String signatureBase64 = key.signMessage(message);
-        log.info("Message signed with " + Address.fromKey(MainNetParams.get(), key) + ": " + signatureBase64);
+        log.info("Message signed with " + Address.fromKey(MAINNET, key) + ": " + signatureBase64);
         // Should verify correctly.
         key.verifyMessage(message, signatureBase64);
         try {
@@ -232,7 +235,7 @@ public class ECKeyTest {
         String sigBase64 = "HPygR8+G/HJ0kSp0azMeW6bvzd1tGg0Nx1mCJ/ls5Yh2Z1WgA10Nc/yPbVYU4HbF8Z98vvXFC8iqGTGsdDgqfe4=";
         Address expectedAddress = Address.fromBase58(MainNetParams.get(), "Xt5QmmzX2LaMgt81dcXGHhdf8pAhaVJKUW");
         ECKey key = ECKey.signedMessageToKey(message, sigBase64);
-        Address gotAddress = Address.fromKey(MainNetParams.get(), key);
+        Address gotAddress = Address.fromKey(MAINNET, key);
         assertEquals(expectedAddress, gotAddress);
     }
 
@@ -315,7 +318,7 @@ public class ECKeyTest {
     @Test
     public void testToString() throws Exception {
         ECKey key = ECKey.fromPrivate(BigInteger.TEN).decompress(); // An example private key.
-        NetworkParameters params = MainNetParams.get();
+        NetworkParameters params = MAINNET;
         assertEquals("ECKey{pub HEX=04a0434d9e47f3c86235477c7b1ae6ae5d3442d49b1943c2b752a68e2a47e247c7893aba425419bc27a3b6c7e693a24c696f794c2ed877a1593cbee53b037368d7, isEncrypted=false, isPubKeyOnly=false}", key.toString());
         assertEquals("ECKey{pub HEX=04a0434d9e47f3c86235477c7b1ae6ae5d3442d49b1943c2b752a68e2a47e247c7893aba425419bc27a3b6c7e693a24c696f794c2ed877a1593cbee53b037368d7, priv HEX=000000000000000000000000000000000000000000000000000000000000000a, priv WIF=7qYrzJZWqnyCWMYswFcqaRJypGdVceudXPSxmZKsngN7h64GgGy, isEncrypted=false, isPubKeyOnly=false}", key.toStringWithPrivate(null, params));
     }
@@ -358,9 +361,8 @@ public class ECKeyTest {
     public void roundTripDumpedPrivKey() throws Exception {
         ECKey key = new ECKey();
         assertTrue(key.isCompressed());
-        NetworkParameters params = UnitTestParams.get();
-        String base58 = key.getPrivateKeyEncoded(params).toString();
-        ECKey key2 = DumpedPrivateKey.fromBase58(params, base58).getKey();
+        String base58 = key.getPrivateKeyEncoded(UNITTEST).toString();
+        ECKey key2 = DumpedPrivateKey.fromBase58(UNITTEST, base58).getKey();
         assertTrue(key2.isCompressed());
         assertTrue(Arrays.equals(key.getPrivKeyBytes(), key2.getPrivKeyBytes()));
         assertTrue(Arrays.equals(key.getPubKey(), key2.getPubKey()));

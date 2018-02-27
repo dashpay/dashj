@@ -96,7 +96,7 @@ public class WalletTest extends TestWithWallet {
     private static final CharSequence PASSWORD1 = "my helicopter contains eels";
     private static final CharSequence WRONG_PASSWORD = "nothing noone nobody nowhere";
 
-    private final Address OTHER_ADDRESS = Address.fromKey(PARAMS, new ECKey());
+    private final Address OTHER_ADDRESS = Address.fromKey(UNITTEST, new ECKey());
 
     @Before
     @Override
@@ -115,14 +115,14 @@ public class WalletTest extends TestWithWallet {
     }
 
     private void createMarriedWallet(int threshold, int numKeys, boolean addSigners) throws BlockStoreException {
-        wallet = new Wallet(PARAMS);
-        blockStore = new MemoryBlockStore(PARAMS);
-        chain = new BlockChain(PARAMS, wallet, blockStore);
+        wallet = new Wallet(UNITTEST);
+        blockStore = new MemoryBlockStore(UNITTEST);
+        chain = new BlockChain(UNITTEST, wallet, blockStore);
 
         List<DeterministicKey> followingKeys = Lists.newArrayList();
         for (int i = 0; i < numKeys - 1; i++) {
             final DeterministicKeyChain keyChain = new DeterministicKeyChain(new SecureRandom());
-            DeterministicKey partnerKey = DeterministicKey.deserializeB58(null, keyChain.getWatchingKey().serializePubB58(PARAMS), PARAMS);
+            DeterministicKey partnerKey = DeterministicKey.deserializeB58(null, keyChain.getWatchingKey().serializePubB58(UNITTEST), UNITTEST);
             followingKeys.add(partnerKey);
             if (addSigners && i < threshold - 1)
                 wallet.addTransactionSigner(new KeyChainTransactionSigner(keyChain));
@@ -153,15 +153,15 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void basicSpendingToP2SH() throws Exception {
-        Address destination = Address.fromP2SHHash(PARAMS, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
+        Address destination = Address.fromP2SHHash(UNITTEST, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
         basicSpendingCommon(wallet, myAddress, destination, null);
     }
 
     @Test
     public void basicSpendingWithEncryptedWallet() throws Exception {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
-        Address myEncryptedAddress = Address.fromKey(PARAMS, encryptedWallet.freshReceiveKey());
+        Address myEncryptedAddress = Address.fromKey(UNITTEST, encryptedWallet.freshReceiveKey());
         basicSpendingCommon(encryptedWallet, myEncryptedAddress, OTHER_ADDRESS, encryptedWallet);
     }
 
@@ -414,8 +414,8 @@ public class WalletTest extends TestWithWallet {
     private void basicSanityChecks(Wallet wallet, Transaction t, Address destination) throws VerificationException {
         assertEquals("Wrong number of tx inputs", 1, t.getInputs().size());
         assertEquals("Wrong number of tx outputs",2, t.getOutputs().size());
-        assertEquals(destination, t.getOutput(0).getScriptPubKey().getToAddress(PARAMS));
-        assertEquals(wallet.currentChangeAddress(), t.getOutputs().get(1).getScriptPubKey().getToAddress(PARAMS));
+        assertEquals(destination, t.getOutput(0).getScriptPubKey().getToAddress(UNITTEST));
+        assertEquals(wallet.currentChangeAddress(), t.getOutputs().get(1).getScriptPubKey().getToAddress(UNITTEST));
         assertEquals(valueOf(0, 50), t.getOutputs().get(1).getValue());
         // Check the script runs and signatures verify.
         t.getInputs().get(0).verify();
@@ -430,8 +430,8 @@ public class WalletTest extends TestWithWallet {
             }
         });
 
-        t.getConfidence().markBroadcastBy(new PeerAddress(PARAMS, InetAddress.getByAddress(new byte[]{1,2,3,4})));
-        t.getConfidence().markBroadcastBy(new PeerAddress(PARAMS, InetAddress.getByAddress(new byte[]{10,2,3,4})));
+        t.getConfidence().markBroadcastBy(new PeerAddress(UNITTEST, InetAddress.getByAddress(new byte[]{1,2,3,4})));
+        t.getConfidence().markBroadcastBy(new PeerAddress(UNITTEST, InetAddress.getByAddress(new byte[]{10,2,3,4})));
         wallet.commitTx(t);
         Threading.waitForUserCode();
         assertEquals(1, wallet.getPoolSize(WalletTransaction.Pool.PENDING));
@@ -451,8 +451,8 @@ public class WalletTest extends TestWithWallet {
         req.shuffleOutputs = false;
         wallet.completeTx(req);
         Transaction t3 = req.tx;
-        assertNotEquals(t2.getOutput(1).getScriptPubKey().getToAddress(PARAMS),
-                        t3.getOutput(1).getScriptPubKey().getToAddress(PARAMS));
+        assertNotEquals(t2.getOutput(1).getScriptPubKey().getToAddress(UNITTEST),
+                        t3.getOutput(1).getScriptPubKey().getToAddress(UNITTEST));
         assertNotNull(t3);
         wallet.commitTx(t3);
         assertTrue(wallet.isConsistent());
@@ -475,7 +475,7 @@ public class WalletTest extends TestWithWallet {
         Coin v3 = valueOf(0, 75);
         Coin v4 = valueOf(1, 25);
 
-        Transaction t2 = new Transaction(PARAMS);
+        Transaction t2 = new Transaction(UNITTEST);
         t2.addOutput(v2, OTHER_ADDRESS);
         t2.addOutput(v3, OTHER_ADDRESS);
         t2.addOutput(v4, OTHER_ADDRESS);
@@ -487,7 +487,7 @@ public class WalletTest extends TestWithWallet {
         List<ScriptChunk> scriptSigChunks = t2.getInput(0).getScriptSig().getChunks();
         // check 'from address' -- in a unit test this is fine
         assertEquals(2, scriptSigChunks.size());
-        assertEquals(myAddress, Address.fromPubKeyHash(PARAMS, Utils.sha256hash160(scriptSigChunks.get(1).data)));
+        assertEquals(myAddress, Address.fromPubKeyHash(UNITTEST, Utils.sha256hash160(scriptSigChunks.get(1).data)));
         assertEquals(TransactionConfidence.ConfidenceType.UNKNOWN, t2.getConfidence().getConfidenceType());
 
         // We have NOT proven that the signature is correct!
@@ -550,7 +550,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void balanceWithIdenticalOutputs() {
         assertEquals(Coin.ZERO, wallet.getBalance(BalanceType.ESTIMATED));
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         tx.addOutput(Coin.COIN, myAddress);
         tx.addOutput(Coin.COIN, myAddress); // identical to the above
         wallet.addWalletTransaction(new WalletTransaction(Pool.UNSPENT, tx));
@@ -642,7 +642,7 @@ public class WalletTest extends TestWithWallet {
         // Send 0.10 to somebody else.
         Transaction send1 = wallet.createSend(OTHER_ADDRESS, valueOf(0, 10));
         // Reserialize.
-        Transaction send2 = PARAMS.getDefaultSerializer().makeTransaction(send1.bitcoinSerialize());
+        Transaction send2 = UNITTEST.getDefaultSerializer().makeTransaction(send1.bitcoinSerialize());
         assertEquals(nanos, send2.getValueSentFromMe(wallet));
         assertEquals(ZERO.subtract(valueOf(0, 10)), send2.getValue(wallet));
     }
@@ -651,14 +651,14 @@ public class WalletTest extends TestWithWallet {
     public void isConsistent_duplicates() throws Exception {
         // This test ensures that isConsistent catches duplicate transactions, eg, because we submitted the same block
         // twice (this is not allowed).
-        Transaction tx = createFakeTx(PARAMS, COIN, myAddress);
-        TransactionOutput output = new TransactionOutput(PARAMS, tx, valueOf(0, 5), OTHER_ADDRESS);
+        Transaction tx = createFakeTx(UNITTEST, COIN, myAddress);
+        TransactionOutput output = new TransactionOutput(UNITTEST, tx, valueOf(0, 5), OTHER_ADDRESS);
         tx.addOutput(output);
         wallet.receiveFromBlock(tx, null, BlockChain.NewBlockType.BEST_CHAIN, 0);
 
         assertTrue(wallet.isConsistent());
 
-        Transaction txClone = PARAMS.getDefaultSerializer().makeTransaction(tx.bitcoinSerialize());
+        Transaction txClone = UNITTEST.getDefaultSerializer().makeTransaction(tx.bitcoinSerialize());
         try {
             wallet.receiveFromBlock(txClone, null, BlockChain.NewBlockType.BEST_CHAIN, 0);
             fail("Illegal argument not thrown when it should have been.");
@@ -670,8 +670,8 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void isConsistent_pools() throws Exception {
         // This test ensures that isConsistent catches transactions that are in incompatible pools.
-        Transaction tx = createFakeTx(PARAMS, COIN, myAddress);
-        TransactionOutput output = new TransactionOutput(PARAMS, tx, valueOf(0, 5), OTHER_ADDRESS);
+        Transaction tx = createFakeTx(UNITTEST, COIN, myAddress);
+        TransactionOutput output = new TransactionOutput(UNITTEST, tx, valueOf(0, 5), OTHER_ADDRESS);
         tx.addOutput(output);
         wallet.receiveFromBlock(tx, null, BlockChain.NewBlockType.BEST_CHAIN, 0);
 
@@ -685,8 +685,8 @@ public class WalletTest extends TestWithWallet {
     public void isConsistent_spent() throws Exception {
         // This test ensures that isConsistent catches transactions that are marked spent when
         // they aren't.
-        Transaction tx = createFakeTx(PARAMS, COIN, myAddress);
-        TransactionOutput output = new TransactionOutput(PARAMS, tx, valueOf(0, 5), OTHER_ADDRESS);
+        Transaction tx = createFakeTx(UNITTEST, COIN, myAddress);
+        TransactionOutput output = new TransactionOutput(UNITTEST, tx, valueOf(0, 5), OTHER_ADDRESS);
         tx.addOutput(output);
         assertTrue(wallet.isConsistent());
 
@@ -696,13 +696,13 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void isTxConsistentReturnsFalseAsExpected() {
-        Wallet wallet = new Wallet(PARAMS);
+        Wallet wallet = new Wallet(UNITTEST);
         TransactionOutput to = createMock(TransactionOutput.class);
         EasyMock.expect(to.isAvailableForSpending()).andReturn(true);
         EasyMock.expect(to.isMineOrWatched(wallet)).andReturn(true);
-        EasyMock.expect(to.getSpentBy()).andReturn(new TransactionInput(PARAMS, null, new byte[0]));
+        EasyMock.expect(to.getSpentBy()).andReturn(new TransactionInput(UNITTEST, null, new byte[0]));
 
-        Transaction tx = FakeTxBuilder.createFakeTxWithoutChange(PARAMS, to);
+        Transaction tx = FakeTxBuilder.createFakeTxWithoutChange(UNITTEST, to);
 
         replay(to);
 
@@ -712,12 +712,12 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void isTxConsistentReturnsFalseAsExpected_WhenAvailableForSpendingEqualsFalse() {
-        Wallet wallet = new Wallet(PARAMS);
+        Wallet wallet = new Wallet(UNITTEST);
         TransactionOutput to = createMock(TransactionOutput.class);
         EasyMock.expect(to.isAvailableForSpending()).andReturn(false);
         EasyMock.expect(to.getSpentBy()).andReturn(null);
 
-        Transaction tx = FakeTxBuilder.createFakeTxWithoutChange(PARAMS, to);
+        Transaction tx = FakeTxBuilder.createFakeTxWithoutChange(UNITTEST, to);
 
         replay(to);
 
@@ -728,18 +728,18 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void transactions() throws Exception {
         // This test covers a bug in which Transaction.getValueSentFromMe was calculating incorrectly.
-        Transaction tx = createFakeTx(PARAMS, COIN, myAddress);
+        Transaction tx = createFakeTx(UNITTEST, COIN, myAddress);
         // Now add another output (ie, change) that goes to some other address.
-        TransactionOutput output = new TransactionOutput(PARAMS, tx, valueOf(0, 5), OTHER_ADDRESS);
+        TransactionOutput output = new TransactionOutput(UNITTEST, tx, valueOf(0, 5), OTHER_ADDRESS);
         tx.addOutput(output);
         // Note that tx is no longer valid: it spends more than it imports. However checking transactions balance
         // correctly isn't possible in SPV mode because value is a property of outputs not inputs. Without all
         // transactions you can't check they add up.
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, tx);
         // Now the other guy creates a transaction which spends that change.
-        Transaction tx2 = new Transaction(PARAMS);
+        Transaction tx2 = new Transaction(UNITTEST);
         tx2.addInput(output);
-        tx2.addOutput(new TransactionOutput(PARAMS, tx2, valueOf(0, 5), myAddress));
+        tx2.addOutput(new TransactionOutput(UNITTEST, tx2, valueOf(0, 5), myAddress));
         // tx2 doesn't send any coins from us, even though the output is in the wallet.
         assertEquals(ZERO, tx2.getValueSentFromMe(wallet));
     }
@@ -760,8 +760,8 @@ public class WalletTest extends TestWithWallet {
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, outbound1);
         assertTrue(outbound1.getWalletOutputs(wallet).size() <= 1); //the change address at most
         // That other guy gives us the coins right back.
-        Transaction inbound2 = new Transaction(PARAMS);
-        inbound2.addOutput(new TransactionOutput(PARAMS, inbound2, coinHalf, myAddress));
+        Transaction inbound2 = new Transaction(UNITTEST);
+        inbound2.addOutput(new TransactionOutput(UNITTEST, inbound2, coinHalf, myAddress));
         assertTrue(outbound1.getWalletOutputs(wallet).size() >= 1);
         inbound2.addInput(outbound1.getOutputs().get(0));
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, inbound2);
@@ -780,9 +780,9 @@ public class WalletTest extends TestWithWallet {
         // Create a send to a merchant of all our coins.
         Transaction send1 = wallet.createSend(OTHER_ADDRESS, valueOf(2, 90));
         // Create a double spend of just the first one.
-        Address BAD_GUY = Address.fromKey(PARAMS, new ECKey());
+        Address BAD_GUY = Address.fromKey(UNITTEST, new ECKey());
         Transaction send2 = wallet.createSend(BAD_GUY, COIN);
-        send2 = PARAMS.getDefaultSerializer().makeTransaction(send2.bitcoinSerialize());
+        send2 = UNITTEST.getDefaultSerializer().makeTransaction(send2.bitcoinSerialize());
         // Broadcast send1, it's now pending.
         wallet.commitTx(send1);
         assertEquals(ZERO, wallet.getBalance()); // change of 10 cents is not yet mined so not included in the balance.
@@ -809,7 +809,7 @@ public class WalletTest extends TestWithWallet {
         Transaction send2 = checkNotNull(wallet.createSend(OTHER_ADDRESS, value2));
         byte[] buf = send1.bitcoinSerialize();
         buf[43] = 0;  // Break the signature: bitcoinj won't check in SPV mode and this is easier than other mutations.
-        send1 = PARAMS.getDefaultSerializer().makeTransaction(buf);
+        send1 = UNITTEST.getDefaultSerializer().makeTransaction(buf);
         wallet.commitTx(send2);
         wallet.allowSpendingUnconfirmedTransactions();
         assertEquals(value, wallet.getBalance(Wallet.BalanceType.ESTIMATED));
@@ -874,9 +874,9 @@ public class WalletTest extends TestWithWallet {
         // Create a send to a merchant.
         Transaction send1 = wallet.createSend(OTHER_ADDRESS, valueOf(0, 50));
         // Create a double spend.
-        Address BAD_GUY = Address.fromKey(PARAMS, new ECKey());
+        Address BAD_GUY = Address.fromKey(UNITTEST, new ECKey());
         Transaction send2 = wallet.createSend(BAD_GUY, valueOf(0, 50));
-        send2 = PARAMS.getDefaultSerializer().makeTransaction(send2.bitcoinSerialize());
+        send2 = UNITTEST.getDefaultSerializer().makeTransaction(send2.bitcoinSerialize());
         // Broadcast send1.
         wallet.commitTx(send1);
         assertEquals(send1, received.getOutput(0).getSpentBy().getParentTransaction());
@@ -889,7 +889,7 @@ public class WalletTest extends TestWithWallet {
                 send1.getConfidence().getConfidenceType());
         assertEquals(send2, received.getOutput(0).getSpentBy().getParentTransaction());
 
-        FakeTxBuilder.DoubleSpends doubleSpends = FakeTxBuilder.createFakeDoubleSpendTxns(PARAMS, myAddress);
+        FakeTxBuilder.DoubleSpends doubleSpends = FakeTxBuilder.createFakeDoubleSpendTxns(UNITTEST, myAddress);
         // t1 spends to our wallet. t2 double spends somewhere else.
         wallet.receivePending(doubleSpends.t1, null);
         assertEquals(TransactionConfidence.ConfidenceType.PENDING,
@@ -1098,11 +1098,11 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void doubleSpendWeReceive() throws Exception {
-        FakeTxBuilder.DoubleSpends doubleSpends = FakeTxBuilder.createFakeDoubleSpendTxns(PARAMS, myAddress);
+        FakeTxBuilder.DoubleSpends doubleSpends = FakeTxBuilder.createFakeDoubleSpendTxns(UNITTEST, myAddress);
         // doubleSpends.t1 spends to our wallet. doubleSpends.t2 double spends somewhere else.
 
-        Transaction t1b = new Transaction(PARAMS);
-        TransactionOutput t1bo = new TransactionOutput(PARAMS, t1b, valueOf(0, 50), OTHER_ADDRESS);
+        Transaction t1b = new Transaction(UNITTEST);
+        TransactionOutput t1bo = new TransactionOutput(UNITTEST, t1b, valueOf(0, 50), OTHER_ADDRESS);
         t1b.addOutput(t1bo);
         t1b.addInput(doubleSpends.t1.getOutput(0));
 
@@ -1298,7 +1298,7 @@ public class WalletTest extends TestWithWallet {
     public void pending1() throws Exception {
         // Check that if we receive a pending transaction that is then confirmed, we are notified as appropriate.
         final Coin nanos = COIN;
-        final Transaction t1 = createFakeTx(PARAMS, nanos, myAddress);
+        final Transaction t1 = createFakeTx(UNITTEST, nanos, myAddress);
 
         // First one is "called" second is "pending".
         final boolean[] flags = new boolean[2];
@@ -1352,7 +1352,7 @@ public class WalletTest extends TestWithWallet {
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN);
         Threading.waitForUserCode();
         assertNull(reasons[0]);
-        final Transaction t1Copy = PARAMS.getDefaultSerializer().makeTransaction(t1.bitcoinSerialize());
+        final Transaction t1Copy = UNITTEST.getDefaultSerializer().makeTransaction(t1.bitcoinSerialize());
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, t1Copy);
         Threading.waitForUserCode();
         assertFalse(flags[0]);
@@ -1361,7 +1361,7 @@ public class WalletTest extends TestWithWallet {
         // Check we don't get notified about an irrelevant transaction.
         flags[0] = false;
         flags[1] = false;
-        Transaction irrelevant = createFakeTx(PARAMS, nanos, OTHER_ADDRESS);
+        Transaction irrelevant = createFakeTx(UNITTEST, nanos, OTHER_ADDRESS);
         if (wallet.isPendingTransactionRelevant(irrelevant))
             wallet.receivePending(irrelevant, null);
         Threading.waitForUserCode();
@@ -1409,16 +1409,16 @@ public class WalletTest extends TestWithWallet {
         Coin nanos = COIN;
 
         // Create two transactions that share the same input tx.
-        Address badGuy = Address.fromKey(PARAMS, new ECKey());
-        Transaction doubleSpentTx = new Transaction(PARAMS);
-        TransactionOutput doubleSpentOut = new TransactionOutput(PARAMS, doubleSpentTx, nanos, badGuy);
+        Address badGuy = Address.fromKey(UNITTEST, new ECKey());
+        Transaction doubleSpentTx = new Transaction(UNITTEST);
+        TransactionOutput doubleSpentOut = new TransactionOutput(UNITTEST, doubleSpentTx, nanos, badGuy);
         doubleSpentTx.addOutput(doubleSpentOut);
-        Transaction t1 = new Transaction(PARAMS);
-        TransactionOutput o1 = new TransactionOutput(PARAMS, t1, nanos, myAddress);
+        Transaction t1 = new Transaction(UNITTEST);
+        TransactionOutput o1 = new TransactionOutput(UNITTEST, t1, nanos, myAddress);
         t1.addOutput(o1);
         t1.addInput(doubleSpentOut);
-        Transaction t2 = new Transaction(PARAMS);
-        TransactionOutput o2 = new TransactionOutput(PARAMS, t2, nanos, badGuy);
+        Transaction t2 = new Transaction(UNITTEST);
+        TransactionOutput o2 = new TransactionOutput(UNITTEST, t2, nanos, badGuy);
         t2.addOutput(o2);
         t2.addInput(doubleSpentOut);
 
@@ -1498,7 +1498,7 @@ public class WalletTest extends TestWithWallet {
     public void keyCreationTime() throws Exception {
         Utils.setMockClock();
         long now = Utils.currentTimeSeconds();
-        wallet = new Wallet(PARAMS);
+        wallet = new Wallet(UNITTEST);
         assertEquals(now, wallet.getEarliestKeyCreationTime());
         Utils.rollMockClock(60);
         wallet.freshReceiveKey();
@@ -1509,7 +1509,7 @@ public class WalletTest extends TestWithWallet {
     public void scriptCreationTime() throws Exception {
         Utils.setMockClock();
         long now = Utils.currentTimeSeconds();
-        wallet = new Wallet(PARAMS);
+        wallet = new Wallet(UNITTEST);
         assertEquals(now, wallet.getEarliestKeyCreationTime());
         Utils.rollMockClock(-120);
         wallet.addWatchedAddress(OTHER_ADDRESS);
@@ -1543,9 +1543,9 @@ public class WalletTest extends TestWithWallet {
         Coin v1 = valueOf(5, 0);
         Coin v2 = valueOf(0, 50);
         Coin v3 = valueOf(0, 25);
-        Transaction t1 = createFakeTx(PARAMS, v1, myAddress);
-        Transaction t2 = createFakeTx(PARAMS, v2, myAddress);
-        Transaction t3 = createFakeTx(PARAMS, v3, myAddress);
+        Transaction t1 = createFakeTx(UNITTEST, v1, myAddress);
+        Transaction t2 = createFakeTx(UNITTEST, v2, myAddress);
+        Transaction t3 = createFakeTx(UNITTEST, v3, myAddress);
 
         Block genesis = blockStore.getChainHead().getHeader();
         Block b10 = makeSolvedTestBlock(genesis, t1);
@@ -1574,7 +1574,7 @@ public class WalletTest extends TestWithWallet {
         // Verify that we support outputs like OP_PUBKEY and the corresponding inputs.
         ECKey key1 = wallet.freshReceiveKey();
         Coin value = valueOf(5, 0);
-        Transaction t1 = createFakeTx(PARAMS, value, key1);
+        Transaction t1 = createFakeTx(UNITTEST, value, key1);
         if (wallet.isPendingTransactionRelevant(t1))
             wallet.receivePending(t1, null);
         // TX should have been seen as relevant.
@@ -1594,7 +1594,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void isWatching() {
         assertFalse(wallet.isWatching());
-        Wallet watchingWallet = Wallet.fromWatchingKey(PARAMS, wallet.getWatchingKey().dropPrivateBytes().dropParent());
+        Wallet watchingWallet = Wallet.fromWatchingKey(UNITTEST, wallet.getWatchingKey().dropPrivateBytes().dropParent());
         assertTrue(watchingWallet.isWatching());
         wallet.encrypt(PASSWORD1);
         assertFalse(wallet.isWatching());
@@ -1603,10 +1603,10 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void watchingWallet() throws Exception {
         DeterministicKey watchKey = wallet.getWatchingKey();
-        String serialized = watchKey.serializePubB58(PARAMS);
+        String serialized = watchKey.serializePubB58(UNITTEST);
 
         // Construct watching wallet.
-        Wallet watchingWallet = Wallet.fromWatchingKey(PARAMS, DeterministicKey.deserializeB58(null, serialized, PARAMS));
+        Wallet watchingWallet = Wallet.fromWatchingKey(UNITTEST, DeterministicKey.deserializeB58(null, serialized, UNITTEST));
         DeterministicKey key2 = watchingWallet.freshReceiveKey();
         assertEquals(myKey, key2);
 
@@ -1621,7 +1621,7 @@ public class WalletTest extends TestWithWallet {
             // Expected
         }
 
-        receiveATransaction(watchingWallet, Address.fromKey(PARAMS, myKey));
+        receiveATransaction(watchingWallet, Address.fromKey(UNITTEST, myKey));
         assertEquals(COIN, watchingWallet.getBalance());
         assertEquals(COIN, watchingWallet.getBalance(Wallet.BalanceType.AVAILABLE));
         assertEquals(ZERO, watchingWallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
@@ -1630,8 +1630,8 @@ public class WalletTest extends TestWithWallet {
     @Test(expected = ECKey.MissingPrivateKeyException.class)
     public void watchingWalletWithCreationTime() throws Exception {
         DeterministicKey watchKey = wallet.getWatchingKey();
-        String serialized = watchKey.serializePubB58(PARAMS);
-        Wallet watchingWallet = Wallet.fromWatchingKeyB58(PARAMS, serialized, 1415282801);
+        String serialized = watchKey.serializePubB58(UNITTEST);
+        Wallet watchingWallet = Wallet.fromWatchingKeyB58(UNITTEST, serialized, 1415282801);
         DeterministicKey key2 = watchingWallet.freshReceiveKey();
         assertEquals(myKey, key2);
 
@@ -1645,17 +1645,17 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void watchingScripts() throws Exception {
         // Verify that pending transactions to watched addresses are relevant
-        Address watchedAddress = Address.fromKey(PARAMS, new ECKey());
+        Address watchedAddress = Address.fromKey(UNITTEST, new ECKey());
         wallet.addWatchedAddress(watchedAddress);
         Coin value = valueOf(5, 0);
-        Transaction t1 = createFakeTx(PARAMS, value, watchedAddress);
+        Transaction t1 = createFakeTx(UNITTEST, value, watchedAddress);
         assertTrue(t1.getWalletOutputs(wallet).size() >= 1);
         assertTrue(wallet.isPendingTransactionRelevant(t1));
     }
 
     @Test(expected = InsufficientMoneyException.class)
     public void watchingScriptsConfirmed() throws Exception {
-        Address watchedAddress = Address.fromKey(PARAMS, new ECKey());
+        Address watchedAddress = Address.fromKey(UNITTEST, new ECKey());
         wallet.addWatchedAddress(watchedAddress);
         sendMoneyToWallet(BlockChain.NewBlockType.BEST_CHAIN, CENT, watchedAddress);
         assertEquals(CENT, wallet.getBalance());
@@ -1668,15 +1668,15 @@ public class WalletTest extends TestWithWallet {
     public void watchingScriptsSentFrom() throws Exception {
         int baseElements = wallet.getBloomFilterElementCount();
 
-        Address watchedAddress = Address.fromKey(PARAMS, new ECKey());
+        Address watchedAddress = Address.fromKey(UNITTEST, new ECKey());
         wallet.addWatchedAddress(watchedAddress);
         assertEquals(baseElements + 1, wallet.getBloomFilterElementCount());
 
-        Transaction t1 = createFakeTx(PARAMS, CENT, watchedAddress);
-        Transaction t2 = createFakeTx(PARAMS, COIN, OTHER_ADDRESS);
+        Transaction t1 = createFakeTx(UNITTEST, CENT, watchedAddress);
+        Transaction t2 = createFakeTx(UNITTEST, COIN, OTHER_ADDRESS);
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, t1);
         assertEquals(baseElements + 2, wallet.getBloomFilterElementCount());
-        Transaction st2 = new Transaction(PARAMS);
+        Transaction st2 = new Transaction(UNITTEST);
         st2.addOutput(CENT, OTHER_ADDRESS);
         st2.addOutput(COIN, OTHER_ADDRESS);
         st2.addInput(t1.getOutput(0));
@@ -1690,9 +1690,9 @@ public class WalletTest extends TestWithWallet {
     public void watchingScriptsBloomFilter() throws Exception {
         assertFalse(wallet.isRequiringUpdateAllBloomFilter());
 
-        Address watchedAddress = Address.fromKey(PARAMS, new ECKey());
-        Transaction t1 = createFakeTx(PARAMS, CENT, watchedAddress);
-        TransactionOutPoint outPoint = new TransactionOutPoint(PARAMS, 0, t1);
+        Address watchedAddress = Address.fromKey(UNITTEST, new ECKey());
+        Transaction t1 = createFakeTx(UNITTEST, CENT, watchedAddress);
+        TransactionOutPoint outPoint = new TransactionOutPoint(UNITTEST, 0, t1);
         wallet.addWatchedAddress(watchedAddress);
 
         assertTrue(wallet.isRequiringUpdateAllBloomFilter());
@@ -1705,7 +1705,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void getWatchedAddresses() throws Exception {
-        Address watchedAddress = Address.fromKey(PARAMS, new ECKey());
+        Address watchedAddress = Address.fromKey(UNITTEST, new ECKey());
         wallet.addWatchedAddress(watchedAddress);
         List<Address> watchedAddresses = wallet.getWatchedAddresses();
         assertEquals(1, watchedAddresses.size());
@@ -1716,7 +1716,7 @@ public class WalletTest extends TestWithWallet {
     public void removeWatchedAddresses() {
         List<Address> addressesForRemoval = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            Address watchedAddress = Address.fromKey(PARAMS, new ECKey());
+            Address watchedAddress = Address.fromKey(UNITTEST, new ECKey());
             addressesForRemoval.add(watchedAddress);
             wallet.addWatchedAddress(watchedAddress);
         }
@@ -1730,7 +1730,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void removeWatchedAddress() {
-        Address watchedAddress = Address.fromKey(PARAMS, new ECKey());
+        Address watchedAddress = Address.fromKey(UNITTEST, new ECKey());
         wallet.addWatchedAddress(watchedAddress);
         wallet.removeWatchedAddress(watchedAddress);
         assertFalse(wallet.isAddressWatched(watchedAddress));
@@ -1741,7 +1741,7 @@ public class WalletTest extends TestWithWallet {
     public void removeScriptsBloomFilter() throws Exception {
         List<Address> addressesForRemoval = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            Address watchedAddress = Address.fromKey(PARAMS, new ECKey());
+            Address watchedAddress = Address.fromKey(UNITTEST, new ECKey());
             addressesForRemoval.add(watchedAddress);
             wallet.addWatchedAddress(watchedAddress);
         }
@@ -1749,8 +1749,8 @@ public class WalletTest extends TestWithWallet {
         wallet.removeWatchedAddresses(addressesForRemoval);
 
         for (Address addr : addressesForRemoval) {
-            Transaction t1 = createFakeTx(PARAMS, CENT, addr);
-            TransactionOutPoint outPoint = new TransactionOutPoint(PARAMS, 0, t1);
+            Transaction t1 = createFakeTx(UNITTEST, CENT, addr);
+            TransactionOutPoint outPoint = new TransactionOutPoint(UNITTEST, 0, t1);
 
             // Note that this has a 1e-12 chance of failing this unit test due to a false positive
             assertFalse(wallet.getBloomFilter(1e-12).contains(outPoint.unsafeBitcoinSerialize()));
@@ -1767,8 +1767,8 @@ public class WalletTest extends TestWithWallet {
 
         assertTrue(wallet.getBloomFilter(0.001).contains(address.getHash160()));
 
-        Transaction t1 = createFakeTx(PARAMS, CENT, address);
-        TransactionOutPoint outPoint = new TransactionOutPoint(PARAMS, 0, t1);
+        Transaction t1 = createFakeTx(UNITTEST, CENT, address);
+        TransactionOutPoint outPoint = new TransactionOutPoint(UNITTEST, 0, t1);
 
         assertFalse(wallet.getBloomFilter(0.001).contains(outPoint.unsafeBitcoinSerialize()));
 
@@ -1787,7 +1787,7 @@ public class WalletTest extends TestWithWallet {
         Sha256Hash hash2 = Sha256Hash.of(f);
         assertFalse("Wallet not saved after generating fresh key", hash1.equals(hash2));  // File has changed.
 
-        Transaction t1 = createFakeTx(PARAMS, valueOf(5, 0), key);
+        Transaction t1 = createFakeTx(UNITTEST, valueOf(5, 0), key);
         if (wallet.isPendingTransactionRelevant(t1))
             wallet.receivePending(t1, null);
         Sha256Hash hash3 = Sha256Hash.of(f);
@@ -1869,8 +1869,8 @@ public class WalletTest extends TestWithWallet {
         // First create our current transaction
         ECKey k2 = wallet.freshReceiveKey();
         Coin v2 = valueOf(0, 50);
-        Transaction t2 = new Transaction(PARAMS);
-        TransactionOutput o2 = new TransactionOutput(PARAMS, t2, v2, Address.fromKey(PARAMS, k2));
+        Transaction t2 = new Transaction(UNITTEST);
+        TransactionOutput o2 = new TransactionOutput(UNITTEST, t2, v2, Address.fromKey(UNITTEST, k2));
         t2.addOutput(o2);
         SendRequest req = SendRequest.forTx(t2);
         wallet.completeTx(req);
@@ -1884,8 +1884,8 @@ public class WalletTest extends TestWithWallet {
         // Now try to the spend the output.
         ECKey k3 = new ECKey();
         Coin v3 = valueOf(0, 25);
-        Transaction t3 = new Transaction(PARAMS);
-        t3.addOutput(v3, Address.fromKey(PARAMS, k3));
+        Transaction t3 = new Transaction(UNITTEST);
+        t3.addOutput(v3, Address.fromKey(UNITTEST, k3));
         t3.addInput(o2);
         wallet.signTransaction(SendRequest.forTx(t3));
 
@@ -1905,8 +1905,8 @@ public class WalletTest extends TestWithWallet {
         // See bug 345. This can happen if there is a pending transaction floating around and then you replay the
         // chain without emptying the memory pool (or refilling it from a peer).
         Coin value = COIN;
-        Transaction tx1 = createFakeTx(PARAMS, value, myAddress);
-        Transaction tx2 = new Transaction(PARAMS);
+        Transaction tx1 = createFakeTx(UNITTEST, value, myAddress);
+        Transaction tx2 = new Transaction(UNITTEST);
         tx2.addInput(tx1.getOutput(0));
         tx2.addOutput(valueOf(0, 9), OTHER_ADDRESS);
         // Add a change address to ensure this tx is relevant.
@@ -1925,14 +1925,14 @@ public class WalletTest extends TestWithWallet {
         // correctly. For instance, we are watching a wallet, someone pays us (A) and we then pay someone else (B)
         // with a change address but the network delivers the transactions to us in order B then A.
         Coin value = COIN;
-        Transaction a = createFakeTx(PARAMS, value, myAddress);
-        Transaction b = new Transaction(PARAMS);
+        Transaction a = createFakeTx(UNITTEST, value, myAddress);
+        Transaction b = new Transaction(UNITTEST);
         b.addInput(a.getOutput(0));
         b.addOutput(CENT, OTHER_ADDRESS);
         Coin v = COIN.subtract(CENT);
         b.addOutput(v, wallet.currentChangeAddress());
-        a = roundTripTransaction(PARAMS, a);
-        b = roundTripTransaction(PARAMS, b);
+        a = roundTripTransaction(UNITTEST, a);
+        b = roundTripTransaction(UNITTEST, b);
         wallet.receivePending(b, null);
         assertEquals(v, wallet.getBalance(Wallet.BalanceType.ESTIMATED));
         wallet.receivePending(a, null);
@@ -1941,7 +1941,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void encryptionDecryptionAESBasic() throws Exception {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
         KeyCrypter keyCrypter = encryptedWallet.getKeyCrypter();
         KeyParameter aesKey = keyCrypter.deriveKey(PASSWORD1);
@@ -1964,7 +1964,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void encryptionDecryptionPasswordBasic() throws Exception {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
 
         assertTrue(encryptedWallet.isEncrypted());
@@ -1982,7 +1982,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void encryptionDecryptionBadPassword() throws Exception {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
         KeyCrypter keyCrypter = encryptedWallet.getKeyCrypter();
         KeyParameter wrongAesKey = keyCrypter.deriveKey(WRONG_PASSWORD);
@@ -2002,7 +2002,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void changePasswordTest() {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
         CharSequence newPassword = "My name is Tom";
         encryptedWallet.changeEncryptionPassword(PASSWORD1, newPassword);
@@ -2012,7 +2012,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void changeAesKeyTest() {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
 
         KeyCrypter keyCrypter = encryptedWallet.getKeyCrypter();
@@ -2029,7 +2029,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void encryptionDecryptionCheckExceptions() throws Exception {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
         KeyCrypter keyCrypter = encryptedWallet.getKeyCrypter();
         KeyParameter aesKey = keyCrypter.deriveKey(PASSWORD1);
@@ -2068,7 +2068,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test(expected = KeyCrypterException.class)
     public void addUnencryptedKeyToEncryptedWallet() throws Exception {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
 
         ECKey key1 = new ECKey();
@@ -2077,7 +2077,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test(expected = KeyCrypterException.class)
     public void addEncryptedKeyToUnencryptedWallet() throws Exception {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
         KeyCrypter keyCrypter = encryptedWallet.getKeyCrypter();
 
@@ -2088,7 +2088,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test(expected = KeyCrypterException.class)
     public void mismatchedCrypter() throws Exception {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
         KeyCrypter keyCrypter = encryptedWallet.getKeyCrypter();
         KeyParameter aesKey = keyCrypter.deriveKey(PASSWORD1);
@@ -2106,14 +2106,14 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void importAndEncrypt() throws InsufficientMoneyException {
-        Wallet encryptedWallet = new Wallet(PARAMS);
+        Wallet encryptedWallet = new Wallet(UNITTEST);
         encryptedWallet.encrypt(PASSWORD1);
 
         final ECKey key = new ECKey();
         encryptedWallet.importKeysAndEncrypt(ImmutableList.of(key), PASSWORD1);
         assertEquals(1, encryptedWallet.getImportedKeys().size());
         assertEquals(key.getPubKeyPoint(), encryptedWallet.getImportedKeys().get(0).getPubKeyPoint());
-        sendMoneyToWallet(encryptedWallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.COIN, Address.fromKey(PARAMS, key));
+        sendMoneyToWallet(encryptedWallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.COIN, Address.fromKey(UNITTEST, key));
         assertEquals(Coin.COIN, encryptedWallet.getBalance());
         SendRequest req = SendRequest.emptyWallet(OTHER_ADDRESS);
         req.aesKey = checkNotNull(encryptedWallet.getKeyCrypter()).deriveKey(PASSWORD1);
@@ -2142,13 +2142,13 @@ public class WalletTest extends TestWithWallet {
     public void respectMaxStandardSize() throws Exception {
         // Check that we won't create txns > 100kb. Average tx size is ~220 bytes so this would have to be enormous.
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, valueOf(100, 0));
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         byte[] bits = new byte[20];
         new Random().nextBytes(bits);
         Coin v = CENT;
         // 3100 outputs to a random address.
         for (int i = 0; i < 3100; i++) {
-            tx.addOutput(v, Address.fromPubKeyHash(PARAMS, bits));
+            tx.addOutput(v, Address.fromPubKeyHash(UNITTEST, bits));
         }
         SendRequest req = SendRequest.forTx(tx);
         wallet.completeTx(req);
@@ -2158,7 +2158,7 @@ public class WalletTest extends TestWithWallet {
     public void opReturnOneOutputTest() throws Exception {
         // Tests basic send of transaction with one output that doesn't transfer any value but just writes OP_RETURN.
         receiveATransaction(wallet, myAddress);
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         Coin messagePrice = Coin.ZERO;
         Script script = ScriptBuilder.createOpReturnScript("hello world!".getBytes());
         tx.addOutput(messagePrice, script);
@@ -2170,7 +2170,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void opReturnMaxBytes() throws Exception {
         receiveATransaction(wallet, myAddress);
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         Script script = ScriptBuilder.createOpReturnScript(new byte[80]);
         tx.addOutput(Coin.ZERO, script);
         SendRequest request = SendRequest.forTx(tx);
@@ -2182,7 +2182,7 @@ public class WalletTest extends TestWithWallet {
     public void opReturnOneOutputWithValueTest() throws Exception {
         // Tests basic send of transaction with one output that destroys coins and has an OP_RETURN.
         receiveATransaction(wallet, myAddress);
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         Coin messagePrice = CENT;
         Script script = ScriptBuilder.createOpReturnScript("hello world!".getBytes());
         tx.addOutput(messagePrice, script);
@@ -2194,7 +2194,7 @@ public class WalletTest extends TestWithWallet {
     public void opReturnTwoOutputsTest() throws Exception {
         // Tests sending transaction where one output transfers BTC, the other one writes OP_RETURN.
         receiveATransaction(wallet, myAddress);
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         Coin messagePrice = Coin.ZERO;
         Script script = ScriptBuilder.createOpReturnScript("hello world!".getBytes());
         tx.addOutput(CENT, OTHER_ADDRESS);
@@ -2207,7 +2207,7 @@ public class WalletTest extends TestWithWallet {
     public void twoOpReturnsPerTransactionTest() throws Exception {
         // Tests sending transaction where there are 2 attempts to write OP_RETURN scripts - this should fail and throw MultipleOpReturnRequested.
         receiveATransaction(wallet, myAddress);
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         Coin messagePrice = Coin.ZERO;
         Script script1 = ScriptBuilder.createOpReturnScript("hello world 1!".getBytes());
         Script script2 = ScriptBuilder.createOpReturnScript("hello world 2!".getBytes());
@@ -2221,7 +2221,7 @@ public class WalletTest extends TestWithWallet {
     @Test(expected = Wallet.DustySendRequested.class)
     public void sendDustTest() throws InsufficientMoneyException {
         // Tests sending dust, should throw DustySendRequested.
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         tx.addOutput(Transaction.MIN_NONDUST_OUTPUT.subtract(SATOSHI), OTHER_ADDRESS);
         SendRequest request = SendRequest.forTx(tx);
         request.ensureMinRequiredFee = true;
@@ -2231,7 +2231,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void sendMultipleCentsTest() throws Exception {
         receiveATransactionAmount(wallet, myAddress, Coin.COIN);
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         Coin c = CENT.subtract(SATOSHI);
         tx.addOutput(c, OTHER_ADDRESS);
         tx.addOutput(c, OTHER_ADDRESS);
@@ -2245,7 +2245,7 @@ public class WalletTest extends TestWithWallet {
     public void sendDustAndOpReturnWithoutValueTest() throws Exception {
         // Tests sending dust and OP_RETURN without value, should throw DustySendRequested because sending sending dust is not allowed in any case.
         receiveATransactionAmount(wallet, myAddress, Coin.COIN);
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         tx.addOutput(Coin.ZERO, ScriptBuilder.createOpReturnScript("hello world!".getBytes()));
         tx.addOutput(Coin.SATOSHI, OTHER_ADDRESS);
         SendRequest request = SendRequest.forTx(tx);
@@ -2257,7 +2257,7 @@ public class WalletTest extends TestWithWallet {
     public void sendDustAndMessageWithValueTest() throws Exception {
         // Tests sending dust and OP_RETURN with value, should throw DustySendRequested
         receiveATransaction(wallet, myAddress);
-        Transaction tx = new Transaction(PARAMS);
+        Transaction tx = new Transaction(UNITTEST);
         tx.addOutput(Coin.CENT, ScriptBuilder.createOpReturnScript("hello world!".getBytes()));
         tx.addOutput(Transaction.MIN_NONDUST_OUTPUT.subtract(SATOSHI), OTHER_ADDRESS);
         SendRequest request = SendRequest.forTx(tx);
@@ -2268,7 +2268,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void sendRequestP2PKTest() {
         ECKey key = new ECKey();
-        SendRequest req = SendRequest.to(PARAMS, key, SATOSHI.multiply(12));
+        SendRequest req = SendRequest.to(UNITTEST, key, SATOSHI.multiply(12));
         assertArrayEquals(key.getPubKey(),
                 ScriptPattern.extractKeyFromPayToPubKey(req.tx.getOutputs().get(0).getScriptPubKey()));
     }
@@ -2276,16 +2276,16 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void sendRequestP2PKHTest() {
         SendRequest req = SendRequest.to(OTHER_ADDRESS, SATOSHI.multiply(12));
-        assertEquals(OTHER_ADDRESS, req.tx.getOutputs().get(0).getScriptPubKey().getToAddress(PARAMS));
+        assertEquals(OTHER_ADDRESS, req.tx.getOutputs().get(0).getScriptPubKey().getToAddress(UNITTEST));
     }
 
     @Test
     public void feeSolverAndCoinSelectionTest_dustySendRequested() throws Exception {
         // Generate a few outputs to us that are far too small to spend reasonably
-        Transaction tx1 = createFakeTx(PARAMS, SATOSHI, myAddress);
-        Transaction tx2 = createFakeTx(PARAMS, SATOSHI, myAddress);
+        Transaction tx1 = createFakeTx(UNITTEST, SATOSHI, myAddress);
+        Transaction tx2 = createFakeTx(UNITTEST, SATOSHI, myAddress);
         assertNotEquals(tx1.getHash(), tx2.getHash());
-        Transaction tx3 = createFakeTx(PARAMS, SATOSHI.multiply(10), myAddress);
+        Transaction tx3 = createFakeTx(UNITTEST, SATOSHI.multiply(10), myAddress);
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, tx1, tx2, tx3);
 
         // Not allowed to send dust.
@@ -2473,7 +2473,7 @@ public class WalletTest extends TestWithWallet {
         SendRequest request17 = SendRequest.to(OTHER_ADDRESS, CENT);
         for (int i = 0; i < 22; i++)
             request17.tx.addOutput(CENT, OTHER_ADDRESS);
-        request17.tx.addOutput(new TransactionOutput(PARAMS, request17.tx, CENT, new byte[15]));
+        request17.tx.addOutput(new TransactionOutput(UNITTEST, request17.tx, CENT, new byte[15]));
         request17.feePerKb = Transaction.DEFAULT_TX_FEE;
         request17.ensureMinRequiredFee = true;
         wallet.completeTx(request17);
@@ -2500,7 +2500,7 @@ public class WalletTest extends TestWithWallet {
         SendRequest request18 = SendRequest.to(OTHER_ADDRESS, CENT);
         for (int i = 0; i < 22; i++)
             request18.tx.addOutput(CENT, OTHER_ADDRESS);
-        request18.tx.addOutput(new TransactionOutput(PARAMS, request18.tx, CENT, new byte[17]));
+        request18.tx.addOutput(new TransactionOutput(UNITTEST, request18.tx, CENT, new byte[17]));
         request18.feePerKb = Transaction.DEFAULT_TX_FEE;
         request18.ensureMinRequiredFee = true;
         wallet.completeTx(request18);
@@ -2601,7 +2601,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(CENT, request25.tx.getInput(1).getValue());
 
         // Spend our CENT output.
-        Transaction spendTx5 = new Transaction(PARAMS);
+        Transaction spendTx5 = new Transaction(UNITTEST);
         spendTx5.addOutput(CENT, OTHER_ADDRESS);
         spendTx5.addInput(tx5.getOutput(0));
         wallet.signTransaction(SendRequest.forTx(spendTx5));
@@ -2640,7 +2640,7 @@ public class WalletTest extends TestWithWallet {
         int i = 0;
         Coin tenThousand = Coin.valueOf(10000);
         while (i <= 100) {
-            Transaction tx = createFakeTxWithChangeAddress(PARAMS, tenThousand, myAddress, OTHER_ADDRESS);
+            Transaction tx = createFakeTxWithChangeAddress(UNITTEST, tenThousand, myAddress, OTHER_ADDRESS);
             tx.getInput(0).setSequenceNumber(i++); // Keep every transaction unique
             wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, i);
         }
@@ -2654,7 +2654,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(request1.tx.getInputs().size(), i); // We should have spent all inputs
 
         // Give us one more input...
-        Transaction tx1 = createFakeTxWithChangeAddress(PARAMS, tenThousand, myAddress, OTHER_ADDRESS);
+        Transaction tx1 = createFakeTxWithChangeAddress(UNITTEST, tenThousand, myAddress, OTHER_ADDRESS);
         tx1.getInput(0).setSequenceNumber(i++); // Keep every transaction unique
         wallet.receiveFromBlock(tx1, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, i);
 
@@ -2666,7 +2666,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(request2.tx.getInputs().size(), i - 1); // We should have spent all inputs - 1
 
         // Give us one more input...
-        Transaction tx2 = createFakeTxWithChangeAddress(PARAMS, tenThousand, myAddress, OTHER_ADDRESS);
+        Transaction tx2 = createFakeTxWithChangeAddress(UNITTEST, tenThousand, myAddress, OTHER_ADDRESS);
         tx2.getInput(0).setSequenceNumber(i++); // Keep every transaction unique
         wallet.receiveFromBlock(tx2, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, i);
 
@@ -2688,7 +2688,7 @@ public class WalletTest extends TestWithWallet {
 
         // Give us a few more inputs...
         while (wallet.getBalance().compareTo(CENT.multiply(2)) < 0) {
-            Transaction tx3 = createFakeTxWithChangeAddress(PARAMS, tenThousand, myAddress, OTHER_ADDRESS);
+            Transaction tx3 = createFakeTxWithChangeAddress(UNITTEST, tenThousand, myAddress, OTHER_ADDRESS);
             tx3.getInput(0).setSequenceNumber(i++); // Keep every transaction unique
             wallet.receiveFromBlock(tx3, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, i);
         }
@@ -2701,7 +2701,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(1, request5.tx.getOutputs().size()); // We should have no change output
 
         // Give us one more input...
-        Transaction tx4 = createFakeTxWithChangeAddress(PARAMS, tenThousand, myAddress, OTHER_ADDRESS);
+        Transaction tx4 = createFakeTxWithChangeAddress(UNITTEST, tenThousand, myAddress, OTHER_ADDRESS);
         tx4.getInput(0).setSequenceNumber(i); // Keep every transaction unique
         wallet.receiveFromBlock(tx4, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, i);
 
@@ -2721,7 +2721,7 @@ public class WalletTest extends TestWithWallet {
         StoredBlock block = new StoredBlock(makeSolvedTestBlock(blockStore, OTHER_ADDRESS), BigInteger.ONE, 1);
         int i = 0;
         while (i <= CENT.divide(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.multiply(10))) {
-            Transaction tx = createFakeTxWithChangeAddress(PARAMS, Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.multiply(10), myAddress, OTHER_ADDRESS);
+            Transaction tx = createFakeTxWithChangeAddress(UNITTEST, Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.multiply(10), myAddress, OTHER_ADDRESS);
             tx.getInput(0).setSequenceNumber(i++); // Keep every transaction unique
             wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, i);
         }
@@ -2739,7 +2739,7 @@ public class WalletTest extends TestWithWallet {
     public void transactionGetFeeTest() throws Exception {
         // Prepare wallet to spend
         StoredBlock block = new StoredBlock(makeSolvedTestBlock(blockStore, OTHER_ADDRESS), BigInteger.ONE, 1);
-        Transaction tx = createFakeTx(PARAMS, COIN, myAddress);
+        Transaction tx = createFakeTx(UNITTEST, COIN, myAddress);
         wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 0);
 
         // Create a transaction
@@ -2794,12 +2794,12 @@ public class WalletTest extends TestWithWallet {
 
         // Generate a few outputs to us
         StoredBlock block = new StoredBlock(makeSolvedTestBlock(blockStore, OTHER_ADDRESS), BigInteger.ONE, 1);
-        Transaction tx1 = createFakeTx(PARAMS, COIN, myAddress);
+        Transaction tx1 = createFakeTx(UNITTEST, COIN, myAddress);
         wallet.receiveFromBlock(tx1, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 0);
-        Transaction tx2 = createFakeTx(PARAMS, COIN, myAddress);
+        Transaction tx2 = createFakeTx(UNITTEST, COIN, myAddress);
         assertNotEquals(tx1.getHash(), tx2.getHash());
         wallet.receiveFromBlock(tx2, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 1);
-        Transaction tx3 = createFakeTx(PARAMS, CENT, myAddress);
+        Transaction tx3 = createFakeTx(UNITTEST, CENT, myAddress);
         wallet.receiveFromBlock(tx3, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 2);
 
         SendRequest request1 = SendRequest.to(OTHER_ADDRESS, CENT);
@@ -2825,7 +2825,7 @@ public class WalletTest extends TestWithWallet {
 
         // However, if there is no connected output, we will grab a COIN output anyway and add the CENT to fee
         SendRequest request3 = SendRequest.to(OTHER_ADDRESS, CENT);
-        request3.tx.addInput(new TransactionInput(PARAMS, request3.tx, new byte[]{}, new TransactionOutPoint(PARAMS, 0, tx3.getHash())));
+        request3.tx.addInput(new TransactionInput(UNITTEST, request3.tx, new byte[]{}, new TransactionOutPoint(UNITTEST, 0, tx3.getHash())));
         // Now completeTx will result in two inputs, two outputs and a fee of a CENT
         // Note that it is simply assumed that the inputs are correctly signed, though in fact the first is not
         request3.shuffleOutputs = false;
@@ -2883,7 +2883,7 @@ public class WalletTest extends TestWithWallet {
         StoredBlock block = new StoredBlock(makeSolvedTestBlock(blockStore, OTHER_ADDRESS), BigInteger.ONE, 1);
         Random rng = new Random();
         for (int i = 0; i < rng.nextInt(100) + 1; i++) {
-            Transaction tx = createFakeTx(PARAMS, Coin.valueOf(rng.nextInt((int) COIN.value)), myAddress);
+            Transaction tx = createFakeTx(UNITTEST, Coin.valueOf(rng.nextInt((int) COIN.value)), myAddress);
             wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, i);
         }
         SendRequest request = SendRequest.emptyWallet(OTHER_ADDRESS);
@@ -2896,7 +2896,7 @@ public class WalletTest extends TestWithWallet {
     public void testEmptyWallet() throws Exception {
         // Add exactly 0.01
         StoredBlock block = new StoredBlock(makeSolvedTestBlock(blockStore, OTHER_ADDRESS), BigInteger.ONE, 1);
-        Transaction tx = createFakeTx(PARAMS, CENT, myAddress);
+        Transaction tx = createFakeTx(UNITTEST, CENT, myAddress);
         wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 0);
         SendRequest request = SendRequest.emptyWallet(OTHER_ADDRESS);
         wallet.completeTx(request);
@@ -2908,9 +2908,9 @@ public class WalletTest extends TestWithWallet {
         // Add 1 confirmed cent and 1 unconfirmed cent. Verify only one cent is emptied because of the coin selection
         // policies that are in use by default.
         block = new StoredBlock(makeSolvedTestBlock(blockStore, OTHER_ADDRESS), BigInteger.ONE, 2);
-        tx = createFakeTx(PARAMS, CENT, myAddress);
+        tx = createFakeTx(UNITTEST, CENT, myAddress);
         wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 0);
-        tx = createFakeTx(PARAMS, CENT, myAddress);
+        tx = createFakeTx(UNITTEST, CENT, myAddress);
         wallet.receivePending(tx, null);
         request = SendRequest.emptyWallet(OTHER_ADDRESS);
         wallet.completeTx(request);
@@ -2922,7 +2922,7 @@ public class WalletTest extends TestWithWallet {
         // Add an unsendable value
         block = new StoredBlock(block.getHeader().createNextBlock(OTHER_ADDRESS), BigInteger.ONE, 3);
         Coin outputValue = Transaction.MIN_NONDUST_OUTPUT.subtract(SATOSHI);
-        tx = createFakeTx(PARAMS, outputValue, myAddress);
+        tx = createFakeTx(UNITTEST, outputValue, myAddress);
         wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 0);
         try {
             request = SendRequest.emptyWallet(OTHER_ADDRESS);
@@ -2935,12 +2935,12 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void childPaysForParent() throws Exception {
         // Receive confirmed balance to play with.
-        Transaction toMe = createFakeTxWithoutChangeAddress(PARAMS, COIN, myAddress);
+        Transaction toMe = createFakeTxWithoutChangeAddress(UNITTEST, COIN, myAddress);
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, toMe);
         assertEquals(Coin.COIN, wallet.getBalance(BalanceType.ESTIMATED_SPENDABLE));
         assertEquals(Coin.COIN, wallet.getBalance(BalanceType.AVAILABLE_SPENDABLE));
         // Receive unconfirmed coin without fee.
-        Transaction toMeWithoutFee = createFakeTxWithoutChangeAddress(PARAMS, COIN, myAddress);
+        Transaction toMeWithoutFee = createFakeTxWithoutChangeAddress(UNITTEST, COIN, myAddress);
         wallet.receivePending(toMeWithoutFee, null);
         assertEquals(Coin.COIN.multiply(2), wallet.getBalance(BalanceType.ESTIMATED_SPENDABLE));
         assertEquals(Coin.COIN, wallet.getBalance(BalanceType.AVAILABLE_SPENDABLE));
@@ -2958,7 +2958,7 @@ public class WalletTest extends TestWithWallet {
     public void keyRotationRandom() throws Exception {
         Utils.setMockClock();
         // Start with an empty wallet (no HD chain).
-        wallet = new Wallet(PARAMS);
+        wallet = new Wallet(UNITTEST);
         // Watch out for wallet-initiated broadcasts.
         MockTransactionBroadcaster broadcaster = new MockTransactionBroadcaster(wallet);
         // Send three cents to two different random keys, then add a key and mark the initial keys as compromised.
@@ -2968,9 +2968,9 @@ public class WalletTest extends TestWithWallet {
         key2.setCreationTimeSeconds(Utils.currentTimeSeconds() - 86400);
         wallet.importKey(key1);
         wallet.importKey(key2);
-        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(PARAMS, key1));
-        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(PARAMS, key2));
-        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(PARAMS, key2));
+        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(UNITTEST, key1));
+        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(UNITTEST, key2));
+        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(UNITTEST, key2));
         Date compromiseTime = Utils.now();
         assertEquals(0, broadcaster.size());
         assertFalse(wallet.isKeyRotating(key1));
@@ -2987,7 +2987,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(THREE_CENTS, tx.getValueSentFromMe(wallet));
         assertEquals(THREE_CENTS.subtract(tx.getFee()), tx.getValueSentToMe(wallet));
         // TX sends to one of our addresses (for now we ignore married wallets).
-        final Address toAddress = tx.getOutput(0).getScriptPubKey().getToAddress(PARAMS);
+        final Address toAddress = tx.getOutput(0).getScriptPubKey().getToAddress(UNITTEST);
         final ECKey rotatingToKey = wallet.findKeyFromPubHash(toAddress.getHash160());
         assertNotNull(rotatingToKey);
         assertFalse(wallet.isKeyRotating(rotatingToKey));
@@ -3001,7 +3001,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(0, broadcaster.size());
 
         // Receive money via a new block on key1 and ensure it shows up as a maintenance task.
-        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(PARAMS, key1));
+        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(UNITTEST, key1));
         wallet.doMaintenance(null, true);
         tx = broadcaster.waitForTransactionAndSucceed();
         assertNotNull(wallet.findKeyFromPubHash(tx.getOutput(0).getScriptPubKey().getPubKeyHash()));
@@ -3033,18 +3033,18 @@ public class WalletTest extends TestWithWallet {
 
     private Wallet roundTrip(Wallet wallet) throws UnreadableWalletException {
         Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
-        return new WalletProtobufSerializer().readWallet(PARAMS, null, protos);
+        return new WalletProtobufSerializer().readWallet(UNITTEST, null, protos);
     }
 
     @Test
     public void keyRotationHD() throws Exception {
         // Test that if we rotate an HD chain, a new one is created and all arrivals on the old keys are moved.
         Utils.setMockClock();
-        wallet = new Wallet(PARAMS);
+        wallet = new Wallet(UNITTEST);
         ECKey key1 = wallet.freshReceiveKey();
         ECKey key2 = wallet.freshReceiveKey();
-        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(PARAMS, key1));
-        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(PARAMS, key2));
+        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(UNITTEST, key1));
+        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(UNITTEST, key2));
         DeterministicKey watchKey1 = wallet.getWatchingKey();
 
         // A day later, we get compromised.
@@ -3075,7 +3075,7 @@ public class WalletTest extends TestWithWallet {
 
         // Do an upgrade based on the bad key.
         final AtomicReference<List<DeterministicKeyChain>> fChains = new AtomicReference<>();
-        KeyChainGroup kcg = new KeyChainGroup(PARAMS) {
+        KeyChainGroup kcg = new KeyChainGroup(UNITTEST) {
 
             {
                 fChains.set(chains);
@@ -3083,22 +3083,22 @@ public class WalletTest extends TestWithWallet {
         };
         kcg.importKeys(badKey, goodKey);
         Utils.rollMockClock(86400);
-        wallet = new Wallet(PARAMS, kcg);   // This avoids the automatic HD initialisation
+        wallet = new Wallet(UNITTEST, kcg);   // This avoids the automatic HD initialisation
         assertTrue(fChains.get().isEmpty());
         wallet.upgradeToDeterministic(null);
         DeterministicKey badWatchingKey = wallet.getWatchingKey();
         assertEquals(badKey.getCreationTimeSeconds(), badWatchingKey.getCreationTimeSeconds());
-        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(PARAMS, badWatchingKey));
+        sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(UNITTEST, badWatchingKey));
 
         // Now we set the rotation time to the time we started making good keys. This should create a new HD chain.
         wallet.setKeyRotationTime(goodKey.getCreationTimeSeconds());
         List<Transaction> txns = wallet.doMaintenance(null, false).get();
         assertEquals(1, txns.size());
-        Address output = txns.get(0).getOutput(0).getAddressFromP2PKHScript(PARAMS);
+        Address output = txns.get(0).getOutput(0).getAddressFromP2PKHScript(UNITTEST);
         ECKey usedKey = wallet.findKeyFromPubHash(output.getHash160());
         assertEquals(goodKey.getCreationTimeSeconds(), usedKey.getCreationTimeSeconds());
         assertEquals(goodKey.getCreationTimeSeconds(), wallet.freshReceiveKey().getCreationTimeSeconds());
-        assertEquals("yX9Y1xr9B9Wx8UXfj7ztvF65YuXaAWeAwu", Address.fromKey(PARAMS, usedKey).toString());
+        assertEquals("yX9Y1xr9B9Wx8UXfj7ztvF65YuXaAWeAwu", Address.fromKey(UNITTEST, usedKey).toString());
         DeterministicKeyChain c = fChains.get().get(1);
         assertEquals(c.getEarliestKeyCreationTime(), goodKey.getCreationTimeSeconds());
         assertEquals(2, fChains.get().size());
@@ -3121,7 +3121,7 @@ public class WalletTest extends TestWithWallet {
     public void fragmentedReKeying() throws Exception {
         // Send lots of small coins and check the fee is correct.
         ECKey key = wallet.freshReceiveKey();
-        Address address = Address.fromKey(PARAMS, key);
+        Address address = Address.fromKey(UNITTEST, key);
         Utils.setMockClock();
         Utils.rollMockClock(86400);
         for (int i = 0; i < 800; i++) {
@@ -3169,7 +3169,7 @@ public class WalletTest extends TestWithWallet {
         // Delete the sigs
         for (TransactionInput input : req.tx.getInputs())
             input.clearScriptBytes();
-        Wallet watching = Wallet.fromWatchingKey(PARAMS, wallet.getWatchingKey().dropParent().dropPrivateBytes());
+        Wallet watching = Wallet.fromWatchingKey(UNITTEST, wallet.getWatchingKey().dropParent().dropPrivateBytes());
         watching.completeTx(SendRequest.forTx(req.tx));
     }
 
@@ -3230,7 +3230,7 @@ public class WalletTest extends TestWithWallet {
         // Send three transactions, with one being an address type and the other being a raw CHECKSIG type pubkey only,
         // and the final one being a key we do have. We expect the first two inputs to be dummy values and the last
         // to be signed correctly.
-        Transaction t1 = sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(PARAMS, pub));
+        Transaction t1 = sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(UNITTEST, pub));
         Transaction t2 = sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, pub);
         Transaction t3 = sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, priv2);
 
@@ -3255,7 +3255,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void riskAnalysis() throws Exception {
         // Send a tx that is considered risky to the wallet, verify it doesn't show up in the balances.
-        final Transaction tx = createFakeTx(PARAMS, COIN, myAddress);
+        final Transaction tx = createFakeTx(UNITTEST, COIN, myAddress);
         final AtomicBoolean bool = new AtomicBoolean();
         wallet.setRiskAnalyzer(new RiskAnalysis.Analyzer() {
             @Override
@@ -3287,13 +3287,13 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void transactionInBlockNotification() {
-        final Transaction tx = createFakeTx(PARAMS, COIN, myAddress);
+        final Transaction tx = createFakeTx(UNITTEST, COIN, myAddress);
         StoredBlock block = createFakeBlock(blockStore, Block.BLOCK_HEIGHT_GENESIS, tx).storedBlock;
         wallet.receivePending(tx, null);
         boolean notification = wallet.notifyTransactionIsInBlock(tx.getHash(), block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 1);
         assertTrue(notification);
 
-        final Transaction tx2 = createFakeTx(PARAMS, COIN, OTHER_ADDRESS);
+        final Transaction tx2 = createFakeTx(UNITTEST, COIN, OTHER_ADDRESS);
         wallet.receivePending(tx2, null);
         StoredBlock block2 = createFakeBlock(blockStore, Block.BLOCK_HEIGHT_GENESIS + 1, tx2).storedBlock;
         boolean notification2 = wallet.notifyTransactionIsInBlock(tx2.getHash(), block2, AbstractBlockChain.NewBlockType.BEST_CHAIN, 1);
@@ -3302,7 +3302,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void duplicatedBlock() {
-        final Transaction tx = createFakeTx(PARAMS, COIN, myAddress);
+        final Transaction tx = createFakeTx(UNITTEST, COIN, myAddress);
         StoredBlock block = createFakeBlock(blockStore, Block.BLOCK_HEIGHT_GENESIS, tx).storedBlock;
         wallet.notifyNewBestBlock(block);
         wallet.notifyNewBestBlock(block);
@@ -3311,7 +3311,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void keyEvents() throws Exception {
         // Check that we can register an event listener, generate some keys and the callbacks are invoked properly.
-        wallet = new Wallet(PARAMS);
+        wallet = new Wallet(UNITTEST);
         final List<ECKey> keys = Lists.newLinkedList();
         wallet.addKeyChainEventListener(Threading.SAME_THREAD, new KeyChainEventListener() {
             @Override
@@ -3332,9 +3332,9 @@ public class WalletTest extends TestWithWallet {
         // much where it goes). Wallet on the other hand will try to auto-upgrade you when possible.
 
         // Create an old-style random wallet.
-        KeyChainGroup group = new KeyChainGroup(PARAMS);
+        KeyChainGroup group = new KeyChainGroup(UNITTEST);
         group.importKeys(new ECKey(), new ECKey());
-        wallet = new Wallet(PARAMS, group);
+        wallet = new Wallet(UNITTEST, group);
         assertTrue(wallet.isDeterministicUpgradeRequired());
         // Use an HD feature.
         wallet.freshReceiveKey();
@@ -3344,9 +3344,9 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void upgradeToHDEncrypted() throws Exception {
         // Create an old-style random wallet.
-        KeyChainGroup group = new KeyChainGroup(PARAMS);
+        KeyChainGroup group = new KeyChainGroup(UNITTEST);
         group.importKeys(new ECKey(), new ECKey());
-        wallet = new Wallet(PARAMS, group);
+        wallet = new Wallet(UNITTEST, group);
         assertTrue(wallet.isDeterministicUpgradeRequired());
         KeyCrypter crypter = new KeyCrypterScrypt();
         KeyParameter aesKey = crypter.deriveKey("abc");
@@ -3379,13 +3379,13 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void watchingMarriedWallet() throws Exception {
         DeterministicKey watchKey = wallet.getWatchingKey();
-        String serialized = watchKey.serializePubB58(PARAMS);
-        Wallet wallet = Wallet.fromWatchingKeyB58(PARAMS, serialized, 0);
-        blockStore = new MemoryBlockStore(PARAMS);
-        chain = new BlockChain(PARAMS, wallet, blockStore);
+        String serialized = watchKey.serializePubB58(UNITTEST);
+        Wallet wallet = Wallet.fromWatchingKeyB58(UNITTEST, serialized, 0);
+        blockStore = new MemoryBlockStore(UNITTEST);
+        chain = new BlockChain(UNITTEST, wallet, blockStore);
 
         final DeterministicKeyChain keyChain = new DeterministicKeyChain(new SecureRandom());
-        DeterministicKey partnerKey = DeterministicKey.deserializeB58(null, keyChain.getWatchingKey().serializePubB58(PARAMS), PARAMS);
+        DeterministicKey partnerKey = DeterministicKey.deserializeB58(null, keyChain.getWatchingKey().serializePubB58(UNITTEST), UNITTEST);
 
         TransactionSigner signer = new StatelessTransactionSigner() {
             @Override
@@ -3460,7 +3460,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void fromKeys() {
         ECKey key = ECKey.fromPrivate(Utils.HEX.decode("00905b93f990267f4104f316261fc10f9f983551f9ef160854f40102eb71cffdcc"));
-        Wallet wallet = Wallet.fromKeys(PARAMS, Arrays.asList(key));
+        Wallet wallet = Wallet.fromKeys(UNITTEST, Arrays.asList(key));
         assertEquals(1, wallet.getImportedKeys().size());
         assertEquals(key, wallet.getImportedKeys().get(0));
         wallet.upgradeToDeterministic(null);
@@ -3483,8 +3483,8 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void totalReceivedSent() throws Exception {
         // Receive 4 BTC in 2 separate transactions
-        Transaction toMe1 = createFakeTxWithoutChangeAddress(PARAMS, COIN.multiply(2), myAddress);
-        Transaction toMe2 = createFakeTxWithoutChangeAddress(PARAMS, COIN.multiply(2), myAddress);
+        Transaction toMe1 = createFakeTxWithoutChangeAddress(UNITTEST, COIN.multiply(2), myAddress);
+        Transaction toMe2 = createFakeTxWithoutChangeAddress(UNITTEST, COIN.multiply(2), myAddress);
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, toMe1, toMe2);
 
         // Check we calculate the total received correctly
@@ -3504,10 +3504,10 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void testIrrelevantDoubleSpend() throws Exception {
-        Transaction tx0 = createFakeTx(PARAMS);
-        Transaction tx1 = createFakeTx(PARAMS);
+        Transaction tx0 = createFakeTx(UNITTEST);
+        Transaction tx1 = createFakeTx(UNITTEST);
 
-        Transaction tx2 = new Transaction(PARAMS);
+        Transaction tx2 = new Transaction(UNITTEST);
         tx2.addInput(tx0.getOutput(0));
         tx2.addOutput(COIN, myAddress);
         tx2.addOutput(COIN, OTHER_ADDRESS);
@@ -3515,14 +3515,14 @@ public class WalletTest extends TestWithWallet {
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, tx2, tx1, tx0);
 
         // tx3 and tx4 double spend each other
-        Transaction tx3 = new Transaction(PARAMS);
+        Transaction tx3 = new Transaction(UNITTEST);
         tx3.addInput(tx1.getOutput(0));
         tx3.addOutput(COIN, myAddress);
         tx3.addOutput(COIN, OTHER_ADDRESS);
         wallet.receivePending(tx3, null);
 
         // tx4 also spends irrelevant output from tx2
-        Transaction tx4 = new Transaction(PARAMS);
+        Transaction tx4 = new Transaction(UNITTEST);
         tx4.addInput(tx1.getOutput(0)); // spends same output
         tx4.addInput(tx2.getOutput(1));
         tx4.addOutput(COIN, OTHER_ADDRESS);
@@ -3538,9 +3538,9 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void overridingDeadTxTest() throws Exception {
-        Transaction tx0 = createFakeTx(PARAMS);
+        Transaction tx0 = createFakeTx(UNITTEST);
 
-        Transaction tx1 = new Transaction(PARAMS);
+        Transaction tx1 = new Transaction(UNITTEST);
         tx1.addInput(tx0.getOutput(0));
         tx1.addOutput(COIN, OTHER_ADDRESS);
         tx1.addOutput(COIN, OTHER_ADDRESS);
@@ -3549,7 +3549,7 @@ public class WalletTest extends TestWithWallet {
         sendMoneyToWallet(AbstractBlockChain.NewBlockType.BEST_CHAIN, tx0, tx1);
 
         // tx2, tx3 and tx4 double spend each other
-        Transaction tx2 = new Transaction(PARAMS);
+        Transaction tx2 = new Transaction(UNITTEST);
         tx2.addInput(tx1.getOutput(0));
         tx2.addInput(tx1.getOutput(1));
         tx2.addOutput(COIN, myAddress);
@@ -3557,12 +3557,12 @@ public class WalletTest extends TestWithWallet {
         wallet.receivePending(tx2, null);
 
         // irrelevant to the wallet
-        Transaction tx3 = new Transaction(PARAMS);
+        Transaction tx3 = new Transaction(UNITTEST);
         tx3.addInput(tx1.getOutput(0)); // spends same output as tx2
         tx3.addOutput(COIN, OTHER_ADDRESS);
 
         // irrelevant to the wallet
-        Transaction tx4 = new Transaction(PARAMS);
+        Transaction tx4 = new Transaction(UNITTEST);
         tx4.addInput(tx1.getOutput(1)); // spends different output, but also in tx2
         tx4.addOutput(COIN, OTHER_ADDRESS);
 

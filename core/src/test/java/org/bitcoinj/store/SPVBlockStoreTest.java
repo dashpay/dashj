@@ -31,28 +31,18 @@ import org.junit.Test;
 
 public class SPVBlockStoreTest {
     private static final NetworkParameters UNITTEST = UnitTestParams.get();
-    private File blockStoreFile;
-
-    @Before
-    public void setup() throws Exception {
-        blockStoreFile = File.createTempFile("spvblockstore", null);
-        blockStoreFile.delete();
-        blockStoreFile.deleteOnExit();
-    }
-
-    private static final NetworkParameters PARAMS = UnitTestParams.get();
 
     @Test
     public void basics() throws Exception {
         File f = File.createTempFile("spvblockstore", null);
         f.delete();
         f.deleteOnExit();
-        SPVBlockStore store = new SPVBlockStore(PARAMS, f);
+        SPVBlockStore store = new SPVBlockStore(UNITTEST, f);
 
-        Address to = Address.fromKey(PARAMS, new ECKey());
+        Address to = Address.fromKey(UNITTEST, new ECKey());
         // Check the first block in a new store is the genesis block.
         StoredBlock genesis = store.getChainHead();
-        assertEquals(PARAMS.getGenesisBlock(), genesis.getHeader());
+        assertEquals(UNITTEST.getGenesisBlock(), genesis.getHeader());
         assertEquals(0, genesis.getHeight());
 
         // Build a new block.
@@ -62,24 +52,11 @@ public class SPVBlockStoreTest {
         store.close();
 
         // Check we can get it back out again if we rebuild the store object.
-        store = new SPVBlockStore(PARAMS, f);
+        store = new SPVBlockStore(UNITTEST, f);
         StoredBlock b2 = store.get(b1.getHeader().getHash());
         assertEquals(b1, b2);
         // Check the chain head was stored correctly also.
         StoredBlock chainHead = store.getChainHead();
         assertEquals(b1, chainHead);
-    }
-
-    @Test(expected = BlockStoreException.class)
-    public void twoStores_onSameFile() throws Exception {
-        new SPVBlockStore(UNITTEST, blockStoreFile);
-        new SPVBlockStore(UNITTEST, blockStoreFile);
-    }
-
-    @Test
-    public void twoStores_butSequentially() throws Exception {
-        SPVBlockStore store = new SPVBlockStore(UNITTEST, blockStoreFile);
-        store.close();
-        store = new SPVBlockStore(UNITTEST, blockStoreFile);
     }
 }
