@@ -42,7 +42,7 @@ import com.google.common.base.Objects;
  * should be interpreted. Whilst almost all addresses today are hashes of public keys, another (currently unsupported
  * type) can contain a hash of a script instead.</p>
  */
-public class Address extends AbstractAddress {
+public class LegacyAddress extends Address {
     /**
      * An address is a RIPEMD160 hash of a public key, therefore is always 160 bits or 20 bytes.
      */
@@ -63,7 +63,7 @@ public class Address extends AbstractAddress {
      * @param hash160
      *            20-byte hash of pubkey or script
      */
-    private Address(NetworkParameters params, boolean p2sh, byte[] hash160) throws AddressFormatException {
+    private LegacyAddress(NetworkParameters params, boolean p2sh, byte[] hash160) throws AddressFormatException {
         super(params, hash160);
         if (hash160.length != 20)
             throw new AddressFormatException("Legacy addresses are 160-bit hashes, so you must provide 20 bytes");
@@ -71,7 +71,7 @@ public class Address extends AbstractAddress {
     }
 
     /**
-     * Construct a {@link Address} that represents the given pubkey hash. The resulting address will be a P2PKH type of
+     * Construct a {@link LegacyAddress} that represents the given pubkey hash. The resulting address will be a P2PKH type of
      * address.
      * 
      * @param params
@@ -80,12 +80,12 @@ public class Address extends AbstractAddress {
      *            20-byte pubkey hash
      * @return constructed address
      */
-    public static Address fromPubKeyHash(NetworkParameters params, byte[] hash160) throws AddressFormatException {
-        return new Address(params, false, hash160);
+    public static LegacyAddress fromPubKeyHash(NetworkParameters params, byte[] hash160) throws AddressFormatException {
+        return new LegacyAddress(params, false, hash160);
     }
 
     /**
-     * Construct a {@link Address} that represents the public part of the given {@link ECKey}. Note that an address is
+     * Construct a {@link LegacyAddress} that represents the public part of the given {@link ECKey}. Note that an address is
      * derived from a hash of the public key and is not the public key itself.
      * 
      * @param params
@@ -94,12 +94,12 @@ public class Address extends AbstractAddress {
      *            only the public part is used
      * @return constructed address
      */
-    public static Address fromKey(NetworkParameters params, ECKey key) {
+    public static LegacyAddress fromKey(NetworkParameters params, ECKey key) {
         return fromPubKeyHash(params, key.getPubKeyHash());
     }
 
     /**
-     * Construct a {@link Address} that represents the given P2SH script hash.
+     * Construct a {@link LegacyAddress} that represents the given P2SH script hash.
      * 
      * @param params
      *            network this address is valid for
@@ -107,12 +107,12 @@ public class Address extends AbstractAddress {
      *            P2SH script hash
      * @return constructed address
      */
-    public static Address fromP2SHHash(NetworkParameters params, byte[] hash160) throws AddressFormatException {
-        return new Address(params, true, hash160);
+    public static LegacyAddress fromP2SHHash(NetworkParameters params, byte[] hash160) throws AddressFormatException {
+        return new LegacyAddress(params, true, hash160);
     }
 
     /**
-     * Constructs a {@link Address} that represents the script hash extracted from the given scriptPubKey.
+     * Constructs a {@link LegacyAddress} that represents the script hash extracted from the given scriptPubKey.
      * 
      * @param params
      *            network this address is valid for
@@ -120,13 +120,13 @@ public class Address extends AbstractAddress {
      *            scriptPubKey
      * @return constructed address
      */
-    public static Address fromP2SHScript(NetworkParameters params, Script scriptPubKey) {
+    public static LegacyAddress fromP2SHScript(NetworkParameters params, Script scriptPubKey) {
         checkArgument(ScriptPattern.isPayToScriptHash(scriptPubKey), "Not a P2SH script");
         return fromP2SHHash(params, ScriptPattern.extractHashFromPayToScriptHash(scriptPubKey));
     }
 
     /**
-     * Construct a {@link Address} from its base58 form.
+     * Construct a {@link LegacyAddress} from its base58 form.
      * 
      * @param params
      *            expected network this address is valid for, or null if if the network should be derived from the
@@ -135,10 +135,10 @@ public class Address extends AbstractAddress {
      *            base58-encoded textual form of the address
      * @throws AddressFormatException
      *             if the given base58 doesn't parse or the checksum is invalid
-     * @throws WrongNetworkException
+     * @throws AddressFormatException.WrongNetwork
      *             if the given address is valid but for a different chain (eg testnet vs mainnet)
      */
-    public static Address fromBase58(@Nullable NetworkParameters params, String base58)
+    public static LegacyAddress fromBase58(@Nullable NetworkParameters params, String base58)
             throws AddressFormatException, AddressFormatException.WrongNetwork {
         byte[] versionAndDataBytes = Base58.decodeChecked(base58);
         int version = versionAndDataBytes[0] & 0xFF;
@@ -146,23 +146,23 @@ public class Address extends AbstractAddress {
         if (params == null) {
             for (NetworkParameters p : Networks.get()) {
                 if (version == p.getAddressHeader())
-                    return new Address(p, false, bytes);
+                    return new LegacyAddress(p, false, bytes);
                 else if (version == p.getP2SHHeader())
-                    return new Address(p, true, bytes);
+                    return new LegacyAddress(p, true, bytes);
             }
             throw new AddressFormatException("No network found for " + base58);
         } else {
             if (version == params.getAddressHeader())
-                return new Address(params, false, bytes);
+                return new LegacyAddress(params, false, bytes);
             else if (version == params.getP2SHHeader())
-                return new Address(params, true, bytes);
+                return new LegacyAddress(params, true, bytes);
             throw new AddressFormatException.WrongNetwork(version);
         }
     }
 
     /** @deprecated use {@link #fromPubKeyHash(NetworkParameters, byte[])} */
     @Deprecated
-    public Address(NetworkParameters params, byte[] hash160) throws AddressFormatException {
+    public LegacyAddress(NetworkParameters params, byte[] hash160) throws AddressFormatException {
         this(params, false, hash160);
     }
 
@@ -184,13 +184,13 @@ public class Address extends AbstractAddress {
         return Base58.encodeChecked(getVersion(), bytes);
     }
 
-    /** @deprecated Use {@link #getHash()}. */
+    /** @deprecated use {@link #getHash()} */
     @Deprecated
     public byte[] getHash160() {
         return getHash();
     }
 
-    /** The (big endian) 20 byte hash that is the core of a Dash address. */
+    /** The (big endian) 20 byte hash that is the core of a Bitcoin address. */
     @Override
     public byte[] getHash() {
         return bytes;
@@ -222,7 +222,7 @@ public class Address extends AbstractAddress {
      * @throws AddressFormatException if the given base58 doesn't parse or the checksum is invalid
      */
     public static NetworkParameters getParametersFromAddress(String address) throws AddressFormatException {
-        return Address.fromBase58(null, address).getParameters();
+        return LegacyAddress.fromBase58(null, address).getParameters();
     }
 
     @Override
@@ -231,7 +231,7 @@ public class Address extends AbstractAddress {
             return true;
         if (o == null || getClass() != o.getClass())
             return false;
-        Address other = (Address) o;
+        LegacyAddress other = (LegacyAddress) o;
         return super.equals(other) && this.p2sh == other.p2sh;
     }
 
@@ -246,7 +246,7 @@ public class Address extends AbstractAddress {
     }
 
     @Override
-    public Address clone() throws CloneNotSupportedException {
-        return (Address) super.clone();
+    public LegacyAddress clone() throws CloneNotSupportedException {
+        return (LegacyAddress) super.clone();
     }
 }
