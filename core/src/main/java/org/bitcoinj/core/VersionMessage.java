@@ -63,7 +63,7 @@ public class VersionMessage extends Message {
      */
     public long time;
     /**
-     * The network address of the node receiving this message. Not used.
+     * The network address of the node receiving this message.
      */
     public PeerAddress receivingAddr;
     /**
