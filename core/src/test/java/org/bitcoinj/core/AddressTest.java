@@ -81,7 +81,7 @@ public class AddressTest {
         try {
             Address.fromBase58(TESTNET, "this is not a valid address!");
             fail();
-        } catch (WrongNetworkException e) {
+        } catch (AddressFormatException.WrongNetwork e) {
             fail();
         } catch (AddressFormatException e) {
             // Success.
@@ -91,7 +91,7 @@ public class AddressTest {
         try {
             Address.fromBase58(TESTNET, "");
             fail();
-        } catch (WrongNetworkException e) {
+        } catch (AddressFormatException.WrongNetwork e) {
             fail();
         } catch (AddressFormatException e) {
             // Success.
@@ -101,7 +101,7 @@ public class AddressTest {
         try {
             Address.fromBase58(TESTNET, "Xtqn4ks8sJS7iG7S7r1Jf37eFFSJGwh8a8");
             fail();
-        } catch (WrongNetworkException e) {
+        } catch (AddressFormatException.WrongNetwork e) {
             // Success.
         } catch (AddressFormatException e) {
             fail();

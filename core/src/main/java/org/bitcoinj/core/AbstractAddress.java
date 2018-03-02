@@ -47,14 +47,14 @@ public abstract class AbstractAddress extends PrefixedChecksummedBytes {
      * @return constructed address
      * @throws AddressFormatException
      *             if the given string doesn't parse or the checksum is invalid
-     * @throws WrongNetworkException
+     * @throws AddressFormatException.WrongNetwork
      *             if the given string is valid but not for the expected network (eg testnet vs mainnet)
      */
     public static AbstractAddress fromString(@Nullable NetworkParameters params, String str)
             throws AddressFormatException {
         try {
             return Address.fromBase58(params, str);
-        } catch (WrongNetworkException x) {
+        } catch (AddressFormatException.WrongNetwork x) {
             throw x;
         }
     }
