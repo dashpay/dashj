@@ -58,8 +58,8 @@ public class Address extends AbstractAddress {
      * 
      * @param params
      *            network this address is valid for
-     * @param version
-     *            version header of the address
+     * @param p2sh
+     *            this is a P2SH address
      * @param hash160
      *            20-byte hash of pubkey or script
      */
@@ -136,7 +136,7 @@ public class Address extends AbstractAddress {
      *            base58-encoded textual form of the address
      * @throws AddressFormatException
      *             if the given base58 doesn't parse or the checksum is invalid
-     * @throws WrongNetworkException
+     * @throws AddressFormatException.WrongNetwork
      *             if the given address is valid but for a different chain (eg testnet vs mainnet)
      */
     public static Address fromBase58(@Nullable NetworkParameters params, String base58)
@@ -151,7 +151,7 @@ public class Address extends AbstractAddress {
                 else if (version == p.getP2SHHeader())
                     return new Address(p, true, bytes);
             }
-            throw new AddressFormatException("No network found for " + base58);
+            throw new AddressFormatException.InvalidPrefix("No network found for " + base58);
         } else {
             if (version == params.getAddressHeader())
                 return new Address(params, false, bytes);
