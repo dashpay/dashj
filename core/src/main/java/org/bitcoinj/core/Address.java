@@ -120,14 +120,10 @@ public class Address extends AbstractAddress {
 
 
     /**
-     * Constructs a {@link Address} that represents the script hash extracted from the given scriptPubKey.
-     * 
-     * @param params
-     *            network this address is valid for
-     * @param scriptPubKey
-     *            scriptPubKey
-     * @return constructed address
+     * @deprecated use {@link #fromScriptHash(NetworkParameters, byte[])} in combination with
+     *             {@link ScriptPattern#extractHashFromPayToScriptHash(Script)}
      */
+    @Deprecated
     public static Address fromP2SHScript(NetworkParameters params, Script scriptPubKey) {
         checkArgument(ScriptPattern.isPayToScriptHash(scriptPubKey), "Not a P2SH script");
         return fromP2SHHash(params, ScriptPattern.extractHashFromPayToScriptHash(scriptPubKey));

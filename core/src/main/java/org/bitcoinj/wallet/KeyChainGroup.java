@@ -245,7 +245,8 @@ public class KeyChainGroup implements KeyBag {
         if (chain.isMarried()) {
             Script outputScript = chain.freshOutputScript(purpose);
             checkState(ScriptPattern.isPayToScriptHash(outputScript)); // Only handle P2SH for now
-            Address freshAddress = Address.fromP2SHScript(params, outputScript);
+            Address freshAddress = Address.fromScriptHash(params,
+                    ScriptPattern.extractHashFromPayToScriptHash(outputScript));
             maybeLookaheadScripts();
             currentAddresses.put(purpose, freshAddress);
             return freshAddress;

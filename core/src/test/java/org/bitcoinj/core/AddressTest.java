@@ -22,6 +22,9 @@ import org.bitcoinj.params.Networks;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptPattern;
+import org.bitcoinj.script.Script.ScriptType;
+import org.bitcoinj.script.ScriptPattern;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -75,6 +78,7 @@ public class AddressTest {
         Address b = Address.fromBase58(MAINNET, "XhSqUwiG6PGjRCXD5sksyvRNE1ZV8jkaVC");
         assertEquals("4a22c3c4cbb31e4d03b15550636762bda0baf85a", Utils.HEX.encode(b.getHash()));
     }
+    
     @Test
     public void errorPaths() {
         // Check what happens if we try and decode garbage.
@@ -167,7 +171,8 @@ public class AddressTest {
         assertEquals("7WJnm5FSpJttSr72bWWqFFZrXwB8ZzsK7b", a.toString());
         Address b = Address.fromScriptHash(TESTNET, HEX.decode("18a0e827269b5211eb51a4af1b2fa69333efa722"));
         assertEquals("8gfggfujFTJDtRMtrkWBKHX4Uz6uufXNC2", b.toString());
-        Address c = Address.fromP2SHScript(MAINNET, ScriptBuilder.createP2SHOutputScript(hex));
+        Address c = Address.fromScriptHash(MAINNET,
+                ScriptPattern.extractHashFromPayToScriptHash(ScriptBuilder.createP2SHOutputScript(hex)));
         assertEquals("7WJnm5FSpJttSr72bWWqFFZrXwB8ZzsK7b", c.toString());
     }
 
@@ -183,7 +188,8 @@ public class AddressTest {
 
         List<ECKey> keys = Arrays.asList(key1, key2, key3);
         Script p2shScript = ScriptBuilder.createP2SHOutputScript(2, keys);
-        Address address = Address.fromP2SHScript(MAINNET, p2shScript);
+        Address address = Address.fromScriptHash(MAINNET,
+                ScriptPattern.extractHashFromPayToScriptHash(p2shScript));
         assertEquals("7pUXwZyXEMWv87j2vnY6SiWDB1bi2rHEb4", address.toString());
     }
 
