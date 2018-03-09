@@ -17,7 +17,13 @@
 
 package org.bitcoinj.wallet;
 
-import org.bitcoinj.core.*;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.BloomFilter;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.UnitTestParams;
@@ -25,13 +31,17 @@ import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.listeners.AbstractKeyChainEventListener;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.io.Resources;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.spongycastle.crypto.params.KeyParameter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.List;
 
@@ -683,7 +693,8 @@ public class DeterministicKeyChainTest {
     private String checkSerialization(List<Protos.Key> keys, String filename) {
         try {
             String sb = protoToString(keys);
-            String expected = Utils.getResourceAsString(getClass().getResource(filename));
+            List<String> lines = Resources.readLines(getClass().getResource(filename), StandardCharsets.UTF_8);
+            String expected = Joiner.on('\n').join(lines);
             assertEquals(expected, sb);
             return expected;
         } catch (IOException e) {
