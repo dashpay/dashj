@@ -20,8 +20,9 @@ package org.bitcoinj.script;
 import com.google.common.collect.Lists;
 
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.params.MainNetParams;
 import org.junit.Test;
 
@@ -42,11 +43,11 @@ public class ScriptPatternTest {
         assertTrue(ScriptPattern.isPayToScriptHash(
                 ScriptBuilder.createP2SHOutputScript(2, keys)
         ));
-        assertTrue(ScriptPattern.isSentToMultisig(
-                ScriptBuilder.createMultiSigOutputScript(2, keys)
-        ));
         assertTrue(ScriptPattern.isPayToPubKey(
                 ScriptBuilder.createOutputScript(keys.get(0))
+        ));
+        assertTrue(ScriptPattern.isSentToMultisig(
+                ScriptBuilder.createMultiSigOutputScript(2, keys)
         ));
         assertTrue(ScriptPattern.isSentToCltvPaymentChannel(
                 ScriptBuilder.createCLTVPaymentChannelOutput(BigInteger.ONE, keys.get(0), keys.get(1))
