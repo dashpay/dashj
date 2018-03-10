@@ -543,7 +543,7 @@ public class Peer extends PeerSocketHandler {
             //do nothing
         } else if(m instanceof MasternodeBroadcast) {
             if(!context.isLiteMode())
-                context.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);
+                context.masternodeManager.processMasternodeBroadcast(this, (MasternodeBroadcast)m);
 
         }
         else if(m instanceof MasternodePing) {

@@ -25,9 +25,11 @@ public class Masternode extends Message{
         MASTERNODE_PRE_ENABLED(0),
         MASTERNODE_ENABLED(1),
         MASTERNODE_EXPIRED(2),
-        MASTERNODE_VIN_SPENT(3),
-        MASTERNODE_REMOVE(4),
-        MASTERNODE_POS_ERROR(5);
+        MASTERNODE_OUTPOINT_SPENT(3),
+        MASTERNODE_UPDATE_REQUIRED(4),
+        MASTERNODE_WATCHDOG_EXPIRED(5),
+        MASTERNODE_NEW_START_REQUIRED(6),
+        MASTERNODE_POSE_BAN(7);
 
          State(int value) {
             this.value = value;
@@ -50,6 +52,12 @@ public class Masternode extends Message{
         public static State forValue(int value) {
             return typesByValue.get(value);
         }
+    }
+
+    enum CollateralStatus {
+        COLLATERAL_OK,
+        COLLATERAL_UTXO_NOT_FOUND,
+        COLLATERAL_INVALID_AMOUNT
     }
 
     public static final int MASTERNODE_CHECK_SECONDS               =   5;
@@ -513,7 +521,7 @@ public class Masternode extends Message{
 
 
         //once spent, stop doing the checks
-        if(activeState == State.MASTERNODE_VIN_SPENT) return;
+        if(activeState == State.MASTERNODE_OUTPOINT_SPENT) return;
 
         // If there are no pings for quite a long time ...
         if(!isPingedWithin(MASTERNODE_REMOVAL_SECONDS)
@@ -577,22 +585,44 @@ public class Masternode extends Message{
             /*return enabled == 1;*/
             return activeState == State.MASTERNODE_ENABLED;
         }
-        public boolean isPreEnabled()
-        {
-            return activeState == State.MASTERNODE_PRE_ENABLED;
+    public boolean isPreEnabled()
+    {
+        return activeState == State.MASTERNODE_PRE_ENABLED;
+    }
+    public boolean isPoSeBanned() { return activeState == State.MASTERNODE_POSE_BAN; }
+    // NOTE: this one relies on nPoSeBanScore, not on nActiveState as everything else here
+    public boolean isPoSeVerified() { return nPoSeBanScore <= -MASTERNODE_POSE_BAN_MAX_SCORE; }
+    public boolean isExpired() { return activeState == State.MASTERNODE_EXPIRED; }
+    public boolean isOutpointSpent() { return activeState == State.MASTERNODE_OUTPOINT_SPENT; }
+    public boolean isUpdateRequired() { return activeState == State.MASTERNODE_UPDATE_REQUIRED; }
+    public boolean isWatchdogExpired() { return activeState == State.MASTERNODE_WATCHDOG_EXPIRED; }
+    public boolean isNewStartRequired() { return activeState == State.MASTERNODE_NEW_START_REQUIRED; }
+
+
+    String stateToString(State nStateIn)
+    {
+        switch(nStateIn) {
+            case MASTERNODE_PRE_ENABLED:            return "PRE_ENABLED";
+            case MASTERNODE_ENABLED:                return "ENABLED";
+            case MASTERNODE_EXPIRED:                return "EXPIRED";
+            case MASTERNODE_OUTPOINT_SPENT:         return "OUTPOINT_SPENT";
+            case MASTERNODE_UPDATE_REQUIRED:        return "UPDATE_REQUIRED";
+            case MASTERNODE_WATCHDOG_EXPIRED:       return "WATCHDOG_EXPIRED";
+            case MASTERNODE_NEW_START_REQUIRED:     return "NEW_START_REQUIRED";
+            case MASTERNODE_POSE_BAN:               return "POSE_BAN";
+            default:                                return "UNKNOWN";
         }
+    }
 
-    public String status() {
-        String strStatus = "unknown";
+    String getStateString()
+    {
+        return stateToString(activeState);
+    }
 
-        if(activeState == State.MASTERNODE_PRE_ENABLED) strStatus = "PRE_ENABLED";
-        if(activeState == State.MASTERNODE_ENABLED) strStatus     = "ENABLED";
-        if(activeState == State.MASTERNODE_EXPIRED) strStatus     = "EXPIRED";
-        if(activeState == State.MASTERNODE_VIN_SPENT) strStatus   = "VIN_SPENT";
-        if(activeState == State.MASTERNODE_REMOVE) strStatus      = "REMOVE";
-        if(activeState == State.MASTERNODE_POS_ERROR) strStatus   = "POS_ERROR";
-
-        return strStatus;
+    String getStatus()
+    {
+        // TODO: return smth a bit more human readable here
+        return getStateString();
     }
 
         boolean isBroadcastedWithin(int seconds)

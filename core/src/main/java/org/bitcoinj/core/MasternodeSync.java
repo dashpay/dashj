@@ -198,12 +198,11 @@ public class MasternodeSync {
                 //If we are in lite mode and allowing InstantX, then only sync the sporks
                 if(context.isLiteMode() && context.allowInstantXinLiteMode()) {
                     RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
-                    queueOnSyncStatusChanged(RequestedMasternodeAssets, 1.0);
                 }
                 break;
             case(MASTERNODE_SYNC_LIST):
                 log.info("CMasternodeSync::SwitchToNextAsset -- Completed "+getAssetName()+" in " + (Utils.currentTimeSeconds() - nTimeAssetSyncStarted));
-                RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;
+                RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;//MASTERNODE_SYNC_MNW;
                 log.info("CMasternodeSync::SwitchToNextAsset -- Starting "+ getAssetName());
                 break;
             case(MASTERNODE_SYNC_MNW):
@@ -231,6 +230,7 @@ public class MasternodeSync {
         RequestedMasternodeAttempt = 0;
         nTimeAssetSyncStarted = Utils.currentTimeSeconds();
         BumpAssetLastTime("CMasternodeSync::SwitchToNextAsset");
+        queueOnSyncStatusChanged(RequestedMasternodeAssets, 1.0);
     }
 
     public int getSyncStatusInt()

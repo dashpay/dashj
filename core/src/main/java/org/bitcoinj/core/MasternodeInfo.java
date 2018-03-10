@@ -1,7 +1,7 @@
 package org.bitcoinj.core;
 
 /**
- * Created by Eric on 2/8/2017.
+ * Created by Hash Engineering on 2/8/2017.
  */
 public class MasternodeInfo {
 
