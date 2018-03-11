@@ -59,7 +59,7 @@ public class Address extends AbstractAddress {
      * @param params
      *            network this address is valid for
      * @param p2sh
-     *            this is a P2SH address
+     *            true if hash160 is hash of a script, false if it is hash of a pubkey
      * @param hash160
      *            20-byte hash of pubkey or script
      */
