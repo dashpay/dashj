@@ -18,22 +18,23 @@
 package org.bitcoinj.core;
 
 import com.google.common.base.Objects;
-import org.bitcoinj.net.discovery.HttpDiscovery;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.*;
-import org.bitcoinj.quorums.LLMQParameters;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.script.ScriptOpCodes;
+import org.bitcoinj.script.*;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
+
 import org.bitcoinj.utils.MonetaryFormat;
 
-import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
-import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.EnumSet;
+import javax.annotation.*;
+import java.io.*;
+import java.math.*;
+import java.util.*;
+import org.bitcoinj.quorums.LLMQParameters;
+
 
 import static org.bitcoinj.core.Coin.*;
 import org.bitcoinj.utils.VersionTally;
@@ -41,16 +42,15 @@ import org.bitcoinj.utils.VersionTally;
 /**
  * <p>NetworkParameters contains the data needed for working with an instantiation of a Bitcoin chain.</p>
  *
- * <p>This is an abstract class, concrete instantiations can be found in the context package. There are four:
+ * <p>This is an abstract class, concrete instantiations can be found in the params package. There are four:
  * one for the main network ({@link MainNetParams}), one for the public test network, and two others that are
  * intended for unit testing and local app development purposes. Although this class contains some aliases for
- * them, you are encouraged to call the static get() methods on each specific context class directly.</p>
+ * them, you are encouraged to call the static get() methods on each specific params class directly.</p>
  */
 public abstract class NetworkParameters {
     /**
      * The alert signing key originally owned by Satoshi, and now passed on to Gavin along with a few others.
      */
-
     public static final byte[] SATOSHI_KEY = Utils.HEX.decode(CoinDefinition.SATOSHI_KEY); //Hex.decode("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
 
     /** The string returned by getId() for the main, production network where people trade things. */
@@ -129,7 +129,7 @@ public abstract class NetworkParameters {
     protected int budgetPaymentsStartBlock;
     protected int budgetPaymentsCycleBlocks;
     protected int budgetPaymentsWindowBlocks;
-    
+
     protected String[] dnsSeeds;
     protected int[] addrSeeds;
     protected HttpDiscovery.Details[] httpSeeds = {};
@@ -389,7 +389,7 @@ public abstract class NetworkParameters {
         return addrSeeds;
     }
 
-    /** Returns discovery objects for seeds implementing the Cartographer protocol. See {@link org.bitcoinj.net.discovery.HttpDiscovery} for more info. */
+    /** Returns discovery objects for seeds implementing the Cartographer protocol. See {@link HttpDiscovery} for more info. */
     public HttpDiscovery.Details[] getHttpSeeds() {
         return httpSeeds;
     }
@@ -440,7 +440,7 @@ public abstract class NetworkParameters {
     }
 
     /**
-     * First byte of a base58 encoded address. See {@link org.bitcoinj.core.Address}. This is the same as acceptableAddressCodes[0] and
+     * First byte of a base58 encoded address. See {@link LegacyAddress}. This is the same as acceptableAddressCodes[0] and
      * is the one used for "normal" addresses. Other types of address may be encountered with version codes found in
      * the acceptableAddressCodes array.
      */
@@ -455,7 +455,7 @@ public abstract class NetworkParameters {
         return p2shHeader;
     }
 
-    /** First byte of a base58 encoded dumped private key. See {@link org.bitcoinj.core.DumpedPrivateKey}. */
+    /** First byte of a base58 encoded dumped private key. See {@link DumpedPrivateKey}. */
     public int getDumpedPrivateKeyHeader() {
         return dumpedPrivateKeyHeader;
     }
@@ -492,7 +492,7 @@ public abstract class NetworkParameters {
     }
 
     /**
-     * The key used to sign {@link org.bitcoinj.core.AlertMessage}s. You can use {@link org.bitcoinj.core.ECKey#verify(byte[], byte[], byte[])} to verify
+     * The key used to sign {@link AlertMessage}s. You can use {@link ECKey#verify(byte[], byte[], byte[])} to verify
      * signatures using it.
      */
     public byte[] getAlertSigningKey() {

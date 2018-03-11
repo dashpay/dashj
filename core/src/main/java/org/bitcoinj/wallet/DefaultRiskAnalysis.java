@@ -115,7 +115,7 @@ public class DefaultRiskAnalysis implements RiskAnalysis {
 
     /**
      * The reason a transaction is considered non-standard, returned by
-     * {@link #isStandard(org.bitcoinj.core.Transaction)}.
+     * {@link #isStandard(Transaction)}.
      */
     public enum RuleViolation {
         NONE,
