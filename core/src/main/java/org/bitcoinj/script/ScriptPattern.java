@@ -30,8 +30,8 @@ import static org.bitcoinj.script.ScriptOpCodes.*;
  */
 public class ScriptPattern {
     /**
-     * Returns true if this script is of the form DUP HASH160 <pubkey hash> EQUALVERIFY CHECKSIG, ie, payment to an
-     * address like 1VayNert3x1KzbpzMGt2qdqrAThiRovi8. This form was originally intended for the case where you wish
+     * Returns true if this script is of the form {@code DUP HASH160 <pubkey hash> EQUALVERIFY CHECKSIG}, ie, payment to an
+     * address like {@code 1VayNert3x1KzbpzMGt2qdqrAThiRovi8}. This form was originally intended for the case where you wish
      * to send somebody money with a written code because their node is offline, but over time has become the standard
      * way to make payments due to the short and recognizable base58 form addresses come in.
      */
@@ -79,7 +79,7 @@ public class ScriptPattern {
         // template, not the logical program structure. Thus you can have two programs that look identical when
         // printed out but one is a P2SH script and the other isn't! :(
         // We explicitly test that the op code used to load the 20 bytes is 0x14 and not something logically
-        // equivalent like OP_HASH160 OP_PUSHDATA1 0x14 <20 bytes of script hash> OP_EQUAL
+        // equivalent like {@code OP_HASH160 OP_PUSHDATA1 0x14 <20 bytes of script hash> OP_EQUAL}
         if (chunks.size() != 3)
             return false;
         if (!chunks.get(0).equalsOpCode(OP_HASH160))
@@ -106,7 +106,7 @@ public class ScriptPattern {
     }
 
     /**
-     * Returns true if this script is of the form <pubkey> OP_CHECKSIG. This form was originally intended for transactions
+     * Returns true if this script is of the form {@code <pubkey> OP_CHECKSIG}. This form was originally intended for transactions
      * where the peers talked to each other directly via TCP/IP, but has fallen out of favor with time due to that mode
      * of operation being susceptible to man-in-the-middle attacks. It is still used in coinbase outputs and can be
      * useful more exotic types of transaction, but today most payments are to addresses.
@@ -137,7 +137,8 @@ public class ScriptPattern {
     }
 
     /**
-     * Returns whether this script matches the format used for multisig outputs: [n] [keys...] [m] CHECKMULTISIG
+     * Returns whether this script matches the format used for multisig outputs:
+     * {@code [n] [keys...] [m] CHECKMULTISIG}
      */
     public static boolean isSentToMultisig(Script script) {
         List<ScriptChunk> chunks = script.chunks;

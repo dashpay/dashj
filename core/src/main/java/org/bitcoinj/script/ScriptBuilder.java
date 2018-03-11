@@ -142,7 +142,7 @@ public class ScriptBuilder {
     }
 
     /** Adds the given number as a push data chunk.
-     * This is intended to use for negative numbers or values > 16, and although
+     * This is intended to use for negative numbers or values greater than 16, and although
      * it will accept numbers in the range 0-16 inclusive, the encoding would be
      * considered non-standard.
      * 
@@ -166,7 +166,7 @@ public class ScriptBuilder {
 
     /**
      * Adds the given number as a push data chunk to the given index in the program.
-     * This is intended to use for negative numbers or values > 16, and although
+     * This is intended to use for negative numbers or values greater than 16, and although
      * it will accept numbers in the range 0-16 inclusive, the encoding would be
      * considered non-standard.
      * 
