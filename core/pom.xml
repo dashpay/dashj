@@ -189,9 +189,11 @@
                                         <urn>com.fasterxml.jackson.core:jackson-databind:2.9.2:jar:null:test:1d8d8cb7cf26920ba57fb61fa56da88cc123b21f</urn>
                                         <urn>com.google.code.findbugs:jsr305:2.0.1:jar:null:compile:516c03b21d50a644d538de0f0369c620989cd8f0</urn>
                                         <urn>com.google.guava:guava:27.0.1-android:jar:null:compile:b7e1c37f66ef193796ccd7ea6e80c2b05426182d</urn>
+                                        <urn>org.checkerframework:checker-compat-qual:2.0.0:jar:null:compile:fc89b03860d11d6213d0154a62bcd1c2f69b9efa</urn>
                                         <urn>com.google.errorprone:error_prone_annotations:2.0.18:jar:null:compile:5f65affce1684999e2f4024983835efc3504012e</urn>
                                         <urn>com.google.j2objc:j2objc-annotations:1.1:jar:null:compile:ed28ded51a8b1c6b112568def5f4b455e6809019</urn>
-                                        <urn>com.google.protobuf:protobuf-java:2.6.1:jar:null:compile:d9521f2aecb909835746b7a5facf612af5e890e8</urn>
+                                        <urn>org.codehaus.mojo:animal-sniffer-annotations:1.14:jar:null:compile:775b7e22fb10026eed3f86e8dc556dfafe35f2d5</urn>
+                                        <urn>com.google.protobuf:protobuf-java:3.5.1:jar:null:compile:8c3492f7662fa1cbf8ca76a0f5eb1146f7725acd</urn>
                                         <urn>com.h2database:h2:1.3.167:jar:null:compile:d3867d586f087e53eb12fc65e5693d8ee9a5da17</urn>
                                         <urn>com.lambdaworks:scrypt:1.4.0:jar:null:compile:906506b74f30c8c20bccd9ed4a11112d8941fe87</urn>
                                         <urn>com.madgag.spongycastle:core:1.58.0.0:jar:null:compile:e08789f8f1e74f155db8b69c3575b5cb213c156c</urn>
@@ -394,7 +396,7 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>2.6.1</version>
+            <version>3.5.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
