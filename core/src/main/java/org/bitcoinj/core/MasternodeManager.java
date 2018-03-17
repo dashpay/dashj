@@ -1,10 +1,12 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.crypto.LinuxSecureRandom;
+import org.bitcoinj.net.Dos;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.store.HashStore;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -12,6 +14,7 @@ import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.nio.ch.Net;
+import sun.security.provider.SHA;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -23,6 +26,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.core.MasterNodeSystem.MASTERNODE_REMOVAL_SECONDS;
+import static org.bitcoinj.core.Masternode.MASTERNODE_WATCHDOG_MAX_SECONDS;
+import static org.bitcoinj.core.VersionMessage.NODE_NETWORK;
 
 /**
  * Created by Hash Engineering on 2/20/2016.
@@ -134,91 +139,21 @@ public class MasternodeManager extends AbstractManager {
         eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeManagerListener>>();
     }
 
-    /*public int calculateMessageSizeInBytes()
+    public int calculateMessageSizeInBytes()
     {
         int size = 0;
         lock.lock();
         try {
             size += VarInt.sizeOf(mapMasternodes.size());
+            size *= 200;
 
-            for (Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()) {
-                entry.getKey().getMessageSize();
-                entry.getValue().bitcoinSerialize(stream);
-            }
-            stream.write(new VarInt(mAskedUsForMasternodeList.size()).encode());
-            for(Iterator<Map.Entry<NetAddress, Long>> it1= mAskedUsForMasternodeList.entrySet().iterator(); it1.hasNext();)
-            {
-                Map.Entry<NetAddress, Long> entry = it1.next();
-                entry.getKey().bitcoinSerialize(stream);
-                Utils.int64ToByteStreamLE(entry.getValue(), stream);
-            }
-            //READWRITE(mWeAskedForMasternodeList);
-            stream.write(new VarInt(mWeAskedForMasternodeList.size()).encode());
 
-            for(Iterator<Map.Entry<NetAddress, Long>> it1= mWeAskedForMasternodeList.entrySet().iterator(); it1.hasNext();)
-            {
-                Map.Entry<NetAddress, Long> entry = it1.next();
-                entry.getKey().bitcoinSerialize(stream);
-                Utils.int64ToByteStreamLE(entry.getValue(), stream);
-            }
-            //READWRITE(mWeAskedForMasternodeListEntry);
-            stream.write(new VarInt(mWeAskedForMasternodeListEntry.size()).encode());
-            for(Iterator<Map.Entry<TransactionOutPoint, HashMap<NetAddress, Long>>> it1= mWeAskedForMasternodeListEntry.entrySet().iterator(); it1.hasNext();)
-            {
-                Map.Entry<TransactionOutPoint, HashMap<NetAddress, Long>> entry = it1.next();
-                entry.getKey().bitcoinSerialize(stream);
-                stream.write(new VarInt(entry.getValue().size()).encode());
-                for(Map.Entry<NetAddress, Long> addLong: entry.getValue().entrySet()) {
-                    addLong.getKey().bitcoinSerialize(stream);
-                    Utils.int64ToByteStreamLE(addLong.getValue(), stream);
-                }
-            }
-
-            stream.write(new VarInt(mMnbRecoveryRequests.size()).encode());
-            for(Map.Entry<Sha256Hash, Pair<Long, Set<NetAddress>>> entry : mMnbRecoveryRequests.entrySet())
-            {
-                stream.write(entry.getKey().getReversedBytes());
-                Utils.int64ToByteStreamLE(entry.getValue().getFirst(), stream);
-                stream.write(new VarInt(entry.getValue().getSecond().size()).encode());
-                for(NetAddress address : entry.getValue().getSecond()) {
-                    address.bitcoinSerialize(stream);
-                }
-            }
-            stream.write(new VarInt(mMnbRecoveryGoodReplies.size()).encode());
-            for(Map.Entry<Sha256Hash, ArrayList<MasternodeBroadcast>> entry : mMnbRecoveryGoodReplies.entrySet())
-            {
-                stream.write(entry.getKey().getReversedBytes());
-                stream.write(new VarInt(entry.getValue().size()).encode());
-                for(MasternodeBroadcast mnb : entry.getValue()) {
-                    mnb.bitcoinSerialize(stream);
-                }
-            }
-
-            //READWRITE(nDsqCount);
-            Utils.uint32ToByteStreamLE(nDsqCount, stream);
-            //READWRITE(mapSeenMasternodeBroadcast);
-            stream.write(new VarInt(mapSeenMasternodeBroadcast.size()).encode());
-            for(Iterator<Map.Entry<Sha256Hash, Pair<Long, MasternodeBroadcast>>> it1= mapSeenMasternodeBroadcast.entrySet().iterator(); it1.hasNext();)
-            {
-                Map.Entry<Sha256Hash, Pair<Long, MasternodeBroadcast>> entry = it1.next();
-                stream.write(entry.getKey().getReversedBytes());
-                Utils.int64ToByteStreamLE(entry.getValue().getFirst(), stream);
-                entry.getValue().getSecond().bitcoinSerialize(stream);
-            }
-            //READWRITE(mapSeenMasternodePing);
-            stream.write(new VarInt(mapSeenMasternodePing.size()).encode());
-            for(Iterator<Map.Entry<Sha256Hash, MasternodePing>> it1= mapSeenMasternodePing.entrySet().iterator(); it1.hasNext();)
-            {
-                Map.Entry<Sha256Hash, MasternodePing> entry = it1.next();
-                stream.write(entry.getKey().getReversedBytes());
-                entry.getValue().bitcoinSerialize(stream);
-            }
             return size;
         }
         finally {
             lock.unlock();
         }
-    }*/
+    }
     @Override
     protected void parse() throws ProtocolException {
 
@@ -418,7 +353,7 @@ public class MasternodeManager extends AbstractManager {
             if(has(mn.vin.getOutpoint()))
                 return false;
 
-            log.info("masternode--CMasternodeMan::Add -- Adding new Masternode: addr={}, {} now\n", mn.address, size() + 1);
+            log.info("masternode--CMasternodeMan::Add -- Adding new Masternode: addr={}, {} now", mn.address, size() + 1);
             mapMasternodes.put(mn.vin.getOutpoint(), mn);
             fMasternodesAdded = true;
         } finally {
@@ -478,34 +413,93 @@ public class MasternodeManager extends AbstractManager {
 
 
 
-    boolean checkMnbAndUpdateMasternodeList(MasternodeBroadcast mnb) {
-        log.info("masternode-CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: {}", mnb.vin.toString());
-
-        lock.lock();
+    boolean checkMnbAndUpdateMasternodeList(Peer pfrom, MasternodeBroadcast mnb, Dos dos) {
+        // Need to lock cs_main here to ensure consistent locking order because the SimpleCheck call below locks cs_main
+        context.peerGroup.getLock();
         try {
-            if (mapSeenMasternodeBroadcast.containsKey(mnb.getHash())) { //seen
-                context.masternodeSync.addedMasternodeList(mnb.getHash());
+            lock.lock();
+            try {
+                
+            dos.set(0);
+            log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s\n", mnb.vin.prevout.ToStringShort());
+
+            Sha256Hash hash = mnb.GetHash();
+            if(mapSeenMasternodeBroadcast.count(hash) && !mnb.fRecovery) { //seen
+                log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s seen\n", mnb.vin.prevout.ToStringShort());
+                // less then 2 pings left before this MN goes into non-recoverable state, bump sync timeout
+                if(GetTime() - mapSeenMasternodeBroadcast[hash].first > MASTERNODE_NEW_START_REQUIRED_SECONDS - MASTERNODE_MIN_MNP_SECONDS * 2) {
+                    log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s seen update\n", mnb.vin.prevout.ToStringShort());
+                    mapSeenMasternodeBroadcast[hash].first = GetTime();
+                    masternodeSync.BumpAssetLastTime("CMasternodeMan::CheckMnbAndUpdateMasternodeList - seen");
+                }
+                // did we ask this node for it?
+                if(pfrom && IsMnbRecoveryRequested(hash) && GetTime() < mMnbRecoveryRequests[hash].first) {
+                    log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb=%s seen request\n", hash.ToString());
+                    if(mMnbRecoveryRequests[hash].second.count(pfrom->addr)) {
+                        log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb=%s seen request, addr=%s\n", hash.ToString(), pfrom->addr.ToString());
+                        // do not allow node to send same mnb multiple times in recovery mode
+                        mMnbRecoveryRequests[hash].second.erase(pfrom->addr);
+                        // does it have newer lastPing?
+                        if(mnb.lastPing.sigTime > mapSeenMasternodeBroadcast[hash].second.lastPing.sigTime) {
+                            // simulate Check
+                            CMasternode mnTemp = CMasternode(mnb);
+                            mnTemp.Check();
+                            log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb=%s seen request, addr=%s, better lastPing: %d min ago, projected mn state: %s\n", hash.ToString(), pfrom->addr.ToString(), (GetAdjustedTime() - mnb.lastPing.sigTime)/60, mnTemp.GetStateString());
+                            if(mnTemp.IsValidStateForAutoStart(mnTemp.nActiveState)) {
+                                // this node thinks it's a good one
+                                log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s seen good\n", mnb.vin.prevout.ToStringShort());
+                                mMnbRecoveryGoodReplies[hash].push_back(mnb);
+                            }
+                        }
+                    }
+                }
                 return true;
             }
+            mapSeenMasternodeBroadcast.insert(std::make_pair(hash, std::make_pair(GetTime(), mnb)));
 
-            mapSeenMasternodeBroadcast.put(mnb.getHash(), mnb);
-        } finally {
-            lock.unlock();
+            log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s new\n", mnb.vin.prevout.ToStringShort());
+
+            if(!mnb.SimpleCheck(nDos)) {
+                log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- SimpleCheck() failed, masternode=%s\n", mnb.vin.prevout.ToStringShort());
+                return false;
+            }
+
+            // search Masternode list
+            CMasternode* pmn = Find(mnb.vin.prevout);
+            if(pmn) {
+                CMasternodeBroadcast mnbOld = mapSeenMasternodeBroadcast[CMasternodeBroadcast(*pmn).GetHash()].second;
+                if(!mnb.Update(pmn, nDos, connman)) {
+                    log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Update() failed, masternode=%s\n", mnb.vin.prevout.ToStringShort());
+                    return false;
+                }
+                if(hash != mnbOld.GetHash()) {
+                    mapSeenMasternodeBroadcast.erase(mnbOld.GetHash());
+                }
+                return true;
+            }
         }
 
-        log.info("masternode-CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: {} new", mnb.vin.toString());
-
-        if(!mnb.checkAndUpdate()){
-            log.info("masternode-CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: {} CheckAndUpdate failed", mnb.vin.toString());
-            return false;
-        }
-
-        // make sure it's still unspent
-        //  - this is checked later by .check() in many places and by ThreadCheckDarkSendPool()
-        if(mnb.checkInputsAndAdd()) {
-            context.masternodeSync.addedMasternodeList(mnb.getHash());
+        if(mnb.CheckOutpoint(nDos)) {
+            Add(mnb);
+            masternodeSync.BumpAssetLastTime("CMasternodeMan::CheckMnbAndUpdateMasternodeList - new");
+            // if it matches our Masternode privkey...
+            if(fMasterNode && mnb.pubKeyMasternode == activeMasternode.pubKeyMasternode) {
+                mnb.nPoSeBanScore = -MASTERNODE_POSE_BAN_MAX_SCORE;
+                if(mnb.nProtocolVersion == PROTOCOL_VERSION) {
+                    // ... and PROTOCOL_VERSION, then we've been remotely activated ...
+                    log.infof("CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Got NEW Masternode entry: masternode=%s  sigTime=%lld  addr=%s\n",
+                            mnb.vin.prevout.ToStringShort(), mnb.sigTime, mnb.addr.ToString());
+                    activeMasternode.ManageState(connman);
+                } else {
+                    // ... otherwise we need to reactivate our node, do not add it to the list and do not relay
+                    // but also do not ban the node we get this message from
+                    log.infof("CMasternodeMan::CheckMnbAndUpdateMasternodeList -- wrong PROTOCOL_VERSION, re-activate your MN: message nProtocolVersion=%d  PROTOCOL_VERSION=%d\n", mnb.nProtocolVersion, PROTOCOL_VERSION);
+                    return false;
+                }
+            }
+            mnb.Relay(connman);
         } else {
-            log.info("CMasternodeMan::CheckMnbAndUpdateMasternodeList - Rejected Masternode entry {}", mnb.address.toString());
+            log.infof("CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Rejected Masternode entry: %s  addr=%s\n", mnb.vin.prevout.ToStringShort(), mnb.addr.ToString());
             return false;
         }
 
@@ -523,7 +517,8 @@ public class MasternodeManager extends AbstractManager {
 
         if(checkMnbAndUpdateMasternodeList(from, mnb))
         {
-
+            // use announced Masternode as a peer
+            //connman.AddNewAddress(CAddress(mnb.addr, NODE_NETWORK), pfrom->addr, 2*60*60);
         }
         if(fMasternodesAdded) {
             notifyMasternodeUpdates();
@@ -555,7 +550,7 @@ public class MasternodeManager extends AbstractManager {
         // if masternode uses sentinel ping instead of watchdog
         // we shoud update nTimeLastWatchdogVote here if sentinel
         // ping flag is actual
-        if(mn != null && mnp.fSentinelIsCurrent)
+        if(mn != null && mnp.sentinelIsCurrent)
             updateWatchdogVoteTime(mnp.vin.getOutpoint(), mnp.sigTime);
 
         // too late, new MNANNOUNCE is required
@@ -585,21 +580,238 @@ public class MasternodeManager extends AbstractManager {
     {
         lock.lock();
         try {
-            peer.setAskFor.erase(mnv.getHash());
+            peer.setAskFor.remove(mnv.getHash());
 
             if (!context.masternodeSync.isMasternodeListSynced())
                 return;
 
-            if(mnv.vchSig1.empty()) {
+            if(mnv.vchSig1.isEmpty()) {
                 // CASE 1: someone asked me to verify myself /IP we are using/
                 //SendVerifyReply(pfrom, mnv, connman);
-            } else if (mnv.vchSig2.empty()) {
+            } else if (mnv.vchSig2.isEmpty()) {
                 // CASE 2: we _probably_ got verification we requested from some masternode
-                ProcessVerifyReply(pfrom, mnv);
+                processVerifyReply(peer, mnv);
             } else {
                 // CASE 3: we _probably_ got verification broadcast signed by some masternode which verified another one
-                ProcessVerifyBroadcast(pfrom, mnv);
+                processVerifyBroadcast(peer, mnv);
             }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    void processVerifyReply(Peer pnode, MasternodeVerification mnv)
+    {
+        StringBuilder strError = new StringBuilder();
+
+        // did we even ask for it? if that's the case we should have matching fulfilled request
+        if(!context.netFullfilledRequestManager.hasFulfilledRequest(pnode.getAddress(), String.format("%s", NetMsgType::MNVERIFY)+"-request")) {
+            log.info("CMasternodeMan::ProcessVerifyReply -- ERROR: we didn't ask for verification of {}, peer={}\n", pnode.getAddress().toString(), pnode);
+            //Misbehaving(pnode->id, 20);
+            return;
+        }
+
+        // Received nonce for a known address must match the one we sent
+        if(mWeAskedForVerification.get(pnode.getAddress()).nonce != mnv.nonce) {
+            log.info("CMasternodeMan::ProcessVerifyReply -- ERROR: wrong nounce: requested={}, received={}, peer={}",
+                    mWeAskedForVerification.get(pnode.getAddress()).nonce, mnv.nonce, pnode);
+            //Misbehaving(pnode->id, 20);
+            return;
+        }
+
+        // Received nBlockHeight for a known address must match the one we sent
+        if(mWeAskedForVerification.get(pnode.getAddress()).blockHeight != mnv.blockHeight) {
+            log.info("CMasternodeMan::ProcessVerifyReply -- ERROR: wrong nBlockHeight: requested={}, received={}, peer={}",
+                    mWeAskedForVerification.get(pnode.getAddress()).blockHeight, mnv.blockHeight, pnode);
+            //Misbehaving(pnode->id, 20);
+            return;
+        }
+
+        Sha256Hash blockHash = context.hashStore.getBlockHash(mnv.blockHeight);
+        if(blockHash == null) {
+            // this shouldn't happen...
+            log.info("MasternodeMan::ProcessVerifyReply -- can't get block hash for unknown block height {}, peer={}", mnv.blockHeight, pnode);
+            return;
+        }
+
+        // we already verified this address, why node is spamming?
+        if(context.netFullfilledRequestManager.hasFulfilledRequest(pnode.getAddress(), "mnv-done")) {
+            log.info("CMasternodeMan::ProcessVerifyReply -- ERROR: already verified %s recently", pnode.getAddress());
+            //Misbehaving(pnode->id, 20);
+            return;
+        }
+
+        lock.lock();
+        try
+        {
+            Masternode realMasternode = null;
+            ArrayList<Masternode> vpMasternodesToBan = new ArrayList<Masternode>();
+            String strMessage1 = String.format("%s%d%s", pnode.getAddress().toString(), mnv.nonce, blockHash.toString());
+            for (Map.Entry<TransactionOutPoint, Masternode> mnpair : mapMasternodes.entrySet()) {
+            if(mnpair.getValue().address.getAddr() == pnode.getAddress().getAddr() && pnode.getServices() & NODE_NETWORK)) {
+                if(MessageSigner.verifyMessage(mnpair.getValue().pubKeyMasternode, mnv.vchSig1, strMessage1, strError)) {
+                    // found it!
+                    realMasternode = mnpair.getValue();
+                    if(!mnpair.getValue().isPoSeVerified()) {
+                        mnpair.getValue().decreasePoSeBanScore();
+                    }
+                    context.netFullfilledRequestManager.addFulfilledRequest(pnode.getAddress(), "mnv-done");
+
+                    // we can only broadcast it if we are an activated masternode
+                    if(context.activeMasternode.outpoint == new TransactionOutPoint(params, 0, Sha256Hash.ZERO_HASH)) continue;
+                    // update ...
+                    mnv.addr = mnpair.getValue().address;
+                    mnv.vin1 = mnpair.getValue().vin;
+                    mnv.vin2 = new TransactionInput(context.getParams(), null, null, context.activeMasternode.outpoint);
+                    String strMessage2 = String.format("%s%d%s%s%s", mnv.addr.toString(), mnv.nonce, blockHash.toString(),
+                            mnv.vin1.getOutpoint().toStringShort(), mnv.vin2.getOutpoint().toStringShort());
+                    // ... and sign it
+                    if(null == (mnv.vchSig2 = MessageSigner.signMessage(strMessage2, context.activeMasternode.keyMasternode))) {
+                        log.info("MasternodeMan::ProcessVerifyReply -- SignMessage() failed\n");
+                        return;
+                    }
+
+                    if(!MessageSigner.verifyMessage(context.activeMasternode.pubKeyMasternode, mnv.vchSig2, strMessage2, strError)) {
+                        log.info("MasternodeMan::ProcessVerifyReply -- VerifyMessage() failed, error: {}", strError);
+                        return;
+                    }
+
+                    mWeAskedForVerification.put(new NetAddress(pnode.getAddress().getAddr()), mnv);
+                    mapSeenMasternodeVerification.put(mnv.getHash(), mnv);
+                    mnv.relay();
+
+                } else {
+                    vpMasternodesToBan.add(mnpair.getValue());
+                }
+            }
+        }
+            // no real masternode found?...
+            if(realMasternode != null) {
+                // this should never be the case normally,
+                // only if someone is trying to game the system in some way or smth like that
+                log.info("CMasternodeMan::ProcessVerifyReply -- ERROR: no real masternode found for addr {}", pnode.getAddress().toString());
+                //Misbehaving(pnode->id, 20);
+                return;
+            }
+            log.info("CMasternodeMan::ProcessVerifyReply -- verified real masternode {} for addr {}",
+                    realMasternode.vin.getOutpoint().toStringShort(), pnode.getAddress().toString());
+            // increase ban score for everyone else
+            for(Masternode mn : vpMasternodesToBan)
+            {
+                mn.increasePoSeBanScore();
+                log.info("masternode--CMasternodeMan::ProcessVerifyReply -- increased PoSe ban score for %s addr %s, new score %d\n",
+                        realMasternode.vin.getOutpoint().toStringShort(), pnode.getAddress().toString(), mn.nPoSeBanScore);
+            }
+            if(!vpMasternodesToBan.isEmpty())
+                log.info("CMasternodeMan::ProcessVerifyReply -- PoSe score increased for {} fake masternodes, addr {}",
+                        vpMasternodesToBan.size(), pnode.getAddress().toString());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    void processVerifyBroadcast(Peer pnode, MasternodeVerification mnv)
+    {
+        StringBuilder strError = new StringBuilder();
+
+        if(mapSeenMasternodeVerification.containsKey(mnv.getHash())) {
+            // we already have one
+            return;
+        }
+        mapSeenMasternodeVerification.put(mnv.getHash(), mnv);
+
+        // we don't care about history
+        if(mnv.blockHeight < nCachedBlockHeight - MAX_POSE_BLOCKS) {
+            log.info("masternode--CMasternodeMan::ProcessVerifyBroadcast -- Outdated: current block {}, verification block {}, peer={}",
+                    nCachedBlockHeight, mnv.blockHeight, pnode);
+            return;
+        }
+
+        if(mnv.vin1.getOutpoint() == mnv.vin2.getOutpoint()) {
+            log.info("masternode", "CMasternodeMan::ProcessVerifyBroadcast -- ERROR: same vins {}, peer={}",
+                    mnv.vin1.getOutpoint().toStringShort(), pnode);
+            // that was NOT a good idea to cheat and verify itself,
+            // ban the node we received such message from
+            //Misbehaving(pnode->id, 100);
+            return;
+        }
+
+        Sha256Hash blockHash = context.hashStore.getBlockHash(mnv.blockHeight);
+        if(blockHash == null) {
+            // this shouldn't happen...
+            log.info("CMasternodeMan::ProcessVerifyBroadcast -- Can't get block hash for unknown block height {}, peer={}", mnv.blockHeight, pnode);
+            return;
+        }
+
+        int nRank;
+
+        if (-1 == (nRank =getMasternodeRank(mnv.vin2.getOutpoint(), mnv.blockHeight, MIN_POSE_PROTO_VERSION))) {
+            log.info("masternode", "CMasternodeMan::ProcessVerifyBroadcast -- Can't calculate rank for masternode {}",
+                    mnv.vin2.getOutpoint().toStringShort());
+            return;
+        }
+
+        if(nRank > MAX_POSE_RANK) {
+            log.info("masternode--CMasternodeMan::ProcessVerifyBroadcast -- Masternode {}} is not in top {}, current rank {}, peer={}",
+                    mnv.vin2.getOutpoint().toStringShort(), (int)MAX_POSE_RANK, nRank, pnode);
+            return;
+        }
+
+        lock.lock();
+        try {
+
+        String strMessage1 = String.format("%s%d%s", mnv.addr.toString(false), mnv.nonce, blockHash.ToString());
+        String strMessage2 = String.format("%s%d%s%s%s", mnv.addr.toString(false), mnv.nonce, blockHash.ToString(),
+            mnv.vin1.getOutpoint().toStringShort(), mnv.vin2.getOutpoint().toStringShort());
+
+        Masternode mn1 = find(mnv.vin1.getOutpoint());
+        if(mn1 == null) {
+            log.info("CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode1 {}", mnv.vin1.getOutpoint().toStringShort());
+            return;
+        }
+
+        Masternode mn2 = find(mnv.vin2.getOutpoint());
+        if(mn2 == null) {
+            log.info("CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode2 {}", mnv.vin2.getOutpoint().toStringShort());
+            return;
+        }
+
+        if(!mn1.address.equals(mnv.addr)) {
+            log.info("CMasternodeMan::ProcessVerifyBroadcast -- addr {} does not match {}", mnv.addr.toString(), mn1.address.toString());
+            return;
+        }
+
+        if(!MessageSigner.verifyMessage(mn1.pubKeyMasternode, mnv.vchSig1, strMessage1, strError)) {
+            log.info("CMasternodeMan::ProcessVerifyBroadcast -- VerifyMessage() for masternode1 failed, error: {}", strError);
+            return;
+        }
+
+        if(!MessageSigner.verifyMessage(mn2.pubKeyMasternode, mnv.vchSig2, strMessage2, strError)) {
+            log.info("CMasternodeMan::ProcessVerifyBroadcast -- VerifyMessage() for masternode2 failed, error: {}", strError);
+            return;
+        }
+
+        if(!mn1.isPoSeVerified()) {
+            mn1.decreasePoSeBanScore();
+        }
+        mnv.relay();
+
+        log.info("CMasternodeMan::ProcessVerifyBroadcast -- verified masternode %s for addr %s\n",
+                mn1.vin.getOutpoint().toStringShort(), mn1.address.toString());
+
+        // increase ban score for everyone else with the same addr
+        int nCount = 0;
+        for (Map.Entry<TransactionOutPoint, Masternode> mnpair : mapMasternodes.entrySet()) {
+            if(mnpair.getValue().address != mnv.addr || mnpair.getKey() == mnv.vin1.getOutpoint()) continue;
+            mnpair.getValue().increasePoSeBanScore();
+            nCount++;
+            log.info("masternode", "CMasternodeMan::ProcessVerifyBroadcast -- increased PoSe ban score for {} addr {}, new score {}",
+                    mnpair.getKey().toStringShort(), mnpair.getValue().address.toString(), mnpair.getValue().nPoSeBanScore);
+        }
+        if(nCount != 0)
+            log.info("CMasternodeMan::ProcessVerifyBroadcast -- PoSe score increased for {} fake masternodes, addr {}",
+                    nCount, mn1.address.toString());
+       
         } finally {
             lock.unlock();
         }
@@ -637,20 +849,18 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
+    @Deprecated
     Masternode find(Script payee)
     {
-        //LOCK(cs);
         lock.lock();
         try {
             Script payee2;
 
-            //BOOST_FOREACH(CMasternode& mn, mapMasternodes)
-            for (Masternode mn : mapMasternodes) {
-                //payee2 = GetScriptForDestination(mn.pubkey.GetID());
-                payee2 = ScriptBuilder.createOutputScript(mn.pubKeyCollateralAddress.getECKey());
+            for (Map.Entry<TransactionOutPoint, Masternode> mn : mapMasternodes.entrySet()) {
+                payee2 = ScriptBuilder.createOutputScript(mn.getValue().pubKeyCollateralAddress.getECKey());
 
                 if (payee2 == payee)
-                    return mn;
+                    return mn.getValue();
             }
             return null;
         } finally {
@@ -801,22 +1011,6 @@ public class MasternodeManager extends AbstractManager {
         } finally {
             lock.unlock();
         }
-
-        = mWeAskedForMasternodeListEntry.get(outPoint);
-
-        if (i != null)
-        {
-            long t = i;
-            if (Utils.currentTimeSeconds() < t) return; // we've asked recently
-        }
-
-        // ask for the mnb info once from the node that sent mnp
-
-        log.info("CMasternodeMan::AskForMN - Asking node for missing entry, vin: "+ vin.toString());
-        //pnode->PushMessage("dseg", vin);
-        pnode.sendMessage(new DarkSendEntryGetMessage(vin));
-        long askAgain = Utils.currentTimeSeconds() + MasternodePing.MASTERNODE_MIN_MNP_SECONDS;
-        mWeAskedForMasternodeListEntry.put(vin.getOutpoint(), askAgain);
     }
 
     Sha256Hash _getBlockHash(long height)
@@ -880,14 +1074,14 @@ public class MasternodeManager extends AbstractManager {
             Pair<NetAddress, Sha256Hash> p1 = (Pair<NetAddress, Sha256Hash>)t1;
             Pair<NetAddress, Sha256Hash> p2 = (Pair<NetAddress, Sha256Hash>)t2;
 
-            if(p1.getFirst() < p2.getFirst())
+            if(p1.getFirst().getAddr().hashCode() < p2.getFirst().getAddr().hashCode())
                 return -1;
             if(p1.getFirst() == p2.getFirst())
                 return 0;
             else return 1;
         }
     }
-}
+
 
     public int getMasternodeRank(TransactionOutPoint outpoint, int nBlockHeight, int minProtocol)
     {
@@ -904,7 +1098,7 @@ public class MasternodeManager extends AbstractManager {
             return -1;
 
         //make sure we know about this block
-        //uint256 hash = 0;
+        //Sha256Hash hash = 0;
         //if(!GetBlockHash(hash, nBlockHeight)) return -1;
         if(blockChain.getChainHead().getHeight() < nBlockHeight)
             return -2; //Blockheight is above what the store has.
@@ -937,27 +1131,27 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
-    public int getMasternodeRank(ArrayList<Pair<Integer, Masternode>> vecMasternodeScoresRet, int nBlockHeight, int minProtocol)
+    public boolean getMasternodeRanks(ArrayList<Pair<Integer, Masternode>> vecMasternodeScoresRet, int nBlockHeight, int minProtocol)
     {
         //Added to speed things up
         if (context.isLiteMode())
-            return -3; // We don't have a masternode list
+            return false; // We don't have a masternode list
 
         if(!context.masternodeSync.isMasternodeListSynced())
-            return -1;
+            return false;
 
         //make sure we know about this block
-        //uint256 hash = 0;
+        //Sha256Hash hash = 0;
         //if(!GetBlockHash(hash, nBlockHeight)) return -1;
         if(blockChain.getChainHead().getHeight() < nBlockHeight)
-            return -2; //Blockheight is above what the store has.
+            return false; //Blockheight is above what the store has.
 
         //TODO:see if the block is in the blockStore
         Sha256Hash nBlockHash = context.hashStore.getBlockHash(nBlockHeight);
         if(nBlockHash == null)
         {
             log.info("CMasternodeMan::{} -- ERROR: GetBlockHash() failed at nBlockHeight {}\n", "getMasternodeRank", nBlockHeight);
-            return -2;
+            return false;
         }
 
         lock.lock();
@@ -965,7 +1159,7 @@ public class MasternodeManager extends AbstractManager {
 
             ArrayList<Pair<Integer, Masternode>> vecMasternodeScores = new ArrayList<Pair<Integer, Masternode>>(mapMasternodes.size());
             if (!getMasternodeScores(nBlockHash, vecMasternodeScores, minProtocol))
-                return -1;
+                return false;
 
             int rank = 0;
             for (Pair<Integer, Masternode> scorePair : vecMasternodeScores) {
@@ -973,13 +1167,11 @@ public class MasternodeManager extends AbstractManager {
                 vecMasternodeScoresRet.add(new Pair<Integer, Masternode>(rank, scorePair.getSecond()));
 
             }
-            return -1;
         } finally {
             lock.unlock();
         }
+        return true;
     }
-
-
 
     void check()
     {
@@ -992,61 +1184,12 @@ public class MasternodeManager extends AbstractManager {
         lock.unlock();
     }
 
-    public ArrayList<Pair<Integer, Masternode>> getMasternodeRanks(int nBlockHeight, int minProtocol)
-    {
-
-            //std::vector<pair<int64_t, CMasternode> > vecMasternodeScores;
-            ArrayList<Pair<Long, Masternode>> vecMasternodeScores = new ArrayList<Pair<Long, Masternode>>();
-            //std::vector<pair<int, CMasternode> > vecMasternodeRanks;
-            ArrayList<Pair<Integer, Masternode>> vecMasternodeRanks = new ArrayList<Pair<Integer, Masternode>>();
-            //make sure we know about this block
-            //uint256 hash = uint256();
-            //if(!GetBlockHash(hash, nBlockHeight)) return vecMasternodeRanks;
-            Sha256Hash hash = context.hashStore.getBlockHash(nBlockHeight);
-            if (hash == null)
-                return vecMasternodeRanks;
-        lock.lock();
-        try {
-            // scan for winner
-            for (Masternode mn : mapMasternodes) {
-
-                mn.check();
-
-                if (mn.protocolVersion < minProtocol) continue;
-                if (!mn.isEnabled()) {
-                    continue;
-                }
-
-                Sha256Hash n = mn.calculateScore(1, nBlockHeight);
-                //long n2 = UintToArith256(n).GetCompact(false);
-                long n2 = Utils.encodeCompactBits(n.toBigInteger(), false);
-
-                vecMasternodeScores.add(new Pair(n2, mn));
-            }
-        } finally {
-            lock.unlock();
-        }
-
-        //sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareScoreMN());
-        Collections.sort(vecMasternodeScores, Collections.reverseOrder(new CompareScoreMn()));
-        //Arrays.sort(vecMasternodeScores.toArray(), new CompareScoreMn());
-        int rank = 0;
-        //BOOST_FOREACH (PAIRTYPE(int64_t, CMasternode)& s, vecMasternodeScores){
-        for(Pair<Long, Masternode> s: vecMasternodeScores) {
-            rank++;
-            vecMasternodeRanks.add(new Pair(rank, s.getSecond()));
-        }
-
-        return vecMasternodeRanks;
-    }
 
     public void checkAndRemove() {
     {
         if(!context.masternodeSync.isMasternodeListSynced())
             return;
-        log.info("CMasternodeMan::CheckAndRemove\n");
-
-
+        log.info("CMasternodeMan::CheckAndRemove");
 
         lock.lock();
         try {
@@ -1119,9 +1262,9 @@ public class MasternodeManager extends AbstractManager {
                             // majority of nodes we asked agrees that this mn doesn't require new mnb, reprocess one of new mnbs
                             log.info("masternode--CMasternodeMan::CheckAndRemove -- reprocessing mnb, masternode={}", MnbReplies.getValue().get(0).vin.getOutpoint().toStringShort());
                             // mapSeenMasternodeBroadcast.erase(itMnbReplies->first);
-                            int nDos;
+                            Dos dos = new Dos();
                             MnbReplies.getValue().get(0).fRecovery = true;
-                            checkMnbAndUpdateMasternodeList(null, MnbReplies.getValue().get(0));
+                            checkMnbAndUpdateMasternodeList(null, MnbReplies.getValue().get(0), dos);
                         }
                         log.info("masternode--CMasternodeMan::CheckAndRemove -- removing mnb recovery reply, masternode={}, size={}", MnbReplies.getValue().get(0).vin.getOutpoint().toStringShort(), (int) MnbReplies.getValue().size());
                         itMnbReplies.remove();
@@ -1209,6 +1352,7 @@ public class MasternodeManager extends AbstractManager {
         finally {
             lock.unlock();
         }
+
         if(fMasternodesRemoved)
         {
             notifyMasternodeUpdates();
@@ -1310,6 +1454,7 @@ public class MasternodeManager extends AbstractManager {
             }
         }
     }
+
     public int getEstimatedMasternodes(int nBlock)
     {
     /*
@@ -1332,6 +1477,7 @@ public class MasternodeManager extends AbstractManager {
         }
         return (int)(Utils.getTotalCoinEstimate(nBlock)/100*nPercentage/nCollateral);
     }
+
 
     MasternodeInfo getMasternodeInfo(TransactionOutPoint outpoint)
     {
@@ -1368,8 +1514,7 @@ public class MasternodeManager extends AbstractManager {
         try {
 
             for(Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()) {
-                //Script scriptCollateralAddress = new ScriptBuilder().entry.getValue().pubKeyCollateralAddress
-                Script scriptCollateralAddress = GetScriptForDestination(mnpair.second.pubKeyCollateralAddress.GetID());
+                Script scriptCollateralAddress = ScriptBuilder.createOutputScript(new Address(params, entry.getValue().pubKeyCollateralAddress.getId()));
                 if (scriptCollateralAddress == payee) {
                     return entry.getValue().getInfo();
                 }
@@ -1398,6 +1543,7 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
+
     public Masternode find(TransactionOutPoint outPoint)
     {
         lock.lock();
@@ -1419,6 +1565,7 @@ public class MasternodeManager extends AbstractManager {
             lock.unlock();
         }
     }
+
 
     //
 // Deterministically select the oldest/best masternode to pay on the network
@@ -1477,9 +1624,9 @@ public class MasternodeManager extends AbstractManager {
         // Sort them low to high
         sort(vecMasternodeLastPaid.begin(), vecMasternodeLastPaid.end(), CompareLastPaidBlock());
 
-        uint256 blockHash;
+        Sha256Hash blockHash;
         if(!GetBlockHash(blockHash, nBlockHeight - 101)) {
-            LogPrintf("CMasternode::GetNextMasternodeInQueueForPayment -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", nBlockHeight - 101);
+            log.info("CMasternode::GetNextMasternodeInQueueForPayment -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", nBlockHeight - 101);
             return false;
         }
         // Look at 1/10 of the oldest nodes (by last payment), calculate their scores and pay the best one
@@ -1488,10 +1635,10 @@ public class MasternodeManager extends AbstractManager {
         //  -- (chance per block * chances before IsScheduled will fire)
         int nTenthNetwork = nMnCount/10;
         int nCountTenth = 0;
-        arith_uint256 nHighest = 0;
+        arith_Sha256Hash nHighest = 0;
         CMasternode *pBestMasternode = NULL;
         BOOST_FOREACH (PAIRTYPE(int, CMasternode*)& s, vecMasternodeLastPaid){
-        arith_uint256 nScore = s.second->CalculateScore(blockHash);
+        arith_Sha256Hash nScore = s.second->CalculateScore(blockHash);
         if(nScore > nHighest){
             nHighest = nScore;
             pBestMasternode = s.second;
@@ -1583,6 +1730,17 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
+    class CompareConnections<T> implements Comparator<T>
+    {
+        @Override
+        public int compare(T o1, T o2) {
+            Pair<NetAddress, Sha256Hash> a = (Pair<NetAddress, Sha256Hash>)o1;
+            Pair<NetAddress, Sha256Hash> b = (Pair<NetAddress, Sha256Hash>)o2;
+            return a.getFirst().getAddr().hashCode() - b.getFirst().getAddr().hashCode();
+        }
+
+    }
+
     Pair<NetAddress, HashSet<Sha256Hash>> popScheduledMnbRequestConnection()
     {
         lock.lock();
@@ -1596,7 +1754,7 @@ public class MasternodeManager extends AbstractManager {
 
             HashSet<Sha256Hash> setResult = new HashSet<Sha256Hash>();
 
-            Collections.sort(listScheduledMnbRequestConnections, new CompareConnections());
+            Collections.sort(listScheduledMnbRequestConnections, new CompareConnections<Pair<NetAddress, Sha256Hash>>());
             Pair<NetAddress, Sha256Hash> pairFront = listScheduledMnbRequestConnections.get(0);
 
             // squash hashes from requests with the same CService as the first one into setResult
@@ -1618,5 +1776,254 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
+    /**
+     * Called to notify CGovernanceManager that the masternode index has been updated.
+     * Must be called while not holding the CMasternodeMan::cs mutex
+     */
+    void notifyMasternodeUpdates() {
+        // Avoid double locking
+        boolean fMasternodesAddedLocal = false;
+        boolean fMasternodesRemovedLocal = false;
+
+        lock.lock();
+        try {
+            fMasternodesAddedLocal = fMasternodesAdded;
+            fMasternodesRemovedLocal = fMasternodesRemoved;
+        } finally {
+            lock.unlock();
+        }
+
+        if (fMasternodesAddedLocal) {
+            //context.governance.checkMasternodeOrphanObjects(connman);
+            //context.governance.checkMasternodeOrphanVotes(connman);
+        }
+        if (fMasternodesRemovedLocal) {
+            //context.governance.UpdateCachesAndClean();
+        }
+
+        lock.lock();
+        try {
+            fMasternodesAdded = false;
+            fMasternodesRemoved = false;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    static boolean IsFirstRun = true;
+    void updateLastPaid(StoredBlock pindex)
+    {
+        lock.lock();
+        try {
+
+            if (context.isLiteMode() || !context.masternodeSync.isWinnersListSynced() || mapMasternodes.isEmpty())
+                return;
+
+            // Do full scan on first run or if we are not a masternode
+            // (MNs should update this info on every block, so limited scan should be enough for them)
+            int nMaxBlocksToScanBack = (IsFirstRun || !DarkCoinSystem.fMasterNode) ? context.masternodePayments.getStorageLimit() : LAST_PAID_SCAN_BLOCKS;
+
+            // LogPrint("mnpayments", "CMasternodeMan::UpdateLastPaid -- nHeight=%d, nMaxBlocksToScanBack=%d, IsFirstRun=%s\n",
+            //                         nCachedBlockHeight, nMaxBlocksToScanBack, IsFirstRun ? "true" : "false");
+
+            for (Map.Entry<TransactionOutPoint, Masternode> mnpair:mapMasternodes.entrySet()){
+                mnpair.getValue().updateLastPaid(pindex, nMaxBlocksToScanBack);
+            }
+
+            IsFirstRun = false;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    void updateWatchdogVoteTime(final TransactionOutPoint outpoint, long nVoteTime)
+    {
+        lock.lock();
+        try {
+            Masternode mn = find(outpoint);
+            if(mn == null) {
+                return;
+            }
+            mn.updateWatchdogVoteTime(nVoteTime);
+            nLastWatchdogVoteTime = Utils.currentTimeSeconds();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    boolean isWatchdogActive()
+    {
+        lock.lock();
+        try {
+            // Check if any masternodes have voted recently, otherwise return false
+            return Utils.currentTimeSeconds() - nLastWatchdogVoteTime <= MASTERNODE_WATCHDOG_MAX_SECONDS;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    boolean addGovernanceVote(final TransactionOutPoint outpoint, Sha256Hash nGovernanceObjectHash) {
+        lock.lock();
+        try {
+            Masternode  mn = find(outpoint);
+            if (mn == null) {
+                return false;
+            }
+            mn.addGovernanceVote(nGovernanceObjectHash);
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    void removeGovernanceObject(Sha256Hash nGovernanceObjectHash)
+    {
+        lock.lock();
+        try {
+            for(Map.Entry<TransactionOutPoint, Masternode> mnpair : mapMasternodes.entrySet()) {
+                mnpair.getValue().removeGovernanceObject(nGovernanceObjectHash);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    void checkMasternode(PublicKey pubKeyMasternode, boolean fForce)
+    {
+        lock.lock();
+        try {
+            for (Map.Entry<TransactionOutPoint, Masternode> mnpair : mapMasternodes.entrySet()) {
+                if (mnpair.getValue().info.pubKeyMasternode == pubKeyMasternode) {
+                    mnpair.getValue().check(fForce);
+                    return;
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    boolean isMasternodePingedWithin(final TransactionOutPoint outpoint, int nSeconds, long nTimeToCheckAt)
+    {
+        lock.lock();
+        try {
+            Masternode mn = find(outpoint);
+            return mn != null ? mn.isPingedWithin(nSeconds, nTimeToCheckAt) : false;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    void setMasternodeLastPing(final TransactionOutPoint outpoint, final MasternodePing mnp)
+    {
+        lock.lock();
+        try {
+            Masternode mn = find(outpoint);
+            if(mn == null) {
+                return;
+            }
+            mn.lastPing = mnp;
+            // if masternode uses sentinel ping instead of watchdog
+            // we shoud update nTimeLastWatchdogVote here if sentinel
+            // ping flag is actual
+            if(mnp.sentinelIsCurrent) {
+                updateWatchdogVoteTime(mnp.vin.getOutpoint(), mnp.sigTime);
+            }
+            mapSeenMasternodePing.put(mnp.getHash(), mnp);
+
+            MasternodeBroadcast mnb = new MasternodeBroadcast(mn);
+            Sha256Hash hash = mnb.getHash();
+            if(mapSeenMasternodeBroadcast.containsKey(hash)) {
+                mapSeenMasternodeBroadcast.get(hash).getSecond().lastPing = mnp;
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    void updatedBlockTip(StoredBlock block)
+    {
+        nCachedBlockHeight = block.getHeight();
+        log.info("masternode--CMasternodeMan::UpdatedBlockTip -- nCachedBlockHeight={}", nCachedBlockHeight);
+
+        checkSameAddr();
+
+        if(DarkCoinSystem.fMasterNode) {
+            // normal wallet does not need to update this every block, doing update on rpc call should be enough
+            updateLastPaid(block);
+        }
+    }
+
+    class CompareByAddr<T> implements Comparator<T>
+    {
+        public int compare(T o1, T o2)
+        {
+            Masternode m1 = (Masternode)o1;
+            Masternode m2 = (Masternode)o2;
+            if(m1.info.address.equals(m2.info.address))
+                return 0;
+            return -1;
+
+        }
+    }
+
+    // This function tries to find masternodes with the same addr,
+    // find a verified one and ban all the other. If there are many nodes
+    // with the same addr but none of them is verified yet, then none of them are banned.
+    // It could take many times to run this before most of the duplicate nodes are banned.
+    void checkSameAddr() {
+        if (!context.masternodeSync.isSynced() || mapMasternodes.isEmpty()) return;
+
+        ArrayList<Masternode> vBan = new ArrayList<Masternode>();
+        ArrayList<Masternode> vSortedByAddr = new ArrayList<Masternode>();
+
+        lock.lock();
+        try {
+
+            Masternode pprevMasternode = null;
+            Masternode pverifiedMasternode = null;
+
+            for (Map.Entry<TransactionOutPoint, Masternode> mnpair : mapMasternodes.entrySet()) {
+                vSortedByAddr.add(mnpair.getValue());
+            }
+
+            Collections.sort(vSortedByAddr, new CompareByAddr());
+            //sort(vSortedByAddr.begin(), vSortedByAddr.end(), CompareByAddr());
+
+            for (Masternode mn : vSortedByAddr) {
+                // check only (pre)enabled masternodes
+                if (mn.isEnabled() && mn.isPreEnabled()) continue;
+                // initial step
+                if (pprevMasternode == null) {
+                    pprevMasternode = mn;
+                    pverifiedMasternode = mn.isPoSeVerified() ? mn : null;
+                    continue;
+                }
+                // second+ step
+                if (mn.address == pprevMasternode.address) {
+                    if (pverifiedMasternode != null) {
+                        // another masternode with the same ip is verified, ban this one
+                        vBan.add(mn);
+                    } else if (mn.isPoSeVerified()) {
+                        // this masternode with the same ip is verified, ban previous one
+                        vBan.add(pprevMasternode);
+                        // and keep a reference to be able to ban following masternodes with the same ip
+                        pverifiedMasternode = mn;
+                    }
+                } else {
+                    pverifiedMasternode = mn.isPoSeVerified() ? mn : null;
+                }
+                pprevMasternode = mn;
+            }
+        } finally {
+            lock.unlock();
+        }
+
+        // ban duplicates
+        for (Masternode mn : vBan) {
+            log.info("CMasternodeMan::CheckSameAddr -- increasing PoSe ban score for masternode {}", mn.vin.getOutpoint().toStringShort());
+            mn.increasePoSeBanScore();
+        }
+    }
 
 }

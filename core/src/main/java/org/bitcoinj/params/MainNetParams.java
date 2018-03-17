@@ -158,6 +158,9 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         DIP0001Window = MAINNET_MAJORITY_DIP0001_WINDOW;
         DIP0001Upgrade = MAINNET_MAJORITY_DIP0001_THRESHOLD;
         DIP0001BlockHeight = 782208;
+
+        fulfilledRequestExpireTime = 60*60;
+        masternodeMinimumConfirmations = 15;
     }
 
     private static MainNetParams instance;

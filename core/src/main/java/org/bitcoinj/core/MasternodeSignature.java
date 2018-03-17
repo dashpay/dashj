@@ -94,4 +94,8 @@ public class MasternodeSignature extends ChildMessage {
         return copy;
     }
 
+    public boolean isEmpty() {
+        return bytes.length == 0;
+    }
+
 }

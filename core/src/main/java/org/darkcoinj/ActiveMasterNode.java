@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Created by Eric on 3/7/2015.
  */
+@Deprecated
 public class ActiveMasterNode {
     private static final Logger log = LoggerFactory.getLogger(ActiveMasterNode.class);
     // Initialized by init.cpp

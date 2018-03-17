@@ -9,6 +9,7 @@ import java.util.ArrayList;
 /**
  * Created by Hash Engineering on 2/8/2015.
  */
+@Deprecated
 public class DarkCoinSystem {
     public InstantSend instantx;
     public MasterNodeSystem masternode;

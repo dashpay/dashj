@@ -56,6 +56,10 @@ public class MasternodeVerification extends Message implements Serializable{
         this.nonce = nonce;
         this.blockHeight = blockHeight;
     }
+    MasternodeVerification(NetworkParameters params, byte [] payload)
+    {
+        super(params, payload, 0);
+    }
 
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;

@@ -69,6 +69,8 @@ public class Context {
     public InstantSend instantSend;
     public HashStore hashStore;
     public MasternodeDB masternodeDB;
+    public NetFullfilledRequestManager netFullfilledRequestManager;
+    public static boolean fMasterNode = false;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -217,6 +219,8 @@ public class Context {
         instantSend = new InstantSend(this);
         masternodeManager = new MasternodeManager(this);
         initializedDash = true;
+
+        netFullfilledRequestManager = new NetFullfilledRequestManager(this);
     }
 
     public void closeDash() {
@@ -339,9 +343,10 @@ public class Context {
         if(initializedDash) {
             instantSend.updatedChainHead(chainHead);
 
-        /*
-        mnodeman.UpdatedBlockTip(pindex);
-        darkSendPool.UpdatedBlockTip(pindex);
+
+        masternodeManager.updatedBlockTip(chainHead);
+
+        /*darkSendPool.UpdatedBlockTip(pindex);
         instantsend.UpdatedBlockTip(pindex);
         mnpayments.UpdatedBlockTip(pindex);
         governance.UpdatedBlockTip(pindex);

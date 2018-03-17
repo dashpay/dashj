@@ -123,6 +123,11 @@ public abstract class NetworkParameters {
     String strMasternodePaymentsPubKey;
     String strDarksendPoolDummyAddress;
     long nStartMasternodePayments;
+    protected long fulfilledRequestExpireTime;
+    protected long masternodeMinimumConfirmations;
+
+    public long getFulfilledRequestExpireTime() { return fulfilledRequestExpireTime; }
+    public long getMasternodeMinimumConfirmations() { return masternodeMinimumConfirmations; }
 
 
 

@@ -8,4 +8,6 @@ public class Dos {
     public Dos() {
         this.value = 0;
     }
+
+    public void set(int value) { this.value = value; }
 }

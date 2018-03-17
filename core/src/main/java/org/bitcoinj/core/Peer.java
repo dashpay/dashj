@@ -2091,7 +2091,9 @@ public class Peer extends PeerSocketHandler {
         vDownloadTxDependencyDepth = depth;
     }
 
+    //
     //Dash Specific Code
+    //
     public void notifyLock(Transaction tx)
     {
         for(Wallet wallet : wallets)
@@ -2137,4 +2139,7 @@ public class Peer extends PeerSocketHandler {
     int masternodeListCount = -1;
     public int getMasternodeListCount() { return masternodeListCount; }
     public void setMasternodeListCount(int count) { masternodeListCount = count; }
+
+    public HashSet<Sha256Hash> setAskFor;
+
 }
