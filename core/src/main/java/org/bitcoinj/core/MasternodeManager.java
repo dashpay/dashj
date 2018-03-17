@@ -430,56 +430,58 @@ public class MasternodeManager extends AbstractManager {
                 if(GetTime() - mapSeenMasternodeBroadcast[hash].first > MASTERNODE_NEW_START_REQUIRED_SECONDS - MASTERNODE_MIN_MNP_SECONDS * 2) {
                     log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s seen update\n", mnb.vin.prevout.ToStringShort());
                     mapSeenMasternodeBroadcast[hash].first = GetTime();
-                    masternodeSync.BumpAssetLastTime("CMasternodeMan::CheckMnbAndUpdateMasternodeList - seen");
+                    context.masternodeSync.BumpAssetLastTime("CMasternodeMan::CheckMnbAndUpdateMasternodeList - seen");
                 }
                 // did we ask this node for it?
-                if(pfrom && IsMnbRecoveryRequested(hash) && GetTime() < mMnbRecoveryRequests[hash].first) {
-                    log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb=%s seen request\n", hash.ToString());
-                    if(mMnbRecoveryRequests[hash].second.count(pfrom->addr)) {
-                        log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb=%s seen request, addr=%s\n", hash.ToString(), pfrom->addr.ToString());
+                if(pfrom && isMnbRecoveryRequested(hash) && Utils.currentTimeSeconds() < mMnbRecoveryRequests.get(hash).getFirst()) {
+                    log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request", hash);
+                    if(mMnbRecoveryRequests.get(hash).getSecond().contains(pfrom.getAddress())) {
+                        log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request, addr={}", hash, pfrom.getAddress());
                         // do not allow node to send same mnb multiple times in recovery mode
-                        mMnbRecoveryRequests[hash].second.erase(pfrom->addr);
+                        mMnbRecoveryRequests.get(hash).getSecond().remove(pfrom.getAddress());
                         // does it have newer lastPing?
-                        if(mnb.lastPing.sigTime > mapSeenMasternodeBroadcast[hash].second.lastPing.sigTime) {
+                        if(mnb.lastPing.sigTime > mapSeenMasternodeBroadcast.get(hash).getSecond().lastPing.sigTime) {
                             // simulate Check
-                            CMasternode mnTemp = CMasternode(mnb);
-                            mnTemp.Check();
-                            log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb=%s seen request, addr=%s, better lastPing: %d min ago, projected mn state: %s\n", hash.ToString(), pfrom->addr.ToString(), (GetAdjustedTime() - mnb.lastPing.sigTime)/60, mnTemp.GetStateString());
-                            if(mnTemp.IsValidStateForAutoStart(mnTemp.nActiveState)) {
+                            Masternode mnTemp = new Masternode(mnb);
+                            mnTemp.check();
+                            log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request, addr={}, better lastPing: %d min ago, projected mn state: %s\n", hash.ToString(), pfrom.getAddress().toString(), (Utils.currentTimeSeconds() - mnb.lastPing.sigTime)/60, mnTemp.getStateString());
+                            if(mnTemp.isValidStateForAutoStart(mnTemp.info.activeState)) {
                                 // this node thinks it's a good one
-                                log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s seen good\n", mnb.vin.prevout.ToStringShort());
-                                mMnbRecoveryGoodReplies[hash].push_back(mnb);
+                                log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} seen good", mnb.info.vin.getOutpoint().toStringShort());
+                                mMnbRecoveryGoodReplies.get(hash).add(mnb);
                             }
                         }
                     }
                 }
                 return true;
             }
-            mapSeenMasternodeBroadcast.insert(std::make_pair(hash, std::make_pair(GetTime(), mnb)));
+            mapSeenMasternodeBroadcast.put(hash, new Pair(Utils.currentTimeSeconds(), mnb));
 
-            log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s new\n", mnb.vin.prevout.ToStringShort());
+            log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} new\n", mnb.info.vin.getOutpoint().toStringShort());
 
-            if(!mnb.SimpleCheck(nDos)) {
-                log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- SimpleCheck() failed, masternode=%s\n", mnb.vin.prevout.ToStringShort());
+            if(!mnb.simpleCheck(nDos)) {
+                log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- SimpleCheck() failed, masternode=%s\n", mnb.info.vin.getOutpoint().toStringShort());
                 return false;
             }
 
             // search Masternode list
-            CMasternode* pmn = Find(mnb.vin.prevout);
-            if(pmn) {
-                CMasternodeBroadcast mnbOld = mapSeenMasternodeBroadcast[CMasternodeBroadcast(*pmn).GetHash()].second;
-                if(!mnb.Update(pmn, nDos, connman)) {
-                    log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Update() failed, masternode=%s\n", mnb.vin.prevout.ToStringShort());
+            Masternode mn = find(mnb.info.vin.getOutpoint());
+            if(mn != null) {
+                MasternodeBroadcast mnbOld = mapSeenMasternodeBroadcast.get(new MasternodeBroadcast(mn).getHash()).getSecond();
+                if(!mnb.update(mn, nDos)) {
+                    log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Update() failed, masternode={}", mnb.info.vin.getOutpoint().toStringShort());
                     return false;
                 }
-                if(hash != mnbOld.GetHash()) {
-                    mapSeenMasternodeBroadcast.erase(mnbOld.GetHash());
+                if(hash != mnbOld.getHash()) {
+                    mapSeenMasternodeBroadcast.remove(mnbOld.getHash());
                 }
                 return true;
             }
-        }
+        } finally {
+                lock.unlock();
 
-        if(mnb.CheckOutpoint(nDos)) {
+        }
+           if(mnb.CheckOutpoint(nDos)) {
             Add(mnb);
             masternodeSync.BumpAssetLastTime("CMasternodeMan::CheckMnbAndUpdateMasternodeList - new");
             // if it matches our Masternode privkey...

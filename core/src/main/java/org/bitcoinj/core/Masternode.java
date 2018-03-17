@@ -13,7 +13,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.core.CoinDefinition.PROTOCOL_VERSION;
 import static org.bitcoinj.core.MasterNodeSystem.MASTERNODE_REMOVAL_SECONDS;
-import static org.bitcoinj.core.MasternodeInfo.State.MASTERNODE_POSE_BAN;
+import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_UTXO_NOT_FOUND;
+import static org.bitcoinj.core.MasternodeInfo.State.*;
 
 /**
  * Created by Eric on 2/8/2015.
@@ -164,20 +165,20 @@ public class Masternode extends Message{
         //vin
         cursor += 36;
 
-        long scriptLen = vin.getScriptBytes().length;
+        long scriptLen = info.vin.getScriptBytes().length;
         // 4 = length of sequence field (unint32)
         cursor += scriptLen + 4 + VarInt.sizeOf(scriptLen);
 
         //MasternodeAddress address;
         cursor += MasternodeAddress.MESSAGE_SIZE;
         //PublicKey pubkey;
-        cursor += pubKeyCollateralAddress.calculateMessageSizeInBytes();
+        cursor += info.pubKeyCollateralAddress.calculateMessageSizeInBytes();
 
         //PublicKey pubKeyMasternode;
-        cursor += pubKeyMasternode.calculateMessageSizeInBytes();
+        cursor += info.pubKeyMasternode.calculateMessageSizeInBytes();
 
         // byte [] sig;
-        cursor += sig.calculateMessageSizeInBytes(); //calcLength(buf, cursor);
+        cursor += vchSig.calculateMessageSizeInBytes(); //calcLength(buf, cursor);
 
 
         //long sigTime; //mnb message time
@@ -391,24 +392,24 @@ public class Masternode extends Message{
             if (!forceCheck && (Utils.currentTimeSeconds() - lastTimeChecked < MASTERNODE_CHECK_SECONDS)) return;
             lastTimeChecked = Utils.currentTimeSeconds();
 
-            LogPrint("masternode--CMasternode::Check -- Masternode %s is in %s state\n", vin.prevout.ToStringShort(), GetStateString());
+            log.info("masternode--CMasternode::Check -- Masternode {} is in {} state\n", vin.prevout.ToStringShort(), GetStateString());
 
             //once spent, stop doing the checks
             if(isOutpointSpent()) return;
 
             int nHeight = 0;
             if(!fUnitTest) {
-                TRY_LOCK(cs_main, lockMain);
-                if(!lockMain) return;
+                //TRY_LOCK(cs_main, lockMain);
+                //if(!lockMain) return;
 
                 CollateralStatus err = CheckCollateral(vin.prevout);
                 if (err == COLLATERAL_UTXO_NOT_FOUND) {
-                    nActiveState = MASTERNODE_OUTPOINT_SPENT;
-                    LogPrint("masternode", "CMasternode::Check -- Failed to find Masternode UTXO, masternode=%s\n", vin.prevout.ToStringShort());
+                    info.activeState = MASTERNODE_OUTPOINT_SPENT;
+                    log.info("masternode", "CMasternode::Check -- Failed to find Masternode UTXO, masternode=%s\n", vin.prevout.ToStringShort());
                     return;
                 }
 
-                nHeight = chainActive.Height();
+                nHeight = context.blockChain.getBestChainHeight();
             }
 
             if(isPoSeBanned()) {
@@ -417,38 +418,38 @@ public class Masternode extends Message{
                 // Masternode still will be on the edge and can be banned back easily if it keeps ignoring mnverify
                 // or connect attempts. Will require few mnverify messages to strengthen its position in mn list.
                 LogPrintf("CMasternode::Check -- Masternode %s is unbanned and back in list now\n", vin.prevout.ToStringShort());
-                DecreasePoSeBanScore();
+                decreasePoSeBanScore();
             } else if(nPoSeBanScore >= MASTERNODE_POSE_BAN_MAX_SCORE) {
-                nActiveState = MASTERNODE_POSE_BAN;
+                info.activeState = MASTERNODE_POSE_BAN;
                 // ban for the whole payment cycle
-                nPoSeBanHeight = nHeight + mnodeman.size();
+                nPoSeBanHeight = nHeight + context.masternodeManager.size();
                 LogPrintf("CMasternode::Check -- Masternode %s is banned till block %d now\n", vin.prevout.ToStringShort(), nPoSeBanHeight);
                 return;
             }
 
             MasternodeInfo.State nActiveStatePrev = info.activeState;
-            boolean fOurMasternode = DarkCoinSystem.fMasterNode && activeMasternode.pubKeyMasternode == pubKeyMasternode;
+            boolean fOurMasternode = DarkCoinSystem.fMasterNode && context.activeMasternode.pubKeyMasternode == pubKeyMasternode;
 
             // masternode doesn't meet payment protocol requirements ...
-            boolean fRequireUpdate = info.nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto() ||
+            boolean fRequireUpdate = info.nProtocolVersion < context.masternodePayments.GetMinMasternodePaymentsProto() ||
                     // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
-                    (fOurMasternode && nProtocolVersion < PROTOCOL_VERSION);
+                    (fOurMasternode && info.nProtocolVersion < PROTOCOL_VERSION);
 
             if(fRequireUpdate) {
-                nActiveState = MASTERNODE_UPDATE_REQUIRED;
-                if(nActiveStatePrev != nActiveState) {
-                    LogPrint("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
+                info.activeState = MASTERNODE_UPDATE_REQUIRED;
+                if(nActiveStatePrev != info.activeState) {
+                    log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
                 }
                 return;
             }
 
             // keep old masternodes on start, give them a chance to receive updates...
-            bool fWaitForPing = !masternodeSync.IsMasternodeListSynced() && !IsPingedWithin(MASTERNODE_MIN_MNP_SECONDS);
+            boolean fWaitForPing = !context.masternodeSync.isMasternodeListSynced() && !IsPingedWithin(MASTERNODE_MIN_MNP_SECONDS);
 
             if(fWaitForPing && !fOurMasternode) {
                 // ...but if it was already expired before the initial check - return right away
-                if(IsExpired() || IsWatchdogExpired() || IsNewStartRequired()) {
-                    LogPrint("masternode", "CMasternode::Check -- Masternode %s is in %s state, waiting for ping\n", vin.prevout.ToStringShort(), GetStateString());
+                if(isExpired() || isWatchdogExpired() || isNewStartRequired()) {
+                    log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state, waiting for ping\n", vin.prevout.ToStringShort(), GetStateString());
                     return;
                 }
             }
@@ -456,48 +457,48 @@ public class Masternode extends Message{
             // don't expire if we are still in "waiting for ping" mode unless it's our own masternode
             if(!fWaitForPing || fOurMasternode) {
 
-                if(!IsPingedWithin(MASTERNODE_NEW_START_REQUIRED_SECONDS)) {
-                    nActiveState = MASTERNODE_NEW_START_REQUIRED;
-                    if(nActiveStatePrev != nActiveState) {
-                        LogPrint("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
+                if(!isPingedWithin(MASTERNODE_NEW_START_REQUIRED_SECONDS)) {
+                    info.activeState = MASTERNODE_NEW_START_REQUIRED;
+                    if(nActiveStatePrev != info.activeState) {
+                        log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
                     }
                     return;
                 }
 
-                bool fWatchdogActive = masternodeSync.IsSynced() && mnodeman.IsWatchdogActive();
-                bool fWatchdogExpired = (fWatchdogActive && ((GetAdjustedTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
+                boolean fWatchdogActive = context.masternodeSync.isSynced() && context.masternodeManager.isWatchdogActive();
+                boolean fWatchdogExpired = (fWatchdogActive && ((Utils.currentTimeSeconds() - info.nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
 
-                LogPrint("masternode", "CMasternode::Check -- outpoint=%s, nTimeLastWatchdogVote=%d, GetAdjustedTime()=%d, fWatchdogExpired=%d\n",
-                        vin.prevout.ToStringShort(), nTimeLastWatchdogVote, GetAdjustedTime(), fWatchdogExpired);
+                log.info("masternode", "CMasternode::Check -- outpoint=%s, nTimeLastWatchdogVote=%d, GetAdjustedTime()=%d, fWatchdogExpired=%d\n",
+                        info.vin.getOutpoint().toStringShort(), info.nTimeLastWatchdogVote, Utils.currentTimeSeconds(), fWatchdogExpired);
 
                 if(fWatchdogExpired) {
-                    nActiveState = MASTERNODE_WATCHDOG_EXPIRED;
-                    if(nActiveStatePrev != nActiveState) {
-                        LogPrint("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
+                    info.activeState = MASTERNODE_WATCHDOG_EXPIRED;
+                    if(nActiveStatePrev != info.activeState) {
+                        log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
                     }
                     return;
                 }
 
-                if(!IsPingedWithin(MASTERNODE_EXPIRATION_SECONDS)) {
-                    nActiveState = MASTERNODE_EXPIRED;
-                    if(nActiveStatePrev != nActiveState) {
-                        LogPrint("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
+                if(!isPingedWithin(MASTERNODE_EXPIRATION_SECONDS)) {
+                    info.activeState = MASTERNODE_EXPIRED;
+                    if(nActiveStatePrev != info.activeState) {
+                        log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
                     }
                     return;
                 }
             }
 
-            if(lastPing.sigTime - sigTime < MASTERNODE_MIN_MNP_SECONDS) {
-                nActiveState = MASTERNODE_PRE_ENABLED;
-                if(nActiveStatePrev != nActiveState) {
-                    LogPrint("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
+            if(lastPing.sigTime - info.sigTime < MASTERNODE_MIN_MNP_SECONDS) {
+                info.activeState = MASTERNODE_PRE_ENABLED;
+                if(nActiveStatePrev != info.activeState) {
+                    log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
                 }
                 return;
             }
 
-            nActiveState = MASTERNODE_ENABLED; // OK
-            if(nActiveStatePrev != nActiveState) {
-                LogPrint("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
+            info.activeState = MASTERNODE_ENABLED; // OK
+            if(nActiveStatePrev != info.activeState) {
+                log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
             }
 
         } finally {
@@ -520,23 +521,23 @@ public class Masternode extends Message{
         public boolean isEnabled()
         {
             /*return enabled == 1;*/
-            return activeState == State.MASTERNODE_ENABLED;
+            return info.activeState == MasternodeInfo.State.MASTERNODE_ENABLED;
         }
     public boolean isPreEnabled()
     {
-        return activeState == State.MASTERNODE_PRE_ENABLED;
+        return info.activeState == MasternodeInfo.State.MASTERNODE_PRE_ENABLED;
     }
-    public boolean isPoSeBanned() { return activeState == State.MASTERNODE_POSE_BAN; }
+    public boolean isPoSeBanned() { return info.activeState == MasternodeInfo.State.MASTERNODE_POSE_BAN; }
     // NOTE: this one relies on nPoSeBanScore, not on nActiveState as everything else here
     public boolean isPoSeVerified() { return nPoSeBanScore <= -MASTERNODE_POSE_BAN_MAX_SCORE; }
-    public boolean isExpired() { return activeState == State.MASTERNODE_EXPIRED; }
-    public boolean isOutpointSpent() { return activeState == State.MASTERNODE_OUTPOINT_SPENT; }
-    public boolean isUpdateRequired() { return activeState == State.MASTERNODE_UPDATE_REQUIRED; }
-    public boolean isWatchdogExpired() { return activeState == State.MASTERNODE_WATCHDOG_EXPIRED; }
-    public boolean isNewStartRequired() { return activeState == State.MASTERNODE_NEW_START_REQUIRED; }
+    public boolean isExpired() { return info.activeState == MasternodeInfo.State.MASTERNODE_EXPIRED; }
+    public boolean isOutpointSpent() { return info.activeState == MasternodeInfo.State.MASTERNODE_OUTPOINT_SPENT; }
+    public boolean isUpdateRequired() { return info.activeState == MasternodeInfo.State.MASTERNODE_UPDATE_REQUIRED; }
+    public boolean isWatchdogExpired() { return info.activeState == MasternodeInfo.State.MASTERNODE_WATCHDOG_EXPIRED; }
+    public boolean isNewStartRequired() { return info.activeState == MasternodeInfo.State.MASTERNODE_NEW_START_REQUIRED; }
 
 
-    String stateToString(State nStateIn)
+    String stateToString(MasternodeInfo.State nStateIn)
     {
         switch(nStateIn) {
             case MASTERNODE_PRE_ENABLED:            return "PRE_ENABLED";
@@ -553,7 +554,7 @@ public class Masternode extends Message{
 
     String getStateString()
     {
-        return stateToString(activeState);
+        return stateToString(info.activeState);
     }
 
     String getStatus()
@@ -585,7 +586,7 @@ public class Masternode extends Message{
 //
     boolean updateFromNewBroadcast(MasternodeBroadcast mnb)
     {
-        if(mnb.sigTime > sigTime) {
+        if(mnb.info.sigTime > info.sigTime) {
             pubKeyMasternode = mnb.pubKeyMasternode;
             sigTime = mnb.sigTime;
             sig = mnb.sig;
@@ -602,34 +603,10 @@ public class Masternode extends Message{
         return false;
     }
 
-        /*
-        int GetMasternodeInputAge()
-        {
-            if(chainActive.Tip() == NULL) return 0;
-
-            if(cacheInputAge == 0){
-                cacheInputAge = GetInputAge(vin);
-                cacheInputAgeBlock = chainActive.Tip()->nHeight;
-            }
-
-            return cacheInputAge+(chainActive.Tip()->nHeight-cacheInputAgeBlock);
-        }
-        */
-
     public MasternodeInfo getInfo()
     {
-        MasternodeInfo info = new MasternodeInfo();
-        info.vin = vin;
-        info.addr = address;
-        info.pubKeyCollateralAddress = pubKeyCollateralAddress;
-        info.pubKeyMasternode = pubKeyMasternode;
-        info.sigTime = sigTime;
-        info.nLastDsq = nLastDsq;
-        info.nTimeLastChecked = nTimeLastChecked;
-        info.nTimeLastPaid = nTimeLastPaid;
-        info.nTimeLastWatchdogVote = nTimeLastWatchdogVote;
-        info.nActiveState = activeState;
-        info.nProtocolVersion = protocolVersion;
+        MasternodeInfo info = new MasternodeInfo(this.info);
+        info.nTimeLastPing = lastPing.sigTime;
         info.fInfoValid = true;
         return info;
     }
