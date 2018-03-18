@@ -65,8 +65,6 @@ public class InstantSend {
     {
         this.blockChain = blockChain;
     }
-    DarkCoinSystem system;
-    MasterNodeSystem masterNodes;
     Context context;
 
     //static InstantSend instantXSystem;
@@ -75,14 +73,6 @@ public class InstantSend {
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
-
-    /*public static InstantSend get(AbstractBlockChain blockChain)
-    {
-        if(instantXSystem == null)
-            instantXSystem = new InstantSend(blockChain);
-
-        return instantXSystem;
-    }*/
 
     public InstantSend(Context context)
     {
@@ -98,24 +88,7 @@ public class InstantSend {
         mapTxLockCandidates = new HashMap<Sha256Hash, TransactionLockCandidate>();
         mapTxLockVotesOrphan = new HashMap<Sha256Hash, TransactionLockVote>();
         mapVotedOutpoints = new HashMap<TransactionOutPoint, Set<Sha256Hash>>();
-
-        masterNodes = MasterNodeSystem.get();
-
-
     }
-
-    /*public InstantSend(DarkCoinSystem system)
-    {
-        this.system = system;
-        blockChain = system.blockChain;
-        //mapTxLocks = new Map<Sha256Hash, TransactionLock>();
-
-    }*/
-
-    /*public void processMessageInstantX(Peer from, Message m)
-    {
-
-    }*/
 
     //check if we need to vote on this transaction
     public void doConsensusVote(TransactionLockRequest tx, long blockHeight)

@@ -111,10 +111,10 @@ public class NetFullfilledRequestManager extends AbstractManager {
             //mapFulfilledRequests[addr][strRequest] = Utils.currentTimeSeconds() + context.getParams().fulfilledRequestExpireTime();
             if (mapFulfilledRequests.containsKey(addr)) {
                 HashMap<String, Long> entry = mapFulfilledRequests.get(addr);
-                entry.put(strRequest, Utils.currentTimeSeconds() + context.getParams().fulfilledRequestExpireTime());
+                entry.put(strRequest, Utils.currentTimeSeconds() + context.getParams().getFulfilledRequestExpireTime());
             } else {
                 HashMap<String, Long> entry = new HashMap<String, Long>();
-                entry.put(strRequest, Utils.currentTimeSeconds() + context.getParams().fulfilledRequestExpireTime());
+                entry.put(strRequest, Utils.currentTimeSeconds() + context.getParams().getFulfilledRequestExpireTime());
                 mapFulfilledRequests.put(addr, entry);
             }
         } finally {

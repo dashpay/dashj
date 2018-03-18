@@ -203,7 +203,7 @@ public class DarkSendPool {
                         // check if we should activate or ping every few minutes,
                         // start right after sync is considered to be done
                         if (tick % Masternode.MASTERNODE_MIN_MNP_SECONDS == 15)
-                            context.activeMasternode.manageStatus();
+                            context.activeMasternode.manageState();
 
                         if (tick % 60 == 0) {
                             context.masternodeManager.processMasternodeConnections();

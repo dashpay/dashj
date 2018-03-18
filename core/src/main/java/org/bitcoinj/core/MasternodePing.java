@@ -16,6 +16,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.net.Dos;
 import org.bitcoinj.store.BlockStoreException;
 import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
@@ -28,6 +29,7 @@ import java.io.Serializable;
 
 import static com.hashengineering.crypto.X11.x11Digest;
 import static org.bitcoinj.core.Masternode.MASTERNODE_EXPIRATION_SECONDS;
+import static org.bitcoinj.core.Masternode.MASTERNODE_NEW_START_REQUIRED_SECONDS;
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 
 public class MasternodePing extends Message implements Serializable {
@@ -162,9 +164,11 @@ public class MasternodePing extends Message implements Serializable {
         Utils.uint32ToByteStreamLE(sentinelVersion, stream);
     }
 
-    boolean checkAndUpdate(Masternode mn, boolean fromNewBroadcast)
+    boolean isExpired() { return Utils.currentTimeSeconds() - sigTime > MASTERNODE_NEW_START_REQUIRED_SECONDS; }
+
+    boolean checkAndUpdate(Masternode mn, boolean fromNewBroadcast, Dos nDos)
     {
-        if(!simpleCheck())
+        if(!simpleCheck(nDos))
         {
             return false;
         }
@@ -180,10 +184,6 @@ public class MasternodePing extends Message implements Serializable {
                 log.info("masternode--CMasternodePing::CheckAndUpdate -- masternode is completely expired, new start is required, masternode={}", vin.getOutpoint().toStringShort());
                 return false;
             }
-
-            Masternode pmn = context.masternodeManager.find(vin);
-            if(pmn != null) return checkSignature(pmn.pubKeyMasternode);
-            return true;
         }
 
         try {
@@ -197,12 +197,6 @@ public class MasternodePing extends Message implements Serializable {
                     return false;
                 }
             }
-            else
-            {
-                if (DarkCoinSystem.fDebug)
-                    log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is unknown", vin.toString(), blockHash.toString());
-            }
-
         } catch (BlockStoreException x) {
             return false;
         }
@@ -215,7 +209,7 @@ public class MasternodePing extends Message implements Serializable {
             log.info("masternode--CMasternodePing::CheckAndUpdate -- Masternode ping arrived too early, masternode"+ vin.getOutpoint().toStringShort());
             return false;
         }
-        if(!checkSignature(mn.pubKeyMasternode))
+        if(!checkSignature(mn.info.pubKeyMasternode))
             return false;
         // so, ping seems to be ok
 
@@ -223,7 +217,7 @@ public class MasternodePing extends Message implements Serializable {
         // (NOTE: assuming that MASTERNODE_EXPIRATION_SECONDS/2 should be enough to finish mn list sync)
         if(!context.masternodeSync.isMasternodeListSynced() && !mn.isPingedWithin(MASTERNODE_EXPIRATION_SECONDS/2)) {
             // let's bump sync timeout
-            log.info("masternode", "CMasternodePing::CheckAndUpdate -- bumping sync timeout, masternode=%s\n", vin.getOutpoint().toStringShort());
+            log.info("masternode--CMasternodePing::CheckAndUpdate -- bumping sync timeout, masternode=%s\n", vin.getOutpoint().toStringShort());
             context.masternodeSync.BumpAssetLastTime("CMasternodePing::CheckAndUpdate");
         }
 
@@ -235,7 +229,7 @@ public class MasternodePing extends Message implements Serializable {
         MasternodeBroadcast mnb = new MasternodeBroadcast(mn);
         Sha256Hash hash = mnb.getHash();
         if (context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
-            context.masternodeManager.mapSeenMasternodeBroadcast.get(hash).lastPing = this;
+            context.masternodeManager.mapSeenMasternodeBroadcast.get(hash).getSecond().lastPing = this;
         }
 
         // force update, ignoring cache
@@ -249,15 +243,6 @@ public class MasternodePing extends Message implements Serializable {
         return true;
     }
 
-    /*boolean checkAndUpdate()
-    {
-        return checkAndUpdate(true, false);
-    }
-    boolean checkAndUpdate(boolean fRequireEnabled)
-    {
-        return checkAndUpdate(fRequireEnabled, false);
-    }
-*/
     boolean sign(ECKey keyMasternode, PublicKey publicKeyMasternode)
     {
         sigTime = Utils.currentTimeSeconds();
@@ -290,9 +275,11 @@ public class MasternodePing extends Message implements Serializable {
         return true;
     }
 
-    public boolean simpleCheck() {
+    public boolean simpleCheck(Dos nDos) {
+        nDos.set(0);
         if (sigTime > Utils.currentTimeSeconds() + 60 * 60) {
             log.info("CMasternodePing::SimpleCheck -- Signature rejected, too far into the future, masternode="+ vin.getOutpoint().toStringShort());
+            nDos.set(1);
             return false;
         }
 

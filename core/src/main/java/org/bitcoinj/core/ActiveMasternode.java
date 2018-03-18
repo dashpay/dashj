@@ -71,7 +71,7 @@ public class ActiveMasternode {
         pingerEnabled = false;
     }
 
-    void manageState()
+    public void manageState()
     {
         log.info("masternode", "CActiveMasternode::ManageState -- Start\n");
         if(!DarkCoinSystem.fMasterNode) {
@@ -187,7 +187,7 @@ public class ActiveMasternode {
 
     void manageStateInitial()
     {
-        log.info("masternode", "CActiveMasternode::ManageStateInitial -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), pingerEnabled);
+        log.info("masternode--CActiveMasternode::ManageStateInitial -- status = {}, type = {}, pinger enabled = {}", getStatus(), getTypeString(), pingerEnabled);
 
         // Check that our local network configuration is correct
         /*if (!fListen) {
@@ -271,22 +271,22 @@ public class ActiveMasternode {
                 log.info("CActiveMasternode::ManageStateRemote -- {}: {}", getStateString(), notCapableReason);
                 return;
             }
-            if(service != infoMn.addr) {
+            if(service != infoMn.address) {
                 state = ACTIVE_MASTERNODE_NOT_CAPABLE;
                 notCapableReason = "Broadcasted IP doesn't match our external address. Make sure you issued a new broadcast if IP of this masternode changed recently.";
                 log.info("CActiveMasternode::ManageStateRemote -- {}: {}", getStateString(), notCapableReason);
                 return;
             }
-            if(!Masternode.isValidStateForAutoStart(infoMn.nActiveState)) {
+            if(!Masternode.isValidStateForAutoStart(infoMn.activeState)) {
                 state = ACTIVE_MASTERNODE_NOT_CAPABLE;
-                notCapableReason = String.format("Masternode in %s state", Masternode.stateToString(infoMn.nActiveState));
+                notCapableReason = String.format("Masternode in %s state", Masternode.stateToString(infoMn.activeState));
                 log.info("CActiveMasternode::ManageStateRemote -- {}: {}", getStateString(), notCapableReason);
                 return;
             }
             if(state != ACTIVE_MASTERNODE_STARTED) {
                 log.info("CActiveMasternode::ManageStateRemote -- STARTED!");
                 outpoint = infoMn.vin.getOutpoint();
-                service = infoMn.addr;
+                service = infoMn.address;
                 pingerEnabled = true;
                 state = ACTIVE_MASTERNODE_STARTED;
             }

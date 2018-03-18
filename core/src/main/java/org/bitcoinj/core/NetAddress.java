@@ -66,6 +66,11 @@ public class NetAddress extends ChildMessage {
         length = MESSAGE_SIZE;
     }
 
+    public NetAddress(NetworkParameters params)
+    {
+        super(params);
+    }
+
     public static NetAddress localhost(NetworkParameters params) {
         return new NetAddress(InetAddresses.forString("127.0.0.1"));
     }
