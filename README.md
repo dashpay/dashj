@@ -53,16 +53,6 @@ The dashjbls library must still be built with `mvn`.
 
 These are found in the `examples` module.
 
-#### Forwarding service
+### Where next?
 
-This will download the block chain and eventually print a Dash address that it has generated.
-
-If you send coins to that address, it will forward them on to the address you specified.
-
-```
-  cd examples
-  mvn exec:java -Dexec.mainClass=org.dashj.examples.ForwardingService -Dexec.args="<insert a dash address here>"
-```
-
-Note that this example app *does not use checkpointing*, so the initial chain sync will be pretty slow. You can make an app that starts up and does the initial sync much faster by including a checkpoints file; see the documentation for
-more info on this technique.
+Now you are ready to [follow the tutorial](https://bitcoinj.github.io/getting-started).  Though this is for bitcoinj, there is no equivalent site for dashj.
