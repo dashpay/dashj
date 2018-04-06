@@ -173,6 +173,11 @@ public class MasternodePing extends Message implements Serializable {
             return false;
         }
 
+        if (mn == null) {
+            log.info("masternode--CMasternodePing::CheckAndUpdate -- Couldn't find Masternode entry, masternode={}", vin.getOutpoint().toStringShort());
+            return false;
+        }
+
         if(!fromNewBroadcast) {
             if(mn.isUpdateRequired())
             {
@@ -198,6 +203,7 @@ public class MasternodePing extends Message implements Serializable {
                 }
             }
         } catch (BlockStoreException x) {
+            log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is too old", vin.toString(), blockHash.toString());
             return false;
         }
 

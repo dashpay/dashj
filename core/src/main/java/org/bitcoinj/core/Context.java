@@ -15,6 +15,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.core.listeners.BlockChainListener;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.bitcoinj.store.MasternodeDB;
@@ -264,7 +265,7 @@ public class Context {
         this.peerGroup = peerGroup;
         this.blockChain = chain;
         hashStore = new HashStore(chain.getBlockStore());
-        chain.addListener(updateHeadListener);
+        chain.addNewBestBlockListener(newBestBlockListener);
         if(initializedDash) {
             sporkManager.setBlockChain(chain);
             masternodeManager.setBlockChain(chain);
@@ -293,10 +294,19 @@ public class Context {
     }
 
 
+    NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
+        @Override
+        public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+            boolean fInitialDownload = blockChain.getChainHead().getHeader().getTimeSeconds() < (Utils.currentTimeSeconds() - 6 * 60 * 60); // ~144 blocks behind -> 2 x fork detection time, was 24 * 60 * 60 in bitcoin
+
+            masternodeSync.updateBlockTip(block, fInitialDownload);
+        }
+    };
+
     BlockChainListener updateHeadListener = new BlockChainListener () {
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException
         {
-            masternodeSync.updateBlockTip(block, false);
+
         }
 
         public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks,

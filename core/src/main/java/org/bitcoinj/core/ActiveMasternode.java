@@ -73,9 +73,9 @@ public class ActiveMasternode {
 
     public void manageState()
     {
-        log.info("masternode", "CActiveMasternode::ManageState -- Start\n");
+        log.info("masternode--CActiveMasternode::ManageState -- Start");
         if(!DarkCoinSystem.fMasterNode) {
-            log.info("masternode", "CActiveMasternode::ManageState -- Not a masternode, returning\n");
+            log.info("masternode--CActiveMasternode::ManageState -- Not a masternode, returning");
             return;
         }
 
@@ -143,7 +143,7 @@ public class ActiveMasternode {
     boolean sendMasternodePing()
     {
         if(!pingerEnabled) {
-            log.info("masternode", "CActiveMasternode::SendMasternodePing -- {}: masternode ping service is disabled, skipping...", getStateString());
+            log.info("masternode--CActiveMasternode::SendMasternodePing -- {}: masternode ping service is disabled, skipping...", getStateString());
             return false;
         }
 

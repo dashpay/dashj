@@ -2140,6 +2140,6 @@ public class Peer extends PeerSocketHandler {
     public int getMasternodeListCount() { return masternodeListCount; }
     public void setMasternodeListCount(int count) { masternodeListCount = count; }
 
-    public HashSet<Sha256Hash> setAskFor;
+    public HashSet<Sha256Hash> setAskFor = new HashSet<Sha256Hash>();
 
 }

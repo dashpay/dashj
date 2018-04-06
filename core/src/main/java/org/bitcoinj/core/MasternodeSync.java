@@ -420,8 +420,8 @@ public class MasternodeSync {
                     log.info("masternode--CMasternodeSync::ProcessTick -- nTick " + tick +
                             "nRequestedMasternodeAssets " + RequestedMasternodeAssets +
                             " nTimeLastBumped " + nTimeLastBumped +
-                            " GetTime() %lld" + Utils.currentTimeSeconds() +
-                            " diff %lld\n" + (Utils.currentTimeSeconds() - nTimeLastBumped));
+                            " GetTime() " + Utils.currentTimeSeconds() +
+                            " diff " + (Utils.currentTimeSeconds() - nTimeLastBumped));
 
                     if (Utils.currentTimeSeconds() - nTimeLastBumped > MASTERNODE_SYNC_TIMEOUT_SECONDS) {
                         log.info("CMasternodeSync::ProcessTick -- nTick "+tick+" nRequestedMasternodeAssets "+RequestedMasternodeAssets+" -- timeout");
@@ -651,7 +651,8 @@ public class MasternodeSync {
     static boolean fReachedBestHeader = false;
     void updateBlockTip(StoredBlock pindexNew, boolean fInitialDownload)
     {
-        log.info("mnsync--CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight:  "+pindexNew.getHeight()+" fInitialDownload="+fInitialDownload);
+        if(!fInitialDownload || pindexNew.getHeight() % 100 == 0)
+            log.info("mnsync--CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight:  "+pindexNew.getHeight()+" fInitialDownload="+fInitialDownload);
 
         if (isFailed() || isSynced() /*|| !pindexBestHeader*/)
             return;
@@ -687,7 +688,7 @@ public class MasternodeSync {
 
         fReachedBestHeader = fReachedBestHeaderNew;
 
-        log.info("mnsync", "CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight: "+pindexNew.getHeight()+" pindexBestHeader->nHeight: "+pindexBestHeader.getHeight()+" fInitialDownload="+fInitialDownload+" fReachedBestHeader="+
+        log.info("mnsync--CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight: "+pindexNew.getHeight()+" pindexBestHeader->nHeight: "+pindexBestHeader.getHeight()+" fInitialDownload="+fInitialDownload+" fReachedBestHeader="+
                 fReachedBestHeader);
 
         if (!isBlockchainSynced() && fReachedBestHeader) {

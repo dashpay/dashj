@@ -65,6 +65,7 @@ public class MasternodeBroadcast extends Masternode {
     @Override
     protected void parse() throws ProtocolException {
 
+        info = new MasternodeInfo();
         info.vin = new TransactionInput(params, null, payload, cursor);
         cursor += info.vin.getMessageSize();
 
@@ -142,7 +143,7 @@ public class MasternodeBroadcast extends Masternode {
 
         // make sure signature isn't in the future (past is OK)
         if (info.sigTime > Utils.currentTimeSeconds() + 60 * 60) {
-            log.info("CMasternodeBroadcast::SimpleCheck -- Signature rejected, too far into the future: masternode=%s\n", info.vin.getOutpoint().toStringShort());
+            log.info("CMasternodeBroadcast::SimpleCheck -- Signature rejected, too far into the future: masternode={}", info.vin.getOutpoint().toStringShort());
             nDos.set(1);
             return false;
         }
@@ -154,7 +155,7 @@ public class MasternodeBroadcast extends Masternode {
         }
 
         if(info.nProtocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
-            log.info("CMasternodeBroadcast::SimpleCheck -- ignoring outdated Masternode: masternode=%s  nProtocolVersion=%d\n", info.vin.getOutpoint().toStringShort(), info.nProtocolVersion);
+            log.info("CMasternodeBroadcast::SimpleCheck -- ignoring outdated Masternode: masternode={}  nProtocolVersion={}", info.vin.getOutpoint().toStringShort(), info.nProtocolVersion);
             return false;
         }
 
@@ -162,7 +163,7 @@ public class MasternodeBroadcast extends Masternode {
         pubkeyScript = ScriptBuilder.createOutputScript(new Address(params, info.pubKeyCollateralAddress.getId()));
 
         if(pubkeyScript.getProgram().length != 25) {
-            log.info("CMasternodeBroadcast::SimpleCheck -- pubKeyCollateralAddress has the wrong size\n");
+            log.info("CMasternodeBroadcast::SimpleCheck -- pubKeyCollateralAddress has the wrong size");
             nDos.set(100);
             return false;
         }
@@ -171,13 +172,13 @@ public class MasternodeBroadcast extends Masternode {
         pubkeyScript2 = ScriptBuilder.createOutputScript(new Address(params, info.pubKeyMasternode.getId()));
 
         if(pubkeyScript2.getProgram().length != 25) {
-            log.info("CMasternodeBroadcast::SimpleCheck -- pubKeyMasternode has the wrong size\n");
+            log.info("CMasternodeBroadcast::SimpleCheck -- pubKeyMasternode has the wrong size");
             nDos.set(100);
             return false;
         }
 
         if(info.vin.getScriptSig().getChunks().size() > 0) {
-            log.info("CMasternodeBroadcast::SimpleCheck -- Ignore Not Empty ScriptSig %s\n", info.vin.toStringCpp());
+            log.info("CMasternodeBroadcast::SimpleCheck -- Ignore Not Empty ScriptSig {}", info.vin.toStringCpp());
             nDos.set(100);
             return false;
         }
@@ -251,7 +252,7 @@ public class MasternodeBroadcast extends Masternode {
         }
 
         if (!checkSignature(nDos)) {
-            log.info("CMasternodeBroadcast::CheckOutpoint -- CheckSignature() failed, masternode=%s\n", info.vin.getOutpoint().toStringShort());
+            log.info("CMasternodeBroadcast::CheckOutpoint -- CheckSignature() failed, masternode={}", info.vin.getOutpoint().toStringShort());
             return false;
         }
 
@@ -332,16 +333,16 @@ public class MasternodeBroadcast extends Masternode {
         info.sigTime = Utils.currentTimeSeconds();
 
         strMessage = info.address.toString() + info.sigTime +
-                Utils.HEX.encode(info.pubKeyCollateralAddress.getId()) + Utils.HEX.encode(info.pubKeyMasternode.getId()) +
+                Utils.HEX.encode(Utils.reverseBytes(info.pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(info.pubKeyMasternode.getId())) +
                 info.nProtocolVersion;
 
         if(null == (vchSig = MessageSigner.signMessage(strMessage, keyCollateralAddress))) {
-            log.info("CMasternodeBroadcast::Sign -- SignMessage() failed\n");
+            log.info("CMasternodeBroadcast::Sign -- SignMessage() failed");
             return false;
         }
 
         if(!MessageSigner.verifyMessage(info.pubKeyCollateralAddress, vchSig, strMessage, strError)) {
-            log.info("CMasternodeBroadcast::Sign -- VerifyMessage() failed, error: %s\n", strError);
+            log.info("CMasternodeBroadcast::Sign -- VerifyMessage() failed, error: {}", strError);
             return false;
         }
 
@@ -355,7 +356,7 @@ public class MasternodeBroadcast extends Masternode {
         nDos.set(0);
 
         strMessage = info.address.toString() +info.sigTime +
-                Utils.HEX.encode(info.pubKeyCollateralAddress.getId()) + Utils.HEX.encode(info.pubKeyMasternode.getId()) +
+                Utils.HEX.encode(Utils.reverseBytes(info.pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(info.pubKeyMasternode.getId())) +
                 info.nProtocolVersion;
 
         log.info("masternode--CMasternodeBroadcast::CheckSignature -- strMessage: {}  pubKeyCollateralAddress address: {}  sig: {}",
