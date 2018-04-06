@@ -37,6 +37,7 @@ public class BlockImporter {
             params = TestNet3Params.get();
         else
             params = MainNetParams.get();
+        new Context(params);
         
         BlockStore store;
         if (args[1].equals("H2")) {
