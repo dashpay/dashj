@@ -5359,6 +5359,16 @@ public class Wallet extends BaseTaggableObject
     }
     //endregion
 
+    public boolean hasKeyChain(ImmutableList<ChildNumber> path)
+    {
+        boolean hasPath = false;
+        for(DeterministicKeyChain chain : keyChainGroup.getDeterministicKeyChains())
+        {
+            if(chain.getAccountPath().equals(path))
+                hasPath = true;
+        }
+        return hasPath;
+    }
     /**
      * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
      */
@@ -5366,13 +5376,8 @@ public class Wallet extends BaseTaggableObject
     {
         try {
             keyChainGroupLock.lock();
-            boolean hasPath = false;
-            for(DeterministicKeyChain chain : keyChainGroup.getDeterministicKeyChains())
-            {
-                if(chain.getAccountPath().equals(path))
-                    hasPath = true;
-            }
-            if(!hasPath)
+
+            if(!hasKeyChain(path))
                 keyChainGroup.addAndActivateHDChain(new DeterministicKeyChain(getKeyChainSeed(), path));
         }
         finally {
