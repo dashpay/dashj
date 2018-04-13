@@ -93,7 +93,6 @@ public class DefaultCoinSelector implements CoinSelector {
         TransactionConfidence confidence = tx.getConfidence();
         TransactionConfidence.ConfidenceType type = confidence.getConfidenceType();
         return type.equals(TransactionConfidence.ConfidenceType.BUILDING) ||
-                //type.equals(TransactionConfidence.ConfidenceType.INSTANTX_LOCKED) || //TODO:InstantX
                type.equals(TransactionConfidence.ConfidenceType.PENDING) &&
                confidence.getSource().equals(TransactionConfidence.Source.SELF) &&
                // In regtest mode we expect to have only one peer, so we won't see transactions propagate.
