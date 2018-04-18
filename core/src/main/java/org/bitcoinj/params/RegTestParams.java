@@ -1,5 +1,6 @@
 /*
  * Copyright 2013 Google Inc.
+ * Copyright 2018 Andreas Schildbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +18,56 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.Block;
+import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.quorums.LLMQParameters;
 
 import java.math.BigInteger;
 import java.util.HashMap;
 
+import static com.google.common.base.Preconditions.checkState;
+
 /**
  * Network parameters for the regression test mode of bitcoind in which all blocks are trivially solvable.
  */
-public class RegTestParams extends TestNet2Params {
+public class RegTestParams extends AbstractBitcoinNetParams {
     private static final BigInteger MAX_TARGET = new BigInteger("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
 
     public RegTestParams() {
         super();
-        // Difficulty adjustments are disabled for regtest. 
-        // By setting the block interval for difficulty adjustments to Integer.MAX_VALUE we make sure difficulty never changes.    
+        packetMagic = 0xfabfb5daL;
+        addressHeader = CoinDefinition.testnetAddressHeader;
+        p2shHeader = CoinDefinition.testnetp2shHeader;
+        targetTimespan = TARGET_TIMESPAN;
+        dumpedPrivateKeyHeader = 128 + CoinDefinition.testnetAddressHeader;
+        genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime);
+        genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget);
+        genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce);
+        spendableCoinbaseDepth = 100;
+        String genesisHash = genesisBlock.getHashAsString();
+        checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash));
+        dnsSeeds = null;
+        addrSeeds = null;
+        bip32HeaderPub = 0x043587CF;
+        bip32HeaderPriv = 0x04358394;
+
+        // Difficulty adjustments are disabled for regtest.
+        // By setting the block interval for difficulty adjustments to Integer.MAX_VALUE we make sure difficulty never
+        // changes.
         interval = Integer.MAX_VALUE;
         maxTarget = MAX_TARGET;
         subsidyDecreaseBlockCount = 150;
         port = 18444;
         id = ID_REGTEST;
 
-        majorityEnforceBlockUpgrade = MainNetParams.MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
-        majorityRejectBlockOutdated = MainNetParams.MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
+        majorityEnforceBlockUpgrade = TestNet3Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
+        majorityRejectBlockOutdated = TestNet3Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MainNetParams.MAINNET_MAJORITY_WINDOW;
+
+        DIP0001BlockHeight = 15000;
+        strSporkAddress = "yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55";
+        budgetPaymentsStartBlock = 4100;
+        budgetPaymentsCycleBlocks = 50;
+        budgetPaymentsWindowBlocks = 10;
 
         fulfilledRequestExpireTime = 5*60;
         masternodeMinimumConfirmations = 1;
