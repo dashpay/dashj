@@ -17,14 +17,13 @@
 
 package org.bitcoinj.params;
 
-import org.bitcoinj.core.*;
-
 import static org.bitcoinj.core.Utils.HEX;
 
 import java.math.BigInteger;
 import java.util.Date;
 import java.util.HashMap;
 
+import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -39,6 +38,10 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
 
     public static final int TESTNET_MAJORITY_DIP0001_WINDOW = 4032;
     public static final int TESTNET_MAJORITY_DIP0001_THRESHOLD = 3226;
+
+    public static final int TESTNET_MAJORITY_WINDOW = 100;
+    public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 75;
+    public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 51;
 
     public TestNet3Params() {
         super();
@@ -119,12 +122,9 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         budgetPaymentsCycleBlocks = 50;
         budgetPaymentsWindowBlocks = 10;
 
-     //   bip32HeaderPub = 0x043587CF;
-     //   bip32HeaderPriv = 0x04358394;
-
-        majorityEnforceBlockUpgrade = TestNet2Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
-        majorityRejectBlockOutdated = TestNet2Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
-        majorityWindow = TestNet2Params.TESTNET_MAJORITY_WINDOW;
+        majorityEnforceBlockUpgrade = TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
+        majorityRejectBlockOutdated = TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
+        majorityWindow = TESTNET_MAJORITY_WINDOW;
 
         DIP0001Window = TESTNET_MAJORITY_DIP0001_WINDOW;
         DIP0001Upgrade = TESTNET_MAJORITY_DIP0001_THRESHOLD;

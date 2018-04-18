@@ -18,7 +18,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.TestNet2Params;
+import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
@@ -59,12 +59,12 @@ public class BlockChainTest {
     private final StoredBlock[] block = new StoredBlock[1];
     private Transaction coinbaseTransaction;
 
-    private static class TweakableTestNet2Params extends TestNet2Params {
+    private static class TweakableTestNet3Params extends TestNet3Params {
         public void setMaxTarget(BigInteger limit) {
             maxTarget = limit;
         }
     }
-    private static final TweakableTestNet2Params TESTNET = new TweakableTestNet2Params();
+    private static final TweakableTestNet3Params TESTNET = new TweakableTestNet3Params();
     private static final NetworkParameters UNITTEST = UnitTestParams.get();
     private static final NetworkParameters MAINNET = MainNetParams.get();
 
