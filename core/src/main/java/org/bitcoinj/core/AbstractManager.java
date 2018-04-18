@@ -47,7 +47,7 @@ public abstract class AbstractManager extends Message {
 
         //if (parseRetain || !parsed)
         //    return;
-        this.payload = null;
+        //this.payload = null;
         parse();
     }
 

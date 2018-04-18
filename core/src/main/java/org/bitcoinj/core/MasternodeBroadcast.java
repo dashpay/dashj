@@ -247,7 +247,8 @@ public class MasternodeBroadcast extends Masternode {
     {
         // we are a masternode with the same vin (i.e. already activated) and this mnb is ours (matches our Masternode privkey)
         // so nothing to do here for us
-        if(context.fMasterNode && info.vin.getOutpoint() == context.activeMasternode.outpoint && info.pubKeyMasternode == context.activeMasternode.pubKeyMasternode) {
+        if(context.fMasterNode && info.vin.getOutpoint() == context.activeMasternode.outpoint &&
+                info.pubKeyMasternode == context.activeMasternode.pubKeyMasternode) {
             return false;
         }
 

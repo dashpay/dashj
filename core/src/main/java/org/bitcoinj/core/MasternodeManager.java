@@ -924,15 +924,11 @@ public class MasternodeManager extends AbstractManager {
         try {
             lock.lock();
 
-
-            //vector<CMasternode>::iterator it = mapMasternodes.begin();
             Iterator<Map.Entry<TransactionOutPoint, Masternode>> it = mapMasternodes.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<TransactionOutPoint, Masternode> entry = it.next();
                 if (entry.getValue().info.vin.equals(vin)){
                     log.info("masternode - CMasternodeMan: Removing Masternode %s "+entry.getValue().info.address.toString()+"- "+(size()-1)+" now");
-
-                    //mapMasternodes.remove(mn);
                     it.remove();
                     queueOnSyncStatusChanged();
                     break;

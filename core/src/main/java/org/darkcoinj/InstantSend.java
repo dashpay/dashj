@@ -15,7 +15,7 @@ import static org.bitcoinj.core.SporkManager.SPORK_2_INSTANTSEND_ENABLED;
 import static org.bitcoinj.core.SporkManager.SPORK_3_INSTANTSEND_BLOCK_FILTERING;
 
 /**
- * Created by Eric on 2/8/2015.
+ * Created by HashEngineering on 2/8/2015.
  */
 public class InstantSend {
     private static final Logger log = LoggerFactory.getLogger(InstantSend.class);

@@ -457,7 +457,7 @@ public class Peer extends PeerSocketHandler {
     static long count = 1;
     @Override
     protected void processMessage(Message m) throws Exception {
-        if(startTime == 0)
+        /*if(startTime == 0)
             startTime = Utils.currentTimeMillis();
         else
         {
@@ -469,7 +469,7 @@ public class Peer extends PeerSocketHandler {
                 log.info("[bandwidth] " + (dataReceived / 1024 / 1024) + " MiB in " +(current-startTime)/1000 + " s:" + (dataReceived / 1024)/(current-startTime)*1000 + " KB/s");
             }
             count++;
-        }
+        }*/
 
 
         // Allow event listeners to filter the message stream. Listeners are allowed to drop messages by
