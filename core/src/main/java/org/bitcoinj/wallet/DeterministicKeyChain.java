@@ -105,7 +105,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     private DeterministicHierarchy hierarchy;
     @Nullable private DeterministicKey rootKey;
     @Nullable private DeterministicSeed seed;
-    @Nullable private ImmutableList<ChildNumber> accountPath;
+    @Nullable private final ImmutableList<ChildNumber> accountPath;
 
     // Paths through the key tree. External keys are ones that are communicated to other parties. Internal keys are
     // keys created for change addresses, coinbases, mixing, etc - anything that isn't communicated. The distinction
@@ -356,7 +356,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
      */
     public DeterministicKeyChain(DeterministicKey watchingKey) {
         checkArgument(watchingKey.isPubKeyOnly(), "Private subtrees not currently supported: if you got this key from DKC.getWatchingKey() then use .dropPrivate().dropParent() on it first.");
-        setAccountPath(watchingKey.getPath());
+        this.accountPath = watchingKey.getPath();
         basicKeyChain = new BasicKeyChain();
         this.seed = null;
         this.rootKey = null;
@@ -385,7 +385,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         this.rootKey = null;
         basicKeyChain.importKey(key);
         hierarchy = new DeterministicHierarchy(key);
-        setAccountPath(key.getPath());
+        this.accountPath = key.getPath();
         initializeHierarchyUnencrypted(key);
         this.isFollowing = isFollowing;
     }
@@ -436,7 +436,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
      */
     protected DeterministicKeyChain(DeterministicSeed seed, @Nullable KeyCrypter crypter,
                                     ImmutableList<ChildNumber> accountPath) {
-        setAccountPath(accountPath);
+        this.accountPath = accountPath;
         this.seed = seed;
         basicKeyChain = new BasicKeyChain(crypter);
         if (!seed.isEncrypted()) {
@@ -466,8 +466,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         checkNotNull(chain.seed);
 
         checkArgument(!chain.rootKey.isEncrypted(), "Chain already encrypted");
-
-        setAccountPath(chain.getAccountPath());
+        this.accountPath = chain.getAccountPath();
         this.issuedExternalKeys = chain.issuedExternalKeys;
         this.issuedInternalKeys = chain.issuedInternalKeys;
 
@@ -506,11 +505,6 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         if (accountPath != null)
             return accountPath;
         return ACCOUNT_ZERO_PATH;
-    }
-
-    /** Store account path of this DeterministicKey */
-    protected void setAccountPath(ImmutableList<ChildNumber> accountPath) {
-        this.accountPath = accountPath;
     }
 
     private DeterministicKey encryptNonLeaf(KeyParameter aesKey, DeterministicKeyChain chain,
