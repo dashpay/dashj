@@ -1335,7 +1335,7 @@ public class Peer extends PeerSocketHandler {
                     masternodeBroadcasts.add(item);
                     break;
                 case    MasterNodePing:
-                    if(context.isLiteMode()) break;
+                    if(context.isLiteMode() || context.masternodeManager.countMasternodes() == 0) break;
                     masternodePings.add(item);
                     break;
                 case DarkSendTransaction:

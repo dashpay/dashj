@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_INVALID_AMOUNT;
+import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_SPV_ASSUME_VALID;
 import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_UTXO_NOT_FOUND;
 import static org.bitcoinj.core.MasternodeInfo.State.MASTERNODE_EXPIRED;
 
@@ -291,9 +292,13 @@ public class MasternodeBroadcast extends Masternode {
             // remember the hash of the block where masternode collateral had minimum required confirmations
             //TODO:  can this be fixed?
             //nCollateralMinConfBlockHash = chainActive[nHeight + params.getMasternodeMinimumConfirmations() - 1]->GetBlockHash();
+
+            if(err == COLLATERAL_SPV_ASSUME_VALID)
+                return true;
         }
 
         log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO verified\n");
+
 
         // make sure the input that was signed in masternode broadcast message is related to the transaction
         // that spawned the Masternode - this is expensive, so it's only done once per Masternode

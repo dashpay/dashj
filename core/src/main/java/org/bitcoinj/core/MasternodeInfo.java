@@ -63,7 +63,14 @@ public class MasternodeInfo {
 
     MasternodeInfo(MasternodeInfo other)
     {
-
+        this.activeState = other.activeState;
+        this.nProtocolVersion = other.nProtocolVersion;
+        this.sigTime = other.sigTime;
+        this.vin = other.vin.duplicateDetached();
+        this.address = other.address;
+        this.pubKeyCollateralAddress = other.pubKeyCollateralAddress;
+        this.pubKeyMasternode = other.pubKeyMasternode;
+        this.nTimeLastWatchdogVote = other.nTimeLastWatchdogVote;
     };
 
     MasternodeInfo(State activeState, int protoVer, long sTime)

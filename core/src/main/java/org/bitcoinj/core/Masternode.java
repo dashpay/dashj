@@ -22,6 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.core.CoinDefinition.PROTOCOL_VERSION;
 import static org.bitcoinj.core.Context.fMasterNode;
+import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_SPV_ASSUME_VALID;
 import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_UTXO_NOT_FOUND;
 import static org.bitcoinj.core.MasternodeInfo.State.*;
 
@@ -743,7 +744,7 @@ public class Masternode extends Message{
 
     Pair<CollateralStatus, Integer> checkCollateral(TransactionOutPoint outpoint)
     {
-        //TODO:  can this be fixed?
+        //TODO:  can this be fixed?  - perhaps with a full node that watches masternodes?
         /*AssertLockHeld(cs_main);
         int HeightRet;
 
@@ -757,7 +758,7 @@ public class Masternode extends Message{
 
         nHeightRet = coin.nHeight;
         return COLLATERAL_OK;*/
-        return new Pair<CollateralStatus, Integer>(COLLATERAL_UTXO_NOT_FOUND, -1);
+        return new Pair<CollateralStatus, Integer>(COLLATERAL_SPV_ASSUME_VALID, -1);
     }
 
     void addGovernanceVote(Sha256Hash nGovernanceObjectHash)

@@ -1148,12 +1148,15 @@ public class MasternodeManager extends AbstractManager {
     void check()
     {
         lock.lock();
-        log.info("masternode--CMasternodeMan::Check -- nLastWatchdogVoteTime={}, IsWatchdogActive()={}", nLastWatchdogVoteTime, isWatchdogActive());
+        try {
+            log.info("masternode--CMasternodeMan::Check -- nLastWatchdogVoteTime={}, IsWatchdogActive()={}", nLastWatchdogVoteTime, isWatchdogActive());
 
-        for(Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()){
-            entry.getValue().check();
+            for (Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()) {
+                entry.getValue().check();
+            }
+        } finally {
+            lock.unlock();
         }
-        lock.unlock();
     }
     boolean isMnbRecoveryRequested(Sha256Hash hash) { return mMnbRecoveryRequests.containsKey(hash); }
 

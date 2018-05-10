@@ -310,8 +310,17 @@ public class MasternodePing extends Message implements Serializable {
     public boolean equals(Object o)
     {
         MasternodePing mnp = (MasternodePing)o;
-        if(mnp.vin.equals(this.vin) && mnp.blockHash.equals(this.blockHash)) {
+        try {
+            if (mnp.vin == null && this.vin == null)
+                return true; //check for Empty
+            if (mnp.vin != null && mnp.vin.equals(this.vin) &&
+                    mnp.blockHash != null && mnp.blockHash.equals(this.blockHash)) {
                 return true;
+            }
+        }
+        catch (NullPointerException npe)
+        {
+            log.warn(npe.getMessage());
         }
         return false;
     }
