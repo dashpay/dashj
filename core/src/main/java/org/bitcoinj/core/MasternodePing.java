@@ -223,12 +223,12 @@ public class MasternodePing extends Message implements Serializable {
         // (NOTE: assuming that MASTERNODE_EXPIRATION_SECONDS/2 should be enough to finish mn list sync)
         if(!context.masternodeSync.isMasternodeListSynced() && !mn.isPingedWithin(MASTERNODE_EXPIRATION_SECONDS/2)) {
             // let's bump sync timeout
-            log.info("masternode--CMasternodePing::CheckAndUpdate -- bumping sync timeout, masternode=%s\n", vin.getOutpoint().toStringShort());
+            log.info("masternode--CMasternodePing::CheckAndUpdate -- bumping sync timeout, masternode={}", vin.getOutpoint().toStringShort());
             context.masternodeSync.BumpAssetLastTime("CMasternodePing::CheckAndUpdate");
         }
 
         // let's store this ping as the last one
-        log.info("masternode--CMasternodePing::CheckAndUpdate -- Masternode ping accepted, masternode=%s\n", vin.getOutpoint().toStringShort());
+        log.info("masternode--CMasternodePing::CheckAndUpdate -- Masternode ping accepted, masternode={}", vin.getOutpoint().toStringShort());
         mn.lastPing = this;
 
         // and update mnodeman.mapSeenMasternodeBroadcast.lastPing which is probably outdated

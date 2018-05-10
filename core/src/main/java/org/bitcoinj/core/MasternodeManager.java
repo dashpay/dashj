@@ -436,9 +436,9 @@ public class MasternodeManager extends AbstractManager {
                     }
                     // did we ask this node for it?
                     if (pfrom != null && isMnbRecoveryRequested(hash) && Utils.currentTimeSeconds() < mMnbRecoveryRequests.get(hash).getFirst()) {
-                        log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request", hash);
+                        log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request", hash);
                         if (mMnbRecoveryRequests.get(hash).getSecond().contains(pfrom.getAddress())) {
-                            log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request, addr={}", hash, pfrom.getAddress());
+                            log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request, addr={}", hash, pfrom.getAddress());
                             // do not allow node to send same mnb multiple times in recovery mode
                             mMnbRecoveryRequests.get(hash).getSecond().remove(pfrom.getAddress());
                             // does it have newer lastPing?
@@ -446,7 +446,7 @@ public class MasternodeManager extends AbstractManager {
                                 // simulate Check
                                 Masternode mnTemp = new Masternode(mnb);
                                 mnTemp.check();
-                                log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request, addr={}, better lastPing: %d min ago, projected mn state: %s", hash.toString(), pfrom.getAddress().toString(), (Utils.currentTimeSeconds() - mnb.lastPing.sigTime) / 60, mnTemp.getStateString());
+                                log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request, addr={}, better lastPing: %d min ago, projected mn state: %s", hash.toString(), pfrom.getAddress().toString(), (Utils.currentTimeSeconds() - mnb.lastPing.sigTime) / 60, mnTemp.getStateString());
                                 if (mnTemp.isValidStateForAutoStart(mnTemp.info.activeState)) {
                                     // this node thinks it's a good one
                                     log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} seen good", mnb.info.vin.getOutpoint().toStringShort());
@@ -462,7 +462,7 @@ public class MasternodeManager extends AbstractManager {
                 log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} new", mnb.info.vin.getOutpoint().toStringShort());
 
                 if (!mnb.simpleCheck(nDos)) {
-                    log.info("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- SimpleCheck() failed, masternode={}", mnb.info.vin.getOutpoint().toStringShort());
+                    log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- SimpleCheck() failed, masternode={}", mnb.info.vin.getOutpoint().toStringShort());
                     return false;
                 }
 
@@ -741,7 +741,7 @@ public class MasternodeManager extends AbstractManager {
         }
 
         if(mnv.vin1.getOutpoint() == mnv.vin2.getOutpoint()) {
-            log.info("masternode", "CMasternodeMan::ProcessVerifyBroadcast -- ERROR: same vins {}, peer={}",
+            log.info("masternode--CMasternodeMan::ProcessVerifyBroadcast -- ERROR: same vins {}, peer={}",
                     mnv.vin1.getOutpoint().toStringShort(), pnode);
             // that was NOT a good idea to cheat and verify itself,
             // ban the node we received such message from
@@ -759,7 +759,7 @@ public class MasternodeManager extends AbstractManager {
         int nRank;
 
         if (-1 == (nRank =getMasternodeRank(mnv.vin2.getOutpoint(), mnv.blockHeight, MIN_POSE_PROTO_VERSION))) {
-            log.info("masternode", "CMasternodeMan::ProcessVerifyBroadcast -- Can't calculate rank for masternode {}",
+            log.info("masternode--CMasternodeMan::ProcessVerifyBroadcast -- Can't calculate rank for masternode {}",
                     mnv.vin2.getOutpoint().toStringShort());
             return;
         }
@@ -818,7 +818,7 @@ public class MasternodeManager extends AbstractManager {
             if(mnpair.getValue().info.address != mnv.addr || mnpair.getKey() == mnv.vin1.getOutpoint()) continue;
             mnpair.getValue().increasePoSeBanScore();
             nCount++;
-            log.info("masternode", "CMasternodeMan::ProcessVerifyBroadcast -- increased PoSe ban score for {} addr {}, new score {}",
+            log.info("masternode--CMasternodeMan::ProcessVerifyBroadcast -- increased PoSe ban score for {} addr {}, new score {}",
                     mnpair.getKey().toStringShort(), mnpair.getValue().info.address.toString(), mnpair.getValue().nPoSeBanScore);
         }
         if(nCount != 0)
@@ -939,6 +939,8 @@ public class MasternodeManager extends AbstractManager {
             lock.unlock();
         }
     }
+
+    /// Return the number of (unique) Masternodes
     int size() { return mapMasternodes.size(); }
 
     public String toString()
@@ -1152,7 +1154,9 @@ public class MasternodeManager extends AbstractManager {
             log.info("masternode--CMasternodeMan::Check -- nLastWatchdogVoteTime={}, IsWatchdogActive()={}", nLastWatchdogVoteTime, isWatchdogActive());
 
             for (Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()) {
-                entry.getValue().check();
+                Masternode mn = entry.getValue();
+                if(!mn.lock.isLocked()) // prevent deadlocks
+                    mn.check();
             }
         } finally {
             lock.unlock();
@@ -1219,7 +1223,7 @@ public class MasternodeManager extends AbstractManager {
                                 fAskedForMnbRecovery = true;
                             }
                             if (fAskedForMnbRecovery) {
-                                log.info("masternode", "CMasternodeMan::CheckAndRemove -- Recovery initiated, masternode={}", entry.getKey().toStringShort());
+                                log.info("masternode--CMasternodeMan::CheckAndRemove -- Recovery initiated, masternode={}", entry.getKey().toStringShort());
                                 nAskForMnbRecovery--;
                             }
                             // wait for mnb recovery replies for MNB_RECOVERY_WAIT_SECONDS seconds
@@ -1228,7 +1232,7 @@ public class MasternodeManager extends AbstractManager {
                     }
 
                     // proces replies for MASTERNODE_NEW_START_REQUIRED masternodes
-                    log.info("masternode", "CMasternodeMan::CheckAndRemove -- mMnbRecoveryGoodReplies size={}", (int) mMnbRecoveryGoodReplies.size());
+                    log.info("masternode--CMasternodeMan::CheckAndRemove -- mMnbRecoveryGoodReplies size={}", (int) mMnbRecoveryGoodReplies.size());
                     Iterator<Map.Entry<Sha256Hash, ArrayList<MasternodeBroadcast>>> itMnbReplies = mMnbRecoveryGoodReplies.entrySet().iterator();
                     while (itMnbReplies.hasNext()) {
                         Map.Entry<Sha256Hash, ArrayList<MasternodeBroadcast>> MnbReplies = itMnbReplies.next();

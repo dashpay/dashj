@@ -431,7 +431,7 @@ public class Masternode extends Message{
             if (!forceCheck && (Utils.currentTimeSeconds() - lastTimeChecked < MASTERNODE_CHECK_SECONDS)) return;
             lastTimeChecked = Utils.currentTimeSeconds();
 
-            log.info("masternode--CMasternode::Check -- Masternode {} is in {} state\n", info.vin.getOutpoint().toStringShort(), getStateString());
+            log.info("masternode--CMasternode::Check -- Masternode {} is in {} state", info.vin.getOutpoint().toStringShort(), getStateString());
 
             //once spent, stop doing the checks
             if(isOutpointSpent()) return;
@@ -444,7 +444,7 @@ public class Masternode extends Message{
                 CollateralStatus err = checkCollateral(info.vin.getOutpoint()).getFirst();
                 if (err == COLLATERAL_UTXO_NOT_FOUND) {
                     info.activeState = MASTERNODE_OUTPOINT_SPENT;
-                    log.info("masternode", "CMasternode::Check -- Failed to find Masternode UTXO, masternode={}", info.vin.getOutpoint().toStringShort());
+                    log.info("masternode--CMasternode::Check -- Failed to find Masternode UTXO, masternode={}", info.vin.getOutpoint().toStringShort());
                     return;
                 }
 
@@ -477,7 +477,7 @@ public class Masternode extends Message{
             if(fRequireUpdate) {
                 info.activeState = MASTERNODE_UPDATE_REQUIRED;
                 if(nActiveStatePrev != info.activeState) {
-                    log.info("masternode", "CMasternode::Check -- Masternode {} is in %s state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                    log.info("masternode--CMasternode::Check -- Masternode {} is in %s state now", info.vin.getOutpoint().toStringShort(), getStateString());
                 }
                 return;
             }
@@ -488,7 +488,7 @@ public class Masternode extends Message{
             if(fWaitForPing && !fOurMasternode) {
                 // ...but if it was already expired before the initial check - return right away
                 if(isExpired() || isWatchdogExpired() || isNewStartRequired()) {
-                    log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state, waiting for ping\n", info.vin.getOutpoint().toStringShort(), getStateString());
+                    log.info("masternode--CMasternode::Check -- Masternode %s is in %s state, waiting for ping", info.vin.getOutpoint().toStringShort(), getStateString());
                     return;
                 }
             }
@@ -499,7 +499,7 @@ public class Masternode extends Message{
                 if(!isPingedWithin(MASTERNODE_NEW_START_REQUIRED_SECONDS)) {
                     info.activeState = MASTERNODE_NEW_START_REQUIRED;
                     if(nActiveStatePrev != info.activeState) {
-                        log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", info.vin.getOutpoint().toStringShort(), getStateString());
+                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
                     }
                     return;
                 }
@@ -507,13 +507,13 @@ public class Masternode extends Message{
                 boolean fWatchdogActive = context.masternodeSync.isSynced() && context.masternodeManager.isWatchdogActive();
                 boolean fWatchdogExpired = (fWatchdogActive && ((Utils.currentTimeSeconds() - info.nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
 
-                log.info("masternode", "CMasternode::Check -- outpoint=%s, nTimeLastWatchdogVote=%d, GetAdjustedTime()=%d, fWatchdogExpired=%d\n",
+                log.info("masternode--CMasternode::Check -- outpoint={}, nTimeLastWatchdogVote={}, GetAdjustedTime()={}, fWatchdogExpired={}",
                         info.vin.getOutpoint().toStringShort(), info.nTimeLastWatchdogVote, Utils.currentTimeSeconds(), fWatchdogExpired);
 
                 if(fWatchdogExpired) {
                     info.activeState = MASTERNODE_WATCHDOG_EXPIRED;
                     if(nActiveStatePrev != info.activeState) {
-                        log.info("masternode", "CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
                     }
                     return;
                 }
@@ -521,7 +521,7 @@ public class Masternode extends Message{
                 if(!isPingedWithin(MASTERNODE_EXPIRATION_SECONDS)) {
                     info.activeState = MASTERNODE_EXPIRED;
                     if(nActiveStatePrev != info.activeState) {
-                        log.info("masternode", "CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
                     }
                     return;
                 }
@@ -530,14 +530,14 @@ public class Masternode extends Message{
             if(lastPing.sigTime - info.sigTime < MASTERNODE_MIN_MNP_SECONDS) {
                 info.activeState = MASTERNODE_PRE_ENABLED;
                 if(nActiveStatePrev != info.activeState) {
-                    log.info("masternode", "CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                    log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
                 }
                 return;
             }
 
             info.activeState = MASTERNODE_ENABLED; // OK
             if(nActiveStatePrev != info.activeState) {
-                log.info("masternode", "CMasternode::Check -- Masternode %s is in %s state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
             }
 
         } finally {
@@ -670,7 +670,7 @@ public class Masternode extends Message{
         /*const CBlockIndex *BlockReading = pindex;
 
         CScript mnpayee = GetScriptForDestination(pubKeyCollateralAddress.GetID());
-        // LogPrint("masternode", "CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s\n", vin.prevout.ToStringShort());
+        // LogPrint("masternode--CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s\n", vin.prevout.ToStringShort());
 
         LOCK(cs_mapMasternodeBlocks);
 
@@ -688,7 +688,7 @@ public class Masternode extends Message{
                 if(mnpayee == txout.scriptPubKey && nMasternodePayment == txout.nValue) {
                     nBlockLastPaid = BlockReading->nHeight;
                     nTimeLastPaid = BlockReading->nTime;
-                    LogPrint("masternode", "CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s -- found new %d\n", vin.prevout.ToStringShort(), nBlockLastPaid);
+                    LogPrint("masternode--CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s -- found new %d\n", vin.prevout.ToStringShort(), nBlockLastPaid);
                     return;
                 }
             }
@@ -700,7 +700,7 @@ public class Masternode extends Message{
 
         // Last payment for this masternode wasn't found in latest mnpayments blocks
         // or it was found in mnpayments blocks but wasn't found in the blockchain.
-        // LogPrint("masternode", "CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s -- keeping old %d\n", vin.prevout.ToStringShort(), nBlockLastPaid);
+        // LogPrint("masternode--CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s -- keeping old %d\n", vin.prevout.ToStringShort(), nBlockLastPaid);
     }
 
     public MasternodeInfo getInfo()
