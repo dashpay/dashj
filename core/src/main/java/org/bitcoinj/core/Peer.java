@@ -514,7 +514,6 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof FilteredBlock) {
             startFilteredBlock((FilteredBlock) m);
         } else if (m instanceof TransactionLockRequest) {
-            //processTransactionLockRequest((TransactionLockRequest) m);
             context.instantSend.processTxLockRequest((TransactionLockRequest)m);
             processTransaction((TransactionLockRequest)m);
 
@@ -559,6 +558,9 @@ public class Peer extends PeerSocketHandler {
         }
         else if(m instanceof SyncStatusCount) {
             context.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
+        }
+        else if(m instanceof GovernanceSyncMessage) {
+            //swallow for now
         }
         else
         {

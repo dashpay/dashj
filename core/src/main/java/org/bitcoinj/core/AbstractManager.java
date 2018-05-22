@@ -9,13 +9,11 @@ import static com.google.common.base.Preconditions.checkState;
 public abstract class AbstractManager extends Message {
 
     Context context;
-    public AbstractManager(Context context)
-    {
+    public AbstractManager(Context context) {
         super(context.getParams());
         this.context = context;
     }
-    public AbstractManager(NetworkParameters params, byte [] payload, int cursor)
-    {
+    public AbstractManager(NetworkParameters params, byte [] payload, int cursor) {
         super(params, payload, cursor);
     }
 

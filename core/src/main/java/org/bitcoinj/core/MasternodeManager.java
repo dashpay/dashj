@@ -159,7 +159,7 @@ public class MasternodeManager extends AbstractManager {
 
         int size = (int)readVarInt();
 
-        mapMasternodes = new HashMap<TransactionOutPoint, Masternode>();
+        mapMasternodes = new HashMap<TransactionOutPoint, Masternode>(size);
         for (int i = 0; i < size; ++i)
         {
             TransactionOutPoint outPoint = new TransactionOutPoint(params, payload, cursor);
@@ -270,7 +270,7 @@ public class MasternodeManager extends AbstractManager {
             stream.write(new VarInt(mapMasternodes.size()).encode());
             for (Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()) {
                 entry.getKey().bitcoinSerialize(stream);
-                entry.getValue().bitcoinSerialize(stream);
+                entry.getValue().masterNodeSerialize(stream); //masternodes are added as MasternodeBroadcasts so bitcoinSerialize will write the MNB, instead of MN
             }
             stream.write(new VarInt(mAskedUsForMasternodeList.size()).encode());
             for(Iterator<Map.Entry<NetAddress, Long>> it1= mAskedUsForMasternodeList.entrySet().iterator(); it1.hasNext();)
@@ -354,6 +354,7 @@ public class MasternodeManager extends AbstractManager {
 
             log.info("masternode--CMasternodeMan::Add -- Adding new Masternode: addr={}, {} now", mn.info.address, size() + 1);
             mapMasternodes.put(mn.info.vin.getOutpoint(), mn);
+            unCache();
             fMasternodesAdded = true;
             queueOnSyncStatusChanged();
             return true;
@@ -366,6 +367,7 @@ public class MasternodeManager extends AbstractManager {
     {
         lock.lock();
         try {
+            unCache();
             mapMasternodes.clear();
             mAskedUsForMasternodeList.clear();
             mWeAskedForMasternodeList.clear();
@@ -574,7 +576,7 @@ public class MasternodeManager extends AbstractManager {
         if(nDos.get() > 0) {
             // if anything significant failed, mark that node
             //Misbehaving(pfrom->GetId(), nDoS);
-        } else {
+        } else if(mn != null) {
             // nothing significant failed, mn is a known one too
             return;
         }
@@ -930,6 +932,7 @@ public class MasternodeManager extends AbstractManager {
                 if (entry.getValue().info.vin.equals(vin)){
                     log.info("masternode - CMasternodeMan: Removing Masternode %s "+entry.getValue().info.address.toString()+"- "+(size()-1)+" now");
                     it.remove();
+                    unCache();
                     queueOnSyncStatusChanged();
                     break;
                 }
@@ -971,14 +974,15 @@ public class MasternodeManager extends AbstractManager {
                         return;
                     }
                     // we asked this node for this outpoint but it's ok to ask again already
-                    log.info("CMasternodeMan::AskForMN -- Asking same peer %s for missing masternode entry again: {}", pnode.getAddress(), outPoint.toStringShort());
+                    log.info("CMasternodeMan::AskForMN -- Asking same peer {} for missing masternode entry again: {}", pnode.getAddress(), outPoint.toStringShort());
                 } else {
                     // we already asked for this outpoint but not this node
-                    log.info("CMasternodeMan::AskForMN -- Asking new peer %s for missing masternode entry: {}", pnode.getAddress(), outPoint.toStringShort());
+                    log.info("CMasternodeMan::AskForMN -- Asking new peer {} for missing masternode entry: {}", pnode.getAddress(), outPoint.toStringShort());
                 }
             } else {
                 // we never asked any node for this outpoint
-                log.info("CMasternodeMan::AskForMN -- Asking peer %s for missing masternode entry for the first time: %s", pnode.getAddress(), outPoint.toStringShort());
+                log.info("CMasternodeMan::AskForMN -- Asking peer {} for missing masternode entry for the first time: {}", pnode.getAddress(), outPoint.toStringShort());
+                map = new HashMap<NetAddress, Long>();
             }
             map.put(new NetAddress(pnode.getAddress().getAddr()), Utils.currentTimeSeconds() + DSEG_UPDATE_SECONDS);
             pnode.sendMessage(new DarkSendEntryGetMessage(new TransactionInput(params, null, null, outPoint)));
@@ -1196,6 +1200,7 @@ public class MasternodeManager extends AbstractManager {
                         // and finally remove it from the list
                         mn.flagGovernanceItemsAsDirty();
                         it.remove();
+                        unCache();
                         fMasternodesRemoved = true;
                     } else {
                         boolean fAsk = (nAskForMnbRecovery > 0) &&
@@ -1940,11 +1945,12 @@ public class MasternodeManager extends AbstractManager {
             lock.unlock();
         }
     }
-
+    private int tipCount = 0;
     void updatedBlockTip(StoredBlock block)
     {
         nCachedBlockHeight = block.getHeight();
-        log.info("masternode--CMasternodeMan::UpdatedBlockTip -- nCachedBlockHeight={}", nCachedBlockHeight);
+        if(tipCount++ % 10 == 0)
+            log.info("masternode--CMasternodeMan::UpdatedBlockTip -- nCachedBlockHeight={}", nCachedBlockHeight);
 
         checkSameAddr();
 

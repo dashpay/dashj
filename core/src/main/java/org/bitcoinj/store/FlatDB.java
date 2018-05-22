@@ -191,6 +191,7 @@ public class FlatDB<Type extends AbstractManager> {
 
             } catch (Exception e){
                 object.clear();
+                e.printStackTrace();
                 log.error("Deserialize or I/O error - {}",  e.getMessage());
                 return  ReadResult.IncorrectFormat;
             }

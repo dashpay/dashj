@@ -85,6 +85,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(GetSporksMessage.class, "getsporks");
         names.put(DarkSendEntryGetMessage.class, "dseg");
         names.put(SyncStatusCount.class, "ssc");
+        names.put(GovernanceSyncMessage.class, "govsync");
 
 
     }

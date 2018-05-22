@@ -30,7 +30,7 @@ public class MasternodeSync {
     public static final int MASTERNODE_SYNC_FINISHED        = 999;
 
     static final int MASTERNODE_SYNC_TICK_SECONDS    = 6;
-    static final int MASTERNODE_SYNC_TIMEOUT_SECONDS = 30; // our blocks are 2.5 minutes so 30 seconds should be fine
+    static final int MASTERNODE_SYNC_TIMEOUT_SECONDS = 30; // our blocks are 2.5 minutes so 30 seconds should be fine -- changed to 300 for test purposes (java)
 
     static final int MASTERNODE_SYNC_ENOUGH_PEERS    = 6;
 
@@ -572,7 +572,7 @@ public class MasternodeSync {
 
     void sendGovernanceSyncRequest(Peer peer)
         {
-            peer.sendMessage(new GovernanceSyncMessage());
+            peer.sendMessage(new GovernanceSyncMessage(context.getParams()));
         }
 
     /******************************************************************************************************************/

@@ -52,7 +52,7 @@ public class Masternode extends Message{
     public static final int MASTERNODE_POSE_BAN_MAX_SCORE          = 5;
 
     MasternodeInfo info;
-    MasternodePing lastPing;
+    MasternodePing lastPing = MasternodePing.EMPTY;;
     MasternodeSignature vchSig;
 
     Sha256Hash nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
@@ -261,6 +261,7 @@ public class Masternode extends Message{
         fUnitTest = readBytes(1)[0] == 1;
 
         long entries = readVarInt();
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>((int)entries);
         for(long i = 0; i < entries; ++i)
         {
             mapGovernanceObjectsVotedOn.put(readHash(), (int)readUint32());
@@ -272,9 +273,8 @@ public class Masternode extends Message{
         length = cursor - offset;
     }
 
-    @Override
-    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
+    public void masterNodeSerialize(OutputStream stream) throws IOException {
         info.vin.bitcoinSerialize(stream);
         info.address.bitcoinSerialize(stream);
         info.pubKeyCollateralAddress.bitcoinSerialize(stream);
@@ -309,6 +309,11 @@ public class Masternode extends Message{
             Utils.uint32ToByteStreamLE(e.getValue(), stream);
         }
 
+    }
+
+    @Override
+    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        masterNodeSerialize(stream);
     }
     static boolean isValidStateForAutoStart(MasternodeInfo.State nActiveStateIn)
     {
