@@ -53,6 +53,7 @@ public class MasternodePing extends Message implements Serializable {
     MasternodePing(Context context) {
         super(context.getParams());
         this.context = context;
+        vin = new TransactionInput(context.getParams(), null, null, new TransactionOutPoint(context.getParams(), 0, Sha256Hash.ZERO_HASH));
     }
 
     MasternodePing(Context context, TransactionOutPoint outPoint)
@@ -343,6 +344,15 @@ public class MasternodePing extends Message implements Serializable {
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException e) {
             throw new RuntimeException(e); // Cannot happen.
+        }
+    }
+    String getHexData() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(400);
+            bitcoinSerialize(bos);
+            return Utils.HEX.encode(bos.toByteArray());
+        } catch (IOException x) {
+            return "";
         }
     }
 }

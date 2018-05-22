@@ -52,18 +52,18 @@ public class Masternode extends Message{
     public static final int MASTERNODE_POSE_BAN_MAX_SCORE          = 5;
 
     MasternodeInfo info;
-    MasternodePing lastPing = MasternodePing.EMPTY;;
+    MasternodePing lastPing;
     MasternodeSignature vchSig;
 
-    Sha256Hash nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
-    int nBlockLastPaid = 0;
-    int nPoSeBanScore = 0;
-    int nPoSeBanHeight = 0;
-    boolean fAllowMixingTx = false;
-    boolean fUnitTest = false;
+    Sha256Hash nCollateralMinConfBlockHash;
+    int nBlockLastPaid;
+    int nPoSeBanScore;
+    int nPoSeBanHeight;
+    boolean fAllowMixingTx;
+    boolean fUnitTest;
 
     // KEEP TRACK OF GOVERNANCE ITEMS EACH MASTERNODE HAS VOTE UPON FOR RECALCULATION
-    HashMap<Sha256Hash, Integer> mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
+    HashMap<Sha256Hash, Integer> mapGovernanceObjectsVotedOn;
 
     Context context;
 
@@ -73,6 +73,15 @@ public class Masternode extends Message{
         this.context = context;
 
         info = new MasternodeInfo();
+
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
+        nBlockLastPaid = 0;
+        nPoSeBanScore = 0;
+        nPoSeBanHeight = 0;
+        fAllowMixingTx = false;
+        fUnitTest = false;
+        lastPing = MasternodePing.EMPTY;
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
     }
 
     public Masternode(NetworkParameters params, byte [] payload, int cursor)
@@ -266,9 +275,6 @@ public class Masternode extends Message{
         {
             mapGovernanceObjectsVotedOn.put(readHash(), (int)readUint32());
         }
-
-
-
 
         length = cursor - offset;
     }
@@ -792,6 +798,16 @@ public class Masternode extends Message{
             info.nTimeLastWatchdogVote = (nVoteTime == 0) ? Utils.currentTimeSeconds() : nVoteTime;
         } finally {
             lock.unlock();
+        }
+    }
+
+    String getHexData() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(400);
+            bitcoinSerialize(bos);
+            return Utils.HEX.encode(bos.toByteArray());
+        } catch (IOException x) {
+            return "";
         }
     }
 }

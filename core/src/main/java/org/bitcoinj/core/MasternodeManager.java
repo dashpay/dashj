@@ -521,7 +521,6 @@ public class MasternodeManager extends AbstractManager {
 
     void processMasternodeBroadcast(Peer from, MasternodeBroadcast mnb)
     {
-        //log.info("processMasternodeBroadcast:  hash={}", mnb.getHash());
         from.setAskFor.remove(mnb.getHash());
 
         if(!context.masternodeSync.isBlockchainSynced())

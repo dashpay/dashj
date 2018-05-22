@@ -376,4 +376,14 @@ public class MasternodeBroadcast extends Masternode {
 
         return true;
     }
+
+    String getHexData() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(400);
+            bitcoinSerialize(bos);
+            return Utils.HEX.encode(bos.toByteArray());
+        } catch (IOException x) {
+            return "";
+        }
+    }
 }
