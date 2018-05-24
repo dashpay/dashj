@@ -124,6 +124,7 @@ public class MasternodeManager extends AbstractManager {
         mapSeenMasternodePing = new HashMap<Sha256Hash, MasternodePing>();
         nDsqCount = 0;
         eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeManagerListener>>();
+        mapSeenMasternodeVerification = new HashMap<Sha256Hash, MasternodeVerification>();
     }
 
     public MasternodeManager(NetworkParameters params, byte [] payload, int cursor)
@@ -157,6 +158,7 @@ public class MasternodeManager extends AbstractManager {
     protected void parse() throws ProtocolException {
 
 
+        String version = readStr();
         int size = (int)readVarInt();
 
         mapMasternodes = new HashMap<TransactionOutPoint, Masternode>(size);
@@ -260,6 +262,9 @@ public class MasternodeManager extends AbstractManager {
             mapSeenMasternodePing.put(hash, mb);
         }
 
+        if(!version.equals(SERIALIZATION_VERSION_STRING))
+            clear();
+
         length = cursor - offset;
     }
     @Override
@@ -267,6 +272,9 @@ public class MasternodeManager extends AbstractManager {
 
         lock.lock();
         try {
+            stream.write(new VarInt(SERIALIZATION_VERSION_STRING.length()).encode());
+            stream.write(SERIALIZATION_VERSION_STRING.getBytes());
+
             stream.write(new VarInt(mapMasternodes.size()).encode());
             for (Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()) {
                 entry.getKey().bitcoinSerialize(stream);

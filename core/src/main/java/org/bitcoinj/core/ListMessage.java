@@ -108,16 +108,16 @@ public abstract class ListMessage extends Message {
                     type = InventoryItem.Type.Spork;
                     break;
                 case 7:
-                    type = InventoryItem.Type.MasterNodeWinner;
+                    type = InventoryItem.Type.MasternodePaymentVote;
                     break;
                 case 8:
-                    type = InventoryItem.Type.MasterNodeScanningError;
+                    type = InventoryItem.Type.MasternodePaymentBlock;
                     break;
                 case 9:
-                    type = InventoryItem.Type.GovernanceVote;
+                    type = InventoryItem.Type.BudgetVote;
                     break;
                 case 10:
-                    type = InventoryItem.Type.GovernanceObject;
+                    type = InventoryItem.Type.BudgetProposal;
                     break;
                 case 11:
                     type = InventoryItem.Type.BudgetFinalized;
@@ -126,16 +126,25 @@ public abstract class ListMessage extends Message {
                     type = InventoryItem.Type.BudgetFinalizedVote;
                     break;
                 case 13:
-                    type = InventoryItem.Type.MasterNodeQuarum;
+                    type = InventoryItem.Type.MasternodeQuorum;
                     break;
                 case 14:
-                    type = InventoryItem.Type.MasterNodeAnnounce;
+                    type = InventoryItem.Type.MasternodeAnnounce;
                     break;
                 case 15:
-                    type = InventoryItem.Type.MasterNodePing;
+                    type = InventoryItem.Type.MasternodePing;
                     break;
                 case 16:
                     type = InventoryItem.Type.DarkSendTransaction;
+                    break;
+                case 17:
+                    type = InventoryItem.Type.GovernanceObject;
+                    break;
+                case 18:
+                    type = InventoryItem.Type.GovernanceObjectVote;
+                    break;
+                case 19:
+                    type = InventoryItem.Type.MasternodeVerify;
                     break;
                 default:
                     //throw new ProtocolException("Unknown CInv type: " + typeCode);

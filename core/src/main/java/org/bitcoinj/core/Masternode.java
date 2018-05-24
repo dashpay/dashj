@@ -29,7 +29,7 @@ import static org.bitcoinj.core.MasternodeInfo.State.*;
 /**
  * Created by Eric on 2/8/2015.
  */
-public class Masternode extends Message{
+public class Masternode extends Message {
     private static final Logger log = LoggerFactory.getLogger(Masternode.class);
     ReentrantLock lock = Threading.lock("Masternode");
     long lastTimeChecked;
@@ -94,7 +94,6 @@ public class Masternode extends Message{
     {
         super(context.getParams(), payload, cursor);
         this.context = context;
-        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
     }
 
     public Masternode(Masternode other)
@@ -103,7 +102,7 @@ public class Masternode extends Message{
         this.context = other.context;
 
         info = new MasternodeInfo(other.info);
-        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>(other.mapGovernanceObjectsVotedOn.size());
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
         for (Map.Entry<Sha256Hash, Integer> entry : other.mapGovernanceObjectsVotedOn.entrySet())
         {
             mapGovernanceObjectsVotedOn.put(entry.getKey(), entry.getValue());

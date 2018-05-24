@@ -30,20 +30,24 @@ public class InventoryItem {
         Transaction,
         Block,
         FilteredBlock,
+        // Dash message types
+        // NOTE: declare non-implmented here, we must keep this enum consistent and backwards compatible
         TransactionLockRequest, //Dash InstantSend
         TransactionLockVote,         //Dash InstantSend
         Spork,
-        MasterNodeWinner,
-        MasterNodeScanningError, // not implemented
-        GovernanceVote,
-        GovernanceObject,
-        BudgetFinalized,
-        BudgetFinalizedVote,
-        MasterNodeQuarum,
-        MasterNodeAnnounce,
-        MasterNodePing,
+        MasternodePaymentVote,
+        MasternodePaymentBlock, // reusing, was MasterNodeScanningError
+        BudgetVote,          // depreciated since 12.1
+        BudgetProposal,      // depreciated since 12.1
+        BudgetFinalized,     // depreciated since 12.1
+        BudgetFinalizedVote, // depreciated since 12.1
+        MasternodeQuorum,    // not implemented
+        MasternodeAnnounce,
+        MasternodePing,
         DarkSendTransaction,
-
+        GovernanceObject,
+        GovernanceObjectVote,
+        MasternodeVerify,
         None,
 
 

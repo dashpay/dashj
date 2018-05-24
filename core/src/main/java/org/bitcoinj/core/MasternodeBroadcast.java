@@ -13,6 +13,7 @@ import org.spongycastle.util.encoders.Base64;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
 
 import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_INVALID_AMOUNT;
 import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_SPV_ASSUME_VALID;
@@ -30,11 +31,13 @@ public class MasternodeBroadcast extends Masternode {
     public MasternodeBroadcast(NetworkParameters params, byte [] payloadBytes)
     {
         super(params, payloadBytes, 0);
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
     }
 
     public MasternodeBroadcast(NetworkParameters params, byte [] payloadBytes, int cursor)
     {
         super(params, payloadBytes, cursor);
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
     }
 
     public MasternodeBroadcast(Masternode masternode)
