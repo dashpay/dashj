@@ -130,7 +130,6 @@ public class MasternodeManager extends AbstractManager {
     public MasternodeManager(NetworkParameters params, byte [] payload, int cursor)
     {
         super(params, payload, cursor);
-        context = Context.get();
         listScheduledMnbRequestConnections = new ArrayList<Pair<NetAddress, Sha256Hash>>();
         fMasternodesAdded = false;
         fMasternodesRemoved = false;
@@ -145,7 +144,7 @@ public class MasternodeManager extends AbstractManager {
         lock.lock();
         try {
             size += VarInt.sizeOf(mapMasternodes.size());
-            size *= 200;
+            size *= 1000;
 
 
             return size;

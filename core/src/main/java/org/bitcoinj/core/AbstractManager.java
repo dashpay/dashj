@@ -15,6 +15,7 @@ public abstract class AbstractManager extends Message {
     }
     public AbstractManager(NetworkParameters params, byte [] payload, int cursor) {
         super(params, payload, cursor);
+        this.context = Context.get();
     }
 
     public abstract int calculateMessageSizeInBytes();

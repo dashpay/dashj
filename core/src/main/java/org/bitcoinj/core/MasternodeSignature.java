@@ -36,6 +36,12 @@ public class MasternodeSignature extends ChildMessage {
         System.arraycopy(signature, 0, bytes, 0, signature.length);
     }
 
+    public MasternodeSignature(MasternodeSignature other) {
+        super(other.getParams());
+        bytes = new byte[other.bytes.length];
+        System.arraycopy(other.bytes, 0, bytes, 0, other.bytes.length);
+    }
+
     protected static int calcLength(byte[] buf, int offset) {
         VarInt varint;
 

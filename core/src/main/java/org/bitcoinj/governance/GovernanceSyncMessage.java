@@ -1,4 +1,10 @@
-package org.bitcoinj.core;
+package org.bitcoinj.governance;
+
+import org.bitcoinj.core.BloomFilter;
+import org.bitcoinj.core.Message;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.manager.GovernanceManager;
 
 import java.io.IOException;
 import java.io.OutputStream;
