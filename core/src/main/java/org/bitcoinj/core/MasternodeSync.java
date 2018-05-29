@@ -202,7 +202,7 @@ public class MasternodeSync {
                 break;
             case(MASTERNODE_SYNC_LIST):
                 log.info("CMasternodeSync::SwitchToNextAsset -- Completed "+getAssetName()+" in " + (Utils.currentTimeSeconds() - nTimeAssetSyncStarted));
-                RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;//MASTERNODE_SYNC_MNW;
+                RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;//MASTERNODE_SYNC_MNW;
                 log.info("CMasternodeSync::SwitchToNextAsset -- Starting "+ getAssetName());
                 break;
             case(MASTERNODE_SYNC_MNW):

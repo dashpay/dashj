@@ -15,6 +15,8 @@
  */
 package org.bitcoinj.governance;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.LinkedHashMultimap;
 import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -27,9 +29,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.manager.GovernanceManager.MAX_GOVERNANCE_OBJECT_DATA_SIZE;
 import static org.darkcoinj.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
 
 public class GovernanceObject extends Message implements Serializable {
@@ -43,7 +48,7 @@ public class GovernanceObject extends Message implements Serializable {
     private int nObjectType;
 
     /// parent object, 0 is root
-    private Sha256Hash nHashParent = new Sha256Hash();
+    private Sha256Hash nHashParent;
 
     /// object revision in the system
     private int nRevision;
@@ -55,15 +60,14 @@ public class GovernanceObject extends Message implements Serializable {
     private long nDeletionTime;
 
     /// fee-tx
-    private Sha256Hash nCollateralHash = new Sha256Hash();
+    private Sha256Hash nCollateralHash;
 
     /// Data field - can be used for anything
     private String strData;
 
     /// Masternode info for signed objects
     private TransactionInput vinMasternode;
-    //C++ TO JAVA CONVERTER WARNING: Unsigned integer types have no direct equivalent in Java:
-//ORIGINAL LINE: std::vector<unsigned char> vchSig;
+
     private MasternodeSignature vchSig;
 
     /// is valid by blockchain
@@ -98,7 +102,7 @@ public class GovernanceObject extends Message implements Serializable {
     private TreeMap<TransactionOutPoint, VoteRecord> mapCurrentMNVotes;
 
     /// Limited map of votes orphaned by MN
-    private CacheMultiMap<TransactionOutPoint, Pair<Integer, GovernanceVote>> mapOrphanVotes;
+    private /*CacheMultiMap*/LinkedHashMultimap<TransactionOutPoint, Pair<Integer, GovernanceVote>> mapOrphanVotes = LinkedHashMultimap.create(100,100);
 
     private GovernanceObjectVoteFile fileVotes;
 
@@ -169,14 +173,66 @@ public class GovernanceObject extends Message implements Serializable {
     }
     @Override
     protected void parse() throws ProtocolException {
+        nHashParent = readHash();
+        nRevision = (int)readUint32();
+        nTime = readInt64();
+        nCollateralHash = readHash();
+        strData = readStr();
+        if(strData.length() > MAX_GOVERNANCE_OBJECT_DATA_SIZE)
+            throw new ProtocolException("String length limit exceeded");
+        nObjectType = (int)readUint32();
+        vinMasternode = new TransactionInput(params, null, payload, cursor);
+        cursor = vinMasternode.getMessageSize();
+        vchSig = new MasternodeSignature(params, payload, cursor);
+        cursor = vchSig.getMessageSize();
+        length = cursor - offset;
 
-
+        // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY
+    }
+    void parseFromDisk() {
+        parse();
+        nDeletionTime = readInt64();
+        fExpired = readBytes(1)[0] == 0 ? false : true;
+        int size = (int)readVarInt();
+        mapCurrentMNVotes = new TreeMap<TransactionOutPoint, VoteRecord>();
+        for(int i = 0; i < size; ++i) {
+            TransactionOutPoint vin = new TransactionOutPoint(params, payload, offset);
+            cursor += vin.getMessageSize();
+            VoteRecord vr = new VoteRecord(params, payload, offset);
+            cursor += vr.getMessageSize();
+            mapCurrentMNVotes.put(vin, vr);
+        }
+        fileVotes = new GovernanceObjectVoteFile();
+        cursor = fileVotes.getMessageSize();
         length = cursor - offset;
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        stream.write(nHashParent.getReversedBytes());
+        Utils.uint32ToByteStreamLE(nRevision, stream);
+        Utils.int64ToByteStreamLE(nTime, stream);
+        stream.write(nCollateralHash.getReversedBytes());
+        Utils.stringToByteStream(strData, stream);
+        Utils.uint32ToByteStreamLE(nObjectType, stream);
+        vinMasternode.bitcoinSerialize(stream);
+        vchSig.bitcoinSerialize(stream);
+    }
 
+    public void serializeToDisk(OutputStream stream) throws IOException {
+        bitcoinSerializeToStream(stream);
+        log.info("gobject--CGovernanceObject::SerializationOp writing votes to disk");
+        Utils.int64ToByteStreamLE(nDeletionTime, stream);
+        stream.write((byte)(fExpired ? 0 : 1));
+        stream.write(new VarInt(mapCurrentMNVotes.size()).encode());
+        Iterator<Map.Entry<TransactionOutPoint, VoteRecord>> it =  mapCurrentMNVotes.entrySet().iterator();
+        while(it.hasNext()) {
+            Map.Entry<TransactionOutPoint, VoteRecord> entry = it.next();
+            entry.getKey().bitcoinSerialize(stream);
+            entry.getValue().bitcoinSerialize(stream);
+        }
+        fileVotes.bitcoinSerialize(stream);
+        log.info("gobject--CGovernanceObject::SerializationOp hash = {}, vote count = {}", getHash().toString(), fileVotes.getVoteCount());
     }
 
     public String toString() {
@@ -185,8 +241,17 @@ public class GovernanceObject extends Message implements Serializable {
 
 
     public Sha256Hash getHash() {
-        UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
-
-        return Sha256Hash.twiceOf(bos.toByteArray());
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
+            bos.write(nHashParent.getReversedBytes());
+            Utils.uint32ToByteStreamLE(nRevision, bos);
+            Utils.int64ToByteStreamLE(nTime, bos);
+            Utils.stringToByteStream(strData, bos);
+            vinMasternode.bitcoinSerialize(bos);
+            vchSig.bitcoinSerialize(bos);
+            return Sha256Hash.twiceOf(bos.toByteArray());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

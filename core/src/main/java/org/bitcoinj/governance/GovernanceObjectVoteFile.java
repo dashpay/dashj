@@ -51,6 +51,11 @@ public class GovernanceObjectVoteFile extends Message {
 		rebuildIndex();
 	}
 
+	public GovernanceObjectVoteFile(NetworkParameters params, byte [] payload, int offset) {
+		super(params, payload, offset);
+		rebuildIndex();
+	}
+
 	/**
 	 * Add a vote to the file
 	 */

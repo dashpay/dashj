@@ -1,6 +1,7 @@
 package org.bitcoinj.manager;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.governance.GovernanceObject;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +19,8 @@ public class GovernanceManager extends AbstractManager {
     ReentrantLock lock = Threading.lock("GovernanceManager");
 
     public static final int MAX_GOVERNANCE_OBJECT_DATA_SIZE = 16 * 1024;
-    public static final int MIN_GOVERNANCE_PEER_PROTO_VERSION = 70206;
-    public static final int GOVERNANCE_FILTER_PROTO_VERSION = 70206;
+    public static final int MIN_GOVERNANCE_PEER_PROTO_VERSION = 70208;
+    public static final int GOVERNANCE_FILTER_PROTO_VERSION = 70208;
 
     public static int nSubmittedFinalBudget;
     public static final int MAX_TIME_FUTURE_DEVIATION = 60*60;
@@ -93,5 +94,12 @@ public class GovernanceManager extends AbstractManager {
         } finally {
             lock.unlock();
         }
+    }
+    public void processGovernanceObject(Peer peer, GovernanceObject governanceObject) {
+
+    }
+
+    public void processGovernanceObjectVote(Peer peer, GovernanceObject governanceObjectVote) {
+
     }
 }
