@@ -16,6 +16,7 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.core.listeners.BlockChainListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
+import org.bitcoinj.manager.GovernanceManager;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.bitcoinj.store.MasternodeDB;
@@ -69,7 +70,7 @@ public class Context {
     public DarkSendPool darkSendPool;
     public InstantSend instantSend;
     public HashStore hashStore;
-    public MasternodeDB masternodeDB;
+    public GovernanceManager governanceManager;
     public NetFullfilledRequestManager netFullfilledRequestManager;
     public static boolean fMasterNode = false;
 
@@ -220,6 +221,7 @@ public class Context {
         instantSend = new InstantSend(this);
         masternodeManager = new MasternodeManager(this);
         initializedDash = true;
+        governanceManager = new GovernanceManager(this);
 
         netFullfilledRequestManager = new NetFullfilledRequestManager(this);
     }
@@ -236,6 +238,7 @@ public class Context {
         instantSend = null;
         masternodeManager = null;
         initializedDash = false;
+        governanceManager = null;
     }
 
     public void initDashSync(String directory)

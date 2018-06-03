@@ -50,7 +50,6 @@ public class DarkSendEntryGetMessage extends Message {
 
         cursor = offset;
 
-        optimalEncodingMessageSize = 0;
 
         TransactionOutPoint outpoint = new TransactionOutPoint(params, payload, cursor);
         cursor += outpoint.getMessageSize();
@@ -59,7 +58,7 @@ public class DarkSendEntryGetMessage extends Message {
         long sequence = readUint32();
         vin = new TransactionInput(params, null, scriptBytes, outpoint);
 
-        optimalEncodingMessageSize += outpoint.getMessageSize() + scriptLen + VarInt.sizeOf(scriptLen) +4;
+        cursor += outpoint.getMessageSize() + scriptLen + VarInt.sizeOf(scriptLen) +4;
 
          length = cursor - offset;
 
@@ -69,16 +68,6 @@ public class DarkSendEntryGetMessage extends Message {
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
         vin.bitcoinSerialize(stream);
-    }
-
-    long getOptimalEncodingMessageSize()
-    {
-        if (optimalEncodingMessageSize != 0)
-            return optimalEncodingMessageSize;
-        if (optimalEncodingMessageSize != 0)
-            return optimalEncodingMessageSize;
-        optimalEncodingMessageSize = getMessageSize();
-        return optimalEncodingMessageSize;
     }
 
     public String toString()

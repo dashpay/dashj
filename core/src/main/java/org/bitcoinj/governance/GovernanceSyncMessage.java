@@ -1,9 +1,6 @@
 package org.bitcoinj.governance;
 
-import org.bitcoinj.core.BloomFilter;
-import org.bitcoinj.core.Message;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.*;
 import org.bitcoinj.manager.GovernanceManager;
 
 import java.io.IOException;
@@ -49,8 +46,17 @@ public class GovernanceSyncMessage extends Message {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         stream.write(prop.getReversedBytes());
-        if(protocolVersion >= GovernanceManager.GOVERNANCE_FILTER_PROTO_VERSION && bloomFilter != null) //TODO:  This may be a bug
-            bloomFilter.bitcoinSerialize(stream);
+        /*if(protocolVersion >= GovernanceManager.GOVERNANCE_FILTER_PROTO_VERSION)*/ {
+            if (bloomFilter != null) //TODO:  This may be a bug
+                bloomFilter.bitcoinSerialize(stream);
+            else {
+                stream.write(new VarInt(0).encode());
+                //stream.write(data);
+                Utils.uint32ToByteStreamLE(0, stream);
+                Utils.uint32ToByteStreamLE(0, stream);
+                stream.write((byte)0);
+            }
+        }
     }
 }
 

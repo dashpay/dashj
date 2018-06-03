@@ -263,7 +263,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     }
 
 
-    GovernanceVote(NetworkParameters params, byte[] payload, int cursor)
+    public GovernanceVote(NetworkParameters params, byte[] payload, int cursor)
     {
         super(params, payload, cursor);
     }

@@ -1,13 +1,18 @@
 package org.bitcoinj.manager;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.governance.GovernanceObject;
+import org.bitcoinj.governance.*;
+import org.bitcoinj.utils.CacheMap;
+import org.bitcoinj.utils.CacheMultiMap;
+import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -27,6 +32,53 @@ public class GovernanceManager extends AbstractManager {
     public static final int RELIABLE_PROPAGATION_TIME = 60;
 
     public static final String SERIALIZATION_VERSION_STRING = "CGovernanceManager-Version-12";
+
+
+    private static final int MAX_CACHE_SIZE = 1000000;
+
+    private final String serializationVersionString = "CGovernanceManager-Version-12";
+
+    private final int maxTimeFutureDeviation = 60*60;
+    private final int reliablePropagationTime = 60;
+
+    private long nTimeLastDiff;
+
+    // keep track of current block height
+    private int nCachedBlockHeight;
+
+    // keep track of the scanning errors
+    private HashMap<Sha256Hash, GovernanceObject> mapObjects;
+
+    // mapErasedGovernanceObjects contains key-value pairs, where
+    //   key   - governance object's hash
+    //   value - expiration time for deleted objects
+    private HashMap<Sha256Hash, Long> mapErasedGovernanceObjects;
+
+    private HashMap<Sha256Hash, Pair<GovernanceObject, ExpirationInfo>> mapMasternodeOrphanObjects;
+    private HashMap<TransactionOutPoint, Integer> mapMasternodeOrphanCounter;
+
+    private HashMap<Sha256Hash, GovernanceObject> mapPostponedObjects;
+    private HashSet<Sha256Hash> setAdditionalRelayObjects;
+
+    private HashMap<Sha256Hash, Long> mapWatchdogObjects;
+
+    private Sha256Hash nHashWatchdogCurrent;
+
+    private long nTimeWatchdogCurrent;
+
+    private CacheMap<Sha256Hash, GovernanceObject> mapVoteToObject;
+
+    private CacheMap<Sha256Hash, GovernanceVote> mapInvalidVotes;
+
+    private CacheMultiMap<Sha256Hash, Pair<GovernanceVote, Long>> mapOrphanVotes;
+
+    private HashMap<TransactionOutPoint, LastObjectRecord> mapLastMasternodeObject;
+
+    private HashSet<Sha256Hash> setRequestedObjects;
+
+    private HashSet<Sha256Hash> setRequestedVotes;
+
+    private boolean fRateChecksEnabled;
 
     public GovernanceManager(Context context) {
         super(context);
@@ -99,7 +151,7 @@ public class GovernanceManager extends AbstractManager {
 
     }
 
-    public void processGovernanceObjectVote(Peer peer, GovernanceObject governanceObjectVote) {
+    public void processGovernanceObjectVote(Peer peer, GovernanceObjectVote governanceObjectVote) {
 
     }
 }

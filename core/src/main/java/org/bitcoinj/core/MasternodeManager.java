@@ -991,7 +991,7 @@ public class MasternodeManager extends AbstractManager {
                 map = new HashMap<NetAddress, Long>();
             }
             map.put(new NetAddress(pnode.getAddress().getAddr()), Utils.currentTimeSeconds() + DSEG_UPDATE_SECONDS);
-            pnode.sendMessage(new DarkSendEntryGetMessage(new TransactionInput(params, null, null, outPoint)));
+            pnode.sendMessage(new DarkSendEntryGetMessage(new TransactionInput(params, null, new byte[0], outPoint)));
         } finally {
             lock.unlock();
         }

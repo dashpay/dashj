@@ -21,6 +21,8 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.bitcoinj.core.listeners.*;
+import org.bitcoinj.governance.GovernanceObject;
+import org.bitcoinj.governance.GovernanceObjectVote;
 import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.store.BlockStore;
@@ -565,9 +567,11 @@ public class Peer extends PeerSocketHandler {
         }
         else if(m instanceof GovernanceSyncMessage) {
             //swallow for now
-        }
-        else
-        {
+        } else if(m instanceof GovernanceObject) {
+            context.governanceManager.processGovernanceObject(this, (GovernanceObject)m);
+        } else if(m instanceof GovernanceObjectVote) {
+            context.governanceManager.processGovernanceObjectVote(this, (GovernanceObjectVote)m);
+        } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
     }
@@ -1291,6 +1295,9 @@ public class Peer extends PeerSocketHandler {
                 return context.masternodeManager.mapSeenMasternodePing.containsKey(inv.hash);
             case MasternodeVerify:
                 return context.masternodeManager.mapSeenMasternodeVerification.containsKey(inv.hash);
+            case GovernanceObject:
+            case GovernanceObjectVote:
+                return false;
         }
         // Don't know what it is, just say we already got one
         return true;
@@ -1308,6 +1315,7 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> masternodeBroadcasts = new LinkedList<InventoryItem>();
         List<InventoryItem> sporks = new LinkedList<InventoryItem>();
         List<InventoryItem> masternodeVerifications = new LinkedList<InventoryItem>();
+        List<InventoryItem> goveranceObjects = new LinkedList<InventoryItem>();
 
         //InstantSend instantSend = InstantSend.get(blockChain);
 
@@ -1351,6 +1359,8 @@ public class Peer extends PeerSocketHandler {
                 case DarkSendTransaction:
                     break;
                 case GovernanceObject:
+                    goveranceObjects.add(item);
+                    break;
                 case GovernanceObjectVote:
                     break;
                 case MasternodeVerify:
@@ -1494,6 +1504,14 @@ public class Peer extends PeerSocketHandler {
             //{
             getdata.addItem(item);
             //}
+        }
+
+        it = goveranceObjects.iterator();
+
+        while (it.hasNext()) {
+            InventoryItem item = it.next();
+            if(!alreadyHave(item))
+                getdata.addItem(item);
         }
 
         // If we are requesting filteredblocks we have to send a ping after the getdata so that we have a clear

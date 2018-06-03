@@ -36,18 +36,18 @@ public class GovernanceObjectVoteFile extends Message {
 
 	private LinkedList<GovernanceVote> listVotes;
 
-	private TreeMap<Sha256Hash, ListIterator<GovernanceVote>> mapVoteIndex;
+	private TreeMap<Sha256Hash, GovernanceVote> mapVoteIndex;
 
 	public GovernanceObjectVoteFile() {
 		this.nMemoryVotes = 0;
 		this.listVotes =  new LinkedList<GovernanceVote>();
-		this.mapVoteIndex = new TreeMap<Sha256Hash, ListIterator<GovernanceVote>>();
+		this.mapVoteIndex = new TreeMap<Sha256Hash, GovernanceVote>();
 	}
 
 	public GovernanceObjectVoteFile(GovernanceObjectVoteFile other) {
 		this.nMemoryVotes = other.nMemoryVotes;
 		this.listVotes = other.listVotes;
-		this.mapVoteIndex = new TreeMap<Sha256Hash,ListIterator<GovernanceVote>>();
+		this.mapVoteIndex = new TreeMap<Sha256Hash, GovernanceVote>();
 		rebuildIndex();
 	}
 
@@ -61,7 +61,7 @@ public class GovernanceObjectVoteFile extends Message {
 	 */
 	public void addVote(GovernanceVote vote) {
 		listVotes.addFirst(vote);
-		mapVoteIndex.put(vote.getHash(), listVotes.listIterator(0));
+		mapVoteIndex.put(vote.getHash(), vote);
 		++nMemoryVotes;
 	}
 
@@ -71,7 +71,7 @@ public class GovernanceObjectVoteFile extends Message {
 //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
 //ORIGINAL LINE: boolean HasVote(const Sha256Hash& nHash) const;
 	public boolean hasVote(Sha256Hash nHash) {
-		ListIterator it = mapVoteIndex.get(nHash);
+		GovernanceVote it = mapVoteIndex.get(nHash);
 		if (it == null) {
 			return false;
 		}
@@ -82,11 +82,11 @@ public class GovernanceObjectVoteFile extends Message {
 	 * Retrieve a vote cached in memory
 	 */
 	public GovernanceVote getVote(Sha256Hash nHash) {
-		ListIterator<GovernanceVote> it = mapVoteIndex.get(nHash);
+		GovernanceVote it = mapVoteIndex.get(nHash);
 		if (it == null) {
 			return null;
 		}
-		return it.next();  //TODO:  This may return a bad result or next will advance the iterator to something else.
+		return it;  //TODO:  This may return a bad result or next will advance the iterator to something else.
 	}
 
 	public final int getVoteCount() {
@@ -121,10 +121,10 @@ public class GovernanceObjectVoteFile extends Message {
 			GovernanceVote vote = it.next();
 			Sha256Hash nHash = vote.getHash();
 			if (mapVoteIndex.get(nHash) == null) {
-				mapVoteIndex.put(nHash, it);
+				mapVoteIndex.put(nHash, vote);
 				++nMemoryVotes;
 			} else {
-				it.remove();
+				it.remove();  //TODO:  this looks like a bug
 			}
 		}
 	}

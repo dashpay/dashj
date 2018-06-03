@@ -192,7 +192,7 @@ public class MasternodeSync {
             case(MASTERNODE_SYNC_WAITING):
                 clearFulfilledRequest();
                 log.info("CMasternodeSync::SwitchToNextAsset -- Completed "+getAssetName()+" in " + (Utils.currentTimeSeconds() - nTimeAssetSyncStarted));
-                RequestedMasternodeAssets = MASTERNODE_SYNC_LIST;
+                RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;//MASTERNODE_SYNC_LIST;
                 log.info("CMasternodeSync::SwitchToNextAsset -- Starting "+ getAssetName());
 
                 //If we are in lite mode and allowing InstantX, then only sync the sporks

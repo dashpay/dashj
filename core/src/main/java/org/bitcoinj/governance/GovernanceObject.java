@@ -182,9 +182,9 @@ public class GovernanceObject extends Message implements Serializable {
             throw new ProtocolException("String length limit exceeded");
         nObjectType = (int)readUint32();
         vinMasternode = new TransactionInput(params, null, payload, cursor);
-        cursor = vinMasternode.getMessageSize();
+        cursor += vinMasternode.getMessageSize();
         vchSig = new MasternodeSignature(params, payload, cursor);
-        cursor = vchSig.getMessageSize();
+        cursor += vchSig.getMessageSize();
         length = cursor - offset;
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY
@@ -252,6 +252,16 @@ public class GovernanceObject extends Message implements Serializable {
             return Sha256Hash.twiceOf(bos.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    String getHexData() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(400);
+            bitcoinSerialize(bos);
+            return Utils.HEX.encode(bos.toByteArray());
+        } catch (IOException x) {
+            return "";
         }
     }
 }

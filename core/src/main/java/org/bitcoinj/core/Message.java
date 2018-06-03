@@ -375,4 +375,8 @@ public abstract class Message {
             this.serializer = params.getDefaultSerializer();
         }
     }
+
+    public static Message create(NetworkParameters parameters, byte [] payload, int cursor) {
+        return null;
+    }
 }
