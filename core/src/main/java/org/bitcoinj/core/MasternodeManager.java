@@ -1468,7 +1468,7 @@ public class MasternodeManager extends AbstractManager {
     }
 
 
-    MasternodeInfo getMasternodeInfo(TransactionOutPoint outpoint)
+    public MasternodeInfo getMasternodeInfo(TransactionOutPoint outpoint)
     {
         lock.lock();
         try {

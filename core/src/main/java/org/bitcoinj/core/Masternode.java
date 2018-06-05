@@ -35,7 +35,7 @@ public class Masternode extends Message {
     long lastTimeChecked;
 
 
-    enum CollateralStatus {
+    public enum CollateralStatus {
         COLLATERAL_OK,
         COLLATERAL_UTXO_NOT_FOUND,
         COLLATERAL_INVALID_AMOUNT,
@@ -752,7 +752,7 @@ public class Masternode extends Message {
         return false;
     }
 
-    Pair<CollateralStatus, Integer> checkCollateral(TransactionOutPoint outpoint)
+    static public Pair<CollateralStatus, Integer> checkCollateral(TransactionOutPoint outpoint)
     {
         //TODO:  can this be fixed?  - perhaps with a full node that watches masternodes?
         /*AssertLockHeld(cs_main);

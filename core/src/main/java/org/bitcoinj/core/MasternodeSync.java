@@ -106,15 +106,14 @@ public class MasternodeSync {
         nTimeLastFailure = 0;
     }
 
-    void BumpAssetLastTime(String strFuncName)
+    public void BumpAssetLastTime(String strFuncName)
     {
         if(isSynced() || isFailed()) return;
         nTimeLastBumped = Utils.currentTimeSeconds();
         log.info("mnsync--CMasternodeSync::BumpAssetLastTime -- "+ strFuncName);
     }
 
-    void addedMasternodeList(Sha256Hash hash)
-    {
+    void addedMasternodeList(Sha256Hash hash) {
         if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
             Integer count = mapSeenSyncMNB.get(hash);
             if(count != null) {
@@ -135,8 +134,7 @@ public class MasternodeSync {
     public boolean isBlockchainSynced() { return RequestedMasternodeAssets > MASTERNODE_SYNC_WAITING; }
     public boolean isMasternodeListSynced() { return RequestedMasternodeAssets > MASTERNODE_SYNC_LIST; }
     public boolean isWinnersListSynced() { return RequestedMasternodeAssets > MASTERNODE_SYNC_MNW; }
-    boolean isSynced()
-    {
+    public boolean isSynced() {
         return RequestedMasternodeAssets == MASTERNODE_SYNC_FINISHED;
     }
 

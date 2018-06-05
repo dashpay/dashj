@@ -42,6 +42,10 @@ public class RegTestParams extends TestNet2Params {
 
         fulfilledRequestExpireTime = 5*60;
         masternodeMinimumConfirmations = 1;
+        superblockStartBlock = 1500;
+        superblockCycle = 10;
+        nGovernanceMinQuorum = 1;
+        nGovernanceFilterElements = 100;
     }
 
     @Override

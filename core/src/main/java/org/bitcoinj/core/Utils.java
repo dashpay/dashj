@@ -140,6 +140,11 @@ public class Utils {
         stream.write(string.getBytes());
     }
 
+    public static void bytesToByteStream(byte [] string, OutputStream stream) throws IOException {
+        stream.write(new VarInt(string.length).encode());
+        stream.write(string);
+    }
+
     /**
      * Work around lack of unsigned types in Java.
      */

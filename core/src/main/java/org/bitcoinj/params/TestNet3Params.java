@@ -90,6 +90,10 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
 
         fulfilledRequestExpireTime = 5*60;
         masternodeMinimumConfirmations = 1;
+        superblockStartBlock = 4200;
+        superblockCycle = 24;
+        nGovernanceMinQuorum = 1;
+        nGovernanceFilterElements = 500;
 
     }
 

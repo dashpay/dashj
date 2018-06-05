@@ -8,7 +8,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public abstract class AbstractManager extends Message {
 
-    Context context;
+    protected Context context;
     public AbstractManager(Context context) {
         super(context.getParams());
         this.context = context;
