@@ -15,33 +15,29 @@
  */
 package org.bitcoinj.governance;
 
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.LinkedHashMultimap;
 import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
-import org.darkcoinj.DarkSendSigner;
-import org.darkcoinj.InstantSend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.governance.GovernanceException.Type.*;
+import static org.bitcoinj.governance.GovernanceVote.MAX_SUPPORTED_VOTE_SIGNAL;
 import static org.bitcoinj.governance.GovernanceVote.VoteOutcome;
 import static org.bitcoinj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_ABSTAIN;
 import static org.bitcoinj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_NO;
 import static org.bitcoinj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_YES;
 import static org.bitcoinj.governance.GovernanceVote.VoteSignal;
 import static org.bitcoinj.governance.GovernanceVote.VoteSignal.*;
-import static org.bitcoinj.manager.GovernanceManager.MAX_GOVERNANCE_OBJECT_DATA_SIZE;
-import static org.darkcoinj.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
 
 public class GovernanceObject extends Message implements Serializable {
 
@@ -142,9 +138,11 @@ public class GovernanceObject extends Message implements Serializable {
     private GovernanceObjectVoteFile fileVotes;
 
     Context context;
+    public GovernanceObject(NetworkParameters params) {
+        super(params);
+    }
 
-    public GovernanceObject(NetworkParameters params, byte[] payload)
-    {
+    public GovernanceObject(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
         context = Context.get();
     }
@@ -155,6 +153,10 @@ public class GovernanceObject extends Message implements Serializable {
 
     public final long getDeletionTime() {
         return nDeletionTime;
+    }
+
+    public final void setDeletionTime(long deletionTime) {
+        nDeletionTime = deletionTime;
     }
 
     public final int getObjectType() {
@@ -191,6 +193,9 @@ public class GovernanceObject extends Message implements Serializable {
 
     public final boolean isSetExpired() {
         return fExpired;
+    }
+    public final void setExpired(boolean expired) {
+        fExpired = expired;
     }
 
     public final void invalidateVoteCache() {
@@ -434,13 +439,13 @@ public class GovernanceObject extends Message implements Serializable {
 
         /*if(!GetTransaction(nCollateralHash, txCollateral, Params().GetConsensus(), nBlockHash, true)){
             strError = strprintf("Can't find collateral tx %s", txCollateral.ToString());
-            LogPrintf("CGovernanceObject::IsCollateralValid -- %s\n", strError);
+            log.info("CGovernanceObject::IsCollateralValid -- %s\n", strError);
             return false;
         }
 
         if(txCollateral.vout.size() < 1) {
             strError = strprintf("tx vout size less than 1 | %d", txCollateral.vout.size());
-            LogPrintf("CGovernanceObject::IsCollateralValid -- %s\n", strError);
+            log.info("CGovernanceObject::IsCollateralValid -- %s\n", strError);
             return false;
         }
 
@@ -464,7 +469,7 @@ public class GovernanceObject extends Message implements Serializable {
                 << endl; );
         if(!o.scriptPubKey.IsPayToPublicKeyHash() && !o.scriptPubKey.IsUnspendable()) {
             strError = strprintf("Invalid Script %s", txCollateral.ToString());
-            LogPrintf ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
+            log.info ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
             return false;
         }
         if(o.scriptPubKey == findScript && o.nValue >= nMinFee) {
@@ -479,7 +484,7 @@ public class GovernanceObject extends Message implements Serializable {
 
         if(!foundOpReturn){
             strError = strprintf("Couldn't find opReturn %s in %s", nExpectedHash.ToString(), txCollateral.ToString());
-            LogPrintf ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
+            log.info ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
             return false;
         }
 
@@ -505,7 +510,7 @@ public class GovernanceObject extends Message implements Serializable {
             } else {
                 strError += ", rejected -- try again later";
             }
-            LogPrintf ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
+            log.info ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
 
             return false;
         }*/
@@ -618,5 +623,88 @@ public class GovernanceObject extends Message implements Serializable {
     public void relay() {
         // Do not relay
     }
+
+    public boolean processVote(Peer pfrom, GovernanceVote vote, GovernanceException exception) {
+        if (!context.masternodeManager.has(vote.getMasternodeOutpoint())) {
+            String message = "CGovernanceObject::ProcessVote -- Masternode index not found";
+            exception.setException(message, GOVERNANCE_EXCEPTION_WARNING);
+            if (mapOrphanVotes.put(vote.getMasternodeOutpoint(), new Pair<Integer, GovernanceVote>((int)(Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME), vote))) {
+                if (pfrom != null) {
+                    context.masternodeManager.askForMN(pfrom, vote.getMasternodeOutpoint());
+                }
+                log.info("{}", message);
+            } else {
+                log.info("gobject--{}", message);
+            }
+            return false;
+        }
+
+        VoteRecord recVote = mapCurrentMNVotes.get(vote.getMasternodeOutpoint());
+        if (recVote == null) {
+            recVote = mapCurrentMNVotes.put(vote.getMasternodeOutpoint(), new VoteRecord(params));
+        }
+
+        VoteSignal eSignal = vote.getSignal();
+        if (eSignal == VOTE_SIGNAL_NONE) {
+            String signalMessage = "CGovernanceObject::ProcessVote -- Vote signal: none";
+            log.info("gobject--{}", signalMessage);
+            exception.setException(signalMessage, GOVERNANCE_EXCEPTION_WARNING);
+            return false;
+        }
+        if (eSignal.getValue() > MAX_SUPPORTED_VOTE_SIGNAL) {
+            String signalMessage = "CGovernanceObject::ProcessVote -- Unsupported vote signal: " + GovernanceVoting.convertSignalToString(vote.getSignal());
+            log.info("{}", signalMessage);
+            exception.setException(signalMessage, GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
+            return false;
+        }
+        VoteInstance voteInstance = recVote.mapInstances.get(eSignal.getValue());
+        if (voteInstance == null) {
+            voteInstance = recVote.mapInstances.put(eSignal.getValue(), new VoteInstance(params));
+        }
+
+        // Reject obsolete votes
+        if (vote.getTimestamp() < voteInstance.nCreationTime) {
+            String obMessage = "CGovernanceObject::ProcessVote -- Obsolete vote";
+            log.info("gobject--{}", obMessage);
+            exception.setException(obMessage, GOVERNANCE_EXCEPTION_NONE);
+            return false;
+        }
+
+        long nNow = Utils.currentTimeSeconds();
+        long nVoteTimeUpdate = voteInstance.nTime;
+        if (context.governanceManager.areRateChecksEnabled()) {
+            long nTimeDelta = nNow - voteInstance.nTime;
+            if (nTimeDelta < GOVERNANCE_UPDATE_MIN) {
+                String oftenMessage = "CGovernanceObject::ProcessVote -- Masternode voting too often, MN outpoint = " +
+                        vote.getMasternodeOutpoint().toStringShort() + ", governance object hash = " + getHash().toString() +
+                        ", time delta = " + nTimeDelta;
+                log.info("gobject--{}", oftenMessage);
+                exception.setException(oftenMessage, GOVERNANCE_EXCEPTION_TEMPORARY_ERROR);
+                nVoteTimeUpdate = nNow;
+                return false;
+            }
+        }
+        // Finally check that the vote is actually valid (done last because of cost of signature verification)
+        if (!vote.isValid(true)) {
+            String validMessage = "CGovernanceObject::ProcessVote -- Invalid vote" + ", MN outpoint = " + vote.getMasternodeOutpoint().toStringShort() + ", governance object hash = " + getHash().toString() + ", vote hash = " + vote.getHash().toString();
+            log.info("gobject--{}", validMessage);
+            exception.setException(validMessage, GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
+            context.governanceManager.addInvalidVote(vote);
+            return false;
+        }
+        if (!context.masternodeManager.addGovernanceVote(vote.getMasternodeOutpoint(), vote.getParentHash())) {
+            String unableMessage = "CGovernanceObject::ProcessVote -- Unable to add governance vote" + ", MN outpoint = " + vote.getMasternodeOutpoint().toStringShort() + ", governance object hash = " + getHash().toString();
+            log.info("gobject--{}", unableMessage);
+            exception.setException(unableMessage, GOVERNANCE_EXCEPTION_PERMANENT_ERROR);
+            return false;
+        }
+        voteInstance = new VoteInstance(params, vote.getOutcome(), nVoteTimeUpdate, vote.getTimestamp());
+        if (!fileVotes.hasVote(vote.getHash())) {
+            fileVotes.addVote(vote);
+        }
+        fDirtyCache = true;
+        return true;
+    }
+
 
 }

@@ -1,7 +1,6 @@
-package org.bitcoinj.manager;
+package org.bitcoinj.governance;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.governance.*;
 import org.bitcoinj.utils.CacheMap;
 import org.bitcoinj.utils.CacheMultiMap;
 import org.bitcoinj.utils.Pair;
@@ -9,9 +8,10 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.rmi.CORBA.Util;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.locks.ReentrantLock;
@@ -231,7 +231,7 @@ public class GovernanceManager extends AbstractManager {
 
                     count++;
                     mapMasternodeOrphanCounter.put(govobj.getMasternodeVin().getOutpoint(), count);
-                    ExpirationInfo info = new ExpirationInfo(pfrom -> GetId(), Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME);
+                    ExpirationInfo info = new ExpirationInfo(peer.getId(), Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME);
                     mapMasternodeOrphanObjects.put(nHash, new Pair<GovernanceObject, ExpirationInfo>(govobj, info));
                     log.info("MNGOVERNANCEOBJECT -- Missing masternode for: {}, strError = {}", strHash, strError);
                 } else if (validity.fMissingConfirmations) {
@@ -246,7 +246,7 @@ public class GovernanceManager extends AbstractManager {
                 return;
             }
 
-            addGovernanceObject(govobj, connman, pfrom);
+            addGovernanceObject(govobj, peer);
         } finally {
             lock.unlock();
         }
@@ -281,6 +281,35 @@ public class GovernanceManager extends AbstractManager {
         setHash.remove(nHash);
         return true;
     }
+
+    public void masternodeRateUpdate(GovernanceObject govobj) {
+        int nObjectType = govobj.getObjectType();
+        if ((nObjectType != GOVERNANCE_OBJECT_TRIGGER) && (nObjectType != GOVERNANCE_OBJECT_WATCHDOG)) {
+            return;
+        }
+
+        final TransactionInput vin = govobj.getMasternodeVin();
+        LastObjectRecord it = mapLastMasternodeObject.get(vin.getOutpoint());
+
+        if (it == null) {
+            it = mapLastMasternodeObject.put(vin.getOutpoint(), new LastObjectRecord(params, true));
+        }
+
+        long nTimestamp = govobj.getCreationTime();
+        if (GOVERNANCE_OBJECT_TRIGGER == nObjectType) {
+            it.triggerBuffer.addTimestamp(nTimestamp);
+        } else if (GOVERNANCE_OBJECT_WATCHDOG == nObjectType) {
+            it.watchdogBuffer.addTimestamp(nTimestamp);
+        }
+
+        if (nTimestamp > Utils.currentTimeSeconds() + MAX_TIME_FUTURE_DEVIATION - RELIABLE_PROPAGATION_TIME) {
+            // schedule additional relay for the object
+            setAdditionalRelayObjects.add(govobj.getHash());
+        }
+
+        it.fStatusOK = true;
+    }
+
 
     public boolean masternodeRateCheck(GovernanceObject govobj, boolean fUpdateFailStatus) {
         Pair<Boolean, Boolean> result =  masternodeRateCheck(govobj, fUpdateFailStatus, true);
@@ -404,7 +433,7 @@ public class GovernanceManager extends AbstractManager {
 
     int getCachedBlockHeight() { return nCachedBlockHeight; }
 
-    void addInvalidVote(final GovernanceVote vote)
+    public void addInvalidVote(final GovernanceVote vote)
     {
         mapInvalidVotes.insert(vote.getHash(), vote);
     }
@@ -414,7 +443,7 @@ public class GovernanceManager extends AbstractManager {
         mapOrphanVotes.insert(vote.getHash(), new Pair<GovernanceVote, Long>(vote, Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME));
     }
 
-    boolean areRateChecksEnabled() {
+    public boolean areRateChecksEnabled() {
         lock.lock();
         try {
             return fRateChecksEnabled;
@@ -422,6 +451,39 @@ public class GovernanceManager extends AbstractManager {
             lock.unlock();
         }
     }
+
+    public void checkOrphanVotes(GovernanceObject govobj, GovernanceException exception) {
+        Sha256Hash nHash = govobj.getHash();
+        ArrayList<Pair<GovernanceVote, Long>> vecVotePairs = new ArrayList<Pair<GovernanceVote, Long>>();
+        mapOrphanVotes.getAll(nHash, vecVotePairs);
+
+        lock.lock();
+        boolean _fRateChecksEnabled = fRateChecksEnabled;
+        fRateChecksEnabled = false;
+        try {
+
+            long nNow = Utils.currentTimeSeconds();
+            for (int i = 0; i < vecVotePairs.size(); ++i) {
+                boolean fRemove = false;
+                Pair<GovernanceVote, Long> pairVote = vecVotePairs.get(i);
+                GovernanceVote vote = pairVote.getFirst();
+
+                if (pairVote.getSecond() < nNow) {
+                    fRemove = true;
+                } else if (govobj.processVote(null, vote, exception)) {
+                    vote.relay();
+                    fRemove = true;
+                }
+                if (fRemove) {
+                    mapOrphanVotes.erase(nHash, pairVote);
+                }
+            }
+        } finally {
+            fRateChecksEnabled = _fRateChecksEnabled;
+            lock.unlock();
+        }
+    }
+
 
     void addGovernanceObject(GovernanceObject govobj, Peer pfrom)
     {
@@ -442,7 +504,7 @@ public class GovernanceManager extends AbstractManager {
             // MAKE SURE THIS OBJECT IS OK
 
             if(!govobj.isValidLocally(validity, true)) {
-                log.info("CGovernanceManager::AddGovernanceObject -- invalid governance object - %s - (nCachedBlockHeight %d) \n", strError, nCachedBlockHeight);
+                log.info("CGovernanceManager::AddGovernanceObject -- invalid governance object - {} - (nCachedBlockHeight {})", validity.strError, nCachedBlockHeight);
                 return;
             }
 
@@ -453,7 +515,7 @@ public class GovernanceManager extends AbstractManager {
                 return;
             }
 
-            log.info("gobject--CGovernanceManager::AddGovernanceObject -- Adding object: hash = {}, type = {}", nHash.toString(), govobj.GetObjectType());
+            log.info("gobject--CGovernanceManager::AddGovernanceObject -- Adding object: hash = {}, type = {}", nHash.toString(), govobj.getObjectType());
 
             if(govobj.getObjectType() == GOVERNANCE_OBJECT_WATCHDOG) {
                 // If it's a watchdog, make sure it fits required time bounds
@@ -461,13 +523,13 @@ public class GovernanceManager extends AbstractManager {
                         govobj.getCreationTime() > Utils.currentTimeSeconds() + GOVERNANCE_WATCHDOG_EXPIRATION_TIME)
                         ) {
                     // drop it
-                    log.info("gobject", "CGovernanceManager::AddGovernanceObject -- CreationTime is out of bounds: hash = %s\n", nHash.ToString());
+                    log.info("gobject", "CGovernanceManager::AddGovernanceObject -- CreationTime is out of bounds: hash = {}", nHash.toString());
                     return;
                 }
 
                 if(!updateCurrentWatchdog(govobj)) {
                     // Allow wd's which are not current to be reprocessed
-                    if(pfrom && (nHashWatchdogCurrent != uint256())) {
+                    if(pfrom != null && !nHashWatchdogCurrent.equals(BigInteger.ZERO)) {
                         pfrom.pushInventory(new InventoryItem(InventoryItem.Type.GovernanceObject, nHashWatchdogCurrent));
                     }
                     log.info("gobject--CGovernanceManager::AddGovernanceObject -- Watchdog not better than current: hash = {}", nHash.toString());
@@ -487,19 +549,19 @@ public class GovernanceManager extends AbstractManager {
             switch(govobj.getObjectType()) {
                 case GOVERNANCE_OBJECT_TRIGGER:
                     log.info("CGovernanceManager::AddGovernanceObject Before AddNewTrigger");
-                    triggerman.AddNewTrigger(nHash);
+                    context.triggerManager.addNewTrigger(nHash);
                     log.info("CGovernanceManager::AddGovernanceObject After AddNewTrigger");
                     break;
                 case GOVERNANCE_OBJECT_WATCHDOG:
                     mapWatchdogObjects.put(nHash, govobj.getCreationTime() + GOVERNANCE_WATCHDOG_EXPIRATION_TIME);
-                    log.info("gobject", "CGovernanceManager::AddGovernanceObject -- Added watchdog to map: hash = %s\n", nHash.ToString());
+                    log.info("gobject", "CGovernanceManager::AddGovernanceObject -- Added watchdog to map: hash = {}", nHash.toString());
                     break;
                 default:
                     break;
             }
 
             log.info("AddGovernanceObject -- {} new, received from {}", strHash, pfrom == null ? pfrom.getAddress().getHostname() : "NULL");
-            govobj.relay(connman);
+            govobj.relay();
 
             // Update the rate buffer
             masternodeRateUpdate(govobj);
@@ -508,7 +570,7 @@ public class GovernanceManager extends AbstractManager {
 
             // WE MIGHT HAVE PENDING/ORPHAN VOTES FOR THIS OBJECT
 
-            CGovernanceException exception;
+            GovernanceException exception = new GovernanceException();
             checkOrphanVotes(govobj, exception);
 
             log.info("CGovernanceManager::AddGovernanceObject END");
@@ -517,7 +579,48 @@ public class GovernanceManager extends AbstractManager {
         }
     }
 
+    public boolean updateCurrentWatchdog(GovernanceObject watchdogNew) {
+        boolean fAccept = false;
 
+        BigInteger nHashNew = new BigInteger(watchdogNew.getHash().getBytes());
+        BigInteger nHashCurrent = new BigInteger(nHashWatchdogCurrent.getBytes());
 
+        long nExpirationDelay = GOVERNANCE_WATCHDOG_EXPIRATION_TIME / 2;
+        long nNow = Utils.currentTimeSeconds();
 
+        if (nHashWatchdogCurrent.equals(Sha256Hash.ZERO_HASH) || ((nNow - watchdogNew.getCreationTime() < nExpirationDelay) && ((nNow - nTimeWatchdogCurrent > nExpirationDelay) || (nHashNew.compareTo(nHashCurrent) > 0))))
+        { //  (current is expired OR -  (new one is NOT expired AND -  no known current OR
+            //   its hash is lower))
+            lock.lock();
+            try {
+                GovernanceObject it = mapObjects.get(nHashWatchdogCurrent);
+                if (it != null) {
+                    log.info("gobject--CGovernanceManager::UpdateCurrentWatchdog -- Expiring previous current watchdog, hash = {}", nHashWatchdogCurrent.toString());
+                    it.setExpired(true);
+                    if (it.getDeletionTime() == 0) {
+                        it.setDeletionTime(nNow);
+                    }
+                }
+                nHashWatchdogCurrent = watchdogNew.getHash();
+                nTimeWatchdogCurrent = watchdogNew.getCreationTime();
+                fAccept = true;
+                log.info("gobject--CGovernanceManager::UpdateCurrentWatchdog -- Current watchdog updated to: hash = {}", Sha256Hash.wrap(nHashNew.toByteArray()).toString());
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        return fAccept;
     }
+
+    public GovernanceObject findGovernanceObject(Sha256Hash nHash)
+    {
+        lock.lock();
+        try {
+            return mapObjects.get(nHash);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+}

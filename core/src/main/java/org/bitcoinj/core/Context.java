@@ -16,10 +16,10 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.core.listeners.BlockChainListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
-import org.bitcoinj.manager.GovernanceManager;
+import org.bitcoinj.governance.GovernanceManager;
+import org.bitcoinj.governance.GovernanceTriggerManager;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
-import org.bitcoinj.store.MasternodeDB;
 import org.darkcoinj.DarkSendPool;
 import org.darkcoinj.InstantSend;
 import org.slf4j.*;
@@ -71,6 +71,7 @@ public class Context {
     public InstantSend instantSend;
     public HashStore hashStore;
     public GovernanceManager governanceManager;
+    public GovernanceTriggerManager triggerManager;
     public NetFullfilledRequestManager netFullfilledRequestManager;
     public static boolean fMasterNode = false;
 
@@ -222,6 +223,7 @@ public class Context {
         masternodeManager = new MasternodeManager(this);
         initializedDash = true;
         governanceManager = new GovernanceManager(this);
+        triggerManager = new GovernanceTriggerManager(this);
 
         netFullfilledRequestManager = new NetFullfilledRequestManager(this);
     }

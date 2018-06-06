@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
+import static org.bitcoinj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_ENDORSED;
+
 //
 // CGovernanceVote - Allow a masternode node to vote and broadcast throughout the network
 //
@@ -133,18 +135,13 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     };
 
 
+    static final int MAX_SUPPORTED_VOTE_SIGNAL = VOTE_SIGNAL_ENDORSED.getValue();
 
 
-//C++ TO JAVA CONVERTER TODO TASK: Java has no concept of a 'friend' function:
-//ORIGINAL LINE: friend boolean operator ==(const CGovernanceVote& vote1, const CGovernanceVote& vote2);
-//C++ TO JAVA CONVERTER TODO TASK: The implementation of the following method could not be found:
-//	boolean operator ==(CGovernanceVote vote1, CGovernanceVote vote2);
-
-//C++ TO JAVA CONVERTER TODO TASK: Java has no concept of a 'friend' function:
-//ORIGINAL LINE: friend boolean operator <(const CGovernanceVote& vote1, const CGovernanceVote& vote2);
-//C++ TO JAVA CONVERTER TODO TASK: The implementation of the following method could not be found:
-//	boolean operator <(CGovernanceVote vote1, CGovernanceVote vote2);
-
+    Context context;
+    
+    
+    
     private boolean fValid; //if the vote is currently valid / counted
     private boolean fSynced; //if we've sent this to our peers
     private int nVoteSignal; // see VOTE_ACTIONS above
@@ -154,13 +151,6 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     private long nTime;
     private MasternodeSignature vchSig;
 
-//C++ TO JAVA CONVERTER TODO TASK: The implementation of the following method could not be found:
-//	CGovernanceVote();
-//C++ TO JAVA CONVERTER TODO TASK: The implementation of the following method could not be found:
-//	CGovernanceVote(COutPoint outpointMasternodeIn, Sha256Hash nParentHashIn, vote_signal_enum_t eVoteSignalIn, vote_outcome_enum_t eVoteOutcomeIn);
-
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-//ORIGINAL LINE: boolean IsValid() const
     public final boolean isValid() {
         return fValid;
     }
@@ -230,8 +220,9 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     }
 
     public final String toString() {
-        return vinMasternode.toString() + ":"  + nTime + ":" +  getOutcome() + ":" + getSignal();
-
+        return vinMasternode.toString() + ":"  + nTime + ":" +
+                GovernanceVoting.convertOutcomeToString(getOutcome()) + ":" +
+                GovernanceVoting.convertSignalToString(getSignal());
     }
 
     /**
@@ -266,6 +257,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     public GovernanceVote(NetworkParameters params, byte[] payload, int cursor)
     {
         super(params, payload, cursor);
+        context = Context.get();
     }
 
     protected static int calcLength(byte[] buf, int offset) {
@@ -293,5 +285,44 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         Utils.uint32ToByteStreamLE(nVoteOutcome, stream);
         Utils.int64ToByteStreamLE(nTime, stream);
         vchSig.bitcoinSerialize(stream);
+    }
+
+    public boolean isValid(boolean fSignatureCheck) {
+        if (nTime > Utils.currentTimeSeconds() + (60 * 60)) {
+            log.info("gobject", "CGovernanceVote::IsValid -- vote is too far ahead of current time - %s - nTime %lli - Max Time %lli\n", getHash().toString(), nTime, Utils.currentTimeSeconds() + (60 * 60));
+            return false;
+        }
+
+        // support up to 50 actions (implemented in sentinel)
+        if (nVoteSignal > MAX_SUPPORTED_VOTE_SIGNAL) {
+            log.info("gobject", "CGovernanceVote::IsValid -- Client attempted to vote on invalid signal(%d) - %s\n", nVoteSignal, getHash().toString());
+            return false;
+        }
+
+        // 0=none, 1=yes, 2=no, 3=abstain. Beyond that reject votes
+        if (nVoteOutcome > 3) {
+            log.info("gobject", "CGovernanceVote::IsValid -- Client attempted to vote on invalid outcome(%d) - %s\n", nVoteSignal, getHash().toString());
+            return false;
+        }
+
+        MasternodeInfo infoMn = context.masternodeManager.getMasternodeInfo(vinMasternode.getOutpoint());
+        if (infoMn == null) {
+            log.info("gobject", "CGovernanceVote::IsValid -- Unknown Masternode - {}", vinMasternode.getOutpoint().toStringShort());
+            return false;
+        }
+
+        if (!fSignatureCheck) {
+            return true;
+        }
+
+        StringBuilder strError = new StringBuilder();
+        String strMessage = vinMasternode.getOutpoint().toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
+
+        if (!MessageSigner.verifyMessage(infoMn.pubKeyMasternode, vchSig, strMessage, strError)) {
+            log.info("CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
+            return false;
+        }
+
+        return true;
     }
 }

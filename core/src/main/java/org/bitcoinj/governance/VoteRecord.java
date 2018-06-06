@@ -4,6 +4,7 @@ import org.bitcoinj.core.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -11,8 +12,12 @@ import java.util.TreeMap;
  * Created by Eric on 5/24/2018.
  */
 public class VoteRecord extends Message {
-    public TreeMap<Integer, VoteInstance> mapInstances;
+    public HashMap<Integer, VoteInstance> mapInstances;
 
+    public VoteRecord(NetworkParameters params) {
+        super(params);
+        mapInstances = new HashMap<Integer, VoteInstance>();
+    }
 
     public VoteRecord(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
@@ -21,7 +26,7 @@ public class VoteRecord extends Message {
     @Override
     protected void parse() throws ProtocolException {
         int size = (int)readVarInt();
-        mapInstances = new TreeMap<Integer, VoteInstance>();
+        mapInstances = new HashMap<Integer, VoteInstance>();
         for(int i = 0; i < size; ++i) {
             int value = (int)readUint32();
             VoteInstance voteInstance = new VoteInstance(params, payload, cursor);

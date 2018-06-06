@@ -1873,7 +1873,7 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
-    boolean addGovernanceVote(final TransactionOutPoint outpoint, Sha256Hash nGovernanceObjectHash) {
+    public boolean addGovernanceVote(final TransactionOutPoint outpoint, Sha256Hash nGovernanceObjectHash) {
         lock.lock();
         try {
             Masternode  mn = find(outpoint);

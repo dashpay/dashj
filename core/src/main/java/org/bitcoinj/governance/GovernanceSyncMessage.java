@@ -1,7 +1,6 @@
 package org.bitcoinj.governance;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.manager.GovernanceManager;
 
 import java.io.IOException;
 import java.io.OutputStream;

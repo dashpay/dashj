@@ -14,9 +14,12 @@ public class VoteInstance extends Message {
     public long nTime;
     public long nCreationTime;
 
+    public VoteInstance(NetworkParameters params) {
+        super(params);
+    }
 
-    public VoteInstance(GovernanceVote.VoteOutcome eOutcomeIn, long nTimeIn, long nCreationTimeIn) {
-        super();
+    public VoteInstance(NetworkParameters params, GovernanceVote.VoteOutcome eOutcomeIn, long nTimeIn, long nCreationTimeIn) {
+        super(params);
         this.eOutcome = eOutcomeIn;
         this.nTime = nTimeIn;
         this.nCreationTime = nCreationTimeIn;
