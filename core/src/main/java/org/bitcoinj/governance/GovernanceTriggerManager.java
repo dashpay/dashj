@@ -158,7 +158,7 @@ public class GovernanceTriggerManager {
      *   - Return the triggers in a list
      */
 
-    private ArrayList<Superblock> getActiveTriggers() {
+    public ArrayList<Superblock> getActiveTriggers() {
         context.governanceManager.lock.lock();
         try {
             ArrayList<Superblock> vecResults = new ArrayList<Superblock>();

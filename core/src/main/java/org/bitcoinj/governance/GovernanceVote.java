@@ -325,4 +325,8 @@ public class GovernanceVote extends ChildMessage implements Serializable {
 
         return true;
     }
+
+    void relay () {
+
+    }
 }

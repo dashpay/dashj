@@ -13,8 +13,6 @@ import org.bitcoinj.utils.Threading;
 import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.nio.ch.Net;
-import sun.security.provider.SHA;
 
 import java.io.IOException;
 import java.io.OutputStream;

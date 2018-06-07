@@ -231,7 +231,7 @@ public class GovernanceManager extends AbstractManager {
 
                     count++;
                     mapMasternodeOrphanCounter.put(govobj.getMasternodeVin().getOutpoint(), count);
-                    ExpirationInfo info = new ExpirationInfo(peer.getId(), Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME);
+                    ExpirationInfo info = new ExpirationInfo(peer.hashCode(), Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME);
                     mapMasternodeOrphanObjects.put(nHash, new Pair<GovernanceObject, ExpirationInfo>(govobj, info));
                     log.info("MNGOVERNANCEOBJECT -- Missing masternode for: {}, strError = {}", strHash, strError);
                 } else if (validity.fMissingConfirmations) {
