@@ -93,7 +93,11 @@ public class GovernanceManager extends AbstractManager {
         this.mapOrphanVotes = new CacheMultiMap<Sha256Hash, Pair<GovernanceVote, Long>>(MAX_CACHE_SIZE);
         this.mapLastMasternodeObject = new HashMap<TransactionOutPoint, LastObjectRecord>();
         this.setRequestedObjects = new HashSet<Sha256Hash>();
+        this.setRequestedVotes = new HashSet<Sha256Hash>();
         this.fRateChecksEnabled = true;
+
+        this.mapPostponedObjects = new HashMap<Sha256Hash, GovernanceObject>();
+        this.mapMasternodeOrphanCounter = new HashMap<TransactionOutPoint, Integer>();
     }
 
     public GovernanceManager(NetworkParameters params, byte [] payload, int cursor) {
@@ -181,7 +185,7 @@ public class GovernanceManager extends AbstractManager {
 
         String strHash = nHash.toString();
 
-        log.info("gobject", "MNGOVERNANCEOBJECT -- Received object: {}", strHash);
+        log.info("gobject--MNGOVERNANCEOBJECT -- Received object: {}", strHash);
 
         if(!acceptObjectMessage(nHash)) {
             log.info("MNGOVERNANCEOBJECT -- Received unrequested object: {}", strHash);
@@ -194,7 +198,7 @@ public class GovernanceManager extends AbstractManager {
             if (mapObjects.containsKey(nHash) || mapPostponedObjects.containsKey(nHash) ||
                     mapErasedGovernanceObjects.containsKey(nHash) || mapMasternodeOrphanObjects.containsKey(nHash)) {
                 // TODO - print error code? what if it's GOVOBJ_ERROR_IMMATURE?
-                log.info("gobject", "MNGOVERNANCEOBJECT -- Received already seen object: {}", strHash);
+                log.info("gobject--MNGOVERNANCEOBJECT -- Received already seen object: {}", strHash);
                 return;
             }
 
@@ -222,7 +226,7 @@ public class GovernanceManager extends AbstractManager {
 
                 int count = mapMasternodeOrphanCounter.get(govobj.getMasternodeVin().getOutpoint());
                     if (count >= 10) {
-                        log.info("gobject", "MNGOVERNANCEOBJECT -- Too many orphan objects, missing masternode={}", govobj.getMasternodeVin().getOutpoint().toStringShort());
+                        log.info("gobject--MNGOVERNANCEOBJECT -- Too many orphan objects, missing masternode={}", govobj.getMasternodeVin().getOutpoint().toStringShort());
                         // ask for this object again in 2 minutes
                         InventoryItem inv = new InventoryItem(InventoryItem.Type.GovernanceObject, govobj.getHash());
                         peer.askFor(inv);
@@ -523,7 +527,7 @@ public class GovernanceManager extends AbstractManager {
                         govobj.getCreationTime() > Utils.currentTimeSeconds() + GOVERNANCE_WATCHDOG_EXPIRATION_TIME)
                         ) {
                     // drop it
-                    log.info("gobject", "CGovernanceManager::AddGovernanceObject -- CreationTime is out of bounds: hash = {}", nHash.toString());
+                    log.info("gobject--CGovernanceManager::AddGovernanceObject -- CreationTime is out of bounds: hash = {}", nHash.toString());
                     return;
                 }
 
@@ -554,7 +558,7 @@ public class GovernanceManager extends AbstractManager {
                     break;
                 case GOVERNANCE_OBJECT_WATCHDOG:
                     mapWatchdogObjects.put(nHash, govobj.getCreationTime() + GOVERNANCE_WATCHDOG_EXPIRATION_TIME);
-                    log.info("gobject", "CGovernanceManager::AddGovernanceObject -- Added watchdog to map: hash = {}", nHash.toString());
+                    log.info("gobject--CGovernanceManager::AddGovernanceObject -- Added watchdog to map: hash = {}", nHash.toString());
                     break;
                 default:
                     break;
@@ -623,4 +627,60 @@ public class GovernanceManager extends AbstractManager {
         }
     }
 
+
+    public boolean confirmInventoryRequest(InventoryItem inv) {
+        // do not request objects until it's time to sync
+        if (!context.masternodeSync.isWinnersListSynced()) {
+            return false;
+        }
+
+        lock.lock();
+        try {
+
+            log.info("gobject--CGovernanceManager::ConfirmInventoryRequest inv = {}", inv);
+
+            // First check if we've already recorded this object
+            switch (inv.type) {
+                case GovernanceObject:
+                    if (mapObjects.containsKey(inv.hash) || mapPostponedObjects.containsKey(inv.hash)) {
+                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance object, returning false\n");
+                        return false;
+                    }
+                    break;
+                case GovernanceObjectVote:
+                    if (mapVoteToObject.hasKey(inv.hash)) {
+                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance vote, returning false\n");
+                        return false;
+                    }
+                    break;
+                default:
+                    log.info("gobject--CGovernanceManager::ConfirmInventoryRequest unknown type, returning false\n");
+                    return false;
+            }
+
+
+            HashSet<Sha256Hash> setHash = null;
+            switch (inv.type) {
+                case GovernanceObject:
+                    setHash = setRequestedObjects;
+                    break;
+                case GovernanceObjectVote:
+                    setHash = setRequestedVotes;
+                    break;
+                default:
+                    return false;
+            }
+
+            boolean hasHash = setHash.contains(inv.hash);
+            if (!hasHash) {
+                setHash.add(inv.hash);
+                log.info("gobject--CGovernanceManager::ConfirmInventoryRequest added inv to requested set");
+            }
+
+            log.info("gobject--CGovernanceManager::ConfirmInventoryRequest reached end, returning true");
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
 }

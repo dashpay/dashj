@@ -1297,7 +1297,7 @@ public class Peer extends PeerSocketHandler {
                 return context.masternodeManager.mapSeenMasternodeVerification.containsKey(inv.hash);
             case GovernanceObject:
             case GovernanceObjectVote:
-                return false;
+                return !context.governanceManager.confirmInventoryRequest(inv);
         }
         // Don't know what it is, just say we already got one
         return true;
@@ -2184,5 +2184,13 @@ public class Peer extends PeerSocketHandler {
     public void setMasternodeListCount(int count) { masternodeListCount = count; }
 
     public HashSet<Sha256Hash> setAskFor = new HashSet<Sha256Hash>();
+
+    public void askFor(InventoryItem item) {
+        //TODO: This needs to be finished
+    }
+
+    public void pushInventory(InventoryItem item) {
+        //TODO: This needs to be finished or we may not need it
+    }
 
 }

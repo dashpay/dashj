@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
+import org.json.*;
 
 import static org.bitcoinj.governance.GovernanceException.Type.*;
 import static org.bitcoinj.governance.GovernanceVote.MAX_SUPPORTED_VOTE_SIGNAL;
@@ -94,7 +95,7 @@ public class GovernanceObject extends Message implements Serializable {
     private Sha256Hash nCollateralHash;
 
     /// Data field - can be used for anything
-    private byte [] strData;
+    private String strData;
 
     /// Masternode info for signed objects
     private TransactionInput vinMasternode;
@@ -218,8 +219,8 @@ public class GovernanceObject extends Message implements Serializable {
         nRevision = (int)readUint32();
         nTime = readInt64();
         nCollateralHash = readHash();
-        strData = readByteArray();
-        if(strData.length > MAX_GOVERNANCE_OBJECT_DATA_SIZE)
+        strData = readStr();
+        if(strData.length() > MAX_GOVERNANCE_OBJECT_DATA_SIZE)
             throw new ProtocolException("String length limit exceeded");
         nObjectType = (int)readUint32();
         vinMasternode = new TransactionInput(params, null, payload, cursor);
@@ -254,7 +255,7 @@ public class GovernanceObject extends Message implements Serializable {
         Utils.uint32ToByteStreamLE(nRevision, stream);
         Utils.int64ToByteStreamLE(nTime, stream);
         stream.write(nCollateralHash.getReversedBytes());
-        Utils.bytesToByteStream(strData, stream);
+        Utils.stringToByteStream(strData, stream);
         Utils.uint32ToByteStreamLE(nObjectType, stream);
         vinMasternode.bitcoinSerialize(stream);
         vchSig.bitcoinSerialize(stream);
@@ -287,10 +288,10 @@ public class GovernanceObject extends Message implements Serializable {
             bos.write(nHashParent.getReversedBytes());
             Utils.uint32ToByteStreamLE(nRevision, bos);
             Utils.int64ToByteStreamLE(nTime, bos);
-            Utils.bytesToByteStream(strData, bos);
+            Utils.stringToByteStream(strData, bos);
             vinMasternode.bitcoinSerialize(bos);
             vchSig.bitcoinSerialize(bos);
-            return Sha256Hash.twiceOf(bos.toByteArray());
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -525,14 +526,14 @@ public class GovernanceObject extends Message implements Serializable {
      *
      */
 
-    public byte[] getDataAsHex()
+    public String getDataAsHex()
     {
         return strData;
     }
 
     public String getDataAsString()
     {
-        return Utils.HEX.encode(strData);
+        return new String(Utils.HEX.decode(strData));
     }
 
     public void updateSentinelVariables() {
@@ -706,5 +707,10 @@ public class GovernanceObject extends Message implements Serializable {
         return true;
     }
 
+    public JSONObject getJSONObject() {
+        JSONTokener parser = new JSONTokener(getDataAsString());
+        JSONObject jsonObject = new JSONObject(parser);
+        return jsonObject;
+    }
 
 }

@@ -2,6 +2,7 @@ package org.bitcoinj.governance;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.utils.BtcFormat;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MarkerFactory;
@@ -51,14 +52,14 @@ public class Superblock extends GovernanceObject {
             throw new SuperblockException("CSuperblock: Governance Object not a trigger");
         }
 
-        UniValue obj = pGovObj.getJSONObject();
+        JSONObject obj = pGovObj.getJSONObject();
 
         // FIRST WE GET THE START EPOCH, THE DATE WHICH THE PAYMENT SHALL OCCUR
-        nEpochStart = obj["event_block_height"].get_int();
+        nEpochStart = obj.getInt("event_block_height");
 
         // NEXT WE GET THE PAYMENT INFORMATION AND RECONSTRUCT THE PAYMENT VECTOR
-        String strAddresses = obj["payment_addresses"].get_str();
-        String strAmounts = obj["payment_amounts"].get_str();
+        String strAddresses = obj.getString("payment_addresses");
+        String strAmounts = obj.getString("payment_amounts");
         parsePaymentSchedule(strAddresses, strAmounts);
 
         log.info("gobject--CSuperblock -- nEpochStart = {}, strAddresses = {}, strAmounts = {}, vecPayments.size() = {}",
@@ -297,7 +298,7 @@ public class Superblock extends GovernanceObject {
         int nPayments = countPayments();
         int nMinerPayments = nOutputs - nPayments;
 
-        log.info("gobject", "CSuperblock::IsValid nOutputs = {}, nPayments = {}, strData = {}", nOutputs, nPayments, getGovernanceObject().getDataAsHex());
+        log.info("gobject--CSuperblock::IsValid nOutputs = {}, nPayments = {}, strData = {}", nOutputs, nPayments, getGovernanceObject().getDataAsHex());
 
         // We require an exact match (including order) between the expected
         // superblock payments and the payments actually in the block.
