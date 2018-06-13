@@ -1,21 +1,20 @@
 package org.bitcoinj.governance;
 
+import com.google.common.collect.Maps;
 import org.bitcoinj.core.*;
-import org.bitcoinj.utils.CacheMap;
-import org.bitcoinj.utils.CacheMultiMap;
-import org.bitcoinj.utils.Pair;
-import org.bitcoinj.utils.Threading;
+import org.bitcoinj.utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.rmi.CORBA.Util;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_PERMANENT_ERROR;
+import static org.bitcoinj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_WARNING;
 import static org.bitcoinj.governance.GovernanceObject.*;
 
 /**
@@ -165,14 +164,6 @@ public class GovernanceManager extends AbstractManager {
         return new GovernanceManager(Context.get());
     }
 
-    @Override
-    public void checkAndRemove() {
-        lock.lock();
-        try {
-        } finally {
-            lock.unlock();
-        }
-    }
     public void processGovernanceObject(Peer peer, GovernanceObject govobj) {
         Sha256Hash nHash = govobj.getHash();
 
@@ -256,9 +247,89 @@ public class GovernanceManager extends AbstractManager {
         }
     }
 
-    public void processGovernanceObjectVote(Peer peer, GovernanceObjectVote governanceObjectVote) {
+    public void processGovernanceObjectVote(Peer peer, GovernanceVote vote) {
+        Sha256Hash nHash = vote.getHash();
+
+        peer.setAskFor.remove(nHash);
+
+        // Ignore such messages until masternode list is synced
+        if (!context.masternodeSync.isMasternodeListSynced()) {
+            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- masternode list not synced\n");
+            return;
+        }
+
+        log.info("gobject--MNGOVERNANCEOBJECTVOTE -- Received vote: {}", vote.toString());
+
+        String strHash = nHash.toString();
+
+        if (!acceptVoteMessage(nHash)) {
+            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- Received unrequested vote object: {}, hash: {}, peer = {}", vote.toString(), strHash, peer.hashCode());
+            return;
+        }
+
+        GovernanceException exception = new GovernanceException();
+        if (processVote(peer, vote, exception)) {
+            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- %s new\n", strHash);
+            context.masternodeSync.BumpAssetLastTime("MNGOVERNANCEOBJECTVOTE");
+            vote.relay();
+        } else {
+            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- Rejected vote, error = %s\n", exception.getMessage());
+            if ((exception.getNodePenalty() != 0) && context.masternodeSync.isSynced()) {
+                //Misbehaving(pfrom.GetId(), exception.GetNodePenalty());
+            }
+            return;
+        }
 
     }
+
+    public boolean processVote(Peer pfrom, GovernanceVote vote, GovernanceException exception) {
+        lock.lock();
+        try {
+            Sha256Hash nHashVote = vote.getHash();
+            if (mapInvalidVotes.hasKey(nHashVote)) {
+                String message = "CGovernanceManager::ProcessVote -- Old invalid vote, MN outpoint = " + vote.getMasternodeOutpoint().toStringShort() +
+                        ", governance object hash = " + vote.getParentHash().toString();
+                log.info(message);
+                exception.setException(message, GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
+                return false;
+            }
+
+            Sha256Hash nHashGovobj = vote.getParentHash();
+            GovernanceObject govobj = mapObjects.get(nHashGovobj);
+            if (govobj == null) {
+                String message = "CGovernanceManager::ProcessVote -- Unknown parent object, MN outpoint = " + vote.getMasternodeOutpoint().toStringShort() +
+                        ", governance object hash = " + vote.getParentHash().toString();
+                exception.setException(message, GOVERNANCE_EXCEPTION_WARNING);
+                if (mapOrphanVotes.insert(nHashGovobj, new Pair<GovernanceVote, Long>(vote, Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME))) {
+                    requestGovernanceObject(pfrom, nHashGovobj, false);
+                    log.info(message);
+                    return false;
+                }
+
+                log.info("gobject--{}", message);
+                return false;
+            }
+
+            if (govobj.isSetCachedDelete() || govobj.isSetExpired()) {
+                log.info("gobject--CGovernanceObject::ProcessVote -- ignoring vote for expired or deleted object, hash = {}", nHashGovobj.toString());
+                return false;
+            }
+
+            boolean fOk = govobj.processVote(pfrom, vote, exception);
+            if (fOk) {
+                mapVoteToObject.insert(nHashVote, govobj);
+
+                if (govobj.getObjectType() == GOVERNANCE_OBJECT_WATCHDOG) {
+                    context.masternodeManager.updateWatchdogVoteTime(vote.getMasternodeOutpoint());
+                    log.info("gobject--CGovernanceObject::ProcessVote -- GOVERNANCE_OBJECT_WATCHDOG vote for {}", vote.getParentHash());
+                }
+            }
+            return fOk;
+        } finally {
+            lock.unlock();
+        }
+    }
+
 
     public boolean acceptObjectMessage(Sha256Hash nHash) {
         lock.lock();
@@ -683,4 +754,364 @@ public class GovernanceManager extends AbstractManager {
             lock.unlock();
         }
     }
+
+    public void checkAndRemove() {
+        updateCachesAndClean();
+    }
+
+    public void updateCachesAndClean() {
+        log.info("gobject--CGovernanceManager::UpdateCachesAndClean\n");
+
+        ArrayList<Sha256Hash> vecDirtyHashes = context.masternodeManager.getAndClearDirtyGovernanceObjectHashes();
+        
+        lock.lock();
+        try {
+
+            // Flag expired watchdogs for removal
+            long nNow = Utils.currentTimeSeconds();
+            log.info("gobject--CGovernanceManager::UpdateCachesAndClean -- Number watchdogs in map: {}, current time = {}", mapWatchdogObjects.size(), nNow);
+            if (mapWatchdogObjects.size() > 1) {
+                Iterator<Map.Entry<Sha256Hash, Long>> it = mapWatchdogObjects.entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry<Sha256Hash, Long> entry = it.next();
+                    log.info("gobject--CGovernanceManager::UpdateCachesAndClean -- Checking watchdog: {}, expiration time = {}", entry.getKey(), entry.getValue());
+                    if (entry.getValue() < nNow) {
+                        log.info("gobject--CGovernanceManager::UpdateCachesAndClean -- Attempting to expire watchdog: {}, expiration time = {}", entry.getKey(), entry.getValue());
+                        GovernanceObject governanceObject = mapObjects.get(entry.getKey());
+                        if (governanceObject != null) {
+                            log.info("gobject--CGovernanceManager::UpdateCachesAndClean -- Expiring watchdog: {}, expiration time = {}", entry.getValue(), entry.getValue());
+                            governanceObject.setExpired(true);
+                            if (governanceObject.getDeletionTime() == 0) {
+                                governanceObject.setDeletionTime(nNow);
+                            }
+                        }
+                        if (entry.getKey().equals(nHashWatchdogCurrent)) {
+                            nHashWatchdogCurrent = Sha256Hash.ZERO_HASH;
+                        }
+                        it.remove();
+                    }
+                }
+            }
+
+            for (int i = 0; i < vecDirtyHashes.size(); ++i) {
+                GovernanceObject it = mapObjects.get(vecDirtyHashes.get(i));
+                if (it == null) {
+                    continue;
+                }
+                it.clearMasternodeVotes();
+                it.setDirtyCache(true);
+            }
+
+            //ScopedLockBool guard = new ScopedLockBool(cs, fRateChecksEnabled, false);
+            lock.lock();
+            boolean _fRateChecksEnabled = fRateChecksEnabled;
+            fRateChecksEnabled = false;
+            try {
+
+                // UPDATE CACHE FOR EACH OBJECT THAT IS FLAGGED DIRTYCACHE=TRUE
+
+                Iterator<Map.Entry<Sha256Hash, GovernanceObject>> it = mapObjects.entrySet().iterator();
+
+                // Clean up any expired or invalid triggers
+                context.triggerManager.cleanAndRemove();
+
+                while (it.hasNext()) {
+                    Map.Entry<Sha256Hash, GovernanceObject> entry = it.next();
+                    GovernanceObject pObj = entry.getValue();
+
+                    if (pObj == null) {
+                        continue;
+                    }
+
+                    Sha256Hash nHash = entry.getKey();
+                    String strHash = nHash.toString();
+
+                    // IF CACHE IS NOT DIRTY, WHY DO THIS?
+                    if (pObj.isSetDirtyCache()) {
+                        // UPDATE LOCAL VALIDITY AGAINST CRYPTO DATA
+                        pObj.updateLocalValidity();
+
+                        // UPDATE SENTINEL SIGNALING VARIABLES
+                        pObj.updateSentinelVariables();
+                    }
+
+                    if (pObj.isSetCachedDelete() && (nHash == nHashWatchdogCurrent)) {
+                        nHashWatchdogCurrent = Sha256Hash.ZERO_HASH;
+                    }
+
+                    // IF DELETE=TRUE, THEN CLEAN THE MESS UP!
+
+                    long nTimeSinceDeletion = Utils.currentTimeSeconds() - pObj.getDeletionTime();
+
+                    log.info("gobject--CGovernanceManager::UpdateCachesAndClean -- Checking object for deletion: {}, deletion time = {}, time since deletion = {}, delete flag = {}, expired flag = {}",
+                            strHash, pObj.getDeletionTime(), nTimeSinceDeletion, pObj.isSetCachedDelete(), pObj.isSetExpired());
+
+                    if ((pObj.isSetCachedDelete() || pObj.isSetExpired()) && (nTimeSinceDeletion >= GOVERNANCE_DELETION_DELAY)) {
+                        log.info("CGovernanceManager::UpdateCachesAndClean -- erase obj {}", entry.getValue());
+                        context.masternodeManager.removeGovernanceObject(pObj.getHash());
+
+                        // Remove vote references
+                        final LinkedList<CacheItem<Sha256Hash, GovernanceObject>> listItems = mapVoteToObject.getItemList();
+                        Iterator<CacheItem<Sha256Hash, GovernanceObject>> lit = listItems.iterator();
+                        while (lit.hasNext()) {
+                            CacheItem<Sha256Hash, GovernanceObject> item = lit.next();
+                            if (item.value == pObj) {
+                                Sha256Hash nKey = item.key;
+                                //mapVoteToObject.erase(nKey);//TODO: crash here?
+                                lit.remove();
+                            }
+                        }
+
+                        long nSuperblockCycleSeconds = params.getSuperblockCycle() * params.TARGET_SPACING;
+                        long nTimeExpired = pObj.getCreationTime() + 2 * nSuperblockCycleSeconds + GOVERNANCE_DELETION_DELAY;
+
+                        if (pObj.getObjectType() == GOVERNANCE_OBJECT_WATCHDOG) {
+                            mapWatchdogObjects.remove(nHash);
+                        } else if (pObj.getObjectType() != GOVERNANCE_OBJECT_TRIGGER) {
+                            // keep hashes of deleted proposals forever
+                            nTimeExpired = Long.MAX_VALUE;
+                        }
+
+                        mapErasedGovernanceObjects.put(nHash, nTimeExpired);
+                        it.remove();
+                    }
+                }
+
+                // forget about expired deleted objects
+                Iterator<Map.Entry<Sha256Hash, Long>> sIt = mapErasedGovernanceObjects.entrySet().iterator();
+                while (sIt.hasNext()) {
+                    if (sIt.next().getValue() < nNow) {
+                        sIt.remove();
+                    }
+                }
+            } finally {
+                fRateChecksEnabled = _fRateChecksEnabled;
+                lock.unlock();
+            }
+
+            log.info("CGovernanceManager::UpdateCachesAndClean -- {}", toString());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public String toString() {
+        lock.lock();
+        try {
+            int nProposalCount = 0;
+            int nTriggerCount = 0;
+            int nWatchdogCount = 0;
+            int nOtherCount = 0;
+
+            Iterator<Map.Entry<Sha256Hash, GovernanceObject>> it = mapObjects.entrySet().iterator();
+
+            while (it.hasNext()) {
+                switch (it.next().getValue().getObjectType()) {
+                    case GOVERNANCE_OBJECT_PROPOSAL:
+                        nProposalCount++;
+                        break;
+                    case GOVERNANCE_OBJECT_TRIGGER:
+                        nTriggerCount++;
+                        break;
+                    case GOVERNANCE_OBJECT_WATCHDOG:
+                        nWatchdogCount++;
+                        break;
+                    default:
+                        nOtherCount++;
+                        break;
+                }
+            }
+
+            return String.format("Governance Objects: %d (Proposals: %d, Triggers: %d, Watchdogs: %d/%d, Other: %d; Erased: %d), Votes: %d",
+                    mapObjects.size(), nProposalCount, nTriggerCount, nWatchdogCount, mapWatchdogObjects.size(), nOtherCount,
+                    mapErasedGovernanceObjects.size(), (int) mapVoteToObject.getSize());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void updatedBlockTip(StoredBlock newBlock) {
+        // Note this gets called from ActivateBestChain without cs_main being held
+        // so it should be safe to lock our mutex here without risking a deadlock
+        // On the other hand it should be safe for us to access pindex without holding a lock
+        // on cs_main because the CBlockIndex objects are dynamically allocated and
+        // presumably never deleted.
+        if (newBlock == null) {
+            return;
+        }
+
+        nCachedBlockHeight = newBlock.getHeight();
+        log.info("gobject--CGovernanceManager::UpdatedBlockTip -- nCachedBlockHeight: %d\n", nCachedBlockHeight);
+
+        checkPostponedObjects();
+    }
+    public void requestOrphanObjects() {
+
+
+        ArrayList<Sha256Hash> vecHashesFiltered = new ArrayList<Sha256Hash>();
+        ArrayList<Sha256Hash> vecHashes = new ArrayList<Sha256Hash>();
+        lock.lock();
+        try {
+            mapOrphanVotes.getKeys(vecHashes);
+            for (int i = 0; i < vecHashes.size(); ++i) {
+                final Sha256Hash nHash = vecHashes.get(i);
+                if (!mapObjects.containsKey(nHash)) {
+                    vecHashesFiltered.add(nHash);
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+
+        log.info("gobject--CGovernanceObject::RequestOrphanObjects -- number objects = %d\n", vecHashesFiltered.size());
+
+        PeerGroup peerGroup = context.peerGroup;
+        peerGroup.getLock().lock();
+        try {
+            for (int i = 0; i < vecHashesFiltered.size(); ++i) {
+                final Sha256Hash nHash = vecHashesFiltered.get(i);
+                for (int j = 0; j < peerGroup.getConnectedPeers().size(); ++j) {
+                    Peer node = peerGroup.getConnectedPeers().get(j);
+                    if (node.isMasternode()) {
+                        continue;
+                    }
+                    requestGovernanceObject(node, nHash, false);
+                }
+            }
+        } finally {
+            peerGroup.getLock().unlock();
+        }
+    }
+    public void cleanOrphanObjects() {
+
+        lock.lock();
+        try {
+            final LinkedList<CacheItem<Sha256Hash, Pair<GovernanceVote, Long>>> items = mapOrphanVotes.getItemList();
+
+            long nNow = Utils.currentTimeSeconds();
+
+            Iterator<CacheItem<Sha256Hash, Pair<GovernanceVote, Long>>> it = items.iterator();
+            while (it.hasNext()) {
+                CacheItem<Sha256Hash, Pair<GovernanceVote, Long>> item = it.next();
+
+                final Pair<GovernanceVote, Long> pairVote = item.value;
+                if (pairVote.getSecond() < nNow) {
+                    mapOrphanVotes.erase(item.key, item.value);
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void requestGovernanceObject(Peer pfrom, Sha256Hash nHash, boolean fUseFilter) {
+        if (pfrom == null) {
+            return;
+        }
+
+        log.info("gobject--CGovernanceObject::RequestGovernanceObject -- hash = {} (peer={})\n", nHash.toString(), pfrom.hashCode());
+
+        if (pfrom.getVersionMessage().clientVersion < GOVERNANCE_FILTER_PROTO_VERSION) {
+            pfrom.sendMessage(new GovernanceSyncMessage(params, nHash));
+            return;
+        }
+        BloomFilter filter = null;
+
+        int nVoteCount = 0;
+        if (fUseFilter) {
+            lock.lock();
+            try {
+                GovernanceObject pObj = findGovernanceObject(nHash);
+
+                if (pObj != null) {
+                    filter = new BloomFilter(params.getGovernanceFilterElements(), GOVERNANCE_FILTER_FP_RATE, new Random().nextInt(999999), BloomFilter.BloomUpdate.UPDATE_ALL);
+                    ArrayList<GovernanceVote> vecVotes = pObj.getVoteFile().getVotes();
+                    nVoteCount = vecVotes.size();
+                    for (int i = 0; i < vecVotes.size(); ++i) {
+                        filter.insert(vecVotes.get(i).getHash().getBytes());
+                    }
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        log.info("gobject--CGovernanceManager::RequestGovernanceObject -- nHash %s nVoteCount {} peer={}", nHash.toString(), nVoteCount, pfrom.hashCode());
+        pfrom.sendMessage(fUseFilter ? new GovernanceSyncMessage(params, nHash, filter) :
+                new GovernanceSyncMessage(params, nHash));
+    }
+
+    public void checkPostponedObjects() {
+        if (!context.masternodeSync.isSynced()) {
+            return;
+        }
+
+        //LOCK2(cs_main, cs);
+        lock.lock();
+        try {
+
+            // Check postponed proposals
+            Iterator<Map.Entry<Sha256Hash, GovernanceObject>> it = mapPostponedObjects.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<Sha256Hash, GovernanceObject> entry = it.next();
+                final Sha256Hash nHash = entry.getKey();
+                GovernanceObject govobj = entry.getValue();
+
+                assert govobj.getObjectType() != GOVERNANCE_OBJECT_WATCHDOG && govobj.getObjectType() != GOVERNANCE_OBJECT_TRIGGER;
+
+                Validity validity = new Validity();
+                if (govobj.isCollateralValid(validity)) {
+                    if (govobj.isValidLocally(validity, false)) {
+                        addGovernanceObject(govobj, null);
+                    } else {
+                        log.info("CGovernanceManager::CheckPostponedObjects -- {} invalid", nHash.toString());
+                    }
+
+                } else if (validity.fMissingConfirmations) {
+                    // wait for more confirmations
+                    continue;
+                }
+
+                // remove processed or invalid object from the queue
+                it.remove();
+            }
+
+
+            // Perform additional relays for triggers/watchdogs
+            long nNow = Utils.currentTimeSeconds();
+            long nSuperblockCycleSeconds = params.getSuperblockCycle() * params.TARGET_SPACING;
+
+            Iterator<Sha256Hash> it2 = setAdditionalRelayObjects.iterator();
+            while (it.hasNext()) {
+
+                Sha256Hash hash = it2.next();
+                GovernanceObject govobj = mapObjects.get(hash);
+                if (govobj != null) {
+
+
+                    long nTimestamp = govobj.getCreationTime();
+
+                    boolean fValid = (nTimestamp <= nNow + MAX_TIME_FUTURE_DEVIATION) && (nTimestamp >= nNow - 2 * nSuperblockCycleSeconds);
+                    boolean fReady = (nTimestamp <= nNow + MAX_TIME_FUTURE_DEVIATION - RELIABLE_PROPAGATION_TIME);
+
+                    if (fValid) {
+                        if (fReady) {
+                            log.info("CGovernanceManager::CheckPostponedObjects -- additional relay: hash = {}", govobj.getHash().toString());
+                            govobj.relay();
+                        } else {
+                            continue;
+                        }
+                    }
+
+                } else {
+                    log.info("CGovernanceManager::CheckPostponedObjects -- additional relay of unknown object: {}", govobj.toString());
+                }
+
+                it.remove();
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
 }

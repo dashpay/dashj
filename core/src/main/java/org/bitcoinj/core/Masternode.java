@@ -107,6 +107,15 @@ public class Masternode extends Message {
         {
             mapGovernanceObjectsVotedOn.put(entry.getKey(), entry.getValue());
         }
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
+        this.lastPing = other.lastPing;
+        this.vchSig = other.vchSig.duplicate();
+        nCollateralMinConfBlockHash = Sha256Hash.wrap(other.nCollateralMinConfBlockHash.getBytes());
+        nBlockLastPaid = other.nBlockLastPaid;
+        nPoSeBanScore = other.nPoSeBanScore;
+        nPoSeBanHeight = other.nPoSeBanHeight;
+        fAllowMixingTx = other.fAllowMixingTx;
+        fUnitTest = other.fUnitTest;
     }
 
     public Masternode(MasternodeBroadcast mnb)
@@ -117,10 +126,10 @@ public class Masternode extends Message {
                 mnb.info.sigTime, mnb.info.vin.getOutpoint(), mnb.info.address, mnb.info.pubKeyCollateralAddress,
                 mnb.info.pubKeyMasternode, mnb.info.sigTime);
         lastPing = mnb.lastPing;
-        vchSig = new MasternodeSignature(mnb.vchSig.getBytes());
+        vchSig = mnb.vchSig.duplicate();
         fAllowMixingTx = true;
         mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
-
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
     }
 
     protected static int calcLength(byte[] buf, int offset) {
@@ -276,6 +285,8 @@ public class Masternode extends Message {
         }
 
         length = cursor - offset;
+
+        lastPing = MasternodePing.EMPTY;
     }
 
 
@@ -369,10 +380,9 @@ public class Masternode extends Message {
             info.vin.bitcoinSerialize(bos);
             //TODO:  look below if this fails.
             bos.write(nCollateralMinConfBlockHash.getReversedBytes());
-            bos.write(nCollateralMinConfBlockHash.getReversedBytes());
+            bos.write(hash.getReversedBytes());
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
-        } catch (IOException x)
-        {
+        } catch (IOException x) {
             throw new RuntimeException(x.getMessage());
         }
     }

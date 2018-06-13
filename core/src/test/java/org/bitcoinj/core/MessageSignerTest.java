@@ -13,7 +13,7 @@ public class MessageSignerTest {
     @Before
     public void setUp()
     {
-        context = Context.getOrCreate(MainNetParams.get());
+        context = new Context(MainNetParams.get());
     }
 
     @Test

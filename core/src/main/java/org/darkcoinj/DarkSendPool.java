@@ -207,9 +207,9 @@ public class DarkSendPool {
 
                         if (tick % 60 == 0) {
                             context.masternodeManager.processMasternodeConnections();
-                            //if(context.masternodeManager.lock.isLocked())
-                                context.masternodeManager.checkAndRemove();
+                            context.masternodeManager.checkAndRemove();
                             context.masternodePayments.checkAndRemove();
+                            context.governanceManager.checkAndRemove();
                             context.instantSend.checkAndRemove();
                         }
                         //hashengineering added this

@@ -18,8 +18,8 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.governance.GovernanceObject;
-import org.bitcoinj.governance.GovernanceObjectVote;
 import org.bitcoinj.governance.GovernanceSyncMessage;
+import org.bitcoinj.governance.GovernanceVote;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +90,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(SyncStatusCount.class, "ssc");
         names.put(GovernanceSyncMessage.class, "govsync");
         names.put(GovernanceObject.class, "govobj");
-        names.put(GovernanceObjectVote.class, "govobjvote");
+        names.put(GovernanceVote.class, "govobjvote");
 
 
     }
@@ -278,7 +278,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("govobj")) {
             return new GovernanceObject(params, payloadBytes);
         } else if(command.equals("govobjvote")) {
-            return new GovernanceObjectVote(params, payloadBytes);
+            return new GovernanceVote(params, payloadBytes, 0);
         } else {
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);

@@ -235,7 +235,7 @@ public class FlatDB<Type extends AbstractManager> {
                 return false;
             }
         }
-        return false;
+        return true;
     }
 
     public boolean dump(Type objToSave)

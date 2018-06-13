@@ -22,8 +22,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.governance.GovernanceObject;
-import org.bitcoinj.governance.GovernanceObjectVote;
 import org.bitcoinj.governance.GovernanceSyncMessage;
+import org.bitcoinj.governance.GovernanceVote;
 import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -569,8 +569,8 @@ public class Peer extends PeerSocketHandler {
             //swallow for now
         } else if(m instanceof GovernanceObject) {
             context.governanceManager.processGovernanceObject(this, (GovernanceObject)m);
-        } else if(m instanceof GovernanceObjectVote) {
-            context.governanceManager.processGovernanceObjectVote(this, (GovernanceObjectVote)m);
+        } else if(m instanceof GovernanceVote) {
+            context.governanceManager.processGovernanceObjectVote(this, (GovernanceVote)m);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
@@ -1296,6 +1296,7 @@ public class Peer extends PeerSocketHandler {
             case MasternodeVerify:
                 return context.masternodeManager.mapSeenMasternodeVerification.containsKey(inv.hash);
             case GovernanceObject:
+                return !context.governanceManager.confirmInventoryRequest(inv);
             case GovernanceObjectVote:
                 return !context.governanceManager.confirmInventoryRequest(inv);
         }
@@ -1362,6 +1363,7 @@ public class Peer extends PeerSocketHandler {
                     goveranceObjects.add(item);
                     break;
                 case GovernanceObjectVote:
+                    goveranceObjects.add(item);
                     break;
                 case MasternodeVerify:
                     if(context.isLiteMode()) break;
@@ -2176,8 +2178,8 @@ public class Peer extends PeerSocketHandler {
         vecRequestsFulfilled.add(strRequest);
     }
 
-    boolean fDarkSendMaster = false;
-    public boolean isDarkSendMaster() { return fDarkSendMaster; }
+    boolean masternode = false;
+    public boolean isMasternode() { return masternode; }
 
     int masternodeListCount = -1;
     public int getMasternodeListCount() { return masternodeListCount; }

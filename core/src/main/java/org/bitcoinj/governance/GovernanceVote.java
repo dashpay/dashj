@@ -213,7 +213,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
             Utils.uint32ToByteStreamLE(nVoteSignal, bos);
             Utils.uint32ToByteStreamLE(nVoteOutcome, bos);
             Utils.int64ToByteStreamLE(nTime, bos);
-            return Sha256Hash.twiceOf(bos.toByteArray());
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch(IOException e) {
             throw new RuntimeException(e); // Cannot happen.
         }
@@ -247,7 +247,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
             vinMasternode.bitcoinSerialize(bos);
             bos.write(nParentHash.getReversedBytes());
             Utils.uint32ToByteStreamLE(nVoteSignal, bos);
-            return Sha256Hash.twiceOf(bos.toByteArray());
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch(IOException e) {
             throw new RuntimeException(e); // Cannot happen.
         }

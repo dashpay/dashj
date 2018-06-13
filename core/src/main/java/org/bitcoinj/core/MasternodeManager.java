@@ -1381,11 +1381,11 @@ public class MasternodeManager extends AbstractManager {
         try {
             for(Peer pnode : context.peerGroup.getConnectedPeers())
             {
-                if (pnode.isDarkSendMaster()) {
+                if (pnode.isMasternode()) {
                     if (context.darkSendPool.submittedToMasternode != null && pnode.getAddress().getAddr().equals(context.darkSendPool.submittedToMasternode.info.address.getAddr()))
                         continue;
                     log.info("Closing Masternode connection {}", pnode.getAddress());
-                    pnode.fDarkSendMaster = false;
+                    pnode.masternode = false;
                 }
 
             }
@@ -1807,7 +1807,7 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
-    ArrayList<Sha256Hash> getAndClearDirtyGovernanceObjectHashes()
+    public ArrayList<Sha256Hash> getAndClearDirtyGovernanceObjectHashes()
     {
         lock.lock();
         try {
@@ -1845,7 +1845,11 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
-    void updateWatchdogVoteTime(final TransactionOutPoint outpoint, long nVoteTime)
+    public void updateWatchdogVoteTime(final TransactionOutPoint outpoint) {
+        updateWatchdogVoteTime(outpoint, 0);
+    }
+
+    public void updateWatchdogVoteTime(final TransactionOutPoint outpoint, long nVoteTime)
     {
         lock.lock();
         try {
@@ -1885,7 +1889,7 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
-    void removeGovernanceObject(Sha256Hash nGovernanceObjectHash)
+    public void removeGovernanceObject(Sha256Hash nGovernanceObjectHash)
     {
         lock.lock();
         try {

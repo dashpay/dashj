@@ -1,6 +1,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.params.MainNetParams;
+import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 /**
@@ -8,8 +9,13 @@ import static org.junit.Assert.assertEquals;
  */
 public class MasternodeTest {
 
-    MainNetParams params = MainNetParams.get();
-    Context context = Context.getOrCreate(params);
+    Context context;
+
+    @Before
+    public void setUp()
+    {
+        context = new Context(MainNetParams.get());
+    }
 
     @Test
     public void testCalculateScore()
@@ -29,8 +35,8 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
 2016-03-01 07:37:39 r=83f1287faaf5e5deb3058112b27a38b523f5324a37e6b00f0a5594b55109ac46 (hash2-hash3)
                       83f1287faaf5e5deb3058112b27a38b523f5324a37e6b00f0a5594b55109ac46
 */
-        TransactionInput vin = new TransactionInput(params,null, new byte[0],
-                new TransactionOutPoint(params, 0,
+        TransactionInput vin = new TransactionInput(context.getParams(),null, new byte[0],
+                new TransactionOutPoint(context.getParams(), 0,
                         Sha256Hash.wrap(Utils.HEX.decode("b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb"))));
 
         Sha256Hash hash;// = context.masternodeManager.getBlockHash(nBlockHeight);

@@ -1,6 +1,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.params.MainNetParams;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -10,8 +11,13 @@ import static org.junit.Assert.assertEquals;
  */
 public class MasternodePingTest {
 
-    MainNetParams params = MainNetParams.get();
-    Context context = Context.getOrCreate(params);
+    Context context;
+
+    @Before
+    public void setUp()
+    {
+        context = new Context(MainNetParams.get());
+    }
 
 
     @Test

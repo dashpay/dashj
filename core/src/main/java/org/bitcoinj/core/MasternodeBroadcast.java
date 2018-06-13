@@ -32,12 +32,14 @@ public class MasternodeBroadcast extends Masternode {
     {
         super(params, payloadBytes, 0);
         mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
     }
 
     public MasternodeBroadcast(NetworkParameters params, byte [] payloadBytes, int cursor)
     {
         super(params, payloadBytes, cursor);
         mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
     }
 
     public MasternodeBroadcast(Masternode masternode)

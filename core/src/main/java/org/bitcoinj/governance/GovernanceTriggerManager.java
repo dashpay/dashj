@@ -70,7 +70,7 @@ public class GovernanceTriggerManager {
      *
      */
 
-    private void cleanAndRemove() {
+    public void cleanAndRemove() {
         log.info("gobject--CGovernanceTriggerManager::CleanAndRemove -- Start");
         context.governanceManager.lock.lock();
         try {

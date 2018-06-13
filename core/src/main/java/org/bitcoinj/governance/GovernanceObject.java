@@ -125,6 +125,10 @@ public class GovernanceObject extends Message implements Serializable {
     /// object was updated and cached values should be updated soon
     private boolean fDirtyCache;
 
+    public void setDirtyCache(boolean fDirtyCache) {
+        this.fDirtyCache = fDirtyCache;
+    }
+
     /// Object is no longer of interest
     private boolean fExpired;
 
@@ -278,7 +282,7 @@ public class GovernanceObject extends Message implements Serializable {
     }
 
     public String toString() {
-        return "";
+        return "GovernanceObject: " + strData;
     }
 
 
@@ -320,9 +324,6 @@ public class GovernanceObject extends Message implements Serializable {
 
     public boolean isValidLocally(String strError, boolean fCheckCollateral) {
         Validity validity = new Validity();
-        boolean fMissingMasternode = false;
-        boolean fMissingConfirmations = false;
-
         return isValidLocally(validity, fCheckCollateral);
     }
     public boolean isValidLocally(Validity validity, boolean fCheckCollateral) {
@@ -579,6 +580,7 @@ public class GovernanceObject extends Message implements Serializable {
             fCachedValid = false;
         }
     }
+
     public int countMatchingVotes(VoteSignal eVoteSignalIn, VoteOutcome eVoteOutcomeIn) {
         int nCount = 0;
         for (Map.Entry<TransactionOutPoint, VoteRecord> it : mapCurrentMNVotes.entrySet()) {
@@ -603,9 +605,11 @@ public class GovernanceObject extends Message implements Serializable {
     public int getYesCount(VoteSignal eVoteSignalIn) {
         return countMatchingVotes(eVoteSignalIn, VOTE_OUTCOME_YES);
     }
+
     public int getNoCount(VoteSignal eVoteSignalIn) {
         return countMatchingVotes(eVoteSignalIn, VOTE_OUTCOME_NO);
     }
+
     public int getAbstainCount(VoteSignal eVoteSignalIn) {
         return countMatchingVotes(eVoteSignalIn, VOTE_OUTCOME_ABSTAIN);
     }
@@ -712,5 +716,29 @@ public class GovernanceObject extends Message implements Serializable {
         JSONObject jsonObject = new JSONObject(parser);
         return jsonObject;
     }
+
+    public void clearMasternodeVotes() {
+        Iterator<Map.Entry<TransactionOutPoint, VoteRecord>> it = mapCurrentMNVotes.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<TransactionOutPoint, VoteRecord> entry = it.next();
+            if (!context.masternodeManager.has(entry.getKey())) {
+                fileVotes.removeVotesFromMasternode(entry.getKey());
+                it.remove();
+            }
+        }
+    }
+
+    public String getSignatureMessage() {
+        lock.lock();
+        try {
+            String strMessage = nHashParent.toString() + "|" + nRevision + "|" + nTime + "|" + strData + "|" + vinMasternode.getOutpoint().toStringShort() + "|" + nCollateralHash.toString();
+
+            return strMessage;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
 
 }
