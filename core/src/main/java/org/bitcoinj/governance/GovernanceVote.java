@@ -305,22 +305,24 @@ public class GovernanceVote extends ChildMessage implements Serializable {
             return false;
         }
 
-        MasternodeInfo infoMn = context.masternodeManager.getMasternodeInfo(vinMasternode.getOutpoint());
-        if (infoMn == null) {
-            log.info("gobject--CGovernanceVote::IsValid -- Unknown Masternode - {}", vinMasternode.getOutpoint().toStringShort());
-            return false;
-        }
+        if(context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST)) {
+            MasternodeInfo infoMn = context.masternodeManager.getMasternodeInfo(vinMasternode.getOutpoint());
+            if (infoMn == null) {
+                log.info("gobject--CGovernanceVote::IsValid -- Unknown Masternode - {}", vinMasternode.getOutpoint().toStringShort());
+                return false;
+            }
 
-        if (!fSignatureCheck) {
-            return true;
-        }
+            if (!fSignatureCheck) {
+                return true;
+            }
 
-        StringBuilder strError = new StringBuilder();
-        String strMessage = vinMasternode.getOutpoint().toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
+            StringBuilder strError = new StringBuilder();
+            String strMessage = vinMasternode.getOutpoint().toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
 
-        if (!MessageSigner.verifyMessage(infoMn.pubKeyMasternode, vchSig, strMessage, strError)) {
-            log.info("CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
-            return false;
+            if (!MessageSigner.verifyMessage(infoMn.pubKeyMasternode, vchSig, strMessage, strError)) {
+                log.info("CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
+                return false;
+            }
         }
 
         return true;

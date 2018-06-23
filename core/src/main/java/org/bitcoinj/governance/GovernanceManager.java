@@ -10,6 +10,7 @@ import javax.rmi.CORBA.Util;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -122,6 +123,53 @@ public class GovernanceManager extends AbstractManager {
 
         String version = readStr();
 
+        //READWRITE(mapErasedGovernanceObjects);
+        int size = (int)readVarInt();
+        mapErasedGovernanceObjects = new HashMap<Sha256Hash, Long>(size);
+        for(int i = 0; i < size; ++i) {
+            Sha256Hash hash = readHash();
+            long time = readInt64();
+            mapErasedGovernanceObjects.put(hash, time);
+        }
+
+        //READWRITE(mapInvalidVotes);
+        mapInvalidVotes = new CacheMap<Sha256Hash, GovernanceVote>(params, payload, cursor);
+        cursor += mapInvalidVotes.getMessageSize();
+        //READWRITE(mapOrphanVotes);
+        mapOrphanVotes = new CacheMultiMap<Sha256Hash, Pair<GovernanceVote, Long>>(params, payload, cursor);
+        cursor += mapOrphanVotes.getMessageSize();
+        //READWRITE(mapObjects);
+        size = (int)readVarInt();
+        mapObjects = new HashMap<Sha256Hash, GovernanceObject>(size);
+        for(int i = 0; i < size; ++i) {
+            Sha256Hash hash = readHash();
+            GovernanceObjectFromFile govobj = new GovernanceObjectFromFile(params, payload, cursor);
+            cursor += govobj.getMessageSize();
+            mapObjects.put(hash, govobj);
+        }
+        //READWRITE(mapWatchdogObjects);
+        size = (int)readVarInt();
+        mapWatchdogObjects = new HashMap<Sha256Hash, Long>(size);
+        for(int i = 0; i < size; ++i) {
+            Sha256Hash hash = readHash();
+            long time = readInt64();
+            mapWatchdogObjects.put(hash, time);
+        }
+        //READWRITE(nHashWatchdogCurrent);
+        nHashWatchdogCurrent = readHash();
+        //READWRITE(nTimeWatchdogCurrent);
+        nTimeWatchdogCurrent = readInt64();
+        //READWRITE(mapLastMasternodeObject);
+        size = (int)readVarInt();
+        mapLastMasternodeObject = new HashMap<TransactionOutPoint, LastObjectRecord>(size);
+        for(int i = 0; i < size; ++i) {
+            TransactionOutPoint outPoint = new TransactionOutPoint(params, payload, cursor);
+            cursor += outPoint.getMessageSize();
+            LastObjectRecord record = new LastObjectRecord(params, payload, cursor);
+            cursor += record.getMessageSize();
+            mapLastMasternodeObject.put(outPoint, record);
+        }
+
         if(!version.equals(SERIALIZATION_VERSION_STRING))
             clear();
 
@@ -134,6 +182,40 @@ public class GovernanceManager extends AbstractManager {
         try {
             stream.write(new VarInt(SERIALIZATION_VERSION_STRING.length()).encode());
             stream.write(SERIALIZATION_VERSION_STRING.getBytes());
+
+            //READWRITE(mapErasedGovernanceObjects);
+            stream.write(new VarInt(mapErasedGovernanceObjects.size()).encode());
+            for(Map.Entry<Sha256Hash, Long> entry : mapErasedGovernanceObjects.entrySet()) {
+                stream.write(entry.getKey().getReversedBytes());
+                Utils.int64ToByteStreamLE(entry.getValue(), stream);
+            }
+            //READWRITE(mapInvalidVotes);
+            mapInvalidVotes.bitcoinSerialize(stream);
+            //READWRITE(mapOrphanVotes);
+            mapOrphanVotes.bitcoinSerialize(stream);
+            //READWRITE(mapObjects);
+            stream.write(new VarInt(mapObjects.size()).encode());
+            for(Map.Entry<Sha256Hash, GovernanceObject> entry : mapObjects.entrySet()) {
+                stream.write(entry.getKey().getReversedBytes());
+                entry.getValue().bitcoinSerialize(stream);
+                entry.getValue().serializeToDisk(stream);
+            }
+            //READWRITE(mapWatchdogObjects);
+            stream.write(new VarInt(mapWatchdogObjects.size()).encode());
+            for(Map.Entry<Sha256Hash, Long> entry : mapWatchdogObjects.entrySet()) {
+                stream.write(entry.getKey().getReversedBytes());
+                Utils.int64ToByteStreamLE(entry.getValue(), stream);
+            }
+            //READWRITE(nHashWatchdogCurrent);
+            stream.write(nHashWatchdogCurrent.getReversedBytes());
+            //READWRITE(nTimeWatchdogCurrent);
+            Utils.int64ToByteStreamLE(nTimeWatchdogCurrent, stream);
+            //READWRITE(mapLastMasternodeObject);
+            stream.write(new VarInt(mapLastMasternodeObject.size()).encode());
+            for(Map.Entry<TransactionOutPoint, LastObjectRecord> entry : mapLastMasternodeObject.entrySet()) {
+                entry.getKey().bitcoinSerialize(stream);
+                entry.getValue().bitcoinSerialize(stream);
+            }
         } finally {
             lock.unlock();
         }
@@ -269,11 +351,11 @@ public class GovernanceManager extends AbstractManager {
 
         GovernanceException exception = new GovernanceException();
         if (processVote(peer, vote, exception)) {
-            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- %s new\n", strHash);
+            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- {} new", strHash);
             context.masternodeSync.BumpAssetLastTime("MNGOVERNANCEOBJECTVOTE");
             vote.relay();
         } else {
-            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- Rejected vote, error = %s\n", exception.getMessage());
+            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- Rejected vote, error = {}", exception.getMessage());
             if ((exception.getNodePenalty() != 0) && context.masternodeSync.isSynced()) {
                 //Misbehaving(pfrom.GetId(), exception.GetNodePenalty());
             }
@@ -367,7 +449,8 @@ public class GovernanceManager extends AbstractManager {
         LastObjectRecord it = mapLastMasternodeObject.get(vin.getOutpoint());
 
         if (it == null) {
-            it = mapLastMasternodeObject.put(vin.getOutpoint(), new LastObjectRecord(params, true));
+            it = new LastObjectRecord(params, true);
+            mapLastMasternodeObject.put(vin.getOutpoint(), it);
         }
 
         long nTimestamp = govobj.getCreationTime();
@@ -698,6 +781,20 @@ public class GovernanceManager extends AbstractManager {
         }
     }
 
+    public void doMaintenance()
+    {
+        if(context.isLiteMode() || !context.masternodeSync.isSynced()) return;
+
+        // CHECK OBJECTS WE'VE ASKED FOR, REMOVE OLD ENTRIES
+
+        cleanOrphanObjects();
+
+        requestOrphanObjects();
+
+        // CHECK AND REMOVE - REPROCESS GOVERNANCE OBJECTS
+
+        updateCachesAndClean();
+    }
 
     public boolean confirmInventoryRequest(InventoryItem inv) {
         // do not request objects until it's time to sync
@@ -714,18 +811,18 @@ public class GovernanceManager extends AbstractManager {
             switch (inv.type) {
                 case GovernanceObject:
                     if (mapObjects.containsKey(inv.hash) || mapPostponedObjects.containsKey(inv.hash)) {
-                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance object, returning false\n");
+                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance object, returning false");
                         return false;
                     }
                     break;
                 case GovernanceObjectVote:
                     if (mapVoteToObject.hasKey(inv.hash)) {
-                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance vote, returning false\n");
+                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance vote, returning false");
                         return false;
                     }
                     break;
                 default:
-                    log.info("gobject--CGovernanceManager::ConfirmInventoryRequest unknown type, returning false\n");
+                    log.info("gobject--CGovernanceManager::ConfirmInventoryRequest unknown type, returning false");
                     return false;
             }
 
@@ -1036,7 +1133,7 @@ public class GovernanceManager extends AbstractManager {
             }
         }
 
-        log.info("gobject--CGovernanceManager::RequestGovernanceObject -- nHash %s nVoteCount {} peer={}", nHash.toString(), nVoteCount, pfrom.hashCode());
+        log.info("gobject--CGovernanceManager::RequestGovernanceObject -- nHash {} nVoteCount {} peer={}", nHash.toString(), nVoteCount, pfrom.hashCode());
         pfrom.sendMessage(fUseFilter ? new GovernanceSyncMessage(params, nHash, filter) :
                 new GovernanceSyncMessage(params, nHash));
     }
@@ -1113,5 +1210,140 @@ public class GovernanceManager extends AbstractManager {
             lock.unlock();
         }
     }
+
+    public int requestGovernanceObjectVotes(Peer pnode) {
+        if (pnode.getVersionMessage().clientVersion < MIN_GOVERNANCE_PEER_PROTO_VERSION) {
+            return -3;
+        }
+        return requestGovernanceObjectVotes();
+    }
+    public int requestGovernanceObjectVotes() {
+        //C++ TO JAVA CONVERTER NOTE: This static local variable declaration (not allowed in Java) has been moved just prior to the method:
+        //	static ClassicMap<uint256, ClassicMap<CService, long>> mapAskedRecently;
+        HashMap<Sha256Hash, HashMap<InetAddress, Long>> mapAskedRecently = new HashMap<Sha256Hash, HashMap<InetAddress, Long>>();
+
+        long nNow = Utils.currentTimeSeconds();
+        int nTimeout = 60 * 60;
+        int nPeersPerHashMax = 3;
+
+        ArrayList<GovernanceObject> vpGovObjsTmp = new ArrayList<GovernanceObject>();
+        ArrayList<GovernanceObject> vpGovObjsTriggersTmp = new ArrayList<GovernanceObject>();
+
+        // This should help us to get some idea about an impact this can bring once deployed on mainnet.
+        // Testnet is ~40 times smaller in masternode count, but only ~1000 masternodes usually vote,
+        // so 1 obj on mainnet == ~10 objs or ~1000 votes on testnet. However we want to test a higher
+        // number of votes to make sure it's robust enough, so aim at 2000 votes per masternode per request.
+        // On mainnet nMaxObjRequestsPerNode is always set to 1.
+        int nMaxObjRequestsPerNode = 1;
+        int nProjectedVotes = 2000;
+        if (params.getId() != NetworkParameters.ID_MAINNET) {
+            nMaxObjRequestsPerNode = Math.max(1, (int)(nProjectedVotes / Math.max(1, context.masternodeManager.size())));
+        }
+
+
+        //LOCK2(cs_main, cs);
+        lock.lock();
+        try {
+
+            if (mapObjects.isEmpty()) {
+                return -2;
+            }
+
+            for (Map.Entry<Sha256Hash, GovernanceObject> it : mapObjects.entrySet()) {
+                if (mapAskedRecently.containsKey(it.getKey())) {
+                    Iterator<Map.Entry<InetAddress, Long>> it1 = mapAskedRecently.get(it.getKey()).entrySet().iterator();
+                    while (it1.hasNext()) {
+                        if (it1.next().getValue() < nNow) {
+                            it1.remove();
+                            //mapAskedRecently.get(it.getKey()).remove(it1++);
+                        } else {
+                        }
+                    }
+                    if (mapAskedRecently.get(it.getKey()).size() >= nPeersPerHashMax) {
+                        continue;
+                    }
+                }
+                if (it.getValue().getObjectType() == GOVERNANCE_OBJECT_TRIGGER) {
+                    vpGovObjsTriggersTmp.add((it.getValue()));
+                } else {
+                    vpGovObjsTmp.add((it.getValue()));
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+
+
+        log.info("gobject--CGovernanceManager::RequestGovernanceObjectVotes -- start: vpGovObjsTriggersTmp {} vpGovObjsTmp {} mapAskedRecently {}", vpGovObjsTriggersTmp.size(), vpGovObjsTmp.size(), mapAskedRecently.size());
+
+        Random insecureRand = new Random();
+        // shuffle pointers
+        Collections.shuffle(vpGovObjsTriggersTmp, insecureRand);
+        Collections.shuffle(vpGovObjsTmp, insecureRand);
+
+        for (int i = 0; i < nMaxObjRequestsPerNode; ++i) {
+            Sha256Hash nHashGovobj = Sha256Hash.ZERO_HASH;
+
+            // ask for triggers first
+            if (vpGovObjsTriggersTmp.size() > 0) {
+                nHashGovobj = vpGovObjsTriggersTmp.get(vpGovObjsTriggersTmp.size() - 1).getHash();
+            } else {
+                if (vpGovObjsTmp.isEmpty()) {
+                    break;
+                }
+                nHashGovobj = vpGovObjsTmp.get(vpGovObjsTmp.size() - 1).getHash();
+            }
+            boolean fAsked = false;
+            for (Peer pnode : context.peerGroup.getConnectedPeers()) {
+                // Only use regular peers, don't try to ask from outbound "masternode" connections -
+                // they stay connected for a short period of time and it's possible that we won't get everything we should.
+                // Only use outbound connections - inbound connection could be a "masternode" connection
+                // initiated from another node, so skip it too.
+                if (pnode.isMasternode() || (DarkCoinSystem.fMasterNode)) {
+                    continue;
+                }
+                // only use up to date peers
+                if (pnode.getVersionMessage().clientVersion < MIN_GOVERNANCE_PEER_PROTO_VERSION) {
+                    continue;
+                }
+                // stop early to prevent setAskFor overflow
+                int nProjectedSize = pnode.setAskFor.size() + nProjectedVotes;
+                if (nProjectedSize > Peer.SETASKFOR_MAX_SZ / 2) {
+                    continue;
+                }
+                // to early to ask the same node
+                HashMap<InetAddress, Long> map = mapAskedRecently.get(nHashGovobj);
+                if (map != null && map.containsKey(pnode.getAddress().getAddr())) {
+                    continue;
+                }
+
+                requestGovernanceObject(pnode, nHashGovobj, true);
+                if(map == null) {
+                    map = new HashMap<InetAddress, Long>();
+                }
+                map.put(pnode.getAddress().getAddr(), nNow + nTimeout);
+                mapAskedRecently.put(nHashGovobj, map);
+
+                fAsked = true;
+                // stop loop if max number of peers per obj was asked
+                if (mapAskedRecently.get(nHashGovobj).size() >= nPeersPerHashMax) {
+                    break;
+                }
+            }
+            // NOTE: this should match `if` above (the one before `while`)
+            if (vpGovObjsTriggersTmp.size() > 0) {
+                vpGovObjsTriggersTmp.remove(vpGovObjsTriggersTmp.size() - 1);
+            } else {
+                vpGovObjsTmp.remove(vpGovObjsTmp.size() - 1);
+            }
+            if (!fAsked) {
+                i--;
+            }
+        }
+        log.info("gobject--CGovernanceManager::RequestGovernanceObjectVotes -- end: vpGovObjsTriggersTmp {} vpGovObjsTmp {} mapAskedRecently {}", vpGovObjsTriggersTmp.size(), vpGovObjsTmp.size(), mapAskedRecently.size());
+
+        return (int)(vpGovObjsTriggersTmp.size() + vpGovObjsTmp.size());
+    }
+
 
 }

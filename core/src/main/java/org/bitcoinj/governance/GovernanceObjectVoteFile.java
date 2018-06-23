@@ -36,18 +36,18 @@ public class GovernanceObjectVoteFile extends Message {
 
 	private LinkedList<GovernanceVote> listVotes;
 
-	private TreeMap<Sha256Hash, GovernanceVote> mapVoteIndex;
+	private HashMap<Sha256Hash, GovernanceVote> mapVoteIndex;
 
 	public GovernanceObjectVoteFile() {
 		this.nMemoryVotes = 0;
 		this.listVotes =  new LinkedList<GovernanceVote>();
-		this.mapVoteIndex = new TreeMap<Sha256Hash, GovernanceVote>();
+		this.mapVoteIndex = new HashMap<Sha256Hash, GovernanceVote>();
 	}
 
 	public GovernanceObjectVoteFile(GovernanceObjectVoteFile other) {
 		this.nMemoryVotes = other.nMemoryVotes;
 		this.listVotes = other.listVotes;
-		this.mapVoteIndex = new TreeMap<Sha256Hash, GovernanceVote>();
+		this.mapVoteIndex = new HashMap<Sha256Hash, GovernanceVote>();
 		rebuildIndex();
 	}
 
@@ -140,6 +140,7 @@ public class GovernanceObjectVoteFile extends Message {
 		}
 
 		length = cursor - offset;
+		mapVoteIndex = new HashMap<Sha256Hash, GovernanceVote>();
 		rebuildIndex();
 	}
 

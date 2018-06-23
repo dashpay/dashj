@@ -1,9 +1,6 @@
 package org.bitcoinj.utils;
 
-import org.bitcoinj.core.Message;
-import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VarInt;
+import org.bitcoinj.core.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,6 +28,7 @@ public class CacheMultiMap<K, V> extends Message {
     //C++ TO JAVA CONVERTER NOTE: Java does not allow default values for parameters. Overloaded methods are inserted above:
 //ORIGINAL LINE: CacheMultiMap(long nMaxSizeIn = 0) : nMaxSize(nMaxSizeIn), nCurrentSize(0), listItems(), mapIndex()
     public CacheMultiMap(long nMaxSizeIn) {
+        super(Context.get().getParams());
         this.nMaxSize = nMaxSizeIn;
         this.nCurrentSize = 0;
         this.listItems = new LinkedList<CacheItem<K, V>>();
@@ -38,11 +36,15 @@ public class CacheMultiMap<K, V> extends Message {
     }
 
     public CacheMultiMap(CacheMap<K, V> other) {
+        super(other.getParams());
         this.nMaxSize = other.getMaxSize();
         this.nCurrentSize = other.getSize();
         this.listItems = new LinkedList<CacheItem<K, V>>(other.getItemList());
         this.mapIndex = new HashMap<K, HashMap<V, CacheItem<K, V>>>();
         rebuildIndex();
+    }
+    public CacheMultiMap(NetworkParameters params, byte [] payload, int cursor) {
+        super(params, payload, cursor);
     }
 
     public final void clear() {
@@ -69,7 +71,8 @@ public class CacheMultiMap<K, V> extends Message {
         }
         HashMap<V, CacheItem<K, V>> map = mapIndex.get(key);
         if (map == null) {
-            map = mapIndex.put(key, new HashMap<V, CacheItem<K, V>>());
+            map = new HashMap<V, CacheItem<K, V>>();
+            mapIndex.put(key, map);
         }
 
         if (map.containsValue(value)) {
@@ -77,7 +80,7 @@ public class CacheMultiMap<K, V> extends Message {
             return false;
         }
 
-        listItems.addFirst(new CacheItem<K,V>(params, key, value));
+        listItems.addFirst(new CacheItem<K,V>(key, value));
         CacheItem<K, V> lit = listItems.getFirst();
 
         map.put(value, lit);
@@ -191,7 +194,8 @@ public class CacheMultiMap<K, V> extends Message {
         {
             HashMap<V, CacheItem<K,V>> mit = mapIndex.get(lit.key);
             if (mit == null) {
-                mit = mapIndex.put(lit.key, new HashMap<V, CacheItem<K, V>>());
+                mit = new HashMap<V, CacheItem<K, V>>();
+                mapIndex.put(lit.key, mit);
             }
             mit.put(lit.value, lit);
         }

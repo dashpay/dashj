@@ -1461,6 +1461,7 @@ public class Peer extends PeerSocketHandler {
         //masternodepings
 
         //if(blockChain.getBestChainHeight() > (this.getBestHeight() - 100))
+        if(context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST))
         {
 
            //if(context.masternodeSync.isSynced()) {
@@ -1508,12 +1509,14 @@ public class Peer extends PeerSocketHandler {
             //}
         }
 
-        it = goveranceObjects.iterator();
+        if(context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+            it = goveranceObjects.iterator();
 
-        while (it.hasNext()) {
-            InventoryItem item = it.next();
-            if(!alreadyHave(item))
-                getdata.addItem(item);
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                if (!alreadyHave(item))
+                    getdata.addItem(item);
+            }
         }
 
         // If we are requesting filteredblocks we have to send a ping after the getdata so that we have a clear
@@ -2184,6 +2187,11 @@ public class Peer extends PeerSocketHandler {
     int masternodeListCount = -1;
     public int getMasternodeListCount() { return masternodeListCount; }
     public void setMasternodeListCount(int count) { masternodeListCount = count; }
+
+    /** The maximum number of entries in mapAskFor */
+    public static final int MAPASKFOR_MAX_SZ = 50000;
+/** The maximum number of entries in setAskFor (larger due to getdata latency)*/
+    public static final int SETASKFOR_MAX_SZ = 2 * 50000;
 
     public HashSet<Sha256Hash> setAskFor = new HashSet<Sha256Hash>();
 

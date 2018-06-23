@@ -253,13 +253,9 @@ public class Context {
 
         boolean success = mndb.load(masternodeManager);
 
-        //
-        // If loading was successful, replace the default manager
-        //
-        if(/*!masternodeManagerLoaded != null!*/ success) {
-            //masternodeManager = masternodeManagerLoaded;
-            masternodeManager.setBlockChain(sporkManager.blockChain);
-        }
+        FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
+
+        success = gmdb.load(governanceManager);
 
         //other functions
         darkSendPool.startBackgroundProcessing();

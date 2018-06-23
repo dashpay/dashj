@@ -3,6 +3,7 @@ package org.bitcoinj.governance;
 import org.bitcoinj.core.ChildMessage;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
+import sun.nio.ch.Net;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,12 +15,15 @@ public class LastObjectRecord extends ChildMessage {
     public LastObjectRecord(NetworkParameters params) {
         this(params, true);
     }
-    //C++ TO JAVA CONVERTER NOTE: Java does not allow default values for parameters. Overloaded methods are inserted above:
-//ORIGINAL LINE: LastObjectRecord(boolean fStatusOKIn = true) : triggerBuffer(), watchdogBuffer(), fStatusOK(fStatusOKIn)
+
     public LastObjectRecord(NetworkParameters params, boolean fStatusOKIn) {
         this.triggerBuffer = new RateCheckBuffer(params);
         this.watchdogBuffer = new RateCheckBuffer(params);
         this.fStatusOK = fStatusOKIn;
+    }
+
+    public LastObjectRecord(NetworkParameters params, byte [] payload, int cursor) {
+        super(params, payload, cursor);
     }
 
     public RateCheckBuffer triggerBuffer;

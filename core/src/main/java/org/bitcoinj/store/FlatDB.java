@@ -262,7 +262,7 @@ public class FlatDB<Type extends AbstractManager> {
             With the code enabled, "Seen Budgets" will equal 0, whereas the object should have one entry.
         */
 
-        log.info("Verifying {} format...\n", fileName);
+        /*log.info("Verifying {} format...\n", fileName);
         Type tmpObjToLoad = (Type)objToSave.createEmpty();
         ReadResult readResult = read(tmpObjToLoad);
 
@@ -279,7 +279,7 @@ public class FlatDB<Type extends AbstractManager> {
                 log.error("file format is unknown or invalid, please fix it manually");
                 return false;
             }
-        }
+        }*/
 
         log.info("Writing info to {}...", fileName);
         write(objToSave);

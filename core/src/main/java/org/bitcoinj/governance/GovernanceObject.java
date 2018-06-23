@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -135,7 +136,7 @@ public class GovernanceObject extends Message implements Serializable {
     /// Failed to parse object data
     private boolean fUnparsable;
 
-    private TreeMap<TransactionOutPoint, VoteRecord> mapCurrentMNVotes;
+    protected HashMap<TransactionOutPoint, VoteRecord> mapCurrentMNVotes;
 
     /// Limited map of votes orphaned by MN
     private /*CacheMultiMap*/LinkedHashMultimap<TransactionOutPoint, Pair<Integer, GovernanceVote>> mapOrphanVotes = LinkedHashMultimap.create(100,100);
@@ -150,6 +151,13 @@ public class GovernanceObject extends Message implements Serializable {
     public GovernanceObject(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
         context = Context.get();
+        mapCurrentMNVotes = new HashMap<TransactionOutPoint, VoteRecord>();
+    }
+
+    public GovernanceObject(NetworkParameters params, byte[] payload, int cursor) {
+        super(params, payload, cursor);
+        context = Context.get();
+        mapCurrentMNVotes = new HashMap<TransactionOutPoint, VoteRecord>();
     }
 
     public final long getCreationTime() {
@@ -233,14 +241,15 @@ public class GovernanceObject extends Message implements Serializable {
         cursor += vchSig.getMessageSize();
         length = cursor - offset;
 
+        fileVotes = new GovernanceObjectVoteFile();
+
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY
     }
     void parseFromDisk() {
-        parse();
         nDeletionTime = readInt64();
         fExpired = readBytes(1)[0] == 0 ? false : true;
         int size = (int)readVarInt();
-        mapCurrentMNVotes = new TreeMap<TransactionOutPoint, VoteRecord>();
+        mapCurrentMNVotes = new HashMap<TransactionOutPoint, VoteRecord>();
         for(int i = 0; i < size; ++i) {
             TransactionOutPoint vin = new TransactionOutPoint(params, payload, offset);
             cursor += vin.getMessageSize();
@@ -248,8 +257,8 @@ public class GovernanceObject extends Message implements Serializable {
             cursor += vr.getMessageSize();
             mapCurrentMNVotes.put(vin, vr);
         }
-        fileVotes = new GovernanceObjectVoteFile();
-        cursor = fileVotes.getMessageSize();
+        fileVotes = new GovernanceObjectVoteFile(params, payload, offset);
+        cursor += fileVotes.getMessageSize();
         length = cursor - offset;
     }
 
@@ -266,7 +275,6 @@ public class GovernanceObject extends Message implements Serializable {
     }
 
     public void serializeToDisk(OutputStream stream) throws IOException {
-        bitcoinSerializeToStream(stream);
         log.info("gobject--CGovernanceObject::SerializationOp writing votes to disk");
         Utils.int64ToByteStreamLE(nDeletionTime, stream);
         stream.write((byte)(fExpired ? 0 : 1));
@@ -282,7 +290,7 @@ public class GovernanceObject extends Message implements Serializable {
     }
 
     public String toString() {
-        return "GovernanceObject: " + strData;
+        return "GovernanceObject: " + getDataAsString().substring(0, 100);
     }
 
 
@@ -539,7 +547,9 @@ public class GovernanceObject extends Message implements Serializable {
 
     public void updateSentinelVariables() {
         // CALCULATE MINIMUM SUPPORT LEVELS REQUIRED
+        if(context.masternodeManager.lock.isHeldByCurrentThread()) {
 
+        }
         int nMnCount = context.masternodeManager.countEnabled();
         if (nMnCount == 0) {
             return;
@@ -630,7 +640,7 @@ public class GovernanceObject extends Message implements Serializable {
     }
 
     public boolean processVote(Peer pfrom, GovernanceVote vote, GovernanceException exception) {
-        if (!context.masternodeManager.has(vote.getMasternodeOutpoint())) {
+        if (context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST) &&!context.masternodeManager.has(vote.getMasternodeOutpoint())) {
             String message = "CGovernanceObject::ProcessVote -- Masternode index not found";
             exception.setException(message, GOVERNANCE_EXCEPTION_WARNING);
             if (mapOrphanVotes.put(vote.getMasternodeOutpoint(), new Pair<Integer, GovernanceVote>((int)(Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME), vote))) {
@@ -646,7 +656,8 @@ public class GovernanceObject extends Message implements Serializable {
 
         VoteRecord recVote = mapCurrentMNVotes.get(vote.getMasternodeOutpoint());
         if (recVote == null) {
-            recVote = mapCurrentMNVotes.put(vote.getMasternodeOutpoint(), new VoteRecord(params));
+            recVote = new VoteRecord(params);
+            mapCurrentMNVotes.put(vote.getMasternodeOutpoint(), recVote);
         }
 
         VoteSignal eSignal = vote.getSignal();
@@ -664,7 +675,8 @@ public class GovernanceObject extends Message implements Serializable {
         }
         VoteInstance voteInstance = recVote.mapInstances.get(eSignal.getValue());
         if (voteInstance == null) {
-            voteInstance = recVote.mapInstances.put(eSignal.getValue(), new VoteInstance(params));
+            voteInstance = new VoteInstance(params);
+            recVote.mapInstances.put(eSignal.getValue(), voteInstance);
         }
 
         // Reject obsolete votes

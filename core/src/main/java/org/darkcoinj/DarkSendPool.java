@@ -217,6 +217,10 @@ public class DarkSendPool {
                             log.info(context.masternodeManager.toString());
                         }
 
+                        if(tick % (60 * 5) == 0) {
+                            context.governanceManager.doMaintenance();
+                        }
+
                         //if(c % MASTERNODES_DUMP_SECONDS == 0) DumpMasternodes();
 
                         //TODO:  Add if necessary for other DarkSend functions

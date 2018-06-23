@@ -1,18 +1,22 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.governance.GovernanceSyncMessage;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.Math.max;
+import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE;
 
 /**
  * Created by Eric on 2/21/2016.
@@ -28,6 +32,15 @@ public class MasternodeSync {
     public static final int MASTERNODE_SYNC_GOVOBJ          = 10;
     public static final int MASTERNODE_SYNC_GOVOBJ_VOTE     = 11;
     public static final int MASTERNODE_SYNC_FINISHED        = 999;
+
+    public enum SYNC_FLAGS {
+        SYNC_MASTERNODE_LIST,
+        SYNC_MNW,
+        SYNC_GOVERNANCE
+    }
+
+    public Set<SYNC_FLAGS> syncFlags;
+    public static final EnumSet<SYNC_FLAGS> SYNC_ALL_OBJECTS = EnumSet.allOf(SYNC_FLAGS.class);
 
     static final int MASTERNODE_SYNC_TICK_SECONDS    = 6;
     static final int MASTERNODE_SYNC_TIMEOUT_SECONDS = 30; // our blocks are 2.5 minutes so 30 seconds should be fine -- changed to 300 for test purposes (java)
@@ -81,12 +94,13 @@ public class MasternodeSync {
     public MasternodeSync(Context context)
     {
         this.context = context;
-
         this.mapSeenSyncBudget = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNB = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNW = new HashMap<Sha256Hash, Integer>();
-
-        eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
+        this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
+        this.syncFlags = this.context.isLiteMode() ? EnumSet.noneOf(SYNC_FLAGS.class) : SYNC_ALL_OBJECTS;
+        this.syncFlags = EnumSet.noneOf(SYNC_FLAGS.class);
+        syncFlags.add(SYNC_GOVERNANCE);
 
         reset();
     }
@@ -190,7 +204,13 @@ public class MasternodeSync {
             case(MASTERNODE_SYNC_WAITING):
                 clearFulfilledRequest();
                 log.info("CMasternodeSync::SwitchToNextAsset -- Completed "+getAssetName()+" in " + (Utils.currentTimeSeconds() - nTimeAssetSyncStarted));
-                RequestedMasternodeAssets = MASTERNODE_SYNC_LIST;
+                if(syncFlags.contains(SYNC_FLAGS.SYNC_MASTERNODE_LIST))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_LIST;
+                else if(syncFlags.contains(SYNC_FLAGS.SYNC_MNW))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;
+                else if(syncFlags.contains(SYNC_GOVERNANCE))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                else RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
                 log.info("CMasternodeSync::SwitchToNextAsset -- Starting "+ getAssetName());
 
                 //If we are in lite mode and allowing InstantX, then only sync the sporks
@@ -200,12 +220,21 @@ public class MasternodeSync {
                 break;
             case(MASTERNODE_SYNC_LIST):
                 log.info("CMasternodeSync::SwitchToNextAsset -- Completed "+getAssetName()+" in " + (Utils.currentTimeSeconds() - nTimeAssetSyncStarted));
-                RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;//MASTERNODE_SYNC_MNW;
+
+                if(syncFlags.contains(SYNC_FLAGS.SYNC_MNW))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;
+                else if(syncFlags.contains(SYNC_GOVERNANCE))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                else RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
+                //RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;//MASTERNODE_SYNC_MNW;
                 log.info("CMasternodeSync::SwitchToNextAsset -- Starting "+ getAssetName());
                 break;
             case(MASTERNODE_SYNC_MNW):
                 log.info("CMasternodeSync::SwitchToNextAsset -- Completed "+getAssetName()+" in " + (Utils.currentTimeSeconds() - nTimeAssetSyncStarted));
-                RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                //RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                if(syncFlags.contains(SYNC_GOVERNANCE))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                else RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
                 log.info("CMasternodeSync::SwitchToNextAsset -- Starting "+ getAssetName());
                 break;
             case(MASTERNODE_SYNC_GOVERNANCE):
@@ -338,9 +367,7 @@ public class MasternodeSync {
 
         // gradually request the rest of the votes after sync finished
         if(isSynced()) {
-            //std::vector<CNode*> vNodesCopy = connman.CopyNodeVector();
-            //governance.RequestGovernanceObjectVotes(vNodesCopy, connman);
-            //connman.ReleaseNodeVector(vNodesCopy);
+            context.governanceManager.requestGovernanceObjectVotes();
             return;
         }
 
@@ -504,8 +531,8 @@ public class MasternodeSync {
                         log.info("gobject--CMasternodeSync::ProcessTick -- nTick " + tick +
                                 "nRequestedMasternodeAssets " + RequestedMasternodeAssets +
                                 " nTimeLastBumped " + nTimeLastBumped +
-                                " GetTime() %lld" + Utils.currentTimeSeconds() +
-                                " diff \n" + (Utils.currentTimeSeconds() - nTimeLastBumped));
+                                " GetTime() {}" + Utils.currentTimeSeconds() +
+                                " diff" + (Utils.currentTimeSeconds() - nTimeLastBumped));
 
                         // check for timeout first
                         if (Utils.currentTimeSeconds() - nTimeLastBumped > MASTERNODE_SYNC_TIMEOUT_SECONDS) {
@@ -520,7 +547,7 @@ public class MasternodeSync {
 
                         // only request obj sync once from each peer, then request votes on per-obj basis
                         if (pnode.hasFulfilledRequest("governance-sync")) {
-                            int nObjsLeftToAsk = 0;//governance.RequestGovernanceObjectVotes(pnode, connman);
+                            int nObjsLeftToAsk = context.governanceManager.requestGovernanceObjectVotes(pnode);
                             // check for data
                             if (nObjsLeftToAsk == 0) {
 

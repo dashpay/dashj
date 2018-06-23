@@ -15,8 +15,8 @@ public class CacheItem<K, V> extends ChildMessage {
     public CacheItem() {
     }
 
-    public CacheItem(NetworkParameters params, K keyIn, V valueIn) {
-        super(params);
+    public CacheItem(K keyIn, V valueIn) {
+        //super(params);
         this.key = keyIn;
         this.value = valueIn;
     }

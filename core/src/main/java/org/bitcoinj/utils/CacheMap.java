@@ -24,8 +24,7 @@ public class CacheMap<K, V> extends ChildMessage {
     public CacheMap() {
             this(0);
             }
-    //C++ TO JAVA CONVERTER NOTE: Java does not allow default values for parameters. Overloaded methods are inserted above:
-    //ORIGINAL LINE: CacheMap(Size nMaxSizeIn = 0) : nMaxSize(nMaxSizeIn), nCurrentSize(0), listItems(), mapIndex()
+
     public CacheMap(long nMaxSizeIn) {
         this.nMaxSize = nMaxSizeIn;
         this.nCurrentSize = 0;
@@ -39,6 +38,10 @@ public class CacheMap<K, V> extends ChildMessage {
         this.listItems = new LinkedList<CacheItem<K, V>>(other.listItems);
         this.mapIndex = new LinkedHashMap<K, CacheItem<K, V>>();
         rebuildIndex();
+    }
+
+    public CacheMap(NetworkParameters params, byte [] payload, int cursor) {
+        super(params, payload, cursor);
     }
 
     public final void clear() {
@@ -75,20 +78,16 @@ public class CacheMap<K, V> extends ChildMessage {
         if (nCurrentSize == nMaxSize) {
             pruneLast();
         }
-        CacheItem item = new CacheItem(params, key, value);
+        CacheItem item = new CacheItem(key, value);
         listItems.addFirst(item);
         mapIndex.put(key, item);
         ++nCurrentSize;
     }
 
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-    //ORIGINAL LINE: boolean HasKey(const K& key) const
     public final boolean hasKey(K key) {
         return mapIndex.containsKey(key);
     }
 
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-    //ORIGINAL LINE: boolean Get(const K& key, V& value) const
     public final CacheItem<K, V> get(K key) {
         CacheItem<K, V> it = mapIndex.get(key);
         if (it == null) {
@@ -103,21 +102,15 @@ public class CacheMap<K, V> extends ChildMessage {
         if (it == null) {
             return;
         }
-        //C++ TO JAVA CONVERTER TODO TASK: There is no direct equivalent to the STL list 'erase' method in Java:
-        //C++ TO JAVA CONVERTER TODO TASK: Iterators are only converted within the context of 'while' and 'for' loops:
         listItems.remove(it);
         mapIndex.remove(it.key);
         --nCurrentSize;
     }
 
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-    //ORIGINAL LINE: const ClassicLinkedList<CacheItem<K,V>>& GetItemList() const
     public final LinkedList<CacheItem<K, V>> getItemList() {
         return listItems;
     }
 
-    //C++ TO JAVA CONVERTER NOTE: This 'copyFrom' method was converted from the original copy assignment operator:
-    //ORIGINAL LINE: CacheMap<K,V>& operator =(const CacheMap<K,V>& other)
     public final CacheMap<K, V> copyFrom(CacheMap<K, V> other) {
         nMaxSize = other.nMaxSize;
         nCurrentSize = other.nCurrentSize;

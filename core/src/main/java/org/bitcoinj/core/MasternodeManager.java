@@ -56,7 +56,7 @@ public class MasternodeManager extends AbstractManager {
     int nCachedBlockHeight;
 
     // critical section to protect the inner data structures
-    ReentrantLock lock = Threading.lock("MasternodeManager");
+    public ReentrantLock lock = Threading.lock("MasternodeManager");
 
     // critical section to protect the inner data structures specifically on messaging
     ReentrantLock lock_messages = Threading.lock("MasternodeManager-Messages");
@@ -99,7 +99,10 @@ public class MasternodeManager extends AbstractManager {
 
     //internal parameters
     AbstractBlockChain blockChain;
-    void setBlockChain(AbstractBlockChain blockChain) { this.blockChain = blockChain; }
+    void setBlockChain(AbstractBlockChain blockChain) {
+        this.blockChain = blockChain;
+        nCachedBlockHeight = this.blockChain.getBestChainHeight();
+    }
 
     //Context context;
 
@@ -948,7 +951,7 @@ public class MasternodeManager extends AbstractManager {
     }
 
     /// Return the number of (unique) Masternodes
-    int size() { return mapMasternodes.size(); }
+    public int size() { return mapMasternodes.size(); }
 
     public String toString()
     {
@@ -1039,12 +1042,12 @@ public class MasternodeManager extends AbstractManager {
     class CompareScoreMN<Object> implements Comparator<Object>
     {
         public int compare(Object t1, Object t2) {
-            Pair<Long, Masternode> p1 = (Pair<Long, Masternode>)t1;
-            Pair<Long, Masternode> p2 = (Pair<Long, Masternode>)t2;
+            Pair<Sha256Hash, Masternode> p1 = (Pair<Sha256Hash, Masternode>)t1;
+            Pair<Sha256Hash, Masternode> p2 = (Pair<Sha256Hash, Masternode>)t2;
 
-            if(p1.getFirst() < p2.getFirst())
+            if(p1.getFirst().compareTo(p2.getFirst()) < 0)
                 return -1;
-            if(p1.getFirst() == p2.getFirst())
+            if(p1.getFirst().equals(p2.getFirst()))
                 return 0;
             else return 1;
         }
@@ -1216,7 +1219,19 @@ public class MasternodeManager extends AbstractManager {
                             HashSet<NetAddress> setRequested = new HashSet<NetAddress>();
                             // calulate only once and only when it's needed
                             if (vecMasternodeRanks.isEmpty()) {
-                                int nRandomBlockHeight = new Random().nextInt(nCachedBlockHeight);
+                                int nRandomBlockHeight = new Random().nextInt(nCachedBlockHeight != 0 ? nCachedBlockHeight : blockChain.getBestChainHeight());
+                                int lowestBlockHeight = context.hashStore.getLowestHeight();
+                                if(nRandomBlockHeight < lowestBlockHeight);
+                                    nRandomBlockHeight = lowestBlockHeight;
+                                /*for(Map.Entry<Integer, Sha256Hash> checkpoint : params.checkpoints.entrySet()) {
+                                    if(checkpoint.getKey() > nRandomBlockHeight)
+                                        nRandomBlockHeight = checkpoint.getKey();
+                                }
+                                if(!params.checkpoints.containsKey(nRandomBlockHeight)) {
+
+                                    Object [] array = params.checkpoints.keySet().toArray();
+                                    nRandomBlockHeight = (Integer)(array[array.length]);
+                                }*/
                                 getMasternodeRanks(vecMasternodeRanks, nRandomBlockHeight, CoinDefinition.PROTOCOL_VERSION);
                             }
                             boolean fAskedForMnbRecovery = false;
@@ -1866,16 +1881,18 @@ public class MasternodeManager extends AbstractManager {
 
     boolean isWatchdogActive()
     {
-        lock.lock();
+//        lock.lock();
         try {
             // Check if any masternodes have voted recently, otherwise return false
             return Utils.currentTimeSeconds() - nLastWatchdogVoteTime <= MASTERNODE_WATCHDOG_MAX_SECONDS;
         } finally {
-            lock.unlock();
+  //          lock.unlock();
         }
     }
 
     public boolean addGovernanceVote(final TransactionOutPoint outpoint, Sha256Hash nGovernanceObjectHash) {
+        if(!context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST))
+            return true;
         lock.lock();
         try {
             Masternode  mn = find(outpoint);
