@@ -222,8 +222,10 @@ public class Block extends Message {
      */
 
     public Coin getBlockInflation(int height, long nPrevBits, boolean fSuperblockPartOnly) {
-        //return Utils.toNanoCoins(50, 0).shiftRight(height / context.getSubsidyDecreaseBlockCount());
-        //return /*Utils.toNanoCoins(*/CoinDefinition.GetBlockReward(height)/*, 0)*/;
+        return getBlockInflation(params, height, nPrevBits, fSuperblockPartOnly);
+    }
+
+    public static Coin getBlockInflation(NetworkParameters params, int height, long nPrevBits, boolean fSuperblockPartOnly) {
         double dDiff;
         long nSubsidyBase;
         int nPrevHeight = height - 1;

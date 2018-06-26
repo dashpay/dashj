@@ -19,6 +19,7 @@ package org.bitcoinj.examples;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.kits.LevelDBWalletAppKit;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.MainNetParams;
@@ -126,8 +127,11 @@ public class ForwardingService {
             @Override
             public void onSyncStatusChanged(int newStatus, double syncStatus) {
                 if(newStatus == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
-                    FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(kit.directory().getAbsolutePath(), "mncache.dat", "magicMasternodeCache");
+                    FlatDB<MasternodeManager> mndb = new FlatDB<>(kit.directory().getAbsolutePath(), "mncache.dat", "magicMasternodeCache");
                     mndb.dump(Context.get().masternodeManager);
+
+                    FlatDB<GovernanceManager> gmdb = new FlatDB<>(kit.directory().getAbsolutePath(), "goverance.dat", "magicGovernanceCache");
+                    gmdb.dump(Context.get().governanceManager);
                     //ArrayList<Pair<Integer, Masternode>> results = Context.get().masternodeManager.getMasternodeRanks(27143, 0);
                     //System.out.println(results.toString());
                 }

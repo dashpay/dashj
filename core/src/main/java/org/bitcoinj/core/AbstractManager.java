@@ -8,15 +8,14 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public abstract class AbstractManager extends Message {
 
-    Context context;
-    public AbstractManager(Context context)
-    {
+    protected Context context;
+    public AbstractManager(Context context) {
         super(context.getParams());
         this.context = context;
     }
-    public AbstractManager(NetworkParameters params, byte [] payload, int cursor)
-    {
+    public AbstractManager(NetworkParameters params, byte [] payload, int cursor) {
         super(params, payload, cursor);
+        this.context = Context.get();
     }
 
     public abstract int calculateMessageSizeInBytes();
@@ -47,7 +46,7 @@ public abstract class AbstractManager extends Message {
 
         //if (parseRetain || !parsed)
         //    return;
-        this.payload = null;
+        //this.payload = null;
         parse();
     }
 

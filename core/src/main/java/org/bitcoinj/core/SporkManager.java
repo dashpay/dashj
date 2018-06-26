@@ -285,7 +285,7 @@ public class SporkManager {
         sign(msg);
 
         if(checkSignature(msg)){
-            log.info("SporkManager::setPrivKey - Successfully initialized as spork signer\n");
+            log.info("SporkManager::setPrivKey - Successfully initialized as spork signer");
             return true;
         } else {
             return false;

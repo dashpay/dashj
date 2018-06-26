@@ -21,6 +21,9 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.bitcoinj.core.listeners.*;
+import org.bitcoinj.governance.GovernanceObject;
+import org.bitcoinj.governance.GovernanceSyncMessage;
+import org.bitcoinj.governance.GovernanceVote;
 import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -457,7 +460,7 @@ public class Peer extends PeerSocketHandler {
     static long count = 1;
     @Override
     protected void processMessage(Message m) throws Exception {
-        if(startTime == 0)
+        /*if(startTime == 0)
             startTime = Utils.currentTimeMillis();
         else
         {
@@ -469,7 +472,7 @@ public class Peer extends PeerSocketHandler {
                 log.info("[bandwidth] " + (dataReceived / 1024 / 1024) + " MiB in " +(current-startTime)/1000 + " s:" + (dataReceived / 1024)/(current-startTime)*1000 + " KB/s");
             }
             count++;
-        }
+        }*/
 
 
         // Allow event listeners to filter the message stream. Listeners are allowed to drop messages by
@@ -514,7 +517,6 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof FilteredBlock) {
             startFilteredBlock((FilteredBlock) m);
         } else if (m instanceof TransactionLockRequest) {
-            //processTransactionLockRequest((TransactionLockRequest) m);
             context.instantSend.processTxLockRequest((TransactionLockRequest)m);
             processTransaction((TransactionLockRequest)m);
 
@@ -543,12 +545,15 @@ public class Peer extends PeerSocketHandler {
             //do nothing
         } else if(m instanceof MasternodeBroadcast) {
             if(!context.isLiteMode())
-                context.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);
+                context.masternodeManager.processMasternodeBroadcast(this, (MasternodeBroadcast)m);
 
         }
         else if(m instanceof MasternodePing) {
             if(!context.isLiteMode())
                 context.masternodeManager.processMasternodePing(this, (MasternodePing)m);
+        } else if(m instanceof MasternodeVerification) {
+            if(!context.isLiteMode())
+                context.masternodeManager.processMasternodeVerify(this, (MasternodeVerification)m);
         }
         else if(m instanceof SporkMessage)
         {
@@ -560,8 +565,13 @@ public class Peer extends PeerSocketHandler {
         else if(m instanceof SyncStatusCount) {
             context.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
         }
-        else
-        {
+        else if(m instanceof GovernanceSyncMessage) {
+            //swallow for now
+        } else if(m instanceof GovernanceObject) {
+            context.governanceManager.processGovernanceObject(this, (GovernanceObject)m);
+        } else if(m instanceof GovernanceVote) {
+            context.governanceManager.processGovernanceObjectVote(this, (GovernanceVote)m);
+        } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
     }
@@ -1245,19 +1255,19 @@ public class Peer extends PeerSocketHandler {
                 return  context.instantSend.mapTxLockVotes.containsKey(inv.hash);
             case Spork:
                 return context.sporkManager.mapSporks.containsKey(inv.hash);
-            case MasterNodeWinner:
+            case MasternodePaymentVote:
                 /*if(context.masternodePayments.mapMasternodePayeeVotes.containsKey(inv.hash)) {
                     context.masternodeSync.AddedMasternodeWinner(inv.hash);
                     return true;
                 }*/
                 return false;
-            case GovernanceVote:
+            case BudgetVote:
                 /*if(budget.mapSeenMasternodeBudgetVotes.containsKey(inv.hash)) {
                     masternodeSync.AddedBudgetItem(inv.hash);
                     return true;
                 }*/
                 return false;
-            case GovernanceObject:
+            case BudgetProposal:
                /*if(budget.mapSeenMasternodeBudgetProposals.containsKey(inv.hash)) {
                     masternodeSync.AddedBudgetItem(inv.hash);
                     return true;
@@ -1275,14 +1285,20 @@ public class Peer extends PeerSocketHandler {
                     return true;
                 }*/
                 return false;
-            case MasterNodeAnnounce:
+            case MasternodeAnnounce:
                 if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(inv.hash)) {
                     context.masternodeSync.addedMasternodeList(inv.hash);
                     return true;
                 }
                 return false;
-            case MasterNodePing:
+            case MasternodePing:
                 return context.masternodeManager.mapSeenMasternodePing.containsKey(inv.hash);
+            case MasternodeVerify:
+                return context.masternodeManager.mapSeenMasternodeVerification.containsKey(inv.hash);
+            case GovernanceObject:
+                return !context.governanceManager.confirmInventoryRequest(inv);
+            case GovernanceObjectVote:
+                return !context.governanceManager.confirmInventoryRequest(inv);
         }
         // Don't know what it is, just say we already got one
         return true;
@@ -1299,6 +1315,8 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> masternodePings = new LinkedList<InventoryItem>();
         List<InventoryItem> masternodeBroadcasts = new LinkedList<InventoryItem>();
         List<InventoryItem> sporks = new LinkedList<InventoryItem>();
+        List<InventoryItem> masternodeVerifications = new LinkedList<InventoryItem>();
+        List<InventoryItem> goveranceObjects = new LinkedList<InventoryItem>();
 
         //InstantSend instantSend = InstantSend.get(blockChain);
 
@@ -1322,23 +1340,34 @@ public class Peer extends PeerSocketHandler {
                 case Spork:
                     sporks.add(item);
                     break;
-                case MasterNodeWinner:
+                case MasternodePaymentVote:
                     break;
-                case MasterNodeScanningError: break;
-                case GovernanceVote: break;
-                case GovernanceObject: break;
-                case    BudgetFinalized: break;
-                case    BudgetFinalizedVote: break;
-                case    MasterNodeQuarum: break;
-                case    MasterNodeAnnounce:
+                case MasternodePaymentBlock: break;
+                // Budget* are obsolete
+                case BudgetVote: break;
+                case BudgetProposal: break;
+                case BudgetFinalized: break;
+                case BudgetFinalizedVote: break;
+                case MasternodeQuorum: break;
+                case MasternodeAnnounce:
                     if(context.isLiteMode()) break;
                     masternodeBroadcasts.add(item);
                     break;
-                case    MasterNodePing:
-                    if(context.isLiteMode()) break;
+                case MasternodePing:
+                    if(context.isLiteMode() || context.masternodeManager.size() == 0) break;
                     masternodePings.add(item);
                     break;
                 case DarkSendTransaction:
+                    break;
+                case GovernanceObject:
+                    goveranceObjects.add(item);
+                    break;
+                case GovernanceObjectVote:
+                    goveranceObjects.add(item);
+                    break;
+                case MasternodeVerify:
+                    if(context.isLiteMode()) break;
+                    masternodeVerifications.add(item);
                     break;
                 default:
                     break;
@@ -1432,6 +1461,7 @@ public class Peer extends PeerSocketHandler {
         //masternodepings
 
         //if(blockChain.getBestChainHeight() > (this.getBestHeight() - 100))
+        if(context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST))
         {
 
            //if(context.masternodeSync.isSynced()) {
@@ -1439,7 +1469,7 @@ public class Peer extends PeerSocketHandler {
 
                 while (it.hasNext()) {
                     InventoryItem item = it.next();
-                    if (!context.masternodeManager.mapSeenMasternodePing.containsKey(item.hash)) {
+                    if (!alreadyHave(item)) {
                         //log.info("inv - received MasternodePing :" + item.hash + " new ping");
                         getdata.addItem(item);
                     } //else
@@ -1459,6 +1489,14 @@ public class Peer extends PeerSocketHandler {
                     getdata.addItem(item);
                 //}
             }
+
+            it = masternodeVerifications.iterator();
+
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                if(!alreadyHave(item))
+                    getdata.addItem(item);
+            }
         }
         it = sporks.iterator();
 
@@ -1469,6 +1507,16 @@ public class Peer extends PeerSocketHandler {
             //{
             getdata.addItem(item);
             //}
+        }
+
+        if(context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+            it = goveranceObjects.iterator();
+
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                if (!alreadyHave(item))
+                    getdata.addItem(item);
+            }
         }
 
         // If we are requesting filteredblocks we have to send a ping after the getdata so that we have a clear
@@ -2091,7 +2139,9 @@ public class Peer extends PeerSocketHandler {
         vDownloadTxDependencyDepth = depth;
     }
 
+    //
     //Dash Specific Code
+    //
     public void notifyLock(Transaction tx)
     {
         for(Wallet wallet : wallets)
@@ -2131,10 +2181,26 @@ public class Peer extends PeerSocketHandler {
         vecRequestsFulfilled.add(strRequest);
     }
 
-    boolean fDarkSendMaster = false;
-    public boolean isDarkSendMaster() { return fDarkSendMaster; }
+    boolean masternode = false;
+    public boolean isMasternode() { return masternode; }
 
     int masternodeListCount = -1;
     public int getMasternodeListCount() { return masternodeListCount; }
     public void setMasternodeListCount(int count) { masternodeListCount = count; }
+
+    /** The maximum number of entries in mapAskFor */
+    public static final int MAPASKFOR_MAX_SZ = 50000;
+/** The maximum number of entries in setAskFor (larger due to getdata latency)*/
+    public static final int SETASKFOR_MAX_SZ = 2 * 50000;
+
+    public HashSet<Sha256Hash> setAskFor = new HashSet<Sha256Hash>();
+
+    public void askFor(InventoryItem item) {
+        //TODO: This needs to be finished
+    }
+
+    public void pushInventory(InventoryItem item) {
+        //TODO: This needs to be finished or we may not need it
+    }
+
 }

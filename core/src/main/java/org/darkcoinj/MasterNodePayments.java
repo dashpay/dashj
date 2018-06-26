@@ -12,6 +12,7 @@ import java.util.ArrayList;
 // Masternode Payments Class
 // Keeps track of who should get paid for which blocks
 //
+    @Deprecated
 public class MasterNodePayments {
     ArrayList<MasterNodePaymentWinner> vWinning;
     int nSyncedFromPeer;

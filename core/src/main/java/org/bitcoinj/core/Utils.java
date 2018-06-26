@@ -135,6 +135,16 @@ public class Utils {
         }
     }
 
+    public static void stringToByteStream(String string, OutputStream stream) throws IOException {
+        stream.write(new VarInt(string.length()).encode());
+        stream.write(string.getBytes());
+    }
+
+    public static void bytesToByteStream(byte [] string, OutputStream stream) throws IOException {
+        stream.write(new VarInt(string.length).encode());
+        stream.write(string);
+    }
+
     /**
      * Work around lack of unsigned types in Java.
      */
@@ -746,5 +756,21 @@ public class Utils {
         }
 
         return dDiff;
+    }
+
+    public static ArrayList<String> split(String words, String regex) {
+        return new ArrayList<String>(Arrays.asList(words.split(regex)));
+    }
+
+    public static int findFirstNotOf(String str, String match, int start) {
+        final int len = str.length();
+        for (int i = start; i < len; i++) {
+            char ch = str.charAt(i);
+            if (match.indexOf(ch) == -1) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 }

@@ -150,4 +150,16 @@ public class HashStore {
         return null;
 
     }
+    public int getLowestHeight() {
+        int min = -1;
+        for(Integer i : blockCache.keySet()) {
+            if(min == -1) {
+                min = i;
+                continue;
+            }
+            if(i < min)
+                min = i;
+        }
+        return min;
+    }
 }

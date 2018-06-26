@@ -15,16 +15,21 @@
  */
 package org.bitcoinj.core;
 
+import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.net.Dos;
 import org.bitcoinj.store.BlockStoreException;
 import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
 import static com.hashengineering.crypto.X11.x11Digest;
+import static org.bitcoinj.core.Masternode.MASTERNODE_EXPIRATION_SECONDS;
+import static org.bitcoinj.core.Masternode.MASTERNODE_NEW_START_REQUIRED_SECONDS;
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 
 public class MasternodePing extends Message implements Serializable {
@@ -33,23 +38,29 @@ public class MasternodePing extends Message implements Serializable {
 
     public static final int  MASTERNODE_MIN_MNP_SECONDS   =          (10*60);
     public static final int MASTERNODE_MIN_MNB_SECONDS    =         (5*60);
+    public static final int DEFAULT_SENTINEL_VERSION = 0x010001;
 
     TransactionInput vin;
     Sha256Hash blockHash;
     long sigTime;
     MasternodeSignature vchSig;
+    boolean sentinelIsCurrent = false; // true if last sentinel ping was actual
+    // MSB is always 0, other 3 bits corresponds to x.x.x version scheme
+    int sentinelVersion = DEFAULT_SENTINEL_VERSION;
 
-    //DarkCoinSystem system;
     Context context;
 
     MasternodePing(Context context) {
         super(context.getParams());
         this.context = context;
+        vin = new TransactionInput(context.getParams(), null, null, new TransactionOutPoint(context.getParams(), 0, Sha256Hash.ZERO_HASH));
     }
-    /*MasternodePing(NetworkParameters context, AbstractBlockChain blockChain, TransactionInput newVin)
+
+    MasternodePing(Context context, TransactionOutPoint outPoint)
     {
-        super(context);
-    }*/
+        //used by masternodes only
+        throw new NotImplementedException();
+    }
 
     MasternodePing(NetworkParameters params, byte[] bytes)
     {
@@ -80,7 +91,11 @@ public class MasternodePing extends Message implements Serializable {
         //sigTime
         cursor += 8;
         //vchSig
-        cursor = MasternodeSignature.calcLength(buf, cursor);
+        cursor += MasternodeSignature.calcLength(buf, cursor);
+
+        cursor += 1;
+
+        cursor += 4;
 
         return cursor - offset;
     }
@@ -104,6 +119,10 @@ public class MasternodePing extends Message implements Serializable {
 
         cursor += vchSig.calculateMessageSizeInBytes();
 
+        cursor += 1;
+
+        cursor += 4;
+
         return cursor;
 
     }
@@ -121,6 +140,16 @@ public class MasternodePing extends Message implements Serializable {
         vchSig = new MasternodeSignature(params, payload, cursor);
         cursor += vchSig.getMessageSize();
 
+        if(cursor == length) { //this will be a bug
+            sentinelIsCurrent = false;
+            sentinelVersion = DEFAULT_SENTINEL_VERSION;
+        }
+        else {
+            byte b[] = readBytes(1);
+            sentinelIsCurrent = b[0] == 1;
+            sentinelVersion = (int)readUint32();
+        }
+
         length = cursor - offset;
 
     }
@@ -132,153 +161,167 @@ public class MasternodePing extends Message implements Serializable {
         stream.write(blockHash.getReversedBytes());
         int64ToByteStreamLE(sigTime, stream);
         vchSig.bitcoinSerialize(stream);
+        stream.write(sentinelIsCurrent ? 1 : 0);
+        Utils.uint32ToByteStreamLE(sentinelVersion, stream);
     }
 
-    boolean checkAndUpdate(boolean fRequireEnabled, boolean fCheckSigTimeOnly)
+    boolean isExpired() { return Utils.currentTimeSeconds() - sigTime > MASTERNODE_NEW_START_REQUIRED_SECONDS; }
+
+    boolean checkAndUpdate(Masternode mn, boolean fromNewBroadcast, Dos nDos)
     {
-        if (sigTime > Utils.currentTimeSeconds() + 60 * 60) {
-            log.info("CMasternodePing::CheckAndUpdate - Signature rejected, too far into the future "+ vin.toString());
-            //nDos = 1;
+        if(!simpleCheck(nDos))
+        {
             return false;
         }
 
-        if (sigTime <= Utils.currentTimeSeconds() - 60 * 60) {
-            log.info("CMasternodePing::CheckAndUpdate - Signature rejected, too far into the past {} - {} {} \n", vin.toString(), sigTime, Utils.currentTimeSeconds());
-            //nDos = 1;
+        if (mn == null) {
+            log.info("masternode--CMasternodePing::CheckAndUpdate -- Couldn't find Masternode entry, masternode={}", vin.getOutpoint().toStringShort());
             return false;
         }
 
-        if(fCheckSigTimeOnly) {
-            Masternode pmn = context.masternodeManager.find(vin);
-            if(pmn != null) return verifySignature(pmn.pubKeyMasternode);
-            return true;
+        if(!fromNewBroadcast) {
+            if(mn.isUpdateRequired())
+            {
+                log.info("masternode--CMasternodePing::CheckAndUpdate -- masternode protocol is outdated, masternode={}", vin.getOutpoint().toStringShort());
+                return false;
+            }
+
+            if (mn.isNewStartRequired()) {
+                log.info("masternode--CMasternodePing::CheckAndUpdate -- masternode is completely expired, new start is required, masternode={}", vin.getOutpoint().toStringShort());
+                return false;
+            }
+        }
+
+        try {
+
+            StoredBlock storedBlock = context.masternodeManager.blockChain.getBlockStore().get(blockHash);
+
+            if(storedBlock != null) {
+
+                if (storedBlock.getHeight() < context.masternodeManager.blockChain.getChainHead().getHeight() - 24) {
+                    log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is too old", vin.toString(), blockHash.toString());
+                    return false;
+                }
+            }
+        } catch (BlockStoreException x) {
+            log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is too old", vin.toString(), blockHash.toString());
+            return false;
         }
 
         log.info("masternode - CMasternodePing::CheckAndUpdate - New Ping - "+ getHash().toString() +" - "+ blockHash.toString()+" - "+ sigTime);
 
-        // see if we have this Masternode
-        Masternode pmn = context.masternodeManager.find(vin);
-        if(pmn != null && pmn.protocolVersion >= context.masternodePayments.getMinMasternodePaymentsProto())
-        {
-            if (fRequireEnabled && !pmn.isEnabled() && !pmn.isPreEnabled()) return false;
-
-            // LogPrintf("mnping - Found corresponding mn for vin: %s\n", vin.ToString());
-            // update only if there is no known ping for this masternode or
-            // last ping was more then MASTERNODE_MIN_MNP_SECONDS-60 ago comparing to this one
-            if(!pmn.isPingedWithin(MASTERNODE_MIN_MNP_SECONDS - 60, sigTime)) {
-                if(!verifySignature(pmn.pubKeyMasternode))
-                    return false;
-
-                String strMessage = vin.toStringCpp() + blockHash.toString() + sigTime;
-
-                StringBuilder errorMessage = new StringBuilder();
-                if (!DarkSendSigner.verifyMessage(pmn.pubKeyMasternode, vchSig, strMessage, errorMessage)) {
-                    log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature " + vin.toString());
-                    //nDos = 33;
-                    return false;
-                }
-
-                try {
-
-                    StoredBlock storedBlock = context.masternodeManager.blockChain.getBlockStore().get(blockHash);
-
-                    if(storedBlock != null) {
-
-                        if (storedBlock.getHeight() < context.masternodeManager.blockChain.getChainHead().getHeight() - 24) {
-                            log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is too old", vin.toString(), blockHash.toString());
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        if (DarkCoinSystem.fDebug)
-                            log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is unknown", vin.toString(), blockHash.toString());
-                    }
-
-                } catch (BlockStoreException x) {
-                    return false;
-                }
-                catch (Exception x) {
-                    return false;
-                }
-                /* java code is above:
-                BlockMap::iterator mi = mapBlockIndex.find(blockHash);
-                if (mi != mapBlockIndex.end() && (*mi).second)
-                {
-                    if((*mi).second->nHeight < chainActive.Height() - 24)
-                    {
-                        log.info("CMasternodePing::CheckAndUpdate - Masternode {2} block hash {2} is too old\n", vin.ToString(), blockHash.ToString());
-                        // Do nothing here (no Masternode update, no mnping relay)
-                        // Let this node to be visible but fail to accept mnping
-
-                        return false;
-                    }
-                } else {
-                if (DarkCoinSystem.fDebug) log.info("CMasternodePing::CheckAndUpdate - Masternode %s block hash %s is unknown\n", vin.ToString(), blockHash.ToString());
-                // maybe we stuck so we shouldn't ban this node, just fail to accept it
-                // TODO: or should we also request this block?
-
-                    return false;
-                }
-
-*/
-                pmn.lastPing = this;
-
-                //mnodeman.mapSeenMasternodeBroadcast.lastPing is probably outdated, so we'll update it
-                MasternodeBroadcast mnb = new MasternodeBroadcast(pmn);
-                Sha256Hash hash = mnb.getHash();
-                if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
-                    context.masternodeManager.mapSeenMasternodeBroadcast.get(hash).lastPing = this;
-                }
-
-                pmn.check(true);
-                if(pmn.isEnabled()) return false;
-
-                log.info("masternode-CMasternodePing::CheckAndUpdate - Masternode ping accepted, vin: "+ vin.toString());
-
-                relay();
-                return true;
-            }
-            log.info("masternode - CMasternodePing::CheckAndUpdate - Masternode ping arrived too early, vin: "+ vin.toString());
-            //nDos = 1; //disable, this is happening frequently and causing banned peers
+        // update only if there is no known ping for this masternode or
+        // last ping was more then MASTERNODE_MIN_MNP_SECONDS-60 ago comparing to this one
+        if(mn.isPingedWithin(MASTERNODE_MIN_MNP_SECONDS - 60, sigTime)) {
+            log.info("masternode--CMasternodePing::CheckAndUpdate -- Masternode ping arrived too early, masternode"+ vin.getOutpoint().toStringShort());
             return false;
         }
-        log.info("masternode - CMasternodePing::CheckAndUpdate - Couldn't find compatible Masternode entry, vin: "+ vin.toString());
+        if(!checkSignature(mn.info.pubKeyMasternode))
+            return false;
+        // so, ping seems to be ok
 
-        return false;
+        // if we are still syncing and there was no known ping for this mn for quite a while
+        // (NOTE: assuming that MASTERNODE_EXPIRATION_SECONDS/2 should be enough to finish mn list sync)
+        if(!context.masternodeSync.isMasternodeListSynced() && !mn.isPingedWithin(MASTERNODE_EXPIRATION_SECONDS/2)) {
+            // let's bump sync timeout
+            log.info("masternode--CMasternodePing::CheckAndUpdate -- bumping sync timeout, masternode={}", vin.getOutpoint().toStringShort());
+            context.masternodeSync.BumpAssetLastTime("CMasternodePing::CheckAndUpdate");
+        }
+
+        // let's store this ping as the last one
+        log.info("masternode--CMasternodePing::CheckAndUpdate -- Masternode ping accepted, masternode={}", vin.getOutpoint().toStringShort());
+        mn.lastPing = this;
+
+        // and update mnodeman.mapSeenMasternodeBroadcast.lastPing which is probably outdated
+        MasternodeBroadcast mnb = new MasternodeBroadcast(mn);
+        Sha256Hash hash = mnb.getHash();
+        if (context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
+            context.masternodeManager.mapSeenMasternodeBroadcast.get(hash).getSecond().lastPing = this;
+        }
+
+        // force update, ignoring cache
+        mn.check(true);
+        // relay ping for nodes in ENABLED/EXPIRED/WATCHDOG_EXPIRED state only, skip everyone else
+        if (!mn.isEnabled() && !mn.isExpired() && !mn.isWatchdogExpired()) return false;
+
+        log.info("masternode--CMasternodePing::CheckAndUpdate -- Masternode ping acceepted and relayed, masternode={}", vin.getOutpoint().toStringShort());
+        relay();
+
+        return true;
     }
-    boolean checkAndUpdate()
+
+    boolean sign(ECKey keyMasternode, PublicKey publicKeyMasternode)
     {
-        return checkAndUpdate(true, false);
-    }
-    boolean checkAndUpdate(boolean fRequireEnabled)
-    {
-        return checkAndUpdate(fRequireEnabled, false);
-    }
-
-    boolean verifySignature(PublicKey pubKeyMasternode) {
-
-        String strMessage = vin.toStringCpp() + blockHash.toString() + sigTime;
-
+        sigTime = Utils.currentTimeSeconds();
+        String message = vin.toStringCpp() + blockHash + sigTime;
         StringBuilder errorMessage = new StringBuilder();
-        if (!DarkSendSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)) {
-            log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature " + vin.toString() + " Error " + errorMessage);
-            //nDos = 33;
+
+        try {
+            MasternodeSignature signature = MessageSigner.signMessage(message, keyMasternode);
+            if(!MessageSigner.verifyMessage(publicKeyMasternode, signature, message, errorMessage)) {
+                log.error("MasternodePing::sign -=- verifyMessage failed, error:" + errorMessage);
+            }
+        }
+        catch (KeyCrypterException kce) {
+            log.error("MasternodePing::sign -=- signMessage failed");
             return false;
         }
+
+        return true;
+
+    }
+
+    boolean checkSignature(PublicKey pubKeyMasternode) {
+        String strMessage = vin.toStringCpp() + blockHash.toString() + sigTime;
+        StringBuilder errorMessage = new StringBuilder();
+
+        if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)) {
+            log.info("CMasternodePing::CheckSignature - Got bad Masternode ping signature " + vin.getOutpoint().toStringShort() + " Error " + errorMessage);
+            return false;
+        }
+        return true;
+    }
+
+    public boolean simpleCheck(Dos nDos) {
+        nDos.set(0);
+        if (sigTime > Utils.currentTimeSeconds() + 60 * 60) {
+            log.info("CMasternodePing::SimpleCheck -- Signature rejected, too far into the future, masternode="+ vin.getOutpoint().toStringShort());
+            nDos.set(1);
+            return false;
+        }
+
+        try {
+            StoredBlock mi = context.blockChain.getBlockStore().get(blockHash);
+            if (mi == null) {
+                log.info("masternode--CMasternodePing::SimpleCheck -- Masternode ping is invalid, unknown block hash: masternode={} blockHash={}", vin.getOutpoint().toStringShort(), blockHash);
+                // maybe we stuck or forked so we shouldn't ban this node, just fail to accept this ping
+                // TODO: or should we also request this block?
+                return false;
+            }
+        }
+        catch (BlockStoreException x)
+        {
+            log.info("masternode--CMasternodePing::SimpleCheck -- Masternode ping is invalid, unknown block hash: masternode={} blockHash={} with Exception: {}", vin.getOutpoint().toStringShort(), blockHash, x.getMessage());
+        }
+
+        log.info("masternode--CMasternodePing::SimpleCheck -- Masternode ping verified: masternode={}  blockHash={}  sigTime={}", vin.getOutpoint().toStringShort(), blockHash, sigTime);
         return true;
     }
 
     public boolean equals(Object o)
     {
         MasternodePing mnp = (MasternodePing)o;
-        if(mnp.sigTime == this.sigTime &&
-                mnp.vin.equals(this.vin) &&
-                mnp.vchSig.equals(this.vchSig) &&
-                mnp.blockHash.equals(this.blockHash))
-        {
-
+        try {
+            if (mnp.vin == null && this.vin == null)
+                return true; //check for Empty
+            if (mnp.vin != null && mnp.vin.equals(this.vin) &&
+                    mnp.blockHash != null && mnp.blockHash.equals(this.blockHash)) {
                 return true;
+            }
+        }
+        catch (NullPointerException npe)
+        {
+            log.warn(npe.getMessage());
         }
         return false;
     }
@@ -301,6 +344,15 @@ public class MasternodePing extends Message implements Serializable {
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException e) {
             throw new RuntimeException(e); // Cannot happen.
+        }
+    }
+    String getHexData() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(400);
+            bitcoinSerialize(bos);
+            return Utils.HEX.encode(bos.toByteArray());
+        } catch (IOException x) {
+            return "";
         }
     }
 }

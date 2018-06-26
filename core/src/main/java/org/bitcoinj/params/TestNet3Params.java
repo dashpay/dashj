@@ -88,6 +88,13 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         DIP0001Upgrade = TESTNET_MAJORITY_DIP0001_THRESHOLD;
         DIP0001BlockHeight = 15000;
 
+        fulfilledRequestExpireTime = 5*60;
+        masternodeMinimumConfirmations = 1;
+        superblockStartBlock = 4200;
+        superblockCycle = 24;
+        nGovernanceMinQuorum = 1;
+        nGovernanceFilterElements = 500;
+
     }
 
     private static TestNet3Params instance;
