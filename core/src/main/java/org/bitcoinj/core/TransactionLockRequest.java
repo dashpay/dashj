@@ -63,7 +63,7 @@ public class TransactionLockRequest extends Transaction {
     }*/
 
     public String toString(@Nullable AbstractBlockChain chain) {
-        return "Transaction Lock Request:\n" + super.toString(chain);
+        return "Transaction Lock Request:" + super.toString(chain);
     }
 
     public boolean isValid()

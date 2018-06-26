@@ -225,7 +225,7 @@ public class MasternodeBroadcast extends Masternode {
 
         // IsVnAssociatedWithPubkey is validated once in CheckOutpoint, after that they just need to match
         if(mn.info.pubKeyCollateralAddress != info.pubKeyCollateralAddress) {
-            log.info("CMasternodeBroadcast::Update -- Got mismatched pubKeyCollateralAddress and vin\n");
+            log.info("CMasternodeBroadcast::Update -- Got mismatched pubKeyCollateralAddress and vin");
             nDos.set(33);
             return false;
         }
@@ -302,13 +302,13 @@ public class MasternodeBroadcast extends Masternode {
                 return true;
         }
 
-        log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO verified\n");
+        log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO verified");
 
 
         // make sure the input that was signed in masternode broadcast message is related to the transaction
         // that spawned the Masternode - this is expensive, so it's only done once per Masternode
         if(!isInputAssociatedWithPubkey()) {
-            log.info("CMasternodeMan::CheckOutpoint -- Got mismatched pubKeyCollateralAddress and vin\n");
+            log.info("CMasternodeMan::CheckOutpoint -- Got mismatched pubKeyCollateralAddress and vin");
             nDos.set(33);
             return false;
         }

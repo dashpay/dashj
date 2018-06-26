@@ -15,7 +15,7 @@ public class SuperblockManager {
     private static final Logger log = LoggerFactory.getLogger(SuperblockManager.class);
 
     public static boolean isSuperblockTriggered(int nBlockHeight) {
-        log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- Start nBlockHeight = %d\n", nBlockHeight);
+        log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- Start nBlockHeight = {}", nBlockHeight);
         if (!Superblock.isValidBlockHeight(Context.get().getParams(), nBlockHeight)) {
             return false;
         }
@@ -29,7 +29,7 @@ public class SuperblockManager {
 
             for (Superblock pSuperblock : vecTriggers) {
                 if (pSuperblock == null) {
-                    log.info("CSuperblockManager::IsSuperblockTriggered -- Non-superblock found, continuing\n");
+                    log.info("CSuperblockManager::IsSuperblockTriggered -- Non-superblock found, continuing");
                     log.info( "IsSuperblockTriggered Not a superblock, continuing ");
                     continue;
                 }
@@ -56,11 +56,11 @@ public class SuperblockManager {
                 pObj.updateSentinelVariables();
 
                 if (pObj.isSetCachedFunding()) {
-                    log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- fCacheFunding = true, returning true\n");
+                    log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- fCacheFunding = true, returning true");
                     log.info( "IsSuperblockTriggered returning true");
                     return true;
                 } else {
-                    log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- fCacheFunding = false, continuing\n");
+                    log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- fCacheFunding = false, continuing");
                     log.info( "IsSuperblockTriggered No fCachedFunding, continuing");
                 }
             }

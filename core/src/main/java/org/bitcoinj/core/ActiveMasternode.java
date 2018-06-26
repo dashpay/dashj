@@ -165,13 +165,13 @@ public class ActiveMasternode {
 
         // Update lastPing for our masternode in Masternode list
         if(context.masternodeManager.isMasternodePingedWithin(outpoint, MASTERNODE_MIN_MNP_SECONDS, mnp.sigTime)) {
-            log.info("CActiveMasternode::SendMasternodePing -- Too early to send Masternode Ping\n");
+            log.info("CActiveMasternode::SendMasternodePing -- Too early to send Masternode Ping");
             return false;
         }
 
         context.masternodeManager.setMasternodeLastPing(outpoint, mnp);
 
-        log.info("CActiveMasternode::SendMasternodePing -- Relaying ping, collateral=%s\n", outpoint.toStringShort());
+        log.info("CActiveMasternode::SendMasternodePing -- Relaying ping, collateral={}", outpoint.toStringShort());
         mnp.relay();
 
         return true;
@@ -232,7 +232,7 @@ public class ActiveMasternode {
             if(service.getPort() != mainnetDefaultPort) {
                 state = ACTIVE_MASTERNODE_NOT_CAPABLE;
                 notCapableReason = String.format("Invalid port: {} - only {} is supported on mainnet.", service.getPort(), mainnetDefaultPort);
-                log.info("CActiveMasternode::ManageStateInitial -- {}: {}\n", getStateString(), notCapableReason);
+                log.info("CActiveMasternode::ManageStateInitial -- {}: {}", getStateString(), notCapableReason);
                 return;
             }
         } else if(service.getPort() == mainnetDefaultPort) {

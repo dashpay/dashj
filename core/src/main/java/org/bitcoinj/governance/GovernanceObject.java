@@ -128,6 +128,7 @@ public class GovernanceObject extends Message implements Serializable {
 
     public void setDirtyCache(boolean fDirtyCache) {
         this.fDirtyCache = fDirtyCache;
+        unCache();
     }
 
     /// Object is no longer of interest

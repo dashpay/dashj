@@ -294,12 +294,12 @@ public class InstantSend {
         }
 
         if(valueOut.isGreaterThan(Coin.valueOf((int) context.sporkManager.getSporkValue(SporkManager.SPORK_5_INSTANTSEND_MAX_VALUE), 0))){
-            log.info("instantsend-IsIXTXValid - Transaction value too high - {}\n", txCollateral.toString());
+            log.info("instantsend-IsIXTXValid - Transaction value too high - {}", txCollateral.toString());
             return false;
         }
 
         if(missingTx){
-            log.info("instantsend-IsIXTXValid - Unknown inputs in IX transaction - {}\n", txCollateral.toString());
+            log.info("instantsend-IsIXTXValid - Unknown inputs in IX transaction - {}", txCollateral.toString());
         /*
             This happens sometimes for an unknown reason, so we'll return that it's a valid transaction.
             If someone submits an invalid transaction it will be rejected by the network anyway and this isn't

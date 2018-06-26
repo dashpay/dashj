@@ -98,8 +98,8 @@ public class FlatDB<Type extends AbstractManager> {
             fileStream.close();
             //fileout.fclose();
 
-            log.info("Written info to {}  {}ms\n", pathDB, Utils.currentTimeMillis() - nStart);
-            log.info("  {}\n", object.toString());
+            log.info("Written info to {}  {}ms", pathDB, Utils.currentTimeMillis() - nStart);
+            log.info("  {}", object.toString());
 
             return true;
 
@@ -227,10 +227,10 @@ public class FlatDB<Type extends AbstractManager> {
             log.error("Error reading {}: ", fileName);
             if(readResult == ReadResult.IncorrectFormat)
             {
-                log.error("magic is ok but data has invalid format, will try to recreate\n");
+                log.error("magic is ok but data has invalid format, will try to recreate");
             }
             else {
-                log.error("file format is unknown or invalid, please fix it manually\n");
+                log.error("file format is unknown or invalid, please fix it manually");
                 // program should exit with an error
                 return false;
             }

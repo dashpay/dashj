@@ -697,6 +697,7 @@ public class GovernanceManager extends AbstractManager {
 
             // INSERT INTO OUR GOVERNANCE OBJECT MEMORY
             mapObjects.put(nHash, govobj);
+            unCache();
 
             // SHOULD WE ADD THIS OBJECT TO ANY OTHER MANANGERS?
 
@@ -805,19 +806,19 @@ public class GovernanceManager extends AbstractManager {
         lock.lock();
         try {
 
-            log.info("gobject--CGovernanceManager::ConfirmInventoryRequest inv = {}", inv);
+            //log.info("gobject--CGovernanceManager::ConfirmInventoryRequest inv = {}", inv);
 
             // First check if we've already recorded this object
             switch (inv.type) {
                 case GovernanceObject:
                     if (mapObjects.containsKey(inv.hash) || mapPostponedObjects.containsKey(inv.hash)) {
-                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance object, returning false");
+                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance object, returning false, object = {}", inv);
                         return false;
                     }
                     break;
                 case GovernanceObjectVote:
                     if (mapVoteToObject.hasKey(inv.hash)) {
-                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance vote, returning false");
+                        log.info("gobject--CGovernanceManager::ConfirmInventoryRequest already have governance vote, returning false, vote = {}", inv);
                         return false;
                     }
                     break;
@@ -842,10 +843,10 @@ public class GovernanceManager extends AbstractManager {
             boolean hasHash = setHash.contains(inv.hash);
             if (!hasHash) {
                 setHash.add(inv.hash);
-                log.info("gobject--CGovernanceManager::ConfirmInventoryRequest added inv to requested set");
+                log.info("gobject--CGovernanceManager::ConfirmInventoryRequest added inv to requested set, {}, object = {}", inv.type, inv);
             }
 
-            log.info("gobject--CGovernanceManager::ConfirmInventoryRequest reached end, returning true");
+            //log.info("gobject--CGovernanceManager::ConfirmInventoryRequest reached end, returning true");
             return true;
         } finally {
             lock.unlock();
@@ -857,7 +858,7 @@ public class GovernanceManager extends AbstractManager {
     }
 
     public void updateCachesAndClean() {
-        log.info("gobject--CGovernanceManager::UpdateCachesAndClean\n");
+        log.info("gobject--CGovernanceManager::UpdateCachesAndClean");
 
         ArrayList<Sha256Hash> vecDirtyHashes = context.masternodeManager.getAndClearDirtyGovernanceObjectHashes();
         
@@ -987,6 +988,7 @@ public class GovernanceManager extends AbstractManager {
             }
 
             log.info("CGovernanceManager::UpdateCachesAndClean -- {}", toString());
+            unCache();
         } finally {
             lock.unlock();
         }
@@ -1106,7 +1108,7 @@ public class GovernanceManager extends AbstractManager {
             return;
         }
 
-        log.info("gobject--CGovernanceObject::RequestGovernanceObject -- hash = {} (peer={})\n", nHash.toString(), pfrom.hashCode());
+        log.info("gobject--CGovernanceObject::RequestGovernanceObject -- hash = {} (peer={})", nHash.toString(), pfrom.hashCode());
 
         if (pfrom.getVersionMessage().clientVersion < GOVERNANCE_FILTER_PROTO_VERSION) {
             pfrom.sendMessage(new GovernanceSyncMessage(params, nHash));
@@ -1345,5 +1347,12 @@ public class GovernanceManager extends AbstractManager {
         return (int)(vpGovObjsTriggersTmp.size() + vpGovObjsTmp.size());
     }
 
+    boolean processVoteAndRelay(GovernanceVote vote, GovernanceException exception) {
+        boolean fOK = processVote(null, vote, exception);
+        if(fOK) {
+            vote.relay();
+        }
+        return fOK;
+    }
 
 }

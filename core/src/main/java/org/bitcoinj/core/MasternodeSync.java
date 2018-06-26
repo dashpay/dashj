@@ -358,7 +358,7 @@ public class MasternodeSync {
         // reset sync status in case of any other sync failure
         if(isFailed()) {
             if(nTimeLastFailure + (1*60) < Utils.currentTimeSeconds()) { // 1 minute cooldown after failed sync
-                log.info("CMasternodeSync::HasSyncFailures -- WARNING: failed to sync, trying again...\n");
+                log.info("CMasternodeSync::HasSyncFailures -- WARNING: failed to sync, trying again...");
                 reset();
                 switchToNextAsset();
             }
@@ -631,7 +631,7 @@ public class MasternodeSync {
         return ListenerRegistration.removeFromList(listener, eventListeners);
     }
 
-    private void queueOnSyncStatusChanged(final int newStatus, final double syncStatus) {
+    public void queueOnSyncStatusChanged(final int newStatus, final double syncStatus) {
         //checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<MasternodeSyncListener> registration : eventListeners) {
             if (registration.executor == Threading.SAME_THREAD) {

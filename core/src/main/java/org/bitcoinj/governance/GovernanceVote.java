@@ -329,6 +329,16 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     }
 
     void relay () {
+        // Do not relay until fully synced
+        if(!context.masternodeSync.isSynced()) {
+            log.info("gobject--CGovernanceVote::Relay -- won't relay until fully synced");
+            return;
+        }
 
+        //we need to do this here, or the other nodes won't receive it.  add reply to getdata in Peer
+        //context.peerGroup.sendMessage()
+        //InventoryMessage inventoryMessage = new InventoryMessage();
+        //InventoryItem inv = new InventoryItem(InventoryItem.Type.GovernanceObjectVote, getHash());
+        //connman.RelayInv(inv, MIN_GOVERNANCE_PEER_PROTO_VERSION);
     }
 }

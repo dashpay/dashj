@@ -16,6 +16,7 @@ public class VoteInstance extends Message {
 
     public VoteInstance(NetworkParameters params) {
         super(params);
+        eOutcome = GovernanceVote.VoteOutcome.VOTE_OUTCOME_NONE;
     }
 
     public VoteInstance(NetworkParameters params, GovernanceVote.VoteOutcome eOutcomeIn, long nTimeIn, long nCreationTimeIn) {
