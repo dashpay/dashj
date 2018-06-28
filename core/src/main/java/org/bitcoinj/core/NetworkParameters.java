@@ -119,15 +119,15 @@ public abstract class NetworkParameters {
 
 
     //Dash Extra Parameters
-    protected String strSporkKey;
+    protected String strSporkAddress;
     String strMasternodePaymentsPubKey;
     String strDarksendPoolDummyAddress;
     long nStartMasternodePayments;
 
 
 
-    public String getSporkKey() {
-        return strSporkKey;
+    public String getSporkAddress() {
+        return strSporkAddress;
     }
 
     protected NetworkParameters() {

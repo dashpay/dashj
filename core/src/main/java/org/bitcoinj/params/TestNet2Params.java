@@ -64,6 +64,7 @@ public class TestNet2Params extends AbstractBitcoinNetParams {
         majorityWindow = TESTNET_MAJORITY_WINDOW;
 
         DIP0001BlockHeight = 15000;
+        strSporkAddress = "yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55";
 
     }
 

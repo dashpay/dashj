@@ -56,6 +56,7 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         majorityWindow = 7;
 
         DIP0001BlockHeight = 100000;  // not active
+        strSporkAddress = "yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55";
     }
 
     private static UnitTestParams instance;

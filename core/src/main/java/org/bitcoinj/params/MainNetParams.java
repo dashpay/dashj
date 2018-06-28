@@ -152,7 +152,7 @@ public class MainNetParams extends AbstractBitcoinNetParams {
                 0xb5a4b052, 0x21f062d1, 0x72ab89b2, 0x74a45318, 0x8312e6bc, 0xb916965f, 0x8aa7c858, 0xfe7effad,
         };                  */
 
-        strSporkKey = "04549ac134f694c0243f503e8c8a9a986f5de6610049c40b07816809b0d1d06a21b07be27b9bb555931773f62ba6cf35a25fd52f694d4e1106ccd237a7bb899fdd";
+        strSporkAddress = "Xgtyuk76vhuFW2iT7UAiHgNdWXCf3J34wh";
         budgetPaymentsStartBlock = 328008;
 
         DIP0001Window = MAINNET_MAJORITY_DIP0001_WINDOW;
