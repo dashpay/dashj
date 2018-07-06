@@ -39,7 +39,9 @@ public class DarkSendQueue extends Message implements Serializable {
 
     DarkCoinSystem system;
 
-    DarkSendQueue() {
+    DarkSendQueue(NetworkParameters params) {
+        super(params);
+        length = 0;
         denom = 0;
         vin = null;
         time = 0;

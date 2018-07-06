@@ -251,7 +251,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if (command.equals("txlvote")) {
             return new TransactionLockVote(params, payloadBytes);
         } else if (command.equals("dsq")) {
-            return new DarkSendQueue(params, payloadBytes);
+            return new DarkSendQueue(params);
         } else if (command.equals("mnb")) {
             return new MasternodeBroadcast(params, payloadBytes);
         } else if( command.equals("mnp")) {
