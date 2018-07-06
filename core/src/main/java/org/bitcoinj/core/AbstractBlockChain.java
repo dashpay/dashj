@@ -1179,6 +1179,15 @@ public abstract class AbstractBlockChain {
             return;
         }
 
+        if(params.getId().equals(NetworkParameters.ID_TESTNET) &&
+                storedPrev.getChainWork().compareTo(new BigInteger(Utils.HEX.decode("000000000000000000000000000000000000000000000000003e9ccfe0e03e01"))) > 0)
+        {
+            if(nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + NetworkParameters.TARGET_SPACING*2) {
+                verifyDifficulty(params.getMaxTarget(), storedPrev, nextBlock);
+                return;
+            }
+        }
+
         for (int i = 1; BlockReading != null && BlockReading.getHeight() > 0; i++) {
             if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
             CountBlocks++;
