@@ -1,21 +1,15 @@
 package org.bitcoinj.core;
 
-import org.bitcoinj.utils.Threading;
-import org.darkcoinj.DarkSend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigInteger;
-import java.util.concurrent.locks.ReentrantLock;
-
-import static com.hashengineering.crypto.X11.x11Digest;
 import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
 
 /**
- * Created by Eric on 2/8/2015.
+ * Created by Hash Engineering on 2/8/2015.
  */
 public class SporkMessage extends Message{
 
