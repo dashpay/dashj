@@ -1,5 +1,7 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.net.Dos;
+import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,49 +9,32 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.MasterNodeSystem.MASTERNODE_REMOVAL_SECONDS;
+import static org.bitcoinj.core.CoinDefinition.PROTOCOL_VERSION;
+import static org.bitcoinj.core.Context.fMasterNode;
+import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_SPV_ASSUME_VALID;
+import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_UTXO_NOT_FOUND;
+import static org.bitcoinj.core.MasternodeInfo.State.*;
 
 /**
- * Created by Eric on 2/8/2015.
+ * Created by Hash Engineering on 2/8/2015.
  */
-public class Masternode extends Message{
+public class Masternode extends Message {
     private static final Logger log = LoggerFactory.getLogger(Masternode.class);
     ReentrantLock lock = Threading.lock("Masternode");
     long lastTimeChecked;
 
-    enum State {
-        MASTERNODE_PRE_ENABLED(0),
-        MASTERNODE_ENABLED(1),
-        MASTERNODE_EXPIRED(2),
-        MASTERNODE_VIN_SPENT(3),
-        MASTERNODE_REMOVE(4),
-        MASTERNODE_POS_ERROR(5);
 
-         State(int value) {
-            this.value = value;
-        }
-
-        public int getValue() {
-            return value;
-        }
-
-        private static final Map<Integer, State> typesByValue = new HashMap<Integer, State>();
-
-        static {
-            for (State type : State.values()) {
-                typesByValue.put(type.value, type);
-            }
-        }
-
-        private final int value;
-
-        public static State forValue(int value) {
-            return typesByValue.get(value);
-        }
+    public enum CollateralStatus {
+        COLLATERAL_OK,
+        COLLATERAL_UTXO_NOT_FOUND,
+        COLLATERAL_INVALID_AMOUNT,
+        COLLATERAL_SPV_ASSUME_VALID, //SPV mode assumes valid
     }
 
     public static final int MASTERNODE_CHECK_SECONDS               =   5;
@@ -61,38 +46,19 @@ public class Masternode extends Message{
 
     public static final int MASTERNODE_POSE_BAN_MAX_SCORE          = 5;
 
-    public TransactionInput vin;
-    public MasternodeAddress address;
-    public PublicKey pubKeyCollateralAddress;
-    public PublicKey pubKeyMasternode;
-    public MasternodeSignature sig;
-    public long sigTime; //mnb message time
-    long nLastDsq;
-    public long nTimeLastChecked;
-    public long nTimeLastPaid;
-    public long nTimeLastWatchdogVote;
-    public State activeState;
-    public int nCacheCollateralBlock;
-    public int nBlockLastPaid;
-    public int protocolVersion;
-    public int nPoSeBanScore;
-    public int nPoSeBanHeight;
-    boolean fAllowMixingTx;
-    boolean unitTest;
-
-    HashMap<Sha256Hash, Integer> mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
-
-    int cacheInputAge;
-    int cacheInputAgeBlock;
-
-    boolean allowFreeTx;
-
-
-    //the dsq count from the last dsq broadcast of this node
-
-    int nScanningErrorCount;
-    int nLastScanningErrorBlockHeight;
+    MasternodeInfo info;
     MasternodePing lastPing;
+    MasternodeSignature vchSig;
+
+    Sha256Hash nCollateralMinConfBlockHash;
+    int nBlockLastPaid;
+    int nPoSeBanScore;
+    int nPoSeBanHeight;
+    boolean fAllowMixingTx;
+    boolean fUnitTest;
+
+    // KEEP TRACK OF GOVERNANCE ITEMS EACH MASTERNODE HAS VOTE UPON FOR RECALCULATION
+    HashMap<Sha256Hash, Integer> mapGovernanceObjectsVotedOn;
 
     Context context;
 
@@ -101,85 +67,64 @@ public class Masternode extends Message{
         super(context.getParams());
         this.context = context;
 
-        vin = null;
-        address = null;
-        pubKeyCollateralAddress = new PublicKey();
-        pubKeyMasternode = new PublicKey();
-        sig = null;
-        activeState = State.MASTERNODE_ENABLED;
-        sigTime = Utils.currentTimeSeconds();
+        info = new MasternodeInfo();
+
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
+        nBlockLastPaid = 0;
+        nPoSeBanScore = 0;
+        nPoSeBanHeight = 0;
+        fAllowMixingTx = false;
+        fUnitTest = false;
         lastPing = MasternodePing.EMPTY;
-        cacheInputAge = 0;
-        cacheInputAgeBlock = 0;
-        unitTest = false;
-        allowFreeTx = true;
-        protocolVersion = CoinDefinition.PROTOCOL_VERSION;
-        nLastDsq = 0;
-        nScanningErrorCount = 0;
-        nLastScanningErrorBlockHeight = 0;
-        lastTimeChecked = 0;
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
     }
 
     public Masternode(NetworkParameters params, byte [] payload, int cursor)
     {
         super(params, payload, cursor);
         context = Context.get();
-        //calculateScoreTest();
     }
 
     public Masternode(Context context, byte [] payload, int cursor)
     {
         super(context.getParams(), payload, cursor);
         this.context = context;
-        //calculateScoreTest();
     }
 
     public Masternode(Masternode other)
     {
         super(other.params);
         this.context = other.context;
-        //LOCK(cs);
-        this.vin = other.vin;  //TODO:  need to make copies of all these?
-        this.address = new MasternodeAddress(other.address.getAddr(), other.address.getPort());
-        this.pubKeyCollateralAddress = other.pubKeyCollateralAddress.duplicate();
-        this.pubKeyMasternode = other.pubKeyMasternode.duplicate();
 
-        //These are good
-        this.sig = other.sig.duplicate();
-        this.activeState = other.activeState;
-        this.sigTime = other.sigTime;
-        this.cacheInputAge = other.cacheInputAge;
-        this.cacheInputAgeBlock = other.cacheInputAgeBlock;
-        this.unitTest = other.unitTest;
-        this.allowFreeTx = other.allowFreeTx;
-        this.protocolVersion = other.protocolVersion;
-        this.nLastDsq = other.nLastDsq;
-        this.nScanningErrorCount = other.nScanningErrorCount;
-        this.nLastScanningErrorBlockHeight = other.nLastScanningErrorBlockHeight;
+        info = new MasternodeInfo(other.info);
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
+        for (Map.Entry<Sha256Hash, Integer> entry : other.mapGovernanceObjectsVotedOn.entrySet())
+        {
+            mapGovernanceObjectsVotedOn.put(entry.getKey(), entry.getValue());
+        }
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
+        this.lastPing = other.lastPing;
+        this.vchSig = other.vchSig.duplicate();
+        nCollateralMinConfBlockHash = Sha256Hash.wrap(other.nCollateralMinConfBlockHash.getBytes());
+        nBlockLastPaid = other.nBlockLastPaid;
+        nPoSeBanScore = other.nPoSeBanScore;
+        nPoSeBanHeight = other.nPoSeBanHeight;
+        fAllowMixingTx = other.fAllowMixingTx;
+        fUnitTest = other.fUnitTest;
     }
 
     public Masternode(MasternodeBroadcast mnb)
     {
         //LOCK(cs);
         super(mnb.params);
-        context = Context.get();
-        vin = mnb.vin;
-        address = mnb.address;
-        pubKeyCollateralAddress = mnb.pubKeyCollateralAddress;
-        pubKeyMasternode = mnb.pubKeyMasternode;
-        sig = mnb.sig;
-        activeState = State.MASTERNODE_ENABLED;
-        sigTime = mnb.sigTime;
+        info = new MasternodeInfo(mnb.getParams(), mnb.info.activeState, mnb.info.nProtocolVersion,
+                mnb.info.sigTime, mnb.info.vin.getOutpoint(), mnb.info.address, mnb.info.pubKeyCollateralAddress,
+                mnb.info.pubKeyMasternode, mnb.info.sigTime);
         lastPing = mnb.lastPing;
-        cacheInputAge = 0;
-        cacheInputAgeBlock = 0;
-        unitTest = false;
-        allowFreeTx = true;
-        protocolVersion = mnb.protocolVersion;
-        nLastDsq = mnb.nLastDsq;
-        nScanningErrorCount = 0;
-        nLastScanningErrorBlockHeight = 0;
-        lastTimeChecked = 0;
+        vchSig = mnb.vchSig.duplicate();
+        fAllowMixingTx = true;
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
     }
 
     protected static int calcLength(byte[] buf, int offset) {
@@ -243,20 +188,20 @@ public class Masternode extends Message{
         //vin
         cursor += 36;
 
-        long scriptLen = vin.getScriptBytes().length;
+        long scriptLen = info.vin.getScriptBytes().length;
         // 4 = length of sequence field (unint32)
         cursor += scriptLen + 4 + VarInt.sizeOf(scriptLen);
 
         //MasternodeAddress address;
         cursor += MasternodeAddress.MESSAGE_SIZE;
         //PublicKey pubkey;
-        cursor += pubKeyCollateralAddress.calculateMessageSizeInBytes();
+        cursor += info.pubKeyCollateralAddress.calculateMessageSizeInBytes();
 
         //PublicKey pubKeyMasternode;
-        cursor += pubKeyMasternode.calculateMessageSizeInBytes();
+        cursor += info.pubKeyMasternode.calculateMessageSizeInBytes();
 
         // byte [] sig;
-        cursor += sig.calculateMessageSizeInBytes(); //calcLength(buf, cursor);
+        cursor += vchSig.calculateMessageSizeInBytes(); //calcLength(buf, cursor);
 
 
         //long sigTime; //mnb message time
@@ -292,75 +237,71 @@ public class Masternode extends Message{
     @Override
     protected void parse() throws ProtocolException {
 
-        vin = new TransactionInput(params, null, payload, cursor);
-        cursor += vin.getMessageSize();
+        info = new MasternodeInfo();
+        info.vin = new TransactionInput(params, null, payload, cursor);
+        cursor += info.vin.getMessageSize();
 
-        address = new MasternodeAddress(params, payload, cursor, CoinDefinition.PROTOCOL_VERSION);
-        cursor += address.getMessageSize();
+        info.address = new MasternodeAddress(params, payload, cursor, PROTOCOL_VERSION);
+        cursor += info.address.getMessageSize();
 
-        pubKeyCollateralAddress = new PublicKey(params, payload, cursor);
-        cursor += pubKeyCollateralAddress.getMessageSize();
+        info.pubKeyCollateralAddress = new PublicKey(params, payload, cursor);
+        cursor += info.pubKeyCollateralAddress.getMessageSize();
 
-        pubKeyMasternode = new PublicKey(params, payload, cursor);
-        cursor += pubKeyMasternode.getMessageSize();
+        info.pubKeyMasternode = new PublicKey(params, payload, cursor);
+        cursor += info.pubKeyMasternode.getMessageSize();
 
-        sig = new MasternodeSignature(params, payload, cursor);
-        cursor += sig.getMessageSize();
+        vchSig = new MasternodeSignature(params, payload, cursor);
+        cursor += vchSig.getMessageSize();
 
-        sigTime = readInt64();
-        nLastDsq = readInt64();
+        info.sigTime = readInt64();
+        info.nLastDsq = readInt64();
 
-        nTimeLastChecked = readInt64();
-        nTimeLastPaid = readInt64();
-        nTimeLastWatchdogVote = readInt64();
+        info.nTimeLastChecked = readInt64();
+        info.nTimeLastPaid = readInt64();
+        info.nTimeLastWatchdogVote = readInt64();
 
-        activeState = State.forValue((int)readUint32());
+        info.activeState = MasternodeInfo.State.forValue((int)readUint32());
 
-        nCacheCollateralBlock = (int) readUint32();
+        nCollateralMinConfBlockHash = readHash();
         nBlockLastPaid = (int)readUint32();
-        protocolVersion = (int)readUint32();
+        info.nProtocolVersion = (int)readUint32();
 
         nPoSeBanScore = (int)readUint32();
         nPoSeBanHeight = (int)readUint32();
 
         fAllowMixingTx = readBytes(1)[0] == 1;
-        unitTest = readBytes(1)[0] == 1;
+        fUnitTest = readBytes(1)[0] == 1;
 
         long entries = readVarInt();
-
-
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>((int)entries);
         for(long i = 0; i < entries; ++i)
         {
             mapGovernanceObjectsVotedOn.put(readHash(), (int)readUint32());
         }
 
-
-
-
         length = cursor - offset;
 
+        lastPing = MasternodePing.EMPTY;
     }
 
-    @Override
-    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
-        vin.bitcoinSerialize(stream);
-        address.bitcoinSerialize(stream);
-        pubKeyCollateralAddress.bitcoinSerialize(stream);
-        pubKeyMasternode.bitcoinSerialize(stream);
+    public void masterNodeSerialize(OutputStream stream) throws IOException {
+        info.vin.bitcoinSerialize(stream);
+        info.address.bitcoinSerialize(stream);
+        info.pubKeyCollateralAddress.bitcoinSerialize(stream);
+        info.pubKeyMasternode.bitcoinSerialize(stream);
 
-        sig.bitcoinSerialize(stream);
+        vchSig.bitcoinSerialize(stream);
 
-        Utils.int64ToByteStreamLE(sigTime, stream);
-        Utils.int64ToByteStreamLE(nLastDsq, stream);
-        Utils.int64ToByteStreamLE(nTimeLastChecked, stream);
-        Utils.int64ToByteStreamLE(nTimeLastPaid, stream);
-        Utils.int64ToByteStreamLE(nTimeLastWatchdogVote, stream);
-        Utils.uint32ToByteStreamLE(activeState.getValue(), stream);
-
-        Utils.uint32ToByteStreamLE(nCacheCollateralBlock, stream);
+        Utils.int64ToByteStreamLE(info.sigTime, stream);
+        Utils.int64ToByteStreamLE(info.nLastDsq, stream);
+        Utils.int64ToByteStreamLE(info.nTimeLastChecked, stream);
+        Utils.int64ToByteStreamLE(info.nTimeLastPaid, stream);
+        Utils.int64ToByteStreamLE(info.nTimeLastWatchdogVote, stream);
+        Utils.uint32ToByteStreamLE(info.activeState.getValue(), stream);
+        stream.write(nCollateralMinConfBlockHash.getReversedBytes());
         Utils.uint32ToByteStreamLE(nBlockLastPaid, stream);
-        Utils.uint32ToByteStreamLE(protocolVersion, stream);
+        Utils.uint32ToByteStreamLE(info.nProtocolVersion, stream);
         Utils.uint32ToByteStreamLE(nPoSeBanScore, stream);
         Utils.uint32ToByteStreamLE(nPoSeBanHeight, stream);
 
@@ -369,7 +310,7 @@ public class Masternode extends Message{
         value[0] = (byte)(fAllowMixingTx ? 1 : 0);
         stream.write(value);
 
-        value[0] = (byte)(unitTest ? 1 : 0);
+        value[0] = (byte)(fUnitTest ? 1 : 0);
         stream.write(value);
 
         stream.write(new VarInt(mapGovernanceObjectsVotedOn.size()).encode());
@@ -381,12 +322,37 @@ public class Masternode extends Message{
 
     }
 
+    @Override
+    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        masterNodeSerialize(stream);
+    }
+    static boolean isValidStateForAutoStart(MasternodeInfo.State nActiveStateIn)
+    {
+        return  nActiveStateIn == MasternodeInfo.State.MASTERNODE_ENABLED ||
+                nActiveStateIn == MasternodeInfo.State.MASTERNODE_PRE_ENABLED ||
+                nActiveStateIn == MasternodeInfo.State.MASTERNODE_EXPIRED ||
+                nActiveStateIn == MasternodeInfo.State.MASTERNODE_WATCHDOG_EXPIRED;
+    }
+
+    boolean isValidForPayment()
+    {
+        if(info.activeState == MasternodeInfo.State.MASTERNODE_ENABLED) {
+            return true;
+        }
+        if(!context.sporkManager.isSporkActive(SporkManager.SPORK_14_REQUIRE_SENTINEL_FLAG) &&
+                (info.activeState == MasternodeInfo.State.MASTERNODE_WATCHDOG_EXPIRED)) {
+            return true;
+        }
+
+        return false;
+    }
+
     //
     // Deterministically calculate a given "score" for a Masternode depending on how close it's hash is to
     // the proof of work for that block. The further away they are the better, the furthest will win the election
     // and get paid this block
     //
-    Sha256Hash calculateScore(int mod, int nBlockHeight)
+    Sha256Hash calculateScore(int nBlockHeight)
     {
         //if(blockChain.getChainHead() == null)
         //    return Sha256Hash.ZERO_HASH;
@@ -399,18 +365,28 @@ public class Masternode extends Message{
             return Sha256Hash.ZERO_HASH;
         }
 
-        return calculateScore(mod, hash);
+        return calculateScore(hash);
     }
 
-    Sha256Hash calculateScore(int mod, Sha256Hash hash)
+    Sha256Hash calculateScore(Sha256Hash hash)
     {
-        return calculateScore(vin, hash);
-
+        UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
+        try {
+            info.vin.bitcoinSerialize(bos);
+            //TODO:  look below if this fails.
+            bos.write(nCollateralMinConfBlockHash.getReversedBytes());
+            bos.write(hash.getReversedBytes());
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+        } catch (IOException x) {
+            throw new RuntimeException(x.getMessage());
+        }
     }
 
+    @Deprecated
     static Sha256Hash calculateScore(TransactionInput vin, Sha256Hash hash)
     {
         //uint256 hash = 0;
+
         BigInteger bi_aux = vin.getOutpoint().getHash().toBigInteger().add(BigInteger.valueOf(vin.getOutpoint().getIndex()));
         byte [] temp = new byte[32];
         byte [] bi_bytes = bi_aux.toByteArray();
@@ -420,31 +396,8 @@ public class Masternode extends Message{
         System.arraycopy(bi_bytes, bi_bytes[0] == 0 ? 1 : 0, temp, 0, length);
         Sha256Hash aux = Sha256Hash.wrap(temp);
 
-        //uint256 aux = vin.prevout.hash + vin.prevout.n;
-
-        /*if(!GetBlockHash(hash, nBlockHeight)) {
-            log.info("CalculateScore ERROR - nHeight {} - Returned 0", nBlockHeight);
-            return 0;
-        }*/
-
-/*        if(hash.equals(Sha256Hash.ZERO_HASH))
-        {
-            log.info("CalculateScore ERROR - Returned 0");
-            return Sha256Hash.ZERO_HASH;
-        }*/
-
-
-
-        //CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
-        //ss << hash;
-        //uint256 hash2 = ss.GetHash();
-
         Sha256Hash hash2 = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(hash.getReversedBytes()));
 
-        /*CHashWriter ss2(SER_GETHASH, PROTOCOL_VERSION);
-        ss2 << hash;
-        ss2 << aux;
-        uint256 hash3 = ss2.GetHash();*/
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
             bos.write(hash.getReversedBytes());
@@ -481,193 +434,384 @@ public class Masternode extends Message{
 
     }
 
-
-       /*public void UpdateLastSeen()
-        { UpdateLastSeen(0);}
-        public void UpdateLastSeen(long override)
-        {
-            if(override == 0){
-            //lastTimeSeen = Utils.currentTimeSeconds();
-            } else {
-            //lastTimeSeen = override;
-            }
-        }*/
-
-        /*long SliceHash(Sha256Hash hash, int slice)
-        {
-            long n = 0;
-            //Utils.readInt64()
-            memcpy(&n, &hash+slice*64, 64);
-            return n;
-        }*/
-
-        public void check() { check(false); }
+    public void check() { check(false); }
 
     public void check(boolean forceCheck)
     {
 
-        //if(ShutdownRequested()) return;
+        lock.lock();
+        try {
+            //if(ShutdownRequested()) return;
 
-        if(!forceCheck && (Utils.currentTimeSeconds() - lastTimeChecked < MASTERNODE_CHECK_SECONDS)) return;
-        lastTimeChecked = Utils.currentTimeSeconds();
+            if (!forceCheck && (Utils.currentTimeSeconds() - lastTimeChecked < MASTERNODE_CHECK_SECONDS)) return;
+            lastTimeChecked = Utils.currentTimeSeconds();
 
+            log.info("masternode--CMasternode::Check -- Masternode {} is in {} state", info.vin.getOutpoint().toStringShort(), getStateString());
 
-        //once spent, stop doing the checks
-        if(activeState == State.MASTERNODE_VIN_SPENT) return;
+            //once spent, stop doing the checks
+            if(isOutpointSpent()) return;
 
-        // If there are no pings for quite a long time ...
-        if(!isPingedWithin(MASTERNODE_REMOVAL_SECONDS)
-                // or doesn't meet payments requirements ...
-                || protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()
-                // or it's our own node and we just updated it to the new protocol but we are still waiting for activation -
-                || (pubKeyMasternode.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion < params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT))){
-            activeState = State.MASTERNODE_REMOVE;
-            return;
-        }
-
-        if(!isPingedWithin(MASTERNODE_EXPIRATION_SECONDS)){
-            activeState = State.MASTERNODE_EXPIRED;
-            return;
-        }
-
-
-        if(lastPing.sigTime - sigTime < MASTERNODE_MIN_MNP_SECONDS){
-            activeState = State.MASTERNODE_PRE_ENABLED;
-            return;
-        }
-
-        if(!unitTest){
-            //TODO:  Not sure how to impliment this
-            /*CValidationState state;
-            //CMutableTransaction tx = CMutableTransaction();
-            Transaction tx = new Transaction(context);
-            TransactionOutput vout = new TransactionOutput(tx, Coin.valueOf(999, 99), darkSendPool.collateralPubKey);
-            tx.addInput(vin);
-            tx.addOutput(vout);
-            {
+            int nHeight = 0;
+            if(!fUnitTest) {
                 //TRY_LOCK(cs_main, lockMain);
                 //if(!lockMain) return;
 
-                if(!AcceptableInputs(mempool, state, CTransaction(tx), false, NULL)){
-                    activeState = MASTERNODE_VIN_SPENT;
+                CollateralStatus err = checkCollateral(info.vin.getOutpoint()).getFirst();
+                if (err == COLLATERAL_UTXO_NOT_FOUND) {
+                    info.activeState = MASTERNODE_OUTPOINT_SPENT;
+                    log.info("masternode--CMasternode::Check -- Failed to find Masternode UTXO, masternode={}", info.vin.getOutpoint().toStringShort());
                     return;
+                }
 
+                nHeight = context.blockChain.getBestChainHeight();
+            }
+
+            if(isPoSeBanned()) {
+                if(nHeight < nPoSeBanHeight) return; // too early?
+                // Otherwise give it a chance to proceed further to do all the usual checks and to change its state.
+                // Masternode still will be on the edge and can be banned back easily if it keeps ignoring mnverify
+                // or connect attempts. Will require few mnverify messages to strengthen its position in mn list.
+                log.info("CMasternode::Check -- Masternode {} is unbanned and back in list now", info.vin.getOutpoint().toStringShort());
+                decreasePoSeBanScore();
+            } else if(nPoSeBanScore >= MASTERNODE_POSE_BAN_MAX_SCORE) {
+                info.activeState = MASTERNODE_POSE_BAN;
+                // ban for the whole payment cycle
+                nPoSeBanHeight = nHeight + context.masternodeManager.size();
+                log.info("CMasternode::Check -- Masternode {} is banned till block %d now", info.vin.getOutpoint().toStringShort(), nPoSeBanHeight);
+                return;
+            }
+
+            MasternodeInfo.State nActiveStatePrev = info.activeState;
+            boolean fOurMasternode = DarkCoinSystem.fMasterNode && context.activeMasternode.pubKeyMasternode == info.pubKeyMasternode;
+
+            // masternode doesn't meet payment protocol requirements ...
+            boolean fRequireUpdate = info.nProtocolVersion < context.masternodePayments.getMinMasternodePaymentsProto() ||
+                    // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
+                    (fOurMasternode && info.nProtocolVersion < PROTOCOL_VERSION);
+
+            if(fRequireUpdate) {
+                info.activeState = MASTERNODE_UPDATE_REQUIRED;
+                if(nActiveStatePrev != info.activeState) {
+                    log.info("masternode--CMasternode::Check -- Masternode {} is in %s state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                }
+                return;
+            }
+
+            // keep old masternodes on start, give them a chance to receive updates...
+            boolean fWaitForPing = !context.masternodeSync.isMasternodeListSynced() && !isPingedWithin(MASTERNODE_MIN_MNP_SECONDS);
+
+            if(fWaitForPing && !fOurMasternode) {
+                // ...but if it was already expired before the initial check - return right away
+                if(isExpired() || isWatchdogExpired() || isNewStartRequired()) {
+                    log.info("masternode--CMasternode::Check -- Masternode %s is in %s state, waiting for ping", info.vin.getOutpoint().toStringShort(), getStateString());
+                    return;
                 }
             }
-            */
-        }
 
-        activeState = State.MASTERNODE_ENABLED; // OK
+            // don't expire if we are still in "waiting for ping" mode unless it's our own masternode
+            if(!fWaitForPing || fOurMasternode) {
+
+                if(!isPingedWithin(MASTERNODE_NEW_START_REQUIRED_SECONDS)) {
+                    info.activeState = MASTERNODE_NEW_START_REQUIRED;
+                    if(nActiveStatePrev != info.activeState) {
+                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                    }
+                    return;
+                }
+
+                boolean fWatchdogActive = context.masternodeSync.isSynced() && context.masternodeManager.isWatchdogActive();
+                boolean fWatchdogExpired = (fWatchdogActive && ((Utils.currentTimeSeconds() - info.nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
+
+                log.info("masternode--CMasternode::Check -- outpoint={}, nTimeLastWatchdogVote={}, GetAdjustedTime()={}, fWatchdogExpired={}",
+                        info.vin.getOutpoint().toStringShort(), info.nTimeLastWatchdogVote, Utils.currentTimeSeconds(), fWatchdogExpired);
+
+                if(fWatchdogExpired) {
+                    info.activeState = MASTERNODE_WATCHDOG_EXPIRED;
+                    if(nActiveStatePrev != info.activeState) {
+                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                    }
+                    return;
+                }
+
+                if(!isPingedWithin(MASTERNODE_EXPIRATION_SECONDS)) {
+                    info.activeState = MASTERNODE_EXPIRED;
+                    if(nActiveStatePrev != info.activeState) {
+                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                    }
+                    return;
+                }
+            }
+
+            if(lastPing.sigTime - info.sigTime < MASTERNODE_MIN_MNP_SECONDS) {
+                info.activeState = MASTERNODE_PRE_ENABLED;
+                if(nActiveStatePrev != info.activeState) {
+                    log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                }
+                return;
+            }
+
+            info.activeState = MASTERNODE_ENABLED; // OK
+            if(nActiveStatePrev != info.activeState) {
+                log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+            }
+
+        } finally {
+            lock.unlock();
+        }
     }
 
-        public boolean UpdatedWithin(int seconds)
+    /**
+     *   FLAG GOVERNANCE ITEMS AS DIRTY
+     *
+     *   - When masternode come and go on the network, we must flag the items they voted on to recalc it's cached flags
+     *
+     */
+    void flagGovernanceItemsAsDirty()
+    {
+        ArrayList<Sha256Hash> vecDirty = new ArrayList<Sha256Hash>();
         {
-            // LogPrintf("UpdatedWithin %d, %d --  %d \n", GetAdjustedTime() , lastTimeSeen, (GetAdjustedTime() - lastTimeSeen) < seconds);
-            return false;//(Utils.currentTimeSeconds() - lastTimeSeen) < seconds;
-            //return (GetAdjustedTime() - lastTimeSeen) < seconds;
+            Iterator<Map.Entry<Sha256Hash, Integer>> it = mapGovernanceObjectsVotedOn.entrySet().iterator();
+            while(it.hasNext()) {
+                vecDirty.add(it.next().getKey());
+            }
         }
-
-        public void Disable()
-        {
-            /*lastTimeSeen = 0;*/
+        for(int i = 0; i < vecDirty.size(); ++i) {
+            context.masternodeManager.addDirtyGovernanceObjectHash(vecDirty.get(i));
         }
-
-        public boolean isEnabled()
-        {
-            /*return enabled == 1;*/
-            return activeState == State.MASTERNODE_ENABLED;
-        }
-        public boolean isPreEnabled()
-        {
-            return activeState == State.MASTERNODE_PRE_ENABLED;
-        }
-
-    public String status() {
-        String strStatus = "unknown";
-
-        if(activeState == State.MASTERNODE_PRE_ENABLED) strStatus = "PRE_ENABLED";
-        if(activeState == State.MASTERNODE_ENABLED) strStatus     = "ENABLED";
-        if(activeState == State.MASTERNODE_EXPIRED) strStatus     = "EXPIRED";
-        if(activeState == State.MASTERNODE_VIN_SPENT) strStatus   = "VIN_SPENT";
-        if(activeState == State.MASTERNODE_REMOVE) strStatus      = "REMOVE";
-        if(activeState == State.MASTERNODE_POS_ERROR) strStatus   = "POS_ERROR";
-
-        return strStatus;
     }
 
-        boolean isBroadcastedWithin(int seconds)
-        {
-            return (Utils.currentTimeSeconds() - sigTime) < seconds;
-        }
-        boolean isPingedWithin(int seconds, long now)
-        {
-            if(now == -1)
-                now = Utils.currentTimeSeconds();
+    public boolean isEnabled()
+    {
+        /*return enabled == 1;*/
+        return info.activeState == MasternodeInfo.State.MASTERNODE_ENABLED;
+    }
 
-            return (lastPing.equals(MasternodePing.empty()))
-                    ? false
-                    : (now - lastPing.sigTime) < seconds;
+    public boolean isPreEnabled()
+    {
+        return info.activeState == MasternodeInfo.State.MASTERNODE_PRE_ENABLED;
+    }
+    public boolean isPoSeBanned() { return info.activeState == MasternodeInfo.State.MASTERNODE_POSE_BAN; }
+    // NOTE: this one relies on nPoSeBanScore, not on nActiveState as everything else here
+    public boolean isPoSeVerified() { return nPoSeBanScore <= -MASTERNODE_POSE_BAN_MAX_SCORE; }
+    public boolean isExpired() { return info.activeState == MasternodeInfo.State.MASTERNODE_EXPIRED; }
+    public boolean isOutpointSpent() { return info.activeState == MasternodeInfo.State.MASTERNODE_OUTPOINT_SPENT; }
+    public boolean isUpdateRequired() { return info.activeState == MasternodeInfo.State.MASTERNODE_UPDATE_REQUIRED; }
+    public boolean isWatchdogExpired() { return info.activeState == MasternodeInfo.State.MASTERNODE_WATCHDOG_EXPIRED; }
+    public boolean isNewStartRequired() { return info.activeState == MasternodeInfo.State.MASTERNODE_NEW_START_REQUIRED; }
+
+
+    public static String stateToString(MasternodeInfo.State nStateIn)
+    {
+        switch(nStateIn) {
+            case MASTERNODE_PRE_ENABLED:            return "PRE_ENABLED";
+            case MASTERNODE_ENABLED:                return "ENABLED";
+            case MASTERNODE_EXPIRED:                return "EXPIRED";
+            case MASTERNODE_OUTPOINT_SPENT:         return "OUTPOINT_SPENT";
+            case MASTERNODE_UPDATE_REQUIRED:        return "UPDATE_REQUIRED";
+            case MASTERNODE_WATCHDOG_EXPIRED:       return "WATCHDOG_EXPIRED";
+            case MASTERNODE_NEW_START_REQUIRED:     return "NEW_START_REQUIRED";
+            case MASTERNODE_POSE_BAN:               return "POSE_BAN";
+            default:                                return "UNKNOWN";
         }
-        boolean isPingedWithin(int seconds)
-        {
-            return isPingedWithin(seconds, -1);
-        }
+    }
+
+    public String getStateString()
+    {
+        return stateToString(info.activeState);
+    }
+
+    public String getStatus()
+    {
+        // TODO: return smth a bit more human readable here
+        return getStateString();
+    }
+
+    boolean isBroadcastedWithin(int seconds)
+    {
+        return (Utils.currentTimeSeconds() - info.sigTime) < seconds;
+    }
+    boolean isPingedWithin(int seconds, long now)
+    {
+        if(now == -1)
+            now = Utils.currentTimeSeconds();
+
+        return (lastPing.equals(MasternodePing.empty()))
+                ? false
+                : (now - lastPing.sigTime) < seconds;
+    }
+    boolean isPingedWithin(int seconds)
+    {
+        return isPingedWithin(seconds, -1);
+    }
 
     //
-// When a new masternode broadcast is sent, update our information
-//
+    // When a new masternode broadcast is sent, update our information
+    //
     boolean updateFromNewBroadcast(MasternodeBroadcast mnb)
     {
-        if(mnb.sigTime > sigTime) {
-            pubKeyMasternode = mnb.pubKeyMasternode;
-            sigTime = mnb.sigTime;
-            sig = mnb.sig;
-            protocolVersion = mnb.protocolVersion;
-            address = mnb.address.duplicate();
-            lastTimeChecked = 0;
-            int nDoS = 0;
-            if(mnb.lastPing == new MasternodePing(context) || (!mnb.lastPing.equals(new MasternodePing(context)) && mnb.lastPing.checkAndUpdate(false))) {
-                lastPing = mnb.lastPing;
-                context.masternodeManager.updateMasternodePing(lastPing);
-            }
-            return true;
+        if(mnb.info.sigTime <= info.sigTime && !mnb.fRecovery) return false;
+
+        info.pubKeyMasternode = mnb.info.pubKeyMasternode;
+        info.sigTime = mnb.info.sigTime;
+        vchSig = mnb.vchSig;
+        info.nProtocolVersion = mnb.info.nProtocolVersion;
+        info.address = mnb.info.address;
+        nPoSeBanScore = 0;
+        nPoSeBanHeight = 0;
+        info.nTimeLastChecked = 0;
+        Dos nDos = new Dos();
+        if(mnb.lastPing.equals(MasternodePing.EMPTY) || (!mnb.lastPing.equals(MasternodePing.EMPTY) && mnb.lastPing.checkAndUpdate(this, true, nDos))) {
+            lastPing = mnb.lastPing;
+            context.masternodeManager.mapSeenMasternodePing.put(lastPing.getHash(), lastPing);
         }
-        return false;
+        // if it matches our Masternode privkey...
+        if(fMasterNode && info.pubKeyMasternode == context.activeMasternode.pubKeyMasternode) {
+            nPoSeBanScore = -MASTERNODE_POSE_BAN_MAX_SCORE;
+            if(info.nProtocolVersion == PROTOCOL_VERSION) {
+                // ... and PROTOCOL_VERSION, then we've been remotely activated ...
+                context.activeMasternode.manageState();
+            } else {
+                // ... otherwise we need to reactivate our node, do not add it to the list and do not relay
+                // but also do not ban the node we get this message from
+                log.info("CMasternode::UpdateFromNewBroadcast -- wrong PROTOCOL_VERSION, re-activate your MN: message nProtocolVersion={}  PROTOCOL_VERSION={}", info.nProtocolVersion, PROTOCOL_VERSION);
+                return false;
+            }
+        }
+        return true;
     }
 
-        /*
-        int GetMasternodeInputAge()
-        {
-            if(chainActive.Tip() == NULL) return 0;
+    void updateLastPaid(StoredBlock pindex, int nMaxBlocksToScanBack)
+    {
+        /*const CBlockIndex *BlockReading = pindex;
 
-            if(cacheInputAge == 0){
-                cacheInputAge = GetInputAge(vin);
-                cacheInputAgeBlock = chainActive.Tip()->nHeight;
+        CScript mnpayee = GetScriptForDestination(pubKeyCollateralAddress.GetID());
+        // LogPrint("masternode--CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s\n", vin.prevout.ToStringShort());
+
+        LOCK(cs_mapMasternodeBlocks);
+
+        for (int i = 0; BlockReading && BlockReading->nHeight > nBlockLastPaid && i < nMaxBlocksToScanBack; i++) {
+            if(mnpayments.mapMasternodeBlocks.count(BlockReading->nHeight) &&
+                    mnpayments.mapMasternodeBlocks[BlockReading->nHeight].HasPayeeWithVotes(mnpayee, 2))
+            {
+                CBlock block;
+                if(!ReadBlockFromDisk(block, BlockReading, Params().GetConsensus())) // shouldn't really happen
+                    continue;
+
+                CAmount nMasternodePayment = GetMasternodePayment(BlockReading->nHeight, block.vtx[0].GetValueOut());
+
+                BOOST_FOREACH(CTxOut txout, block.vtx[0].vout)
+                if(mnpayee == txout.scriptPubKey && nMasternodePayment == txout.nValue) {
+                    nBlockLastPaid = BlockReading->nHeight;
+                    nTimeLastPaid = BlockReading->nTime;
+                    LogPrint("masternode--CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s -- found new %d\n", vin.prevout.ToStringShort(), nBlockLastPaid);
+                    return;
+                }
             }
 
-            return cacheInputAge+(chainActive.Tip()->nHeight-cacheInputAgeBlock);
+            if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
+            BlockReading = BlockReading->pprev;
         }
         */
 
+        // Last payment for this masternode wasn't found in latest mnpayments blocks
+        // or it was found in mnpayments blocks but wasn't found in the blockchain.
+        // LogPrint("masternode--CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s -- keeping old %d\n", vin.prevout.ToStringShort(), nBlockLastPaid);
+    }
+
     public MasternodeInfo getInfo()
     {
-        MasternodeInfo info = new MasternodeInfo();
-        info.vin = vin;
-        info.addr = address;
-        info.pubKeyCollateralAddress = pubKeyCollateralAddress;
-        info.pubKeyMasternode = pubKeyMasternode;
-        info.sigTime = sigTime;
-        info.nLastDsq = nLastDsq;
-        info.nTimeLastChecked = nTimeLastChecked;
-        info.nTimeLastPaid = nTimeLastPaid;
-        info.nTimeLastWatchdogVote = nTimeLastWatchdogVote;
-        info.nActiveState = activeState;
-        info.nProtocolVersion = protocolVersion;
+        MasternodeInfo info = new MasternodeInfo(this.info);
+        info.nTimeLastPing = lastPing.sigTime;
         info.fInfoValid = true;
         return info;
     }
 
-    void poSeBan() {
+    public boolean isValidNetAddr()
+    {
+        return isValidNetAddr(info.address);
+    }
 
+    public boolean isValidNetAddr(MasternodeAddress address)
+    {
+        return params.getId().equals(NetworkParameters.ID_REGTEST) ||
+                (address.isIPv4() && !address.getSocketAddress().isUnresolved());
+    }
+
+    void increasePoSeBanScore() { if(nPoSeBanScore < MASTERNODE_POSE_BAN_MAX_SCORE) nPoSeBanScore++; }
+    void decreasePoSeBanScore() { if(nPoSeBanScore > -MASTERNODE_POSE_BAN_MAX_SCORE) nPoSeBanScore--; }
+    void poSeBan() { nPoSeBanScore = MASTERNODE_POSE_BAN_MAX_SCORE; }
+
+    boolean isInputAssociatedWithPubkey()
+    {
+        //TODO:  can this be fixed?
+        /*Script payee = ScriptBuilder.createOutputScript(new Address(params, info.pubKeyCollateralAddress.getId()));
+
+        Transaction tx;
+        Sha256Hash hash;
+        if(GetTransaction(info.vin.getOutpoint().getHash(), tx, Params().GetConsensus(), hash, true)) {
+            for(TransactionOutput out : tx.getOutputs()) {
+                if (out.getValue() == Coin.valueOf(1000, 0) && out.getScriptPubKey() == payee) return true;
+            }
+        }
+        */
+        return false;
+    }
+
+    static public Pair<CollateralStatus, Integer> checkCollateral(TransactionOutPoint outpoint)
+    {
+        //TODO:  can this be fixed?  - perhaps with a full node that watches masternodes?
+        /*AssertLockHeld(cs_main);
+        int HeightRet;
+
+        if(!GetUTXOCoin(outpoint, coin)) {
+            return COLLATERAL_UTXO_NOT_FOUND;
+        }
+
+        if(coin.out.nValue != 1000 * COIN) {
+            return COLLATERAL_INVALID_AMOUNT;
+        }
+
+        nHeightRet = coin.nHeight;
+        return COLLATERAL_OK;*/
+        return new Pair<CollateralStatus, Integer>(COLLATERAL_SPV_ASSUME_VALID, -1);
+    }
+
+    void addGovernanceVote(Sha256Hash nGovernanceObjectHash)
+    {
+        if(mapGovernanceObjectsVotedOn.containsKey(nGovernanceObjectHash)) {
+            Integer it = mapGovernanceObjectsVotedOn.get(nGovernanceObjectHash);
+            mapGovernanceObjectsVotedOn.put(nGovernanceObjectHash, it++);
+        } else {
+            mapGovernanceObjectsVotedOn.put(nGovernanceObjectHash, 1);
+        }
+    }
+
+    void removeGovernanceObject(Sha256Hash nGovernanceObjectHash)
+    {
+        Integer it = mapGovernanceObjectsVotedOn.get(nGovernanceObjectHash);
+        if(it == null) {
+            return;
+        }
+        mapGovernanceObjectsVotedOn.remove(it);
+    }
+
+    void updateWatchdogVoteTime(long nVoteTime)
+    {
+        lock.lock();
+        try {
+            info.nTimeLastWatchdogVote = (nVoteTime == 0) ? Utils.currentTimeSeconds() : nVoteTime;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    String getHexData() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(400);
+            bitcoinSerialize(bos);
+            return Utils.HEX.encode(bos.toByteArray());
+        } catch (IOException x) {
+            return "";
+        }
     }
 }
