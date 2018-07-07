@@ -15,7 +15,7 @@ import static org.bitcoinj.core.SporkManager.SPORK_2_INSTANTSEND_ENABLED;
 import static org.bitcoinj.core.SporkManager.SPORK_3_INSTANTSEND_BLOCK_FILTERING;
 
 /**
- * Created by Eric on 2/8/2015.
+ * Created by HashEngineering on 2/8/2015.
  */
 public class InstantSend {
     private static final Logger log = LoggerFactory.getLogger(InstantSend.class);
@@ -65,8 +65,6 @@ public class InstantSend {
     {
         this.blockChain = blockChain;
     }
-    DarkCoinSystem system;
-    MasterNodeSystem masterNodes;
     Context context;
 
     //static InstantSend instantXSystem;
@@ -75,14 +73,6 @@ public class InstantSend {
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
-
-    /*public static InstantSend get(AbstractBlockChain blockChain)
-    {
-        if(instantXSystem == null)
-            instantXSystem = new InstantSend(blockChain);
-
-        return instantXSystem;
-    }*/
 
     public InstantSend(Context context)
     {
@@ -98,24 +88,7 @@ public class InstantSend {
         mapTxLockCandidates = new HashMap<Sha256Hash, TransactionLockCandidate>();
         mapTxLockVotesOrphan = new HashMap<Sha256Hash, TransactionLockVote>();
         mapVotedOutpoints = new HashMap<TransactionOutPoint, Set<Sha256Hash>>();
-
-        masterNodes = MasterNodeSystem.get();
-
-
     }
-
-    /*public InstantSend(DarkCoinSystem system)
-    {
-        this.system = system;
-        blockChain = system.blockChain;
-        //mapTxLocks = new Map<Sha256Hash, TransactionLock>();
-
-    }*/
-
-    /*public void processMessageInstantX(Peer from, Message m)
-    {
-
-    }*/
 
     //check if we need to vote on this transaction
     public void doConsensusVote(TransactionLockRequest tx, long blockHeight)
@@ -321,12 +294,12 @@ public class InstantSend {
         }
 
         if(valueOut.isGreaterThan(Coin.valueOf((int) context.sporkManager.getSporkValue(SporkManager.SPORK_5_INSTANTSEND_MAX_VALUE), 0))){
-            log.info("instantsend-IsIXTXValid - Transaction value too high - {}\n", txCollateral.toString());
+            log.info("instantsend-IsIXTXValid - Transaction value too high - {}", txCollateral.toString());
             return false;
         }
 
         if(missingTx){
-            log.info("instantsend-IsIXTXValid - Unknown inputs in IX transaction - {}\n", txCollateral.toString());
+            log.info("instantsend-IsIXTXValid - Unknown inputs in IX transaction - {}", txCollateral.toString());
         /*
             This happens sometimes for an unknown reason, so we'll return that it's a valid transaction.
             If someone submits an invalid transaction it will be rejected by the network anyway and this isn't
