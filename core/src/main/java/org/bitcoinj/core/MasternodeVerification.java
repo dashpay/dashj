@@ -28,8 +28,8 @@ public class MasternodeVerification extends Message implements Serializable{
 
     private static final Logger log = LoggerFactory.getLogger(MasternodeVerification.class);
 
-    TransactionInput vin1;
-    TransactionInput vin2;
+    TransactionOutPoint masternodeOutpoint1;
+    TransactionOutPoint masternodeOutpoint2;
     NetAddress addr;
     int nonce;
     int blockHeight;
@@ -59,11 +59,11 @@ public class MasternodeVerification extends Message implements Serializable{
     @Override
     protected void parse() throws ProtocolException {
 
-        vin1 = new TransactionInput(params, null, payload, cursor);
-        cursor += vin1.getMessageSize();
+        masternodeOutpoint1 = new TransactionOutPoint(params, payload, cursor);
+        cursor += masternodeOutpoint1.getMessageSize();
 
-        vin2 = new TransactionInput(params, null, payload, cursor);
-        cursor += vin2.getMessageSize();
+        masternodeOutpoint2 = new TransactionOutPoint(params, payload, cursor);
+        cursor += masternodeOutpoint2.getMessageSize();
 
         addr = new NetAddress(params, payload, cursor, 0);
 
@@ -82,8 +82,8 @@ public class MasternodeVerification extends Message implements Serializable{
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        vin1.bitcoinSerialize(stream);
-        vin2.bitcoinSerialize(stream);
+        masternodeOutpoint1.bitcoinSerialize(stream);
+        masternodeOutpoint2.bitcoinSerialize(stream);
         addr.bitcoinSerialize(stream);
         uint32ToByteStreamLE(nonce, stream);
         uint32ToByteStreamLE(blockHeight, stream);
@@ -98,8 +98,8 @@ public class MasternodeVerification extends Message implements Serializable{
     public Sha256Hash getHash(){
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
-            vin1.bitcoinSerialize(bos);
-            vin2.bitcoinSerialize(bos);
+            masternodeOutpoint1.bitcoinSerialize(bos);
+            masternodeOutpoint2.bitcoinSerialize(bos);
             addr.bitcoinSerialize(bos);
             uint32ToByteStreamLE(nonce, bos);
             uint32ToByteStreamLE(blockHeight, bos);

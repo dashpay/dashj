@@ -283,7 +283,7 @@ public class ActiveMasternode {
             }
             if(state != ACTIVE_MASTERNODE_STARTED) {
                 log.info("CActiveMasternode::ManageStateRemote -- STARTED!");
-                outpoint = infoMn.vin.getOutpoint();
+                outpoint = infoMn.outpoint;
                 service = infoMn.address;
                 pingerEnabled = true;
                 state = ACTIVE_MASTERNODE_STARTED;

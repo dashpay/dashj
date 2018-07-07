@@ -1,5 +1,6 @@
 package org.bitcoinj.core;
 
+import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.bitcoinj.net.Dos;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -118,7 +119,7 @@ public class Masternode extends Message {
         //LOCK(cs);
         super(mnb.params);
         info = new MasternodeInfo(mnb.getParams(), mnb.info.activeState, mnb.info.nProtocolVersion,
-                mnb.info.sigTime, mnb.info.vin.getOutpoint(), mnb.info.address, mnb.info.pubKeyCollateralAddress,
+                mnb.info.sigTime, mnb.info.outpoint, mnb.info.address, mnb.info.pubKeyCollateralAddress,
                 mnb.info.pubKeyMasternode, mnb.info.sigTime);
         lastPing = mnb.lastPing;
         vchSig = mnb.vchSig.duplicate();
@@ -188,10 +189,6 @@ public class Masternode extends Message {
         //vin
         cursor += 36;
 
-        long scriptLen = info.vin.getScriptBytes().length;
-        // 4 = length of sequence field (unint32)
-        cursor += scriptLen + 4 + VarInt.sizeOf(scriptLen);
-
         //MasternodeAddress address;
         cursor += MasternodeAddress.MESSAGE_SIZE;
         //PublicKey pubkey;
@@ -238,8 +235,8 @@ public class Masternode extends Message {
     protected void parse() throws ProtocolException {
 
         info = new MasternodeInfo();
-        info.vin = new TransactionInput(params, null, payload, cursor);
-        cursor += info.vin.getMessageSize();
+        info.outpoint = new TransactionOutPoint(params, payload, cursor);
+        cursor += info.outpoint.getMessageSize();
 
         info.address = new MasternodeAddress(params, payload, cursor, PROTOCOL_VERSION);
         cursor += info.address.getMessageSize();
@@ -286,7 +283,7 @@ public class Masternode extends Message {
 
 
     public void masterNodeSerialize(OutputStream stream) throws IOException {
-        info.vin.bitcoinSerialize(stream);
+        info.outpoint.bitcoinSerialize(stream);
         info.address.bitcoinSerialize(stream);
         info.pubKeyCollateralAddress.bitcoinSerialize(stream);
         info.pubKeyMasternode.bitcoinSerialize(stream);
@@ -372,7 +369,7 @@ public class Masternode extends Message {
     {
         UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
         try {
-            info.vin.bitcoinSerialize(bos);
+            info.outpoint.bitcoinSerialize(bos);
             //TODO:  look below if this fails.
             bos.write(nCollateralMinConfBlockHash.getReversedBytes());
             bos.write(hash.getReversedBytes());
@@ -387,7 +384,7 @@ public class Masternode extends Message {
     {
         //uint256 hash = 0;
 
-        BigInteger bi_aux = vin.getOutpoint().getHash().toBigInteger().add(BigInteger.valueOf(vin.getOutpoint().getIndex()));
+        BigInteger bi_aux = vin.getHash().toBigInteger().add(BigInteger.valueOf(vin.getOutpoint().getIndex()));
         byte [] temp = new byte[32];
         byte [] bi_bytes = bi_aux.toByteArray();
         int length = bi_bytes[0] == 0 ?
@@ -446,7 +443,7 @@ public class Masternode extends Message {
             if (!forceCheck && (Utils.currentTimeSeconds() - lastTimeChecked < MASTERNODE_CHECK_SECONDS)) return;
             lastTimeChecked = Utils.currentTimeSeconds();
 
-            log.info("masternode--CMasternode::Check -- Masternode {} is in {} state", info.vin.getOutpoint().toStringShort(), getStateString());
+            log.info("masternode--CMasternode::Check -- Masternode {} is in {} state", info.outpoint.toStringShort(), getStateString());
 
             //once spent, stop doing the checks
             if(isOutpointSpent()) return;
@@ -456,10 +453,10 @@ public class Masternode extends Message {
                 //TRY_LOCK(cs_main, lockMain);
                 //if(!lockMain) return;
 
-                CollateralStatus err = checkCollateral(info.vin.getOutpoint()).getFirst();
+                CollateralStatus err = checkCollateral(info.outpoint).getFirst();
                 if (err == COLLATERAL_UTXO_NOT_FOUND) {
                     info.activeState = MASTERNODE_OUTPOINT_SPENT;
-                    log.info("masternode--CMasternode::Check -- Failed to find Masternode UTXO, masternode={}", info.vin.getOutpoint().toStringShort());
+                    log.info("masternode--CMasternode::Check -- Failed to find Masternode UTXO, masternode={}", info.outpoint.toStringShort());
                     return;
                 }
 
@@ -471,13 +468,13 @@ public class Masternode extends Message {
                 // Otherwise give it a chance to proceed further to do all the usual checks and to change its state.
                 // Masternode still will be on the edge and can be banned back easily if it keeps ignoring mnverify
                 // or connect attempts. Will require few mnverify messages to strengthen its position in mn list.
-                log.info("CMasternode::Check -- Masternode {} is unbanned and back in list now", info.vin.getOutpoint().toStringShort());
+                log.info("CMasternode::Check -- Masternode {} is unbanned and back in list now", info.outpoint.toStringShort());
                 decreasePoSeBanScore();
             } else if(nPoSeBanScore >= MASTERNODE_POSE_BAN_MAX_SCORE) {
                 info.activeState = MASTERNODE_POSE_BAN;
                 // ban for the whole payment cycle
                 nPoSeBanHeight = nHeight + context.masternodeManager.size();
-                log.info("CMasternode::Check -- Masternode {} is banned till block %d now", info.vin.getOutpoint().toStringShort(), nPoSeBanHeight);
+                log.info("CMasternode::Check -- Masternode {} is banned till block %d now", info.outpoint.toStringShort(), nPoSeBanHeight);
                 return;
             }
 
@@ -492,7 +489,7 @@ public class Masternode extends Message {
             if(fRequireUpdate) {
                 info.activeState = MASTERNODE_UPDATE_REQUIRED;
                 if(nActiveStatePrev != info.activeState) {
-                    log.info("masternode--CMasternode::Check -- Masternode {} is in %s state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                    log.info("masternode--CMasternode::Check -- Masternode {} is in %s state now", info.outpoint.toStringShort(), getStateString());
                 }
                 return;
             }
@@ -503,7 +500,7 @@ public class Masternode extends Message {
             if(fWaitForPing && !fOurMasternode) {
                 // ...but if it was already expired before the initial check - return right away
                 if(isExpired() || isWatchdogExpired() || isNewStartRequired()) {
-                    log.info("masternode--CMasternode::Check -- Masternode %s is in %s state, waiting for ping", info.vin.getOutpoint().toStringShort(), getStateString());
+                    log.info("masternode--CMasternode::Check -- Masternode %s is in %s state, waiting for ping", info.outpoint.toStringShort(), getStateString());
                     return;
                 }
             }
@@ -514,7 +511,7 @@ public class Masternode extends Message {
                 if(!isPingedWithin(MASTERNODE_NEW_START_REQUIRED_SECONDS)) {
                     info.activeState = MASTERNODE_NEW_START_REQUIRED;
                     if(nActiveStatePrev != info.activeState) {
-                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.outpoint.toStringShort(), getStateString());
                     }
                     return;
                 }
@@ -523,12 +520,12 @@ public class Masternode extends Message {
                 boolean fWatchdogExpired = (fWatchdogActive && ((Utils.currentTimeSeconds() - info.nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
 
                 log.info("masternode--CMasternode::Check -- outpoint={}, nTimeLastWatchdogVote={}, GetAdjustedTime()={}, fWatchdogExpired={}",
-                        info.vin.getOutpoint().toStringShort(), info.nTimeLastWatchdogVote, Utils.currentTimeSeconds(), fWatchdogExpired);
+                        info.outpoint.toStringShort(), info.nTimeLastWatchdogVote, Utils.currentTimeSeconds(), fWatchdogExpired);
 
                 if(fWatchdogExpired) {
                     info.activeState = MASTERNODE_WATCHDOG_EXPIRED;
                     if(nActiveStatePrev != info.activeState) {
-                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.outpoint.toStringShort(), getStateString());
                     }
                     return;
                 }
@@ -536,7 +533,7 @@ public class Masternode extends Message {
                 if(!isPingedWithin(MASTERNODE_EXPIRATION_SECONDS)) {
                     info.activeState = MASTERNODE_EXPIRED;
                     if(nActiveStatePrev != info.activeState) {
-                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                        log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.outpoint.toStringShort(), getStateString());
                     }
                     return;
                 }
@@ -545,14 +542,14 @@ public class Masternode extends Message {
             if(lastPing.sigTime - info.sigTime < MASTERNODE_MIN_MNP_SECONDS) {
                 info.activeState = MASTERNODE_PRE_ENABLED;
                 if(nActiveStatePrev != info.activeState) {
-                    log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                    log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.outpoint.toStringShort(), getStateString());
                 }
                 return;
             }
 
             info.activeState = MASTERNODE_ENABLED; // OK
             if(nActiveStatePrev != info.activeState) {
-                log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.vin.getOutpoint().toStringShort(), getStateString());
+                log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.outpoint.toStringShort(), getStateString());
             }
 
         } finally {
@@ -748,7 +745,7 @@ public class Masternode extends Message {
 
         Transaction tx;
         Sha256Hash hash;
-        if(GetTransaction(info.vin.getOutpoint().getHash(), tx, Params().GetConsensus(), hash, true)) {
+        if(GetTransaction(info.outpoint.getHash(), tx, Params().GetConsensus(), hash, true)) {
             for(TransactionOutput out : tx.getOutputs()) {
                 if (out.getValue() == Coin.valueOf(1000, 0) && out.getScriptPubKey() == payee) return true;
             }

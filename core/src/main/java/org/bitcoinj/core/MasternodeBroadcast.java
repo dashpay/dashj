@@ -71,8 +71,8 @@ public class MasternodeBroadcast extends Masternode {
     protected void parse() throws ProtocolException {
 
         info = new MasternodeInfo();
-        info.vin = new TransactionInput(params, null, payload, cursor);
-        cursor += info.vin.getMessageSize();
+        info.outpoint = new TransactionOutPoint(params, payload, cursor);
+        cursor += info.outpoint.getMessageSize();
 
         info.address = new MasternodeAddress(params, payload, cursor, 0);
         cursor += info.address.getMessageSize();
@@ -99,7 +99,7 @@ public class MasternodeBroadcast extends Masternode {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
-        info.vin.bitcoinSerialize(stream);
+        info.outpoint.bitcoinSerialize(stream);
         info.address.bitcoinSerialize(stream);
         info.pubKeyCollateralAddress.bitcoinSerialize(stream);
         info.pubKeyMasternode.bitcoinSerialize(stream);
@@ -115,12 +115,29 @@ public class MasternodeBroadcast extends Masternode {
     public Sha256Hash getHash()
     {
         try {
-            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(8 + info.vin.getMessageSize() + info.pubKeyCollateralAddress.calculateMessageSizeInBytes());
-            info.vin.bitcoinSerialize(bos);
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(8 + info.outpoint.getMessageSize() + info.pubKeyCollateralAddress.calculateMessageSizeInBytes());
+            new TransactionInput(params, null, new byte[0], info.outpoint).bitcoinSerialize(bos);
             info.pubKeyCollateralAddress.bitcoinSerialize(bos);
             Utils.int64ToByteStreamLE(info.sigTime, bos);
-
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice((bos.toByteArray())));
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e); // Cannot happen.
+        }
+    }
+    public Sha256Hash getSignatureHash()
+    {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(8 + info.outpoint.getMessageSize() + info.pubKeyCollateralAddress.calculateMessageSizeInBytes());
+            info.outpoint.bitcoinSerialize(bos);
+            info.address.bitcoinSerialize(bos);
+            info.pubKeyCollateralAddress.bitcoinSerialize(bos);
+            info.pubKeyMasternode.bitcoinSerialize(bos);
+            Utils.int64ToByteStreamLE(info.sigTime, bos);
+            Utils.uint32ToByteStreamLE(info.nProtocolVersion, bos);
+           // return Sha256Hash.wrapReversed(Sha256Hash.hashTwice((bos.toByteArray())));
+            return Sha256Hash.twiceOf(bos.toByteArray());
         }
         catch (IOException e)
         {
@@ -142,13 +159,13 @@ public class MasternodeBroadcast extends Masternode {
         // make sure addr is valid
         if(!isValidNetAddr()) {
             log.info("CMasternodeBroadcast::SimpleCheck -- Invalid addr, rejected: masternode={}  addr={}",
-                    info.vin.getOutpoint().toStringShort(), info.address.toString());
+                    info.outpoint.toStringShort(), info.address.toString());
             return false;
         }
 
         // make sure signature isn't in the future (past is OK)
         if (info.sigTime > Utils.currentTimeSeconds() + 60 * 60) {
-            log.info("CMasternodeBroadcast::SimpleCheck -- Signature rejected, too far into the future: masternode={}", info.vin.getOutpoint().toStringShort());
+            log.info("CMasternodeBroadcast::SimpleCheck -- Signature rejected, too far into the future: masternode={}", info.outpoint.toStringShort());
             nDos.set(1);
             return false;
         }
@@ -160,7 +177,7 @@ public class MasternodeBroadcast extends Masternode {
         }
 
         if(info.nProtocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
-            log.info("CMasternodeBroadcast::SimpleCheck -- ignoring outdated Masternode: masternode={}  nProtocolVersion={}", info.vin.getOutpoint().toStringShort(), info.nProtocolVersion);
+            log.info("CMasternodeBroadcast::SimpleCheck -- ignoring outdated Masternode: masternode={}  nProtocolVersion={}", info.outpoint.toStringShort(), info.nProtocolVersion);
             return false;
         }
 
@@ -178,12 +195,6 @@ public class MasternodeBroadcast extends Masternode {
 
         if(pubkeyScript2.getProgram().length != 25) {
             log.info("CMasternodeBroadcast::SimpleCheck -- pubKeyMasternode has the wrong size");
-            nDos.set(100);
-            return false;
-        }
-
-        if(info.vin.getScriptSig().getChunks().size() > 0) {
-            log.info("CMasternodeBroadcast::SimpleCheck -- Ignore Not Empty ScriptSig {}", info.vin.toStringCpp());
             nDos.set(100);
             return false;
         }
@@ -210,7 +221,7 @@ public class MasternodeBroadcast extends Masternode {
         // unless someone is doing something fishy
         if(mn.info.sigTime > info.sigTime) {
             log.info("CMasternodeBroadcast::Update -- Bad sigTime {} (existing broadcast is at {}) for Masternode {} {}",
-                    info.sigTime, mn.info.sigTime, info.vin.getOutpoint().toStringShort(), info.address.toString());
+                    info.sigTime, mn.info.sigTime, info.outpoint.toStringShort(), info.address.toString());
             return false;
         }
 
@@ -218,7 +229,7 @@ public class MasternodeBroadcast extends Masternode {
 
         // masternode is banned by PoSe
         if(mn.isPoSeBanned()) {
-            log.info("CMasternodeBroadcast::Update -- Banned by PoSe, masternode={}", info.vin.getOutpoint().toStringShort());
+            log.info("CMasternodeBroadcast::Update -- Banned by PoSe, masternode={}", info.outpoint.toStringShort());
             return false;
         }
 
@@ -230,7 +241,7 @@ public class MasternodeBroadcast extends Masternode {
         }
 
         if (!checkSignature(nDos)) {
-            log.info("CMasternodeBroadcast::Update -- CheckSignature() failed, masternode={}", info.vin.getOutpoint().toStringShort());
+            log.info("CMasternodeBroadcast::Update -- CheckSignature() failed, masternode={}", info.outpoint.toStringShort());
             return false;
         }
 
@@ -252,13 +263,13 @@ public class MasternodeBroadcast extends Masternode {
     {
         // we are a masternode with the same vin (i.e. already activated) and this mnb is ours (matches our Masternode privkey)
         // so nothing to do here for us
-        if(context.fMasterNode && info.vin.getOutpoint() == context.activeMasternode.outpoint &&
+        if(context.fMasterNode && info.outpoint == context.activeMasternode.outpoint &&
                 info.pubKeyMasternode == context.activeMasternode.pubKeyMasternode) {
             return false;
         }
 
         if (!checkSignature(nDos)) {
-            log.info("CMasternodeBroadcast::CheckOutpoint -- CheckSignature() failed, masternode={}", info.vin.getOutpoint().toStringShort());
+            log.info("CMasternodeBroadcast::CheckOutpoint -- CheckSignature() failed, masternode={}", info.outpoint.toStringShort());
             return false;
         }
 
@@ -273,22 +284,22 @@ public class MasternodeBroadcast extends Masternode {
             }*/
 
             int nHeight;
-            Pair<CollateralStatus, Integer> result = checkCollateral(info.vin.getOutpoint());
+            Pair<CollateralStatus, Integer> result = checkCollateral(info.outpoint);
             CollateralStatus err = result.getFirst();
             nHeight = result.getSecond();
             if (err == COLLATERAL_UTXO_NOT_FOUND) {
-                log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Failed to find Masternode UTXO, masternode={}", info.vin.getOutpoint().toStringShort());
+                log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Failed to find Masternode UTXO, masternode={}", info.outpoint.toStringShort());
                 return false;
             }
 
             if (err == COLLATERAL_INVALID_AMOUNT) {
-                log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO should have 1000 DASH, masternode={}", info.vin.getOutpoint().toStringShort());
+                log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO should have 1000 DASH, masternode={}", info.outpoint.toStringShort());
                 return false;
             }
 
             if(context.blockChain.getBestChainHeight() - nHeight + 1 < params.getMasternodeMinimumConfirmations()) {
                 log.info("CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO must have at least {} confirmations, masternode={}",
-                        params.getMasternodeMinimumConfirmations(), info.vin.getOutpoint().toStringShort());
+                        params.getMasternodeMinimumConfirmations(), info.outpoint.toStringShort());
                 // maybe we miss few blocks, let this mnb to be checked again later
                 context.masternodeManager.mapSeenMasternodeBroadcast.remove(getHash());
                 return false;
@@ -326,7 +337,7 @@ public class MasternodeBroadcast extends Masternode {
                 CBlockIndex* pConfIndex = chainActive[pMNIndex->nHeight + params.getMasternodeMinimumConfirmations() - 1]; // block where tx got nMasternodeMinimumConfirmations
                 if(pConfIndex->GetBlockTime() > sigTime) {
                     log.info("CMasternodeBroadcast::CheckOutpoint -- Bad sigTime {} ({} conf block is at {}) for Masternode {} {}",
-                            info.sigTime, params.getMasternodeMinimumConfirmations(), pConfIndex->GetBlockTime(), info.vin.getOutpoint().toStringShort(), info.address.toString());
+                            info.sigTime, params.getMasternodeMinimumConfirmations(), pConfIndex->GetBlockTime(), info.outpoint.toStringShort(), info.address.toString());
                     return false;
                 }
             }
@@ -365,17 +376,33 @@ public class MasternodeBroadcast extends Masternode {
         StringBuilder strError = new StringBuilder();
         nDos.set(0);
 
-        strMessage = info.address.toString() +info.sigTime +
-                Utils.HEX.encode(Utils.reverseBytes(info.pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(info.pubKeyMasternode.getId())) +
-                info.nProtocolVersion;
+        if(context.sporkManager.isSporkActive(SporkManager.SPORK_6_NEW_SIGS)) {
+            Sha256Hash hash = getSignatureHash();
+            if(!HashSigner.verifyHash(hash, info.pubKeyCollateralAddress, vchSig, strError)) {
+                strMessage = info.address.toString() + info.sigTime +
+                        Utils.HEX.encode(Utils.reverseBytes(info.pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(info.pubKeyMasternode.getId())) +
+                        info.nProtocolVersion;
 
-        log.info("masternode--CMasternodeBroadcast::CheckSignature -- strMessage: {}  pubKeyCollateralAddress address: {}  sig: {}",
-                strMessage, new Address(params, info.pubKeyCollateralAddress.getId()), Base64.toBase64String(vchSig.getBytes()));
+                if (!MessageSigner.verifyMessage(info.pubKeyCollateralAddress, vchSig, strMessage, strError)){
+                    // nope, not in old format either
+                    log.error("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: {}", strError);
+                    nDos.set(100);
+                    return false;
+                }
+            }
+        } else {
+            strMessage = info.address.toString() + info.sigTime +
+                    Utils.HEX.encode(Utils.reverseBytes(info.pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(info.pubKeyMasternode.getId())) +
+                    info.nProtocolVersion;
 
-        if(!MessageSigner.verifyMessage(info.pubKeyCollateralAddress, vchSig, strMessage, strError)){
-            log.info("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: {}", strError);
-            nDos.set(100);
-            return false;
+            log.info("masternode--CMasternodeBroadcast::CheckSignature -- strMessage: {}  pubKeyCollateralAddress address: {}  sig: {}",
+                    strMessage, new Address(params, info.pubKeyCollateralAddress.getId()), Base64.toBase64String(vchSig.getBytes()));
+
+            if (!MessageSigner.verifyMessage(info.pubKeyCollateralAddress, vchSig, strMessage, strError)) {
+                log.info("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: {}", strError);
+                nDos.set(100);
+                return false;
+            }
         }
 
         return true;

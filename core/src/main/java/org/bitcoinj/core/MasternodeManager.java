@@ -353,11 +353,11 @@ public class MasternodeManager extends AbstractManager {
     {
         lock.lock();
         try {
-            if(has(mn.info.vin.getOutpoint()))
+            if(has(mn.info.outpoint))
                 return false;
 
             log.info("masternode--CMasternodeMan::Add -- Adding new Masternode: addr={}, {} now", mn.info.address, size() + 1);
-            mapMasternodes.put(mn.info.vin.getOutpoint(), mn);
+            mapMasternodes.put(mn.info.outpoint, mn);
             unCache();
             fMasternodesAdded = true;
             queueOnSyncStatusChanged();
@@ -429,14 +429,14 @@ public class MasternodeManager extends AbstractManager {
             try {
 
                 nDos.set(0);
-                log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={}", mnb.info.vin.getOutpoint().toStringShort());
+                log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={}", mnb.info.outpoint.toStringShort());
 
                 Sha256Hash hash = mnb.getHash();
                 if (mapSeenMasternodeBroadcast.containsKey(hash) && !mnb.fRecovery) { //seen
-                    log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} seen", mnb.info.vin.getOutpoint().toStringShort());
+                    log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} seen", mnb.info.outpoint.toStringShort());
                     // less then 2 pings left before this MN goes into non-recoverable state, bump sync timeout
                     if (Utils.currentTimeSeconds() - mapSeenMasternodeBroadcast.get(hash).getFirst() > MASTERNODE_NEW_START_REQUIRED_SECONDS - MASTERNODE_MIN_MNP_SECONDS * 2) {
-                        log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} seen update", mnb.info.vin.getOutpoint().toStringShort());
+                        log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} seen update", mnb.info.outpoint.toStringShort());
                         mapSeenMasternodeBroadcast.get(hash).setFirst(Utils.currentTimeSeconds());
                         context.masternodeSync.BumpAssetLastTime("CMasternodeMan::CheckMnbAndUpdateMasternodeList - seen");
                     }
@@ -455,7 +455,7 @@ public class MasternodeManager extends AbstractManager {
                                 log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- mnb={} seen request, addr={}, better lastPing: %d min ago, projected mn state: %s", hash.toString(), pfrom.getAddress().toString(), (Utils.currentTimeSeconds() - mnb.lastPing.sigTime) / 60, mnTemp.getStateString());
                                 if (mnTemp.isValidStateForAutoStart(mnTemp.info.activeState)) {
                                     // this node thinks it's a good one
-                                    log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} seen good", mnb.info.vin.getOutpoint().toStringShort());
+                                    log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} seen good", mnb.info.outpoint.toStringShort());
                                     mMnbRecoveryGoodReplies.get(hash).add(mnb);
                                 }
                             }
@@ -465,19 +465,19 @@ public class MasternodeManager extends AbstractManager {
                 }
                 mapSeenMasternodeBroadcast.put(hash, new Pair(Utils.currentTimeSeconds(), mnb));
 
-                log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} new", mnb.info.vin.getOutpoint().toStringShort());
+                log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode={} new", mnb.info.outpoint.toStringShort());
 
                 if (!mnb.simpleCheck(nDos)) {
-                    log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- SimpleCheck() failed, masternode={}", mnb.info.vin.getOutpoint().toStringShort());
+                    log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- SimpleCheck() failed, masternode={}", mnb.info.outpoint.toStringShort());
                     return false;
                 }
 
                 // search Masternode list
-                Masternode mn = find(mnb.info.vin.getOutpoint());
+                Masternode mn = find(mnb.info.outpoint);
                 if (mn != null) {
                     MasternodeBroadcast mnbOld = mapSeenMasternodeBroadcast.get(new MasternodeBroadcast(mn).getHash()).getSecond();
                     if (!mnb.update(mn, nDos)) {
-                        log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Update() failed, masternode={}", mnb.info.vin.getOutpoint().toStringShort());
+                        log.info("masternode--CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Update() failed, masternode={}", mnb.info.outpoint.toStringShort());
                         return false;
                     }
                     if (hash != mnbOld.getHash()) {
@@ -503,7 +503,7 @@ public class MasternodeManager extends AbstractManager {
                 if(mnb.info.nProtocolVersion == CoinDefinition.PROTOCOL_VERSION) {
                     // ... and PROTOCOL_VERSION, then we've been remotely activated ...
                     log.info("CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Got NEW Masternode entry: masternode={}  sigTime={}  addr={}",
-                            mnb.info.vin.getOutpoint().toStringShort(), mnb.info.sigTime, mnb.info.address.toString());
+                            mnb.info.outpoint.toStringShort(), mnb.info.sigTime, mnb.info.address.toString());
                     context.activeMasternode.manageState();
                 } else {
                     // ... otherwise we need to reactivate our node, do not add it to the list and do not relay
@@ -514,7 +514,7 @@ public class MasternodeManager extends AbstractManager {
             }
             mnb.relay();
         } else {
-            log.info("CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Rejected Masternode entry: {}  addr={}", mnb.info.vin.getOutpoint().toStringShort(), mnb.info.address.toString());
+            log.info("CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Rejected Masternode entry: {}  addr={}", mnb.info.outpoint.toStringShort(), mnb.info.address.toString());
             return false;
         }
 
@@ -529,7 +529,7 @@ public class MasternodeManager extends AbstractManager {
 
         if(!context.masternodeSync.isBlockchainSynced())
             return;
-        log.info("masternode--MNANNOUNCE -- Masternode announce, masternode="+ mnb.info.vin.getOutpoint().toStringShort());
+        log.info("masternode--MNANNOUNCE -- Masternode announce, masternode="+ mnb.info.outpoint.toStringShort());
 
         Dos nDos = new Dos();
         if(checkMnbAndUpdateMasternodeList(from, mnb, nDos))
@@ -550,7 +550,7 @@ public class MasternodeManager extends AbstractManager {
         if(!context.masternodeSync.isBlockchainSynced())
             return;
 
-        log.info("masternode--MNPING -- Masternode ping, masternode="+ mnp.vin.getOutpoint().toStringShort());
+        log.info("masternode--MNPING -- Masternode ping, masternode="+ mnp.masternodeOutpoint.toStringShort());
 
         lock.lock();
         try {
@@ -560,15 +560,15 @@ public class MasternodeManager extends AbstractManager {
         } finally {
             lock.unlock();
         }
-        log.info("masternode--MNPING -- Masternode ping, masternode={} new", mnp.vin.toString());
+        log.info("masternode--MNPING -- Masternode ping, masternode={} new", mnp.masternodeOutpoint.toString());
 
-        Masternode mn = find(mnp.vin.getOutpoint());
+        Masternode mn = find(mnp.masternodeOutpoint);
 
         // if masternode uses sentinel ping instead of watchdog
         // we shoud update nTimeLastWatchdogVote here if sentinel
         // ping flag is actual
         if(mn != null && mnp.sentinelIsCurrent)
-            updateWatchdogVoteTime(mnp.vin.getOutpoint(), mnp.sigTime);
+            updateWatchdogVoteTime(mnp.masternodeOutpoint, mnp.sigTime);
 
         // too late, new MNANNOUNCE is required
         if(mn != null && mn.isNewStartRequired()) return;
@@ -586,7 +586,7 @@ public class MasternodeManager extends AbstractManager {
 
         // something significant is broken or mn is unknown,
         // we might have to ask for a masternode entry once
-        askForMN(peer, mnp.vin.getOutpoint());
+        askForMN(peer, mnp.masternodeOutpoint);
     }
     void processDseg(DarkSendEntryGetMessage dseg)
     {
@@ -679,10 +679,10 @@ public class MasternodeManager extends AbstractManager {
                     if(context.activeMasternode.outpoint == new TransactionOutPoint(params, 0, Sha256Hash.ZERO_HASH)) continue;
                     // update ...
                     mnv.addr = mnpair.getValue().info.address;
-                    mnv.vin1 = mnpair.getValue().info.vin;
-                    mnv.vin2 = new TransactionInput(context.getParams(), null, null, context.activeMasternode.outpoint);
+                    mnv.masternodeOutpoint1 = mnpair.getValue().info.outpoint;
+                    mnv.masternodeOutpoint2 = new TransactionOutPoint(context.getParams(), context.activeMasternode.outpoint.getIndex(), context.activeMasternode.outpoint.getHash());
                     String strMessage2 = String.format("%s%d%s%s%s", mnv.addr.toString(), mnv.nonce, blockHash.toString(),
-                            mnv.vin1.getOutpoint().toStringShort(), mnv.vin2.getOutpoint().toStringShort());
+                            mnv.masternodeOutpoint1.toStringShort(), mnv.masternodeOutpoint2.toStringShort());
                     // ... and sign it
                     if(null == (mnv.vchSig2 = MessageSigner.signMessage(strMessage2, context.activeMasternode.keyMasternode))) {
                         log.info("MasternodeMan::ProcessVerifyReply -- SignMessage() failed");
@@ -712,13 +712,13 @@ public class MasternodeManager extends AbstractManager {
                 return;
             }
             log.info("CMasternodeMan::ProcessVerifyReply -- verified real masternode {} for addr {}",
-                    realMasternode.info.vin.getOutpoint().toStringShort(), pnode.getAddress().toString());
+                    realMasternode.info.outpoint.toStringShort(), pnode.getAddress().toString());
             // increase ban score for everyone else
             for(Masternode mn : vpMasternodesToBan)
             {
                 mn.increasePoSeBanScore();
                 log.info("masternode--CMasternodeMan::ProcessVerifyReply -- increased PoSe ban score for %s addr %s, new score %d",
-                        realMasternode.info.vin.getOutpoint().toStringShort(), pnode.getAddress().toString(), mn.nPoSeBanScore);
+                        realMasternode.info.outpoint.toStringShort(), pnode.getAddress().toString(), mn.nPoSeBanScore);
             }
             if(!vpMasternodesToBan.isEmpty())
                 log.info("CMasternodeMan::ProcessVerifyReply -- PoSe score increased for {} fake masternodes, addr {}",
@@ -745,9 +745,9 @@ public class MasternodeManager extends AbstractManager {
             return;
         }
 
-        if(mnv.vin1.getOutpoint() == mnv.vin2.getOutpoint()) {
+        if(mnv.masternodeOutpoint1 == mnv.masternodeOutpoint2) {
             log.info("masternode--CMasternodeMan::ProcessVerifyBroadcast -- ERROR: same vins {}, peer={}",
-                    mnv.vin1.getOutpoint().toStringShort(), pnode);
+                    mnv.masternodeOutpoint1.toStringShort(), pnode);
             // that was NOT a good idea to cheat and verify itself,
             // ban the node we received such message from
             //Misbehaving(pnode->id, 100);
@@ -763,15 +763,15 @@ public class MasternodeManager extends AbstractManager {
 
         int nRank;
 
-        if (-1 == (nRank =getMasternodeRank(mnv.vin2.getOutpoint(), mnv.blockHeight, MIN_POSE_PROTO_VERSION))) {
+        if (-1 == (nRank =getMasternodeRank(mnv.masternodeOutpoint2, mnv.blockHeight, MIN_POSE_PROTO_VERSION))) {
             log.info("masternode--CMasternodeMan::ProcessVerifyBroadcast -- Can't calculate rank for masternode {}",
-                    mnv.vin2.getOutpoint().toStringShort());
+                    mnv.masternodeOutpoint2.toStringShort());
             return;
         }
 
         if(nRank > MAX_POSE_RANK) {
             log.info("masternode--CMasternodeMan::ProcessVerifyBroadcast -- Masternode {}} is not in top {}, current rank {}, peer={}",
-                    mnv.vin2.getOutpoint().toStringShort(), (int)MAX_POSE_RANK, nRank, pnode);
+                    mnv.masternodeOutpoint2.toStringShort(), (int)MAX_POSE_RANK, nRank, pnode);
             return;
         }
 
@@ -780,17 +780,17 @@ public class MasternodeManager extends AbstractManager {
 
         String strMessage1 = String.format("%s%d%s", mnv.addr.toString(), mnv.nonce, blockHash);
         String strMessage2 = String.format("%s%d%s%s%s", mnv.addr.toString(), mnv.nonce, blockHash,
-            mnv.vin1.getOutpoint().toStringShort(), mnv.vin2.getOutpoint().toStringShort());
+            mnv.masternodeOutpoint1.toStringShort(), mnv.masternodeOutpoint2.toStringShort());
 
-        Masternode mn1 = find(mnv.vin1.getOutpoint());
+        Masternode mn1 = find(mnv.masternodeOutpoint1);
         if(mn1 == null) {
-            log.info("CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode1 {}", mnv.vin1.getOutpoint().toStringShort());
+            log.info("CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode1 {}", mnv.masternodeOutpoint1.toStringShort());
             return;
         }
 
-        Masternode mn2 = find(mnv.vin2.getOutpoint());
+        Masternode mn2 = find(mnv.masternodeOutpoint2);
         if(mn2 == null) {
-            log.info("CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode2 {}", mnv.vin2.getOutpoint().toStringShort());
+            log.info("CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode2 {}", mnv.masternodeOutpoint2.toStringShort());
             return;
         }
 
@@ -815,12 +815,12 @@ public class MasternodeManager extends AbstractManager {
         mnv.relay();
 
         log.info("CMasternodeMan::ProcessVerifyBroadcast -- verified masternode %s for addr %s",
-                mn1.info.vin.getOutpoint().toStringShort(), mn1.info.address.toString());
+                mn1.info.outpoint.toStringShort(), mn1.info.address.toString());
 
         // increase ban score for everyone else with the same addr
         int nCount = 0;
         for (Map.Entry<TransactionOutPoint, Masternode> mnpair : mapMasternodes.entrySet()) {
-            if(mnpair.getValue().info.address != mnv.addr || mnpair.getKey() == mnv.vin1.getOutpoint()) continue;
+            if(mnpair.getValue().info.address != mnv.addr || mnpair.getKey() == mnv.masternodeOutpoint1) continue;
             mnpair.getValue().increasePoSeBanScore();
             nCount++;
             log.info("masternode--CMasternodeMan::ProcessVerifyBroadcast -- increased PoSe ban score for {} addr {}, new score {}",
@@ -932,7 +932,7 @@ public class MasternodeManager extends AbstractManager {
             Iterator<Map.Entry<TransactionOutPoint, Masternode>> it = mapMasternodes.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<TransactionOutPoint, Masternode> entry = it.next();
-                if (entry.getValue().info.vin.equals(vin)){
+                if (entry.getValue().info.outpoint.equals(vin)){
                     log.info("masternode - CMasternodeMan: Removing Masternode %s "+entry.getValue().info.address.toString()+"- "+(size()-1)+" now");
                     it.remove();
                     unCache();
@@ -1102,7 +1102,7 @@ public class MasternodeManager extends AbstractManager {
             rank = 0;
             for (Pair<Sha256Hash, Masternode> scorePair : vecMasternodeScores) {
                 rank++;
-                if (scorePair.getSecond().info.vin.getOutpoint() == outpoint) {
+                if (scorePair.getSecond().info.outpoint == outpoint) {
                     return rank;
                 }
             }
@@ -1260,14 +1260,14 @@ public class MasternodeManager extends AbstractManager {
                             // all nodes we asked should have replied now
                             if (MnbReplies.getValue().size() >= MNB_RECOVERY_QUORUM_REQUIRED) {
                                 // majority of nodes we asked agrees that this mn doesn't require new mnb, reprocess one of new mnbs
-                                log.info("masternode--CMasternodeMan::CheckAndRemove -- reprocessing mnb, masternode={}", MnbReplies.getValue().get(0).info.vin.getOutpoint().toStringShort());
+                                log.info("masternode--CMasternodeMan::CheckAndRemove -- reprocessing mnb, masternode={}", MnbReplies.getValue().get(0).info.outpoint.toStringShort());
                                 // mapSeenMasternodeBroadcast.erase(itMnbReplies->first);
                                 Dos dos = new Dos();
                                 MnbReplies.getValue().get(0).fRecovery = true;
                                 checkMnbAndUpdateMasternodeList(null, MnbReplies.getValue().get(0), dos);
                             }
                             log.info("masternode--CMasternodeMan::CheckAndRemove -- removing mnb recovery reply, masternode={}, size={}",
-                                    MnbReplies.getValue().get(0).info.vin.getOutpoint().toStringShort(), (int) MnbReplies.getValue().size());
+                                    MnbReplies.getValue().get(0).info.outpoint.toStringShort(), (int) MnbReplies.getValue().size());
                             itMnbReplies.remove();
                         }
                     }
@@ -1680,14 +1680,14 @@ public class MasternodeManager extends AbstractManager {
                 if (mn.protocolVersion < nProtocolVersion || !mn.isEnabled()) continue;
                 fExclude = false;
                 for(final TransactionOutPoint outpointToExclude : vecToExclude){
-                    if (mn.info.vin.getOutpoint() == outpointToExclude) {
+                    if (mn.info.outpoint == outpointToExclude) {
                         fExclude = true;
                         break;
                     }
                 }
                 if (fExclude) continue;
                 // found the one not in vecToExclude
-                log.info("masternode--CMasternodeMan::FindRandomNotInVec -- found, masternode={}", mn.info.vin.getOutpoint().toStringShort());
+                log.info("masternode--CMasternodeMan::FindRandomNotInVec -- found, masternode={}", mn.info.outpoint.toStringShort());
                 return mn.getInfo();
             }
 
@@ -1953,7 +1953,7 @@ public class MasternodeManager extends AbstractManager {
             // we shoud update nTimeLastWatchdogVote here if sentinel
             // ping flag is actual
             if(mnp.sentinelIsCurrent) {
-                updateWatchdogVoteTime(mnp.vin.getOutpoint(), mnp.sigTime);
+                updateWatchdogVoteTime(mnp.masternodeOutpoint, mnp.sigTime);
             }
             mapSeenMasternodePing.put(mnp.getHash(), mnp);
 
@@ -2048,7 +2048,7 @@ public class MasternodeManager extends AbstractManager {
 
         // ban duplicates
         for (Masternode mn : vBan) {
-            log.info("CMasternodeMan::CheckSameAddr -- increasing PoSe ban score for masternode {}", mn.info.vin.getOutpoint().toStringShort());
+            log.info("CMasternodeMan::CheckSameAddr -- increasing PoSe ban score for masternode {}", mn.info.outpoint.toStringShort());
             mn.increasePoSeBanScore();
         }
     }

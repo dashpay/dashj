@@ -45,7 +45,7 @@ public class MasternodeInfo {
     public int nProtocolVersion = 0;
     public long sigTime = 0; //mnb message time
 
-    public TransactionInput vin;
+    public TransactionOutPoint outpoint;
     public MasternodeAddress address;
     public PublicKey pubKeyCollateralAddress;
     public PublicKey pubKeyMasternode;
@@ -66,7 +66,7 @@ public class MasternodeInfo {
         this.activeState = other.activeState;
         this.nProtocolVersion = other.nProtocolVersion;
         this.sigTime = other.sigTime;
-        this.vin = other.vin.duplicateDetached();
+        this.outpoint = new TransactionOutPoint(Context.get().getParams(), other.outpoint.getIndex(), other.outpoint.getHash());
         this.address = other.address;
         this.pubKeyCollateralAddress = other.pubKeyCollateralAddress;
         this.pubKeyMasternode = other.pubKeyMasternode;
@@ -88,7 +88,7 @@ public class MasternodeInfo {
         this.activeState = activeState;
         this.nProtocolVersion = protoVer;
         this.sigTime = sTime;
-        this.vin = new TransactionInput(params, null, null, outpoint);
+        this.outpoint = new TransactionOutPoint(outpoint.getParams(), outpoint.getIndex(), outpoint.getHash());;
         this.address = address;
         this.pubKeyCollateralAddress = pkCollAddr;
         this.pubKeyMasternode = pkMN;
@@ -102,7 +102,7 @@ public class MasternodeInfo {
         this.activeState = activeState;
         this.nProtocolVersion = protoVer;
         this.sigTime = sTime;
-        this.vin = new TransactionInput(params, null, null, outpoint);
+        this.outpoint = new TransactionOutPoint(outpoint.getParams(), outpoint.getIndex(), outpoint.getHash());;
         this.address = address;
         this.pubKeyCollateralAddress = pkCollAddr;
         this.pubKeyMasternode = pkMN;

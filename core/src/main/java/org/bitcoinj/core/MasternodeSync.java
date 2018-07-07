@@ -15,6 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static java.lang.Math.max;
 import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE;
+import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST;
 
 /**
  * Created by Eric on 2/21/2016.
@@ -96,7 +97,7 @@ public class MasternodeSync {
         this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
         this.syncFlags = this.context.isLiteMode() ? EnumSet.noneOf(SYNC_FLAGS.class) : SYNC_ALL_OBJECTS;
         this.syncFlags = EnumSet.noneOf(SYNC_FLAGS.class);
-        syncFlags.add(SYNC_GOVERNANCE);
+        syncFlags.add(SYNC_MASTERNODE_LIST);
 
         reset();
     }
