@@ -1,8 +1,10 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.net.Dos;
+import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
-import org.darkcoinj.DarkSendSigner;
+import org.bitcoinj.utils.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.util.encoders.Base64;
@@ -10,6 +12,12 @@ import org.spongycastle.util.encoders.Base64;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
+
+import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_INVALID_AMOUNT;
+import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_SPV_ASSUME_VALID;
+import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_UTXO_NOT_FOUND;
+import static org.bitcoinj.core.MasternodeInfo.State.MASTERNODE_EXPIRED;
 
 /**
  * Created by Hash Engineering on 2/20/2015.
@@ -17,23 +25,26 @@ import java.io.OutputStream;
 public class MasternodeBroadcast extends Masternode {
     private static final Logger log = LoggerFactory.getLogger(MasternodeBroadcast.class);
 
+    boolean fRecovery = false;
+
     public MasternodeBroadcast(NetworkParameters params, byte [] payloadBytes)
     {
         super(params, payloadBytes, 0);
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
     }
 
     public MasternodeBroadcast(NetworkParameters params, byte [] payloadBytes, int cursor)
     {
         super(params, payloadBytes, cursor);
+        mapGovernanceObjectsVotedOn = new HashMap<Sha256Hash, Integer>();
+        nCollateralMinConfBlockHash = Sha256Hash.ZERO_HASH;
     }
 
     public MasternodeBroadcast(Masternode masternode)
     {
        super(masternode);
     }
-
-
-    private transient int optimalEncodingMessageSize;
 
 
     protected static int calcLength(byte[] buf, int offset) {
@@ -59,272 +70,61 @@ public class MasternodeBroadcast extends Masternode {
     @Override
     protected void parse() throws ProtocolException {
 
-        vin = new TransactionInput(params, null, payload, cursor);
-        cursor += vin.getMessageSize();
+        info = new MasternodeInfo();
+        info.vin = new TransactionInput(params, null, payload, cursor);
+        cursor += info.vin.getMessageSize();
 
-        address = new MasternodeAddress(params, payload, cursor, 0);
-        cursor += address.getMessageSize();
+        info.address = new MasternodeAddress(params, payload, cursor, 0);
+        cursor += info.address.getMessageSize();
 
-        pubKeyCollateralAddress = new PublicKey(params, payload, cursor);
-        cursor += pubKeyCollateralAddress.getMessageSize();
+        info.pubKeyCollateralAddress = new PublicKey(params, payload, cursor);
+        cursor += info.pubKeyCollateralAddress.getMessageSize();
 
-        pubKeyMasternode = new PublicKey(params, payload, cursor);
-        cursor += pubKeyMasternode.getMessageSize();
+        info.pubKeyMasternode = new PublicKey(params, payload, cursor);
+        cursor += info.pubKeyMasternode.getMessageSize();
 
-        sig = new MasternodeSignature(params, payload, cursor);
-        cursor += sig.getMessageSize();
+        vchSig = new MasternodeSignature(params, payload, cursor);
+        cursor += vchSig.getMessageSize();
 
-        sigTime = readInt64();
+        info.sigTime = readInt64();
 
-        protocolVersion = (int)readUint32();
+        info.nProtocolVersion = (int)readUint32();
 
         lastPing = new MasternodePing(params, payload, cursor);
         cursor += lastPing.getMessageSize();
 
-        //nLastDsq = readInt64();
-
         length = cursor - offset;
-
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
-        vin.bitcoinSerialize(stream);
-        address.bitcoinSerialize(stream);
-        pubKeyCollateralAddress.bitcoinSerialize(stream);
-        pubKeyMasternode.bitcoinSerialize(stream);
+        info.vin.bitcoinSerialize(stream);
+        info.address.bitcoinSerialize(stream);
+        info.pubKeyCollateralAddress.bitcoinSerialize(stream);
+        info.pubKeyMasternode.bitcoinSerialize(stream);
 
-        sig.bitcoinSerialize(stream);
+        vchSig.bitcoinSerialize(stream);
 
-        Utils.int64ToByteStreamLE(sigTime, stream);
-        Utils.uint32ToByteStreamLE(protocolVersion, stream);
+        Utils.int64ToByteStreamLE(info.sigTime, stream);
+        Utils.uint32ToByteStreamLE(info.nProtocolVersion, stream);
 
         lastPing.bitcoinSerialize(stream);
-
-        Utils.int64ToByteStreamLE(nLastDsq, stream);
-
     }
 
     public Sha256Hash getHash()
     {
-        byte [] dataToHash = new byte[pubKeyCollateralAddress.getBytes().length+8];
-        Utils.uint32ToByteArrayLE(sigTime, dataToHash, 0);
-        System.arraycopy(pubKeyCollateralAddress.getBytes(), 0, dataToHash, 8, pubKeyCollateralAddress.getBytes().length);
         try {
-            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(8 + vin.getMessageSize() + pubKeyCollateralAddress.calculateMessageSizeInBytes());
-            vin.bitcoinSerialize(bos);
-            Utils.int64ToByteStreamLE(sigTime, bos);
-            pubKeyCollateralAddress.bitcoinSerialize(bos);
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(8 + info.vin.getMessageSize() + info.pubKeyCollateralAddress.calculateMessageSizeInBytes());
+            info.vin.bitcoinSerialize(bos);
+            info.pubKeyCollateralAddress.bitcoinSerialize(bos);
+            Utils.int64ToByteStreamLE(info.sigTime, bos);
+
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice((bos.toByteArray())));
         }
         catch (IOException e)
         {
             throw new RuntimeException(e); // Cannot happen.
-        }
-    }
-
-    boolean checkAndUpdate()//int& nDos
-    {
-        // make sure signature isn't in the future (past is OK)
-        if (sigTime > Utils.currentTimeSeconds() + 60 * 60) {
-            log.info("CMasternodeBroadcast::CheckAndUpdate - Signature rejected, too far into the future " + vin.toString());
-            //nDos = 1;
-            return false;
-        }
-
-        // incorrect ping or its sigTime
-        if(lastPing.equals(MasternodePing.EMPTY) || !lastPing.checkAndUpdate(false, true))
-            return false;
-
-        if (protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
-            log.info("CMasternodeBroadcast::CheckAndUpdate - ignoring outdated Masternode " + vin.toString() + " protocol version " + protocolVersion);
-            return false;
-        }
-
-        Script pubkeyScript;
-        //pubkeyScript = GetScriptForDestination(pubKeyCollateralAddress.GetID());
-        pubkeyScript = ScriptBuilder.createOutputScript(new Address(params, pubKeyCollateralAddress.getId()));
-
-        if (pubkeyScript.getProgram().length != 25) {
-            log.info("CMasternodeBroadcast::CheckAndUpdate - pubKeyCollateralAddress the wrong size");
-            //nDos = 100;
-            return false;
-        }
-
-        Script pubkeyScript2;
-        //pubkeyScript2 = GetScriptForDestination(pubKeyMasternode.GetID());
-        pubkeyScript2 = ScriptBuilder.createOutputScript(new Address(params, pubKeyMasternode.getId()));
-
-        if (pubkeyScript2.getProgram().length != 25) {
-            log.info("CMasternodeBroadcast::CheckAndUpdate - pubKeyMasternode the wrong size\n");
-            //nDos = 100;
-            return false;
-        }
-
-        //if(!vin.scriptSig.empty()) {
-        if (!vin.getScriptSig().getChunks().isEmpty()) {
-            log.info("CMasternodeBroadcast::CheckAndUpdate - Ignore Not Empty ScriptSig " + vin.toString());
-            return false;
-        }
-
-        StringBuilder errorMessage = new StringBuilder();
-
-        if (!verifySignature()) {
-            //if(!DarkSendSigner.verifyMessage(pubKeyCollateralAddress, sig, strMessage, errorMessage)){
-            log.info("CMasternodeBroadcast::CheckAndUpdate - VerifySignature failed: " + vin.toString());
-            //nDos = 100;
-            return false;
-        }
-
-        if (params.getId().equals(NetworkParameters.ID_MAINNET)) {
-            if (address.getPort() != 9999) return false;
-        } else if (address.getPort() == 9999) return false;
-
-        //search existing Masternode list, this is where we update existing Masternodes with new mnb broadcasts
-        Masternode pmn = context.masternodeManager.find(vin);
-
-        // no such masternode or it's not enabled already, nothing to update
-        if (pmn == null || (pmn != null && !pmn.isEnabled())) return true;
-
-         // this broadcast is older or equal than the one that we already have - it's bad and should never happen
-         // unless someone is doing something fishy
-         // (mapSeenMasternodeBroadcast in CMasternodeMan::ProcessMessage should filter legit duplicates)
-        if(pmn.sigTime >= sigTime) {
-             log.info("CMasternodeBroadcast::CheckAndUpdate - Bad sigTime "+sigTime+" for Masternode "+address+" "+vin+" (existing broadcast is at " + pmn.sigTime);
-             return false;
-        }
-
-         // masternode is not enabled yet/already, nothing to update
-        if(!pmn.isEnabled()) return true;
-
-        // mn.pubKeyCollateralAddress = pubKeyCollateralAddress, IsVinAssociatedWithPubkey is validated once below,
-        //   after that they just need to match
-        if (pmn.pubKeyCollateralAddress.equals(pubKeyCollateralAddress) && !pmn.isBroadcastedWithin(MASTERNODE_MIN_MNB_SECONDS)) {
-            //take the newest entry
-            log.info("CMasternodeBroadcast::CheckAndUpdate - Got updated entry for " + address.toString());
-            if (pmn.updateFromNewBroadcast(this)) {
-                pmn.check();
-                // normally masternode should be in pre-enabled status after update, if not - do not relay
-                if (pmn.isEnabled()) relay();
-            }
-            context.masternodeSync.addedMasternodeList(getHash());
-        }
-
-        return true;
-
-    }
-
-    boolean checkAndUpdate_old()//int& nDos
-    {
-        // make sure signature isn't in the future (past is OK)
-        if (sigTime > Utils.currentTimeSeconds() + 60 * 60) {
-            log.info("CMasternodeBroadcast::CheckAndUpdate - Signature rejected, too far into the future " + vin.toString());
-            //nDos = 1;
-            return false;
-        }
-
-        // incorrect ping or its sigTime
-        if(lastPing.equals(MasternodePing.EMPTY) || !lastPing.checkAndUpdate(false, true))
-            return false;
-
-        //String vchPubKey = new String(pubKeyCollateralAddress.getBytes(), StandardCharsets.US_ASCII);
-        //String vchPubKey2 = new String(pubKeyMasternode.getBytes(), StandardCharsets.US_ASCII);
-        //std::string strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
-        //String strMessage = address.toString() + sigTime + vchPubKey + vchPubKey2 + protocolVersion;
-        try {
-            byte [] message = null;
-            String strMessage = "";
-
-            if(protocolVersion < 70201) {
-                UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream((address.toString() + sigTime).length() + pubKeyCollateralAddress.getBytes().length + pubKeyMasternode.getBytes().length + ((Integer) protocolVersion).toString().getBytes().length);
-                bos.write((address.toString() + sigTime).getBytes());
-                bos.write(pubKeyCollateralAddress.getBytes());
-                bos.write(pubKeyMasternode.getBytes());
-                bos.write(((Integer) protocolVersion).toString().getBytes());
-
-                message = bos.toByteArray();
-            }
-            else
-            {
-                /*UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream((address.toString() + sigTime).length() + pubKeyCollateralAddress.getBytes().length + pubKeyMasternode.getBytes().length + ((Integer) protocolVersion).toString().getBytes().length);
-                bos.write((address.toString() + sigTime).getBytes());
-                bos.write(pubKeyCollateralAddress.getId());
-                bos.write(pubKeyMasternode.getId());
-                bos.write(((Integer) protocolVersion).toString().getBytes());
-*/
-                // message = bos.toByteArray();
-                strMessage = address.toString() + sigTime + Utils.HEX.encode(Utils.reverseBytes(pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(pubKeyMasternode.getId())) + protocolVersion;
-                message = strMessage.getBytes();
-                log.info("CMasternodeBroadcast::VerifySignature - sanitized strMessage: "+Utils.sanitizeString(strMessage)+", pubKeyCollateralAddress address: "+new Address(params, pubKeyCollateralAddress.getId()).toString()+", sig: %s\n" +
-                        Base64.toBase64String(sig.getBytes()));
-            }
-
-            if (protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
-                log.info("mnb - ignoring outdated Masternode " + vin.toString() + " protocol version " + protocolVersion);
-                return false;
-            }
-
-            Script pubkeyScript;
-            //pubkeyScript = GetScriptForDestination(pubKeyCollateralAddress.GetID());
-            pubkeyScript = ScriptBuilder.createOutputScript(new Address(params, pubKeyCollateralAddress.getId()));
-
-            if (pubkeyScript.getProgram().length != 25) {
-                log.info("mnb - pubKeyCollateralAddress the wrong size");
-                //nDos = 100;
-                return false;
-            }
-
-            Script pubkeyScript2;
-            //pubkeyScript2 = GetScriptForDestination(pubKeyMasternode.GetID());
-            pubkeyScript2 = ScriptBuilder.createOutputScript(new Address(params, pubKeyMasternode.getId()));
-
-            if (pubkeyScript2.getProgram().length != 25) {
-                log.info("mnb - pubKeyMasternode the wrong size\n");
-                //nDos = 100;
-                return false;
-            }
-
-            //if(!vin.scriptSig.empty()) {
-            if (!vin.getScriptSig().getChunks().isEmpty()) {
-                log.info("mnb - Ignore Not Empty ScriptSig " + vin.toString());
-                return false;
-            }
-
-            StringBuilder errorMessage = new StringBuilder();
-
-            if (!DarkSendSigner.verifyMessage1(pubKeyCollateralAddress, sig, message, errorMessage)) {
-                //if(!DarkSendSigner.verifyMessage(pubKeyCollateralAddress, sig, strMessage, errorMessage)){
-                log.info("mnb - Got bad Masternode address signature: " + errorMessage);
-                //nDos = 100;
-                return false;
-            }
-
-            if (params.getId().equals(NetworkParameters.ID_MAINNET)) {
-                if (address.getPort() != 9999) return false;
-            } else if (address.getPort() == 9999) return false;
-
-            //search existing Masternode list, this is where we update existing Masternodes with new mnb broadcasts
-            Masternode pmn = context.masternodeManager.find(vin);
-
-            // no such masternode or it's not enabled already, nothing to update
-            if (pmn == null || (pmn != null && !pmn.isEnabled())) return true;
-
-            // mn.pubKeyCollateralAddress = pubKeyCollateralAddress, IsVinAssociatedWithPubkey is validated once below,
-            //   after that they just need to match
-            if (pmn.pubKeyCollateralAddress.equals(pubKeyCollateralAddress) && !pmn.isBroadcastedWithin(MASTERNODE_MIN_MNB_SECONDS)) {
-                //take the newest entry
-                log.info("mnb - Got updated entry for " + address.toString());
-                if (pmn.updateFromNewBroadcast(this)) {
-                    pmn.check();
-                    if (pmn.isEnabled()) relay();
-                }
-                context.masternodeSync.addedMasternodeList(getHash());
-            }
-
-            return true;
-        } catch (IOException x){
-            return false;
         }
     }
 
@@ -335,208 +135,259 @@ public class MasternodeBroadcast extends Masternode {
         //RelayInv(inv);
     }
 
-    boolean checkInputsAndAdd()
+    boolean simpleCheck(Dos nDos)
+    {
+        nDos.set(0);
+
+        // make sure addr is valid
+        if(!isValidNetAddr()) {
+            log.info("CMasternodeBroadcast::SimpleCheck -- Invalid addr, rejected: masternode={}  addr={}",
+                    info.vin.getOutpoint().toStringShort(), info.address.toString());
+            return false;
+        }
+
+        // make sure signature isn't in the future (past is OK)
+        if (info.sigTime > Utils.currentTimeSeconds() + 60 * 60) {
+            log.info("CMasternodeBroadcast::SimpleCheck -- Signature rejected, too far into the future: masternode={}", info.vin.getOutpoint().toStringShort());
+            nDos.set(1);
+            return false;
+        }
+
+        // empty ping or incorrect sigTime/unknown blockhash
+        if(lastPing == MasternodePing.EMPTY || !lastPing.simpleCheck(nDos)) {
+            // one of us is probably forked or smth, just mark it as expired and check the rest of the rules
+            info.activeState = MASTERNODE_EXPIRED;
+        }
+
+        if(info.nProtocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
+            log.info("CMasternodeBroadcast::SimpleCheck -- ignoring outdated Masternode: masternode={}  nProtocolVersion={}", info.vin.getOutpoint().toStringShort(), info.nProtocolVersion);
+            return false;
+        }
+
+        Script pubkeyScript;
+        pubkeyScript = ScriptBuilder.createOutputScript(new Address(params, info.pubKeyCollateralAddress.getId()));
+
+        if(pubkeyScript.getProgram().length != 25) {
+            log.info("CMasternodeBroadcast::SimpleCheck -- pubKeyCollateralAddress has the wrong size");
+            nDos.set(100);
+            return false;
+        }
+
+        Script pubkeyScript2;
+        pubkeyScript2 = ScriptBuilder.createOutputScript(new Address(params, info.pubKeyMasternode.getId()));
+
+        if(pubkeyScript2.getProgram().length != 25) {
+            log.info("CMasternodeBroadcast::SimpleCheck -- pubKeyMasternode has the wrong size");
+            nDos.set(100);
+            return false;
+        }
+
+        if(info.vin.getScriptSig().getChunks().size() > 0) {
+            log.info("CMasternodeBroadcast::SimpleCheck -- Ignore Not Empty ScriptSig {}", info.vin.toStringCpp());
+            nDos.set(100);
+            return false;
+        }
+
+        int mainnetDefaultPort = MainNetParams.get().getPort();
+        if(params.getId() == NetworkParameters.ID_MAINNET) {
+            if(info.address.getPort() != mainnetDefaultPort) return false;
+        } else if(info.address.getPort() == mainnetDefaultPort) return false;
+
+        return true;
+    }
+
+    boolean update(Masternode mn, Dos nDos)
+    {
+        nDos.set(0);
+
+        if(mn.info.sigTime == info.sigTime && !fRecovery) {
+            // mapSeenMasternodeBroadcast in CMasternodeMan::CheckMnbAndUpdateMasternodeList should filter legit duplicates
+            // but this still can happen if we just started, which is ok, just do nothing here.
+            return false;
+        }
+
+        // this broadcast is older than the one that we already have - it's bad and should never happen
+        // unless someone is doing something fishy
+        if(mn.info.sigTime > info.sigTime) {
+            log.info("CMasternodeBroadcast::Update -- Bad sigTime {} (existing broadcast is at {}) for Masternode {} {}",
+                    info.sigTime, mn.info.sigTime, info.vin.getOutpoint().toStringShort(), info.address.toString());
+            return false;
+        }
+
+        mn.check();
+
+        // masternode is banned by PoSe
+        if(mn.isPoSeBanned()) {
+            log.info("CMasternodeBroadcast::Update -- Banned by PoSe, masternode={}", info.vin.getOutpoint().toStringShort());
+            return false;
+        }
+
+        // IsVnAssociatedWithPubkey is validated once in CheckOutpoint, after that they just need to match
+        if(mn.info.pubKeyCollateralAddress != info.pubKeyCollateralAddress) {
+            log.info("CMasternodeBroadcast::Update -- Got mismatched pubKeyCollateralAddress and vin");
+            nDos.set(33);
+            return false;
+        }
+
+        if (!checkSignature(nDos)) {
+            log.info("CMasternodeBroadcast::Update -- CheckSignature() failed, masternode={}", info.vin.getOutpoint().toStringShort());
+            return false;
+        }
+
+        // if ther was no masternode broadcast recently or if it matches our Masternode privkey...
+        if(mn.isBroadcastedWithin(MASTERNODE_MIN_MNB_SECONDS) || (context.fMasterNode && info.pubKeyMasternode == context.activeMasternode.pubKeyMasternode)) {
+            // take the newest entry
+            log.info("CMasternodeBroadcast::Update -- Got UPDATED Masternode entry: addr={}", info.address.toString());
+            if(mn.updateFromNewBroadcast(this)) {
+                mn.check();
+                relay();
+            }
+            context.masternodeSync.BumpAssetLastTime("CMasternodeBroadcast::Update");
+        }
+
+        return true;
+    }
+
+    boolean checkOutpoint(Dos nDos)
     {
         // we are a masternode with the same vin (i.e. already activated) and this mnb is ours (matches our Masternode privkey)
         // so nothing to do here for us
-        if(DarkCoinSystem.fMasterNode && vin.getOutpoint().equals(context.activeMasternode.vin.getOutpoint()) && pubKeyMasternode.equals(context.activeMasternode.pubKeyMasternode))
-            return true;
-
-        // incorrect ping or its sigTime
-        if(lastPing == MasternodePing.EMPTY || !lastPing.checkAndUpdate(false, true))
-            return false;
-
-        // search existing Masternode list
-        Masternode pmn = context.masternodeManager.find(vin);
-
-        if(pmn != null) {
-            // nothing to do here if we already know about this masternode and it's enabled
-            if(pmn.isEnabled() || pmn.isPreEnabled()) return true;
-                // if it's not enabled, remove old MN first and continue
-            else context.masternodeManager.remove(pmn.vin);
-        }
-
-        /*  TODO:  Will this work?
-
-         if(GetInputAge(vin) < Params().GetConsensus().nMasternodeMinimumConfirmations){
-            LogPrintf("CMasternodeBroadcast::CheckInputsAndAdd - Input must have at least %d confirmations\n", Params().GetConsensus().nMasternodeMinimumConfirmations);
-            // maybe we miss few blocks, let this mnb to be checked again later
-            mnodeman.mapSeenMasternodeBroadcast.erase(GetHash());
-            masternodeSync.mapSeenSyncMNB.erase(GetHash());
+        if(context.fMasterNode && info.vin.getOutpoint() == context.activeMasternode.outpoint &&
+                info.pubKeyMasternode == context.activeMasternode.pubKeyMasternode) {
             return false;
         }
-        CValidationState state;
-        CMutableTransaction tx = CMutableTransaction();
-        TransactionOutput vout = new TransactionOutput(context, Coin.valueOf(999,99), context.darkSendPool.collateralPubKey);
-        tx.vin.push_back(vin);
-        tx.vout.push_back(vout);
+
+        if (!checkSignature(nDos)) {
+            log.info("CMasternodeBroadcast::CheckOutpoint -- CheckSignature() failed, masternode={}", info.vin.getOutpoint().toStringShort());
+            return false;
+        }
 
         {
-            TRY_LOCK(cs_main, lockMain);
+            //TODO:  can this be fixed?
+            /*TRY_LOCK(cs_main, lockMain);
             if(!lockMain) {
                 // not mnb fault, let it to be checked again later
+                log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Failed to acquire lock, addr={}", info.address.toString());
                 context.masternodeManager.mapSeenMasternodeBroadcast.remove(getHash());
-                context.masternodeSync.mapSeenSyncMNB.remove(getHash());
+                return false;
+            }*/
+
+            int nHeight;
+            Pair<CollateralStatus, Integer> result = checkCollateral(info.vin.getOutpoint());
+            CollateralStatus err = result.getFirst();
+            nHeight = result.getSecond();
+            if (err == COLLATERAL_UTXO_NOT_FOUND) {
+                log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Failed to find Masternode UTXO, masternode={}", info.vin.getOutpoint().toStringShort());
                 return false;
             }
 
-            if(!AcceptableInputs(mempool, state, CTransaction(tx), false, NULL)) {
-                //set nDos
-                state.IsInvalid(nDoS);
+            if (err == COLLATERAL_INVALID_AMOUNT) {
+                log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO should have 1000 DASH, masternode={}", info.vin.getOutpoint().toStringShort());
                 return false;
             }
+
+            if(context.blockChain.getBestChainHeight() - nHeight + 1 < params.getMasternodeMinimumConfirmations()) {
+                log.info("CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO must have at least {} confirmations, masternode={}",
+                        params.getMasternodeMinimumConfirmations(), info.vin.getOutpoint().toStringShort());
+                // maybe we miss few blocks, let this mnb to be checked again later
+                context.masternodeManager.mapSeenMasternodeBroadcast.remove(getHash());
+                return false;
+            }
+            // remember the hash of the block where masternode collateral had minimum required confirmations
+            //TODO:  can this be fixed?
+            //nCollateralMinConfBlockHash = chainActive[nHeight + params.getMasternodeMinimumConfirmations() - 1]->GetBlockHash();
+
+            if(err == COLLATERAL_SPV_ASSUME_VALID)
+                return true;
         }
-        */
 
-        log.info("masternode - mnb - Accepted Masternode entry\n");
+        log.info("masternode--CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO verified");
 
-        /* TODO:  Will this work?
-        if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
-            log.info("mnb - Input must have at least {1} confirmations", MASTERNODE_MIN_CONFIRMATIONS);
-            // maybe we miss few blocks, let this mnb to be checked again later
-            mnodeman.mapSeenMasternodeBroadcast.erase(GetHash());
-            masternodeSync.mapSeenSyncMNB.erase(GetHash());
+
+        // make sure the input that was signed in masternode broadcast message is related to the transaction
+        // that spawned the Masternode - this is expensive, so it's only done once per Masternode
+        if(!isInputAssociatedWithPubkey()) {
+            log.info("CMasternodeMan::CheckOutpoint -- Got mismatched pubKeyCollateralAddress and vin");
+            nDos.set(33);
             return false;
         }
-        */
 
-        // make sure the vout that was signed is related to the transaction that spawned the Masternode
-        //  - this is expensive, so it's only done once per Masternode
-        if(!DarkSendSigner.isVinAssociatedWithPubkey(params, vin, pubKeyCollateralAddress)) {
-            log.info("CMasternodeMan::CheckInputsAndAdd - Got mismatched pubKeyCollateralAddress and vin");
-            //nDos = 33;
-            return false;
-        }
-
+        //TODO: can we do a better job at getting the transaction and the block?
         // verify that sig time is legit in past
-        // should be at least not earlier than block when 1000 DASH tx got MASTERNODE_MIN_CONFIRMATIONS
-        /*
-        uint256 hashBlock = 0;
+        // should be at least not earlier than block when 1000 DASH tx got nMasternodeMinimumConfirmations
+        /*uint256 hashBlock = uint256();
         CTransaction tx2;
-        GetTransaction(vin.prevout.hash, tx2, hashBlock, true);
-        BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
-        if (mi != mapBlockIndex.end() && (*mi).second)
+        GetTransaction(vin.prevout.hash, tx2, Params().GetConsensus(), hashBlock, true);
         {
-            CBlockIndex* pMNIndex = (*mi).second; // block for 1000 DASH tx -> 1 confirmation
-            CBlockIndex* pConfIndex = chainActive[pMNIndex->nHeight + MASTERNODE_MIN_CONFIRMATIONS - 1]; // block where tx got MASTERNODE_MIN_CONFIRMATIONS
-            if(pConfIndex->GetBlockTime() > sigTime)
-            {
-                LogPrintf("mnb - Bad sigTime %d for Masternode %20s %105s (%i conf block is at %d)\n",
-                        sigTime, addr.ToString(), vin.ToString(), MASTERNODE_MIN_CONFIRMATIONS, pConfIndex->GetBlockTime());
-                return false;
+            LOCK(cs_main);
+            BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
+            if (mi != mapBlockIndex.end() && (*mi).second) {
+                CBlockIndex* pMNIndex = (*mi).second; // block for 1000 DASH tx -> 1 confirmation
+                CBlockIndex* pConfIndex = chainActive[pMNIndex->nHeight + params.getMasternodeMinimumConfirmations() - 1]; // block where tx got nMasternodeMinimumConfirmations
+                if(pConfIndex->GetBlockTime() > sigTime) {
+                    log.info("CMasternodeBroadcast::CheckOutpoint -- Bad sigTime {} ({} conf block is at {}) for Masternode {} {}",
+                            info.sigTime, params.getMasternodeMinimumConfirmations(), pConfIndex->GetBlockTime(), info.vin.getOutpoint().toStringShort(), info.address.toString());
+                    return false;
+                }
             }
         }
-
         */
-
-
-        // if it matches our Masternode privkey...
-        if(DarkCoinSystem.fMasterNode && pubKeyMasternode == context.activeMasternode.pubKeyMasternode) {
-            if(protocolVersion == params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT)) {
-                // ... and PROTOCOL_VERSION, then we've been remotely activated ...
-                context.activeMasternode.enableHotColdMasterNode(vin, address);
-            } else {
-                // ... otherwise we need to reactivate our node, don not add it to the list and do not relay
-                // but also do not ban the node we get this message from
-                log.info("CMasternodeBroadcast::CheckInputsAndAdd - wrong PROTOCOL_VERSION, announce message: "+protocolVersion+" MN: "+params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT)+" - re-activate your MN");
-                return false;
-            }
-        }
-
-        log.info("mnb - Got NEW Masternode entry - {} - {} - {} - {} ", getHash().toString(), address.toString(), vin.toString(), sigTime);
-        Masternode mn = new Masternode(this);
-        context.masternodeManager.add(mn);
-
-        // if it matches our Masternode privkey, then we've been remotely activated
-        if(pubKeyMasternode.equals(context.activeMasternode.pubKeyMasternode) && protocolVersion == CoinDefinition.PROTOCOL_VERSION){
-            context.activeMasternode.enableHotColdMasterNode(vin, address);
-        }
-
-        boolean isLocal = address.getAddr().isSiteLocalAddress() || address.getAddr().isLoopbackAddress();
-
-        if(params.getId().equals(NetworkParameters.ID_REGTEST)) isLocal = false;
-        if(!isLocal) relay();
-
         return true;
     }
 
-    boolean verifySignature()
+    boolean sign(ECKey keyCollateralAddress)
     {
         String strMessage;
-        StringBuilder errorMessage = new StringBuilder();
-        //nDos = 0;
+        StringBuilder strError = new StringBuilder();
 
-        //
-        // REMOVE AFTER MIGRATION TO 12.1
-        //
-        if(protocolVersion < 70201) {
-            byte [] message;
-            try {
-                UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream((address.toString() + sigTime).length() + pubKeyCollateralAddress.getBytes().length + pubKeyMasternode.getBytes().length + ((Integer) protocolVersion).toString().getBytes().length);
-                bos.write((address.toString() + sigTime).getBytes());
-                bos.write(pubKeyCollateralAddress.getBytes());
-                bos.write(pubKeyMasternode.getBytes());
-                bos.write(((Integer) protocolVersion).toString().getBytes());
-                message = bos.toByteArray();
-            }
-            catch (Exception x)
-            {
-                return false;
-            }
+        info.sigTime = Utils.currentTimeSeconds();
 
+        strMessage = info.address.toString() + info.sigTime +
+                Utils.HEX.encode(Utils.reverseBytes(info.pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(info.pubKeyMasternode.getId())) +
+                info.nProtocolVersion;
 
-            /*log.info("masternode", "CMasternodeBroadcast::VerifySignature - sanitized strMessage: "+Utils.sanitizeString(String.valueOf(message))+", pubKeyCollateralAddress address: "+new Address(params, pubKeyCollateralAddress.getId()).toString()+", sig: %s" +
-                    Base64.toBase64String(sig.getBytes()));*/
-            log.info("CMasternodeBroadcast::VerifySignature - sanitized strMessage: "+Utils.sanitizeString(String.valueOf(message))+", pubKeyCollateralAddress address: "+new Address(params, pubKeyCollateralAddress.getId()).toString()+", sig: %s" +
-                    Base64.toBase64String(sig.getBytes()));
+        if(null == (vchSig = MessageSigner.signMessage(strMessage, keyCollateralAddress))) {
+            log.info("CMasternodeBroadcast::Sign -- SignMessage() failed");
+            return false;
+        }
 
-            if(!DarkSendSigner.verifyMessage1(pubKeyCollateralAddress, sig, message, errorMessage)){
-                /*if (addr.ToString() != addr.ToString(false))
-                {
-                    // maybe it's wrong format, try again with the old one
-                    strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) +
-                            vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
-
-                    LogPrint("masternode", "CMasternodeBroadcast::VerifySignature - second try, sanitized strMessage: %s, pubKeyCollateralAddress address: %s, sig: %s\n",
-                            SanitizeString(strMessage), CBitcoinAddress(pubKeyCollateralAddress.GetID()).ToString(),
-                            EncodeBase64(&vchSig[0], vchSig.size()));
-
-                    if(!darkSendSigner.VerifyMessage(pubKeyCollateralAddress, vchSig, strMessage, errorMessage)){
-                        // didn't work either
-                        LogPrintf("CMasternodeBroadcast::VerifySignature - Got bad Masternode address signature, second try, sanitized error: %s\n",
-                                SanitizeString(errorMessage));
-                        // don't ban for old masternodes, their sigs could be broken because of the bug
-                        return false;
-                    }
-                } else {*/
-                    // nope, sig is actually wrong
-                    log.warn("CMasternodeBroadcast::VerifySignature - Got bad Masternode address signature, sanitized error: %s\n",
-                            Utils.sanitizeString(errorMessage.toString()));
-                    // don't ban for old masternodes, their sigs could be broken because of the bug
-                    return false;
-                //}
-            }
-        } else {
-            //
-            // END REMOVE
-            //
-
-
-            strMessage = address.toString() + sigTime + Utils.HEX.encode(Utils.reverseBytes(pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(pubKeyMasternode.getId())) + protocolVersion;
-
-            log.info("CMasternodeBroadcast::VerifySignature - sanitized strMessage: "+Utils.sanitizeString(strMessage)+", pubKeyCollateralAddress address: "+new Address(params, pubKeyCollateralAddress.getId()).toString()+", sig: %s\n" +
-                    Base64.toBase64String(sig.getBytes()));
-
-            //LogPrint("masternode", "CMasternodeBroadcast::VerifySignature - strMessage: %s, pubKeyCollateralAddress address: %s, sig: %s\n", strMessage, CBitcoinAddress(pubKeyCollateralAddress.GetID()).ToString(), EncodeBase64(&vchSig[0], vchSig.size()));
-
-            if(!DarkSendSigner.verifyMessage(pubKeyCollateralAddress, sig, strMessage, errorMessage)){
-                log.warn("CMasternodeBroadcast::VerifySignature - Got bad Masternode address signature, error: " + errorMessage);
-                //nDos = 100;
-                return false;
-            }
+        if(!MessageSigner.verifyMessage(info.pubKeyCollateralAddress, vchSig, strMessage, strError)) {
+            log.info("CMasternodeBroadcast::Sign -- VerifyMessage() failed, error: {}", strError);
+            return false;
         }
 
         return true;
     }
 
+    boolean checkSignature(Dos nDos)
+    {
+        String strMessage;
+        StringBuilder strError = new StringBuilder();
+        nDos.set(0);
+
+        strMessage = info.address.toString() +info.sigTime +
+                Utils.HEX.encode(Utils.reverseBytes(info.pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(info.pubKeyMasternode.getId())) +
+                info.nProtocolVersion;
+
+        log.info("masternode--CMasternodeBroadcast::CheckSignature -- strMessage: {}  pubKeyCollateralAddress address: {}  sig: {}",
+                strMessage, new Address(params, info.pubKeyCollateralAddress.getId()), Base64.toBase64String(vchSig.getBytes()));
+
+        if(!MessageSigner.verifyMessage(info.pubKeyCollateralAddress, vchSig, strMessage, strError)){
+            log.info("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: {}", strError);
+            nDos.set(100);
+            return false;
+        }
+
+        return true;
+    }
+
+    String getHexData() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(400);
+            bitcoinSerialize(bos);
+            return Utils.HEX.encode(bos.toByteArray());
+        } catch (IOException x) {
+            return "";
+        }
+    }
 }
