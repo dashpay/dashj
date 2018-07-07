@@ -11,6 +11,8 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.core.MasternodeManager.MASTERNODES_DUMP_SECONDS;
+
 /**
  * Created by Eric on 2/8/2015.
  */
@@ -203,20 +205,28 @@ public class DarkSendPool {
                         // check if we should activate or ping every few minutes,
                         // start right after sync is considered to be done
                         if (tick % Masternode.MASTERNODE_MIN_MNP_SECONDS == 15)
-                            context.activeMasternode.manageStatus();
+                            context.activeMasternode.manageState();
 
                         if (tick % 60 == 0) {
                             context.masternodeManager.processMasternodeConnections();
                             context.masternodeManager.checkAndRemove();
                             context.masternodePayments.checkAndRemove();
+                            context.governanceManager.checkAndRemove();
                             context.instantSend.checkAndRemove();
                         }
                         //hashengineering added this
                         if(tick % 30 == 0) {
                             log.info(context.masternodeManager.toString());
+                            log.info(context.governanceManager.toString());
                         }
 
-                        //if(c % MASTERNODES_DUMP_SECONDS == 0) DumpMasternodes();
+                        if(tick % (60 * 5) == 0) {
+                            context.governanceManager.doMaintenance();
+                        }
+
+                        if(tick % MASTERNODES_DUMP_SECONDS == 0) {
+                            context.masternodeSync.queueOnSyncStatusChanged(MasternodeSync.MASTERNODE_SYNC_FINISHED, 1.0f);
+                        }
 
                         //TODO:  Add if necessary for other DarkSend functions
                         /*
