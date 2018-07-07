@@ -210,7 +210,7 @@ public class MasternodeDB {
             log.info("  {}", manager.toString());
             if (!fDryRun) {
                 log.info("Masternode manager - cleaning....");
-                manager.checkAndRemove(true);
+                manager.checkAndRemove();
                 log.info("Masternode manager - result:");
                 log.info("  {}", manager.toString());
             }

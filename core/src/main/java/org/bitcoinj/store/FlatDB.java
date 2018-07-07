@@ -98,8 +98,8 @@ public class FlatDB<Type extends AbstractManager> {
             fileStream.close();
             //fileout.fclose();
 
-            log.info("Written info to {}  {}ms\n", pathDB, Utils.currentTimeMillis() - nStart);
-            log.info("  {}\n", object.toString());
+            log.info("Written info to {}  {}ms", pathDB, Utils.currentTimeMillis() - nStart);
+            log.info("  {}", object.toString());
 
             return true;
 
@@ -191,6 +191,7 @@ public class FlatDB<Type extends AbstractManager> {
 
             } catch (Exception e){
                 object.clear();
+                e.printStackTrace();
                 log.error("Deserialize or I/O error - {}",  e.getMessage());
                 return  ReadResult.IncorrectFormat;
             }
@@ -226,15 +227,15 @@ public class FlatDB<Type extends AbstractManager> {
             log.error("Error reading {}: ", fileName);
             if(readResult == ReadResult.IncorrectFormat)
             {
-                log.error("magic is ok but data has invalid format, will try to recreate\n");
+                log.error("magic is ok but data has invalid format, will try to recreate");
             }
             else {
-                log.error("file format is unknown or invalid, please fix it manually\n");
+                log.error("file format is unknown or invalid, please fix it manually");
                 // program should exit with an error
                 return false;
             }
         }
-        return false;
+        return true;
     }
 
     public boolean dump(Type objToSave)
@@ -261,7 +262,7 @@ public class FlatDB<Type extends AbstractManager> {
             With the code enabled, "Seen Budgets" will equal 0, whereas the object should have one entry.
         */
 
-        log.info("Verifying {} format...\n", fileName);
+        /*log.info("Verifying {} format...\n", fileName);
         Type tmpObjToLoad = (Type)objToSave.createEmpty();
         ReadResult readResult = read(tmpObjToLoad);
 
@@ -278,7 +279,7 @@ public class FlatDB<Type extends AbstractManager> {
                 log.error("file format is unknown or invalid, please fix it manually");
                 return false;
             }
-        }
+        }*/
 
         log.info("Writing info to {}...", fileName);
         write(objToSave);
