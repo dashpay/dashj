@@ -1,7 +1,7 @@
 package org.bitcoinj.core;
 
 /**
- * Created by Eric on 2/21/2016.
+ * Created by Hash Engineering on 2/21/2016.
  */
 public class MasternodePayments {
     Context context;
@@ -9,8 +9,11 @@ public class MasternodePayments {
     //! minimum peer version that can receive masternode payments
     // V1 - Last protocol version before update
     // V2 - Newest protocol version
-    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70206;
-    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70206;
+    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70208;
+    static final int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70208;
+
+    final float nStorageCoeff = 1.25f;
+    final int nMinBlocksToStore = 5000;
 
     MasternodePayments(Context context)
     {
@@ -41,5 +44,10 @@ public class MasternodePayments {
             }
         }*/
         return false;
+    }
+
+    public int getStorageLimit()
+    {
+        return Math.max((int)(context.masternodeManager.size() * nStorageCoeff), nMinBlocksToStore);
     }
 }
