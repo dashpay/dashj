@@ -17,12 +17,10 @@
 package org.bitcoinj.core;
 
 import com.google.common.net.InetAddresses;
-import org.bitcoinj.params.MainNetParams;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -64,6 +62,11 @@ public class NetAddress extends ChildMessage {
     public NetAddress(InetAddress addr) {
         this.addr = checkNotNull(addr);
         length = MESSAGE_SIZE;
+    }
+
+    public NetAddress(NetworkParameters params)
+    {
+        super(params);
     }
 
     public static NetAddress localhost(NetworkParameters params) {
