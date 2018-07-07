@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.CoinDefinition.PROTOCOL_VERSION;
 import static org.bitcoinj.core.Masternode.MASTERNODE_WATCHDOG_MAX_SECONDS;
 import static org.bitcoinj.core.MasternodePing.MASTERNODE_MIN_MNP_SECONDS;
 
@@ -263,7 +262,7 @@ public class ActiveMasternode {
         context.masternodeManager.checkMasternode(pubKeyMasternode, true);
         MasternodeInfo infoMn;
         if(null != (infoMn = context.masternodeManager.getMasternodeInfo(pubKeyMasternode))) {
-            if(infoMn.nProtocolVersion != PROTOCOL_VERSION) {
+            if(infoMn.nProtocolVersion != NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion()) {
                 state = ACTIVE_MASTERNODE_NOT_CAPABLE;
                 notCapableReason = "Invalid protocol version";
                 log.info("CActiveMasternode::ManageStateRemote -- {}: {}", getStateString(), notCapableReason);

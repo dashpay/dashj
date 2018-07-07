@@ -717,10 +717,10 @@ public class PeerGroupTest extends TestWithPeerGroup {
         ListenableFuture<List<Peer>> future = peerGroup.waitForPeersWithServiceMask(2, 3);
 
         VersionMessage ver1 = new VersionMessage(PARAMS, 10);
-        ver1.clientVersion = CoinDefinition.MIN_PROTOCOL_VERSION;
+        ver1.clientVersion = NetworkParameters.ProtocolVersion.MINIMUM.getBitcoinProtocolVersion();
         ver1.localServices = VersionMessage.NODE_NETWORK;
         VersionMessage ver2 = new VersionMessage(PARAMS, 10);
-        ver2.clientVersion = CoinDefinition.MIN_PROTOCOL_VERSION;
+        ver2.clientVersion = NetworkParameters.ProtocolVersion.MINIMUM.getBitcoinProtocolVersion();
         ver2.localServices = VersionMessage.NODE_NETWORK | 2;
         peerGroup.start();
         assertFalse(future.isDone());
