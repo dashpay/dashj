@@ -1,18 +1,20 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.lang.Math.max;
+import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE;
 
 /**
  * Created by Eric on 2/21/2016.
@@ -25,12 +27,19 @@ public class MasternodeSync {
     public static final int MASTERNODE_SYNC_LIST            = 2;
     public static final int MASTERNODE_SYNC_MNW             = 3;
     public static final int MASTERNODE_SYNC_GOVERNANCE      = 4;
-    public static final int MASTERNODE_SYNC_GOVOBJ          = 10;
-    public static final int MASTERNODE_SYNC_GOVOBJ_VOTE     = 11;
     public static final int MASTERNODE_SYNC_FINISHED        = 999;
 
+    public enum SYNC_FLAGS {
+        SYNC_MASTERNODE_LIST,
+        SYNC_MNW,
+        SYNC_GOVERNANCE
+    }
+
+    public Set<SYNC_FLAGS> syncFlags;
+    public static final EnumSet<SYNC_FLAGS> SYNC_ALL_OBJECTS = EnumSet.allOf(SYNC_FLAGS.class);
+
     static final int MASTERNODE_SYNC_TICK_SECONDS    = 6;
-    static final int MASTERNODE_SYNC_TIMEOUT_SECONDS = 30; // our blocks are 2.5 minutes so 30 seconds should be fine
+    static final int MASTERNODE_SYNC_TIMEOUT_SECONDS = 30; // our blocks are 2.5 minutes so 30 seconds should be fine -- changed to 300 for test purposes (java)
 
     static final int MASTERNODE_SYNC_ENOUGH_PEERS    = 6;
 
@@ -81,12 +90,13 @@ public class MasternodeSync {
     public MasternodeSync(Context context)
     {
         this.context = context;
-
         this.mapSeenSyncBudget = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNB = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNW = new HashMap<Sha256Hash, Integer>();
-
-        eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
+        this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
+        this.syncFlags = this.context.isLiteMode() ? EnumSet.noneOf(SYNC_FLAGS.class) : SYNC_ALL_OBJECTS;
+        this.syncFlags = EnumSet.noneOf(SYNC_FLAGS.class);
+        syncFlags.add(SYNC_GOVERNANCE);
 
         reset();
     }
@@ -106,15 +116,14 @@ public class MasternodeSync {
         nTimeLastFailure = 0;
     }
 
-    void BumpAssetLastTime(String strFuncName)
+    public void BumpAssetLastTime(String strFuncName)
     {
         if(isSynced() || isFailed()) return;
         nTimeLastBumped = Utils.currentTimeSeconds();
         log.info("mnsync--CMasternodeSync::BumpAssetLastTime -- "+ strFuncName);
     }
 
-    void addedMasternodeList(Sha256Hash hash)
-    {
+    void addedMasternodeList(Sha256Hash hash) {
         if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
             Integer count = mapSeenSyncMNB.get(hash);
             if(count != null) {
@@ -135,8 +144,7 @@ public class MasternodeSync {
     public boolean isBlockchainSynced() { return RequestedMasternodeAssets > MASTERNODE_SYNC_WAITING; }
     public boolean isMasternodeListSynced() { return RequestedMasternodeAssets > MASTERNODE_SYNC_LIST; }
     public boolean isWinnersListSynced() { return RequestedMasternodeAssets > MASTERNODE_SYNC_MNW; }
-    boolean isSynced()
-    {
+    public boolean isSynced() {
         return RequestedMasternodeAssets == MASTERNODE_SYNC_FINISHED;
     }
 
@@ -192,23 +200,37 @@ public class MasternodeSync {
             case(MASTERNODE_SYNC_WAITING):
                 clearFulfilledRequest();
                 log.info("CMasternodeSync::SwitchToNextAsset -- Completed "+getAssetName()+" in " + (Utils.currentTimeSeconds() - nTimeAssetSyncStarted));
-                RequestedMasternodeAssets = MASTERNODE_SYNC_LIST;
+                if(syncFlags.contains(SYNC_FLAGS.SYNC_MASTERNODE_LIST))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_LIST;
+                else if(syncFlags.contains(SYNC_FLAGS.SYNC_MNW))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;
+                else if(syncFlags.contains(SYNC_GOVERNANCE))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                else RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
                 log.info("CMasternodeSync::SwitchToNextAsset -- Starting "+ getAssetName());
 
                 //If we are in lite mode and allowing InstantX, then only sync the sporks
                 if(context.isLiteMode() && context.allowInstantXinLiteMode()) {
                     RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
-                    queueOnSyncStatusChanged(RequestedMasternodeAssets, 1.0);
                 }
                 break;
             case(MASTERNODE_SYNC_LIST):
                 log.info("CMasternodeSync::SwitchToNextAsset -- Completed "+getAssetName()+" in " + (Utils.currentTimeSeconds() - nTimeAssetSyncStarted));
-                RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;
+
+                if(syncFlags.contains(SYNC_FLAGS.SYNC_MNW))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;
+                else if(syncFlags.contains(SYNC_GOVERNANCE))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                else RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
+                //RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;//MASTERNODE_SYNC_MNW;
                 log.info("CMasternodeSync::SwitchToNextAsset -- Starting "+ getAssetName());
                 break;
             case(MASTERNODE_SYNC_MNW):
                 log.info("CMasternodeSync::SwitchToNextAsset -- Completed "+getAssetName()+" in " + (Utils.currentTimeSeconds() - nTimeAssetSyncStarted));
-                RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                //RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                if(syncFlags.contains(SYNC_GOVERNANCE))
+                    RequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+                else RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
                 log.info("CMasternodeSync::SwitchToNextAsset -- Starting "+ getAssetName());
                 break;
             case(MASTERNODE_SYNC_GOVERNANCE):
@@ -224,13 +246,14 @@ public class MasternodeSync {
 
                 //connman.ForEachNode(CConnman::AllNodes, [](CNode* pnode) {
                 //netfulfilledman.AddFulfilledRequest(pnode->addr, "full-sync");
-            log.info("CMasternodeSync::SwitchToNextAsset -- Sync has finished\n");
+            log.info("CMasternodeSync::SwitchToNextAsset -- Sync has finished");
 
             break;
         }
         RequestedMasternodeAttempt = 0;
         nTimeAssetSyncStarted = Utils.currentTimeSeconds();
         BumpAssetLastTime("CMasternodeSync::SwitchToNextAsset");
+        queueOnSyncStatusChanged(RequestedMasternodeAssets, 1.0);
     }
 
     public int getSyncStatusInt()
@@ -331,7 +354,7 @@ public class MasternodeSync {
         // reset sync status in case of any other sync failure
         if(isFailed()) {
             if(nTimeLastFailure + (1*60) < Utils.currentTimeSeconds()) { // 1 minute cooldown after failed sync
-                log.info("CMasternodeSync::HasSyncFailures -- WARNING: failed to sync, trying again...\n");
+                log.info("CMasternodeSync::HasSyncFailures -- WARNING: failed to sync, trying again...");
                 reset();
                 switchToNextAsset();
             }
@@ -340,9 +363,7 @@ public class MasternodeSync {
 
         // gradually request the rest of the votes after sync finished
         if(isSynced()) {
-            //std::vector<CNode*> vNodesCopy = connman.CopyNodeVector();
-            //governance.RequestGovernanceObjectVotes(vNodesCopy, connman);
-            //connman.ReleaseNodeVector(vNodesCopy);
+            context.governanceManager.requestGovernanceObjectVotes();
             return;
         }
 
@@ -420,8 +441,8 @@ public class MasternodeSync {
                     log.info("masternode--CMasternodeSync::ProcessTick -- nTick " + tick +
                             "nRequestedMasternodeAssets " + RequestedMasternodeAssets +
                             " nTimeLastBumped " + nTimeLastBumped +
-                            " GetTime() %lld" + Utils.currentTimeSeconds() +
-                            " diff %lld\n" + (Utils.currentTimeSeconds() - nTimeLastBumped));
+                            " GetTime() " + Utils.currentTimeSeconds() +
+                            " diff " + (Utils.currentTimeSeconds() - nTimeLastBumped));
 
                     if (Utils.currentTimeSeconds() - nTimeLastBumped > MASTERNODE_SYNC_TIMEOUT_SECONDS) {
                         log.info("CMasternodeSync::ProcessTick -- nTick "+tick+" nRequestedMasternodeAssets "+RequestedMasternodeAssets+" -- timeout");
@@ -506,8 +527,8 @@ public class MasternodeSync {
                         log.info("gobject--CMasternodeSync::ProcessTick -- nTick " + tick +
                                 "nRequestedMasternodeAssets " + RequestedMasternodeAssets +
                                 " nTimeLastBumped " + nTimeLastBumped +
-                                " GetTime() %lld" + Utils.currentTimeSeconds() +
-                                " diff \n" + (Utils.currentTimeSeconds() - nTimeLastBumped));
+                                " GetTime() {}" + Utils.currentTimeSeconds() +
+                                " diff" + (Utils.currentTimeSeconds() - nTimeLastBumped));
 
                         // check for timeout first
                         if (Utils.currentTimeSeconds() - nTimeLastBumped > MASTERNODE_SYNC_TIMEOUT_SECONDS) {
@@ -522,7 +543,7 @@ public class MasternodeSync {
 
                         // only request obj sync once from each peer, then request votes on per-obj basis
                         if (pnode.hasFulfilledRequest("governance-sync")) {
-                            int nObjsLeftToAsk = 0;//governance.RequestGovernanceObjectVotes(pnode, connman);
+                            int nObjsLeftToAsk = context.governanceManager.requestGovernanceObjectVotes(pnode);
                             // check for data
                             if (nObjsLeftToAsk == 0) {
 
@@ -572,7 +593,7 @@ public class MasternodeSync {
 
     void sendGovernanceSyncRequest(Peer peer)
         {
-            peer.sendMessage(new GovernanceSyncMessage());
+            peer.sendMessage(new GovernanceSyncMessage(context.getParams()));
         }
 
     /******************************************************************************************************************/
@@ -606,7 +627,7 @@ public class MasternodeSync {
         return ListenerRegistration.removeFromList(listener, eventListeners);
     }
 
-    private void queueOnSyncStatusChanged(final int newStatus, final double syncStatus) {
+    public void queueOnSyncStatusChanged(final int newStatus, final double syncStatus) {
         //checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<MasternodeSyncListener> registration : eventListeners) {
             if (registration.executor == Threading.SAME_THREAD) {
@@ -651,7 +672,8 @@ public class MasternodeSync {
     static boolean fReachedBestHeader = false;
     void updateBlockTip(StoredBlock pindexNew, boolean fInitialDownload)
     {
-        log.info("mnsync--CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight:  "+pindexNew.getHeight()+" fInitialDownload="+fInitialDownload);
+        if(!fInitialDownload || pindexNew.getHeight() % 100 == 0)
+            log.info("mnsync--CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight:  "+pindexNew.getHeight()+" fInitialDownload="+fInitialDownload);
 
         if (isFailed() || isSynced() /*|| !pindexBestHeader*/)
             return;
@@ -687,7 +709,7 @@ public class MasternodeSync {
 
         fReachedBestHeader = fReachedBestHeaderNew;
 
-        log.info("mnsync", "CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight: "+pindexNew.getHeight()+" pindexBestHeader->nHeight: "+pindexBestHeader.getHeight()+" fInitialDownload="+fInitialDownload+" fReachedBestHeader="+
+        log.info("mnsync--CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight: "+pindexNew.getHeight()+" pindexBestHeader->nHeight: "+pindexBestHeader.getHeight()+" fInitialDownload="+fInitialDownload+" fReachedBestHeader="+
                 fReachedBestHeader);
 
         if (!isBlockchainSynced() && fReachedBestHeader) {
