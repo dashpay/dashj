@@ -39,6 +39,13 @@ public class RegTestParams extends TestNet2Params {
         majorityEnforceBlockUpgrade = MainNetParams.MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
         majorityRejectBlockOutdated = MainNetParams.MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MainNetParams.MAINNET_MAJORITY_WINDOW;
+
+        fulfilledRequestExpireTime = 5*60;
+        masternodeMinimumConfirmations = 1;
+        superblockStartBlock = 1500;
+        superblockCycle = 10;
+        nGovernanceMinQuorum = 1;
+        nGovernanceFilterElements = 100;
     }
 
     @Override

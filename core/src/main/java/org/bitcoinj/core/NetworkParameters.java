@@ -123,6 +123,11 @@ public abstract class NetworkParameters {
     String strMasternodePaymentsPubKey;
     String strDarksendPoolDummyAddress;
     long nStartMasternodePayments;
+    protected long fulfilledRequestExpireTime;
+    protected long masternodeMinimumConfirmations;
+
+    public long getFulfilledRequestExpireTime() { return fulfilledRequestExpireTime; }
+    public long getMasternodeMinimumConfirmations() { return masternodeMinimumConfirmations; }
 
 
 
@@ -575,4 +580,37 @@ public abstract class NetworkParameters {
     public boolean isDIP0001ActiveAtTip() { return DIP0001ActiveAtTip; }
     public void setDIPActiveAtTip(boolean active) { DIP0001ActiveAtTip = active; }
     public int getDIP0001BlockHeight() { return DIP0001BlockHeight; }
+
+    protected int superblockStartBlock;
+    protected int superblockCycle; // in blocks
+
+    /**
+     * Getter for property 'nGovernanceMinQuorum'.
+     *
+     * @return Value for property 'nGovernanceMinQuorum'.
+     */
+    public int getGovernanceMinQuorum() {
+        return nGovernanceMinQuorum;
+    }
+
+    /**
+     * Getter for property 'nGovernanceFilterElements'.
+     *
+     * @return Value for property 'nGovernanceFilterElements'.
+     */
+    public int getGovernanceFilterElements() {
+        return nGovernanceFilterElements;
+    }
+
+
+    protected int nGovernanceMinQuorum; // Min absolute vote count to trigger an action
+    protected int nGovernanceFilterElements;
+
+    public int getSuperblockCycle() {
+        return superblockCycle;
+    }
+
+    public int getSuperblockStartBlock() {
+        return superblockStartBlock;
+    }
 }
