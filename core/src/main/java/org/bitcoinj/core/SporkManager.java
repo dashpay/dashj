@@ -89,7 +89,13 @@ public class SporkManager {
 
             //does a task if needed
             executeSpork(spork.nSporkID, spork.nValue);
+    }
 
+    public void processSporkForUnitTesting(int spork) {
+        SporkMessage sporkMessage = new SporkMessage(context.getParams());
+        sporkMessage.nSporkID = spork;
+        mapSporks.put(Sha256Hash.ZERO_HASH, sporkMessage);
+        mapSporksActive.put(sporkMessage.nSporkID, sporkMessage);
     }
     /*
     void processGetSporks(GetSporksMessage m)
