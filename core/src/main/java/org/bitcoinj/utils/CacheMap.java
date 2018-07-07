@@ -9,8 +9,6 @@ import java.util.*;
 /**
  * Map like container that keeps the N most recently added items
  */
-//C++ TO JAVA CONVERTER TODO TASK: C++ template specifiers containing defaults cannot be converted to Java:
-//ORIGINAL LINE: template<typename K, typename V, typename Size = uint>
 public class CacheMap<K, V> extends ChildMessage {
 
     private long nMaxSize;
@@ -54,23 +52,18 @@ public class CacheMap<K, V> extends ChildMessage {
         nMaxSize = nMaxSizeIn;
     }
 
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-    //ORIGINAL LINE: Size GetMaxSize() const
     public final long getMaxSize() {
         return nMaxSize;
     }
 
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-    //ORIGINAL LINE: Size GetSize() const
     public final long getSize() {
         return nCurrentSize;
     }
 
     public final void insert(K key, V value) {
         CacheItem<K, V> it = mapIndex.get(key);
-        //C++ TO JAVA CONVERTER TODO TASK: Iterators are only converted within the context of 'while' and 'for' loops:
+
         if (it != null) {
-            //C++ TO JAVA CONVERTER TODO TASK: Iterators are only converted within the context of 'while' and 'for' loops:
             CacheItem<K, V> item = it;
             item.value = value;
             return;

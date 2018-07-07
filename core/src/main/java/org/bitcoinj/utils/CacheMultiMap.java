@@ -9,8 +9,7 @@ import java.util.*;
 /**
  * Map like container that keeps the N most recently added items
  */
-//C++ TO JAVA CONVERTER TODO TASK: C++ template specifiers containing defaults cannot be converted to Java:
-//ORIGINAL LINE: template<typename K, typename V, typename long = uint>
+
 public class CacheMultiMap<K, V> extends Message {
 
     protected long nMaxSize;
@@ -25,8 +24,6 @@ public class CacheMultiMap<K, V> extends Message {
         this(0);
     }
 
-    //C++ TO JAVA CONVERTER NOTE: Java does not allow default values for parameters. Overloaded methods are inserted above:
-//ORIGINAL LINE: CacheMultiMap(long nMaxSizeIn = 0) : nMaxSize(nMaxSizeIn), nCurrentSize(0), listItems(), mapIndex()
     public CacheMultiMap(long nMaxSizeIn) {
         super(Context.get().getParams());
         this.nMaxSize = nMaxSizeIn;
@@ -142,15 +139,12 @@ public class CacheMultiMap<K, V> extends Message {
         if (mit == null) {
             return;
         }
-//C++ TO JAVA CONVERTER TODO TASK: Iterators are only converted within the context of 'while' and 'for' loops:
 
         CacheItem<K, V> it = mit.get(value);
         if (it == null) {
             return;
         }
 
-//C++ TO JAVA CONVERTER TODO TASK: There is no direct equivalent to the STL list 'erase' method in Java:
-//C++ TO JAVA CONVERTER TODO TASK: Iterators are only converted within the context of 'while' and 'for' loops:
         listItems.remove(it);
         --nCurrentSize;
         mit.remove(key);
@@ -174,9 +168,7 @@ public class CacheMultiMap<K, V> extends Message {
 
         HashMap<V,CacheItem<K,V>> mit = mapIndex.get(item.key);
 
-//C++ TO JAVA CONVERTER TODO TASK: Iterators are only converted within the context of 'while' and 'for' loops:
         if (mit != null){
-//C++ TO JAVA CONVERTER TODO TASK: Iterators are only converted within the context of 'while' and 'for' loops:
             mit.remove(item.value);
 
             if (mit.size() < 1) {
