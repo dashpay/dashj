@@ -15,9 +15,11 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.core.listeners.BlockChainListener;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
+import org.bitcoinj.governance.GovernanceManager;
+import org.bitcoinj.governance.GovernanceTriggerManager;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
-import org.bitcoinj.store.MasternodeDB;
 import org.darkcoinj.DarkSendPool;
 import org.darkcoinj.InstantSend;
 import org.slf4j.*;
@@ -68,7 +70,10 @@ public class Context {
     public DarkSendPool darkSendPool;
     public InstantSend instantSend;
     public HashStore hashStore;
-    public MasternodeDB masternodeDB;
+    public GovernanceManager governanceManager;
+    public GovernanceTriggerManager triggerManager;
+    public NetFullfilledRequestManager netFullfilledRequestManager;
+    public static boolean fMasterNode = false;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -204,7 +209,7 @@ public class Context {
     //
     private boolean initializedDash = false;
     public void initDash(boolean liteMode, boolean allowInstantX) {
-        this.liteMode = true;//liteMode; --TODO: currently only lite mode has been tested and works with 12.1
+        this.liteMode = liteMode;//liteMode; --TODO: currently only lite mode has been tested and works with 12.1
         this.allowInstantX = allowInstantX;
 
         //Dash Specific
@@ -217,6 +222,10 @@ public class Context {
         instantSend = new InstantSend(this);
         masternodeManager = new MasternodeManager(this);
         initializedDash = true;
+        governanceManager = new GovernanceManager(this);
+        triggerManager = new GovernanceTriggerManager(this);
+
+        netFullfilledRequestManager = new NetFullfilledRequestManager(this);
     }
 
     public void closeDash() {
@@ -231,6 +240,7 @@ public class Context {
         instantSend = null;
         masternodeManager = null;
         initializedDash = false;
+        governanceManager = null;
     }
 
     public void initDashSync(String directory)
@@ -243,13 +253,9 @@ public class Context {
 
         boolean success = mndb.load(masternodeManager);
 
-        //
-        // If loading was successful, replace the default manager
-        //
-        if(/*!masternodeManagerLoaded != null!*/ success) {
-            //masternodeManager = masternodeManagerLoaded;
-            masternodeManager.setBlockChain(sporkManager.blockChain);
-        }
+        FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
+
+        success = gmdb.load(governanceManager);
 
         //other functions
         darkSendPool.startBackgroundProcessing();
@@ -260,7 +266,7 @@ public class Context {
         this.peerGroup = peerGroup;
         this.blockChain = chain;
         hashStore = new HashStore(chain.getBlockStore());
-        chain.addListener(updateHeadListener);
+        chain.addNewBestBlockListener(newBestBlockListener);
         if(initializedDash) {
             sporkManager.setBlockChain(chain);
             masternodeManager.setBlockChain(chain);
@@ -289,10 +295,19 @@ public class Context {
     }
 
 
+    NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
+        @Override
+        public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+            boolean fInitialDownload = blockChain.getChainHead().getHeader().getTimeSeconds() < (Utils.currentTimeSeconds() - 6 * 60 * 60); // ~144 blocks behind -> 2 x fork detection time, was 24 * 60 * 60 in bitcoin
+
+            masternodeSync.updateBlockTip(block, fInitialDownload);
+        }
+    };
+
     BlockChainListener updateHeadListener = new BlockChainListener () {
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException
         {
-            masternodeSync.updateBlockTip(block, false);
+
         }
 
         public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks,
@@ -339,9 +354,10 @@ public class Context {
         if(initializedDash) {
             instantSend.updatedChainHead(chainHead);
 
-        /*
-        mnodeman.UpdatedBlockTip(pindex);
-        darkSendPool.UpdatedBlockTip(pindex);
+
+        masternodeManager.updatedBlockTip(chainHead);
+
+        /*darkSendPool.UpdatedBlockTip(pindex);
         instantsend.UpdatedBlockTip(pindex);
         mnpayments.UpdatedBlockTip(pindex);
         governance.UpdatedBlockTip(pindex);
