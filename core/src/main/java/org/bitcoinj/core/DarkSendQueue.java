@@ -124,7 +124,7 @@ public class DarkSendQueue extends Message implements Serializable {
         stream.write(new VarInt(vchSig.length).encode());
         stream.write(vchSig);
     }
-
+/*
     boolean getAddress(MasternodeAddress address) {
         for (Masternode mn : system.masternode.vecMasternodes) {
             if (mn.vin == vin) {
@@ -144,7 +144,7 @@ public class DarkSendQueue extends Message implements Serializable {
         return 0;
     }
 
-    /*boolean Sign() {
+    boolean Sign() {
         if (!DarkCoinSystem.fMasterNode) return false;
 
         String strMessage = vin.toString() + denom + time + ready;

@@ -21,18 +21,12 @@ public class DarkSendElectionEntryPingMessage extends Message {
 
     private transient int optimalEncodingMessageSize;
 
-    MasterNodeSystem system;
 
     DarkSendElectionEntryPingMessage()
     {
         super();
     }
 
-    DarkSendElectionEntryPingMessage(MasterNodeSystem system)
-    {
-        super();
-        this.system = system;
-    }
     DarkSendElectionEntryPingMessage(NetworkParameters params, byte[] payloadBytes)
     {
         super(params, payloadBytes, 0);
