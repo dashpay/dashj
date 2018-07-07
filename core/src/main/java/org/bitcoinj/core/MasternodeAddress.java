@@ -22,6 +22,7 @@ import org.bitcoinj.params.MainNetParams;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -68,6 +69,11 @@ public class MasternodeAddress extends NetAddress {
         super(addr);
         this.port = port;
         length = MESSAGE_SIZE;
+    }
+
+    public MasternodeAddress(NetworkParameters params) {
+        super(params);
+        this.port = params.getPort();
     }
 
     /**
@@ -147,4 +153,28 @@ public class MasternodeAddress extends NetAddress {
 
 
     public MasternodeAddress duplicate() { return new MasternodeAddress(getAddr(), getPort()); }
+
+    public static final boolean checkIPv4(final String ip) {
+        boolean isIPv4;
+        try {
+            final InetAddress inet = InetAddress.getByName(ip);
+            isIPv4 = inet.getHostAddress().equals(ip)
+                    && inet instanceof Inet4Address;
+        } catch (final UnknownHostException e) {
+            isIPv4 = false;
+        }
+        return isIPv4;
+    }
+
+    public boolean isIPv4() {
+        boolean isIPv4;
+        try {
+            final InetAddress inet = InetAddress.getByName(getAddr().getHostAddress());
+            isIPv4 = inet.getHostAddress().equals(getAddr().getHostAddress())
+                    && inet instanceof Inet4Address;
+        } catch (final UnknownHostException e) {
+            isIPv4 = false;
+        }
+        return isIPv4;
+    }
 }
