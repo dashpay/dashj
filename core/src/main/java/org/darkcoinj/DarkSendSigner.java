@@ -14,6 +14,7 @@ import java.security.SignatureException;
 /**
  * Created by Eric on 2/8/2015.
  */
+@Deprecated
 public class DarkSendSigner {
     private static final Logger log = LoggerFactory.getLogger(DarkSendPool.class);
     public static boolean isVinAssociatedWithPubkey(NetworkParameters params, TransactionInput vin, PublicKey pubkey) {
