@@ -17,6 +17,9 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.governance.GovernanceObject;
+import org.bitcoinj.governance.GovernanceSyncMessage;
+import org.bitcoinj.governance.GovernanceVote;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,10 +83,14 @@ public class BitcoinSerializer extends MessageSerializer {
 
         names.put(MasternodeBroadcast.class, "mnb");
         names.put(MasternodePing.class, "mnp");
+        names.put(MasternodeVerification.class, "mnv");
         names.put(SporkMessage.class, "spork");
         names.put(GetSporksMessage.class, "getsporks");
         names.put(DarkSendEntryGetMessage.class, "dseg");
         names.put(SyncStatusCount.class, "ssc");
+        names.put(GovernanceSyncMessage.class, "govsync");
+        names.put(GovernanceObject.class, "govobj");
+        names.put(GovernanceVote.class, "govobjvote");
 
 
     }
@@ -256,6 +263,8 @@ public class BitcoinSerializer extends MessageSerializer {
             return new MasternodeBroadcast(params, payloadBytes);
         } else if( command.equals("mnp")) {
             return new MasternodePing(params, payloadBytes);
+        } else if (command.equals("mnv")) {
+            return new MasternodeVerification(params, payloadBytes);
         } else if (command.equals("spork")) {
             return new SporkMessage(params, payloadBytes, 0);
         } else if(command.equals("ssc")) {
@@ -266,11 +275,13 @@ public class BitcoinSerializer extends MessageSerializer {
             return new SendCompactBlocksMessage(params);
         } else if(command.equals("getsporks")) {
             return new GetSporksMessage(params);
-        }
-        else if(command.equals("govsync")) {
+        } else if(command.equals("govsync")) {
             return new GovernanceSyncMessage(params);
-        }
-        else{
+        } else if(command.equals("govobj")) {
+            return new GovernanceObject(params, payloadBytes);
+        } else if(command.equals("govobjvote")) {
+            return new GovernanceVote(params, payloadBytes, 0);
+        } else {
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);
         }
