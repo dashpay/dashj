@@ -22,19 +22,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
-
-import static com.google.common.base.Preconditions.*;
 
 // TODO: Lose the mmap in this class. There are too many platform bugs that require odd workarounds.
 
@@ -149,5 +140,17 @@ public class HashStore {
         }
         return null;
 
+    }
+    public int getLowestHeight() {
+        int min = -1;
+        for(Integer i : blockCache.keySet()) {
+            if(min == -1) {
+                min = i;
+                continue;
+            }
+            if(i < min)
+                min = i;
+        }
+        return min;
     }
 }
