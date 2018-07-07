@@ -2,15 +2,8 @@ package org.bitcoinj.core;
 
 import com.google.common.base.Charsets;
 import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.darkcoinj.DarkSendPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.util.encoders.Base64;
-
-import java.io.ByteArrayOutputStream;
-import java.security.SignatureException;
 
 /**
  * Created by HashEngineering on 2/8/2015.
