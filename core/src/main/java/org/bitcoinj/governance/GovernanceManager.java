@@ -274,7 +274,7 @@ public class GovernanceManager extends AbstractManager {
 
             boolean fRateCheckBypassed = false;
             if (!masternodeRateCheck(govobj, true, false).getFirst()) {
-                log.info("MNGOVERNANCEOBJECT -- masternode rate check failed - {} - (current block height %d) \n", strHash, nCachedBlockHeight);
+                log.info("MNGOVERNANCEOBJECT -- masternode rate check failed - {} - (current block height {})", strHash, nCachedBlockHeight);
                 return;
             }
 
@@ -1037,7 +1037,7 @@ public class GovernanceManager extends AbstractManager {
         }
 
         nCachedBlockHeight = newBlock.getHeight();
-        log.info("gobject--CGovernanceManager::UpdatedBlockTip -- nCachedBlockHeight: %d\n", nCachedBlockHeight);
+        log.info("gobject--CGovernanceManager::UpdatedBlockTip -- nCachedBlockHeight: {}\n", nCachedBlockHeight);
 
         checkPostponedObjects();
     }
@@ -1059,7 +1059,7 @@ public class GovernanceManager extends AbstractManager {
             lock.unlock();
         }
 
-        log.info("gobject--CGovernanceObject::RequestOrphanObjects -- number objects = %d\n", vecHashesFiltered.size());
+        log.info("gobject--CGovernanceObject::RequestOrphanObjects -- number objects = {}\n", vecHashesFiltered.size());
 
         PeerGroup peerGroup = context.peerGroup;
         peerGroup.getLock().lock();
@@ -1124,7 +1124,7 @@ public class GovernanceManager extends AbstractManager {
                     ArrayList<GovernanceVote> vecVotes = pObj.getVoteFile().getVotes();
                     nVoteCount = vecVotes.size();
                     for (int i = 0; i < vecVotes.size(); ++i) {
-                        filter.insert(vecVotes.get(i).getHash().getBytes());
+                        filter.insert(vecVotes.get(i).getHash().getReversedBytes());
                     }
                 }
             } finally {
@@ -1350,6 +1350,133 @@ public class GovernanceManager extends AbstractManager {
             vote.relay();
         }
         return fOK;
+    }
+
+    public void processGovernanceSyncMessage(Peer peer, GovernanceSyncMessage message) {
+        if(peer.getVersionMessage().clientVersion < MIN_GOVERNANCE_PEER_PROTO_VERSION) {
+            log.warn("gobject--MNGOVERNANCESYNC -- peer={} using obsolete version {}", peer.hashCode(), peer.getVersionMessage().clientVersion);
+            peer.sendMessage(new RejectMessage(params, RejectMessage.RejectCode.OBSOLETE, Sha256Hash.ZERO_HASH, "obsolete-peer",
+                    String.format("Version must be %d or greater", MIN_GOVERNANCE_PEER_PROTO_VERSION)));
+            return;
+        }
+
+        // Ignore such requests until we are fully synced.
+        // We could start processing this after masternode list is synced
+        // but this is a heavy one so it's better to finish sync first.
+        if (!context.masternodeSync.isSynced()) return;
+
+        if(message.prop.equals(Sha256Hash.ZERO_HASH)) {
+            syncAll(peer);
+        } else {
+            syncSingleObjAndItsVotes(peer, message.prop, message.bloomFilter);
+        }
+        log.info("gobject--MNGOVERNANCESYNC -- syncing governance objects to our peer at %s", peer.getAddress().toString());
+    }
+
+    public void syncSingleObjAndItsVotes(Peer pnode, Sha256Hash nProp, BloomFilter filter) {
+        // do not provide any data until our node is synced
+        if (!context.masternodeSync.isSynced()) {
+            return;
+        }
+
+        int nVoteCount = 0;
+
+        // SYNC GOVERNANCE OBJECTS WITH OTHER CLIENT
+
+        log.info("gobject--CGovernanceManager::syncSingleObjAndItsVotes -- syncing single object to peer={}, nProp = {}", pnode.hashCode(), nProp.toString());
+
+        lock.lock();
+        try {
+
+            // single valid object and its valid votes
+            GovernanceObject govobj = mapObjects.get(nProp);
+            if (govobj == null) {
+                log.info("gobject--CGovernanceManager:: -- no matching object for hash {}, peer={}", nProp.toString(), pnode.hashCode());
+                return;
+            }
+            String strHash = nProp.toString();
+
+            log.info("gobject--CGovernanceManager:: -- attempting to sync govobj: {}, peer={}", strHash, pnode.hashCode());
+
+            if (govobj.isSetCachedDelete() || govobj.isSetExpired()) {
+                log.info("CGovernanceManager:: -- not syncing deleted/expired govobj: {}, peer={}", strHash, pnode.hashCode());
+                return;
+            }
+
+            // Push the govobj inventory message over to the other client
+            log.info("gobject--CGovernanceManager:: -- syncing govobj: {}, peer={}\n", strHash, pnode.hashCode());
+            pnode.pushInventory(new InventoryItem(InventoryItem.Type.GovernanceObject, nProp));
+
+            //C++ TO JAVA CONVERTER TODO TASK: There is no equivalent to implicit typing in Java unless the Java 10 inferred typing option is selected:
+            GovernanceObjectVoteFile fileVotes = govobj.getVoteFile();
+
+            //C++ TO JAVA CONVERTER TODO TASK: There is no equivalent to implicit typing in Java unless the Java 10 inferred typing option is selected:
+            for (GovernanceVote vote : fileVotes.getVotes()) {
+                Sha256Hash nVoteHash = vote.getHash();
+                if (filter.contains(nVoteHash.getReversedBytes()) || !vote.isValid(true)) {
+                    continue;
+                }
+                pnode.pushInventory(new InventoryItem(InventoryItem.Type.GovernanceObjectVote, nVoteHash));
+                ++nVoteCount;
+            }
+
+            pnode.sendMessage(new SyncStatusCount(MasternodeSync.MASTERNODE_SYNC_GOVOBJ, 1));
+            pnode.sendMessage(new SyncStatusCount(MasternodeSync.MASTERNODE_SYNC_GOVOBJ_VOTE, nVoteCount));
+            log.info("CGovernanceManager::{} -- sent 1 object and {} votes to peer={}", nVoteCount, pnode.hashCode());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void syncAll(Peer pnode) {
+        // do not provide any data until our node is synced
+        if (!context.masternodeSync.isSynced()) {
+            return;
+        }
+
+        if (context.netFullfilledRequestManager.hasFulfilledRequest(pnode.getAddress(), "govsync")) {
+            //LOCK(cs_main);
+            // Asking for the whole list multiple times in a short period of time is no good
+            log.info("gobject--CGovernanceManager:: -- peer already asked me for the list");
+            //Misbehaving(pnode.GetId(), 20);
+            return;
+        }
+        context.netFullfilledRequestManager.addFulfilledRequest(pnode.getAddress(), "govsync");
+
+        int nObjCount = 0;
+        int nVoteCount = 0;
+
+        // SYNC GOVERNANCE OBJECTS WITH OTHER CLIENT
+
+        log.info("gobject--CGovernanceManager:: -- syncing all objects to peer={}", pnode.hashCode());
+
+        lock.lock();
+        try {
+
+            // all valid objects, no votes
+            for (Map.Entry<Sha256Hash, GovernanceObject> it : mapObjects.entrySet()) {
+                final GovernanceObject govobj = it.getValue();
+                String strHash = it.getKey().toString();
+
+                log.info("gobject--CGovernanceManager:: -- attempting to sync govobj: {}, peer={}\n", strHash, pnode.hashCode());
+
+                if (govobj.isSetCachedDelete() || govobj.isSetExpired()) {
+                    log.info("CGovernanceManager::{} -- not syncing deleted/expired govobj: {}, peer={}\n", strHash, pnode.hashCode());
+                    continue;
+                }
+
+                // Push the inventory budget proposal message over to the other client
+                log.info("gobject--CGovernanceManager:: -- syncing govobj: {}, peer={}", strHash, pnode.hashCode());
+                pnode.pushInventory(new InventoryItem(InventoryItem.Type.GovernanceObject, it.getKey()));
+                ++nObjCount;
+            }
+
+            pnode.sendMessage(new SyncStatusCount(MasternodeSync.MASTERNODE_SYNC_GOVOBJ, nObjCount));
+            pnode.sendMessage(new SyncStatusCount(MasternodeSync.MASTERNODE_SYNC_GOVOBJ_VOTE, nVoteCount));
+            log.info("CGovernanceManager:: -- sent {} objects and {} votes to peer={}", nObjCount, nVoteCount, pnode.hashCode());
+        } finally {
+            lock.unlock();
+        }
     }
 
 }

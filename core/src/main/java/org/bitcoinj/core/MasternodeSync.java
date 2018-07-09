@@ -28,6 +28,8 @@ public class MasternodeSync {
     public static final int MASTERNODE_SYNC_LIST            = 2;
     public static final int MASTERNODE_SYNC_MNW             = 3;
     public static final int MASTERNODE_SYNC_GOVERNANCE      = 4;
+    public static final int MASTERNODE_SYNC_GOVOBJ          = 10;
+    public static final int MASTERNODE_SYNC_GOVOBJ_VOTE     = 11;
     public static final int MASTERNODE_SYNC_FINISHED        = 999;
 
     public enum SYNC_FLAGS {

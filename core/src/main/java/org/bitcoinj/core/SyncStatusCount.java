@@ -30,6 +30,11 @@ public class SyncStatusCount extends Message {
         super(params, payloadBytes, cursor);
     }
 
+    public SyncStatusCount(int itemId, int count) {
+        this.itemId = itemId;
+        this.count = count;
+    }
+
     protected static int calcLength(byte[] buf, int offset) {
 
         int cursor = offset;

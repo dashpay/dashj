@@ -104,7 +104,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
         }
     }
 
-    void addFulfilledRequest(PeerAddress addr, String strRequest)
+    public void addFulfilledRequest(PeerAddress addr, String strRequest)
     {
         lock.lock();
         try {
@@ -122,7 +122,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
         }
     }
 
-    boolean hasFulfilledRequest(PeerAddress addr, String strRequest)
+    public boolean hasFulfilledRequest(PeerAddress addr, String strRequest)
     {
         lock.lock();
         try {
@@ -139,7 +139,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
 
     }
 
-    void removeFulfilledRequest(PeerAddress addr, String strRequest)
+    public void removeFulfilledRequest(PeerAddress addr, String strRequest)
     {
         lock.lock();
         try {
