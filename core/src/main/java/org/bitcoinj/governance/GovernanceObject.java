@@ -28,10 +28,10 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 import org.json.*;
 
+import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
 import static org.bitcoinj.governance.GovernanceException.Type.*;
 import static org.bitcoinj.governance.GovernanceVote.MAX_SUPPORTED_VOTE_SIGNAL;
 import static org.bitcoinj.governance.GovernanceVote.VoteOutcome;
@@ -96,10 +96,10 @@ public class GovernanceObject extends Message implements Serializable {
     private Sha256Hash nCollateralHash;
 
     /// Data field - can be used for anything
-    private String strData;
+    private byte [] data;
 
     /// Masternode info for signed objects
-    private TransactionInput vinMasternode;
+    private TransactionOutPoint masternodeOutpoint;
 
     private MasternodeSignature vchSig;
 
@@ -181,8 +181,8 @@ public class GovernanceObject extends Message implements Serializable {
         return nCollateralHash;
     }
 
-    public final TransactionInput getMasternodeVin() {
-        return vinMasternode;
+    public final TransactionOutPoint getMasternodeOutpoint() {
+        return masternodeOutpoint;
     }
 
     public final boolean isSetCachedFunding() {
@@ -232,12 +232,10 @@ public class GovernanceObject extends Message implements Serializable {
         nRevision = (int)readUint32();
         nTime = readInt64();
         nCollateralHash = readHash();
-        strData = readStr();
-        if(strData.length() > MAX_GOVERNANCE_OBJECT_DATA_SIZE)
-            throw new ProtocolException("String length limit exceeded");
+        data = readByteArray();
         nObjectType = (int)readUint32();
-        vinMasternode = new TransactionInput(params, null, payload, cursor);
-        cursor += vinMasternode.getMessageSize();
+        masternodeOutpoint = new TransactionOutPoint(params, payload, cursor);
+        cursor += masternodeOutpoint.getMessageSize();
         vchSig = new MasternodeSignature(params, payload, cursor);
         cursor += vchSig.getMessageSize();
         length = cursor - offset;
@@ -269,9 +267,9 @@ public class GovernanceObject extends Message implements Serializable {
         Utils.uint32ToByteStreamLE(nRevision, stream);
         Utils.int64ToByteStreamLE(nTime, stream);
         stream.write(nCollateralHash.getReversedBytes());
-        Utils.stringToByteStream(strData, stream);
+        Utils.bytesToByteStream(data, stream);
         Utils.uint32ToByteStreamLE(nObjectType, stream);
-        vinMasternode.bitcoinSerialize(stream);
+        masternodeOutpoint.bitcoinSerialize(stream);
         vchSig.bitcoinSerialize(stream);
     }
 
@@ -291,7 +289,7 @@ public class GovernanceObject extends Message implements Serializable {
     }
 
     public String toString() {
-        return "GovernanceObject: " + getDataAsString().substring(0, 100);
+        return "GovernanceObject: " + getDataAsPlainString().substring(0, 100);
     }
 
 
@@ -301,10 +299,26 @@ public class GovernanceObject extends Message implements Serializable {
             bos.write(nHashParent.getReversedBytes());
             Utils.uint32ToByteStreamLE(nRevision, bos);
             Utils.int64ToByteStreamLE(nTime, bos);
-            Utils.stringToByteStream(strData, bos);
-            vinMasternode.bitcoinSerialize(bos);
+            Utils.stringToByteStream(getDataAsHexString(), bos);
+            new TransactionInput(params, null, new byte[0], masternodeOutpoint).bitcoinSerialize(bos);
             vchSig.bitcoinSerialize(bos);
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Sha256Hash getSignatureHash() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
+            bos.write(nHashParent.getReversedBytes());
+            Utils.uint32ToByteStreamLE(nRevision, bos);
+            Utils.int64ToByteStreamLE(nTime, bos);
+            bos.write(nCollateralHash.getReversedBytes());
+            Utils.bytesToByteStream(data, bos);
+            Utils.uint32ToByteStreamLE(nObjectType, bos);
+            masternodeOutpoint.bitcoinSerialize(bos);
+            return Sha256Hash.twiceOf(bos.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -360,11 +374,11 @@ public class GovernanceObject extends Message implements Serializable {
 
         if (fCheckCollateral) {
             if ((nObjectType == GOVERNANCE_OBJECT_TRIGGER) || (nObjectType == GOVERNANCE_OBJECT_WATCHDOG)) {
-                String strOutpoint = vinMasternode.getOutpoint().toStringShort();
-                MasternodeInfo infoMn = context.masternodeManager.getMasternodeInfo(vinMasternode.getOutpoint());
+                String strOutpoint = masternodeOutpoint.toStringShort();
+                MasternodeInfo infoMn = context.masternodeManager.getMasternodeInfo(masternodeOutpoint);
                 if (infoMn == null ) {
 
-                    Pair<Masternode.CollateralStatus, Integer> status = Masternode.checkCollateral(vinMasternode.getOutpoint());
+                    Pair<Masternode.CollateralStatus, Integer> status = Masternode.checkCollateral(masternodeOutpoint);
                     Masternode.CollateralStatus err = status.getFirst();
                     if (err == Masternode.CollateralStatus.COLLATERAL_OK) {
                         validity.fMissingMasternode =  true;
@@ -412,17 +426,28 @@ public class GovernanceObject extends Message implements Serializable {
     {
         StringBuilder strError = new StringBuilder();
 
-        String strMessage = Utils.BITCOIN_SIGNED_MESSAGE_HEADER;
-        lock.lock();
-        try { ;
-            if(!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+        if(context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+            Sha256Hash hash = getSignatureHash();
+            if(HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
+
+                //could be an old object
+                String message = getSignatureMessage();
+
+                if(MessageSigner.verifyMessage(pubKeyMasternode, vchSig, message, strError)) {
+                    //not in old format either
+                    log.error("CGovernance::CheckSignature -- VerifyMessage() failed, error: {}", strError);
+                    return false;
+                }
+            }
+        } else {
+            String strMessage = getSignatureMessage();
+
+            if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
                 log.error("CGovernance::CheckSignature -- VerifyMessage() failed, error: {}", strError);
                 return false;
             }
-            return true;
-        } finally {
-            lock.unlock();
         }
+        return true;
     }
 
     Coin getMinCollateralFee()
@@ -536,14 +561,12 @@ public class GovernanceObject extends Message implements Serializable {
      *
      */
 
-    public String getDataAsHex()
-    {
-        return strData;
+    public String getDataAsHexString() {
+        return Utils.HEX.encode(data);
     }
 
-    public String getDataAsString()
-    {
-        return new String(Utils.HEX.decode(strData));
+    public String getDataAsPlainString() {
+        return new String(data);
     }
 
     public void updateSentinelVariables() {
@@ -725,7 +748,7 @@ public class GovernanceObject extends Message implements Serializable {
     }
 
     public JSONObject getJSONObject() {
-        JSONTokener parser = new JSONTokener(getDataAsString());
+        JSONTokener parser = new JSONTokener(getDataAsPlainString());
         JSONObject jsonObject = new JSONObject(parser);
         return jsonObject;
     }
@@ -744,12 +767,50 @@ public class GovernanceObject extends Message implements Serializable {
     public String getSignatureMessage() {
         lock.lock();
         try {
-            String strMessage = nHashParent.toString() + "|" + nRevision + "|" + nTime + "|" + strData + "|" + vinMasternode.getOutpoint().toStringShort() + "|" + nCollateralHash.toString();
+            String strMessage = nHashParent.toString() + "|" +
+                    nRevision + "|" +
+                    nTime + "|" +
+                    getDataAsHexString() + "|" +
+                    masternodeOutpoint.toStringShort() + "|" +
+                    nCollateralHash.toString();
 
             return strMessage;
         } finally {
             lock.unlock();
         }
+    }
+
+    public boolean sign(ECKey keyMasternode, PublicKey pubKeyMasternode) {
+        StringBuilder strError = new StringBuilder();
+
+        if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+            Sha256Hash hash = getSignatureHash();
+
+            if ((vchSig = HashSigner.signHash(hash, keyMasternode)) == null) {
+                log.error("CGovernanceObject::Sign -- SignHash() failed");
+                return false;
+            }
+
+            if (!HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
+                log.error("CGovernanceObject::Sign -- VerifyHash() failed, error: {}", strError);
+                return false;
+            }
+        } else {
+            String strMessage = getSignatureMessage();
+            if ((vchSig = MessageSigner.signMessage(strMessage, keyMasternode)) == null) {
+                log.error("CGovernanceObject::Sign -- SignMessage() failed");
+                return false;
+            }
+
+            if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+                log.error("CGovernanceObject::Sign -- VerifyMessage() failed, error: {}", strError);
+                return false;
+            }
+        }
+
+        log.info("gobject", "CGovernanceObject::Sign -- pubkey id = %s, masternode = {}", Utils.HEX.encode(pubKeyMasternode.getId()), masternodeOutpoint.toStringShort());
+
+        return true;
     }
 
 

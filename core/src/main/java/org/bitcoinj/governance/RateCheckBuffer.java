@@ -38,7 +38,7 @@ public class RateCheckBuffer extends ChildMessage {
             // Buffer full, discard 1st element
             nDataStart = (nDataStart + 1) % RATE_BUFFER_SIZE;
         }
-        vecTimestamps.set(nDataEnd, nTimestamp);
+        vecTimestamps.add(nDataEnd, nTimestamp);
         nDataEnd = (nDataEnd + 1) % RATE_BUFFER_SIZE;
         fBufferEmpty = false;
     }

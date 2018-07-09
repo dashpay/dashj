@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
+import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
 import static org.bitcoinj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_ENDORSED;
 
 //
@@ -145,36 +146,32 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     private boolean fValid; //if the vote is currently valid / counted
     private boolean fSynced; //if we've sent this to our peers
     private int nVoteSignal; // see VOTE_ACTIONS above
-    private TransactionInput vinMasternode;
+    private TransactionOutPoint masternodeOutpoint;
     private Sha256Hash nParentHash;
     private int nVoteOutcome; // see VOTE_OUTCOMES above
     private long nTime;
     private MasternodeSignature vchSig;
 
+    /* memory only */
+    Sha256Hash hash;
+
+
     public final boolean isValid() {
         return fValid;
     }
 
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-//ORIGINAL LINE: boolean IsSynced() const
     public final boolean isSynced() {
         return fSynced;
     }
 
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-//ORIGINAL LINE: long GetTimestamp() const
     public final long getTimestamp() {
         return nTime;
     }
 
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-//ORIGINAL LINE: vote_signal_enum_t GetSignal() const
     public final VoteSignal getSignal() {
         return VoteSignal.fromValue(nVoteSignal);
     }
 
-    //C++ TO JAVA CONVERTER WARNING: 'const' methods are not available in Java:
-//ORIGINAL LINE: vote_outcome_enum_t GetOutcome() const
     public final VoteOutcome getOutcome() {
         return VoteOutcome.fromValue(nVoteOutcome);
     }
@@ -195,9 +192,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         return getOutcome().toString();
     }
 
-    public final TransactionOutPoint getMasternodeOutpoint() {
-        return vinMasternode.getOutpoint();
-    }
+    public final TransactionOutPoint getMasternodeOutpoint() { return masternodeOutpoint; }
 
     /**
      *   GetHash()
@@ -206,9 +201,27 @@ public class GovernanceVote extends ChildMessage implements Serializable {
      */
 
     public final Sha256Hash getHash() {
+        return hash;
+    }
+
+    public void updateHash() {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
-            vinMasternode.bitcoinSerialize(bos);
+            new TransactionInput(params, null, new byte[0], masternodeOutpoint).bitcoinSerialize(bos);
+            bos.write(nParentHash.getReversedBytes());
+            Utils.uint32ToByteStreamLE(nVoteSignal, bos);
+            Utils.uint32ToByteStreamLE(nVoteOutcome, bos);
+            Utils.int64ToByteStreamLE(nTime, bos);
+            hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+        } catch(IOException e) {
+            throw new RuntimeException(e); // Cannot happen.
+        }
+    }
+
+    public Sha256Hash getSignatureHash() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
+            masternodeOutpoint.bitcoinSerialize(bos);
             bos.write(nParentHash.getReversedBytes());
             Utils.uint32ToByteStreamLE(nVoteSignal, bos);
             Utils.uint32ToByteStreamLE(nVoteOutcome, bos);
@@ -220,7 +233,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     }
 
     public final String toString() {
-        return vinMasternode.toString() + ":"  + nTime + ":" +
+        return masternodeOutpoint.toString() + ":"  + nTime + ":" +
                 GovernanceVoting.convertOutcomeToString(getOutcome()) + ":" +
                 GovernanceVoting.convertSignalToString(getSignal());
     }
@@ -244,7 +257,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         // CALCULATE HOW TO STORE VOTE IN governance.mapVotes
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
-            vinMasternode.bitcoinSerialize(bos);
+            masternodeOutpoint.bitcoinSerialize(bos);
             bos.write(nParentHash.getReversedBytes());
             Utils.uint32ToByteStreamLE(nVoteSignal, bos);
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
@@ -266,20 +279,21 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     }
     @Override
     protected void parse() throws ProtocolException {
-        vinMasternode = new TransactionInput(params, null, payload, cursor);
-        cursor += vinMasternode.getMessageSize();
+        masternodeOutpoint = new TransactionOutPoint(params, payload, cursor);
+        cursor += masternodeOutpoint.getMessageSize();
         nParentHash = readHash();
         nVoteOutcome = (int)readUint32();
         nVoteSignal = (int)readUint32();
         nTime = readInt64();
         vchSig = new MasternodeSignature(params, payload, cursor);
         cursor += vchSig.getMessageSize();
+        updateHash();
         length = cursor - offset;
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        vinMasternode.bitcoinSerialize(stream);
+        masternodeOutpoint.bitcoinSerialize(stream);
         stream.write(nParentHash.getReversedBytes());
         Utils.uint32ToByteStreamLE(nVoteSignal, stream);
         Utils.uint32ToByteStreamLE(nVoteOutcome, stream);
@@ -306,9 +320,9 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         }
 
         if(context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST)) {
-            MasternodeInfo infoMn = context.masternodeManager.getMasternodeInfo(vinMasternode.getOutpoint());
+            MasternodeInfo infoMn = context.masternodeManager.getMasternodeInfo(masternodeOutpoint);
             if (infoMn == null) {
-                log.info("gobject--CGovernanceVote::IsValid -- Unknown Masternode - {}", vinMasternode.getOutpoint().toStringShort());
+                log.info("gobject--CGovernanceVote::IsValid -- Unknown Masternode - {}", masternodeOutpoint.toStringShort());
                 return false;
             }
 
@@ -316,13 +330,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
                 return true;
             }
 
-            StringBuilder strError = new StringBuilder();
-            String strMessage = vinMasternode.getOutpoint().toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
-
-            if (!MessageSigner.verifyMessage(infoMn.pubKeyMasternode, vchSig, strMessage, strError)) {
-                log.info("CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
-                return false;
-            }
+            return checkSignature(infoMn.pubKeyMasternode);
         }
 
         return true;
@@ -341,4 +349,65 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         //InventoryItem inv = new InventoryItem(InventoryItem.Type.GovernanceObjectVote, getHash());
         //connman.RelayInv(inv, MIN_GOVERNANCE_PEER_PROTO_VERSION);
     }
+
+    public boolean sign(ECKey keyMasternode, PublicKey pubKeyMasternode) {
+        StringBuilder strError = new StringBuilder();
+
+        if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+            Sha256Hash hash = getSignatureHash();
+
+            if ((vchSig = HashSigner.signHash(hash, keyMasternode)) == null) {
+                log.error("CGovernanceVote::Sign -- SignHash() failed");
+                return false;
+            }
+
+            if (!HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
+                log.error("CGovernanceVote::Sign -- VerifyHash() failed, error: {}", strError);
+                return false;
+            }
+        } else {
+
+            String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
+
+            if ((vchSig = MessageSigner.signMessage(strMessage, keyMasternode)) == null) {
+                log.error("CGovernanceVote::Sign -- SignMessage() failed");
+                return false;
+            }
+
+            if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+                log.error("CGovernanceVote::Sign -- VerifyMessage() failed, error: {}", strError);
+                return false;
+            }
+        }
+
+        return true;
+    }
+    public boolean checkSignature(PublicKey pubKeyMasternode) {
+        StringBuilder strError = new StringBuilder();
+
+        if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+            Sha256Hash hash = getSignatureHash();
+
+            if (!HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
+                // could be a signature in old format
+                String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
+
+                if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+                    // nope, not in old format either
+                    log.info("gobject", "CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
+                    return false;
+                }
+            }
+        } else {
+            String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
+
+            if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+                log.info("gobject", "CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 }

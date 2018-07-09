@@ -294,9 +294,9 @@ public class GovernanceManager extends AbstractManager {
             if (!fIsValid) {
                 if (validity.fMissingMasternode) {
 
-                int count = mapMasternodeOrphanCounter.get(govobj.getMasternodeVin().getOutpoint());
+                int count = mapMasternodeOrphanCounter.get(govobj.getMasternodeOutpoint());
                     if (count >= 10) {
-                        log.info("gobject--MNGOVERNANCEOBJECT -- Too many orphan objects, missing masternode={}", govobj.getMasternodeVin().getOutpoint().toStringShort());
+                        log.info("gobject--MNGOVERNANCEOBJECT -- Too many orphan objects, missing masternode={}", govobj.getMasternodeOutpoint().toStringShort());
                         // ask for this object again in 2 minutes
                         InventoryItem inv = new InventoryItem(InventoryItem.Type.GovernanceObject, govobj.getHash());
                         peer.askFor(inv);
@@ -304,7 +304,7 @@ public class GovernanceManager extends AbstractManager {
                     }
 
                     count++;
-                    mapMasternodeOrphanCounter.put(govobj.getMasternodeVin().getOutpoint(), count);
+                    mapMasternodeOrphanCounter.put(govobj.getMasternodeOutpoint(), count);
                     ExpirationInfo info = new ExpirationInfo(peer.hashCode(), Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME);
                     mapMasternodeOrphanObjects.put(nHash, new Pair<GovernanceObject, ExpirationInfo>(govobj, info));
                     log.info("MNGOVERNANCEOBJECT -- Missing masternode for: {}, strError = {}", strHash, strError);
@@ -333,7 +333,7 @@ public class GovernanceManager extends AbstractManager {
 
         // Ignore such messages until masternode list is synced
         if (!context.masternodeSync.isMasternodeListSynced()) {
-            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- masternode list not synced\n");
+            log.info("gobject--MNGOVERNANCEOBJECTVOTE -- masternode list not synced");
             return;
         }
 
@@ -442,12 +442,12 @@ public class GovernanceManager extends AbstractManager {
             return;
         }
 
-        final TransactionInput vin = govobj.getMasternodeVin();
-        LastObjectRecord it = mapLastMasternodeObject.get(vin.getOutpoint());
+        final TransactionOutPoint outpoint = govobj.getMasternodeOutpoint();
+        LastObjectRecord it = mapLastMasternodeObject.get(outpoint);
 
         if (it == null) {
             it = new LastObjectRecord(params, true);
-            mapLastMasternodeObject.put(vin.getOutpoint(), it);
+            mapLastMasternodeObject.put(outpoint, it);
         }
 
         long nTimestamp = govobj.getCreationTime();
@@ -503,7 +503,7 @@ public class GovernanceManager extends AbstractManager {
                 return result;
             }
 
-            final TransactionInput vin = govobj.getMasternodeVin();
+            final TransactionOutPoint outpoint = govobj.getMasternodeOutpoint();
             long nTimestamp = govobj.getCreationTime();
             long nNow = Utils.currentTimeSeconds();
             long nSuperblockCycleSeconds = params.getSuperblockCycle() * params.TARGET_SPACING;
@@ -511,18 +511,18 @@ public class GovernanceManager extends AbstractManager {
             String strHash = govobj.getHash().toString();
 
             if (nTimestamp < nNow - 2 * nSuperblockCycleSeconds) {
-                log.info("CGovernanceManager::MasternodeRateCheck -- object {} rejected due to too old timestamp, masternode vin = {}, timestamp = {}, current time = {}", strHash, vin.getOutpoint().toStringShort(), nTimestamp, nNow);
+                log.info("CGovernanceManager::MasternodeRateCheck -- object {} rejected due to too old timestamp, masternode vin = {}, timestamp = {}, current time = {}", strHash, outpoint.toStringShort(), nTimestamp, nNow);
                 result.setFirst(false);
                 return result;
             }
 
             if (nTimestamp > nNow + MAX_TIME_FUTURE_DEVIATION) {
-                log.info("CGovernanceManager::MasternodeRateCheck -- object {} rejected due to too new (future) timestamp, masternode vin = {}, timestamp = {}d, current time = {}", strHash, vin.getOutpoint().toStringShort(), nTimestamp, nNow);
+                log.info("CGovernanceManager::MasternodeRateCheck -- object {} rejected due to too new (future) timestamp, masternode vin = {}, timestamp = {}d, current time = {}", strHash, outpoint.toStringShort(), nTimestamp, nNow);
                 result.setFirst(false);
                 return result;
             }
 
-            LastObjectRecord it = mapLastMasternodeObject.get(vin.getOutpoint());
+            LastObjectRecord it = mapLastMasternodeObject.get(outpoint);
             if (it ==null) {
                 result.setFirst(true);
                 return result;
@@ -559,7 +559,7 @@ public class GovernanceManager extends AbstractManager {
             if (!fRateOK) {
                 log.info("CGovernanceManager::MasternodeRateCheck -- Rate too high: object hash = {}, " +
                          "masternode vin = {}, object timestamp = {}, rate = {}, max rate = {}",
-                          strHash, vin.getOutpoint().toStringShort(), nTimestamp, dRate, dMaxRate);
+                          strHash, outpoint.toStringShort(), nTimestamp, dRate, dMaxRate);
 
                 if (fUpdateFailStatus) {
                     it.fStatusOK = false;
@@ -699,7 +699,7 @@ public class GovernanceManager extends AbstractManager {
             // SHOULD WE ADD THIS OBJECT TO ANY OTHER MANANGERS?
 
                 log.info( "CGovernanceManager::AddGovernanceObject Before trigger block, strData = "
-                    + govobj.getDataAsString() +
+                    + govobj.getDataAsPlainString() +
                     ", nObjectType = " + govobj.getObjectType());
 
             switch(govobj.getObjectType()) {

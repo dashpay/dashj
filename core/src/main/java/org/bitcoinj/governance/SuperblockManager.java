@@ -42,7 +42,7 @@ public class SuperblockManager {
                     continue;
                 }
 
-                log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- data = {}", pObj.getDataAsString());
+                log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- data = {}", pObj.getDataAsPlainString());
 
                 // note : 12.1 - is epoch calculation correct?
 

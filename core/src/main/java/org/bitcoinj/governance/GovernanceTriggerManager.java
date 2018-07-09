@@ -137,7 +137,7 @@ public class GovernanceTriggerManager {
                     String strdata = "NULL";
                     GovernanceObject pgovobj = pSuperblock.getGovernanceObject();
                     if (pgovobj != null) {
-                        strdata = pgovobj.getDataAsString();
+                        strdata = pgovobj.getDataAsPlainString();
                     }
                     log.info("CGovernanceTriggerManager::CleanAndRemove: Removing object: " + strdata);
                     log.info("gobject--CGovernanceTriggerManager::CleanAndRemove -- Removing trigger object");
@@ -174,7 +174,7 @@ public class GovernanceTriggerManager {
                 GovernanceObject pObj = context.governanceManager.findGovernanceObject(entry.getKey());
 
                 if (pObj != null) {
-                    log.info("GetActiveTriggers: pObj->GetDataAsString() = " + pObj.getDataAsString());
+                    log.info("GetActiveTriggers: pObj->GetDataAsString() = " + pObj.getDataAsPlainString());
                     vecResults.add(entry.getValue());
                 }
             }

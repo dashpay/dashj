@@ -1,11 +1,9 @@
 package org.bitcoinj.governance;
 import org.bitcoinj.core.*;
-import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.utils.BtcFormat;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MarkerFactory;
 
 import java.text.ParseException;
 import java.util.*;
@@ -44,7 +42,7 @@ public class Superblock extends GovernanceObject {
         }
 
         log.info("CSuperblock Constructor pGovObj : "
-                + pGovObj.getDataAsString()
+                + pGovObj.getDataAsPlainString()
                 + ", nObjectType = " + pGovObj.getObjectType());
 
         if (pGovObj.getObjectType() != GOVERNANCE_OBJECT_TRIGGER) {
@@ -298,7 +296,7 @@ public class Superblock extends GovernanceObject {
         int nPayments = countPayments();
         int nMinerPayments = nOutputs - nPayments;
 
-        log.info("gobject--CSuperblock::IsValid nOutputs = {}, nPayments = {}, strData = {}", nOutputs, nPayments, getGovernanceObject().getDataAsHex());
+        log.info("gobject--CSuperblock::IsValid nOutputs = {}, nPayments = {}, strData = {}", nOutputs, nPayments, getGovernanceObject().getDataAsHexString());
 
         // We require an exact match (including order) between the expected
         // superblock payments and the payments actually in the block.
