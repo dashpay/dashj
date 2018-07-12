@@ -16,8 +16,7 @@ public class HashSigner {
     private static final Logger log = LoggerFactory.getLogger(HashSigner.class);
 
     public static MasternodeSignature signHash(Sha256Hash hash, ECKey key) {
-        ECKey.ECDSASignature signature = key.sign(hash);
-        return new MasternodeSignature(signature.encodeToDER());
+        return new MasternodeSignature(key.signHash(hash));
     }
 
     /// Verify the hash signature, returns true if successful
