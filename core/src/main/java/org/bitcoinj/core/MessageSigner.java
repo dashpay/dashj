@@ -6,23 +6,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Created by HashEngineering on 2/8/2015.
+ * Created by HashEngineering on 4/18/2018.
  */
 public class MessageSigner {
     private static final Logger log = LoggerFactory.getLogger(MessageSigner.class);
 
-    public static ECKey getKeysFromSecret(String strSecret, StringBuilder errorMessage)
+    public static ECKey getKeysFromSecret(String secret, StringBuilder errorMessage)
     {
-        byte [] bytes;
         try {
-            bytes = Base58.decode(strSecret);
+            return DumpedPrivateKey.fromBase58(Context.get().getParams(), secret).getKey();
         }
         catch (AddressFormatException x)
         {
+            errorMessage.append("Decoding secret failed: " + x.getMessage());
             return null;
         }
-        ECKey key = ECKey.fromPrivate(bytes);
-        return key;
     }
 
     public static MasternodeSignature signMessage(String message, ECKey key) throws KeyCrypterException {
