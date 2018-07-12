@@ -886,6 +886,43 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
+     * Signs a hash using the standard Bitcoin messaging signing format and returns the signature as a byte array.
+     *
+     * @throws IllegalStateException if this ECKey does not have the private part.
+     * @throws KeyCrypterException if this ECKey is encrypted and no AESKey is provided or it does not decrypt the ECKey.
+     */
+    public byte [] signHash(Sha256Hash hash) throws KeyCrypterException {
+        return signHash(hash, null);
+    }
+
+    /**
+     * Signs a hash using the standard Bitcoin messaging signing format and returns the signature as a byte array.
+     *
+     * @throws IllegalStateException if this ECKey does not have the private part.
+     * @throws KeyCrypterException if this ECKey is encrypted and no AESKey is provided or it does not decrypt the ECKey.
+     */
+    public byte [] signHash(Sha256Hash hash, @Nullable KeyParameter aesKey) throws KeyCrypterException {
+        ECDSASignature sig = sign(hash, aesKey);
+        // Now we have to work backwards to figure out the recId needed to recover the signature.
+        int recId = -1;
+        for (int i = 0; i < 4; i++) {
+            ECKey k = ECKey.recoverFromSignature(i, sig, hash, isCompressed());
+            if (k != null && k.pub.equals(pub)) {
+                recId = i;
+                break;
+            }
+        }
+        if (recId == -1)
+            throw new RuntimeException("Could not construct a recoverable key. This should never happen.");
+        int headerByte = recId + 27 + (isCompressed() ? 4 : 0);
+        byte[] sigData = new byte[65];  // 1 header + 32 bytes for R + 32 bytes for S
+        sigData[0] = (byte)headerByte;
+        System.arraycopy(Utils.bigIntegerToBytes(sig.r, 32), 0, sigData, 1, 32);
+        System.arraycopy(Utils.bigIntegerToBytes(sig.s, 32), 0, sigData, 33, 32);
+        return sigData;
+    }
+
+    /**
      * Given an arbitrary piece of text and a Bitcoin-format message signature encoded in base64, returns an ECKey
      * containing the public key that was used to sign it. This can then be compared to the expected public key to
      * determine if the signature was correct. These sorts of signatures are compatible with the Bitcoin-Qt/bitcoind
