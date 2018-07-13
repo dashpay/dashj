@@ -113,10 +113,9 @@ public class CoinDefinition {
 
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
-            "dnsseed.masternode.io",
-            "dnsseed.dashpay.io",
             "dnsseed.dash.org",
-            "dnsseed.dashdot.io"
+            "dnsseed.dashdot.io",
+            "dnsseed.masternode.io",
     };
 
 
