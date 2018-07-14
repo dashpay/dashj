@@ -773,4 +773,28 @@ public class Utils {
 
         return -1;
     }
+
+    public static org.bitcoinj.utils.Pair<Integer, String> splitHostPort(String in) {
+
+        int port = 0;
+        String host = "";
+        int colon = in.lastIndexOf(':');
+        // if a : is found, and it either follows a [...], or no other : is in the string, treat it as port separator
+        boolean fHaveColon = colon != -1;
+        boolean fBracketed = fHaveColon && (in.charAt(0) == '[' && in.charAt(colon - 1) == ']'); // if there is a colon, and in[0]=='[', colon is not 0, so in[colon-1] is safe
+        boolean fMultiColon = fHaveColon && (in.lastIndexOf(':',colon - 1) != -1);
+        if (fHaveColon && (colon == 0 || fBracketed || !fMultiColon)) {
+            int n = Integer.parseInt(in.substring(colon + 1));
+            if (n > 0 && n < 0x10000) {
+                in = in.substring(0, colon);
+                port = n;
+            }
+        }
+        if (in.length() > 0 && in.charAt(0) == '[' && in.charAt(in.length() - 1) == ']') {
+            host = in.substring(1, 1 + in.length() - 2);
+        } else {
+            host = in;
+        }
+        return new org.bitcoinj.utils.Pair<Integer, String>(port, host);
+    }
 }
