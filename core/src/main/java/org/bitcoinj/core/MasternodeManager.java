@@ -81,7 +81,7 @@ public class MasternodeManager extends AbstractManager {
 
     ArrayList<Sha256Hash> vecDirtyGovernanceObjectHashes;
 
-    long nLastWatchdogVoteTime;
+    long nLastSentinelPingTime;
 
     // Keep track of all broadcasts I've seen
     public HashMap<Sha256Hash, Pair<Long, MasternodeBroadcast>> mapSeenMasternodeBroadcast;// = new HashMap<Sha256Hash, MasternodeBroadcast>();
@@ -116,7 +116,7 @@ public class MasternodeManager extends AbstractManager {
         fMasternodesAdded = false;
         fMasternodesRemoved = false;
         vecDirtyGovernanceObjectHashes = new ArrayList<Sha256Hash>();
-        nLastWatchdogVoteTime = 0;
+        nLastSentinelPingTime = 0;
         mapSeenMasternodeBroadcast = new HashMap<Sha256Hash, Pair<Long, MasternodeBroadcast>>();
         mapSeenMasternodePing = new HashMap<Sha256Hash, MasternodePing>();
         nDsqCount = 0;
@@ -131,7 +131,7 @@ public class MasternodeManager extends AbstractManager {
         fMasternodesAdded = false;
         fMasternodesRemoved = false;
         vecDirtyGovernanceObjectHashes = new ArrayList<Sha256Hash>();
-        nLastWatchdogVoteTime = 0;
+        nLastSentinelPingTime = 0;
         eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeManagerListener>>();
     }
 
@@ -379,7 +379,7 @@ public class MasternodeManager extends AbstractManager {
             mapSeenMasternodeBroadcast.clear();
             mapSeenMasternodePing.clear();
             nDsqCount = 0;
-            nLastWatchdogVoteTime = 0;
+            nLastSentinelPingTime = 0;
         } finally {
             lock.unlock();
         }
@@ -568,7 +568,7 @@ public class MasternodeManager extends AbstractManager {
         // we shoud update nTimeLastWatchdogVote here if sentinel
         // ping flag is actual
         if(mn != null && mnp.sentinelIsCurrent)
-            updateWatchdogVoteTime(mnp.masternodeOutpoint, mnp.sigTime);
+            updateLastSentinelPingTime(mnp.masternodeOutpoint, mnp.sigTime);
 
         // too late, new MNANNOUNCE is required
         if(mn != null && mn.isNewStartRequired()) return;
@@ -1158,7 +1158,7 @@ public class MasternodeManager extends AbstractManager {
     {
         lock.lock();
         try {
-            log.info("masternode--CMasternodeMan::Check -- nLastWatchdogVoteTime={}, IsWatchdogActive()={}", nLastWatchdogVoteTime, isWatchdogActive());
+            log.info("masternode--CMasternodeMan::Check -- nLastSentinelPingTime={}, IsWatchdogActive()={}", nLastSentinelPingTime, isSentinelPingActive());
 
             for (Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()) {
                 Masternode mn = entry.getValue();
@@ -1553,6 +1553,20 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
+    public Masternode find(MasternodeAddress address)
+    {
+        lock.lock();
+        try {
+            for(Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()) {
+                if(entry.getValue().info.address.equals(address))
+                    return entry.getValue();
+            }
+        } finally {
+            lock.unlock();
+        }
+        return null;
+    }
+
     public Masternode get(TransactionOutPoint outPoint)
     {
         lock.lock();
@@ -1856,31 +1870,26 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
-    public void updateWatchdogVoteTime(final TransactionOutPoint outpoint) {
-        updateWatchdogVoteTime(outpoint, 0);
+    public void updateLastSentinelPingTime(final TransactionOutPoint outpoint) {
+        updateLastSentinelPingTime(outpoint, 0);
     }
 
-    public void updateWatchdogVoteTime(final TransactionOutPoint outpoint, long nVoteTime)
+    public void updateLastSentinelPingTime(final TransactionOutPoint outpoint, long nVoteTime)
     {
         lock.lock();
         try {
-            Masternode mn = find(outpoint);
-            if(mn == null) {
-                return;
-            }
-            mn.updateWatchdogVoteTime(nVoteTime);
-            nLastWatchdogVoteTime = Utils.currentTimeSeconds();
+            nLastSentinelPingTime = Utils.currentTimeSeconds();
         } finally {
             lock.unlock();
         }
     }
 
-    boolean isWatchdogActive()
+    boolean isSentinelPingActive()
     {
 //        lock.lock();
         try {
             // Check if any masternodes have voted recently, otherwise return false
-            return Utils.currentTimeSeconds() - nLastWatchdogVoteTime <= MASTERNODE_WATCHDOG_MAX_SECONDS;
+            return Utils.currentTimeSeconds() - nLastSentinelPingTime <= MASTERNODE_SENTINEL_MAX_SECONDS;
         } finally {
   //          lock.unlock();
         }
@@ -1953,7 +1962,7 @@ public class MasternodeManager extends AbstractManager {
             // we shoud update nTimeLastWatchdogVote here if sentinel
             // ping flag is actual
             if(mnp.sentinelIsCurrent) {
-                updateWatchdogVoteTime(mnp.masternodeOutpoint, mnp.sigTime);
+                updateLastSentinelPingTime(mnp.masternodeOutpoint, mnp.sigTime);
             }
             mapSeenMasternodePing.put(mnp.getHash(), mnp);
 
