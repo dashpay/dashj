@@ -234,7 +234,7 @@ public class MasternodeBroadcast extends Masternode {
         }
 
         // IsVnAssociatedWithPubkey is validated once in CheckOutpoint, after that they just need to match
-        if(mn.info.pubKeyCollateralAddress != info.pubKeyCollateralAddress) {
+        if(!mn.info.pubKeyCollateralAddress.equals(info.pubKeyCollateralAddress)) {
             log.info("CMasternodeBroadcast::Update -- Got mismatched pubKeyCollateralAddress and vin");
             nDos.set(33);
             return false;
