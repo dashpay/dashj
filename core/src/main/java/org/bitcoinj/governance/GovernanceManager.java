@@ -399,7 +399,7 @@ public class GovernanceManager extends AbstractManager {
                 mapVoteToObject.insert(nHashVote, govobj);
 
                 if (govobj.getObjectType() == GOVERNANCE_OBJECT_WATCHDOG) {
-                    context.masternodeManager.updateWatchdogVoteTime(vote.getMasternodeOutpoint());
+                    context.masternodeManager.updateLastSentinelPingTime(vote.getMasternodeOutpoint());
                     log.info("gobject--CGovernanceObject::ProcessVote -- GOVERNANCE_OBJECT_WATCHDOG vote for {}", vote.getParentHash());
                 }
             }
@@ -1344,7 +1344,7 @@ public class GovernanceManager extends AbstractManager {
         return (int)(vpGovObjsTriggersTmp.size() + vpGovObjsTmp.size());
     }
 
-    boolean processVoteAndRelay(GovernanceVote vote, GovernanceException exception) {
+    public boolean processVoteAndRelay(GovernanceVote vote, GovernanceException exception) {
         boolean fOK = processVote(null, vote, exception);
         if(fOK) {
             vote.relay();
@@ -1474,6 +1474,60 @@ public class GovernanceManager extends AbstractManager {
             pnode.sendMessage(new SyncStatusCount(MasternodeSync.MASTERNODE_SYNC_GOVOBJ, nObjCount));
             pnode.sendMessage(new SyncStatusCount(MasternodeSync.MASTERNODE_SYNC_GOVOBJ_VOTE, nVoteCount));
             log.info("CGovernanceManager:: -- sent {} objects and {} votes to peer={}", nObjCount, nVoteCount, pnode.hashCode());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean haveVoteForHash(Sha256Hash voteHash)
+    {
+        lock.lock();
+        try {
+
+            CacheItem<Sha256Hash, GovernanceObject> item = mapVoteToObject.get(voteHash);
+            if(item == null)
+                return false;
+            return item.value.getVoteFile().hasVote(voteHash);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public GovernanceVote getVoteForHash(Sha256Hash voteHash)
+    {
+        lock.lock();
+        try {
+
+            CacheItem<Sha256Hash, GovernanceObject> item = mapVoteToObject.get(voteHash);
+            if(item == null)
+                return null;
+            return item.value.getVoteFile().getVote(voteHash);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public ArrayList<GovernanceObject> getAllNewerThan(long nMoreThanTime) {
+        lock.lock();
+        try {
+            ArrayList<GovernanceObject> vGovObjs = new ArrayList<GovernanceObject>();
+
+            Iterator<Map.Entry<Sha256Hash, GovernanceObject>> it = mapObjects.entrySet().iterator();
+            while (it.hasNext()) {
+                // IF THIS OBJECT IS OLDER THAN TIME, CONTINUE
+                Map.Entry<Sha256Hash, GovernanceObject> entry = it.next();
+
+                if (entry.getValue().getCreationTime() < nMoreThanTime) {
+                    continue;
+                }
+
+                // ADD GOVERNANCE OBJECT TO LIST
+
+                GovernanceObject pGovObj = entry.getValue();
+                vGovObjs.add(pGovObj);
+            }
+
+            return vGovObjs;
         } finally {
             lock.unlock();
         }
