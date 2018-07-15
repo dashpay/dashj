@@ -1,7 +1,10 @@
 package org.bitcoinj.governance;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
+import org.bitcoinj.governance.listeners.GovernanceVoteConfidenceEventListener;
 import org.bitcoinj.utils.*;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
@@ -9,8 +12,11 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_PERMANENT_ERROR;
 import static org.bitcoinj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_WARNING;
 import static org.bitcoinj.governance.GovernanceObject.*;
@@ -1530,6 +1536,49 @@ public class GovernanceManager extends AbstractManager {
             return vGovObjs;
         } finally {
             lock.unlock();
+        }
+    }
+    private final CopyOnWriteArrayList<ListenerRegistration<GovernanceVoteConfidenceEventListener>> voteConfidenceListeners
+            = new CopyOnWriteArrayList<ListenerRegistration<GovernanceVoteConfidenceEventListener>>();
+
+    /**
+     * Adds an event listener object. Methods on this object are called when confidence
+     * of a vote changes. Runs the listener methods in the user thread.
+     */
+    public void addVoteConfidenceEventListener(GovernanceVoteConfidenceEventListener listener) {
+        addVoteConfidenceEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when confidence
+     * of a vote changes. The listener is executed by the given executor.
+     */
+    public void addVoteConfidenceEventListener(Executor executor, GovernanceVoteConfidenceEventListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        voteConfidenceListeners.add(new ListenerRegistration<GovernanceVoteConfidenceEventListener>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeVoteConfidenceEventListener(GovernanceVoteConfidenceEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, voteConfidenceListeners);
+    }
+
+    private void queueOnTransactionConfidenceChanged(final GovernanceVote vote) {
+        checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<GovernanceVoteConfidenceEventListener> registration : voteConfidenceListeners) {
+            if (registration.executor == Threading.SAME_THREAD) {
+                registration.listener.onVoteConfidenceChanged(vote);
+            } else {
+                registration.executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        registration.listener.onVoteConfidenceChanged(vote);
+                    }
+                });
+            }
         }
     }
 
