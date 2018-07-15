@@ -18,7 +18,6 @@ package org.bitcoinj.core;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.net.Dos;
 import org.bitcoinj.store.BlockStoreException;
-import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.util.encoders.Base64;
@@ -249,7 +248,7 @@ public class MasternodePing extends Message implements Serializable {
         // force update, ignoring cache
         mn.check(true);
         // relay ping for nodes in ENABLED/EXPIRED/WATCHDOG_EXPIRED state only, skip everyone else
-        if (!mn.isEnabled() && !mn.isExpired() && !mn.isWatchdogExpired()) return false;
+        if (!mn.isEnabled() && !mn.isExpired() && !mn.isSentinelExpired()) return false;
 
         log.info("masternode--CMasternodePing::CheckAndUpdate -- Masternode ping acceepted and relayed, masternode={}", masternodeOutpoint.toStringShort());
         relay();

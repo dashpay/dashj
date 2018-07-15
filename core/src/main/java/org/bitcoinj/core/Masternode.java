@@ -1,6 +1,5 @@
 package org.bitcoinj.core;
 
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.bitcoinj.net.Dos;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -35,6 +34,7 @@ public class Masternode extends Message {
         COLLATERAL_OK,
         COLLATERAL_UTXO_NOT_FOUND,
         COLLATERAL_INVALID_AMOUNT,
+        COLLATERAL_INVALID_PUBKEY,
         COLLATERAL_SPV_ASSUME_VALID, //SPV mode assumes valid
     }
 
@@ -42,7 +42,7 @@ public class Masternode extends Message {
     public static final int MASTERNODE_MIN_MNB_SECONDS             =   5 * 60;
     public static final int MASTERNODE_MIN_MNP_SECONDS             =  10 * 60;
     public static final int MASTERNODE_EXPIRATION_SECONDS          =  65 * 60;
-    public static final int MASTERNODE_WATCHDOG_MAX_SECONDS        = 120 * 60;
+    public static final int MASTERNODE_SENTINEL_MAX_SECONDS = 120 * 60;
     public static final int MASTERNODE_NEW_START_REQUIRED_SECONDS  = 180 * 60;
 
     public static final int MASTERNODE_POSE_BAN_MAX_SCORE          = 5;
@@ -120,7 +120,7 @@ public class Masternode extends Message {
         super(mnb.params);
         info = new MasternodeInfo(mnb.getParams(), mnb.info.activeState, mnb.info.nProtocolVersion,
                 mnb.info.sigTime, mnb.info.outpoint, mnb.info.address, mnb.info.pubKeyCollateralAddress,
-                mnb.info.pubKeyMasternode, mnb.info.sigTime);
+                mnb.info.pubKeyMasternode);
         lastPing = mnb.lastPing;
         vchSig = mnb.vchSig.duplicate();
         fAllowMixingTx = true;
@@ -255,7 +255,6 @@ public class Masternode extends Message {
 
         info.nTimeLastChecked = readInt64();
         info.nTimeLastPaid = readInt64();
-        info.nTimeLastWatchdogVote = readInt64();
 
         info.activeState = MasternodeInfo.State.forValue((int)readUint32());
 
@@ -294,7 +293,6 @@ public class Masternode extends Message {
         Utils.int64ToByteStreamLE(info.nLastDsq, stream);
         Utils.int64ToByteStreamLE(info.nTimeLastChecked, stream);
         Utils.int64ToByteStreamLE(info.nTimeLastPaid, stream);
-        Utils.int64ToByteStreamLE(info.nTimeLastWatchdogVote, stream);
         Utils.uint32ToByteStreamLE(info.activeState.getValue(), stream);
         stream.write(nCollateralMinConfBlockHash.getReversedBytes());
         Utils.uint32ToByteStreamLE(nBlockLastPaid, stream);
@@ -328,7 +326,7 @@ public class Masternode extends Message {
         return  nActiveStateIn == MasternodeInfo.State.MASTERNODE_ENABLED ||
                 nActiveStateIn == MasternodeInfo.State.MASTERNODE_PRE_ENABLED ||
                 nActiveStateIn == MasternodeInfo.State.MASTERNODE_EXPIRED ||
-                nActiveStateIn == MasternodeInfo.State.MASTERNODE_WATCHDOG_EXPIRED;
+                nActiveStateIn == MasternodeInfo.State.MASTERNODE_SENTINEL_EXPIRED;
     }
 
     boolean isValidForPayment()
@@ -337,7 +335,7 @@ public class Masternode extends Message {
             return true;
         }
         if(!context.sporkManager.isSporkActive(SporkManager.SPORK_14_REQUIRE_SENTINEL_FLAG) &&
-                (info.activeState == MasternodeInfo.State.MASTERNODE_WATCHDOG_EXPIRED)) {
+                (info.activeState == MasternodeInfo.State.MASTERNODE_SENTINEL_EXPIRED)) {
             return true;
         }
 
@@ -450,9 +448,6 @@ public class Masternode extends Message {
 
             int nHeight = 0;
             if(!fUnitTest) {
-                //TRY_LOCK(cs_main, lockMain);
-                //if(!lockMain) return;
-
                 CollateralStatus err = checkCollateral(info.outpoint).getFirst();
                 if (err == COLLATERAL_UTXO_NOT_FOUND) {
                     info.activeState = MASTERNODE_OUTPOINT_SPENT;
@@ -479,7 +474,7 @@ public class Masternode extends Message {
             }
 
             MasternodeInfo.State nActiveStatePrev = info.activeState;
-            boolean fOurMasternode = DarkCoinSystem.fMasterNode && context.activeMasternode.pubKeyMasternode == info.pubKeyMasternode;
+            boolean fOurMasternode = DarkCoinSystem.fMasterNode && context.activeMasternode.pubKeyMasternode.equals(info.pubKeyMasternode);
 
             // masternode doesn't meet payment protocol requirements ...
             boolean fRequireUpdate = info.nProtocolVersion < context.masternodePayments.getMinMasternodePaymentsProto() ||
@@ -499,7 +494,7 @@ public class Masternode extends Message {
 
             if(fWaitForPing && !fOurMasternode) {
                 // ...but if it was already expired before the initial check - return right away
-                if(isExpired() || isWatchdogExpired() || isNewStartRequired()) {
+                if(isExpired() || isSentinelExpired() || isNewStartRequired()) {
                     log.info("masternode--CMasternode::Check -- Masternode %s is in %s state, waiting for ping", info.outpoint.toStringShort(), getStateString());
                     return;
                 }
@@ -516,14 +511,14 @@ public class Masternode extends Message {
                     return;
                 }
 
-                boolean fWatchdogActive = context.masternodeSync.isSynced() && context.masternodeManager.isWatchdogActive();
-                boolean fWatchdogExpired = (fWatchdogActive && ((Utils.currentTimeSeconds() - info.nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
+                boolean sentinelPingActive = context.masternodeSync.isSynced() && context.masternodeManager.isSentinelPingActive();
+                boolean sentinelPingExpired = (sentinelPingActive && isPingedWithin(MASTERNODE_SENTINEL_MAX_SECONDS));
 
                 log.info("masternode--CMasternode::Check -- outpoint={}, nTimeLastWatchdogVote={}, GetAdjustedTime()={}, fWatchdogExpired={}",
-                        info.outpoint.toStringShort(), info.nTimeLastWatchdogVote, Utils.currentTimeSeconds(), fWatchdogExpired);
+                        info.outpoint.toStringShort(), Utils.currentTimeSeconds(), Utils.currentTimeSeconds(), sentinelPingExpired);
 
-                if(fWatchdogExpired) {
-                    info.activeState = MASTERNODE_WATCHDOG_EXPIRED;
+                if(sentinelPingExpired) {
+                    info.activeState = MASTERNODE_SENTINEL_EXPIRED;
                     if(nActiveStatePrev != info.activeState) {
                         log.info("masternode--CMasternode::Check -- Masternode {} is in {} state now", info.outpoint.toStringShort(), getStateString());
                     }
@@ -593,7 +588,7 @@ public class Masternode extends Message {
     public boolean isExpired() { return info.activeState == MasternodeInfo.State.MASTERNODE_EXPIRED; }
     public boolean isOutpointSpent() { return info.activeState == MasternodeInfo.State.MASTERNODE_OUTPOINT_SPENT; }
     public boolean isUpdateRequired() { return info.activeState == MasternodeInfo.State.MASTERNODE_UPDATE_REQUIRED; }
-    public boolean isWatchdogExpired() { return info.activeState == MasternodeInfo.State.MASTERNODE_WATCHDOG_EXPIRED; }
+    public boolean isSentinelExpired() { return info.activeState == MasternodeInfo.State.MASTERNODE_SENTINEL_EXPIRED; }
     public boolean isNewStartRequired() { return info.activeState == MasternodeInfo.State.MASTERNODE_NEW_START_REQUIRED; }
 
 
@@ -605,7 +600,7 @@ public class Masternode extends Message {
             case MASTERNODE_EXPIRED:                return "EXPIRED";
             case MASTERNODE_OUTPOINT_SPENT:         return "OUTPOINT_SPENT";
             case MASTERNODE_UPDATE_REQUIRED:        return "UPDATE_REQUIRED";
-            case MASTERNODE_WATCHDOG_EXPIRED:       return "WATCHDOG_EXPIRED";
+            case MASTERNODE_SENTINEL_EXPIRED:       return "SENTINEL_EXPIRED";
             case MASTERNODE_NEW_START_REQUIRED:     return "NEW_START_REQUIRED";
             case MASTERNODE_POSE_BAN:               return "POSE_BAN";
             default:                                return "UNKNOWN";
@@ -629,12 +624,12 @@ public class Masternode extends Message {
     }
     boolean isPingedWithin(int seconds, long now)
     {
+        if(lastPing == null || lastPing.equals(MasternodePing.empty()))
+            return false;
         if(now == -1)
             now = Utils.currentTimeSeconds();
 
-        return (lastPing.equals(MasternodePing.empty()))
-                ? false
-                : (now - lastPing.sigTime) < seconds;
+        return (now - lastPing.sigTime) < seconds;
     }
     boolean isPingedWithin(int seconds)
     {
@@ -789,17 +784,7 @@ public class Masternode extends Message {
         if(it == null) {
             return;
         }
-        mapGovernanceObjectsVotedOn.remove(it);
-    }
-
-    void updateWatchdogVoteTime(long nVoteTime)
-    {
-        lock.lock();
-        try {
-            info.nTimeLastWatchdogVote = (nVoteTime == 0) ? Utils.currentTimeSeconds() : nVoteTime;
-        } finally {
-            lock.unlock();
-        }
+        mapGovernanceObjectsVotedOn.remove(nGovernanceObjectHash);
     }
 
     String getHexData() {

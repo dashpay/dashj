@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.Masternode.MASTERNODE_WATCHDOG_MAX_SECONDS;
+import static org.bitcoinj.core.Masternode.MASTERNODE_SENTINEL_MAX_SECONDS;
 import static org.bitcoinj.core.MasternodePing.MASTERNODE_MIN_MNP_SECONDS;
 
 /**
@@ -154,7 +154,7 @@ public class ActiveMasternode {
         MasternodePing mnp = new MasternodePing(context, outpoint);
         mnp.sentinelVersion = sentinelVersion;
         mnp.sentinelIsCurrent =
-                (Math.abs(Utils.currentTimeSeconds() - sentinelPingTime) < MASTERNODE_WATCHDOG_MAX_SECONDS);
+                (Math.abs(Utils.currentTimeSeconds() - sentinelPingTime) < MASTERNODE_SENTINEL_MAX_SECONDS);
         if(!mnp.sign(keyMasternode, pubKeyMasternode)) {
             log.info("CActiveMasternode::SendMasternodePing -- ERROR: Couldn't sign Masternode Ping");
             return false;

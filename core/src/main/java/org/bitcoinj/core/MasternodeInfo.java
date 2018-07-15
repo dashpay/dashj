@@ -14,7 +14,7 @@ public class MasternodeInfo {
         MASTERNODE_EXPIRED(2),
         MASTERNODE_OUTPOINT_SPENT(3),
         MASTERNODE_UPDATE_REQUIRED(4),
-        MASTERNODE_WATCHDOG_EXPIRED(5),
+        MASTERNODE_SENTINEL_EXPIRED(5),
         MASTERNODE_NEW_START_REQUIRED(6),
         MASTERNODE_POSE_BAN(7);
 
@@ -49,13 +49,12 @@ public class MasternodeInfo {
     public MasternodeAddress address;
     public PublicKey pubKeyCollateralAddress;
     public PublicKey pubKeyMasternode;
-    public long nTimeLastWatchdogVote = 0;
 
-    public long nLastDsq = 0; //the dsq count from the last dsq broadcast of this node
-    public long nTimeLastChecked = 0;
-    public long nTimeLastPaid = 0;
-    public long nTimeLastPing = 0; //* not in CMN
-    public boolean fInfoValid = false; //* not
+    public long nLastDsq; //the dsq count from the last dsq broadcast of this node
+    public long nTimeLastChecked;
+    public long nTimeLastPaid;
+    public long nTimeLastPing; //* not in CMN
+    public boolean fInfoValid; //* not
 
     MasternodeInfo()
     {
@@ -70,8 +69,7 @@ public class MasternodeInfo {
         this.address = other.address;
         this.pubKeyCollateralAddress = other.pubKeyCollateralAddress;
         this.pubKeyMasternode = other.pubKeyMasternode;
-        this.nTimeLastWatchdogVote = other.nTimeLastWatchdogVote;
-    };
+    }
 
     MasternodeInfo(State activeState, int protoVer, long sTime)
     {
@@ -82,8 +80,7 @@ public class MasternodeInfo {
 
     MasternodeInfo(NetworkParameters params, State activeState, int protoVer, long sTime,
                       TransactionOutPoint outpoint, MasternodeAddress address,
-                      PublicKey pkCollAddr, PublicKey pkMN,
-                      long tWatchdogV)
+                      PublicKey pkCollAddr, PublicKey pkMN)
     {
         this.activeState = activeState;
         this.nProtocolVersion = protoVer;
@@ -92,22 +89,5 @@ public class MasternodeInfo {
         this.address = address;
         this.pubKeyCollateralAddress = pkCollAddr;
         this.pubKeyMasternode = pkMN;
-        this.nTimeLastWatchdogVote = tWatchdogV;
     }
-
-    MasternodeInfo(NetworkParameters params, State activeState, int protoVer, long sTime,
-                   TransactionOutPoint outpoint, MasternodeAddress address,
-                   PublicKey pkCollAddr, PublicKey pkMN)
-    {
-        this.activeState = activeState;
-        this.nProtocolVersion = protoVer;
-        this.sigTime = sTime;
-        this.outpoint = new TransactionOutPoint(outpoint.getParams(), outpoint.getIndex(), outpoint.getHash());;
-        this.address = address;
-        this.pubKeyCollateralAddress = pkCollAddr;
-        this.pubKeyMasternode = pkMN;
-        this.nTimeLastWatchdogVote = 0;
-    }
-
-
 }
