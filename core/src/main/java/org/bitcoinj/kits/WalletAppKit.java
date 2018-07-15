@@ -96,6 +96,13 @@ public class WalletAppKit extends AbstractIdleService {
     }
 
     /**
+     * Creates a new WalletAppKit, with a newly created {@link Context}. Files will be stored in the given directory.
+     */
+    public WalletAppKit(NetworkParameters params, File directory, String filePrefix, boolean liteMode) {
+        this(new Context(params), directory, filePrefix, liteMode);
+    }
+
+    /**
      * Creates a new WalletAppKit, with the given {@link Context}. Files will be stored in the given directory.
      */
     public WalletAppKit(Context context, File directory, String filePrefix) {
@@ -104,7 +111,20 @@ public class WalletAppKit extends AbstractIdleService {
         this.directory = checkNotNull(directory);
         this.filePrefix = checkNotNull(filePrefix);
 
-        context.initDash(true, true);
+        context.initDash(false, true);
+        context.initDashSync(directory.getAbsolutePath());
+    }
+
+    /**
+     * Creates a new WalletAppKit, with the given {@link Context}. Files will be stored in the given directory.
+     */
+    public WalletAppKit(Context context, File directory, String filePrefix, boolean liteMode) {
+        this.context = context;
+        this.params = checkNotNull(context.getParams());
+        this.directory = checkNotNull(directory);
+        this.filePrefix = checkNotNull(filePrefix);
+
+        context.initDash(liteMode, true);
         context.initDashSync(directory.getAbsolutePath());
     }
 
