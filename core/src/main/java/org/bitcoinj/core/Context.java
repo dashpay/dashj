@@ -18,6 +18,7 @@ import org.bitcoinj.core.listeners.BlockChainListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceTriggerManager;
+import org.bitcoinj.governance.VoteConfidenceTable;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.darkcoinj.DarkSendPool;
@@ -74,6 +75,7 @@ public class Context {
     public GovernanceTriggerManager triggerManager;
     public NetFullfilledRequestManager netFullfilledRequestManager;
     public static boolean fMasterNode = false;
+    private VoteConfidenceTable voteConfidenceTable;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -84,6 +86,7 @@ public class Context {
     public Context(NetworkParameters params) {
         log.info("Creating bitcoinj {} context.", VersionMessage.BITCOINJ_VERSION);
         this.confidenceTable = new TxConfidenceTable();
+        this.voteConfidenceTable = new VoteConfidenceTable();
         this.params = params;
         lastConstructed = this;
         // We may already have a context in our TLS slot. This can happen a lot during unit tests, so just ignore it.
@@ -259,6 +262,7 @@ public class Context {
 
         //other functions
         darkSendPool.startBackgroundProcessing();
+
     }
 
     public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)
@@ -363,5 +367,8 @@ public class Context {
         governance.UpdatedBlockTip(pindex);
         masternodeSync.UpdatedBlockTip(pindex);*/
         }
+    }
+    public VoteConfidenceTable getVoteConfidenceTable() {
+        return voteConfidenceTable;
     }
 }

@@ -19,6 +19,7 @@ import org.bitcoinj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -35,7 +36,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     private static final Logger log = LoggerFactory.getLogger(GovernanceVote.class);
 
     // INTENTION OF MASTERNODES REGARDING ITEM
-    enum VoteOutcome {
+    public enum VoteOutcome {
         VOTE_OUTCOME_NONE(0),
         VOTE_OUTCOME_YES(1),
         VOTE_OUTCOME_NO(2),
@@ -70,7 +71,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
 
 
     // SIGNAL VARIOUS THINGS TO HAPPEN:
-    enum VoteSignal  {
+    public enum VoteSignal  {
         VOTE_SIGNAL_NONE(0),
         VOTE_SIGNAL_FUNDING(1), //   -- fund this object for it's stated amount
         VOTE_SIGNAL_VALID(2), //   -- this object checks out in sentinel engine
@@ -155,6 +156,28 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     /* memory only */
     Sha256Hash hash;
 
+    @Nullable GovernanceVoteConfidence confidence;
+
+    public GovernanceVoteConfidence getConfidence() {
+        return getConfidence(context);
+    }
+
+    /**
+     * Returns the confidence object for this transaction from the {@link org.bitcoinj.core.TxConfidenceTable}
+     * referenced by the given {@link Context}.
+     */
+    public GovernanceVoteConfidence getConfidence(Context context) {
+        return getConfidence(context.getVoteConfidenceTable());
+    }
+
+    /**
+     * Returns the confidence object for this transaction from the {@link org.bitcoinj.core.TxConfidenceTable}
+     */
+    public GovernanceVoteConfidence getConfidence(VoteConfidenceTable table) {
+        if (confidence == null)
+            confidence = table.getOrCreate(getHash()) ;
+        return confidence;
+    }
 
     public final boolean isValid() {
         return fValid;
@@ -226,13 +249,13 @@ public class GovernanceVote extends ChildMessage implements Serializable {
             Utils.uint32ToByteStreamLE(nVoteSignal, bos);
             Utils.uint32ToByteStreamLE(nVoteOutcome, bos);
             Utils.int64ToByteStreamLE(nTime, bos);
-            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+            return Sha256Hash.twiceOf(bos.toByteArray());
         } catch(IOException e) {
             throw new RuntimeException(e); // Cannot happen.
         }
     }
 
-    public final String toString() {
+    public String toString() {
         return masternodeOutpoint.toString() + ":"  + nTime + ":" +
                 GovernanceVoting.convertOutcomeToString(getOutcome()) + ":" +
                 GovernanceVoting.convertSignalToString(getSignal());
@@ -253,7 +276,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
      *   on funding a specific project for example.
      *   We do not include a time because it will be updated each time the vote is updated, changing the hash
      */
-    public final Sha256Hash getTypeHash() {
+    public Sha256Hash getTypeHash() {
         // CALCULATE HOW TO STORE VOTE IN governance.mapVotes
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
@@ -271,6 +294,19 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     {
         super(params, payload, cursor);
         context = Context.get();
+    }
+
+    public GovernanceVote(NetworkParameters params, TransactionOutPoint outpoint, Sha256Hash parentHash, VoteSignal eVoteSignal, VoteOutcome eVoteOutcome) {
+        super(params);
+        context = Context.get();
+        masternodeOutpoint = outpoint;
+        nParentHash = parentHash;
+        nVoteSignal = eVoteSignal.getValue();
+        nVoteOutcome = eVoteOutcome.getValue();
+        fValid = true;
+        fSynced = false;
+        nTime = Utils.currentTimeSeconds();
+        updateHash();
     }
 
     protected static int calcLength(byte[] buf, int offset) {
@@ -343,11 +379,11 @@ public class GovernanceVote extends ChildMessage implements Serializable {
             return;
         }
 
-        //we need to do this here, or the other nodes won't receive it.  add reply to getdata in Peer
-        //context.peerGroup.sendMessage()
-        //InventoryMessage inventoryMessage = new InventoryMessage();
         //InventoryItem inv = new InventoryItem(InventoryItem.Type.GovernanceObjectVote, getHash());
-        //connman.RelayInv(inv, MIN_GOVERNANCE_PEER_PROTO_VERSION);
+        //context.peerGroup.relayInventory(inv, MIN_GOVERNANCE_PEER_PROTO_VERSION);
+
+        //TODO:Leave Here for now, but later this should be a part of the user interface
+        //context.peerGroup.broadcastGovernanceVote(this);
     }
 
     public boolean sign(ECKey keyMasternode, PublicKey pubKeyMasternode) {

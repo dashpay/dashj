@@ -24,6 +24,7 @@ import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.governance.GovernanceObject;
 import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.governance.GovernanceVote;
+import org.bitcoinj.governance.GovernanceVoteConfidence;
 import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -136,6 +137,7 @@ public class Peer extends PeerSocketHandler {
     // to keep it pinned to the root set if they care about this data.
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private final HashSet<TransactionConfidence> pendingTxDownloads = new HashSet<TransactionConfidence>();
+    private final HashSet<GovernanceVoteConfidence> pendingVotes = new HashSet<GovernanceVoteConfidence>();
     // The lowest version number we're willing to accept. Lower than this will result in an immediate disconnect.
     private volatile int vMinProtocolVersion;
     // When an API user explicitly requests a block or transaction from a peer, the InventoryItem is put here
@@ -1523,6 +1525,15 @@ public class Peer extends PeerSocketHandler {
                 InventoryItem item = it.next();
                 if (!alreadyHave(item))
                     getdata.addItem(item);
+                else {
+                    // The line below can trigger confidence listeners.
+                    GovernanceVoteConfidence conf = context.getVoteConfidenceTable().seen(item.hash, this.getAddress());
+
+                    log.debug("{}: getdata on tx {}", getAddress(), item.hash);
+                    getdata.addItem(item);
+                    // Register with the garbage collector that we care about the confidence data for a while.
+                    pendingVotes.add(conf);
+                }
             }
         }
 
