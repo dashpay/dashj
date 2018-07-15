@@ -34,8 +34,12 @@ public class MasternodeSync {
 
     public enum SYNC_FLAGS {
         SYNC_MASTERNODE_LIST,
+        SYNC_OWNED_MASTERNODES,
         SYNC_MNW,
-        SYNC_GOVERNANCE
+        SYNC_GOVERNANCE,
+        SYNC_PROPOSALS,
+        SYNC_TRIGGERS,
+        SYNC_GOVERNANCE_VOTES,
     }
 
     public Set<SYNC_FLAGS> syncFlags;
@@ -100,6 +104,7 @@ public class MasternodeSync {
         this.syncFlags = this.context.isLiteMode() ? EnumSet.noneOf(SYNC_FLAGS.class) : SYNC_ALL_OBJECTS;
         this.syncFlags = EnumSet.noneOf(SYNC_FLAGS.class);
         syncFlags.add(SYNC_MASTERNODE_LIST);
+        syncFlags.add(SYNC_GOVERNANCE);
 
         reset();
     }
