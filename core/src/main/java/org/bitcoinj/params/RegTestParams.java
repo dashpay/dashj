@@ -46,6 +46,11 @@ public class RegTestParams extends TestNet2Params {
         superblockCycle = 10;
         nGovernanceMinQuorum = 1;
         nGovernanceFilterElements = 100;
+
+        powDGWHeight = 15200;
+        powKGWHeight = 34140;
+        powAllowMinimumDifficulty = true;
+        powNoRetargeting = true;
     }
 
     @Override

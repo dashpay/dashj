@@ -18,6 +18,10 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.math.BigInteger;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -25,6 +29,8 @@ import static com.google.common.base.Preconditions.*;
  * Parameters for the main production network on which people trade goods and services.
  */
 public class MainNetParams extends AbstractBitcoinNetParams {
+    private static final Logger log = LoggerFactory.getLogger(MainNetParams.class);
+
     public static final int MAINNET_MAJORITY_WINDOW = 1000;
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
@@ -374,6 +380,10 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         nGovernanceMinQuorum = 10;
         nGovernanceFilterElements = 20000;
 
+        powDGWHeight = 34140;
+        powKGWHeight = 15200;
+        powAllowMinimumDifficulty = false;
+        powNoRetargeting = false;
     }
 
     private static MainNetParams instance;
@@ -387,5 +397,46 @@ public class MainNetParams extends AbstractBitcoinNetParams {
     @Override
     public String getPaymentProtocolId() {
         return PAYMENT_PROTOCOL_ID_MAINNET;
+    }
+
+    @Override
+    protected void verifyDifficulty(StoredBlock storedPrev, Block nextBlock, BigInteger newTarget) {
+
+        long newTargetCompact = calculateNextDifficulty(storedPrev, nextBlock, newTarget);
+        long receivedTargetCompact = nextBlock.getDifficultyTarget();
+        int height = storedPrev.getHeight() + 1;
+
+        if (/*height >= powDGWHeight &&*/ height <= 68589) {
+            double n1 = convertBitsToDouble(receivedTargetCompact);
+            double n2 = convertBitsToDouble(newTargetCompact);
+
+            if (java.lang.Math.abs(n1 - n2) > n1 * 0.5 )
+                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                    Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
+        } else {
+            if (newTargetCompact != receivedTargetCompact)
+                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                        Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
+        }
+    }
+
+    static double convertBitsToDouble(long nBits) {
+        long nShift = (nBits >> 24) & 0xff;
+
+        double dDiff =
+                (double)0x0000ffff / (double)(nBits & 0x00ffffff);
+
+        while (nShift < 29)
+        {
+            dDiff *= 256.0;
+            nShift++;
+        }
+        while (nShift > 29)
+        {
+            dDiff /= 256.0;
+            nShift--;
+        }
+
+        return dDiff;
     }
 }
