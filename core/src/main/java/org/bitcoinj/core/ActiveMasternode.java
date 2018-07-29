@@ -1,6 +1,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -151,26 +152,30 @@ public class ActiveMasternode {
             return false;
         }
 
-        MasternodePing mnp = new MasternodePing(context, outpoint);
-        mnp.sentinelVersion = sentinelVersion;
-        mnp.sentinelIsCurrent =
-                (Math.abs(Utils.currentTimeSeconds() - sentinelPingTime) < MASTERNODE_SENTINEL_MAX_SECONDS);
-        if(!mnp.sign(keyMasternode, pubKeyMasternode)) {
-            log.info("CActiveMasternode::SendMasternodePing -- ERROR: Couldn't sign Masternode Ping");
+        try {
+            MasternodePing mnp = new MasternodePing(context, outpoint);
+            mnp.sentinelVersion = sentinelVersion;
+            mnp.sentinelIsCurrent =
+                    (Math.abs(Utils.currentTimeSeconds() - sentinelPingTime) < MASTERNODE_SENTINEL_MAX_SECONDS);
+            if (!mnp.sign(keyMasternode, pubKeyMasternode)) {
+                log.info("CActiveMasternode::SendMasternodePing -- ERROR: Couldn't sign Masternode Ping");
+                return false;
+            }
+
+            // Update lastPing for our masternode in Masternode list
+            if (context.masternodeManager.isMasternodePingedWithin(outpoint, MASTERNODE_MIN_MNP_SECONDS, mnp.sigTime)) {
+                log.info("CActiveMasternode::SendMasternodePing -- Too early to send Masternode Ping");
+                return false;
+            }
+
+            context.masternodeManager.setMasternodeLastPing(outpoint, mnp);
+
+            log.info("CActiveMasternode::SendMasternodePing -- Relaying ping, collateral={}", outpoint.toStringShort());
+            mnp.relay();
+        } catch (BlockStoreException x) {
+            log.error("CActiveMasternode::SendMasternodePing -- cannot determine blockHash");
             return false;
         }
-
-        // Update lastPing for our masternode in Masternode list
-        if(context.masternodeManager.isMasternodePingedWithin(outpoint, MASTERNODE_MIN_MNP_SECONDS, mnp.sigTime)) {
-            log.info("CActiveMasternode::SendMasternodePing -- Too early to send Masternode Ping");
-            return false;
-        }
-
-        context.masternodeManager.setMasternodeLastPing(outpoint, mnp);
-
-        log.info("CActiveMasternode::SendMasternodePing -- Relaying ping, collateral={}", outpoint.toStringShort());
-        mnp.relay();
-
         return true;
     }
 

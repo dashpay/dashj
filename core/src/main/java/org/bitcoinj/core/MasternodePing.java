@@ -21,13 +21,10 @@ import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.util.encoders.Base64;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static com.hashengineering.crypto.X11.x11Digest;
 import static org.bitcoinj.core.Masternode.MASTERNODE_EXPIRATION_SECONDS;
 import static org.bitcoinj.core.Masternode.MASTERNODE_NEW_START_REQUIRED_SECONDS;
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
@@ -40,6 +37,7 @@ public class MasternodePing extends Message implements Serializable {
     public static final int MASTERNODE_MIN_MNB_SECONDS    =         (5*60);
     public static final int DEFAULT_SENTINEL_VERSION = 0x010001;
     public static final int DEFAULT_DAEMON_VERSION = 120200;
+    public static final int CURRENT_DAEMON_VERSION = 120302;
 
     TransactionOutPoint masternodeOutpoint;
     Sha256Hash blockHash;
@@ -58,10 +56,19 @@ public class MasternodePing extends Message implements Serializable {
         masternodeOutpoint = new TransactionOutPoint(context.getParams(), 0, Sha256Hash.ZERO_HASH);
     }
 
-    MasternodePing(Context context, TransactionOutPoint outPoint)
+    MasternodePing(Context context, TransactionOutPoint outpoint) throws BlockStoreException
     {
+        super(context.getParams());
         //used by masternodes only
-        throw new NotImplementedException();
+        masternodeOutpoint = outpoint;
+        blockHash = context.blockChain.getChainHead().getHeader().getHash();
+        StoredBlock cursor = context.blockChain.getChainHead();
+        for (int i = 0; i < 12; ++i) {
+            cursor = cursor.getPrev(context.blockChain.getBlockStore());
+        }
+        blockHash = cursor.getHeader().getHash();
+        sigTime = Utils.currentTimeSeconds();
+        daemonVersion = MasternodePing.CURRENT_DAEMON_VERSION;
     }
 
     MasternodePing(NetworkParameters params, byte[] bytes)
