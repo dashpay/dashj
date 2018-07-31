@@ -186,9 +186,11 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
         }
 
         if(powAllowMinimumDifficulty &&
-                storedPrev.getChainWork().compareTo(new BigInteger(Utils.HEX.decode("000000000000000000000000000000000000000000000000003e9ccfe0e03e01"))) >= 0)
+                (devnetGenesisBlock == null && storedPrev.getChainWork().compareTo(new BigInteger(Utils.HEX.decode("000000000000000000000000000000000000000000000000003e9ccfe0e03e01"))) >= 0) ||
+                devnetGenesisBlock != null)
         {
-            if (storedPrev.getChainWork().compareTo(new BigInteger(Utils.HEX.decode("000000000000000000000000000000000000000000000000003ff00000000000"))) >= 0) {
+            if (storedPrev.getChainWork().compareTo(new BigInteger(Utils.HEX.decode("000000000000000000000000000000000000000000000000003ff00000000000"))) >= 0 ||
+                    devnetGenesisBlock != null) {
                 // recent block is more than 2 hours old
                 if (nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + 2 * 60 * 60) {
                     verifyDifficulty(storedPrev, nextBlock, getMaxTarget());

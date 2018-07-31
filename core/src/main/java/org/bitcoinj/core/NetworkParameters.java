@@ -21,6 +21,7 @@ import com.google.common.base.Objects;
 import org.bitcoinj.net.discovery.HttpDiscovery;
 import org.bitcoinj.params.*;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -56,6 +57,8 @@ public abstract class NetworkParameters {
     /** The string returned by getId() for the testnet. */
 
     public static final String ID_TESTNET = CoinDefinition.ID_TESTNET; //"org.bitcoin.test";
+    /** The string returned by getId() for the devnet. */
+    public static final String ID_DEVNET = "org.dash.dev";
     /** Unit test network. */
     public static final String ID_UNITTESTNET = CoinDefinition.ID_UNITTESTNET; //"com.google.bitcoin.unittest";
     /** The string returned by getId() for regtest mode. */
@@ -65,6 +68,8 @@ public abstract class NetworkParameters {
     public static final String PAYMENT_PROTOCOL_ID_MAINNET = "main";
     /** The string used by the payment protocol to represent the test net. */
     public static final String PAYMENT_PROTOCOL_ID_TESTNET = "test";
+    /** The string used by the payment protocol to represent the devnet. */
+    public static final String PAYMENT_PROTOCOL_ID_DEVNET = "dev";
     /** The string used by the payment protocol to represent unit testing (note that this is non-standard). */
     public static final String PAYMENT_PROTOCOL_ID_UNIT_TESTS = "unittest";
     public static final String PAYMENT_PROTOCOL_ID_REGTEST = "regtest";
@@ -72,6 +77,8 @@ public abstract class NetworkParameters {
     // TODO: Seed nodes should be here as well.
 
     protected Block genesisBlock;
+    protected Block devnetGenesisBlock;
+    protected String devNetName;
     protected BigInteger maxTarget;
     protected int port;
     protected long packetMagic;  // Indicates message origin network and is used to seek to the next message when stream state is unknown.
@@ -161,6 +168,42 @@ public abstract class NetworkParameters {
         }
         genesisBlock.addTransaction(t);
         return genesisBlock;
+    }
+
+    protected static Block findDevnetGenesis(NetworkParameters n, String devNetName, Block genesisBlock, Coin reward) {
+        assert (!devNetName.isEmpty());
+
+        Block devNetGenesisBlock = createDevNetGenesisBlock(n, genesisBlock.getHash(), devNetName, genesisBlock.getTimeSeconds() + 1, 0, genesisBlock.getDifficultyTarget(), reward);
+        devNetGenesisBlock.solve();
+
+        return devNetGenesisBlock;
+    }
+
+    private static Block createDevNetGenesisBlock(NetworkParameters n, Sha256Hash prevHash, String devNetName, long time, int nonce, long diffTarget, Coin reward) {
+        assert (!devNetName.isEmpty());
+        Transaction t = new Transaction(n);
+        Block devNetGenesis = new Block(n, 4);
+        try {
+            // A script containing the difficulty bits and the following message:
+            //
+            //   coin dependent
+            ScriptBuilder builder = new ScriptBuilder();
+            Script inputScript = builder.number(1).data(devNetName.getBytes()).build();
+            t.addInput(new TransactionInput(n, t, inputScript.getProgram()));
+
+            builder = new ScriptBuilder();
+            Script outputScript = builder.op(ScriptOpCodes.OP_RETURN).build();
+            t.addOutput(new TransactionOutput(n, t, reward, outputScript.getProgram()));
+        } catch (Exception e) {
+            // Cannot happen.
+            throw new RuntimeException(e);
+        }
+        devNetGenesis.addTransaction(t);
+        devNetGenesis.setPrevBlockHash(prevHash);
+        devNetGenesis.setTime(time);
+        devNetGenesis.setDifficultyTarget(diffTarget);
+        devNetGenesis.setNonce(nonce);
+        return devNetGenesis;
     }
 
 
@@ -340,6 +383,26 @@ public abstract class NetworkParameters {
      */
     public Block getGenesisBlock() {
         return genesisBlock;
+    }
+
+    /**
+     * <p>DevNet Genesis block for this chain.</p>
+     *
+     * <p>The second block in a devnet chain is a known constant shared between all Dash DevNet implimentations for a
+     * particular devnetname. For a block to be valid, it must be eventually possible to work backwards to the devnet block
+     * and to the genesis block by following the prevBlockHash pointers in the block headers.</p>
+     */
+    public Block getDevNetGenesisBlock() {
+        return devnetGenesisBlock;
+    }
+
+    /**
+     * Gets the name of the devnet.  It should never be called for non-devnets.
+     *
+     * @return the name of the devnet
+     */
+    public String getDevNetName() {
+        return devNetName;
     }
 
     /** Default TCP port on which to connect to nodes. */

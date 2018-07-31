@@ -742,6 +742,14 @@ public class Block extends Message {
         // enough, it's probably been done by the network.
         checkProofOfWork(true);
         checkTimestamp();
+
+        // Check DevNet
+        if(params.getDevNetGenesisBlock() != null) {
+            if(getPrevBlockHash().equals(params.genesisBlock.getHash()) &&
+                    !getHash().equals(params.getDevNetGenesisBlock().getHash())) {
+                throw new VerificationException("Wrong devnet genesis block");
+            }
+        }
     }
 
     /**

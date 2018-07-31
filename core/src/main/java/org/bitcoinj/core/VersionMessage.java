@@ -111,6 +111,8 @@ public class VersionMessage extends Message {
             throw new RuntimeException(e);  // Cannot happen (illegal IP length).
         }
         subVer = LIBRARY_SUBVER;
+        if(params.getDevNetGenesisBlock() != null)
+            subVer = "/"+CoinDefinition.coinName+"J:" + BITCOINJ_VERSION + "(devnet=" + params.getDevNetName() +")/";
         bestHeight = newBestHeight;
         relayTxesBeforeFilter = true;
 
