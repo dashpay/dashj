@@ -27,6 +27,7 @@ import org.bitcoinj.governance.GovernanceObject;
 import org.bitcoinj.governance.GovernanceVoteBroadcast;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.masternode.owner.MasternodeControl;
+import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -54,7 +55,7 @@ public class ForwardingServiceDash {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
         BriefLogFormatter.init();
         if (args.length < 1) {
-            System.err.println("Usage: address-to-send-back-to [regtest|testnet]");
+            System.err.println("Usage: address-to-send-back-to [regtest|testnet|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
             return;
         }
 
@@ -67,6 +68,11 @@ public class ForwardingServiceDash {
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
+        } else if( args.length > 6 && args[1].equals("devnet")) {
+            String [] dnsSeeds = new String[args.length - 5];
+            System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
+            params = DevNetParams.get(args[2], args[3], Integer.parseInt(args[4]), dnsSeeds);
+            filePrefix = "forwarding-service-devnet";
         } else {
             params = MainNetParams.get();
             filePrefix = "forwarding-service";
