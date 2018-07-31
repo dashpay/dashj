@@ -106,7 +106,10 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
                                 Long.toHexString(cursor.getHeader().getDifficultyTarget()) + " vs " +
                                 Long.toHexString(nextBlock.getDifficultyTarget()));
                 } else {
-                    verifyDifficulty(storedPrev, nextBlock, getMaxTarget());
+                    if(nextBlock.getDifficultyTarget() != Utils.encodeCompactBits(maxTarget))
+                        throw new VerificationException("Unexpected change in difficulty at height " + storedPrev.getHeight() +
+                                ": " + Long.toHexString(Utils.encodeCompactBits(maxTarget)) + " vs " +
+                                Long.toHexString(nextBlock.getDifficultyTarget()));
                 }
                 return;
             }
@@ -222,6 +225,10 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
             if(countBlocks != pastBlocks) {
                 try {
                     cursor = cursor.getPrev(blockStore);
+                    if(cursor == null) {
+                        //when using checkpoints, the previous block will not exist until 24 blocks are in the store.
+                        return;
+                    }
                 } catch (BlockStoreException x) {
                     //when using checkpoints, the previous block will not exist until 24 blocks are in the store.
                     return;

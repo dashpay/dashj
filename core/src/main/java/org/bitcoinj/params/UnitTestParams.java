@@ -57,6 +57,9 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
 
         DIP0001BlockHeight = 100000;  // not active
         strSporkAddress = "yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55";
+
+        powDGWHeight = 34140;
+        powKGWHeight = 15200;
     }
 
     private static UnitTestParams instance;
