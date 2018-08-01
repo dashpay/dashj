@@ -52,17 +52,18 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
     @Test
     public void testParse() {
         byte [] mndata = Utils.HEX.decode(
-                "03ea9f31d92ee60d3f9cb2a86dfafdda51ba7f05a3a4aeb5fa12c2ffae0eab830000000000000000000000000000ffff34c917814e1f2102d3b5834899c4479fe6eee3a1775d7b932f4e8d341f19a26453bc5b2a3fbb322c4104acb47355c2968cdf79d1ef17950bc0a896d674c4db62a3b0778181fc9cc8d864d8ca5c5f4325754d8c9f83038779b1d2ff755459b89596bb738615eed5c07610412024baf946c849c9a2dbddf8bb21059d9f6f3a9442b382c20012f15990e8a4308200b892e1a23e6245cbfa6596d416dd1741f01752119f909e2ceee78e7b6653488e5e3b5b00000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000401201000000000000000000000000");
+                      "09efcb66ff207c412e0c9817edc6ae73f4ee6ab69b78872f19c1e7f6da81ab530000000000000000000000000000ffff36bb35f04a3e21024844d13d64dd612147474caeb3ae9eff50daffec4cea17312ce3a8191573af5141042045b0853a5d097b39747b975a2e8cf952a7ac082367ba9b987158ec00a12e92848950444ddd416c7258268c91bffafdc0b14dd4877d488ce7abbe45bdc8469a411f1d574ccc8b7fe9ceba57d9d52e41665e0ac92e6db7fb01d733ff8bb7e59392973c27b199fa7532f1f3ad6a95ebc80685f8c48aa3cf7079650acc62f20f6647ebdddc5a5b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000421201000000000000000000000000");
 
-        PublicKey collateralAddress = new PublicKey(Utils.HEX.decode("02d3b5834899c4479fe6eee3a1775d7b932f4e8d341f19a26453bc5b2a3fbb322c"));
+        PublicKey collateralAddress = new PublicKey(Utils.HEX.decode("024844d13d64dd612147474caeb3ae9eff50daffec4cea17312ce3a8191573af51"));
 
         Masternode mn = new Masternode(MainNetParams.get(), mndata, 0);
         MasternodeInfo info = mn.getInfo();
-        assertEquals(info.nLastDsq, 0);
-        assertEquals(info.sigTime, 1530617486L);
-        assertEquals(info.nProtocolVersion, 70208);
-        assertEquals(info.pubKeyCollateralAddress, collateralAddress);
-        assertEquals(mn.mapGovernanceObjectsVotedOn.size(), 0);
+        assertEquals(0, info.nLastDsq);
+        assertEquals(1532681437, info.sigTime);
+        assertEquals(70210, info.nProtocolVersion);
+        assertEquals(collateralAddress, info.pubKeyCollateralAddress);
+        assertEquals(false, mn.fAllowMixingTx);
+        assertEquals(0, mn.mapGovernanceObjectsVotedOn.size());
 
 
     }
