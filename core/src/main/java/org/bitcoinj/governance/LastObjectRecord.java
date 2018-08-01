@@ -3,7 +3,6 @@ package org.bitcoinj.governance;
 import org.bitcoinj.core.ChildMessage;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
-import sun.nio.ch.Net;
 
 import java.io.IOException;
 import java.io.OutputStream;
