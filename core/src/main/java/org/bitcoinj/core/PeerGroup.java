@@ -2173,6 +2173,7 @@ public class PeerGroup implements TransactionBroadcaster {
             log.info("Transaction source unknown, setting to SELF: {}", tx.getHashAsString());
             tx.getConfidence().setSource(TransactionConfidence.Source.SELF);
         }
+        tx.getConfidence().setPeerInfo(getConnectedPeers().size(), minConnections);
         final TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
         broadcast.setMinConnections(minConnections);
         // Send the TX to the wallet once we have a successful broadcast.

@@ -226,6 +226,9 @@ message TransactionConfidence {
   }
 
   optional IXType ixType = 19 [default = IX_NONE];
+  optional int32 peerCount = 20;
+  optional int32 minConnections = 21;
+  optional int64 sentTime = 22;
 
   // Next tag: 9
 }

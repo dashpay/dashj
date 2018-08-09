@@ -373,6 +373,12 @@ public class WalletProtobufSerializer {
         Date lastBroadcastedAt = confidence.getLastBroadcastedAt();
         if (lastBroadcastedAt != null)
             confidenceBuilder.setLastBroadcastedAt(lastBroadcastedAt.getTime());
+
+        confidenceBuilder.setMinConnections(confidence.getMinConnections());
+        confidenceBuilder.setPeerCount(confidence.getPeerCount());
+        Date sentAt = confidence.getSentAt();
+        if(sentAt != null)
+            confidenceBuilder.setSentTime(sentAt.getTime());
         txBuilder.setConfidence(confidenceBuilder);
     }
 
@@ -806,6 +812,11 @@ public class WalletProtobufSerializer {
             default:
                 confidence.setIXType(TransactionConfidence.IXType.IX_NONE); break;
 
+        }
+        if(confidenceProto.hasSentTime())
+            confidence.setSentTime(new Date(confidenceProto.getSentTime()));
+        if(confidenceProto.hasMinConnections()) {
+            confidence.setPeerInfo(confidenceProto.getPeerCount(), confidenceProto.getMinConnections());
         }
     }
 

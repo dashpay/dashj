@@ -116,8 +116,16 @@ public class TransactionBroadcast {
     }
 
     private class EnoughAvailablePeers implements Runnable {
+
+        private Context context;
+
+        public EnoughAvailablePeers() {
+            this.context = Context.get();
+        }
+
         @Override
         public void run() {
+            Context.propagate(context);
             // We now have enough connected peers to send the transaction.
             // This can be called immediately if we already have enough. Otherwise it'll be called from a peer
             // thread.
@@ -152,6 +160,11 @@ public class TransactionBroadcast {
                     peer.sendMessage(tx);
                     // We don't record the peer as having seen the tx in the memory pool because we want to track only
                     // how many peers announced to us.
+
+                    //the transaction has been sent, mark it and update the listeners
+                    tx.getConfidence().setSent();
+                    tx.getConfidence().setPeerInfo(numConnected, minConnections);
+                    tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.SENT);
                 } catch (Exception e) {
                     log.error("Caught exception sending to {}", peer, e);
                 }

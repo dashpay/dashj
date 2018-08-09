@@ -189,6 +189,13 @@ public class TransactionConfidence {
              * be given.
              */
             IX_TYPE,
+
+            /**
+             * Occurs when the transaction was sent to at least one peer.  {@link @sentAt} will have the time
+             * that the message was sent to the peer(s).  This was added to allow interfaces to effectively
+             * communicate the status of the transaction when there is only 1 peer.
+             */
+            SENT
         }
         void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason);
     }
@@ -340,6 +347,11 @@ public class TransactionConfidence {
     public synchronized String toString() {
         StringBuilder builder = new StringBuilder();
         int peers = numBroadcastPeers();
+        if (minConnections > 0) {
+            builder.append(sentAt != null ? "Sent: " + Utils.dateTimeFormat(sentAt) : "Not sent");
+            builder.append(" while connected to " + peerCount + (peerCount > 1 ? " peers" : " peer") +
+                    " [requiring " + minConnections + (minConnections > 1 ? " peers" : " peer") + "]\n");
+        }
         if (peers > 0) {
             builder.append("Seen by ").append(peers).append(peers > 1 ? " peers" : " peer");
             if (lastBroadcastedAt != null)
@@ -544,4 +556,37 @@ public class TransactionConfidence {
 
     public boolean isIX() { return ixType != IXType.IX_NONE; }
     public boolean isTransactionLocked() { return ixType == IXType.IX_LOCKED; }
+
+    //
+    // Information about peer count when sent
+    //
+    int peerCount;
+    int minConnections;
+    Date sentAt;
+
+    public int getPeerCount() {
+        return peerCount;
+    }
+
+    public int getMinConnections() { return minConnections; }
+
+    public void setPeerInfo(int peerCount, int minConnections) {
+        this.peerCount = peerCount;
+        this.minConnections = minConnections;
+    }
+
+    public boolean isSent() {
+        return sentAt != null;
+    }
+
+    public void setSent() {
+        sentAt = new Date(Utils.currentTimeMillis());
+    }
+
+    public Date getSentAt() { return sentAt; }
+
+    public void setSentTime (Date sentAt) {
+        this.sentAt = sentAt;
+    }
+
 }

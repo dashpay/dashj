@@ -6902,6 +6902,36 @@ public final class Protos {
      * <code>optional .wallet.TransactionConfidence.IXType ixType = 19 [default = IX_NONE];</code>
      */
     org.bitcoinj.wallet.Protos.TransactionConfidence.IXType getIxType();
+
+    // optional int32 peerCount = 20;
+    /**
+     * <code>optional int32 peerCount = 20;</code>
+     */
+    boolean hasPeerCount();
+    /**
+     * <code>optional int32 peerCount = 20;</code>
+     */
+    int getPeerCount();
+
+    // optional int32 minConnections = 21;
+    /**
+     * <code>optional int32 minConnections = 21;</code>
+     */
+    boolean hasMinConnections();
+    /**
+     * <code>optional int32 minConnections = 21;</code>
+     */
+    int getMinConnections();
+
+    // optional int64 sentTime = 22;
+    /**
+     * <code>optional int64 sentTime = 22;</code>
+     */
+    boolean hasSentTime();
+    /**
+     * <code>optional int64 sentTime = 22;</code>
+     */
+    long getSentTime();
   }
   /**
    * Protobuf type {@code wallet.TransactionConfidence}
@@ -7021,6 +7051,21 @@ public final class Protos {
                 bitField0_ |= 0x00000040;
                 ixType_ = value;
               }
+              break;
+            }
+            case 160: {
+              bitField0_ |= 0x00000080;
+              peerCount_ = input.readInt32();
+              break;
+            }
+            case 168: {
+              bitField0_ |= 0x00000100;
+              minConnections_ = input.readInt32();
+              break;
+            }
+            case 176: {
+              bitField0_ |= 0x00000200;
+              sentTime_ = input.readInt64();
               break;
             }
           }
@@ -7636,6 +7681,54 @@ public final class Protos {
       return ixType_;
     }
 
+    // optional int32 peerCount = 20;
+    public static final int PEERCOUNT_FIELD_NUMBER = 20;
+    private int peerCount_;
+    /**
+     * <code>optional int32 peerCount = 20;</code>
+     */
+    public boolean hasPeerCount() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional int32 peerCount = 20;</code>
+     */
+    public int getPeerCount() {
+      return peerCount_;
+    }
+
+    // optional int32 minConnections = 21;
+    public static final int MINCONNECTIONS_FIELD_NUMBER = 21;
+    private int minConnections_;
+    /**
+     * <code>optional int32 minConnections = 21;</code>
+     */
+    public boolean hasMinConnections() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    /**
+     * <code>optional int32 minConnections = 21;</code>
+     */
+    public int getMinConnections() {
+      return minConnections_;
+    }
+
+    // optional int64 sentTime = 22;
+    public static final int SENTTIME_FIELD_NUMBER = 22;
+    private long sentTime_;
+    /**
+     * <code>optional int64 sentTime = 22;</code>
+     */
+    public boolean hasSentTime() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    /**
+     * <code>optional int64 sentTime = 22;</code>
+     */
+    public long getSentTime() {
+      return sentTime_;
+    }
+
     private void initFields() {
       type_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Type.UNKNOWN;
       appearedAtHeight_ = 0;
@@ -7645,6 +7738,9 @@ public final class Protos {
       lastBroadcastedAt_ = 0L;
       source_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Source.SOURCE_UNKNOWN;
       ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
+      peerCount_ = 0;
+      minConnections_ = 0;
+      sentTime_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -7688,6 +7784,15 @@ public final class Protos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeEnum(19, ixType_.getNumber());
       }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeInt32(20, peerCount_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeInt32(21, minConnections_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeInt64(22, sentTime_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -7728,6 +7833,18 @@ public final class Protos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(19, ixType_.getNumber());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(20, peerCount_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(21, minConnections_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(22, sentTime_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -7874,6 +7991,12 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000040);
         ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
         bitField0_ = (bitField0_ & ~0x00000080);
+        peerCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000100);
+        minConnections_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000200);
+        sentTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000400);
         return this;
       }
 
@@ -7939,6 +8062,18 @@ public final class Protos {
           to_bitField0_ |= 0x00000040;
         }
         result.ixType_ = ixType_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.peerCount_ = peerCount_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.minConnections_ = minConnections_;
+        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        result.sentTime_ = sentTime_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8001,6 +8136,15 @@ public final class Protos {
         }
         if (other.hasIxType()) {
           setIxType(other.getIxType());
+        }
+        if (other.hasPeerCount()) {
+          setPeerCount(other.getPeerCount());
+        }
+        if (other.hasMinConnections()) {
+          setMinConnections(other.getMinConnections());
+        }
+        if (other.hasSentTime()) {
+          setSentTime(other.getSentTime());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -8606,6 +8750,105 @@ public final class Protos {
       public Builder clearIxType() {
         bitField0_ = (bitField0_ & ~0x00000080);
         ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
+        onChanged();
+        return this;
+      }
+
+      // optional int32 peerCount = 20;
+      private int peerCount_ ;
+      /**
+       * <code>optional int32 peerCount = 20;</code>
+       */
+      public boolean hasPeerCount() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      /**
+       * <code>optional int32 peerCount = 20;</code>
+       */
+      public int getPeerCount() {
+        return peerCount_;
+      }
+      /**
+       * <code>optional int32 peerCount = 20;</code>
+       */
+      public Builder setPeerCount(int value) {
+        bitField0_ |= 0x00000100;
+        peerCount_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 peerCount = 20;</code>
+       */
+      public Builder clearPeerCount() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        peerCount_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional int32 minConnections = 21;
+      private int minConnections_ ;
+      /**
+       * <code>optional int32 minConnections = 21;</code>
+       */
+      public boolean hasMinConnections() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      /**
+       * <code>optional int32 minConnections = 21;</code>
+       */
+      public int getMinConnections() {
+        return minConnections_;
+      }
+      /**
+       * <code>optional int32 minConnections = 21;</code>
+       */
+      public Builder setMinConnections(int value) {
+        bitField0_ |= 0x00000200;
+        minConnections_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 minConnections = 21;</code>
+       */
+      public Builder clearMinConnections() {
+        bitField0_ = (bitField0_ & ~0x00000200);
+        minConnections_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional int64 sentTime = 22;
+      private long sentTime_ ;
+      /**
+       * <code>optional int64 sentTime = 22;</code>
+       */
+      public boolean hasSentTime() {
+        return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+      /**
+       * <code>optional int64 sentTime = 22;</code>
+       */
+      public long getSentTime() {
+        return sentTime_;
+      }
+      /**
+       * <code>optional int64 sentTime = 22;</code>
+       */
+      public Builder setSentTime(long value) {
+        bitField0_ |= 0x00000400;
+        sentTime_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 sentTime = 22;</code>
+       */
+      public Builder clearSentTime() {
+        bitField0_ = (bitField0_ & ~0x00000400);
+        sentTime_ = 0L;
         onChanged();
         return this;
       }
@@ -19573,7 +19816,7 @@ public final class Protos {
       "e\030\005 \001(\003\"\177\n\021TransactionOutput\022\r\n\005value\030\001 " +
       "\002(\003\022\024\n\014script_bytes\030\002 \002(\014\022!\n\031spent_by_tr" +
       "ansaction_hash\030\003 \001(\014\022\"\n\032spent_by_transac" +
-      "tion_index\030\004 \001(\005\"\254\004\n\025TransactionConfiden" +
+      "tion_index\030\004 \001(\005\"\351\004\n\025TransactionConfiden" +
       "ce\0220\n\004type\030\001 \001(\0162\".wallet.TransactionCon" +
       "fidence.Type\022\032\n\022appeared_at_height\030\002 \001(\005",
       "\022\036\n\026overriding_transaction\030\003 \001(\014\022\r\n\005dept" +
@@ -19581,55 +19824,56 @@ public final class Protos {
       "eerAddress\022\033\n\023last_broadcasted_at\030\010 \001(\003\022" +
       "4\n\006source\030\007 \001(\0162$.wallet.TransactionConf" +
       "idence.Source\022=\n\006ixType\030\023 \001(\0162$.wallet.T" +
-      "ransactionConfidence.IXType:\007IX_NONE\"`\n\004" +
-      "Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILDING\020\001\022\013\n\007PENDI" +
-      "NG\020\002\022\025\n\021NOT_IN_BEST_CHAIN\020\003\022\010\n\004DEAD\020\004\022\017\n" +
-      "\013IN_CONFLICT\020\005\"A\n\006Source\022\022\n\016SOURCE_UNKNO" +
-      "WN\020\000\022\022\n\016SOURCE_NETWORK\020\001\022\017\n\013SOURCE_SELF\020",
-      "\002\"4\n\006IXType\022\013\n\007IX_NONE\020\000\022\016\n\nIX_REQUEST\020\001" +
-      "\022\r\n\tIX_LOCKED\020\002\"\303\005\n\013Transaction\022\017\n\007versi" +
-      "on\030\001 \002(\005\022\014\n\004hash\030\002 \002(\014\022&\n\004pool\030\003 \001(\0162\030.w" +
-      "allet.Transaction.Pool\022\021\n\tlock_time\030\004 \001(" +
-      "\r\022\022\n\nupdated_at\030\005 \001(\003\0223\n\021transaction_inp" +
-      "ut\030\006 \003(\0132\030.wallet.TransactionInput\0225\n\022tr" +
-      "ansaction_output\030\007 \003(\0132\031.wallet.Transact" +
-      "ionOutput\022\022\n\nblock_hash\030\010 \003(\014\022 \n\030block_r" +
-      "elativity_offsets\030\013 \003(\005\0221\n\nconfidence\030\t " +
-      "\001(\0132\035.wallet.TransactionConfidence\0225\n\007pu",
-      "rpose\030\n \001(\0162\033.wallet.Transaction.Purpose" +
-      ":\007UNKNOWN\022+\n\rexchange_rate\030\014 \001(\0132\024.walle" +
-      "t.ExchangeRate\022\014\n\004memo\030\r \001(\t\"Y\n\004Pool\022\013\n\007" +
-      "UNSPENT\020\004\022\t\n\005SPENT\020\005\022\014\n\010INACTIVE\020\002\022\010\n\004DE" +
-      "AD\020\n\022\013\n\007PENDING\020\020\022\024\n\020PENDING_INACTIVE\020\022\"" +
-      "\243\001\n\007Purpose\022\013\n\007UNKNOWN\020\000\022\020\n\014USER_PAYMENT" +
-      "\020\001\022\020\n\014KEY_ROTATION\020\002\022\034\n\030ASSURANCE_CONTRA" +
-      "CT_CLAIM\020\003\022\035\n\031ASSURANCE_CONTRACT_PLEDGE\020" +
-      "\004\022\033\n\027ASSURANCE_CONTRACT_STUB\020\005\022\r\n\tRAISE_" +
-      "FEE\020\006\"N\n\020ScryptParameters\022\014\n\004salt\030\001 \002(\014\022",
-      "\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\0018\022\014\n\001p\030\004 \001" +
-      "(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001 \002(\t\022\014\n\004data\030\002" +
-      " \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022\013\n\003tag\030\001 " +
-      "\002(\t\022\014\n\004data\030\002 \002(\014\"5\n\021TransactionSigner\022\022" +
-      "\n\nclass_name\030\001 \002(\t\022\014\n\004data\030\002 \001(\014\"\351\004\n\006Wal" +
-      "let\022\032\n\022network_identifier\030\001 \002(\t\022\034\n\024last_" +
-      "seen_block_hash\030\002 \001(\014\022\036\n\026last_seen_block" +
-      "_height\030\014 \001(\r\022!\n\031last_seen_block_time_se" +
-      "cs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013.wallet.Key\022(\n\013tr" +
-      "ansaction\030\004 \003(\0132\023.wallet.Transaction\022&\n\016",
-      "watched_script\030\017 \003(\0132\016.wallet.Script\022C\n\017" +
-      "encryption_type\030\005 \001(\0162\035.wallet.Wallet.En" +
-      "cryptionType:\013UNENCRYPTED\0227\n\025encryption_" +
-      "parameters\030\006 \001(\0132\030.wallet.ScryptParamete" +
-      "rs\022\022\n\007version\030\007 \001(\005:\0011\022$\n\textension\030\n \003(" +
-      "\0132\021.wallet.Extension\022\023\n\013description\030\013 \001(" +
-      "\t\022\031\n\021key_rotation_time\030\r \001(\004\022\031\n\004tags\030\020 \003" +
-      "(\0132\013.wallet.Tag\0226\n\023transaction_signers\030\021" +
-      " \003(\0132\031.wallet.TransactionSigner\";\n\016Encry" +
-      "ptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYPTED_",
-      "SCRYPT_AES\020\002\"R\n\014ExchangeRate\022\022\n\ncoin_val" +
-      "ue\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n\022fiat_cur" +
-      "rency_code\030\003 \002(\tB\035\n\023org.bitcoinj.walletB" +
-      "\006Protos"
+      "ransactionConfidence.IXType:\007IX_NONE\022\021\n\t" +
+      "peerCount\030\024 \001(\005\022\026\n\016minConnections\030\025 \001(\005\022" +
+      "\020\n\010sentTime\030\026 \001(\003\"`\n\004Type\022\013\n\007UNKNOWN\020\000\022\014" +
+      "\n\010BUILDING\020\001\022\013\n\007PENDING\020\002\022\025\n\021NOT_IN_BEST" +
+      "_CHAIN\020\003\022\010\n\004DEAD\020\004\022\017\n\013IN_CONFLICT\020\005\"A\n\006S",
+      "ource\022\022\n\016SOURCE_UNKNOWN\020\000\022\022\n\016SOURCE_NETW" +
+      "ORK\020\001\022\017\n\013SOURCE_SELF\020\002\"4\n\006IXType\022\013\n\007IX_N" +
+      "ONE\020\000\022\016\n\nIX_REQUEST\020\001\022\r\n\tIX_LOCKED\020\002\"\303\005\n" +
+      "\013Transaction\022\017\n\007version\030\001 \002(\005\022\014\n\004hash\030\002 " +
+      "\002(\014\022&\n\004pool\030\003 \001(\0162\030.wallet.Transaction.P" +
+      "ool\022\021\n\tlock_time\030\004 \001(\r\022\022\n\nupdated_at\030\005 \001" +
+      "(\003\0223\n\021transaction_input\030\006 \003(\0132\030.wallet.T" +
+      "ransactionInput\0225\n\022transaction_output\030\007 " +
+      "\003(\0132\031.wallet.TransactionOutput\022\022\n\nblock_" +
+      "hash\030\010 \003(\014\022 \n\030block_relativity_offsets\030\013",
+      " \003(\005\0221\n\nconfidence\030\t \001(\0132\035.wallet.Transa" +
+      "ctionConfidence\0225\n\007purpose\030\n \001(\0162\033.walle" +
+      "t.Transaction.Purpose:\007UNKNOWN\022+\n\rexchan" +
+      "ge_rate\030\014 \001(\0132\024.wallet.ExchangeRate\022\014\n\004m" +
+      "emo\030\r \001(\t\"Y\n\004Pool\022\013\n\007UNSPENT\020\004\022\t\n\005SPENT\020" +
+      "\005\022\014\n\010INACTIVE\020\002\022\010\n\004DEAD\020\n\022\013\n\007PENDING\020\020\022\024" +
+      "\n\020PENDING_INACTIVE\020\022\"\243\001\n\007Purpose\022\013\n\007UNKN" +
+      "OWN\020\000\022\020\n\014USER_PAYMENT\020\001\022\020\n\014KEY_ROTATION\020" +
+      "\002\022\034\n\030ASSURANCE_CONTRACT_CLAIM\020\003\022\035\n\031ASSUR" +
+      "ANCE_CONTRACT_PLEDGE\020\004\022\033\n\027ASSURANCE_CONT",
+      "RACT_STUB\020\005\022\r\n\tRAISE_FEE\020\006\"N\n\020ScryptPara" +
+      "meters\022\014\n\004salt\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014" +
+      "\n\001r\030\003 \001(\005:\0018\022\014\n\001p\030\004 \001(\005:\0011\"8\n\tExtension\022" +
+      "\n\n\002id\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\022\021\n\tmandatory\030\003" +
+      " \002(\010\" \n\003Tag\022\013\n\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"5" +
+      "\n\021TransactionSigner\022\022\n\nclass_name\030\001 \002(\t\022" +
+      "\014\n\004data\030\002 \001(\014\"\351\004\n\006Wallet\022\032\n\022network_iden" +
+      "tifier\030\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001" +
+      "(\014\022\036\n\026last_seen_block_height\030\014 \001(\r\022!\n\031la" +
+      "st_seen_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003",
+      "(\0132\013.wallet.Key\022(\n\013transaction\030\004 \003(\0132\023.w" +
+      "allet.Transaction\022&\n\016watched_script\030\017 \003(" +
+      "\0132\016.wallet.Script\022C\n\017encryption_type\030\005 \001" +
+      "(\0162\035.wallet.Wallet.EncryptionType:\013UNENC" +
+      "RYPTED\0227\n\025encryption_parameters\030\006 \001(\0132\030." +
+      "wallet.ScryptParameters\022\022\n\007version\030\007 \001(\005" +
+      ":\0011\022$\n\textension\030\n \003(\0132\021.wallet.Extensio" +
+      "n\022\023\n\013description\030\013 \001(\t\022\031\n\021key_rotation_t" +
+      "ime\030\r \001(\004\022\031\n\004tags\030\020 \003(\0132\013.wallet.Tag\0226\n\023" +
+      "transaction_signers\030\021 \003(\0132\031.wallet.Trans",
+      "actionSigner\";\n\016EncryptionType\022\017\n\013UNENCR" +
+      "YPTED\020\001\022\030\n\024ENCRYPTED_SCRYPT_AES\020\002\"R\n\014Exc" +
+      "hangeRate\022\022\n\ncoin_value\030\001 \002(\003\022\022\n\nfiat_va" +
+      "lue\030\002 \002(\003\022\032\n\022fiat_currency_code\030\003 \002(\tB\035\n" +
+      "\023org.bitcoinj.walletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -19683,7 +19927,7 @@ public final class Protos {
           internal_static_wallet_TransactionConfidence_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_wallet_TransactionConfidence_descriptor,
-              new java.lang.String[] { "Type", "AppearedAtHeight", "OverridingTransaction", "Depth", "BroadcastBy", "LastBroadcastedAt", "Source", "IxType", });
+              new java.lang.String[] { "Type", "AppearedAtHeight", "OverridingTransaction", "Depth", "BroadcastBy", "LastBroadcastedAt", "Source", "IxType", "PeerCount", "MinConnections", "SentTime", });
           internal_static_wallet_Transaction_descriptor =
             getDescriptor().getMessageTypes().get(8);
           internal_static_wallet_Transaction_fieldAccessorTable = new
