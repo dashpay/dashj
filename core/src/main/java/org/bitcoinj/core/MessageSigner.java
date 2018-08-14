@@ -24,7 +24,7 @@ public class MessageSigner {
     }
 
     public static MasternodeSignature signMessage(String message, ECKey key) throws KeyCrypterException {
-        byte dataToHash [] = (Utils.BITCOIN_SIGNED_MESSAGE_HEADER_BYTES+message).getBytes(Charsets.UTF_8);
+        byte dataToHash [] = Utils.formatMessageForSigning(message);
         return HashSigner.signHash(Sha256Hash.twiceOf(dataToHash), key);
     }
 
