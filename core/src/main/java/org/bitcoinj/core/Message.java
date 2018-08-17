@@ -287,6 +287,16 @@ public abstract class Message {
         return length;
     }
 
+    protected int readUint16() throws ProtocolException {
+        try {
+            int i = Utils.readUint16(payload, cursor);
+            cursor += 2;
+            return i;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            throw new ProtocolException(e);
+        }
+    }
+
     protected long readUint32() throws ProtocolException {
         try {
             long u = Utils.readUint32(payload, cursor);
