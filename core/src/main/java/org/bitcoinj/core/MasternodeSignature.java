@@ -93,7 +93,7 @@ public class MasternodeSignature extends ChildMessage {
         return false;
     }
 
-    MasternodeSignature duplicate()
+    public MasternodeSignature duplicate()
     {
         MasternodeSignature copy = new MasternodeSignature(params, getBytes(), 0);
 
@@ -104,4 +104,7 @@ public class MasternodeSignature extends ChildMessage {
         return bytes.length == 0;
     }
 
+    public void clear() {
+        bytes = new byte[0];
+    }
 }
