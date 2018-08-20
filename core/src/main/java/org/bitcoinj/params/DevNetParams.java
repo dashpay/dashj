@@ -46,6 +46,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
 
     public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds) {
         super();
+        this.devNetName = "devnet-" + devNetName;
         id = ID_DEVNET + "." + devNetName;
 
         packetMagic = 0xe2caffce;
@@ -66,7 +67,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
 
-        devnetGenesisBlock = findDevnetGenesis(this, devNetName, getGenesisBlock(), Coin.valueOf(50, 0));
+        devnetGenesisBlock = findDevnetGenesis(this, this.devNetName, getGenesisBlock(), Coin.valueOf(50, 0));
         alertSigningKey = HEX.decode(CoinDefinition.TESTNET_SATOSHI_KEY);
 
         this.dnsSeeds = dnsSeeds;
@@ -98,8 +99,6 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         powKGWHeight = 4001;
         powAllowMinimumDifficulty = true;
         powNoRetargeting = false;
-
-        this.devNetName = "devnet-" + devNetName;
     }
 
     //support more than one DevNet
