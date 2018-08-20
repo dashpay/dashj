@@ -31,15 +31,20 @@ public class MasternodeSignature extends ChildMessage {
 
     public MasternodeSignature(byte [] signature)
     {
-        super(Context.get().getParams());
         bytes = new byte[signature.length];
         System.arraycopy(signature, 0, bytes, 0, signature.length);
+        length = VarInt.sizeOf(bytes.length) + bytes.length;
     }
 
     public MasternodeSignature(MasternodeSignature other) {
         super(other.getParams());
         bytes = new byte[other.bytes.length];
         System.arraycopy(other.bytes, 0, bytes, 0, other.bytes.length);
+        length = other.getMessageSize();
+    }
+
+    public static MasternodeSignature createEmpty() {
+        return new MasternodeSignature(new byte[0]);
     }
 
     protected static int calcLength(byte[] buf, int offset) {
