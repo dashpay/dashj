@@ -234,7 +234,7 @@ public class WalletProtobufSerializer {
 
         txBuilder.setPool(getProtoPool(wtx))
                  .setHash(hashToByteString(tx.getHash()))
-                 .setVersion((int) tx.getVersion());
+                 .setVersion((int) tx.getVersion32bit());
 
         if (tx.getUpdateTime() != null) {
             txBuilder.setUpdatedAt(tx.getUpdateTime().getTime());
@@ -311,6 +311,10 @@ public class WalletProtobufSerializer {
 
         if (tx.getMemo() != null)
             txBuilder.setMemo(tx.getMemo());
+
+        byte [] extraPayload = tx.getExtraPayload();
+        if(extraPayload != null && extraPayload.length > 0)
+            txBuilder.setExtraPayload(ByteString.copyFrom(extraPayload));
 
         return txBuilder.build();
     }
@@ -616,7 +620,7 @@ public class WalletProtobufSerializer {
         boolean isIX = txProto.getConfidence().hasIxType() && txProto.getConfidence().getIxType() != Protos.TransactionConfidence.IXType.IX_NONE;
         Transaction tx = !isIX ? new Transaction(params) : new TransactionLockRequest(params);
 
-        tx.setVersion(txProto.getVersion());
+        tx.setVersion32bit(txProto.getVersion());
 
         if (txProto.hasUpdatedAt()) {
             tx.setUpdateTime(new Date(txProto.getUpdatedAt()));
@@ -678,6 +682,9 @@ public class WalletProtobufSerializer {
 
         if (txProto.hasMemo())
             tx.setMemo(txProto.getMemo());
+
+        if(txProto.hasExtraPayload())
+            tx.setExtraPayload(txProto.getExtraPayload().toByteArray());
 
         // Transaction should now be complete.
         Sha256Hash protoHash = byteStringToHash(txProto.getHash());

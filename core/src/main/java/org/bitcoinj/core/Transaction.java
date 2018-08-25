@@ -19,6 +19,7 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.evolution.SpecialTxPayload;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
@@ -91,6 +92,47 @@ public class Transaction extends ChildMessage {
     };
     private static final Logger log = LoggerFactory.getLogger(Transaction.class);
 
+    public enum Type {
+        TRANSACTION_NORMAL(0),
+        TRANSACTION_PROVIDER_REGISTER(1),
+        TRANSACTION_PROVIDER_UPDATE_SERVICE(2),
+        TRANSACTION_PROVIDER_UPDATE_REGISTRAR(3),
+        TRANSACTION_PROVIDER_UPDATE_REVOKE(4),
+        TRANSACTION_COINBASE(5),
+        TRANSACTION_SUBTX_REGISTER(8),
+        TRANSACTION_SUBTX_TOPUP(9),
+        TRANSACTION_SUBTX_RESETKEY(10),
+        TRANSACTION_SUBTX_CLOSEACCOUNT(11),
+        TRANSACTION_SUBTX_TRANSITION(12);
+
+        int value;
+
+        Type(int value) {
+            this.value = value;
+            getMappings().put(value, this);
+        }
+
+        private static java.util.HashMap<Integer, Type> mappings;
+        private static java.util.HashMap<Integer, Type> getMappings() {
+            if (mappings == null) {
+                synchronized (Type.class) {
+                    if (mappings == null) {
+                        mappings = new java.util.HashMap<Integer, Type>();
+                    }
+                }
+            }
+            return mappings;
+        }
+
+        public int getValue() {
+            return value;
+        }
+
+        public static Type fromValue(int value) {
+            return getMappings().get(value);
+        }
+    }
+
     /** Threshold for lockTime: below this value it is interpreted as block number, otherwise as timestamp. **/
     public static final int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
     /** Same but as a BigInteger for CHECKLOCKTIMEVERIFY */
@@ -116,18 +158,22 @@ public class Transaction extends ChildMessage {
      * {@link TransactionOutput#getMinNonDustValue(Coin)}.
      */
     public static final Coin MIN_NONDUST_OUTPUT = Coin.valueOf(CoinDefinition.DUST_LIMIT); // satoshis
-
     /**
      * Max initial size of inputs and outputs ArrayList.
      */
     public static final int MAX_INITIAL_INPUTS_OUTPUTS_SIZE = 20;
 
     // These are bitcoin serialized.
-    private long version;
+    private int version;
+    private Type type;
     private ArrayList<TransactionInput> inputs;
     private ArrayList<TransactionOutput> outputs;
 
     private long lockTime;
+
+    private byte [] extraPayload;
+
+    private SpecialTxPayload extraPayloadObject;
 
     // This is either the time the transaction was broadcast as measured from the local clock, or the time from the
     // block in which it was included. Note that this can be changed by re-orgs so the wallet may update this field.
@@ -200,10 +246,18 @@ public class Transaction extends ChildMessage {
     public Transaction(NetworkParameters params) {
         super(params);
         version = 1;
+        type = Type.TRANSACTION_NORMAL;
         inputs = new ArrayList<TransactionInput>();
         outputs = new ArrayList<TransactionOutput>();
         // We don't initialize appearsIn deliberately as it's only useful for transactions stored in the wallet.
         length = 8; // 8 for std fields
+    }
+
+    public Transaction(NetworkParameters params, SpecialTxPayload specialTxPayload) {
+        this(params);
+        version = 3;
+        type = specialTxPayload.getType();
+        setExtraPayload(specialTxPayload, false);
     }
 
     /**
@@ -559,7 +613,8 @@ public class Transaction extends ChildMessage {
     protected void parse() throws ProtocolException {
         cursor = offset;
 
-        version = readUint32();
+        version = readUint16();
+        type = Type.fromValue(readUint16());
         optimalEncodingMessageSize = 4;
 
         // First come the inputs.
@@ -586,6 +641,10 @@ public class Transaction extends ChildMessage {
         }
         lockTime = readUint32();
         optimalEncodingMessageSize += 4;
+        if(version >= 3 && type != Type.TRANSACTION_NORMAL) {
+            extraPayload = readByteArray();
+            setExtraPayloadObject();
+        }
         length = cursor - offset;
     }
 
@@ -652,6 +711,7 @@ public class Transaction extends ChildMessage {
             s.append("  updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
         if (version != 1)
             s.append("  version ").append(version).append('\n');
+        s.append("  type ").append(getTypeString()).append('(').append(type.getValue()).append(")\n");
         if (isTimeLocked()) {
             s.append("  time locked until ");
             if (lockTime < LOCKTIME_THRESHOLD) {
@@ -807,6 +867,23 @@ public class Transaction extends ChildMessage {
         // Verify the API user didn't try to do operations out of order.
         checkState(!outputs.isEmpty(), "Attempting to sign tx without outputs.");
         TransactionInput input = new TransactionInput(params, this, new byte[]{}, prevOut);
+        addInput(input);
+        Sha256Hash hash = hashForSignature(inputs.size() - 1, scriptPubKey, sigHash, anyoneCanPay);
+        ECKey.ECDSASignature ecSig = sigKey.sign(hash);
+        TransactionSignature txSig = new TransactionSignature(ecSig, sigHash, anyoneCanPay);
+        if (scriptPubKey.isSentToRawPubKey())
+            input.setScriptSig(ScriptBuilder.createInputScript(txSig));
+        else if (scriptPubKey.isSentToAddress())
+            input.setScriptSig(ScriptBuilder.createInputScript(txSig, sigKey));
+        else
+            throw new ScriptException("Don't know how to sign for this kind of scriptPubKey: " + scriptPubKey);
+        return input;
+    }
+
+    public TransactionInput addSignedInput(TransactionInput input, Script scriptPubKey, ECKey sigKey,
+                                           SigHash sigHash, boolean anyoneCanPay) throws ScriptException {
+        // Verify the API user didn't try to do operations out of order.
+        checkState(!outputs.isEmpty(), "Attempting to sign tx without outputs.");
         addInput(input);
         Sha256Hash hash = hashForSignature(inputs.size() - 1, scriptPubKey, sigHash, anyoneCanPay);
         ECKey.ECDSASignature ecSig = sigKey.sign(hash);
@@ -1064,7 +1141,8 @@ public class Transaction extends ChildMessage {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        uint32ToByteStreamLE(version, stream);
+        uint16ToByteStreamLE(version, stream);
+        uint16ToByteStreamLE(type.getValue(), stream);
         stream.write(new VarInt(inputs.size()).encode());
         for (TransactionInput in : inputs)
             in.bitcoinSerialize(stream);
@@ -1072,6 +1150,10 @@ public class Transaction extends ChildMessage {
         for (TransactionOutput out : outputs)
             out.bitcoinSerialize(stream);
         uint32ToByteStreamLE(lockTime, stream);
+        if(version >= 3 && type != Type.TRANSACTION_NORMAL) {
+            stream.write(new VarInt(extraPayload.length).encode());
+            stream.write(extraPayload);
+        }
     }
 
 
@@ -1108,13 +1190,39 @@ public class Transaction extends ChildMessage {
         this.lockTime = lockTime;
     }
 
-    public long getVersion() {
+    public int getVersion() {
         return version;
     }
 
     public void setVersion(int version) {
         this.version = version;
-        unCache();
+        hash = null;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
+    public void setType(int type) {
+        setType(Type.fromValue(type));
+    }
+
+    public void setType(Type type) {
+        this.type = type;
+        hash = null;
+    }
+
+    public String getTypeString() {
+        return type.toString();//type == Type.TRANSACTION_NORMAL ? "Normal" : extraPayloadObject.getTypeName();
+    }
+
+    public long getVersion32bit() {
+        return version | type.getValue() << 16;
+    }
+
+    public void setVersion32bit(long version32bit) {
+        version = (int)(0xffff & version32bit);
+        type = Type.fromValue((int)(0xffff & (version32bit >> 16)));
     }
 
     /** Returns an unmodifiable view of all inputs. */
@@ -1391,5 +1499,55 @@ public class Transaction extends ChildMessage {
      */
     public void setMemo(String memo) {
         this.memo = memo;
+    }
+
+    public byte [] getExtraPayload() {
+        return extraPayload;
+    }
+
+    public SpecialTxPayload getExtraPayloadObject() {
+        return extraPayloadObject;
+    }
+
+    public void setExtraPayload(byte [] extraPayload) {
+        this.extraPayload = extraPayload;
+        setExtraPayloadObject();
+    }
+
+    protected void setExtraPayload(SpecialTxPayload specialTxPayload, boolean copy) {
+        if(!copy) {
+            extraPayloadObject = specialTxPayload;
+            extraPayload = specialTxPayload.getPayload();
+        } else {
+            setExtraPayload(specialTxPayload.getPayload());
+        }
+    }
+
+    public void setExtraPayload(SpecialTxPayload specialTxPayload) {
+        assert(specialTxPayload.getType() != Type.TRANSACTION_NORMAL);
+        setExtraPayload(specialTxPayload.getPayload());
+        setType(specialTxPayload.getType());
+        unCache();
+    }
+
+    protected void setExtraPayloadObject() {
+        extraPayloadObject = null;
+        switch (type) {
+            case TRANSACTION_NORMAL:
+                break;
+            case TRANSACTION_PROVIDER_REGISTER:
+            case TRANSACTION_PROVIDER_UPDATE_REGISTRAR:
+            case TRANSACTION_PROVIDER_UPDATE_REVOKE:
+            case TRANSACTION_PROVIDER_UPDATE_SERVICE:
+                break;
+            case TRANSACTION_COINBASE:
+                break;
+            case TRANSACTION_SUBTX_REGISTER:
+            case TRANSACTION_SUBTX_RESETKEY:
+            case TRANSACTION_SUBTX_TOPUP:
+            case TRANSACTION_SUBTX_CLOSEACCOUNT:
+            case TRANSACTION_SUBTX_TRANSITION:
+                break;
+        }
     }
 }

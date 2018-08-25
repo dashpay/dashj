@@ -306,6 +306,8 @@ message Transaction {
   optional string memo = 13;
 
   // Next tag: 14
+
+  optional bytes extra_payload = 20;
 }
 
 /** The parameters used in the scrypt key derivation function.
