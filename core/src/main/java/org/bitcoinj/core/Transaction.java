@@ -19,6 +19,7 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.evolution.CoinbaseTx;
 import org.bitcoinj.evolution.SpecialTxPayload;
 import org.bitcoinj.evolution.SubTxRegister;
 import org.bitcoinj.script.Script;
@@ -1542,6 +1543,7 @@ public class Transaction extends ChildMessage {
             case TRANSACTION_PROVIDER_UPDATE_SERVICE:
                 break;
             case TRANSACTION_COINBASE:
+                extraPayloadObject = new CoinbaseTx(params, this);
                 break;
             case TRANSACTION_SUBTX_REGISTER:
                 extraPayloadObject = new SubTxRegister(params, this);
