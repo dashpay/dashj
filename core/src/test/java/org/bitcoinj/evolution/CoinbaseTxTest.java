@@ -19,20 +19,20 @@ public class CoinbaseTxTest {
     public void startup() {
         PARAMS = UnitTestParams.get();
         context = Context.getOrCreate(PARAMS);
-        txdata = Utils.HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff0502fe070101ffffffff022dc71a3d05000000232103ee68257f0a4b1d9cadaf24809b2dddcf557cd3f11db99430c3a682d003861891ac21c71a3d050000001976a914e1e24b11deb712819c7d0da193423bda1b47c25d88ac0000000024fe0700006c45528d7b8d4e7a33614a1c3806f4faf5c463f0b313aa0ece1ce12c34154a44");         //"01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84";
+        txdata = Utils.HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff0502fa050105ffffffff02f4c21a3d0500000023210397181e4cc48fcba0e597bfb029d4cfc4473ae5772a0ff32223977d4e03e07fa9acf4c21a3d050000001976a91425e50daf158a83dfaacd1b77175900aa95a67d4188ac00000000260100fa050000aaaec8d6a8535a01bd844817dea1faed66f6c397b1dcaec5fe8c5af025023c35");
     }
 
     @Test
     public void verifyTest() {
-        Sha256Hash txId = Sha256Hash.wrap("afb7aeb1cb84049c7c81c980c996515dda91ec5c15c29398bad985e9a286d2dc");
+        Sha256Hash txId = Sha256Hash.wrap("7fdcbf835dc7b0d4fe2c8d1b5b3ef32ea5a26d0a225b52a0bb7652804535a491");
 
         Transaction tx = new Transaction(PARAMS, txdata);
         CoinbaseTx cbtx = (CoinbaseTx)tx.getExtraPayloadObject();
 
-        byte [] payloadDataToConfirm = Utils.HEX.decode("fe0700006c45528d7b8d4e7a33614a1c3806f4faf5c463f0b313aa0ece1ce12c34154a44");
+        byte [] payloadDataToConfirm = Utils.HEX.decode("0100fa050000aaaec8d6a8535a01bd844817dea1faed66f6c397b1dcaec5fe8c5af025023c35");
         assertArrayEquals("Payload Data does not match", payloadDataToConfirm, cbtx.getPayload());
         assertEquals(txId, tx.getHash());
-        assertEquals(2046, cbtx.getHeight());
+        assertEquals(1530, cbtx.getHeight());
 
         try {
             UnsafeByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(txdata.length);

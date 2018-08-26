@@ -19,7 +19,7 @@ public class CoinbaseTx extends SpecialTxPayload {
 
     @Override
     protected void parse() throws ProtocolException {
-      //  super.parse(); //currently missing the version
+        super.parse();
         height = readUint32();
         merkleRootMasternodeList = readHash();
         length = cursor - offset;
@@ -27,7 +27,7 @@ public class CoinbaseTx extends SpecialTxPayload {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-     //   super.bitcoinSerializeToStream(stream);  //currently missing the version
+        super.bitcoinSerializeToStream(stream);
         Utils.uint32ToByteStreamLE(height, stream);
         stream.write(merkleRootMasternodeList.getReversedBytes());
     }
