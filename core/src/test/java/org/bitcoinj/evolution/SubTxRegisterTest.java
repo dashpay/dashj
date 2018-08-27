@@ -138,7 +138,7 @@ public class SubTxRegisterTest {
         tx.addOutput(output);
 
         SubTxRegister subtx = new SubTxRegister(1, "samisfun", payloadKey);
-        SubTxRegister subTxUnsigned = new SubTxRegister(1, "samisfun", payloadKey.getPubKeyHash());
+        SubTxRegister subTxUnsigned = new SubTxRegister(1, "samisfun", new KeyId(payloadKey.getPubKeyHash()));
         subTxUnsigned.sign(payloadKey);
 
         byte [] payloadDataToConfirm = Utils.HEX.decode("01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84");

@@ -10,7 +10,7 @@ public class SubTxRegister extends SpecialTxPayload {
     public final int CURRENT_VERSION = 1;
 
     String userName;
-    byte [] pubKeyId;
+    KeyId pubKeyId;
     MasternodeSignature signature;
 
     public SubTxRegister(NetworkParameters params, Transaction tx) {
@@ -20,12 +20,12 @@ public class SubTxRegister extends SpecialTxPayload {
     public SubTxRegister(int version, String userName, ECKey key) {
         super(version);
         this.userName = userName;
-        pubKeyId = key.getPubKeyHash();
+        pubKeyId = new KeyId(key.getPubKeyHash());
         length = 2 + userName.length() + VarInt.sizeOf(userName.length()) + 20 + 1;
         sign(key);
     }
 
-    public SubTxRegister(int version, String userName, byte [] keyId) {
+    public SubTxRegister(int version, String userName, KeyId keyId) {
         super(version);
         this.userName = userName;
         pubKeyId = keyId;
@@ -37,7 +37,8 @@ public class SubTxRegister extends SpecialTxPayload {
     protected void parse() throws ProtocolException {
         super.parse();
         userName = readStr();
-        pubKeyId = readBytes(20);
+        pubKeyId = new KeyId(params, payload, cursor);
+        cursor += pubKeyId.getMessageSize();
         signature = new MasternodeSignature(params, payload, cursor);
         cursor += signature.getMessageSize();
         length = cursor - offset;
@@ -47,7 +48,7 @@ public class SubTxRegister extends SpecialTxPayload {
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         super.bitcoinSerializeToStream(stream);
         Utils.stringToByteStream(userName, stream);
-        stream.write(pubKeyId);
+        pubKeyId.bitcoinSerialize(stream);
         signature.bitcoinSerialize(stream);
     }
 
@@ -56,7 +57,7 @@ public class SubTxRegister extends SpecialTxPayload {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getMessageSize());
             super.bitcoinSerializeToStream(bos);
             Utils.stringToByteStream(userName, bos);
-            bos.write(pubKeyId);
+            pubKeyId.bitcoinSerialize(bos);
             bos.write(0);
             return Sha256Hash.wrap(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException x) {
@@ -88,7 +89,7 @@ public class SubTxRegister extends SpecialTxPayload {
         result.append("txType", getName());
         result.append("version", version);
         result.append("userName", userName);
-        result.append("pubKeyId", Utils.HEX.encode(pubKeyId));
+        result.append("pubKeyId", pubKeyId);
         return result;
     }
 
@@ -105,7 +106,7 @@ public class SubTxRegister extends SpecialTxPayload {
     }
 
     public String getUserName() { return userName; }
-    public byte [] getPubKeyId() { return pubKeyId; }
+    public KeyId getPubKeyId() { return pubKeyId; }
     public MasternodeSignature getSignature() { return signature; }
 
     @Override
