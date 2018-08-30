@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.evolution.SubTxTransition.EVO_TS_MAX_FEE;
+import static org.bitcoinj.evolution.SubTxTransition.EVO_TS_MIN_FEE;
+
 public class EvolutionUserManager extends AbstractManager {
 
     private static final Logger log = LoggerFactory.getLogger(EvolutionUserManager.class);
@@ -162,9 +165,11 @@ public class EvolutionUserManager extends AbstractManager {
     {
         lock.lock();
         try {
+            SubTxTopup topup = (SubTxTopup)tx.getExtraPayloadObject();
+            EvolutionUser user = getUser(topup.getRegTxId());
+            if(user.isClosed())
+                return false;
 
-            SubTxTopup subTx = (SubTxTopup)tx.getExtraPayloadObject();
-            EvolutionUser user = getUser(subTx.getRegTxId());
             if (user == null) {
                 return false;
             }
@@ -178,6 +183,76 @@ public class EvolutionUserManager extends AbstractManager {
         } finally {
             lock.unlock();
         }
+    }
+
+    boolean checkSubTxResetKey(Transaction tx, StoredBlock prev)
+    {
+        lock.lock();
+        try {
+
+            SubTxResetKey subTx = (SubTxResetKey)tx.getExtraPayloadObject();
+            EvolutionUser user = getUser(subTx.regTxId);
+            if (!checkSubTxAndFeeForUser(tx, subTx, user)){
+                return false;
+            }
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    boolean checkSubTxAndFeeForUser(Transaction tx, SubTxForExistingUser subTxRet, EvolutionUser user)
+    {
+        if (!checkSubTxForUser(tx, subTxRet, user)) {
+            return false;
+        }
+
+        // TODO min fee depending on TS size
+        if (subTxRet.creditFee.compareTo(EVO_TS_MIN_FEE) < 0 || subTxRet.creditFee.compareTo(EVO_TS_MAX_FEE) > 0) {
+            return false;
+        }
+
+        if (user.getCreditBalance().compareTo(subTxRet.creditFee) < 0) {
+            // Low DoS score as peers may not know about the low balance (e.g. due to not mined topups)
+            return false;//state.DoS(10, false, REJECT_INSUFFICIENTFEE, "bad-subtx-nocredits");
+        }
+        return true;
+    }
+
+    boolean checkSubTxForUser(Transaction tx, SubTxForExistingUser subTxRet, EvolutionUser user)
+    {
+        if (getSubTxAndUser(tx) == null) {
+            return false;
+        }
+
+        StringBuilder strError = new StringBuilder();
+        if (!HashSigner.verifyHash(subTxRet.getSignHash(), user.getCurPubKeyID().getBytes(), subTxRet.getSignature(), strError)) {
+        // TODO immediately ban?
+            return false;
+        }
+
+        return true;
+    }
+
+    EvolutionUser getSubTxAndUser(Transaction tx) {
+        return getSubTxAndUser(tx, false);
+    }
+
+    EvolutionUser getSubTxAndUser(Transaction tx, boolean allowClosed)
+    {
+        SubTxForExistingUser subTx = (SubTxForExistingUser)tx.getExtraPayloadObject();
+        if(!subTx.check())
+            return null;
+
+        EvolutionUser user = getUser(subTx.getRegTxId());
+
+        if(user == null)
+            return null;
+
+        if(!allowClosed && user.isClosed())
+            return null;
+
+        return user;
     }
 
     EvolutionUser buildUser(Transaction regTx)
@@ -248,6 +323,41 @@ public class EvolutionUserManager extends AbstractManager {
     {
         Coin topupAmount = getTxBurnAmount(tx);
         user.addTopUp(topupAmount);
+        return true;
+    }
+
+    boolean processSubTxResetKey(Transaction tx, StoredBlock prev, Coin specialTxFees)
+    {
+        lock.lock();
+        try {
+
+
+            SubTxResetKey subTx = (SubTxResetKey) tx.getExtraPayloadObject();
+            EvolutionUser user = getSubTxAndUser(tx);
+            if (user == null)
+                return false;
+
+            if (!processSubTxResetKeyForUser(user, tx, subTx)) {
+                return false;
+            }
+
+            //pecialTxFees += subTx.creditFee;
+
+            writeUser(user);
+            //userDb.PushSubTx(subTx.regTxId, tx.GetHash());
+            //userDb.PushPubKey(subTx.regTxId, subTx.newPubKeyId);
+
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    boolean processSubTxResetKeyForUser(EvolutionUser user, Transaction tx, SubTxResetKey subTx)
+    {
+        user.setCurSubTx(tx.getHash());
+        user.setCurPubKeyID(subTx.getNewPubKeyId());
+        user.addSpend(subTx.getCreditFee());
         return true;
     }
 

@@ -19,10 +19,7 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.evolution.CoinbaseTx;
-import org.bitcoinj.evolution.SpecialTxPayload;
-import org.bitcoinj.evolution.SubTxRegister;
-import org.bitcoinj.evolution.SubTxTopup;
+import org.bitcoinj.evolution.*;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
@@ -1550,13 +1547,14 @@ public class Transaction extends ChildMessage {
                 extraPayloadObject = new SubTxRegister(params, this);
                 break;
             case TRANSACTION_SUBTX_RESETKEY:
+                extraPayloadObject = new SubTxResetKey(params, this);
+                break;
             case TRANSACTION_SUBTX_TOPUP:
                 extraPayloadObject = new SubTxTopup(params, this);
+                break;
             case TRANSACTION_SUBTX_CLOSEACCOUNT:
             case TRANSACTION_SUBTX_TRANSITION:
                 break;
         }
-        if(extraPayloadObject != null)
-            extraPayloadObject.setParentTransaction(this);
     }
 }
