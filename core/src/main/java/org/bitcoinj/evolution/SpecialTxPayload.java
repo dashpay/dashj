@@ -43,6 +43,11 @@ public abstract class SpecialTxPayload extends Message {
         }
     }
 
+    @Override
+    public Sha256Hash getHash() {
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(getPayload()));
+    }
+
     public boolean check() {
         if(version > getCurrentVersion())
             return false;
