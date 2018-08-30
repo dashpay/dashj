@@ -49,6 +49,18 @@ public abstract class SpecialTxPayload extends Message {
         return true;
     }
 
+    public int getVersion() {
+        return version;
+    }
+
+    public Transaction getParentTransaction() {
+        return parentTransaction;
+    }
+
+    public void setParentTransaction(Transaction parentTransaction) {
+        this.parentTransaction = parentTransaction;
+    }
+
     public abstract int getCurrentVersion();
 
     public abstract Transaction.Type getType();
