@@ -44,7 +44,7 @@ public abstract class SpecialTxPayload extends Message {
     }
 
     public boolean check() {
-        if(version <= getCurrentVersion())
+        if(version > getCurrentVersion())
             return false;
         return true;
     }

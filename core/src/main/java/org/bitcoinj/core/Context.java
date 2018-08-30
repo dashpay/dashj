@@ -16,6 +16,7 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.core.listeners.BlockChainListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
+import org.bitcoinj.evolution.EvolutionUserManager;
 import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceTriggerManager;
 import org.bitcoinj.governance.VoteConfidenceTable;
@@ -74,6 +75,7 @@ public class Context {
     public GovernanceManager governanceManager;
     public GovernanceTriggerManager triggerManager;
     public NetFullfilledRequestManager netFullfilledRequestManager;
+    public EvolutionUserManager evoUserManager;
     public static boolean fMasterNode = false;
     private VoteConfidenceTable voteConfidenceTable;
 
@@ -229,6 +231,7 @@ public class Context {
         triggerManager = new GovernanceTriggerManager(this);
 
         netFullfilledRequestManager = new NetFullfilledRequestManager(this);
+        evoUserManager = new EvolutionUserManager(this);
     }
 
     public void closeDash() {
