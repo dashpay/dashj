@@ -22,6 +22,7 @@ import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.evolution.CoinbaseTx;
 import org.bitcoinj.evolution.SpecialTxPayload;
 import org.bitcoinj.evolution.SubTxRegister;
+import org.bitcoinj.evolution.SubTxTopup;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
@@ -1550,9 +1551,12 @@ public class Transaction extends ChildMessage {
                 break;
             case TRANSACTION_SUBTX_RESETKEY:
             case TRANSACTION_SUBTX_TOPUP:
+                extraPayloadObject = new SubTxTopup(params, this);
             case TRANSACTION_SUBTX_CLOSEACCOUNT:
             case TRANSACTION_SUBTX_TRANSITION:
                 break;
         }
+        if(extraPayloadObject != null)
+            extraPayloadObject.setParentTransaction(this);
     }
 }

@@ -128,6 +128,7 @@ public class EvolutionUserManager extends AbstractManager {
     }
 
     boolean checkSubTxRegister(Transaction tx, StoredBlock prevBlock) {
+        lock.lock();
         try {
             SubTxRegister subTxRegister = new SubTxRegister(tx.getParams(), tx);
 
@@ -139,7 +140,7 @@ public class EvolutionUserManager extends AbstractManager {
 
             Coin topupAmount = getTxBurnAmount(tx);
 
-            if(topupAmount.compareTo(Coin.valueOf(1000)/*SubTxTopup.MIN_SUBTX_TOPUP*/) < 0)
+            if(topupAmount.compareTo(SubTxTopup.MIN_SUBTX_TOPUP) < 0)
                 return false;
 
             StringBuilder errorMessage = new StringBuilder();
@@ -151,8 +152,32 @@ public class EvolutionUserManager extends AbstractManager {
 
         } catch (ProtocolException x) {
 
+        } finally {
+            lock.unlock();
         }
         return false;
+    }
+
+    boolean checkSubTxTopup(Transaction tx, StoredBlock prev)
+    {
+        lock.lock();
+        try {
+
+            SubTxTopup subTx = (SubTxTopup)tx.getExtraPayloadObject();
+            EvolutionUser user = getUser(subTx.getRegTxId());
+            if (user == null) {
+                return false;
+            }
+
+            Coin topupAmount = getTxBurnAmount(tx);
+            if (topupAmount.compareTo(SubTxTopup.MIN_SUBTX_TOPUP) < 0) {
+                return false;
+            }
+
+            return true;
+        } finally {
+            lock.unlock();
+        }
     }
 
     EvolutionUser buildUser(Transaction regTx)
@@ -194,6 +219,36 @@ public class EvolutionUserManager extends AbstractManager {
         } finally {
             lock.unlock();
         }
+    }
+
+    boolean processSubTxTopup(Transaction tx, StoredBlock prev, Coin specialTxFees)
+    {
+        lock.lock();
+        try {
+
+            SubTxTopup subTx = (SubTxTopup)tx.getExtraPayloadObject();
+            EvolutionUser user = getUser(subTx.getRegTxId());
+            if (user == null) {
+                return false;
+            }
+
+            if (!processSubTxTopupForUser(user, tx, subTx)) {
+                return false;
+            }
+
+            // We don't push the subTx hash here as everyone can topup a users credits and the order is also not important
+            writeUser(user);
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    boolean processSubTxTopupForUser(EvolutionUser user, Transaction tx, SubTxTopup subTx)
+    {
+        Coin topupAmount = getTxBurnAmount(tx);
+        user.addTopUp(topupAmount);
+        return true;
     }
 
     public EvolutionUser getCurrentUser() {
