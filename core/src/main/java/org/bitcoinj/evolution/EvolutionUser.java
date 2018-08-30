@@ -145,4 +145,9 @@ public class EvolutionUser extends ChildMessage {
     public Sha256Hash getCurHashSTPacket() {
         return hashCurSTPacket;
     }
+
+    @Override
+    public String toString() {
+        return "EvolutionUser:  " + userName + " ["+getCreditBalance()+"] ";
+    }
 }
