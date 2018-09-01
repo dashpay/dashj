@@ -10,8 +10,8 @@ public class SubTxTransition extends SubTxForExistingUser {
 
     static final int CURRENT_VERSION = 1;
 
-    static final Coin EVO_TS_MIN_FEE = Coin.valueOf(1000); // TODO find good min fee
-    static final Coin EVO_TS_MAX_FEE = EVO_TS_MIN_FEE.multiply(10); // TODO find good max fee
+    public static final Coin EVO_TS_MIN_FEE = Coin.valueOf(1000); // TODO find good min fee
+    public static final Coin EVO_TS_MAX_FEE = EVO_TS_MIN_FEE.multiply(10); // TODO find good max fee
 
 
     Sha256Hash hashSTPacket;

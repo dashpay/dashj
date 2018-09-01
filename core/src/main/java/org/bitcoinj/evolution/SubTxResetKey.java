@@ -18,7 +18,7 @@ public class SubTxResetKey extends SubTxForExistingUser {
         super(params, tx);
     }
 
-    protected SubTxResetKey(int version, Sha256Hash regTxId, Sha256Hash hashPrevSubTx, Coin creditFee, KeyId newPubKeyId, ECKey key) {
+    public SubTxResetKey(int version, Sha256Hash regTxId, Sha256Hash hashPrevSubTx, Coin creditFee, KeyId newPubKeyId, ECKey key) {
         super(version, regTxId, hashPrevSubTx, creditFee);
         this.newPubKeyId = newPubKeyId;
         length = MESSAGE_SIZE_WITH_EMPTY_SIG;
