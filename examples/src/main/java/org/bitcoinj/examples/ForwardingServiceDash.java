@@ -17,14 +17,18 @@
 
 package org.bitcoinj.examples;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.evolution.*;
 import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceObject;
 import org.bitcoinj.governance.GovernanceVoteBroadcast;
+import org.bitcoinj.kits.EvolutionWalletAppKit;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.masternode.owner.MasternodeControl;
 import org.bitcoinj.params.DevNetParams;
@@ -33,11 +37,14 @@ import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Random;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -53,7 +60,7 @@ public class ForwardingServiceDash {
 
     public static void main(String[] args) throws Exception {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
-        BriefLogFormatter.init();
+        BriefLogFormatter.initVerbose();
         if (args.length < 1) {
             System.err.println("Usage: address-to-send-back-to [regtest|testnet|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
             return;
@@ -81,7 +88,26 @@ public class ForwardingServiceDash {
         forwardingAddress = Address.fromBase58(params, args[0]);
 
         // Start up a basic app using a class that automates some boilerplate.
-        kit = new WalletAppKit(params, new File("."), filePrefix, false);
+        if(args[1] == "devnet") {
+            kit = new WalletAppKit(params, new File("."), filePrefix, false) {
+                @Override
+                protected void onSetupCompleted() {
+                    super.onSetupCompleted();
+                    peerGroup().setMinBroadcastConnections(2);
+                    peerGroup().setMaxConnections(3);
+                }
+            };
+        } else {
+            kit = new EvolutionWalletAppKit(params, new File("."), filePrefix, false) {
+                @Override
+                protected void onSetupCompleted() {
+                    super.onSetupCompleted();
+                    peerGroup().setMinBroadcastConnections(2);
+                    peerGroup().setMaxConnections(3);
+                }
+            };
+        }
+
 
         //kit = new LevelDBWalletAppKit(params, new File("."), filePrefix);
 
@@ -105,6 +131,9 @@ public class ForwardingServiceDash {
                 Coin value = tx.getValueSentToMe(w);
                 System.out.println("Received tx for " + value.toFriendlyString() + ": " + tx);
                 System.out.println("Transaction will be forwarded after it confirms.");
+
+                if(tx.getType() != Transaction.Type.TRANSACTION_NORMAL)
+                    return;
                 // Wait until it's made it into the block chain (may run immediately if it's already there).
                 //
                 // For this dummy app of course, we could just forward the unconfirmed transaction. If it were
@@ -112,6 +141,45 @@ public class ForwardingServiceDash {
                 // be called in onSetupCompleted() above. But we don't do that here to demonstrate the more common
                 // case of waiting for a block.
                 Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>() {
+                    @Override
+                    public void onSuccess(TransactionConfidence result) {
+                        createUser(tx);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        // This kind of future can't fail, just rethrow in case something weird happens.
+                        throw new RuntimeException(t);
+                    }
+                });
+
+                Futures.addCallback(tx.getConfidence().getDepthFuture(2), new FutureCallback<TransactionConfidence>() {
+                    @Override
+                    public void onSuccess(TransactionConfidence result) {
+                        topup(tx);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        // This kind of future can't fail, just rethrow in case something weird happens.
+                        throw new RuntimeException(t);
+                    }
+                });
+
+                Futures.addCallback(tx.getConfidence().getDepthFuture(3), new FutureCallback<TransactionConfidence>() {
+                    @Override
+                    public void onSuccess(TransactionConfidence result) {
+                        reset(tx);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        // This kind of future can't fail, just rethrow in case something weird happens.
+                        throw new RuntimeException(t);
+                    }
+                });
+
+                Futures.addCallback(tx.getConfidence().getDepthFuture(4), new FutureCallback<TransactionConfidence>() {
                     @Override
                     public void onSuccess(TransactionConfidence result) {
                         forwardCoins(tx);
@@ -179,13 +247,100 @@ public class ForwardingServiceDash {
         } catch (InterruptedException ignored) {}
     }
 
+    static EvolutionUser currentUser;
+    static ECKey privKey;
+    static ECKey newPrivKey;
+
+    private static void createUser(Transaction tx) {
+        try {
+
+            Coin amount = Coin.parseCoin("0.001");
+            privKey = ECKey.fromPrivate(kit.wallet().getActiveKeyChain().getKeyByPath(DeterministicKeyChain.ACCOUNT_ZERO_PATH, false).getPrivKeyBytes());
+            newPrivKey = ECKey.fromPrivate(kit.wallet().getActiveKeyChain().getKeyByPath(ImmutableList.of(ChildNumber.ONE_HARDENED), true).getPrivKeyBytes());
+            SendRequest req = SendRequest.forSubTxRegister(kit.params(),
+                    new SubTxRegister(1, "hashengineering"+new Random().nextInt()/1000,
+                            privKey),
+                    amount);
+
+            final Wallet.SendResult sendResult = kit.wallet().sendCoins(req);
+
+            currentUser = Context.get().evoUserManager.getUser(sendResult.tx.getHash());
+
+            sendResult.broadcastComplete.addListener(new Runnable() {
+                @Override
+                public void run() {
+                    // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
+                    System.out.println("SubTxRegister! Transaction hash is " + sendResult.tx.getHashAsString());
+                }
+            }, MoreExecutors.sameThreadExecutor());
+
+            FlatDB<EvolutionUserManager> mndb = new FlatDB<EvolutionUserManager>(kit.directory().getAbsolutePath(),"user.dat", "magicMasternodeCache");
+            mndb.dump(Context.get().evoUserManager);
+        } catch (KeyCrypterException | InsufficientMoneyException e) {
+            // We don't use encrypted wallets in this example - can never happen.
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void topup(Transaction tx) {
+        try {
+
+
+            SendRequest topup = SendRequest.forSubTxTopup(kit.params(),
+                    new SubTxTopup(1, currentUser.getRegTxId()), Coin.valueOf(50000000));
+
+            final Wallet.SendResult sendResult = kit.wallet().sendCoins(topup);
+
+
+            sendResult.broadcastComplete.addListener(new Runnable() {
+                @Override
+                public void run() {
+                    // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
+                    System.out.println("SubTxTopup! Transaction hash is " + sendResult.tx.getHashAsString());
+                }
+            }, MoreExecutors.sameThreadExecutor());
+
+            FlatDB<EvolutionUserManager> mndb = new FlatDB<EvolutionUserManager>(kit.directory().getAbsolutePath(),"user.dat", "magicMasternodeCache");
+            mndb.dump(Context.get().evoUserManager);
+        } catch (KeyCrypterException | InsufficientMoneyException e) {
+            // We don't use encrypted wallets in this example - can never happen.
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void reset(Transaction tx) {
+        try {
+
+            SendRequest reset = SendRequest.forSubTxResetKey(kit.params(),
+                    new SubTxResetKey(1, currentUser.getRegTxId(), currentUser.getCurSubTx(), SubTxTransition.EVO_TS_MIN_FEE, new KeyId(newPrivKey.getPubKeyHash()), privKey));
+
+            final Wallet.SendResult sendResult = kit.wallet().sendCoins(reset);
+
+            sendResult.broadcastComplete.addListener(new Runnable() {
+                @Override
+                public void run() {
+                    // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
+                    System.out.println("SubTxResetKey! Transaction hash is " + sendResult.tx.getHashAsString());
+                }
+            }, MoreExecutors.sameThreadExecutor());
+
+            FlatDB<EvolutionUserManager> mndb = new FlatDB<EvolutionUserManager>(kit.directory().getAbsolutePath(),"user.dat", "magicMasternodeCache");
+            mndb.dump(Context.get().evoUserManager);
+        } catch (KeyCrypterException | InsufficientMoneyException e) {
+            // We don't use encrypted wallets in this example - can never happen.
+            throw new RuntimeException(e);
+        }
+    }
+
     private static void forwardCoins(Transaction tx) {
         try {
-            Coin value = tx.getValueSentToMe(kit.wallet());
-            System.out.println("Forwarding " + value.toFriendlyString());
+
+            //Coin value = tx.getValueSentToMe(kit.wallet()).subtract(amount);
+            System.out.println("Forwarding " + kit.wallet().getBalance());
             // Now send the coins back! Send with a small fee attached to ensure rapid confirmation.
-            final Coin amountToSend = value.subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE);
-            final Wallet.SendResult sendResult = kit.wallet().sendCoins(kit.peerGroup(), forwardingAddress, amountToSend);
+            //final Coin amountToSend = value.subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE);
+            final Wallet.SendResult sendResult = //kit.wallet().sendCoins(kit.peerGroup(), forwardingAddress, amountToSend);
+                    kit.wallet().sendCoins(SendRequest.emptyWallet(forwardingAddress));
             checkNotNull(sendResult);  // We should never try to send more coins than we have!
             System.out.println("Sending ...");
             // Register a callback that is invoked when the transaction has propagated across the network.
@@ -207,4 +362,5 @@ public class ForwardingServiceDash {
             throw new RuntimeException(e);
         }
     }
+
 }
