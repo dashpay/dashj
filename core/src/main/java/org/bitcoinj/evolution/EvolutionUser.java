@@ -47,7 +47,6 @@ public class EvolutionUser extends ChildMessage {
         this.topupCredits = Coin.ZERO;
         this.spentCredits = Coin.ZERO;
         hashCurSTPacket = Sha256Hash.ZERO_HASH;
-        hashCurSubTx = Sha256Hash.ZERO_HASH;
     }
 
     public EvolutionUser(NetworkParameters params, byte [] payload, int offset) {
