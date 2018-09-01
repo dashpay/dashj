@@ -1,6 +1,7 @@
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +84,7 @@ public class EvolutionUserManager extends AbstractManager {
         return new EvolutionUserManager();
     }
 
-    void deleteUser(Sha256Hash regTxId) {
+    public void deleteUser(Sha256Hash regTxId) {
         if(userMap.containsKey(regTxId))
             return;
 
@@ -94,11 +95,11 @@ public class EvolutionUserManager extends AbstractManager {
         userMap.remove(user);
     }
 
-    EvolutionUser getUser(Sha256Hash regTxId) {
+    public EvolutionUser getUser(Sha256Hash regTxId) {
         return userMap.get(regTxId);
     }
 
-    Sha256Hash getUserIdByName(String userName) {
+    public Sha256Hash getUserIdByName(String userName) {
         for(Map.Entry<Sha256Hash, EvolutionUser> user : userMap.entrySet())
         {
             if(user.getValue().getUserName().equals(userName))
@@ -107,11 +108,11 @@ public class EvolutionUserManager extends AbstractManager {
         return null;
     }
 
-    boolean userExists(Sha256Hash regTxId) {
+    public boolean userExists(Sha256Hash regTxId) {
         return userMap.containsKey(regTxId);
     }
 
-    boolean userNameExists(String userName) {
+    public boolean userNameExists(String userName) {
         return getUserIdByName(userName) != null;
     }
 
@@ -166,6 +167,9 @@ public class EvolutionUserManager extends AbstractManager {
         lock.lock();
         try {
             SubTxTopup topup = (SubTxTopup)tx.getExtraPayloadObject();
+            if(!topup.check())
+                return false;
+
             EvolutionUser user = getUser(topup.getRegTxId());
             if(user.isClosed())
                 return false;
@@ -191,6 +195,9 @@ public class EvolutionUserManager extends AbstractManager {
         try {
 
             SubTxResetKey subTx = (SubTxResetKey)tx.getExtraPayloadObject();
+            if(!subTx.check())
+                return false;
+
             EvolutionUser user = getUser(subTx.regTxId);
             if (!checkSubTxAndFeeForUser(tx, subTx, user)){
                 return false;
@@ -222,6 +229,10 @@ public class EvolutionUserManager extends AbstractManager {
     boolean checkSubTxForUser(Transaction tx, SubTxForExistingUser subTxRet, EvolutionUser user)
     {
         if (getSubTxAndUser(tx) == null) {
+            return false;
+        }
+
+        if (!subTxRet.hashPrevSubTx.equals(user.getCurSubTx())) {
             return false;
         }
 
@@ -273,7 +284,7 @@ public class EvolutionUserManager extends AbstractManager {
         return user;
     }
 
-    public boolean processSubTxRegister(Transaction tx, StoredBlock prev, Coin specialTxFees)
+    public boolean processSubTxRegister(Transaction tx, StoredBlock prev)
     {
         lock.lock();
         try {
@@ -296,7 +307,7 @@ public class EvolutionUserManager extends AbstractManager {
         }
     }
 
-    boolean processSubTxTopup(Transaction tx, StoredBlock prev, Coin specialTxFees)
+    boolean processSubTxTopup(Transaction tx, StoredBlock prev)
     {
         lock.lock();
         try {
@@ -326,7 +337,7 @@ public class EvolutionUserManager extends AbstractManager {
         return true;
     }
 
-    boolean processSubTxResetKey(Transaction tx, StoredBlock prev, Coin specialTxFees)
+    boolean processSubTxResetKey(Transaction tx, StoredBlock prev)
     {
         lock.lock();
         try {
@@ -367,5 +378,27 @@ public class EvolutionUserManager extends AbstractManager {
 
     public void setCurrentUser(EvolutionUser currentUser) {
         this.currentUser = currentUser;
+    }
+
+    public boolean processSpecialTransaction(Transaction tx, Block currentBlock) {
+        try {
+            StoredBlock prev = currentBlock != null ? context.blockChain.getBlockStore().get(currentBlock.getHash()) : null;
+            prev = prev != null ? prev.getPrev(context.blockChain.getBlockStore()) : null;
+
+            switch (tx.getType()) {
+                case TRANSACTION_SUBTX_REGISTER:
+                    return checkSubTxRegister(tx, prev) && processSubTxRegister(tx, prev);
+                case TRANSACTION_SUBTX_TOPUP:
+                    return checkSubTxTopup(tx, prev) && processSubTxTopup(tx, prev);
+                case TRANSACTION_SUBTX_RESETKEY:
+                    return checkSubTxResetKey(tx, prev) && processSubTxResetKey(tx, prev);
+                case TRANSACTION_SUBTX_CLOSEACCOUNT:
+                case TRANSACTION_SUBTX_TRANSITION:
+                        return false;
+            }
+        } catch (BlockStoreException x) {
+            return false;
+        }
+        return false;
     }
 }

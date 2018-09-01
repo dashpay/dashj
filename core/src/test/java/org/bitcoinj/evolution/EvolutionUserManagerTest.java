@@ -113,7 +113,7 @@ public class EvolutionUserManagerTest {
         if(!manager.checkSubTxRegister(tx, null))
             fail();
 
-        if(!manager.processSubTxRegister(tx, null, Coin.valueOf(10000)))
+        if(!manager.processSubTxRegister(tx, null))
             fail();
 
         EvolutionUser user = manager.getUser(tx.getHash());
@@ -129,16 +129,13 @@ public class EvolutionUserManagerTest {
         if(!manager.checkSubTxTopup(secondTx, null))
             fail();
 
-        if(!manager.processSubTxTopup(secondTx, null, Coin.valueOf(10000)))
+        if(!manager.processSubTxTopup(secondTx, null))
             fail();
         assertEquals(101000000L, user.getCreditBalance().getValue());
         Transaction thirdTx = new Transaction(PARAMS, resetTxData);
         SubTxResetKey reset = (SubTxResetKey)thirdTx.getExtraPayloadObject();
 
-        if(!manager.checkSubTxResetKey(thirdTx, null))
-            fail();
-
-        if(!manager.processSubTxResetKey(thirdTx, null, Coin.valueOf(10000)))
+        if(!manager.processSpecialTransaction(thirdTx, null))
             fail();
 
         assertEquals(reset.getNewPubKeyId(), user.getCurPubKeyID());
