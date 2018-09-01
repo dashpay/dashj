@@ -1364,7 +1364,7 @@ public class Transaction extends ChildMessage {
      * @throws VerificationException
      */
     public void verify() throws VerificationException {
-        if (inputs.size() == 0 || outputs.size() == 0)
+        if ((inputs.size() == 0 || outputs.size() == 0) && type != Type.TRANSACTION_SUBTX_RESETKEY)
             throw new VerificationException.EmptyInputsOrOutputs();
         if (this.getMessageSize() > Block.MAX_BLOCK_SIZE)
             throw new VerificationException.LargerThanMaxBlockSize();

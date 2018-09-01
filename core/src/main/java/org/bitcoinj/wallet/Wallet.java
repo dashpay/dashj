@@ -2527,6 +2527,7 @@ public class Wallet extends BaseTaggableObject
             if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
                 context.instantSend.processTxLockRequest((TransactionLockRequest)tx);
             }
+            context.evoUserManager.processSpecialTransaction(tx, null);
 
             informConfidenceListenersIfNotReorganizing();
             saveNow();
@@ -3983,6 +3984,8 @@ public class Wallet extends BaseTaggableObject
             checkArgument(!req.completed, "Given SendRequest has already been completed.");
             // Calculate the amount of value we need to import.
             Coin value = Coin.ZERO;
+            boolean requiresInputs = req.tx.getType() != Transaction.Type.TRANSACTION_SUBTX_RESETKEY;
+            boolean requiresNoFee = req.tx.getType() == Transaction.Type.TRANSACTION_SUBTX_RESETKEY;
             for (TransactionOutput output : req.tx.getOutputs()) {
                 value = value.add(output.getValue());
             }
@@ -4022,7 +4025,10 @@ public class Wallet extends BaseTaggableObject
 
             CoinSelection bestCoinSelection;
             TransactionOutput bestChangeOutput = null;
-            if (!req.emptyWallet) {
+            if (requiresNoFee) {
+                ArrayList<TransactionOutput> gathered = new ArrayList<TransactionOutput>();
+                bestCoinSelection = new CoinSelection(Coin.valueOf(0), gathered);
+            } else if (!req.emptyWallet) {
                 // This can throw InsufficientMoneyException.
                 FeeCalculation feeCalculation = calculateFee(req, value, originalInputs, req.ensureMinRequiredFee, candidates);
                 bestCoinSelection = feeCalculation.bestCoinSelection;
@@ -4057,7 +4063,7 @@ public class Wallet extends BaseTaggableObject
                 req.tx.shuffleOutputs();
 
             // Now sign the inputs, thus proving that we are entitled to redeem the connected outputs.
-            if (req.signInputs)
+            if (requiresInputs && req.signInputs)
                 signTransaction(req);
 
             // Check size.
