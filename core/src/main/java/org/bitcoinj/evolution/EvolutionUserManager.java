@@ -401,4 +401,9 @@ public class EvolutionUserManager extends AbstractManager {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        return "EvolutionUserManager:  " + userMap.size() + " users.";
+    }
 }
