@@ -17,6 +17,7 @@ package org.bitcoinj.core;
 import org.bitcoinj.core.listeners.BlockChainListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.EvolutionUserManager;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceTriggerManager;
 import org.bitcoinj.governance.VoteConfidenceTable;
@@ -76,6 +77,7 @@ public class Context {
     public GovernanceTriggerManager triggerManager;
     public NetFullfilledRequestManager netFullfilledRequestManager;
     public EvolutionUserManager evoUserManager;
+    public SimplifiedMasternodeListManager masternodeListManager;
     public static boolean fMasterNode = false;
     private VoteConfidenceTable voteConfidenceTable;
 
@@ -232,6 +234,8 @@ public class Context {
 
         netFullfilledRequestManager = new NetFullfilledRequestManager(this);
         evoUserManager = new EvolutionUserManager(this);
+        masternodeListManager = new SimplifiedMasternodeListManager(this);
+
     }
 
     public void closeDash() {
@@ -251,10 +255,6 @@ public class Context {
 
     public void initDashSync(String directory)
     {
-        //masternodeDB = new MasternodeDB(directory);
-
-        //MasternodeManager masternodeManagerLoaded = masternodeDB.read(this, false);
-
         FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(directory, "mncache.dat", "magicMasternodeCache");
 
         boolean success = mndb.load(masternodeManager);
@@ -262,6 +262,14 @@ public class Context {
         FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
 
         success = gmdb.load(governanceManager);
+
+        FlatDB<EvolutionUserManager> evdb = new FlatDB<EvolutionUserManager>(directory, "user.dat", "magicMasternodeCache");
+
+        success = evdb.load(evoUserManager);
+
+        FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(directory, "mnlist.dat", "magicMNListCache");
+
+        success = smnl.load(masternodeListManager);
 
         //other functions
         darkSendPool.startBackgroundProcessing();
@@ -279,6 +287,7 @@ public class Context {
             masternodeManager.setBlockChain(chain);
             masternodeSync.setBlockChain(chain);
             instantSend.setBlockChain(chain);
+            masternodeListManager.setBlockChain(chain, peerGroup);
         }
         params.setDIPActiveAtTip(chain.getBestChainHeight() >= params.getDIP0001BlockHeight());
     }
@@ -363,6 +372,7 @@ public class Context {
 
 
         masternodeManager.updatedBlockTip(chainHead);
+        masternodeListManager.updatedBlockTip(chainHead);
 
         /*darkSendPool.UpdatedBlockTip(pindex);
         instantsend.UpdatedBlockTip(pindex);

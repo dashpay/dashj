@@ -21,6 +21,8 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.bitcoinj.core.listeners.*;
+import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
+import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.governance.GovernanceObject;
 import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.governance.GovernanceVote;
@@ -573,6 +575,8 @@ public class Peer extends PeerSocketHandler {
             context.governanceManager.processGovernanceObject(this, (GovernanceObject)m);
         } else if(m instanceof GovernanceVote) {
             context.governanceManager.processGovernanceObjectVote(this, (GovernanceVote)m);
+        } else if (m instanceof SimplifiedMasternodeListDiff) {
+            context.masternodeListManager.processMasternodeListDiff((SimplifiedMasternodeListDiff)m);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }

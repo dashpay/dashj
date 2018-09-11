@@ -17,6 +17,8 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
+import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.governance.GovernanceObject;
 import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.governance.GovernanceVote;
@@ -91,7 +93,8 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(GovernanceSyncMessage.class, "govsync");
         names.put(GovernanceObject.class, "govobj");
         names.put(GovernanceVote.class, "govobjvote");
-
+        names.put(GetSimplifiedMasternodeListDiff.class, "getmnlistd");
+        names.put(SimplifiedMasternodeListDiff.class, "mnlistdiff");
 
     }
 
@@ -213,7 +216,7 @@ public class BitcoinSerializer extends MessageSerializer {
         Message message;
         if (command.equals("version")) {
             return new VersionMessage(params, payloadBytes);
-        } else if (command.equals("inv")) { 
+        } else if (command.equals("inv")) {
             message = makeInventoryMessage(payloadBytes, length);
         } else if (command.equals("block")) {
             message = makeBlock(payloadBytes, length);
@@ -281,6 +284,10 @@ public class BitcoinSerializer extends MessageSerializer {
             return new GovernanceObject(params, payloadBytes);
         } else if(command.equals("govobjvote")) {
             return new GovernanceVote(params, payloadBytes, 0);
+        } else if(command.equals("getmnlistd")) {
+            return new GetSimplifiedMasternodeListDiff(params, payloadBytes);
+        } else if(command.equals("mnlistdiff")) {
+            return new SimplifiedMasternodeListDiff(params, payloadBytes);
         } else {
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);
