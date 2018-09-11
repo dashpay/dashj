@@ -72,4 +72,15 @@ public class KeyId extends ChildMessage {
         return Address.fromP2SHHash(params, bytes);
     }
 
+    @Override
+    public Sha256Hash getHash() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(MESSAGE_SIZE);
+            bitcoinSerializeToStream(bos);
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+        } catch (IOException x) {
+            throw new RuntimeException(x);
+        }
+    }
+
 }
