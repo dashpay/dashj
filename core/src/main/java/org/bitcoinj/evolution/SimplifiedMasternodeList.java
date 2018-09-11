@@ -1,0 +1,256 @@
+package org.bitcoinj.evolution;
+
+import org.bitcoinj.core.*;
+import org.bitcoinj.utils.Pair;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.*;
+
+import static org.bitcoinj.core.Sha256Hash.hashTwice;
+
+public class SimplifiedMasternodeList extends Message {
+
+    private Sha256Hash blockHash;
+    private long height;
+    HashMap<Sha256Hash, SimplifiedMasternodeListEntry> mnMap;
+    HashMap<Sha256Hash, Pair<Sha256Hash, Integer>> mnUniquePropertyMap;
+
+    SimplifiedMasternodeList(NetworkParameters params) {
+        super(params);
+        blockHash = Sha256Hash.ZERO_HASH;
+        height = -1;
+        mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(5000);
+        mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(5000);
+    }
+
+    SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset) {
+        super(params, payload, offset);
+    }
+
+    SimplifiedMasternodeList(SimplifiedMasternodeList other) {
+        this.blockHash = other.blockHash;
+        this.height = other.height;
+        mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(other.mnMap);
+        mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(other.mnUniquePropertyMap);
+    }
+
+    @Override
+    protected void parse() throws ProtocolException {
+        blockHash = readHash();
+        height = (int)readUint32();
+        int size = (int)readVarInt();
+        mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(size);
+        for(int i = 0; i < size; ++i)
+        {
+            Sha256Hash hash = readHash();
+            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor);
+            cursor += mn.getMessageSize();
+            mnMap.put(hash, mn);
+        }
+
+        size = (int)readVarInt();
+        mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(size);
+        for(long i = 0; i < size; ++i)
+        {
+            Sha256Hash hash = readHash();
+            Sha256Hash first = readHash();
+            int second = (int)readUint32();
+            mnUniquePropertyMap.put(hash, new Pair<Sha256Hash, Integer>(first, second));
+        }
+    }
+
+    @Override
+    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        stream.write(blockHash.getReversedBytes());
+        Utils.uint32ToByteStreamLE(height, stream);
+
+        stream.write(new VarInt(mnMap.size()).encode());
+        for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            stream.write(entry.getKey().getReversedBytes());
+            entry.getValue().bitcoinSerializeToStream(stream);
+        }
+        stream.write(new VarInt(mnUniquePropertyMap.size()).encode());
+        for(Map.Entry<Sha256Hash, Pair<Sha256Hash, Integer>> entry : mnUniquePropertyMap.entrySet()) {
+            stream.write(entry.getKey().getReversedBytes());
+            stream.write(entry.getValue().getFirst().getReversedBytes());
+            Utils.uint32ToByteStreamLE(entry.getValue().getSecond().intValue(), stream);
+        }
+    }
+
+    public int size() {
+        return mnMap.size();
+    }
+
+    @Override
+    public String toString() {
+        return "Simplified MN List:  count:  " + size();
+    }
+
+    SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff)
+    {
+        assert(diff.prevBlockHash.equals(blockHash));
+
+        CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
+        SimplifiedMasternodeList result = new SimplifiedMasternodeList(this);
+
+        blockHash = diff.blockHash;
+        height = cbtx.getHeight();
+
+        for (Sha256Hash hash : diff.deletedMNs) {
+            result.removeMN(hash);
+        }
+        for (SimplifiedMasternodeListEntry entry : diff.mnList) {
+            result.addMN(entry);
+        }
+        return result;
+    }
+
+    void addMN(SimplifiedMasternodeListEntry dmn)
+    {
+        assert(!mnMap.containsKey(dmn.proRegTxHash));
+        mnMap.put(dmn.proRegTxHash, dmn);
+        addUniqueProperty(dmn, dmn.service);
+        addUniqueProperty(dmn, dmn.keyIdVoting);
+        addUniqueProperty(dmn, dmn.keyIdOperator);
+    }
+
+    void removeMN(Sha256Hash proTxHash)
+    {
+        SimplifiedMasternodeListEntry dmn = getMN(proTxHash);
+        assert(dmn != null);
+        deleteUniqueProperty(dmn, dmn.service);
+        deleteUniqueProperty(dmn, dmn.keyIdVoting);
+        deleteUniqueProperty(dmn, dmn.keyIdOperator);
+        mnMap.remove(proTxHash);
+    }
+
+    public SimplifiedMasternodeListEntry getMN(Sha256Hash proTxHash)
+    {
+        SimplifiedMasternodeListEntry p = mnMap.get(proTxHash);
+        if (p == null) {
+            return null;
+        }
+        return p;
+    }
+
+
+    <T extends ChildMessage> void addUniqueProperty(SimplifiedMasternodeListEntry dmn, T value)
+    {
+        Sha256Hash hash = value.getHash();
+        int i = 1;
+        Pair<Sha256Hash, Integer> oldEntry = mnUniquePropertyMap.get(hash);
+        assert(oldEntry == null || oldEntry.getFirst().equals(dmn.proRegTxHash));
+        if(oldEntry != null)
+            i = oldEntry.getSecond() + 1;
+        Pair<Sha256Hash, Integer> newEntry = new Pair(dmn.proRegTxHash, i);
+
+        mnUniquePropertyMap.put(hash, newEntry);
+    }
+    <T extends ChildMessage>
+    void deleteUniqueProperty(SimplifiedMasternodeListEntry dmn, T oldValue)
+    {
+        Sha256Hash oldHash = oldValue.getHash();
+        Pair<Sha256Hash, Integer> p = mnUniquePropertyMap.get(oldHash);
+        assert(p != null && p.getFirst() == dmn.proRegTxHash);
+        if (p.getSecond() == 1) {
+            mnUniquePropertyMap.remove(oldHash);
+        } else {
+            mnUniquePropertyMap.put(oldHash, new Pair<Sha256Hash, Integer>(dmn.proRegTxHash, p.getSecond() - 1));
+        }
+    }
+
+
+    boolean verify(Transaction coinbaseTx) throws VerificationException {
+        //check mnListMerkleRoot
+
+        if(!(coinbaseTx.getExtraPayloadObject() instanceof CoinbaseTx))
+            throw new VerificationException("transaction is not a coinbase transaction");
+
+        CoinbaseTx cbtx = (CoinbaseTx)coinbaseTx.getExtraPayloadObject();
+
+        ArrayList<Sha256Hash> proTxHashes = new ArrayList<Sha256Hash>(mnMap.size());
+        for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            proTxHashes.add(entry.getValue().proRegTxHash);
+        }
+        Collections.sort(proTxHashes, new Comparator<Sha256Hash>() {
+            @Override
+            public int compare(Sha256Hash o1, Sha256Hash o2) {
+                return o1.compareTo(o2);
+            }
+        });
+
+        ArrayList<Sha256Hash> smnlHashes = new ArrayList<Sha256Hash>(mnMap.size());
+        for(Sha256Hash hash : proTxHashes) {
+            for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet())
+                if(entry.getValue().proRegTxHash.equals(hash))
+                    smnlHashes.add(entry.getValue().getHash());
+        }
+
+        if(smnlHashes.size() == 0)
+            return true;
+
+        if(!cbtx.merkleRootMasternodeList.equals(calculateMerkleRoot(smnlHashes)))
+            throw new VerificationException("MerkleRoot of masternode list does not match coinbaseTx");
+        return true;
+    }
+
+    private Sha256Hash calculateMerkleRoot(List<Sha256Hash> hashes) {
+        List<byte[]> tree = buildMerkleTree(hashes);
+        return Sha256Hash.wrap(tree.get(tree.size() - 1));
+    }
+
+    private List<byte[]> buildMerkleTree(List<Sha256Hash> hashes) {
+        // The Merkle root is based on a tree of hashes calculated from the masternode list proRegHash:
+        //
+        //     root
+        //      / \
+        //   A      B
+        //  / \    / \
+        // t1 t2 t3 t4
+        //
+        // The tree is represented as a list: t1,t2,t3,t4,A,B,root where each
+        // entry is a hash.
+        //
+        // The hashing algorithm is double SHA-256. The leaves are a hash of the serialized contents of the transaction.
+        // The interior nodes are hashes of the concenation of the two child hashes.
+        //
+        // This structure allows the creation of proof that a transaction was included into a block without having to
+        // provide the full block contents. Instead, you can provide only a Merkle branch. For example to prove tx2 was
+        // in a block you can just provide tx2, the hash(tx1) and B. Now the other party has everything they need to
+        // derive the root, which can be checked against the block header. These proofs aren't used right now but
+        // will be helpful later when we want to download partial block contents.
+        //
+        // Note that if the number of transactions is not even the last tx is repeated to make it so (see
+        // tx3 above). A tree with 5 transactions would look like this:
+        //
+        //         root
+        //        /     \
+        //       1        5
+        //     /   \     / \
+        //    2     3    4  4
+        //  / \   / \   / \
+        // t1 t2 t3 t4 t5 t5
+        ArrayList<byte[]> tree = new ArrayList<byte[]>();
+        // Start by adding all the hashes of the transactions as leaves of the tree.
+        for (Sha256Hash hash : hashes) {
+            tree.add(hash.getBytes());
+        }
+        int levelOffset = 0; // Offset in the list where the currently processed level starts.
+        // Step through each level, stopping when we reach the root (levelSize == 1).
+        for (int levelSize = hashes.size(); levelSize > 1; levelSize = (levelSize + 1) / 2) {
+            // For each pair of nodes on that level:
+            for (int left = 0; left < levelSize; left += 2) {
+                // The right hand node can be the same as the left hand, in the case where we don't have enough
+                // transactions.
+                int right = Math.min(left + 1, levelSize - 1);
+                byte[] leftBytes = Utils.reverseBytes(tree.get(levelOffset + left));
+                byte[] rightBytes = Utils.reverseBytes(tree.get(levelOffset + right));
+                tree.add(Utils.reverseBytes(hashTwice(leftBytes, 0, 32, rightBytes, 0, 32)));
+            }
+            // Move to the next level.
+            levelOffset += levelSize;
+        }
+        return tree;
+    }
+}
