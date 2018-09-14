@@ -71,7 +71,23 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         checkpoints.put(   1999, Sha256Hash.wrap("00000052e538d27fa53693efe6fb6892a0c1d26c0235f599171c48a3cce553b1"));
         checkpoints.put(   2999, Sha256Hash.wrap("0000024bc3f4f4cb30d29827c13d921ad77d2c6072e586c7f60d83c2722cdcc5"));
 
-        addrSeeds = null;
+        addrSeeds = new int[] {
+                0xf8a7ed22,
+                0xe05dee22,
+                0x2e4de52b,
+                0x5f68202d,
+                0x1fd7202d,
+                0xe6dd202d,
+                0x4ced202d,
+                0x712e0734,
+                0x8117c934,
+                0x8e14448a,
+                0x5008e3a5,
+                0x80e5b6d9,
+                0x84e5b6d9,
+                0x86e5b6d9,
+                0x88e5b6d9
+        };
         bip32HeaderPub = 0x043587cf;
         bip32HeaderPriv = 0x04358394 ;
 
