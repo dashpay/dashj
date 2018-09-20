@@ -1479,7 +1479,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(tx2, transactions.get(0));
         assertEquals(tx1, transactions.get(1));
         assertEquals(2, transactions.size());
-        // Check we get only the last transaction if we request a subrage.
+        // Check we get only the last transaction if we request a subrange.
         transactions = wallet.getRecentTransactions(1, false);
         assertEquals(1, transactions.size());
         assertEquals(tx2,  transactions.get(0));
