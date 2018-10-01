@@ -115,7 +115,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
             instances.put("devnet-" + devNetName, instance);
             return instance;
         } else {
-            return instances.get(devNetName);
+            return instances.get("devnet-" + devNetName);
         }
     }
 
