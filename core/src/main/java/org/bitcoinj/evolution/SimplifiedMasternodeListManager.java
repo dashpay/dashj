@@ -83,7 +83,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            requestMNListDiff(block);
+            if(Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < 60 * 60)
+                requestMNListDiff(block);
         }
     };
 
@@ -91,7 +92,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
             if(tipBlockHash.equals(Sha256Hash.ZERO_HASH)) {
-                peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, blockChain.getChainHead().getHeader().getHash()));
+                if(Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < 60 * 60)
+                    peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, blockChain.getChainHead().getHeader().getHash()));
             }
         }
     };
