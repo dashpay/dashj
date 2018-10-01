@@ -288,6 +288,7 @@ public class Context {
             masternodeSync.setBlockChain(chain);
             instantSend.setBlockChain(chain);
             masternodeListManager.setBlockChain(chain, peerGroup);
+            chain.addTransactionReceivedListener(evoUserManager);
         }
         params.setDIPActiveAtTip(chain.getBestChainHeight() >= params.getDIP0001BlockHeight());
     }
@@ -315,8 +316,8 @@ public class Context {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
             boolean fInitialDownload = blockChain.getChainHead().getHeader().getTimeSeconds() < (Utils.currentTimeSeconds() - 6 * 60 * 60); // ~144 blocks behind -> 2 x fork detection time, was 24 * 60 * 60 in bitcoin
-
-            masternodeSync.updateBlockTip(block, fInitialDownload);
+            if(masternodeSync != null)
+                masternodeSync.updateBlockTip(block, fInitialDownload);
         }
     };
 

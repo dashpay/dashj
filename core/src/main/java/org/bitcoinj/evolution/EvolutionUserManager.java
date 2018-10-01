@@ -1,6 +1,7 @@
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -15,7 +16,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.bitcoinj.evolution.SubTxTransition.EVO_TS_MAX_FEE;
 import static org.bitcoinj.evolution.SubTxTransition.EVO_TS_MIN_FEE;
 
-public class EvolutionUserManager extends AbstractManager {
+public class EvolutionUserManager extends AbstractManager implements TransactionReceivedInBlockListener {
 
     private static final Logger log = LoggerFactory.getLogger(EvolutionUserManager.class);
     public ReentrantLock lock = Threading.lock("EvolutionUserManager");
@@ -399,6 +400,17 @@ public class EvolutionUserManager extends AbstractManager {
         } catch (BlockStoreException x) {
             return false;
         }
+        return false;
+    }
+
+    @Override
+    public void receiveFromBlock(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
+        //this does not handle side chains!
+        processSpecialTransaction(tx, block.getHeader());
+    }
+
+    @Override
+    public boolean notifyTransactionIsInBlock(Sha256Hash txHash, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
         return false;
     }
 

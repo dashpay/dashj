@@ -2527,7 +2527,8 @@ public class Wallet extends BaseTaggableObject
             if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
                 context.instantSend.processTxLockRequest((TransactionLockRequest)tx);
             }
-            context.evoUserManager.processSpecialTransaction(tx, null);
+            if(context.evoUserManager != null) //Check for unit tests
+                context.evoUserManager.processSpecialTransaction(tx, null);
 
             informConfidenceListenersIfNotReorganizing();
             saveNow();
