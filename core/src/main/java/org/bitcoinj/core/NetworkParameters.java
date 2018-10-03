@@ -299,6 +299,8 @@ public abstract class NetworkParameters {
             return UnitTestParams.get();
         } else if (id.equals(ID_REGTEST)) {
             return RegTestParams.get();
+        } else if (id.contains(ID_DEVNET)) {
+            return DevNetParams.get(id.substring(id.lastIndexOf('.')+1));
         } else {
             return null;
         }

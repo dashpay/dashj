@@ -119,6 +119,14 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         }
     }
 
+    public static synchronized DevNetParams get(String devNetName) {
+        if(!instances.containsKey("devnet-" + devNetName)) {
+            return null;
+        } else {
+            return instances.get("devnet-" + devNetName);
+        }
+    }
+
     @Override
     public String getPaymentProtocolId() {
         return PAYMENT_PROTOCOL_ID_DEVNET;
