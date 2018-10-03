@@ -4,6 +4,8 @@ import org.bitcoinj.core.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public class EvolutionUser extends ChildMessage {
 
@@ -20,11 +22,16 @@ public class EvolutionUser extends ChildMessage {
 
     boolean closed;
 
+    protected HashMap<Sha256Hash, Transaction> topupTxMap;
+    protected HashMap<Sha256Hash, Transaction> resetTxMap;
+
     EvolutionUser(NetworkParameters params) {
         super(params);
         regTxId = Sha256Hash.ZERO_HASH;
         hashCurSTPacket = Sha256Hash.ZERO_HASH;
         hashCurSubTx = Sha256Hash.ZERO_HASH;
+        topupTxMap = new HashMap<Sha256Hash, Transaction>(1);
+        resetTxMap = new HashMap<Sha256Hash, Transaction>(1);
     }
 
     /*public EvolutionUser(Sha256Hash regTxId, String userName, KeyId curPubKeyID) {
@@ -47,6 +54,8 @@ public class EvolutionUser extends ChildMessage {
         this.topupCredits = Coin.ZERO;
         this.spentCredits = Coin.ZERO;
         hashCurSTPacket = Sha256Hash.ZERO_HASH;
+        topupTxMap = new HashMap<Sha256Hash, Transaction>(1);
+        resetTxMap = new HashMap<Sha256Hash, Transaction>(1);
     }
 
     public EvolutionUser(NetworkParameters params, byte [] payload, int offset) {
@@ -66,6 +75,20 @@ public class EvolutionUser extends ChildMessage {
         topupCredits = Coin.valueOf(readInt64());
         spentCredits = Coin.valueOf(readInt64());
         closed = readBytes(1)[0] == 1 ? true : false;
+        int size = (int)readVarInt();
+        topupTxMap = new HashMap<Sha256Hash, Transaction>(size);
+        for(int i = 0; i < size; ++i) {
+            Transaction topup = new Transaction(params, payload, cursor);
+            cursor += topup.getMessageSize();
+            topupTxMap.put(topup.getHash(), topup);
+        }
+        size = (int)readVarInt();
+        resetTxMap = new HashMap<Sha256Hash, Transaction>(size);
+        for(int i = 0; i < size; ++i) {
+            Transaction reset = new Transaction(params, payload, cursor);
+            cursor += reset.getMessageSize();
+            resetTxMap.put(reset.getHash(), reset);
+        }
         length = cursor - offset;
     }
 
@@ -80,6 +103,14 @@ public class EvolutionUser extends ChildMessage {
         Utils.int64ToByteStreamLE(topupCredits.getValue(), stream);
         Utils.int64ToByteStreamLE(spentCredits.getValue(), stream);
         stream.write(closed ? 1 : 0);
+        stream.write(new VarInt(topupTxMap.size()).encode());
+        for(Map.Entry<Sha256Hash, Transaction> entry : topupTxMap.entrySet()) {
+            entry.getValue().bitcoinSerialize(stream);
+        }
+        stream.write(new VarInt(resetTxMap.size()).encode());
+        for(Map.Entry<Sha256Hash, Transaction> entry : resetTxMap.entrySet()) {
+            entry.getValue().bitcoinSerialize(stream);
+        }
     }
 
     public Sha256Hash getRegTxId() {
@@ -106,8 +137,9 @@ public class EvolutionUser extends ChildMessage {
         return topupCredits.subtract(spentCredits);
     }
 
-    public void addTopUp(Coin amount) {
+    public void addTopUp(Coin amount, Transaction topupTx) {
         topupCredits = topupCredits.add(amount);
+        topupTxMap.put(topupTx.getHash(), topupTx);
     }
 
     public void addSpend(Coin amount) {
@@ -148,5 +180,17 @@ public class EvolutionUser extends ChildMessage {
     @Override
     public String toString() {
         return "EvolutionUser:  " + userName + " ["+getCreditBalance()+"] ";
+    }
+
+    public boolean hasTopup(Transaction tx) {
+        return topupTxMap.containsKey(tx.getHash());
+    }
+
+    public boolean hasReset(Transaction tx) {
+        return resetTxMap.containsKey(tx.getHash());
+    }
+
+    public void addReset(Transaction tx) {
+        resetTxMap.put(tx.getHash(), tx);
     }
 }
