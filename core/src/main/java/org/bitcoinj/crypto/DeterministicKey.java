@@ -316,7 +316,6 @@ public class DeterministicKey extends ECKey {
         return super.isPubKeyOnly() && (parent == null || parent.isPubKeyOnly());
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean hasPrivKey() {
         return findParentWithPrivKey() != null;
@@ -355,13 +354,13 @@ public class DeterministicKey extends ECKey {
     public ECDSASignature sign(Sha256Hash input, @Nullable KeyParameter aesKey) throws KeyCrypterException {
         if (isEncrypted()) {
             // If the key is encrypted, ECKey.sign will decrypt it first before rerunning sign. Decryption walks the
-            // key heirarchy to find the private key (see below), so, we can just run the inherited method.
+            // key hierarchy to find the private key (see below), so, we can just run the inherited method.
             return super.sign(input, aesKey);
         } else {
             // If it's not encrypted, derive the private via the parents.
             final BigInteger privateKey = findOrDerivePrivateKey();
             if (privateKey == null) {
-                // This key is a part of a public-key only heirarchy and cannot be used for signing
+                // This key is a part of a public-key only hierarchy and cannot be used for signing
                 throw new MissingPrivateKeyException();
             }
             return super.doSign(input, privateKey);
@@ -441,9 +440,9 @@ public class DeterministicKey extends ECKey {
     }
 
     /**
-     * Derives a child at the given index using hardened derivation.  Note: <code>index</code> is
+     * Derives a child at the given index using hardened derivation.  Note: {@code index} is
      * not the "i" value.  If you want the softened derivation, then use instead
-     * <code>HDKeyDerivation.deriveChildKey(this, new ChildNumber(child, false))</code>.
+     * {@code HDKeyDerivation.deriveChildKey(this, new ChildNumber(child, false))}.
      */
     public DeterministicKey derive(int child) {
         return HDKeyDerivation.deriveChildKey(this, new ChildNumber(child, true));
@@ -583,7 +582,7 @@ public class DeterministicKey extends ECKey {
     }
 
     /**
-     * Verifies equality of all fields but NOT the parent pointer (thus the same key derived in two separate heirarchy
+     * Verifies equality of all fields but NOT the parent pointer (thus the same key derived in two separate hierarchy
      * objects will equal each other.
      */
     @Override

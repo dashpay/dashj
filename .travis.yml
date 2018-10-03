@@ -1,7 +1,11 @@
 # configuration for https://travis-ci.org/HashEngineering/dashj
 sudo: false
-dist: trusty
+dist: precise
 language: java
+addons:
+  hosts:
+    - host
+  hostname: host
 jdk: oraclejdk8
 install: true # remove default
 script:

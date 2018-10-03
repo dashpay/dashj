@@ -196,7 +196,14 @@ public class BuildCheckpoints {
     }
 
     private static void sanityCheck(File file, int expectedSize) throws IOException {
-        CheckpointManager manager = new CheckpointManager(params, new FileInputStream(file));
+        FileInputStream fis = new FileInputStream(file);
+        CheckpointManager manager;
+        try {
+            manager = new CheckpointManager(params, fis);
+        } finally {
+            fis.close();
+        }
+
         checkState(manager.numCheckpoints() == expectedSize);
 
         /*

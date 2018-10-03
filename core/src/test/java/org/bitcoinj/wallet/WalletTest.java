@@ -2748,7 +2748,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void lowerThanDefaultFee() throws InsufficientMoneyException {
-        int feeFactor = 10;
+        int feeFactor = 50;
         Coin fee = Transaction.DEFAULT_TX_FEE.divide(feeFactor);
         receiveATransactionAmount(wallet, myAddress, Coin.COIN);
         SendRequest req = SendRequest.to(myAddress, Coin.CENT);
@@ -2923,8 +2923,8 @@ public class WalletTest extends TestWithWallet {
         wallet.receiveFromBlock(tx, block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 0);
         try {
             request = SendRequest.emptyWallet(OTHER_ADDRESS);
-            assertEquals(ZERO, request.tx.getFee());
             wallet.completeTx(request);
+            assertEquals(ZERO, request.tx.getFee());
             fail();
         } catch (Wallet.CouldNotAdjustDownwards e) {}
     }

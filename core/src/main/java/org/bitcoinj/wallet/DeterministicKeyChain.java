@@ -334,7 +334,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     }
 
     /**
-     * <p>Creates a deterministic key chain with the given watch key. If <code>isFollowing</code> flag is set then this keychain follows
+     * <p>Creates a deterministic key chain with the given watch key. If {@code isFollowing} flag is set then this keychain follows
      * some other keychain. In a married wallet following keychain represents "spouse's" keychain.</p>
      * <p>Watch key has to be an account key.</p>
      */
@@ -644,7 +644,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     }
 
     /**
-     * <p>An alias for <code>getKeyByPath(getAccountPath())</code>.</p>
+     * <p>An alias for {@code getKeyByPath(getAccountPath())}.</p>
      *
      * <p>Use this when you would like to create a watching key chain that follows this one, but can't spend money from it.
      * The returned key can be serialized and then passed into {@link #watch(org.bitcoinj.crypto.DeterministicKey)}
@@ -934,7 +934,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                 if (!isWatchingAccountKey) {
                     // If the non-encrypted case, the non-leaf keys (account, internal, external) have already
                     // been rederived and inserted at this point. In the encrypted case though,
-                    // we can't rederive and we must reinsert, potentially building the heirarchy object
+                    // we can't rederive and we must reinsert, potentially building the hierarchy object
                     // if need be.
                     if (path.isEmpty()) {
                         // Master key.

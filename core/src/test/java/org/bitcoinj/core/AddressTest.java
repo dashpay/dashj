@@ -43,15 +43,15 @@ public class AddressTest {
         Address testAddress = Address.fromBase58(testParams, "ydzm4Uvr2GkLxTwQnwiyijYUukk1eweBo4");
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         new ObjectOutputStream(os).writeObject(testAddress);
-        VersionedChecksummedBytes testAddressCopy = (VersionedChecksummedBytes) new ObjectInputStream(
-                new ByteArrayInputStream(os.toByteArray())).readObject();
+        Address testAddressCopy = (Address) new ObjectInputStream(new ByteArrayInputStream(os.toByteArray()))
+                .readObject();
         assertEquals(testAddress, testAddressCopy);
 
         Address mainAddress = Address.fromBase58(mainParams, "Xtqn4ks8sJS7iG7S7r1Jf37eFFSJGwh8a8");
         os = new ByteArrayOutputStream();
         new ObjectOutputStream(os).writeObject(mainAddress);
-        VersionedChecksummedBytes mainAddressCopy = (VersionedChecksummedBytes) new ObjectInputStream(
-                new ByteArrayInputStream(os.toByteArray())).readObject();
+        Address mainAddressCopy = (Address) new ObjectInputStream(new ByteArrayInputStream(os.toByteArray()))
+                .readObject();
         assertEquals(mainAddress, mainAddressCopy);
     }
 

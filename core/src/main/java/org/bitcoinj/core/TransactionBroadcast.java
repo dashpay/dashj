@@ -116,7 +116,6 @@ public class TransactionBroadcast {
     }
 
     private class EnoughAvailablePeers implements Runnable {
-
         private Context context;
 
         public EnoughAvailablePeers() {

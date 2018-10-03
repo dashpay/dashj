@@ -102,6 +102,11 @@ public class WalletFiles {
         };
     }
 
+    /** Get the {@link Wallet} this {@link WalletFiles} is managing. */
+    public Wallet getWallet() {
+        return wallet;
+    }
+
     /**
      * The given listener will be called on the autosave thread before and after the wallet is saved to disk.
      */
@@ -113,6 +118,8 @@ public class WalletFiles {
     public void saveNow() throws IOException {
         // Can be called by any thread. However the wallet is locked whilst saving, so we can have two saves in flight
         // but they will serialize (using different temp files).
+        if (executor.isShutdown())
+            return;
         Date lastBlockSeenTime = wallet.getLastBlockSeenTime();
         log.info("Saving wallet; last seen block is height {}, date {}, hash {}", wallet.getLastBlockSeenHeight(),
                 lastBlockSeenTime != null ? Utils.dateTimeFormat(lastBlockSeenTime) : "unknown",
@@ -136,7 +143,7 @@ public class WalletFiles {
 
     /** Queues up a save in the background. Useful for not very important wallet changes. */
     public void saveLater() {
-        if (savePending.getAndSet(true))
+        if (executor.isShutdown() || savePending.getAndSet(true))
             return;   // Already pending.
         executor.schedule(saver, delay, delayTimeUnit);
     }

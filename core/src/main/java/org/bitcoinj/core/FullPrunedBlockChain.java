@@ -340,10 +340,10 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
         return new TransactionOutputChanges(txOutsCreated, txOutsSpent);
     }
 
-    @Override
     /**
      * Used during reorgs to connect a block previously on a fork
      */
+    @Override
     protected synchronized TransactionOutputChanges connectTransactions(StoredBlock newBlock, StoredBlock storedPrev)
             throws VerificationException, BlockStoreException, PrunedException {
         checkState(lock.isHeldByCurrentThread());

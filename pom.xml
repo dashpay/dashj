@@ -4,7 +4,8 @@
 
   <groupId>org.dashj</groupId>
   <artifactId>dashj-parent</artifactId>
-  <version>0.14.4.7</version>
+  <version>0.14.7</version>
+
   <packaging>pom</packaging>
 
   <modules>

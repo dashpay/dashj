@@ -711,7 +711,7 @@ public class Script {
             }
             // First chunk must be an OP_N opcode too.
             if (decodeFromOpN(chunks.get(0).opcode) < 1) return false;
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) { // thrown by decodeFromOpN()
             return false;   // Not an OP_N opcode.
         }
         return true;
@@ -803,7 +803,7 @@ public class Script {
     /**
      * Cast a script chunk to a BigInteger.
      *
-     * @see #castToBigInteger(byte[], int) for values with different maximum
+     * @see #castToBigInteger(byte[], int, boolean) for values with different maximum
      * sizes.
      * @throws ScriptException if the chunk is longer than 4 bytes.
      */
@@ -815,7 +815,7 @@ public class Script {
 
     /**
      * Cast a script chunk to a BigInteger. Normally you would want
-     * {@link #castToBigInteger(byte[])} instead, this is only for cases where
+     * {@link #castToBigInteger(byte[], boolean)} instead, this is only for cases where
      * the normal maximum length does not apply (i.e. CHECKLOCKTIMEVERIFY).
      *
      * @param maxLength the maximum length in bytes.
@@ -978,7 +978,7 @@ public class Script {
                     break;
                 case OP_FROMALTSTACK:
                     if (altstack.size() < 1)
-                        throw new ScriptException("Attempted OP_TOALTSTACK on an empty altstack");
+                        throw new ScriptException("Attempted OP_FROMALTSTACK on an empty altstack");
                     stack.add(altstack.pollLast());
                     break;
                 case OP_2DROP:
@@ -1129,7 +1129,7 @@ public class Script {
                     throw new ScriptException("Attempted to use disabled Script Op.");
                 case OP_EQUAL:
                     if (stack.size() < 2)
-                        throw new ScriptException("Attempted OP_EQUALVERIFY on a stack with size < 2");
+                        throw new ScriptException("Attempted OP_EQUAL on a stack with size < 2");
                     stack.add(Arrays.equals(stack.pollLast(), stack.pollLast()) ? new byte[] {1} : new byte[] {});
                     break;
                 case OP_EQUALVERIFY:

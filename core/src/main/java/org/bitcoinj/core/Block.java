@@ -375,8 +375,6 @@ public class Block extends Message {
     /**
      * Special handling to check if we have a valid byte array for both header
      * and transactions
-     *
-     * @throws IOException
      */
     @Override
     public byte[] bitcoinSerialize() {
@@ -1067,7 +1065,7 @@ public class Block extends Message {
      * purely a header).
      */
     public boolean hasTransactions() {
-        return !this.transactions.isEmpty();
+        return (this.transactions != null) && !this.transactions.isEmpty();
     }
 
     /**

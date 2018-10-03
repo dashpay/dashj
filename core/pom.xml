@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.dashj</groupId>
         <artifactId>dashj-parent</artifactId>
-        <version>0.14.4.7</version>
+        <version>0.14.7</version>
     </parent>
 
     <artifactId>dashj-core</artifactId>
@@ -320,7 +320,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>-Xmx1024m ${surefireArgLine}</argLine><!-- Last argument is required for code coverage to work. -->
+                    <!-- First argument increases the maximum heap size, second argument disables a nasty HotSpot optimization
+                         (see http://jawspeak.com/2010/05/26/hotspot-caused-exceptions-to-lose-their-stack-traces-in-production-and-the-fix/)
+                         and last argument is required for code coverage to work. -->
+                    <argLine>-Xmx1024m -XX:-OmitStackTraceInFastThrow ${surefireArgLine}</argLine>
                     <runOrder>alphabetical</runOrder>
                     <systemProperties>
                         <property>
