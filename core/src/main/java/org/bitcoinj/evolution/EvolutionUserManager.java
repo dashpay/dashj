@@ -172,17 +172,21 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
                 return false;
 
             EvolutionUser user = getUser(topup.getRegTxId());
-            if(user.isClosed())
-                return false;
 
             if (user == null) {
                 return false;
             }
 
+            if(user.isClosed())
+                return false;
+
             Coin topupAmount = getTxBurnAmount(tx);
             if (topupAmount.compareTo(SubTxTopup.MIN_SUBTX_TOPUP) < 0) {
                 return false;
             }
+
+            if(user.hasTopup(tx))
+                return false;
 
             return true;
         } finally {
@@ -203,6 +207,10 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
             if (!checkSubTxAndFeeForUser(tx, subTx, user)){
                 return false;
             }
+
+            if(user.hasReset(tx))
+                return false;
+
             return true;
         } finally {
             lock.unlock();
@@ -280,7 +288,7 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
         SubTxRegister subTx = (SubTxRegister)regTx.getExtraPayloadObject();
 
         EvolutionUser user = new EvolutionUser(regTx, subTx.getUserName(), subTx.getPubKeyId());
-        user.addTopUp(getTxBurnAmount(regTx));
+        user.addTopUp(getTxBurnAmount(regTx), regTx);
 
         return user;
     }
@@ -295,7 +303,7 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
             Coin topupAmount = getTxBurnAmount(tx);
 
             EvolutionUser user = new EvolutionUser(tx, subTx.userName, subTx.getPubKeyId());
-            user.addTopUp(topupAmount);
+            user.addTopUp(topupAmount, tx);
             //userDb.pushSubTx(tx.getHash(), tx.getHash());
             //userDb.pushPubKey(tx.getHash(), subTx.getPubKeyId());
             writeUser(user);
@@ -334,7 +342,7 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
     boolean processSubTxTopupForUser(EvolutionUser user, Transaction tx, SubTxTopup subTx)
     {
         Coin topupAmount = getTxBurnAmount(tx);
-        user.addTopUp(topupAmount);
+        user.addTopUp(topupAmount, tx);
         return true;
     }
 
@@ -370,6 +378,7 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
         user.setCurSubTx(tx.getHash());
         user.setCurPubKeyID(subTx.getNewPubKeyId());
         user.addSpend(subTx.getCreditFee());
+        user.addReset(tx);
         return true;
     }
 

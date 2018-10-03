@@ -131,6 +131,11 @@ public class EvolutionUserManagerTest {
 
         if(!manager.processSubTxTopup(secondTx, null))
             fail();
+
+        //checkSubTxTopup should return false, since this topup tx exists for the user
+        if(manager.checkSubTxTopup(secondTx, null))
+            fail();
+
         assertEquals(101000000L, user.getCreditBalance().getValue());
         Transaction thirdTx = new Transaction(PARAMS, resetTxData);
         SubTxResetKey reset = (SubTxResetKey)thirdTx.getExtraPayloadObject();
