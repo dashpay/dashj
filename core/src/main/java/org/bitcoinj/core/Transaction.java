@@ -653,9 +653,6 @@ public class Transaction extends ChildMessage {
             }
             s.append('\n');
         }
-        if (isOptInFullRBF()) {
-            s.append("  opts into full replace-by-fee\n");
-        }
         if (inputs.size() == 0) {
             s.append("  INCOMPLETE: No inputs!\n");
             return s.toString();
@@ -697,8 +694,6 @@ public class Transaction extends ChildMessage {
                 }
                 if (in.hasSequence()) {
                     s.append("\n          sequence:").append(Long.toHexString(in.getSequenceNumber()));
-                    if (in.isOptInFullRBF())
-                        s.append(", opts into full RBF");
                 }
             } catch (Exception e) {
                 s.append("[exception: ").append(e.getMessage()).append("]");
@@ -1290,17 +1285,6 @@ public class Transaction extends ChildMessage {
             return false;
         for (TransactionInput input : getInputs())
             if (input.hasSequence())
-                return true;
-        return false;
-    }
-
-    /**
-     * Returns whether this transaction will opt into the
-     * <a href="https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki">full replace-by-fee </a> semantics.
-     */
-    public boolean isOptInFullRBF() {
-        for (TransactionInput input : getInputs())
-            if (input.isOptInFullRBF())
                 return true;
         return false;
     }

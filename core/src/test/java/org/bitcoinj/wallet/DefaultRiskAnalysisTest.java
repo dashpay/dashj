@@ -222,13 +222,4 @@ public class DefaultRiskAnalysisTest {
         tx.addOutput(Coin.CENT, ScriptBuilder.createOpReturnScript("hi there".getBytes()));
         assertEquals(RiskAnalysis.Result.OK, DefaultRiskAnalysis.FACTORY.create(wallet, tx, NO_DEPS).analyze());
     }
-
-    @Test
-    public void optInFullRBF() throws Exception {
-        Transaction tx = FakeTxBuilder.createFakeTx(PARAMS);
-        tx.getInput(0).setSequenceNumber(TransactionInput.NO_SEQUENCE - 2);
-        DefaultRiskAnalysis analysis = DefaultRiskAnalysis.FACTORY.create(wallet, tx, NO_DEPS);
-        assertEquals(RiskAnalysis.Result.NON_FINAL, analysis.analyze());
-        assertEquals(tx, analysis.getNonFinal());
-    }
 }

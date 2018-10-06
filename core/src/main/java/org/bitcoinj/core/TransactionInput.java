@@ -393,14 +393,6 @@ public class TransactionInput extends ChildMessage {
     }
 
     /**
-     * Returns whether this input will cause a transaction to opt into the
-     * <a href="https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki">full replace-by-fee </a> semantics.
-     */
-    public boolean isOptInFullRBF() {
-        return sequence < NO_SEQUENCE - 1;
-    }
-
-    /**
      * For a connected transaction, runs the script against the connected pubkey and verifies they are correct.
      * @throws ScriptException if the script did not verify.
      * @throws VerificationException If the outpoint doesn't match the given output.
@@ -494,11 +486,8 @@ public class TransactionInput extends ChildMessage {
                 s.append(": COINBASE");
             } else {
                 s.append(" for [").append(outpoint).append("]: ").append(getScriptSig());
-                String flags = Joiner.on(", ").skipNulls().join(
-                        hasSequence() ? "sequence: " + Long.toHexString(sequence) : null,
-                        isOptInFullRBF() ? "opts into full RBF" : null);
-                if (!flags.isEmpty())
-                    s.append(" (").append(flags).append(')');
+                if (hasSequence())
+                    s.append(" (sequence: ").append(Long.toHexString(sequence)).append(")");
             }
             return s.toString();
         } catch (ScriptException e) {

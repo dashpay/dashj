@@ -371,16 +371,6 @@ public class TransactionTest {
         transaction.checkCoinBaseHeight(height);
     }
 
-    @Test
-    public void optInFullRBF() {
-        // a standard transaction as wallets would create
-        Transaction tx = FakeTxBuilder.createFakeTx(PARAMS);
-        assertFalse(tx.isOptInFullRBF());
-
-        tx.getInputs().get(0).setSequenceNumber(TransactionInput.NO_SEQUENCE - 2);
-        assertTrue(tx.isOptInFullRBF());
-    }
-
     /**
      * Ensure that hashForSignature() doesn't modify a transaction's data, which could wreak multithreading havoc.
      */
