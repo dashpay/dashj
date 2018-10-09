@@ -48,10 +48,9 @@ public abstract class SpecialTxPayload extends Message {
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(getPayload()));
     }
 
-    public boolean check() {
+    public void check() throws VerificationException {
         if(version > getCurrentVersion())
-            return false;
-        return true;
+            throw new VerificationException("Invalid special tx version:" + version);
     }
 
     public int getVersion() {

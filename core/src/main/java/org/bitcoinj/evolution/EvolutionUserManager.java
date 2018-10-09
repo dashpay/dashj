@@ -109,6 +109,13 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
         return null;
     }
 
+    public EvolutionUser getUserByName(String username) {
+        Sha256Hash regTxId = getUserIdByName(username);
+        if(regTxId != null)
+            return getUser(regTxId);
+        return null;
+    }
+
     public boolean userExists(Sha256Hash regTxId) {
         return userMap.containsKey(regTxId);
     }
@@ -132,137 +139,121 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
         return burned;
     }
 
-    boolean checkSubTxRegister(Transaction tx, StoredBlock prevBlock) {
+    void checkSubTxRegister(Transaction tx, StoredBlock prevBlock) throws VerificationException {
         lock.lock();
         try {
             SubTxRegister subTxRegister = new SubTxRegister(tx.getParams(), tx);
 
-            if(!subTxRegister.check())
-                return false;
+            subTxRegister.check();
 
-            if(userNameExists(subTxRegister.getUserName()))
-                return false;
+            if(userNameExists(subTxRegister.getUserName())) {
+                EvolutionUser user = getUserByName(subTxRegister.getUserName());
+                if(user.getRegTxId().equals(tx.getHash()))
+                    return;  //we have already processed this subTxRegister, so return
+                //This username conflicts with an existing user
+                throw new VerificationException("Username exists: " + subTxRegister.getUserName());
+            }
 
             Coin topupAmount = getTxBurnAmount(tx);
 
             if(topupAmount.compareTo(SubTxTopup.MIN_SUBTX_TOPUP) < 0)
-                return false;
+                throw new VerificationException("SubTxRegister:  Topup too low: " + topupAmount + " < " + SubTxTopup.MIN_SUBTX_TOPUP);
 
             StringBuilder errorMessage = new StringBuilder();
             if(!HashSigner.verifyHash(subTxRegister.getSignHash(), subTxRegister.getPubKeyId().getBytes(), subTxRegister.getSignature(), errorMessage))
             {
-                return false;
+                throw new VerificationException("SubTxRegister: invalid signature: "+ errorMessage);
             }
-            return true;
 
         } catch (ProtocolException x) {
 
         } finally {
             lock.unlock();
         }
-        return false;
     }
 
-    boolean checkSubTxTopup(Transaction tx, StoredBlock prev)
+    void checkSubTxTopup(Transaction tx, StoredBlock prev)
     {
         lock.lock();
         try {
             SubTxTopup topup = (SubTxTopup)tx.getExtraPayloadObject();
-            if(!topup.check())
-                return false;
+            topup.check();
 
             EvolutionUser user = getUser(topup.getRegTxId());
 
             if (user == null) {
-                return false;
+                throw new SpecialTxException.UserDoesNotExist(topup.regTxId);
             }
 
             if(user.isClosed())
-                return false;
+                throw new VerificationException("SubTxTopup:  user ["+ topup.regTxId +"] is closed");
 
             Coin topupAmount = getTxBurnAmount(tx);
             if (topupAmount.compareTo(SubTxTopup.MIN_SUBTX_TOPUP) < 0) {
-                return false;
+                throw new VerificationException("SubTxTopup:  Topup too low: " + topupAmount + " < " + SubTxTopup.MIN_SUBTX_TOPUP);
             }
 
-            if(user.hasTopup(tx))
-                return false;
-
-            return true;
         } finally {
             lock.unlock();
         }
     }
 
-    boolean checkSubTxResetKey(Transaction tx, StoredBlock prev)
+    void checkSubTxResetKey(Transaction tx, StoredBlock prev)
     {
         lock.lock();
         try {
 
             SubTxResetKey subTx = (SubTxResetKey)tx.getExtraPayloadObject();
-            if(!subTx.check())
-                return false;
+            subTx.check();
 
             EvolutionUser user = getUser(subTx.regTxId);
-            if (!checkSubTxAndFeeForUser(tx, subTx, user)){
-                return false;
-            }
+            checkSubTxAndFeeForUser(tx, subTx, user);
 
-            if(user.hasReset(tx))
-                return false;
-
-            return true;
         } finally {
             lock.unlock();
         }
     }
 
-    boolean checkSubTxAndFeeForUser(Transaction tx, SubTxForExistingUser subTxRet, EvolutionUser user)
+    void checkSubTxAndFeeForUser(Transaction tx, SubTxForExistingUser subTxRet, EvolutionUser user) throws VerificationException
     {
-        if (!checkSubTxForUser(tx, subTxRet, user)) {
-            return false;
-        }
+        checkSubTxForUser(tx, subTxRet, user);
 
         // TODO min fee depending on TS size
         if (subTxRet.creditFee.compareTo(EVO_TS_MIN_FEE) < 0 || subTxRet.creditFee.compareTo(EVO_TS_MAX_FEE) > 0) {
-            return false;
+            throw new VerificationException("SubTx:  fees are too high or low");
         }
 
         if (user.getCreditBalance().compareTo(subTxRet.creditFee) < 0) {
             // Low DoS score as peers may not know about the low balance (e.g. due to not mined topups)
-            return false;//state.DoS(10, false, REJECT_INSUFFICIENTFEE, "bad-subtx-nocredits");
+            //state.DoS(10, false, REJECT_INSUFFICIENTFEE, "bad-subtx-nocredits");
+            throw new VerificationException("SubTx:  Not enough credits");
         }
-        return true;
     }
 
-    boolean checkSubTxForUser(Transaction tx, SubTxForExistingUser subTxRet, EvolutionUser user)
+    void checkSubTxForUser(Transaction tx, SubTxForExistingUser subTxRet, EvolutionUser user)
     {
         if (getSubTxAndUser(tx) == null) {
-            return false;
+            throw new SpecialTxException.UserDoesNotExist(((SubTxForExistingUser)tx.getExtraPayloadObject()).regTxId);
         }
 
         if (!subTxRet.hashPrevSubTx.equals(user.getCurSubTx())) {
-            return false;
+            throw new VerificationException("SubTx: prev subtx not equal to current user["+user.getUserName()+"] tx: " + subTxRet.hashPrevSubTx + " != " + user.getCurSubTx());
         }
 
-        StringBuilder strError = new StringBuilder();
-        if (!HashSigner.verifyHash(subTxRet.getSignHash(), user.getCurPubKeyID().getBytes(), subTxRet.getSignature(), strError)) {
-        // TODO immediately ban?
-            return false;
+        StringBuilder errorMessage = new StringBuilder();
+        if (!HashSigner.verifyHash(subTxRet.getSignHash(), user.getCurPubKeyID().getBytes(), subTxRet.getSignature(), errorMessage)) {
+            throw new VerificationException("SubTx: invalid signature: " + errorMessage);
         }
-
-        return true;
     }
 
     EvolutionUser getSubTxAndUser(Transaction tx) {
         return getSubTxAndUser(tx, false);
     }
 
-    EvolutionUser getSubTxAndUser(Transaction tx, boolean allowClosed)
+    EvolutionUser getSubTxAndUser(Transaction tx, boolean allowClosed) throws VerificationException
     {
         SubTxForExistingUser subTx = (SubTxForExistingUser)tx.getExtraPayloadObject();
-        if(!subTx.check())
-            return null;
+        subTx.check();
 
         EvolutionUser user = getUser(subTx.getRegTxId());
 
@@ -275,15 +266,13 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
         return user;
     }
 
-    EvolutionUser buildUser(Transaction regTx)
+    EvolutionUser buildUser(Transaction regTx) throws VerificationException
     {
         if (regTx == null) {
             return null;
         }
 
-        if (!checkSubTxRegister(regTx, null)) {
-            return null;
-        }
+        checkSubTxRegister(regTx, null);
 
         SubTxRegister subTx = (SubTxRegister)regTx.getExtraPayloadObject();
 
@@ -300,9 +289,13 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
 
             SubTxRegister subTx = (SubTxRegister)tx.getExtraPayloadObject();
 
+            EvolutionUser user = getUser(tx.getHash());
+            if(user != null)
+                return false;  //User exists, skip further processing
+
             Coin topupAmount = getTxBurnAmount(tx);
 
-            EvolutionUser user = new EvolutionUser(tx, subTx.userName, subTx.getPubKeyId());
+            user = new EvolutionUser(tx, subTx.userName, subTx.getPubKeyId());
             user.addTopUp(topupAmount, tx);
             //userDb.pushSubTx(tx.getHash(), tx.getHash());
             //userDb.pushPubKey(tx.getHash(), subTx.getPubKeyId());
@@ -326,6 +319,9 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
             if (user == null) {
                 return false;
             }
+
+            if(user.hasTopup(tx)) // don't process again, if it was already added
+                return false;
 
             if (!processSubTxTopupForUser(user, tx, subTx)) {
                 return false;
@@ -357,11 +353,14 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
             if (user == null)
                 return false;
 
+            if(user.hasReset(tx))
+                return false;
+
             if (!processSubTxResetKeyForUser(user, tx, subTx)) {
                 return false;
             }
 
-            //pecialTxFees += subTx.creditFee;
+            //specialTxFees += subTx.creditFee;
 
             writeUser(user);
             //userDb.PushSubTx(subTx.regTxId, tx.GetHash());
@@ -390,18 +389,21 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
         this.currentUser = currentUser;
     }
 
-    public boolean processSpecialTransaction(Transaction tx, Block currentBlock) {
+    public boolean processSpecialTransaction(Transaction tx, Block currentBlock) throws VerificationException {
         try {
             StoredBlock prev = currentBlock != null ? context.blockChain.getBlockStore().get(currentBlock.getHash()) : null;
             prev = prev != null ? prev.getPrev(context.blockChain.getBlockStore()) : null;
 
             switch (tx.getType()) {
                 case TRANSACTION_SUBTX_REGISTER:
-                    return checkSubTxRegister(tx, prev) && processSubTxRegister(tx, prev);
+                    checkSubTxRegister(tx, prev);
+                    return processSubTxRegister(tx, prev);
                 case TRANSACTION_SUBTX_TOPUP:
-                    return checkSubTxTopup(tx, prev) && processSubTxTopup(tx, prev);
+                    checkSubTxTopup(tx, prev);
+                    return processSubTxTopup(tx, prev);
                 case TRANSACTION_SUBTX_RESETKEY:
-                    return checkSubTxResetKey(tx, prev) && processSubTxResetKey(tx, prev);
+                    checkSubTxResetKey(tx, prev);
+                    return processSubTxResetKey(tx, prev);
                 case TRANSACTION_SUBTX_CLOSEACCOUNT:
                 case TRANSACTION_SUBTX_TRANSITION:
                         return false;

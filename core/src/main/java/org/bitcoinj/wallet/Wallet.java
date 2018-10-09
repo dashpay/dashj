@@ -2447,6 +2447,11 @@ public class Wallet extends BaseTaggableObject
         try {
             if (pending.containsKey(tx.getHash()))
                 return false;
+
+            if(context.evoUserManager != null) { //Check for unit tests
+                context.evoUserManager.processSpecialTransaction(tx, null);
+            }
+
             log.info("commitTx of {}", tx.getHashAsString());
             Coin balance = getBalance();
             tx.setUpdateTime(Utils.now());
@@ -2527,8 +2532,6 @@ public class Wallet extends BaseTaggableObject
             if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
                 context.instantSend.processTxLockRequest((TransactionLockRequest)tx);
             }
-            if(context.evoUserManager != null) //Check for unit tests
-                context.evoUserManager.processSpecialTransaction(tx, null);
 
             informConfidenceListenersIfNotReorganizing();
             saveNow();

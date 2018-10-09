@@ -892,7 +892,7 @@ public class Peer extends PeerSocketHandler {
                                         {
                                             context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
                                         }
-                                        context.evoUserManager.processSpecialTransaction(tx, currentFilteredBlock != null ? currentFilteredBlock.getBlockHeader() : null);
+                                        context.evoUserManager.processSpecialTransaction(tx, null);
                                     } catch (VerificationException e) {
                                         log.error("{}: Wallet failed to process pending transaction {}", getAddress(), tx.getHash());
                                         log.error("Error was: ", e);
@@ -914,7 +914,7 @@ public class Peer extends PeerSocketHandler {
                             {
                                 context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
                             }
-                            context.evoUserManager.processSpecialTransaction(tx, currentFilteredBlock != null ? currentFilteredBlock.getBlockHeader() : null);
+                            context.evoUserManager.processSpecialTransaction(tx, null);
                         }
                     }
                 } catch (VerificationException e) {
