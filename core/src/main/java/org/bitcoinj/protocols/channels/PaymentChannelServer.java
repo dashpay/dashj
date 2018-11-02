@@ -374,7 +374,7 @@ public class PaymentChannelServer {
             state.storeChannelInWallet(PaymentChannelServer.this);
             try {
                 receiveUpdatePaymentMessage(providedContract.getInitialPayment(), false /* no ack msg */);
-            } catch (VerificationException e) {
+            } catch (SignatureDecodeException | VerificationException e) {
                 log.error("Initial payment failed to verify", e);
                 error(e.getMessage(), Protos.Error.ErrorCode.BAD_TRANSACTION, CloseReason.REMOTE_SENT_INVALID_MESSAGE);
                 return;
@@ -425,7 +425,8 @@ public class PaymentChannelServer {
     }
 
     @GuardedBy("lock")
-    private void receiveUpdatePaymentMessage(Protos.UpdatePayment msg, boolean sendAck) throws VerificationException, ValueOutOfRangeException, InsufficientMoneyException {
+    private void receiveUpdatePaymentMessage(Protos.UpdatePayment msg, boolean sendAck) throws SignatureDecodeException,
+            VerificationException, ValueOutOfRangeException, InsufficientMoneyException {
         log.info("Got a payment update");
 
         Coin lastBestPayment = state.getBestValueToMe();
@@ -514,7 +515,7 @@ public class PaymentChannelServer {
             } catch (InsufficientMoneyException e) {
                 log.error("Caught insufficient money exception handling message from client", e);
                 error(e.getMessage(), Protos.Error.ErrorCode.BAD_TRANSACTION, CloseReason.REMOTE_SENT_INVALID_MESSAGE);
-            } catch (IllegalStateException e) {
+            } catch (SignatureDecodeException e) {
                 log.error("Caught illegal state exception handling message from client", e);
                 error(e.getMessage(), Protos.Error.ErrorCode.SYNTAX_ERROR, CloseReason.REMOTE_SENT_INVALID_MESSAGE);
             }
