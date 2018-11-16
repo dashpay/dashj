@@ -628,7 +628,7 @@ public abstract class NetworkParameters {
         MINIMUM(70209),
         PONG(60001),
         BLOOM_FILTER(CoinDefinition.MIN_PROTOCOL_VERSION),
-        CURRENT(70210);
+        CURRENT(70212);
 
         private final int bitcoinProtocol;
 
@@ -648,6 +648,8 @@ public abstract class NetworkParameters {
 
     protected int superblockStartBlock;
     protected int superblockCycle; // in blocks
+
+    protected boolean supportsEvolution = true;
 
     /**
      * Getter for property 'nGovernanceMinQuorum'.
@@ -677,5 +679,9 @@ public abstract class NetworkParameters {
 
     public int getSuperblockStartBlock() {
         return superblockStartBlock;
+    }
+
+    public boolean isSupportingEvolution() {
+        return supportsEvolution;
     }
 }

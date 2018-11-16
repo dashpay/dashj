@@ -45,6 +45,10 @@ public class DevNetParams extends AbstractBitcoinNetParams {
     private static final BigInteger MAX_TARGET = Utils.decodeCompactBits(0x207fffff);
 
     public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds) {
+        this(devNetName, sporkAddress, defaultPort, dnsSeeds, false);
+    }
+
+    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsEvolution) {
         super();
         this.devNetName = "devnet-" + devNetName;
         id = ID_DEVNET + "." + devNetName;
@@ -99,6 +103,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         powKGWHeight = 4001;
         powAllowMinimumDifficulty = true;
         powNoRetargeting = false;
+        this.supportsEvolution = supportsEvolution;
     }
 
     //support more than one DevNet
