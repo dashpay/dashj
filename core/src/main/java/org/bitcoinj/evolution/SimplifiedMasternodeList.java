@@ -29,6 +29,7 @@ public class SimplifiedMasternodeList extends Message {
     }
 
     SimplifiedMasternodeList(SimplifiedMasternodeList other) {
+        super(other.params);
         this.blockHash = other.blockHash;
         this.height = other.height;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(other.mnMap);
@@ -58,6 +59,7 @@ public class SimplifiedMasternodeList extends Message {
             int second = (int)readUint32();
             mnUniquePropertyMap.put(hash, new Pair<Sha256Hash, Integer>(first, second));
         }
+        length = cursor - offset;
     }
 
     @Override
@@ -108,11 +110,13 @@ public class SimplifiedMasternodeList extends Message {
 
     void addMN(SimplifiedMasternodeListEntry dmn)
     {
-        assert(!mnMap.containsKey(dmn.proRegTxHash));
         mnMap.put(dmn.proRegTxHash, dmn);
         addUniqueProperty(dmn, dmn.service);
         addUniqueProperty(dmn, dmn.keyIdVoting);
-        addUniqueProperty(dmn, dmn.keyIdOperator);
+        if(params.isSupportingEvolution())
+            addUniqueProperty(dmn, dmn.pubKeyOperator);
+        else
+            addUniqueProperty(dmn, dmn.keyIdOperator);
     }
 
     void removeMN(Sha256Hash proTxHash)

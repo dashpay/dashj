@@ -52,7 +52,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     @Override
     protected void parse() throws ProtocolException {
-        int size = (int)readVarInt();
         mnList = new SimplifiedMasternodeList(params, payload, cursor);
         cursor += mnList.getMessageSize();
         tipBlockHash = readHash();
@@ -78,6 +77,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         tipHeight = ((CoinbaseTx)mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         tipBlockHash = mnlistdiff.blockHash;
         log.info(this.toString());
+        unCache();
     }
 
     public NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
@@ -111,5 +111,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     @Override
     public String toString() {
         return "SimplifiedMNListManager:  {" + mnList + ", tipHeight "+ tipHeight +"}";
+    }
+
+    long getSpork15Value() {
+        return context.sporkManager.getSporkValue(SporkManager.SPORK_15_DETERMINISTIC_MNS_ENABLED);
     }
 }
