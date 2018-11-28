@@ -113,7 +113,23 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         return "SimplifiedMNListManager:  {" + mnList + ", tipHeight "+ tipHeight +"}";
     }
 
-    long getSpork15Value() {
+    public long getSpork15Value() {
         return context.sporkManager.getSporkValue(SporkManager.SPORK_15_DETERMINISTIC_MNS_ENABLED);
+    }
+
+    public boolean isDeterministicMNsSporkActive(long height) {
+        if(height == -1) {
+            height = tipHeight;
+        }
+
+        return height > getSpork15Value();
+    }
+
+    public boolean isDeterministicMNsSporkActive() {
+        return isDeterministicMNsSporkActive(-1);
+    }
+
+    public SimplifiedMasternodeList getListAtChainTip() {
+        return mnList;
     }
 }

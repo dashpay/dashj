@@ -36,6 +36,17 @@ public class SimplifiedMasternodeList extends Message {
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(other.mnUniquePropertyMap);
     }
 
+    SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries) {
+        super(params);
+        this.blockHash = Sha256Hash.ZERO_HASH;
+        this.height = -1;
+        mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>();
+        mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(entries.size());
+        for(SimplifiedMasternodeListEntry entry : entries)
+            addMN(entry);
+
+    }
+
     @Override
     protected void parse() throws ProtocolException {
         blockHash = readHash();
@@ -122,11 +133,12 @@ public class SimplifiedMasternodeList extends Message {
     void removeMN(Sha256Hash proTxHash)
     {
         SimplifiedMasternodeListEntry dmn = getMN(proTxHash);
-        assert(dmn != null);
-        deleteUniqueProperty(dmn, dmn.service);
-        deleteUniqueProperty(dmn, dmn.keyIdVoting);
-        deleteUniqueProperty(dmn, dmn.keyIdOperator);
-        mnMap.remove(proTxHash);
+        if(dmn != null) {
+            deleteUniqueProperty(dmn, dmn.service);
+            deleteUniqueProperty(dmn, dmn.keyIdVoting);
+            deleteUniqueProperty(dmn, dmn.pubKeyOperator);
+            mnMap.remove(proTxHash);
+        }
     }
 
     public SimplifiedMasternodeListEntry getMN(Sha256Hash proTxHash)
@@ -191,12 +203,35 @@ public class SimplifiedMasternodeList extends Message {
                     smnlHashes.add(entry.getValue().getHash());
         }
 
+
         if(smnlHashes.size() == 0)
             return true;
 
         if(!cbtx.merkleRootMasternodeList.equals(calculateMerkleRoot(smnlHashes)))
             throw new VerificationException("MerkleRoot of masternode list does not match coinbaseTx");
         return true;
+    }
+
+    public Sha256Hash calculateMerkleRoot() {
+        ArrayList<Sha256Hash> proTxHashes = new ArrayList<Sha256Hash>(mnMap.size());
+        for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            proTxHashes.add(entry.getValue().proRegTxHash);
+        }
+
+        Collections.sort(proTxHashes, new Comparator<Sha256Hash>() {
+            @Override
+            public int compare(Sha256Hash o1, Sha256Hash o2) {
+                return o1.compareTo(o2);
+            }
+        });
+        ArrayList<Sha256Hash> smnlHashes = new ArrayList<Sha256Hash>(mnMap.size());
+        for(Sha256Hash hash : proTxHashes) {
+            for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet())
+                if(entry.getValue().proRegTxHash.equals(hash))
+                    smnlHashes.add(entry.getValue().getHash());
+        }
+
+        return calculateMerkleRoot(smnlHashes);
     }
 
     private Sha256Hash calculateMerkleRoot(List<Sha256Hash> hashes) {
@@ -256,5 +291,21 @@ public class SimplifiedMasternodeList extends Message {
             levelOffset += levelSize;
         }
         return tree;
+    }
+
+    public interface ForeachMNCallback {
+        void processMN(SimplifiedMasternodeListEntry mn);
+    }
+
+    public void forEachMN(boolean onlyValid, ForeachMNCallback callback) {
+        for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if(!onlyValid || isMNValid(entry.getValue())) {
+                callback.processMN(entry.getValue());
+            }
+        }
+    }
+
+    public boolean isMNValid(SimplifiedMasternodeListEntry entry) {
+        return entry.isValid;
     }
 }

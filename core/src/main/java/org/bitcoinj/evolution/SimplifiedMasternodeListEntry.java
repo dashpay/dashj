@@ -15,17 +15,27 @@ public class SimplifiedMasternodeListEntry extends ChildMessage {
     BLSPublicKey pubKeyOperator;
     KeyId keyIdVoting;
     boolean isValid;
+    static int MESSAGE_SIZE = 151;
+    static int MESSAGE_SIZE_OLD = 151 - 28;
 
-    SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset) {
+    public SimplifiedMasternodeListEntry(NetworkParameters params) {
+        super(params);
+        length = MESSAGE_SIZE;
+    }
+
+    public SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
     }
 
-    SimplifiedMasternodeListEntry(SimplifiedMasternodeListEntry other) {
+    public SimplifiedMasternodeListEntry(NetworkParameters params, SimplifiedMasternodeListEntry other) {
+        super(params);
         proRegTxHash = other.proRegTxHash;
         confirmedHash = other.confirmedHash;
         service = other.service.duplicate();
         keyIdOperator = other.keyIdOperator.duplicate();
         keyIdVoting = other.keyIdVoting.duplicate();
+        pubKeyOperator = new BLSPublicKey(other.pubKeyOperator);
+        length = params.isSupportingEvolution() ? MESSAGE_SIZE : MESSAGE_SIZE_OLD;
     }
 
     @Override
@@ -84,4 +94,31 @@ public class SimplifiedMasternodeListEntry extends ChildMessage {
                 keyIdOperator, keyIdVoting);
     }
 
+    public Sha256Hash getProRegTxHash() {
+        return proRegTxHash;
+    }
+
+    public Sha256Hash getConfirmedHash() {
+        return confirmedHash;
+    }
+
+    public MasternodeAddress getService() {
+        return service;
+    }
+
+    public KeyId getKeyIdOperator() {
+        return keyIdOperator;
+    }
+
+    public BLSPublicKey getPubKeyOperator() {
+        return pubKeyOperator;
+    }
+
+    public KeyId getKeyIdVoting() {
+        return keyIdVoting;
+    }
+
+    public boolean isValid() {
+        return isValid;
+    }
 }
