@@ -1,8 +1,8 @@
 package org.bitcoinj.crypto;
 
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
-import org.dashj.bls.PublicKey;
 
 public class BLSId extends BLSAbstractObject {
     public static int BLS_CURVE_ID_SIZE  = 32;
@@ -17,6 +17,10 @@ public class BLSId extends BLSAbstractObject {
         valid = true;
         this.hash = Sha256Hash.wrap(hash.getBytes());
         updateHash();
+    }
+
+    public BLSId(NetworkParameters params, byte [] payload, int offset) {
+        super(params, payload, offset);
     }
 
     @Override
@@ -43,5 +47,11 @@ public class BLSId extends BLSAbstractObject {
     protected void parse() throws ProtocolException {
         byte buffer[] = readBytes(BLS_CURVE_ID_SIZE);
         internalSetBuffer(buffer);
+        serializedSize = BLS_CURVE_ID_SIZE;
+        length = cursor - offset;
+    }
+
+    public byte [] getBytes() {
+        return hash.getBytes();
     }
 }

@@ -30,6 +30,13 @@ public abstract class BLSAbstractObject extends ChildMessage {
         updateHash();
     }
 
+    BLSAbstractObject(byte [] buffer, int serializedSize) {
+        Preconditions.checkArgument(buffer.length == serializedSize);
+        this.serializedSize = serializedSize;
+        setBuffer(buffer);
+        updateHash();
+    }
+
     BLSAbstractObject(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
         this.valid = true;
@@ -77,7 +84,8 @@ public abstract class BLSAbstractObject extends ChildMessage {
     }
 
     protected void reset() {
-        valid = false;
+        valid = internalSetBuffer(new byte[serializedSize]);
+        updateHash();
     }
 
 
@@ -93,7 +101,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
     }
 
     protected void updateHash() {
-        byte [] buffer = getBuffer(serializedSize);
+        byte [] buffer = isValid() ? getBuffer(serializedSize) : new byte[serializedSize];
         hash = Sha256Hash.twiceOf(buffer);
     }
 
@@ -103,6 +111,10 @@ public abstract class BLSAbstractObject extends ChildMessage {
             updateHash();
         }
         return hash;
+    }
+
+    public boolean isValid() {
+        return valid;
     }
 
     @Override

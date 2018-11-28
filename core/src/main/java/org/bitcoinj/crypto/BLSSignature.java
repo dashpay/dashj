@@ -1,6 +1,7 @@
 package org.bitcoinj.crypto;
 
 import com.google.common.base.Preconditions;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
 import org.dashj.bls.*;
@@ -14,6 +15,18 @@ public class BLSSignature extends BLSAbstractObject {
 
     BLSSignature() {
         super(BLS_CURVE_SIG_SIZE);
+    }
+
+    public BLSSignature(byte [] signature) {
+        super(signature, BLS_CURVE_SIG_SIZE);
+    }
+
+    public BLSSignature(NetworkParameters params, byte [] payload, int offset) {
+        super(params, payload, offset);
+    }
+
+    public BLSSignature(BLSSignature signature) {
+        super(signature.getBuffer(), BLS_CURVE_SIG_SIZE);
     }
 
     BLSSignature(InsecureSignature sk) {

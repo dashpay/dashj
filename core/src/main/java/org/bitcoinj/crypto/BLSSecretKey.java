@@ -25,6 +25,14 @@ public class BLSSecretKey extends BLSAbstractObject
         updateHash();
     }
 
+    public BLSSecretKey(byte [] buffer) {
+        super(buffer, BLS_CURVE_SECKEY_SIZE);
+    }
+
+    public BLSSecretKey(BLSSecretKey secretKey) {
+        super(secretKey.getBuffer(), BLS_CURVE_SECKEY_SIZE);
+    }
+
     @Override
     boolean internalSetBuffer(byte[] buffer) {
         try {

@@ -30,6 +30,10 @@ public class BLSPublicKey extends BLSAbstractObject {
         super(params, payload, offset);
     }
 
+    public BLSPublicKey(BLSPublicKey publicKey) {
+        super(publicKey.getBuffer(), BLS_CURVE_PUBKEY_SIZE);
+    }
+
     @Override
     boolean internalSetBuffer(byte[] buffer) {
         try {
@@ -59,7 +63,7 @@ public class BLSPublicKey extends BLSAbstractObject {
         super.bitcoinSerializeToStream(stream);
     }
 
-    public void AggregateInsecure(BLSPublicKey sk) {
+    public void aggregateInsecure(BLSPublicKey sk) {
         Preconditions.checkState(valid && sk.valid);
         PublicKeyVector publicKeys = new PublicKeyVector();
         publicKeys.push_back(publicKeyImpl);
@@ -68,7 +72,7 @@ public class BLSPublicKey extends BLSAbstractObject {
         updateHash();
     }
 
-    public static BLSPublicKey AggregateInsecure(ArrayList<BLSPublicKey> sks) {
+    public static BLSPublicKey aggregateInsecure(ArrayList<BLSPublicKey> sks) {
         if(sks.isEmpty()) {
             return new BLSPublicKey();
         }
