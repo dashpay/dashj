@@ -116,6 +116,9 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         powAllowMinimumDifficulty = true;
         powNoRetargeting = false;
 
+        instantSendConfirmationsRequired = 2;
+        instantSendKeepLock = 6;
+
     }
 
     private static TestNet3Params instance;

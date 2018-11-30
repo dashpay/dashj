@@ -384,6 +384,9 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         powKGWHeight = 15200;
         powAllowMinimumDifficulty = false;
         powNoRetargeting = false;
+
+        instantSendConfirmationsRequired = 6;
+        instantSendKeepLock = 24;
     }
 
     private static MainNetParams instance;

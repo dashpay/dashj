@@ -51,6 +51,8 @@ public class RegTestParams extends TestNet2Params {
         powKGWHeight = 15200;
         powAllowMinimumDifficulty = true;
         powNoRetargeting = true;
+
+        instantSendConfirmationsRequired = 2;
     }
 
     @Override

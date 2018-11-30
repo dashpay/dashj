@@ -104,6 +104,9 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         powAllowMinimumDifficulty = true;
         powNoRetargeting = false;
         this.supportsEvolution = supportsEvolution;
+
+        instantSendConfirmationsRequired = 2;
+        instantSendKeepLock = 6;
     }
 
     //support more than one DevNet

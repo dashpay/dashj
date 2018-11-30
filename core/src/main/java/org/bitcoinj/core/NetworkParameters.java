@@ -684,4 +684,15 @@ public abstract class NetworkParameters {
     public boolean isSupportingEvolution() {
         return supportsEvolution;
     }
+
+    protected int instantSendConfirmationsRequired;
+    protected int instantSendKeepLock;
+
+    public int getInstantSendConfirmationsRequired() {
+        return instantSendConfirmationsRequired;
+    }
+
+    public int getInstantSendKeepLock() {
+        return instantSendKeepLock;
+    }
 }
