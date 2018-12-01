@@ -27,7 +27,7 @@ include_directories(${JNI_INCLUDE_DIRS}
 					${CMAKE_SOURCE_DIR}/src/main/
 					${CMAKE_SOURCE_DIR}/src/main/cpp
 					${CMAKE_SOURCE_DIR}/src/main/cpp/bls-signatures/src
-					${CMAKE_SOURCE_DIR}/src/main/cpp/bls-signatures/build/contrib/relic/include
+					${CMAKE_BINARY_DIR}/src/main/cpp/bls-signatures/contrib/relic/include
 					${CMAKE_SOURCE_DIR}/src/main/cpp/bls-signatures/contrib/relic/include
 )
 
@@ -39,4 +39,6 @@ target_link_libraries( # Specifies the target library.
         dashjbls
 
         # Links the target library to the bls library
-        ${CMAKE_SOURCE_DIR}/src/main/cpp/bls-signatures/build/libbls.a)
+        bls)
+
+add_subdirectory(src/main/cpp)
