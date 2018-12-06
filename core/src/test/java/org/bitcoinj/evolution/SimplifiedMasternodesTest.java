@@ -5,9 +5,12 @@ import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.params.MainNetParams;
 import static org.junit.Assert.*;
 
+import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.store.FlatDB;
 import org.junit.Test;
 
 import java.net.InetAddress;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
@@ -15,6 +18,13 @@ import java.util.ArrayList;
  * Created by hashengineering on 11/26/18.
  */
 public class SimplifiedMasternodesTest {
+
+    static {
+        MainNetParams MAINPARAMS = MainNetParams.get();
+        TestNet3Params TESTPARAMS = TestNet3Params.get();
+        Context context = new Context(TESTPARAMS);
+    }
+
     @Test
     public void merkleRoots() throws UnknownHostException
     {
@@ -71,5 +81,26 @@ public class SimplifiedMasternodesTest {
         String calculatedMerkleRoot = sml.calculateMerkleRoot().toString();
 
         assertEquals(expectedMerkleRoot, calculatedMerkleRoot);
+    }
+
+    @Test
+    public void loadFromFile() throws Exception {
+        URL datafile = getClass().getResource("simplifiedmasternodelistmanager.dat");
+        FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true);
+
+        SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(Context.get());
+        assertEquals(db.load(managerDefaultNames), true);
+
+        SimplifiedMasternodeListManager managerSpecific = new SimplifiedMasternodeListManager(Context.get());
+        FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 1);
+        assertEquals(db2.load(managerSpecific), true);
+
+        //check to make sure that they have the same number of masternodes
+        assertEquals(managerDefaultNames.mnList.size(), managerSpecific.mnList.size());
+
+        //load a file with version 1, expecting version 2
+        SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(Context.get());
+        FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 2);
+        assertEquals(db3.load(managerSpecificFail), false);
     }
 }
