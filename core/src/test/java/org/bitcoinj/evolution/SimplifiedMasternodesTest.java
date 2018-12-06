@@ -6,7 +6,9 @@ import org.bitcoinj.params.MainNetParams;
 import static org.junit.Assert.*;
 
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.store.FlatDB;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetAddress;
@@ -19,16 +21,22 @@ import java.util.ArrayList;
  */
 public class SimplifiedMasternodesTest {
 
-    static {
-        MainNetParams MAINPARAMS = MainNetParams.get();
-        TestNet3Params TESTPARAMS = TestNet3Params.get();
-        Context context = new Context(TESTPARAMS);
+    Context context;
+    UnitTestParams PARAMS;
+    MainNetParams MAINPARAMS;
+    byte[] txdata;
+
+    @Before
+    public void startup() {
+        MAINPARAMS = MainNetParams.get();
+        PARAMS = UnitTestParams.get();
+        context = Context.getOrCreate(PARAMS);
+        txdata = Utils.HEX.decode("0300090001d4ad073ec40da120d28a47164753f4f5ad80d0dc3b918b39223d36ebdfacdef6000000006b483045022100a65429d4f2ab2df58cafdaaffe874ef260f610e068e89a4455fbf92261156bb7022015733ae5aef3006fd5781b91f97ca1102edf09e9383ca761e407c619d13db7660121034c1f31446c5971558b9027499c3678483b0deb06af5b5ccd41e1f536af1e34cafeffffff0200e1f50500000000016ad2d327cc050000001976a9141eccbe2508c7741d2e4c517f87565e7d477cfbbc88ac000000002201002369fced72076b33e25c5ca31efb605037e3377c8e1989eb9ec968224d5e22b4");         //"01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84";
     }
 
     @Test
     public void merkleRoots() throws UnknownHostException
     {
-        MainNetParams PARAMS = MainNetParams.get();
         ArrayList<SimplifiedMasternodeListEntry> entries = new ArrayList<SimplifiedMasternodeListEntry>(15);
         for (int i = 0; i < 15; i++) {
             SimplifiedMasternodeListEntry smle = new SimplifiedMasternodeListEntry(PARAMS);
