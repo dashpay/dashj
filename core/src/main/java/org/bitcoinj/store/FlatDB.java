@@ -41,10 +41,30 @@ public class FlatDB<Type extends AbstractManager> {
 
     Context context;
 
-    public FlatDB()
-    {
-        context = Context.get();
+    public FlatDB(Context context, String fileOrDirectory, boolean isFileName) {
+        this.context = context;
+        if(isFileName) {
+            this.pathDB = fileOrDirectory;
+            this.directory = new File(fileOrDirectory).getParentFile().getAbsolutePath();
+        } else {
+            this.directory = fileOrDirectory;
+            this.pathDB = null;
+        }
     }
+
+    public FlatDB(Context context, String fileOrDirectory, boolean isFileName, String magicMessage, int version) {
+        this.context = context;
+        this.magicMessage = magicMessage + "-" + version;
+        if(isFileName) {
+            this.pathDB = fileOrDirectory;
+            this.directory = new File(fileOrDirectory).getParentFile().getAbsolutePath();
+        } else {
+            this.directory = fileOrDirectory;
+            this.pathDB = null;
+        }
+    }
+
+
     public FlatDB(String directory, String fileName, String magicMessage) {
         context = Context.get();
         this.magicMessage = magicMessage;
@@ -55,7 +75,7 @@ public class FlatDB<Type extends AbstractManager> {
     void setPath(String directory, String file)
     {
         this.directory = directory;
-        pathDB = directory + "/" +file;
+        pathDB = directory + File.separator +file;
     }
     public String getDirectory()
     {
@@ -67,6 +87,12 @@ public class FlatDB<Type extends AbstractManager> {
         try {
             long nStart = Utils.currentTimeMillis();
 
+            if(pathDB == null) {
+                pathDB = directory + File.separator + object.getDefaultFileName();
+            }
+            if(magicMessage == null) {
+                magicMessage = object.getMagicMessage();
+            }
             // serialize, checksum data up to that point, then append checksum
             UnsafeByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(object.calculateMessageSizeInBytes()+4+magicMessage.getBytes().length);
             stream.write(magicMessage.getBytes());
@@ -115,6 +141,14 @@ public class FlatDB<Type extends AbstractManager> {
         long nStart = Utils.currentTimeMillis();
         try {
             // open input file, and associate with CAutoFile
+
+            if(magicMessage == null) {
+                magicMessage = object.getMagicMessage();
+            }
+
+            if(pathDB == null) {
+                pathDB = directory + File.separator + object.getDefaultFileName();
+            }
 
             FileInputStream fileStream = new FileInputStream(pathDB);
 
@@ -199,9 +233,9 @@ public class FlatDB<Type extends AbstractManager> {
             log.info("Loaded info from {}  {}ms", fileName, Utils.currentTimeMillis() - nStart);
             log.info("  {}", object.toString());
             if (!fDryRun) {
-                log.info("Masternode manager - cleaning....");
+                log.info("manager - cleaning....");
                 object.checkAndRemove();
-                log.info("Masternode manager - result:");
+                log.info("manager - result:");
                 log.info("  {}", object.toString());
             }
 
@@ -217,7 +251,6 @@ public class FlatDB<Type extends AbstractManager> {
 
     public boolean load(Type objToLoad)
     {
-
         log.info("Reading info from {}...", fileName);
         ReadResult readResult = read(objToLoad);
         if (readResult == ReadResult.FileError)
@@ -235,6 +268,7 @@ public class FlatDB<Type extends AbstractManager> {
                 return false;
             }
         }
+        objToLoad.setFilename(pathDB);
         return true;
     }
 
@@ -287,5 +321,5 @@ public class FlatDB<Type extends AbstractManager> {
 
         return true;
     }
-};
+}
 
