@@ -515,6 +515,28 @@
                 <classifier/>
             </properties>
         </profile>
+            <profile>
+                <id>no-build-bls</id>
+                <build>
+                    <plugins>
+                        <plugin>
+                            <groupId>com.googlecode.cmake-maven-project</groupId>
+                            <artifactId>cmake-maven-plugin</artifactId>
+                            <version>3.7.2-b1</version>
+                            <executions>
+                                <execution>
+                                    <id>cmake-generate</id> <!-- here there must be the same identifier as defined in <build><plugins> section -->
+                                    <phase>none</phase> <!-- this disables plugin -->
+                                </execution>
+                                <execution>
+                                    <id>cmake-compile</id> <!-- here there must be the same identifier as defined in <build><plugins> section -->
+                                    <phase>none</phase> <!-- this disables plugin -->
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </build>
+            </profile>
     </profiles>
 
 </project>
