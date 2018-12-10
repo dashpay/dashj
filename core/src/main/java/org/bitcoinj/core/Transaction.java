@@ -1557,4 +1557,17 @@ public class Transaction extends ChildMessage {
                 break;
         }
     }
+
+    /* returns false if inputs > 4 or there are less than the required confirmations */
+    public boolean isSimple() {
+        if(inputs.size() > 4)
+            return false;
+        for(TransactionInput input : inputs) {
+            Transaction connectedTx = input.getConnectedTransaction();
+            if(connectedTx != null && connectedTx.getConfidence().getDepthInBlocks() < params.getInstantSendConfirmationsRequired())
+                return false;
+        }
+
+        return true;
+    }
 }
