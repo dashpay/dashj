@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.evolution.*;
 import org.bitcoinj.governance.GovernanceManager;
@@ -47,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.bitcoinj.wallet.KeyChain.KeyPurpose.RECEIVE_FUNDS;
 
 /**
  * ForwardingService demonstrates basic usage of the library. It sits on the network and when it receives coins, simply
@@ -57,6 +59,8 @@ public class ForwardingServiceDash {
     private static WalletAppKit kit;
 
     private static MasternodeControl control;
+
+    private static DeterministicKeyChain blockchainUserKeyChain;
 
     public static void main(String[] args) throws Exception {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
@@ -88,7 +92,7 @@ public class ForwardingServiceDash {
         forwardingAddress = Address.fromBase58(params, args[0]);
 
         // Start up a basic app using a class that automates some boilerplate.
-        if(args[1] == "devnet") {
+        if(!args[1].equals("devnet")) {
             kit = new WalletAppKit(params, new File("."), filePrefix, false) {
                 @Override
                 protected void onSetupCompleted() {
@@ -120,6 +124,9 @@ public class ForwardingServiceDash {
         // Download the block chain and wait until it's done.
         kit.startAsync();
         kit.awaitRunning();
+
+        blockchainUserKeyChain = ((EvolutionWalletAppKit)kit).getBlockchainUserKeyChain();
+
 
         // We want to know when we receive money.
         kit.wallet().addCoinsReceivedEventListener(new WalletCoinsReceivedEventListener() {
@@ -248,15 +255,15 @@ public class ForwardingServiceDash {
     }
 
     static EvolutionUser currentUser;
-    static ECKey privKey;
-    static ECKey newPrivKey;
+    static DeterministicKey privKey;
+    static DeterministicKey newPrivKey;
 
     private static void createUser(Transaction tx) {
         try {
 
             Coin amount = Coin.parseCoin("0.001");
-            privKey = ECKey.fromPrivate(kit.wallet().getActiveKeyChain().getKeyByPath(DeterministicKeyChain.ACCOUNT_ZERO_PATH, false).getPrivKeyBytes());
-            newPrivKey = ECKey.fromPrivate(kit.wallet().getActiveKeyChain().getKeyByPath(ImmutableList.of(ChildNumber.ONE_HARDENED), true).getPrivKeyBytes());
+            privKey = ((EvolutionWalletAppKit)kit).getEvoUserWallet().freshReceiveKey();
+            newPrivKey = ((EvolutionWalletAppKit)kit).getEvoUserWallet().freshKey(RECEIVE_FUNDS);
             SendRequest req = SendRequest.forSubTxRegister(kit.params(),
                     new SubTxRegister(1, "hashengineering"+new Random().nextInt()/1000,
                             privKey),
@@ -265,6 +272,7 @@ public class ForwardingServiceDash {
             final Wallet.SendResult sendResult = kit.wallet().sendCoins(req);
 
             currentUser = Context.get().evoUserManager.getUser(sendResult.tx.getHash());
+            currentUser.setPublicKeyPath(privKey.getPath());
 
             sendResult.broadcastComplete.addListener(new Runnable() {
                 @Override

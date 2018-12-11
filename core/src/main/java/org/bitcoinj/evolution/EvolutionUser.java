@@ -1,9 +1,13 @@
 package org.bitcoinj.evolution;
 
+import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.wallet.DeterministicKeyChain;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,6 +29,8 @@ public class EvolutionUser extends ChildMessage {
     protected HashMap<Sha256Hash, Transaction> topupTxMap;
     protected HashMap<Sha256Hash, Transaction> resetTxMap;
 
+    protected ImmutableList<ChildNumber> publicKeyPath;
+
     EvolutionUser(NetworkParameters params) {
         super(params);
         regTxId = Sha256Hash.ZERO_HASH;
@@ -32,6 +38,7 @@ public class EvolutionUser extends ChildMessage {
         hashCurSubTx = Sha256Hash.ZERO_HASH;
         topupTxMap = new HashMap<Sha256Hash, Transaction>(1);
         resetTxMap = new HashMap<Sha256Hash, Transaction>(1);
+        publicKeyPath = ImmutableList.<ChildNumber>builder().addAll(DeterministicKeyChain.EVOLUTION_ACCOUNT_PATH).add(ChildNumber.ZERO).build();
     }
 
     /*public EvolutionUser(Sha256Hash regTxId, String userName, KeyId curPubKeyID) {
@@ -56,6 +63,7 @@ public class EvolutionUser extends ChildMessage {
         hashCurSTPacket = Sha256Hash.ZERO_HASH;
         topupTxMap = new HashMap<Sha256Hash, Transaction>(1);
         resetTxMap = new HashMap<Sha256Hash, Transaction>(1);
+        publicKeyPath = ImmutableList.<ChildNumber>builder().addAll(DeterministicKeyChain.EVOLUTION_ACCOUNT_PATH).add(ChildNumber.ZERO).build();
     }
 
     public EvolutionUser(NetworkParameters params, byte [] payload, int offset) {
@@ -89,6 +97,12 @@ public class EvolutionUser extends ChildMessage {
             cursor += reset.getMessageSize();
             resetTxMap.put(reset.getHash(), reset);
         }
+        size = (int)readVarInt();
+        ArrayList<ChildNumber> pathElements = new ArrayList<ChildNumber>(size);
+        for(int i = 0; i < size; ++i) {
+            pathElements.add(new ChildNumber((int)readUint32()));
+        }
+        publicKeyPath = ImmutableList.<ChildNumber>builder().addAll(pathElements).build();
         length = cursor - offset;
     }
 
@@ -110,6 +124,10 @@ public class EvolutionUser extends ChildMessage {
         stream.write(new VarInt(resetTxMap.size()).encode());
         for(Map.Entry<Sha256Hash, Transaction> entry : resetTxMap.entrySet()) {
             entry.getValue().bitcoinSerialize(stream);
+        }
+        stream.write(new VarInt(publicKeyPath.size()).encode());
+        for(ChildNumber i : publicKeyPath) {
+            Utils.uint32ToByteStreamLE(i.getI(), stream);
         }
     }
 
@@ -192,5 +210,13 @@ public class EvolutionUser extends ChildMessage {
 
     public void addReset(Transaction tx) {
         resetTxMap.put(tx.getHash(), tx);
+    }
+
+    public void setPublicKeyPath(ImmutableList<ChildNumber> publicKeyPath) {
+        this.publicKeyPath = publicKeyPath;
+    }
+
+    public ImmutableList<ChildNumber> getPublicKeyPath() {
+        return publicKeyPath;
     }
 }

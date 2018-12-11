@@ -1,10 +1,9 @@
 package org.bitcoinj.kits;
 
-import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
-import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
@@ -16,8 +15,9 @@ import static org.bitcoinj.wallet.DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS;
 
 public class EvolutionWalletAppKit extends WalletAppKit {
 
-    ImmutableList<ChildNumber> EVOLUTION_ACCOUNT_PATH = ImmutableList.of(new ChildNumber(5, true),
-            ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED);
+    protected DeterministicKeyChain blockchainUserKeyChain;
+    protected Wallet evoUserWallet;
+
 
     public EvolutionWalletAppKit(Context context, File directory, String filePrefix, boolean liteMode) {
         super(context, directory, filePrefix, liteMode);
@@ -29,18 +29,45 @@ public class EvolutionWalletAppKit extends WalletAppKit {
 
     @Override
     protected Wallet createWallet() {
-        KeyChainGroup kcg;
-        if (restoreFromSeed != null)
-            kcg = new KeyChainGroup(params, restoreFromSeed, EVOLUTION_ACCOUNT_PATH);
-        else {
-            kcg = new KeyChainGroup(params, new DeterministicSeed(new SecureRandom(), DEFAULT_SEED_ENTROPY_BITS,
-                    "", Utils.currentTimeSeconds()), EVOLUTION_ACCOUNT_PATH);
+        DeterministicSeed seed;
+        if (restoreFromSeed != null) {
+            seed = restoreFromSeed;
+        } else {
+
+            seed = new DeterministicSeed(new SecureRandom(), DEFAULT_SEED_ENTROPY_BITS,
+                    "", Utils.currentTimeSeconds());
         }
 
+        // Create BIP32 (m/0') keychain
+        DeterministicKeyChain bip32chain = new DeterministicKeyChain(seed, DeterministicKeyChain.ACCOUNT_ZERO_PATH);
+        // Create BIP44 (m/44'/5'/0')
+        DeterministicKeyChain bip44chain = new DeterministicKeyChain(seed, params.getId().equals(NetworkParameters.ID_MAINNET) ?
+                DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH : DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET);
+
+        KeyChainGroup kcg = new KeyChainGroup(params);
+        kcg.addAndActivateHDChain(bip32chain);
+        kcg.addAndActivateHDChain(bip44chain); //default keychain
+
+        blockchainUserKeyChain = new DeterministicKeyChain(seed, DeterministicKeyChain.EVOLUTION_ACCOUNT_PATH);
+
+        KeyChainGroup evoUserKcg = new KeyChainGroup(params);
+        evoUserKcg.addAndActivateHDChain(blockchainUserKeyChain);
+
         if (walletFactory != null) {
+            evoUserWallet = walletFactory.create(params, evoUserKcg);
             return walletFactory.create(params, kcg);
+
         } else {
+            evoUserWallet = walletFactory.create(params, evoUserKcg);
             return new Wallet(params, kcg);  // default
         }
+    }
+
+    public DeterministicKeyChain getBlockchainUserKeyChain() {
+        return blockchainUserKeyChain;
+    }
+
+    public Wallet getEvoUserWallet() {
+        return evoUserWallet;
     }
 }
