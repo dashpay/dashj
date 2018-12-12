@@ -15,8 +15,10 @@
  */
 package org.bitcoinj.core;
 
-import org.darkcoinj.DarkSendSigner;
-import org.darkcoinj.InstantSend;
+import org.bitcoinj.crypto.BLSSignature;
+import org.bitcoinj.evolution.SimplifiedMasternodeList;
+import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,11 +35,13 @@ public class TransactionLockVote extends Message implements Serializable {
     public Sha256Hash txHash;
     TransactionOutPoint outpoint;
     TransactionOutPoint outpointMasternode;
+    Sha256Hash masternodeProTxHash;
+    Sha256Hash quorumModifierHash;
     MasternodeSignature vchMasternodeSignature;
-    //public TransactionInput vinMasternode;
 
     //local memory only
     public int confirmedHeight;
+    Context context;
 
     public long getTimeCreated() {
         return timeCreated;
@@ -47,14 +51,16 @@ public class TransactionLockVote extends Message implements Serializable {
 
 
     MasternodeManager masternodeManager;
+    SimplifiedMasternodeListManager masternodeListManager;
 
     //MasterNodeSystem system;
 
     TransactionLockVote(NetworkParameters params, byte[] payload)
     {
         super(params, payload, 0);
-      //  this.system = MasterNodeSystem.get();
-        masternodeManager = Context.get().masternodeManager;
+        this.context = Context.get();
+        masternodeManager = context.masternodeManager;
+        masternodeListManager = context.masternodeListManager;
     }
 
     protected static int calcLength(byte[] buf, int offset) {
@@ -95,6 +101,11 @@ public class TransactionLockVote extends Message implements Serializable {
         outpointMasternode = new TransactionOutPoint(params, payload, cursor);
         cursor+= outpointMasternode.getMessageSize();
 
+        if(params.isSupportingEvolution() && Context.get().masternodeListManager.isDeterministicMNsSporkActive()) {
+            quorumModifierHash = readHash();
+            masternodeProTxHash = readHash();
+        }
+
         vchMasternodeSignature = new MasternodeSignature(params, payload, cursor);
         cursor += vchMasternodeSignature.getMessageSize();
 
@@ -113,7 +124,10 @@ public class TransactionLockVote extends Message implements Serializable {
         outpoint.bitcoinSerialize(stream);
         outpointMasternode.bitcoinSerialize(stream);
 
-        stream.write(new VarInt(vchMasternodeSignature.length).encode());
+        if(masternodeListManager.isDeterministicMNsSporkActive()) {
+            stream.write(quorumModifierHash.getReversedBytes());
+            stream.write(masternodeProTxHash.getReversedBytes());
+        }
         vchMasternodeSignature.bitcoinSerialize(stream);
 
     }
@@ -132,52 +146,62 @@ public class TransactionLockVote extends Message implements Serializable {
     {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
-            bos.write(txHash.getBytes());
+            bos.write(txHash.getReversedBytes());
             outpoint.bitcoinSerialize(bos);
             outpointMasternode.bitcoinSerialize(bos);
-
+            if(masternodeListManager.isDeterministicMNsSporkActive()) {
+                bos.write(quorumModifierHash.getReversedBytes());
+                bos.write(masternodeProTxHash.getReversedBytes());
+            }
             return Sha256Hash.twiceOf(bos.toByteArray());
         }
         catch(IOException x)
         {
-            return Sha256Hash.ZERO_HASH;
+            throw new RuntimeException(x);
         }
+    }
+
+    public Sha256Hash getSignatureHash() {
+        return getHash();
     }
 
     public boolean isValid(Peer peer)
     {
-        if(Context.get().isLiteMode())
-            return true;
+        SimplifiedMasternodeList mnList = masternodeListManager.getListAtChainTip();
 
-        if(!masternodeManager.has(outpointMasternode)) {
-            log.info("instantsend--CTxLockVote::IsValid -- Unknown masternode "+ outpointMasternode.toStringCpp());
-            masternodeManager.askForMN(peer, outpointMasternode);
-            return false;
+        if(params.isSupportingEvolution() && masternodeListManager.isDeterministicMNsSporkActive()) {
+
+
+            if(mnList.getMN(masternodeProTxHash) == null) {
+                log.info("Unknown masternode " + masternodeProTxHash);
+                return false;
+            }
+
+            // At this point Dash Core would check unspent outputs (UTXO's) to find the
+            // block height of the related transaction.  Then this would be used to calculate
+            // the lockInputHeight (input height + 4).  Next the masternode rank would be
+            // determined of the masternode that created this TxLockVote.  Since an SPV node
+            // cannot normally determine the input height, we will trust quorumModifierHash
+            // as being the block hash of the lockInputHeight.
+
+            int rank = masternodeListManager.getListAtChainTip().getMasternodeRank(masternodeProTxHash, quorumModifierHash);
+            if (rank < 0) {
+                //can be caused by past versions trying to vote with an invalid protocol
+                log.error("Can't calculate rank for masternode {}", masternodeProTxHash);
+                return false;
+            }
+            log.info("Masternode {}, rank={}", masternodeProTxHash, rank);
+
+            int signaturesTotal = TransactionOutPointLock.SIGNATURES_TOTAL;
+            if (rank > signaturesTotal) {
+                log.error("Masternode {} is not in the top {} ({}), vote hash={}",
+                        masternodeProTxHash, signaturesTotal, rank, getHash());
+                return false;
+            }
+        } else {
+            //don't check masternode rank on 0.12.3
         }
 
-        /*CCoins coins;
-        if(!GetUTXOCoins(outpoint, coins)) {
-            LogPrint("instantsend", "CTxLockVote::IsValid -- Failed to find UTXO %s\n", outpoint.ToStringShort());
-            return false;
-        }
-
-        int nLockInputHeight = coins.nHeight + 4;
-
-        int nRank;
-        if(!mnodeman.GetMasternodeRank(outpointMasternode, nRank, nLockInputHeight, MIN_INSTANTSEND_PROTO_VERSION)) {
-            //can be caused by past versions trying to vote with an invalid protocol
-            LogPrint("instantsend", "CTxLockVote::IsValid -- Can't calculate rank for masternode %s\n", outpointMasternode.ToStringShort());
-            return false;
-        }
-        LogPrint("instantsend", "CTxLockVote::IsValid -- Masternode %s, rank=%d\n", outpointMasternode.ToStringShort(), nRank);
-
-        int nSignaturesTotal = COutPointLock::SIGNATURES_TOTAL;
-        if(nRank > nSignaturesTotal) {
-            LogPrint("instantsend", "CTxLockVote::IsValid -- Masternode %s is not in the top %d (%d), vote hash=%s\n",
-                    outpointMasternode.ToStringShort(), nSignaturesTotal, nRank, GetHash().ToString());
-            return false;
-        }
-    */
         if(!checkSignature()) {
             log.info("CTxLockVote::IsValid -- Signature invalid");
             return false;
@@ -188,19 +212,46 @@ public class TransactionLockVote extends Message implements Serializable {
 
     boolean checkSignature()
     {
-        StringBuilder errorMessage = new StringBuilder();
-        String strMessage = txHash.toString() + outpoint.toStringCpp();
+        if(masternodeListManager.isDeterministicMNsSporkActive()) {
 
-        MasternodeInfo infoMn = masternodeManager.getMasternodeInfo(outpointMasternode);
+            SimplifiedMasternodeListEntry dmn = masternodeListManager.getListAtChainTip().getMN(masternodeProTxHash);
+            if(dmn == null) {
+                log.error("TxLockVote.checkSignature:  Unknown Masternode: " + masternodeProTxHash);
+                return false;
+            }
+            Sha256Hash hash = getSignatureHash();
 
-        if(!infoMn.fInfoValid) {
-            log.info("CTxLockVote::CheckSignature -- Unknown Masternode: masternode="+ outpointMasternode.toString());
-            return false;
-        }
+            BLSSignature sig = new BLSSignature(vchMasternodeSignature.getBytes());
+            if(!sig.isValid() || !sig.verifyInsecure(dmn.getPubKeyOperator(), hash)) {
+                log.error("CTxLockVote::CheckSignature -- VerifyInsecure() failed");
+                return false;
+            }
+        } else if (context.sporkManager.isSporkActive(SporkManager.SPORK_6_NEW_SIGS)/* && !context.isLiteMode()*/) {
+            //This will not be handled, but we will leave the code here for now
 
-        if(!DarkSendSigner.verifyMessage(infoMn.pubKeyMasternode, vchMasternodeSignature, strMessage, errorMessage)) {
-            log.info("CTxLockVote::CheckSignature -- VerifyMessage() failed, error: "+  errorMessage);
-            return false;
+            /*Sha256Hash hash = getSignatureHash();
+
+            StringBuilder strError = new StringBuilder();
+            String strMessage = txHash.toString() + outpoint.toStringCpp();
+
+            MasternodeInfo infoMn = masternodeManager.getMasternodeInfo(outpointMasternode);
+            if(infoMn == null){
+                log.error("CTxLockVote::CheckSignature -- Unknown Masternode: masternode={}", outpointMasternode.toString());
+                return false;
+            }
+
+            if (!HashSigner.verifyHash(hash, infoMn.legacyKeyIDOperator, vchMasternodeSignature, strError)) {
+                // could be a signature in old format
+                if (!MessageSigner.verifyMessage(infoMn.legacyKeyIDOperator, vchMasternodeSignature, strMessage, strError)) {
+                    // nope, not in old format either
+                    log.error("CTxLockVote::CheckSignature -- VerifyMessage() failed, error: {}", strError);
+                    return false;
+                }
+            }*/
+            return true;
+        } else {
+            //old sigs, we won't handle this case either.
+            return true;
         }
 
         return true;
@@ -215,7 +266,7 @@ public class TransactionLockVote extends Message implements Serializable {
     public boolean isExpired(int height)
     {
         // Locks and votes expire nInstantSendKeepLock blocks after the block corresponding tx was included into.
-        return (confirmedHeight != -1) && (height - confirmedHeight > InstantSend.nInstantSendKeepLock);
+        return (confirmedHeight != -1) && (height - confirmedHeight > params.getInstantSendKeepLock());
     }
     public boolean isTimedOut()
     {
