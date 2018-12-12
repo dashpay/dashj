@@ -17,6 +17,8 @@ public class SimplifiedMasternodeListEntry extends ChildMessage {
     boolean isValid;
     static int MESSAGE_SIZE = 151;
     static int MESSAGE_SIZE_OLD = 151 - 28;
+    //In Memory
+    Sha256Hash confirmedHashWithProRegTxHash;
 
     public SimplifiedMasternodeListEntry(NetworkParameters params) {
         super(params);
@@ -35,6 +37,7 @@ public class SimplifiedMasternodeListEntry extends ChildMessage {
         keyIdOperator = other.keyIdOperator.duplicate();
         keyIdVoting = other.keyIdVoting.duplicate();
         pubKeyOperator = new BLSPublicKey(other.pubKeyOperator);
+        updateConfirmedHashWithProRegTxHash();
         length = params.isSupportingEvolution() ? MESSAGE_SIZE : MESSAGE_SIZE_OLD;
     }
 
@@ -55,6 +58,9 @@ public class SimplifiedMasternodeListEntry extends ChildMessage {
         keyIdVoting = new KeyId(params, payload, cursor);
         cursor += keyIdVoting.getMessageSize();
         isValid = readBytes(1)[0] == 1;
+
+        updateConfirmedHashWithProRegTxHash();
+
         length = cursor - offset;
     }
 
@@ -120,5 +126,20 @@ public class SimplifiedMasternodeListEntry extends ChildMessage {
 
     public boolean isValid() {
         return isValid;
+    }
+
+    public Sha256Hash getConfirmedHashWithProRegTxHash() {
+        return confirmedHashWithProRegTxHash;
+    }
+
+    void updateConfirmedHashWithProRegTxHash() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(64);
+            bos.write(proRegTxHash.getReversedBytes());
+            bos.write(confirmedHash.getReversedBytes());
+            confirmedHashWithProRegTxHash = Sha256Hash.wrapReversed(Sha256Hash.hash(bos.toByteArray()));
+        } catch (IOException x) {
+            throw new RuntimeException(x);
+        }
     }
 }
