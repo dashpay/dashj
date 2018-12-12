@@ -305,7 +305,100 @@ public class SimplifiedMasternodeList extends Message {
         }
     }
 
+    public int getAllMNsCount()
+    {
+        return mnMap.size();
+    }
+
+    public int getValidMNsCount()
+    {
+        int count = 0;
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> p : mnMap.entrySet()) {
+        if (isMNValid(p.getValue())) {
+            count++;
+        }
+    }
+        return count;
+    }
+
     public boolean isMNValid(SimplifiedMasternodeListEntry entry) {
         return entry.isValid;
+    }
+
+    ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>> calculateScores(final Sha256Hash modifier)
+    {
+        final ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>> scores = new ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>>(getAllMNsCount());
+
+        forEachMN(true, new ForeachMNCallback() {
+            @Override
+            public void processMN(SimplifiedMasternodeListEntry mn) {
+                if(mn.getConfirmedHash().equals(Sha256Hash.ZERO_HASH)) {
+                    // we only take confirmed MNs into account to avoid hash grinding on the ProRegTxHash to sneak MNs into a
+                    // future quorums
+                    return;
+                }
+
+                // calculate sha256(sha256(proTxHash, confirmedHash), modifier) per MN
+                // Please note that this is not a double-sha256 but a single-sha256
+                // The first part is already precalculated (confirmedHashWithProRegTxHash)
+                // TODO When https://github.com/bitcoin/bitcoin/pull/13191 gets backported, implement something that is similar but for single-sha256
+                try {
+                    UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(64);
+                    bos.write(mn.getConfirmedHashWithProRegTxHash().getReversedBytes());
+                    bos.write(modifier.getReversedBytes());
+                    scores.add(new Pair(Sha256Hash.of(bos.toByteArray()), mn)); //we don't reverse this, it is not for a wire message
+                } catch (IOException x) {
+                    throw new RuntimeException(x);
+                }
+            }
+        });
+
+        return scores;
+    }
+
+    class CompareScoreMN<Object> implements Comparator<Object>
+    {
+        public int compare(Object t1, Object t2) {
+            Pair<Sha256Hash, SimplifiedMasternodeListEntry> p1 = (Pair<Sha256Hash, SimplifiedMasternodeListEntry>)t1;
+            Pair<Sha256Hash, SimplifiedMasternodeListEntry> p2 = (Pair<Sha256Hash, SimplifiedMasternodeListEntry>)t2;
+
+            if(p1.getFirst().compareTo(p2.getFirst()) < 0)
+                return -1;
+            if(p1.getFirst().equals(p2.getFirst()))
+                return 0;
+            else return 1;
+        }
+    }
+
+    public int getMasternodeRank(Sha256Hash proTxHash, Sha256Hash quorumModifierHash)
+    {
+        int rank = -1;
+        //Added to speed things up
+
+        SimplifiedMasternodeListEntry mnExisting = getMN(proTxHash);
+        if (mnExisting == null)
+            return -1;
+
+        //lock.lock();
+        try {
+
+            ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>> vecMasternodeScores = calculateScores(quorumModifierHash);
+            if (vecMasternodeScores.isEmpty())
+                return -1;
+
+            Collections.sort(vecMasternodeScores, Collections.reverseOrder(new CompareScoreMN()));
+
+
+            rank = 0;
+            for (Pair<Sha256Hash, SimplifiedMasternodeListEntry> scorePair : vecMasternodeScores) {
+                rank++;
+                if (scorePair.getSecond().getProRegTxHash().equals(proTxHash)) {
+                    return rank;
+                }
+            }
+            return -1;
+        } finally {
+            //lock.unlock();
+        }
     }
 }
