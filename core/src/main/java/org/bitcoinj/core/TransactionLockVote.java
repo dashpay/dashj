@@ -124,7 +124,7 @@ public class TransactionLockVote extends Message implements Serializable {
         outpoint.bitcoinSerialize(stream);
         outpointMasternode.bitcoinSerialize(stream);
 
-        if(masternodeListManager.isDeterministicMNsSporkActive()) {
+        if(params.isSupportingEvolution() && masternodeListManager.isDeterministicMNsSporkActive()) {
             stream.write(quorumModifierHash.getReversedBytes());
             stream.write(masternodeProTxHash.getReversedBytes());
         }
@@ -149,7 +149,7 @@ public class TransactionLockVote extends Message implements Serializable {
             bos.write(txHash.getReversedBytes());
             outpoint.bitcoinSerialize(bos);
             outpointMasternode.bitcoinSerialize(bos);
-            if(masternodeListManager.isDeterministicMNsSporkActive()) {
+            if(params.isSupportingEvolution() && masternodeListManager.isDeterministicMNsSporkActive()) {
                 bos.write(quorumModifierHash.getReversedBytes());
                 bos.write(masternodeProTxHash.getReversedBytes());
             }
