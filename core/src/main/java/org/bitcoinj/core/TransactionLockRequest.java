@@ -1,5 +1,6 @@
 package org.bitcoinj.core;
 
+import org.darkcoinj.InstantSend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +67,7 @@ public class TransactionLockRequest extends Transaction {
         return "Transaction Lock Request:" + super.toString(chain);
     }
 
-    public boolean isValid()
+    public boolean isValid(int currentblockHeight)
     {
         if(getOutputs().size() < 1) return false;
 
@@ -74,9 +75,12 @@ public class TransactionLockRequest extends Transaction {
             log.info("instantsend--CTxLockRequest::IsValid -- WARNING: Too many inputs: tx=", toString());
         }
 
-        /*LOCK(cs_main);
-        if(!CheckFinalTx(*this)) {
-            LogPrint("instantsend", "CTxLockRequest::IsValid -- Transaction is not final: tx=%s", ToString());
+        //Ideally, a dashj node is always fully synced, but if it isn't
+        //then this code below will not allow a lock request for this transaction.
+        //Therefore, let us skip this check and rely on lock votes.
+
+        /*if(!isFinal(currentblockHeight+1, Utils.currentTimeSeconds())) {
+            log.warn("Transaction is not final: tx=%s", toString());
             return false;
         }*/
 
@@ -84,12 +88,6 @@ public class TransactionLockRequest extends Transaction {
         Coin nValueOut = Coin.ZERO;
 
         for(TransactionOutput txout: getOutputs()) {
-            // InstantSend supports normal scripts and unspendable (i.e. data) scripts.
-            // TODO: Look into other script types that are normal and can be included
-            if(!txout.getScriptPubKey().isSentToAddress() && !txout.getScriptPubKey().isOpReturn()) {
-                log.info("instantsend--CTxLockRequest::IsValid -- Invalid Script "+ toString());
-                return false;
-            }
             nValueOut = nValueOut.add(txout.getValue());
         }
 
@@ -126,7 +124,7 @@ public class TransactionLockRequest extends Transaction {
 
         Coin fee = getFee();
 
-        if(fee != null && fee.isLessThan(getMinFee())) {
+        if(fee != null && fee.isLessThan(getMinFee(false))) {
             log.info("instantsend--CTxLockRequest::IsValid -- did not include enough fees in transaction: fees="+nValueOut.subtract(nValueIn)+", tx="+toString());
             return false;
         }
@@ -134,8 +132,10 @@ public class TransactionLockRequest extends Transaction {
         return true;
     }
 
-    public Coin getMinFee()
+    public Coin getMinFee(boolean forceMinFee)
     {
+        if(!forceMinFee && InstantSend.canAutoLock() && isSimple())
+            return Coin.ZERO;
         Coin nMinFee = params.isDIP0001ActiveAtTip() ? MIN_FEE.div(10) : MIN_FEE;
         return Coin.valueOf(max(nMinFee.getValue(), getInputs().size() * nMinFee.getValue()));
     }
@@ -144,4 +144,6 @@ public class TransactionLockRequest extends Transaction {
     {
         return getInputs().size() * TransactionOutPointLock.SIGNATURES_TOTAL;
     }
+
+    public static int getMaxSignatures(int inputs) { return inputs * TransactionOutPointLock.SIGNATURES_TOTAL; }
 }

@@ -1,7 +1,5 @@
 package org.bitcoinj.core;
 
-import org.darkcoinj.InstantSend;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -16,10 +14,10 @@ public class TransactionLockCandidate {
     int confirmedHeight;
     long timeCreated;
 
-    public TransactionLockRequest txLockRequest;
+    public Transaction txLockRequest;
     public HashMap<TransactionOutPoint, TransactionOutPointLock> mapOutPointLocks;
 
-    public TransactionLockCandidate(NetworkParameters params, TransactionLockRequest txLockRequest)
+    public TransactionLockCandidate(NetworkParameters params, Transaction txLockRequest)
     {
         this.params = params;
         this.confirmedHeight = -1;
@@ -28,7 +26,7 @@ public class TransactionLockCandidate {
         mapOutPointLocks = new HashMap<TransactionOutPoint, TransactionOutPointLock>();
     }
 
-    public Sha256Hash getHash() { return txLockRequest.getHash(); }
+    public Sha256Hash getHash() { return txLockRequest != null ? txLockRequest.getHash() : Sha256Hash.ZERO_HASH; }
 
     public boolean hasMasternodeVoted(TransactionOutPoint outpoint, TransactionOutPoint outpointMasternode)
     {
@@ -78,7 +76,7 @@ public class TransactionLockCandidate {
     public boolean isExpired(int height)
     {
         // Locks and votes expire nInstantSendKeepLock blocks after the block corresponding tx was included into.
-        return (confirmedHeight != -1) && (height - confirmedHeight > InstantSend.nInstantSendKeepLock);
+        return (confirmedHeight != -1) && (height - confirmedHeight > params.getInstantSendKeepLock());
     }
 
     public boolean isTimedOut()

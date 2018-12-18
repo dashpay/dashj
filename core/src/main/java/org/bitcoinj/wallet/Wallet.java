@@ -41,6 +41,7 @@ import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.bitcoinj.wallet.listeners.WalletEventListener;
 import org.bitcoinj.wallet.listeners.WalletReorganizeEventListener;
+import org.darkcoinj.InstantSend;
 import org.slf4j.*;
 import org.spongycastle.crypto.params.*;
 
@@ -2497,7 +2498,8 @@ public class Wallet extends BaseTaggableObject
                 // Add to the pending pool and schedule confidence listener notifications.
                 log.info("->pending: {}", tx.getHashAsString());
                 tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
-                if(tx instanceof TransactionLockRequest) //TODO:InstantX - may need to adjust the ones above too?
+                if(tx instanceof TransactionLockRequest ||
+                        (InstantSend.canAutoLock() && tx.isSimple())) //TODO:InstantX - may need to adjust the ones above too?
                     tx.getConfidence().setIXType(IXType.IX_REQUEST);//setConfidenceType(ConfidenceType.INSTANTX_PENDING);
                 //else tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
                 confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
@@ -2530,7 +2532,7 @@ public class Wallet extends BaseTaggableObject
 
             //Dash Specific
             if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
-                context.instantSend.processTxLockRequest((TransactionLockRequest)tx);
+                context.instantSend.processTxLockRequest(tx);
             }
 
             informConfidenceListenersIfNotReorganizing();
@@ -5153,7 +5155,7 @@ public class Wallet extends BaseTaggableObject
             //Dash Specific
             if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
                 //This transaction was stuck and we need to track it once again with InstantSend
-                context.instantSend.processTxLockRequest((TransactionLockRequest)tx);
+                context.instantSend.processTxLockRequest(tx);
             }
             checkState(confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.IN_CONFLICT,
                     "Expected PENDING or IN_CONFLICT, was %s.", confidenceType);

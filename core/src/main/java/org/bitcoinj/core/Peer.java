@@ -521,9 +521,7 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof FilteredBlock) {
             startFilteredBlock((FilteredBlock) m);
         } else if (m instanceof TransactionLockRequest) {
-            context.instantSend.processTxLockRequest((TransactionLockRequest)m);
             processTransaction((TransactionLockRequest)m);
-
         } else if (m instanceof Transaction) {
             processTransaction((Transaction) m);
         } else if (m instanceof GetDataMessage) {
@@ -861,6 +859,11 @@ public class Peer extends PeerSocketHandler {
                 // fully downloaded instead.
                 return;
             }
+
+            //Dash Specific
+            if(context.instantSend != null)
+                context.instantSend.processTxLockRequest(tx);
+
             // It's a broadcast transaction. Tell all wallets about this tx so they can check if it's relevant or not.
             for (final Wallet wallet : wallets) {
                 try {
@@ -914,7 +917,8 @@ public class Peer extends PeerSocketHandler {
                             {
                                 context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
                             }
-                            context.evoUserManager.processSpecialTransaction(tx, null);
+                            if(context.evoUserManager != null)
+                                context.evoUserManager.processSpecialTransaction(tx, null);
                         }
                     }
                 } catch (VerificationException e) {

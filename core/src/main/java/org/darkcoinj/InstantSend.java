@@ -5,12 +5,12 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.security.provider.SHA;
 
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.core.DarkCoinSystem.fMasterNode;
+import static org.bitcoinj.core.SporkManager.SPORK_16_INSTANTSEND_AUTOLOCKS;
 import static org.bitcoinj.core.SporkManager.SPORK_2_INSTANTSEND_ENABLED;
 import static org.bitcoinj.core.SporkManager.SPORK_3_INSTANTSEND_BLOCK_FILTERING;
 
@@ -29,8 +29,8 @@ public class InstantSend {
     //StoredBlock currentBlock;
     int cachedBlockHeight;
 
-    public HashMap<Sha256Hash, TransactionLockRequest> mapLockRequestAccepted;
-    public HashMap<Sha256Hash, TransactionLockRequest> mapLockRequestRejected;
+    public HashMap<Sha256Hash, Transaction> mapLockRequestAccepted;
+    public HashMap<Sha256Hash, Transaction> mapLockRequestRejected;
     public HashMap<Sha256Hash, TransactionLockVote> mapTxLockVotes;
     public HashMap<Sha256Hash, TransactionLockVote> mapTxLockVotesOrphan;
     public HashMap<Sha256Hash, TransactionLockCandidate> mapTxLockCandidates;
@@ -41,7 +41,6 @@ public class InstantSend {
     public HashMap<TransactionOutPoint, Sha256Hash> mapLockedOutpoints;
     public HashMap<TransactionOutPoint, Long> mapMasternodeOrphanVotes; //track votes with no tx for DOS
 
-    public static int nInstantSendKeepLock = 24;
     int nCompleteTXLocks;
 
     //our internal stuff
@@ -77,8 +76,8 @@ public class InstantSend {
     public InstantSend(Context context)
     {
         this.context = context;
-        this.mapLockRequestAccepted = new HashMap<Sha256Hash, TransactionLockRequest>();
-        this.mapLockRequestRejected = new HashMap<Sha256Hash, TransactionLockRequest>();
+        this.mapLockRequestAccepted = new HashMap<Sha256Hash, Transaction>();
+        this.mapLockRequestRejected = new HashMap<Sha256Hash, Transaction>();
         this.mapTxLockVotes = new HashMap<Sha256Hash, TransactionLockVote>();
         this.mapTxLocks = new HashMap<Sha256Hash, TransactionLock>();
         this.mapMasternodeOrphanVotes = new HashMap<TransactionOutPoint, Long>();
@@ -447,7 +446,7 @@ public class InstantSend {
             // will actually process only after the lock request itself has arrived
 
             TransactionLockCandidate it = mapTxLockCandidates.get(txHash);
-            if(mapTxLockCandidates.containsKey(txHash) && it.txLockRequest == null) {
+            if(it == null || it.txLockRequest == null) {
                 if(!mapTxLockVotesOrphan.containsKey(vote.getHash())) {
                     // start timeout countdown after the very first vote
                     createEmptyTxLockCandidate(txHash);
@@ -456,7 +455,7 @@ public class InstantSend {
                     log.info("instantsend--CInstantSend::ProcessTxLockVote -- Orphan vote: txid="+txHash.toString()+"  masternode="+vote.getOutpointMasternode().toString()+" new\n");
                     boolean fReprocess = true;
 
-                    TransactionLockRequest lockRequest = mapLockRequestAccepted.get(txHash);
+                    Transaction lockRequest = mapLockRequestAccepted.get(txHash);
                     if(lockRequest == null) {
                         lockRequest = mapLockRequestRejected.get(txHash);
                         if(lockRequest == null) {
@@ -555,7 +554,7 @@ public class InstantSend {
             }
 
             int nSignatures = txLockCandidate.countVotes();
-            int nSignaturesMax = txLockCandidate.txLockRequest.getMaxSignatures();
+            int nSignaturesMax = TransactionLockRequest.getMaxSignatures(txLockCandidate.txLockRequest.getInputs().size());
             log.info("instantsend--CInstantSend::ProcessTxLockVote -- Transaction Lock signatures count: "+nSignatures+"/"+nSignaturesMax+", vote hash="+ vote.getHash());
 
             tryToFinalizeLockCandidate(txLockCandidate);
@@ -659,7 +658,7 @@ public class InstantSend {
         }
     }
 
-    public boolean processTxLockRequest(TransactionLockRequest txLockRequest)
+    public boolean processTxLockRequest(Transaction txLockRequest)
     {
         try {
             lock.lock();
@@ -739,9 +738,16 @@ public class InstantSend {
         }
     }
 
-    boolean createTxLockCandidate(TransactionLockRequest txLockRequest)
+    boolean createTxLockCandidate(Transaction txLockRequest)
     {
-        if(!txLockRequest.isValid()) return false;
+        if(txLockRequest instanceof TransactionLockRequest) {
+            if (!((TransactionLockRequest)txLockRequest).isValid(cachedBlockHeight)) return false;
+        } else {
+            // The autolock spork must be activated and
+            // regular transactions must have less or equal to 4 inputs
+            if(!canAutoLock() || !txLockRequest.isSimple())
+                return false;
+        }
 
         try {
             lock.lock();
@@ -876,7 +882,7 @@ public class InstantSend {
     }
 
 
-    boolean isEnoughOrphanVotesForTx(TransactionLockRequest txLockRequest)
+    boolean isEnoughOrphanVotesForTx(Transaction txLockRequest)
     {
         // There could be a situation when we already have quite a lot of votes
         // but tx lock request still wasn't received. Let's scan through
@@ -1026,7 +1032,8 @@ public class InstantSend {
                     }
                     mapLockRequestAccepted.remove(txHash);
                     mapLockRequestRejected.remove(txHash);
-                    mapTxLockCandidates.remove(itLockCandidate);
+                    //mapTxLockCandidates.remove(itLockCandidate);
+                    itLockCandidate.remove();
                 } else {
                     //++itLockCandidate;
                 }
@@ -1039,7 +1046,8 @@ public class InstantSend {
                 Map.Entry<Sha256Hash, TransactionLockVote> vote = itVote.next();
                 if (vote.getValue().isExpired(cachedBlockHeight)) {
                     log.info("instantsend--CInstantSend::CheckAndRemove -- Removing expired vote: txid="+vote.getValue().getTxHash()+"  masternode=" + vote.getValue().getOutpointMasternode().toStringShort());
-                    mapTxLockVotes.remove(itVote);
+                    //mapTxLockVotes.remove(itVote);
+                    itVote.remove();
                 } else {
                     //++itVote;
                 }
@@ -1278,8 +1286,8 @@ public class InstantSend {
                     }
                     log.info("CInstantSend::ResolveConflicts -- WARNING: Found conflicting completed Transaction Lock, dropping both, txid="+
                             txHash.toString() + " conflicting txid="+  hashConflicting.toString());
-                    TransactionLockRequest txLockRequest = lockCandidate.txLockRequest;
-                    TransactionLockRequest txLockRequestConflicting = lockCandidateConflicting.txLockRequest;
+                    Transaction txLockRequest = lockCandidate.txLockRequest;
+                    Transaction txLockRequestConflicting = lockCandidateConflicting.txLockRequest;
                     lockCandidate.setConfirmedHeight(0); // expired
                     lockCandidateConflicting.setConfirmedHeight(0); // expired
                     checkAndRemove(); // clean up
@@ -1361,7 +1369,7 @@ public class InstantSend {
             GetMainSignals().NotifyTransactionLock(txLockCandidate.txLockRequest);
 */
 
-            TransactionLockRequest tx = txLockCandidate.txLockRequest;
+            Transaction tx = txLockCandidate.txLockRequest;
             tx.getConfidence().setIXType(TransactionConfidence.IXType.IX_LOCKED);
             tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
 
@@ -1371,6 +1379,12 @@ public class InstantSend {
         finally {
             lock.unlock();
         }
+    }
+
+    static public boolean canAutoLock() {
+        if(Context.get().sporkManager != null)
+            return Context.get().sporkManager.isSporkActive(SPORK_16_INSTANTSEND_AUTOLOCKS);
+        else return false;
     }
 }
 
