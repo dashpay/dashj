@@ -1,5 +1,6 @@
 package org.bitcoinj.evolution;
 
+import com.google.common.base.Preconditions;
 import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Pair;
 
@@ -102,7 +103,7 @@ public class SimplifiedMasternodeList extends Message {
 
     SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff)
     {
-        assert(diff.prevBlockHash.equals(blockHash));
+        Preconditions.checkArgument(diff.prevBlockHash.equals(blockHash), "The mnlistdiff does not connect to this list");
 
         CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
         SimplifiedMasternodeList result = new SimplifiedMasternodeList(this);
