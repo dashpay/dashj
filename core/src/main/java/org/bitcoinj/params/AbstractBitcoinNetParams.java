@@ -188,29 +188,18 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
             return;
         }
 
-        if(powAllowMinimumDifficulty &&
-                (devnetGenesisBlock == null && storedPrev.getChainWork().compareTo(new BigInteger(Utils.HEX.decode("000000000000000000000000000000000000000000000000003e9ccfe0e03e01"))) >= 0) ||
-                devnetGenesisBlock != null)
+        if(powAllowMinimumDifficulty)
         {
-            if (storedPrev.getChainWork().compareTo(new BigInteger(Utils.HEX.decode("000000000000000000000000000000000000000000000000003ff00000000000"))) >= 0 ||
-                    devnetGenesisBlock != null) {
-                // recent block is more than 2 hours old
-                if (nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + 2 * 60 * 60) {
-                    verifyDifficulty(storedPrev, nextBlock, getMaxTarget());
-                    return;
-                }
-                // recent block is more than 10 minutes old
-                if (nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + NetworkParameters.TARGET_SPACING*4) {
-                    BigInteger newTarget = storedPrev.getHeader().getDifficultyTargetAsInteger().multiply(BigInteger.valueOf(10));
-                    verifyDifficulty(storedPrev, nextBlock, newTarget);
-                    return;
-                }
-            } else {
-                // old stuff
-                if(nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + NetworkParameters.TARGET_SPACING*2) {
-                    verifyDifficulty(storedPrev, nextBlock, getMaxTarget());
-                    return;
-                }
+            // recent block is more than 2 hours old
+            if (nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + 2 * 60 * 60) {
+                verifyDifficulty(storedPrev, nextBlock, getMaxTarget());
+                return;
+            }
+            // recent block is more than 10 minutes old
+            if (nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + NetworkParameters.TARGET_SPACING*4) {
+                BigInteger newTarget = storedPrev.getHeader().getDifficultyTargetAsInteger().multiply(BigInteger.valueOf(10));
+                verifyDifficulty(storedPrev, nextBlock, newTarget);
+                return;
             }
         }
         StoredBlock cursor = storedPrev;
