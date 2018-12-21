@@ -43,6 +43,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
     public static final int DEVNET_MAJORITY_DIP0001_THRESHOLD = 3226;
 
     private static final BigInteger MAX_TARGET = Utils.decodeCompactBits(0x207fffff);
+    BigInteger maxUint256 = new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
+
 
     public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds) {
         this(devNetName, sporkAddress, defaultPort, dnsSeeds, false);
@@ -212,7 +214,6 @@ public class DevNetParams extends AbstractBitcoinNetParams {
             timespan = targetTimespan / 4;
         if (timespan > targetTimespan * 4)
             timespan = targetTimespan * 4;
-        BigInteger maxUint256 = new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
         BigInteger newTarget = Utils.decodeCompactBits(prev.getDifficultyTarget());
         newTarget = newTarget.multiply(BigInteger.valueOf(timespan));
 
@@ -222,5 +223,91 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         newTarget = newTarget.divide(BigInteger.valueOf(targetTimespan));
 
         verifyDifficulty(storedPrev, nextBlock, newTarget);
+    }
+
+    public void DarkGravityWave(StoredBlock storedPrev, Block nextBlock,
+                                final BlockStore blockStore) throws VerificationException {
+        /* current difficulty formula, darkcoin - DarkGravity v3, written by Evan Duffield - evan@darkcoin.io */
+        long pastBlocks = 24;
+
+        if (storedPrev == null || storedPrev.getHeight() == 0 || storedPrev.getHeight() < pastBlocks) {
+            verifyDifficulty(storedPrev, nextBlock, getMaxTarget());
+            return;
+        }
+
+        if(powAllowMinimumDifficulty &&
+                (devnetGenesisBlock == null && storedPrev.getChainWork().compareTo(new BigInteger(Utils.HEX.decode("000000000000000000000000000000000000000000000000003e9ccfe0e03e01"))) >= 0) ||
+                devnetGenesisBlock != null)
+        {
+            if (storedPrev.getChainWork().compareTo(new BigInteger(Utils.HEX.decode("000000000000000000000000000000000000000000000000003ff00000000000"))) >= 0 ||
+                    devnetGenesisBlock != null) {
+                // recent block is more than 2 hours old
+                if (nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + 2 * 60 * 60) {
+                    verifyDifficulty(storedPrev, nextBlock, getMaxTarget());
+                    return;
+                }
+                // recent block is more than 10 minutes old
+                if (nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + NetworkParameters.TARGET_SPACING*4) {
+                    BigInteger newTarget = storedPrev.getHeader().getDifficultyTargetAsInteger().multiply(BigInteger.valueOf(10));
+                    verifyDifficulty(storedPrev, nextBlock, newTarget);
+                    return;
+                }
+            } else {
+                // old stuff
+                if(nextBlock.getTimeSeconds() > storedPrev.getHeader().getTimeSeconds() + NetworkParameters.TARGET_SPACING*2) {
+                    verifyDifficulty(storedPrev, nextBlock, getMaxTarget());
+                    return;
+                }
+            }
+        }
+        StoredBlock cursor = storedPrev;
+        BigInteger pastTargetAverage = BigInteger.ZERO;
+        for(int countBlocks = 1; countBlocks <= pastBlocks; countBlocks++) {
+            BigInteger target = cursor.getHeader().getDifficultyTargetAsInteger();
+            if(countBlocks == 1) {
+                pastTargetAverage = target;
+            } else {
+                BigInteger product = pastTargetAverage.multiply(BigInteger.valueOf(countBlocks));
+                if(product.compareTo(maxUint256) > 0)
+                    product = product.and(maxUint256);
+
+                BigInteger numerator = product.add(target);
+                if(numerator.compareTo(maxUint256) > 0)
+                    numerator = numerator.and(maxUint256);
+
+                pastTargetAverage = numerator.divide(BigInteger.valueOf(countBlocks+1));
+            }
+            if(countBlocks != pastBlocks) {
+                try {
+                    cursor = cursor.getPrev(blockStore);
+                    if(cursor == null) {
+                        //when using checkpoints, the previous block will not exist until 24 blocks are in the store.
+                        return;
+                    }
+                } catch (BlockStoreException x) {
+                    //when using checkpoints, the previous block will not exist until 24 blocks are in the store.
+                    return;
+                }
+            }
+        }
+
+
+        BigInteger newTarget = pastTargetAverage;
+
+        long timespan = storedPrev.getHeader().getTimeSeconds() - cursor.getHeader().getTimeSeconds();
+        long targetTimespan = pastBlocks*TARGET_SPACING;
+
+        if (timespan < targetTimespan/3)
+            timespan = targetTimespan/3;
+        if (timespan > targetTimespan*3)
+            timespan = targetTimespan*3;
+
+        // Retarget
+        newTarget = newTarget.multiply(BigInteger.valueOf(timespan));
+        if(newTarget.compareTo(maxUint256) > 0)
+            newTarget = newTarget.and(maxUint256);
+        newTarget = newTarget.divide(BigInteger.valueOf(targetTimespan));
+        verifyDifficulty(storedPrev, nextBlock, newTarget);
+
     }
 }
