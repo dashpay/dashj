@@ -4159,7 +4159,7 @@ public class Wallet extends BaseTaggableObject
         if (ensureMinRequiredFee && fee.compareTo(params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
             fee = params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
         if(useInstantSend)
-            fee = TransactionLockRequest.MIN_FEE.multiply(tx.getInputs().size());
+            fee = TransactionLockRequest.MIN_FEE.multiply(tx.getInputs().size()).div(params.isDIP0001ActiveAtTip() ? 10 : 1);
         TransactionOutput output = tx.getOutput(0);
         output.setValue(output.getValue().subtract(fee));
         return !output.isDust();
