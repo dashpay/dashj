@@ -103,13 +103,13 @@ public class SimplifiedMasternodeList extends Message {
 
     SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff)
     {
-        Preconditions.checkArgument(diff.prevBlockHash.equals(blockHash), "The mnlistdiff does not connect to this list");
-
         CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
+        Preconditions.checkArgument(diff.prevBlockHash.equals(blockHash), "The mnlistdiff does not connect to this list.  height: " + height + " vs " + cbtx.getHeight());
+
         SimplifiedMasternodeList result = new SimplifiedMasternodeList(this);
 
-        blockHash = diff.blockHash;
-        height = cbtx.getHeight();
+        result.blockHash = diff.blockHash;
+        result.height = cbtx.getHeight();
 
         for (Sha256Hash hash : diff.deletedMNs) {
             result.removeMN(hash);

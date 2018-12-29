@@ -71,13 +71,22 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff) {
         log.info("processing mnlistdiff: " + mnlistdiff);
-        SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
-        newMNList.verify(mnlistdiff.coinBaseTx);
-        mnList = newMNList;
-        tipHeight = ((CoinbaseTx)mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
-        tipBlockHash = mnlistdiff.blockHash;
-        log.info(this.toString());
-        unCache();
+        try {
+            SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
+            newMNList.verify(mnlistdiff.coinBaseTx);
+            mnList = newMNList;
+            tipHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
+            tipBlockHash = mnlistdiff.blockHash;
+            log.info(this.toString());
+            unCache();
+            save();
+        } catch(IllegalArgumentException x) {
+            //we already have this mnlistdiff or doesn't match our current tipBlockHash
+            log.info(x.getMessage());
+        } catch(NullPointerException x) {
+            //file name is not set, do not save
+            log.info(x.getMessage());
+        }
     }
 
     public NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
@@ -110,6 +119,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public void requestMNListDiff(StoredBlock block) {
         context.peerGroup.getDownloadPeer().sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, block.getHeader().getHash()));
+    }
+
+    public void updateMNList() {
+        context.peerGroup.getDownloadPeer().sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, context.blockChain.getChainHead().getHeader().getHash()));
     }
 
     @Override
