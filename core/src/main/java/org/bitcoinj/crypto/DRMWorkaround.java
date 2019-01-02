@@ -37,7 +37,7 @@ public class DRMWorkaround {
         if (done) return;
         done = true;
 
-        if (Utils.isAndroidRuntime())
+        if (Utils.isAndroidRuntime() || Utils.isOpenJDKRuntime())
             return;
         try {
             Field gate = Class.forName("javax.crypto.JceSecurity").getDeclaredField("isRestricted");
