@@ -324,6 +324,8 @@ public class ForwardingServiceDash {
 
             final Wallet.SendResult sendResult = kit.wallet().sendCoins(reset);
 
+            currentUser.setPublicKeyPath(newPrivKey.getPath());
+
             sendResult.broadcastComplete.addListener(new Runnable() {
                 @Override
                 public void run() {
