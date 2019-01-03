@@ -58,7 +58,7 @@ public class EvolutionWalletAppKit extends WalletAppKit {
             return walletFactory.create(params, kcg);
 
         } else {
-            evoUserWallet = walletFactory.create(params, evoUserKcg);
+            evoUserWallet = new Wallet(params, evoUserKcg);
             return new Wallet(params, kcg);  // default
         }
     }
