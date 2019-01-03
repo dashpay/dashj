@@ -155,7 +155,7 @@ public final class MonetaryFormat {
      * </p>
      * 
      * <p>
-     * For example, if you pass <tt>4,2</tt> it will add four decimals to your formatted string if needed, and then add
+     * For example, if you pass {@code 4,2} it will add four decimals to your formatted string if needed, and then add
      * another two decimals if needed. At this point, rather than adding further decimals the value will be rounded.
      * </p>
      * 
@@ -179,7 +179,7 @@ public final class MonetaryFormat {
      * </p>
      * 
      * <p>
-     * For example, if you pass <tt>1,8</tt> it will up to eight decimals to your formatted string if needed. After
+     * For example, if you pass {@code 1,8} it will up to eight decimals to your formatted string if needed. After
      * these have been used up, rather than adding further decimals the value will be rounded.
      * </p>
      * 

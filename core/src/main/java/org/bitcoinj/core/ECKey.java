@@ -444,8 +444,8 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
-     * Returns public key bytes from the given private key. To convert a byte array into a BigInteger, use <tt>
-     * new BigInteger(1, bytes);</tt>
+     * Returns public key bytes from the given private key. To convert a byte array into a BigInteger,
+     * use {@code new BigInteger(1, bytes);}
      */
     public static byte[] publicKeyFromPrivate(BigInteger privKey, boolean compressed) {
         ECPoint point = publicPointFromPrivate(privKey);
@@ -453,8 +453,8 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
-     * Returns public key point from the given private key. To convert a byte array into a BigInteger, use <tt>
-     * new BigInteger(1, bytes);</tt>
+     * Returns public key point from the given private key. To convert a byte array into a BigInteger,
+     * use {@code new BigInteger(1, bytes);}
      */
     public static ECPoint publicPointFromPrivate(BigInteger privKey) {
         /*
