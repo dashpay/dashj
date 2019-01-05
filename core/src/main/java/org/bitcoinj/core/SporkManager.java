@@ -1,5 +1,6 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,9 +61,10 @@ public class SporkManager {
         setSporkAddress(context.getParams().getSporkAddress());
     }
 
-    void setBlockChain(AbstractBlockChain blockChain)
+    void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup)
     {
         this.blockChain = blockChain;
+        peerGroup.addConnectedEventListener(peerConnectedEventListener);
     }
 
     void processSpork(Peer from, SporkMessage spork) {
@@ -266,4 +268,15 @@ public class SporkManager {
         return true;
     }
 
+    public PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
+        @Override
+        public void onPeerConnected(Peer peer, int peerCount) {
+            // SPORK : ALWAYS ASK FOR SPORKS AS WE SYNC (we skip this mode now)
+            if (!peer.hasFulfilledRequest("spork-sync")) {
+                peer.fulfilledRequest("spork-sync");
+
+                peer.sendMessage(new GetSporksMessage(context.getParams())); //get current network sporks
+            }
+        }
+    };
 }
