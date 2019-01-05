@@ -343,8 +343,15 @@ public class Wallet extends BaseTaggableObject
                     }
                 } else if(reason == ChangeReason.IX_TYPE &&
                         confidence.getIXType() == TransactionConfidence.IXType.IX_LOCKED) {
-                    //save the wallet when an InstantSend transaction is locked
-                    saveLater();
+                    lock.lock();
+                    try {
+                        Transaction tx = getTransaction(confidence.getTransactionHash());
+                        queueOnTransactionConfidenceChanged(tx);
+                        //save the wallet when an InstantSend transaction is locked
+                        saveLater();
+                    } finally {
+                         lock.unlock();;
+                    }
                 }
             }
         };
