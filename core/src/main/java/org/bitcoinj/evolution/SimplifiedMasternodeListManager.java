@@ -70,12 +70,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff) {
-        log.info("processing mnlistdiff: " + mnlistdiff);
+        long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
+        log.info("processing mnlistdiff between : " + tipHeight + " & " + newHeight + "; " + mnlistdiff);
         try {
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
             newMNList.verify(mnlistdiff.coinBaseTx);
             mnList = newMNList;
-            tipHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
+            tipHeight = newHeight;
             tipBlockHash = mnlistdiff.blockHash;
             log.info(this.toString());
             unCache();
@@ -118,10 +119,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public void requestMNListDiff(StoredBlock block) {
+        log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + block.getHeight());
         context.peerGroup.getDownloadPeer().sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, block.getHeader().getHash()));
     }
 
     public void updateMNList() {
+        log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + context.blockChain.getChainHead().getHeight());
         context.peerGroup.getDownloadPeer().sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, context.blockChain.getChainHead().getHeader().getHash()));
     }
 
