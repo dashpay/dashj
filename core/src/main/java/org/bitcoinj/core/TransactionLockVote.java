@@ -55,7 +55,7 @@ public class TransactionLockVote extends Message implements Serializable {
 
     //MasterNodeSystem system;
 
-    TransactionLockVote(NetworkParameters params, byte[] payload)
+    public TransactionLockVote(NetworkParameters params, byte[] payload)
     {
         super(params, payload, 0);
         this.context = Context.get();
@@ -259,6 +259,14 @@ public class TransactionLockVote extends Message implements Serializable {
     public Sha256Hash getTxHash() { return txHash; }
     public TransactionOutPoint getOutpointMasternode() { return outpointMasternode; }
     public TransactionOutPoint getOutpoint() { return outpoint; }
+
+    public Sha256Hash getQuorumModifierHash() {
+        return quorumModifierHash;
+    }
+
+    public Sha256Hash getMasternodeProTxHash() {
+        return masternodeProTxHash;
+    }
 
     public void setConfirmedHeight(int confirmedHeight) { this.confirmedHeight = confirmedHeight; }
 
