@@ -157,7 +157,7 @@ public class SimplifiedMasternodeList extends Message {
         Sha256Hash hash = value.getHash();
         int i = 1;
         Pair<Sha256Hash, Integer> oldEntry = mnUniquePropertyMap.get(hash);
-        assert(oldEntry == null || oldEntry.getFirst().equals(dmn.proRegTxHash));
+        //assert(oldEntry == null || oldEntry.getFirst().equals(dmn.proRegTxHash));
         if(oldEntry != null)
             i = oldEntry.getSecond() + 1;
         Pair<Sha256Hash, Integer> newEntry = new Pair(dmn.proRegTxHash, i);
@@ -169,7 +169,7 @@ public class SimplifiedMasternodeList extends Message {
     {
         Sha256Hash oldHash = oldValue.getHash();
         Pair<Sha256Hash, Integer> p = mnUniquePropertyMap.get(oldHash);
-        assert(p != null && p.getFirst() == dmn.proRegTxHash);
+        //assert(p != null && p.getFirst() == dmn.proRegTxHash);
         if (p.getSecond() == 1) {
             mnUniquePropertyMap.remove(oldHash);
         } else {
