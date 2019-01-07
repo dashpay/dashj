@@ -267,7 +267,7 @@ public class Context {
 
         success = evdb.load(evoUserManager);
 
-        FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(directory, "mnlist.dat", "magicMNListCache");
+        FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(this, directory, false);
 
         success = smnl.load(masternodeListManager);
 
@@ -283,12 +283,13 @@ public class Context {
         hashStore = new HashStore(chain.getBlockStore());
         chain.addNewBestBlockListener(newBestBlockListener);
         if(initializedDash) {
-            sporkManager.setBlockChain(chain);
+            sporkManager.setBlockChain(chain, peerGroup);
             masternodeManager.setBlockChain(chain);
             masternodeSync.setBlockChain(chain);
             instantSend.setBlockChain(chain);
             masternodeListManager.setBlockChain(chain, peerGroup);
             chain.addTransactionReceivedListener(evoUserManager);
+            updatedChainHead(chain.getChainHead());
         }
         params.setDIPActiveAtTip(chain.getBestChainHeight() >= params.getDIP0001BlockHeight());
     }
