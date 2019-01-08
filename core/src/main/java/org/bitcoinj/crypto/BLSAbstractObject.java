@@ -3,6 +3,7 @@ package org.bitcoinj.crypto;
 import com.google.common.base.Preconditions;
 import org.bitcoinj.core.*;
 import org.dashj.bls.BLSObject;
+import org.dashj.bls.JNI;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -15,7 +16,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     static {
         try {
-            System.loadLibrary("dashjbls");
+            System.loadLibrary(JNI.LIBRARY_NAME);
         } catch (UnsatisfiedLinkError x) {
             throw new RuntimeException(x.getMessage());
         }

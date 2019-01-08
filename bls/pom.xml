@@ -374,7 +374,7 @@
                 <platform>windows-x86_64</platform>
                 <build.type>debug</build.type>
                 <cmake.classifier>windows-x86_64</cmake.classifier>
-                <cmake.generator>Visual Studio 14 2015</cmake.generator>
+                <cmake.generator>MinGW Makefiles</cmake.generator>
                 <cmake.options>-Ax64</cmake.options>
                 <cmake.config>${build.type}</cmake.config>
             </properties>
@@ -395,7 +395,7 @@
                 <platform>windows-x86_64</platform>
                 <build.type>release</build.type>
                 <cmake.classifier>windows-x86_64</cmake.classifier>
-                <cmake.generator>Visual Studio 14 2015</cmake.generator>
+                <cmake.generator>MinGW Makefiles</cmake.generator>
                 <cmake.options>-Ax64</cmake.options>
                 <cmake.config>${build.type}</cmake.config>
             </properties>

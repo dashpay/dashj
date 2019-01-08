@@ -8,7 +8,7 @@ import static org.junit.Assert.fail;
 public class BaseTest {
     static {
         try {
-            System.loadLibrary("dashjbls");
+            System.loadLibrary(JNI.LIBRARY_NAME);
         } catch (UnsatisfiedLinkError x) {
             fail(x.getMessage());
         }

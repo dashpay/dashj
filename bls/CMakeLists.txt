@@ -35,6 +35,11 @@ include_directories(${JNI_INCLUDE_DIRS}
 # can link multiple libraries, such as libraries you define in this
 # build script, prebuilt third-party libraries, or system libraries.
 
+# This removes the 'lib' prefix from target library name on windows
+IF ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
+set_target_properties(dashjbls PROPERTIES PREFIX "")
+ENDIF()
+
 target_link_libraries( # Specifies the target library.
         dashjbls
 
