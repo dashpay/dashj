@@ -159,6 +159,8 @@ public class SporkManager {
         } else if(nSporkID == SPORK_15_DETERMINISTIC_MNS_ENABLED) {
             if(nValue <= context.blockChain.getBestChainHeight())
                 context.masternodeListManager.updateMNList();
+            if(context.getParams().isSupportingEvolution())
+                context.peerGroup.setMinRequiredProtocolVersionAndDisconnect(NetworkParameters.ProtocolVersion.DMN_LIST.getBitcoinProtocolVersion());
         }
     }
 

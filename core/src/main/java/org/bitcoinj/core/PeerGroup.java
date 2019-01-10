@@ -2473,4 +2473,16 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     public boolean isBloomFilteringEnabled() {
         return vBloomFilteringEnabled;
     }
+
+    public void setMinRequiredProtocolVersionAndDisconnect(int protocolVersion) {
+        setMinRequiredProtocolVersion(protocolVersion);
+        lock.lock();
+        try {
+            for (Peer peer : peers) {
+                peer.setMinProtocolVersion(protocolVersion);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
 }
