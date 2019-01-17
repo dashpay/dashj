@@ -23,8 +23,6 @@ import org.bitcoinj.governance.GovernanceTriggerManager;
 import org.bitcoinj.governance.VoteConfidenceTable;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
-import org.darkcoinj.DarkSendPool;
-import org.darkcoinj.InstantSend;
 import org.slf4j.*;
 
 import java.util.List;

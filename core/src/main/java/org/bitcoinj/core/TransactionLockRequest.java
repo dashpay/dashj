@@ -1,6 +1,5 @@
 package org.bitcoinj.core;
 
-import org.darkcoinj.InstantSend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

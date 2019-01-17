@@ -1,4 +1,4 @@
-package org.darkcoinj;
+package org.bitcoinj.core;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;

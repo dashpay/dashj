@@ -2,7 +2,6 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.store.BlockStore;
 import org.darkcoinj.DarkSend;
-import org.darkcoinj.InstantSend;
 
 import java.util.ArrayList;
 

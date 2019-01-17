@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import static org.darkcoinj.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
+import static org.bitcoinj.core.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
 
 /**
  * Created by Eric on 2/7/2017.

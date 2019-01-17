@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static org.darkcoinj.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
+import static org.bitcoinj.core.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
 
 public class TransactionLockVote extends Message implements Serializable {
 
