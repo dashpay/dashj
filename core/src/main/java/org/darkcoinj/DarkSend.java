@@ -11,6 +11,7 @@ import java.util.Map;
 /**
  * Created by Hash Engineering Solutions on 2/8/2015.
  */
+@Deprecated
 public class DarkSend {
     private static final Logger log = LoggerFactory.getLogger(DarkSend.class);
     public static final int POOL_MAX_TRANSACTIONS                =  3; // wait for X transactions to merge and publish

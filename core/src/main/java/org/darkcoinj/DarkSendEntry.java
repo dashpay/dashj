@@ -7,6 +7,7 @@ import java.util.ArrayList;
 /**
  * Created by Eric on 2/8/2015.
  */
+@Deprecated
 public class DarkSendEntry {
     boolean isSet;
     ArrayList<DarkSendEntryVin> sev;
