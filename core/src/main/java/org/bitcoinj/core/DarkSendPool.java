@@ -119,24 +119,7 @@ public class DarkSendPool {
 
         setNull();
     }
-    /*
-    void InitCollateralAddress(){
-        String strAddress = "";
-        if(system.context.getId() == NetworkParameters.ID_MAINNET) {
-            strAddress = "Xq19GqFvajRrEdDHYRKGYjTsQfpV5jyipF";
-        } else {
-            strAddress = "y1EZuxhhNMAUofTBEeLqGE1bJrpC2TWRNp";
-        }
-        SetCollateralAddress(strAddress);
-    }
 
-    void SetMinBlockSpacing(int minBlockSpacingIn){
-        minBlockSpacing = minBlockSpacingIn;
-    }
-
-    bool SetCollateralAddress(std::string strAddress);
-    void Reset();
-    */
     static SecureRandom secureRandom = new SecureRandom();
 
     void setNull()
@@ -180,23 +163,16 @@ public class DarkSendPool {
             oneThread = true;
             // Make this thread recognisable as the wallet flushing thread
 
-            //RenameThread("dash-darksend");
             log.info("--------------------------------------\nstarting dash-darksend thread");
             int tick = 0;
             try {
 
                 while (true && !exit) {
                     Thread.sleep(1000);
-                    //LogPrintf("ThreadCheckDarkSendPool::check timeout\n");
 
                     // try to sync from all available nodes, one step at a time
                     context.masternodeSync.processTick();
 
-                    /*if(context.isLiteMode() && context.allowInstantXinLiteMode() && context.masternodeSync.getSyncStatusInt() == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
-                        log.info("closing thread: " + Thread.currentThread().getName());
-                        oneThread = false;
-                        return; // if in LiteMode and allowing instantX and the Sporks are synced, then close this thread.
-                    }*/
 
                     if (context.masternodeSync.isBlockchainSynced()) {
 
@@ -234,15 +210,6 @@ public class DarkSendPool {
                             context.instantSend.notifyLockStatus();
                         }
 
-                        //TODO:  Add if necessary for other DarkSend functions
-                        /*
-                        darkSendPool.CheckTimeout();
-                        darkSendPool.CheckForCompleteQueue();
-
-                        if(nDoAutoNextRun == nTick) {
-                            darkSendPool.DoAutomaticDenominating();
-                            nDoAutoNextRun = nTick + PRIVATESEND_AUTO_TIMEOUT_MIN + GetRandInt(PRIVATESEND_AUTO_TIMEOUT_MAX - PRIVATESEND_AUTO_TIMEOUT_MIN);
-                        }*/
                     }
                 }
             }
