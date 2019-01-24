@@ -168,4 +168,19 @@ public class SporkMessage extends Message{
         return true;
     }
 
+    public int getSporkID() {
+        return nSporkID;
+    }
+
+    public long getValue() {
+        return nValue;
+    }
+
+    public long getTimeSigned() {
+        return nTimeSigned;
+    }
+
+    public MasternodeSignature getSignature() {
+        return sig;
+    }
 }
