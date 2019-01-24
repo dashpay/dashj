@@ -2,15 +2,22 @@ package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
+import org.bitcoinj.evolution.listeners.EvolutionUserRemovedEventListener;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.evolution.listeners.EvolutionUserAddedEventListener;
+import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.evolution.SubTxTransition.EVO_TS_MAX_FEE;
@@ -27,15 +34,21 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
     EvolutionUserManager() {
         super(Context.get());
         userMap = new HashMap<Sha256Hash, EvolutionUser>(1);
+        this.userAddedListeners = new CopyOnWriteArrayList<ListenerRegistration<EvolutionUserAddedEventListener>>();
+        this.userRemovedListeners = new CopyOnWriteArrayList<ListenerRegistration<EvolutionUserRemovedEventListener>>();
     }
 
     public EvolutionUserManager(Context context) {
         super(context);
         userMap = new HashMap<Sha256Hash, EvolutionUser>(1);
+        this.userAddedListeners = new CopyOnWriteArrayList<ListenerRegistration<EvolutionUserAddedEventListener>>();
+        this.userRemovedListeners = new CopyOnWriteArrayList<ListenerRegistration<EvolutionUserRemovedEventListener>>();
     }
 
     public EvolutionUserManager(NetworkParameters params, byte [] payload) {
         super(params, payload, 0);
+        this.userAddedListeners = new CopyOnWriteArrayList<ListenerRegistration<EvolutionUserAddedEventListener>>();
+        this.userRemovedListeners = new CopyOnWriteArrayList<ListenerRegistration<EvolutionUserRemovedEventListener>>();
     }
 
     @Override
@@ -94,6 +107,7 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
             return;
 
         userMap.remove(user);
+        queueOnUserRemoved(user);
     }
 
     public EvolutionUser getUser(Sha256Hash regTxId) {
@@ -300,6 +314,7 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
             //userDb.pushSubTx(tx.getHash(), tx.getHash());
             //userDb.pushPubKey(tx.getHash(), subTx.getPubKeyId());
             writeUser(user);
+            queueOnUserAdded(user);
             if(userMap.size() == 1)
                 currentUser = user;
 
@@ -423,6 +438,94 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
     @Override
     public boolean notifyTransactionIsInBlock(Sha256Hash txHash, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
         return false;
+    }
+
+    private transient CopyOnWriteArrayList<ListenerRegistration<EvolutionUserAddedEventListener>> userAddedListeners;
+    private transient CopyOnWriteArrayList<ListenerRegistration<EvolutionUserRemovedEventListener>> userRemovedListeners;
+
+    /**
+     * Adds an event listener object. Methods on this object are called when new user is being added or removed.
+     * Runs the listener methods in the user thread.
+     */
+    public void addUserAddedListener(EvolutionUserAddedEventListener listener) {
+        addUserAddedListener(listener, Threading.USER_THREAD);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when new user is being added or removed.
+     * The listener is executed by the given executor.
+     */
+    public void addUserAddedListener(EvolutionUserAddedEventListener listener, Executor executor) {
+        // This is thread safe, so we don't need to take the lock.
+        userAddedListeners.add(new ListenerRegistration<EvolutionUserAddedEventListener>(listener, executor));
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when new user is being added or removed.
+     * Runs the listener methods in the user thread.
+     */
+    public void addUserRemovedListener(EvolutionUserRemovedEventListener listener) {
+        addUserRemovedListener(listener, Threading.USER_THREAD);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when new user is being added or removed.
+     * The listener is executed by the given executor.
+     */
+    public void addUserRemovedListener(EvolutionUserRemovedEventListener listener, Executor executor) {
+        // This is thread safe, so we don't need to take the lock.
+        userRemovedListeners.add(new ListenerRegistration<EvolutionUserRemovedEventListener>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeEventListener(EvolutionUserAddedEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, userAddedListeners);
+    }
+
+    public void queueOnUserAdded(final EvolutionUser user) {
+        for (final ListenerRegistration<EvolutionUserAddedEventListener> registration : userAddedListeners) {
+            if (registration.executor == Threading.SAME_THREAD) {
+                registration.listener.onUserAdded(user);
+            } else {
+                registration.executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        registration.listener.onUserAdded(user);
+                    }
+                });
+            }
+        }
+    }
+
+    public void queueOnUserRemoved(final EvolutionUser user) {
+        for (final ListenerRegistration<EvolutionUserRemovedEventListener> registration : userRemovedListeners) {
+            if (registration.executor == Threading.SAME_THREAD) {
+                registration.listener.onUserRemoved(user);
+            } else {
+                registration.executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        registration.listener.onUserRemoved(user);
+                    }
+                });
+            }
+        }
+    }
+
+    public List<EvolutionUser> getUsers() {
+        lock.lock();
+        try {
+            List<EvolutionUser> evoUsersList = new ArrayList<EvolutionUser>(userMap.size());
+            for (Map.Entry<Sha256Hash, EvolutionUser> entry : userMap.entrySet()) {
+                evoUsersList.add(entry.getValue());
+            }
+            return evoUsersList;
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
