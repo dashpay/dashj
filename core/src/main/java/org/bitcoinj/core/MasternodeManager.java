@@ -2062,4 +2062,16 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
+    public List<Masternode> getMasternodes() {
+        lock.lock();
+        try {
+            List<Masternode> masternodeList = new ArrayList<Masternode>(mapMasternodes.size());
+            for (Map.Entry<TransactionOutPoint, Masternode> entry : mapMasternodes.entrySet()) {
+                masternodeList.add(entry.getValue());
+            }
+            return masternodeList;
+        } finally {
+            lock.unlock();
+        }
+    }
 }
