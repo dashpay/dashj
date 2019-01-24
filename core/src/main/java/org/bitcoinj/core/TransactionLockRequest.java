@@ -146,4 +146,5 @@ public class TransactionLockRequest extends Transaction {
     }
 
     public static int getMaxSignatures(int inputs) { return inputs * TransactionOutPointLock.SIGNATURES_TOTAL; }
+
 }

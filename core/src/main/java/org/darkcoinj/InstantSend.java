@@ -2,11 +2,15 @@ package org.darkcoinj;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;
+import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.core.DarkCoinSystem.fMasterNode;
@@ -19,9 +23,10 @@ import static org.bitcoinj.core.SporkManager.SPORK_3_INSTANTSEND_BLOCK_FILTERING
  */
 public class InstantSend {
     private static final Logger log = LoggerFactory.getLogger(InstantSend.class);
-    public static final int MIN_INSTANTSEND_PROTO_VERSION = 70208;
-    public static final int INSTANTSEND_TIMEOUT_SECONDS        = 65;
-    //private static final int ORPHAN_VOTE_SECONDS            = 60;
+    public static final int MIN_INSTANTSEND_PROTO_VERSION           = 70208;
+    public static final int INSTANTSEND_TIMEOUT_SECONDS             = 65;
+    //private static final int ORPHAN_VOTE_SECONDS                    = 60;
+    public static final long INSTANTSEND_LOCK_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(10);
 
 
     ReentrantLock lock = Threading.lock("InstantSend");
@@ -41,6 +46,7 @@ public class InstantSend {
     public HashMap<TransactionOutPoint, Sha256Hash> mapLockedOutpoints;
     public HashMap<TransactionOutPoint, Long> mapMasternodeOrphanVotes; //track votes with no tx for DOS
 
+    public static int nInstantSendKeepLock = 24;
     int nCompleteTXLocks;
 
     //our internal stuff
@@ -1086,6 +1092,29 @@ public class InstantSend {
             lock.unlock();
         }
     }
+
+    /**
+     * Check whether the outgoing simple transactions were auto locked
+     * within the specific time frame, if not set the IXType to TransactionConfidence.IXType.IX_LOCK_FAILED
+     */
+    public void notifyLockStatus()
+    {
+        for(Map.Entry<Sha256Hash, Transaction> entry : mapLockRequestAccepted.entrySet()) {
+            Transaction transaction = entry.getValue();
+            TransactionConfidence confidence = transaction.getConfidence();
+            TransactionConfidence.IXType confidenceType = confidence.getIXType();
+            if (confidenceType == TransactionConfidence.IXType.IX_REQUEST) {
+                long sentAt = confidence.getSentAt().getTime();
+                long now = System.currentTimeMillis();
+                long txSentMillisAgo = now - sentAt;
+                if (txSentMillisAgo > INSTANTSEND_LOCK_TIMEOUT_MILLIS) {
+                    confidence.setIXType(TransactionConfidence.IXType.IX_LOCK_FAILED);
+                    confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
+                }
+            }
+        }
+    }
+
     public void updatedChainHead(StoredBlock chainHead)
     {
         cachedBlockHeight = chainHead.getHeight();

@@ -30,6 +30,17 @@ import java.util.*;
  * "spending" more priority than would be required to get the transaction we are creating confirmed.
  */
 public class DefaultCoinSelector implements CoinSelector {
+
+    private static final DefaultCoinSelector instance = new DefaultCoinSelector();
+
+    public static DefaultCoinSelector get() {
+        return instance;
+    }
+
+    DefaultCoinSelector() {
+
+    }
+
     @Override
     public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
         ArrayList<TransactionOutput> selected = new ArrayList<TransactionOutput>();

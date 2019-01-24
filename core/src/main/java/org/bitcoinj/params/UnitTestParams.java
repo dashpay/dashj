@@ -60,6 +60,9 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
 
         powDGWHeight = 34140;
         powKGWHeight = 15200;
+
+        instantSendConfirmationsRequired = MainNetParams.get().getInstantSendConfirmationsRequired();
+        instantSendKeepLock = MainNetParams.get().getInstantSendKeepLock();
     }
 
     private static UnitTestParams instance;

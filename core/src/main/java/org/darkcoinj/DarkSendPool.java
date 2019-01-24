@@ -228,6 +228,12 @@ public class DarkSendPool {
                             context.masternodeSync.queueOnSyncStatusChanged(MasternodeSync.MASTERNODE_SYNC_FINISHED, 1.0f);
                         }
 
+                        // check whether the outgoing simple transactions were auto locked
+                        // within the specific time frame
+                        if (tick % 2 == 0) {
+                            context.instantSend.notifyLockStatus();
+                        }
+
                         //TODO:  Add if necessary for other DarkSend functions
                         /*
                         darkSendPool.CheckTimeout();

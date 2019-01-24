@@ -163,6 +163,8 @@ public class Transaction extends ChildMessage {
      */
     public static final int MAX_INITIAL_INPUTS_OUTPUTS_SIZE = 20;
 
+    public static final int MAX_INPUTS_FOR_AUTO_IX = 4;
+
     // These are bitcoin serialized.
     private int version;
     private Type type;
@@ -1560,7 +1562,7 @@ public class Transaction extends ChildMessage {
 
     /* returns false if inputs > 4 or there are less than the required confirmations */
     public boolean isSimple() {
-        if(inputs.size() > 4)
+        if(inputs.size() > MAX_INPUTS_FOR_AUTO_IX)
             return false;
         for(TransactionInput input : inputs) {
             Transaction connectedTx = input.getConnectedTransaction();

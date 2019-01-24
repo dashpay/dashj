@@ -541,7 +541,8 @@ public class TransactionConfidence {
     public enum IXType {
         IX_NONE,
         IX_REQUEST,
-        IX_LOCKED
+        IX_LOCKED,
+        IX_LOCK_FAILED
     };
 
     IXType ixType = IXType.IX_NONE;

@@ -16,19 +16,17 @@ package org.bitcoinj.wallet;
 
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.params.RegTestParams;
 
-/**
- * Created by Hash Engineering on 1/15/2016.
- */
-public class InstantXCoinSelector extends DefaultCoinSelector {
+public class ZeroConfCoinSelector extends DefaultCoinSelector {
 
-    private static final InstantXCoinSelector instance = new InstantXCoinSelector();
+    private static final ZeroConfCoinSelector instance = new ZeroConfCoinSelector();
 
-    public static InstantXCoinSelector get() {
+    public static ZeroConfCoinSelector get() {
         return instance;
     }
 
-    private InstantXCoinSelector() {
+    private ZeroConfCoinSelector() {
 
     }
 
@@ -41,10 +39,12 @@ public class InstantXCoinSelector extends DefaultCoinSelector {
     }
 
     boolean isTransactionSelectable(Transaction tx) {
-        // Only pick chain-included transactions with at least `instantSendConfirmationsRequired` confirmations
-        int instantSendConfirmationsRequired = tx.getParams().getInstantSendConfirmationsRequired();
+        // Only pick chain-included transactions, or transactions that are pending (whether ours or not).
         TransactionConfidence confidence = tx.getConfidence();
         TransactionConfidence.ConfidenceType type = confidence.getConfidenceType();
-        return (type.equals(TransactionConfidence.ConfidenceType.BUILDING) && confidence.getDepthInBlocks() >= instantSendConfirmationsRequired);
+        return type.equals(TransactionConfidence.ConfidenceType.BUILDING) || type.equals(TransactionConfidence.ConfidenceType.PENDING) &&
+                // In regtest mode we expect to have only one peer, so we won't see transactions propagate.
+                // TODO: The value 1 below dates from a time when transactions we broadcast *to* were counted, set to 0
+                (confidence.numBroadcastPeers() > 1 || tx.getParams() == RegTestParams.get());
     }
 }

@@ -816,7 +816,7 @@ public class Wallet extends BaseTaggableObject
     /**
      * Returns whether this wallet consists entirely of watching keys (unencrypted keys with no private part). Mixed
      * wallets are forbidden.
-     * 
+     *
      * @throws IllegalStateException
      *             if there are no keys, or if there is a mix between watching and non-watching keys.
      */
@@ -4722,10 +4722,10 @@ public class Wallet extends BaseTaggableObject
      * <p>Gets a bloom filter that contains all of the public keys from this wallet, and which will provide the given
      * false-positive rate if it has size elements. Keep in mind that you will get 2 elements in the bloom filter for
      * each key in the wallet, for the public key and the hash of the public key (address form).</p>
-     * 
+     *
      * <p>This is used to generate a BloomFilter which can be {@link BloomFilter#merge(BloomFilter)}d with another.
      * It could also be used if you have a specific target for the filter's size.</p>
-     * 
+     *
      * <p>See the docs for {@link BloomFilter(int, double)} for a brief explanation of anonymity when using bloom
      * filters.</p>
      */
