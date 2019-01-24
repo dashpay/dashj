@@ -1,10 +1,9 @@
 package org.bitcoinj.governance;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
+import org.bitcoinj.governance.listeners.GovernanceObjectAddedEventListener;
 import org.bitcoinj.governance.listeners.GovernanceVoteConfidenceEventListener;
 import org.bitcoinj.utils.*;
-import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
@@ -101,6 +100,8 @@ public class GovernanceManager extends AbstractManager {
 
         this.mapPostponedObjects = new HashMap<Sha256Hash, GovernanceObject>();
         this.mapMasternodeOrphanCounter = new HashMap<TransactionOutPoint, Integer>();
+
+        this.governanceObjectAddedListeners = new CopyOnWriteArrayList<ListenerRegistration<GovernanceObjectAddedEventListener>>();
     }
 
     public GovernanceManager(NetworkParameters params, byte [] payload, int cursor) {
@@ -700,6 +701,7 @@ public class GovernanceManager extends AbstractManager {
 
             // INSERT INTO OUR GOVERNANCE OBJECT MEMORY
             mapObjects.put(nHash, govobj);
+            queueOnGovernanceObjectAdded(nHash, govobj);
             unCache();
 
             // SHOULD WE ADD THIS OBJECT TO ANY OTHER MANANGERS?
@@ -1582,4 +1584,47 @@ public class GovernanceManager extends AbstractManager {
         }
     }
 
+    private transient CopyOnWriteArrayList<ListenerRegistration<GovernanceObjectAddedEventListener>> governanceObjectAddedListeners;
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addGovernanceObjectAddedListener(GovernanceObjectAddedEventListener listener) {
+        addGovernanceObjectAddedListener(listener, Threading.USER_THREAD);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addGovernanceObjectAddedListener(GovernanceObjectAddedEventListener listener, Executor executor) {
+        // This is thread safe, so we don't need to take the lock.
+        governanceObjectAddedListeners.add(new ListenerRegistration<GovernanceObjectAddedEventListener>(listener, executor));
+        //keychain.addEventListener(listener, executor);
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeGovernanceObjectAddedListener(GovernanceObjectAddedEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, governanceObjectAddedListeners);
+    }
+
+    private void queueOnGovernanceObjectAdded(final Sha256Hash nHash, final GovernanceObject object) {
+        checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<GovernanceObjectAddedEventListener> registration : governanceObjectAddedListeners) {
+            if (registration.executor == Threading.SAME_THREAD) {
+                registration.listener.onGovernanceObjectAdded(nHash, object);
+            } else {
+                registration.executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        registration.listener.onGovernanceObjectAdded(nHash, object);
+                    }
+                });
+            }
+        }
+    }
 }
