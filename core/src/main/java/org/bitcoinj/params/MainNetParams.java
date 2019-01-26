@@ -68,7 +68,9 @@ public class MainNetParams extends AbstractBitcoinNetParams {
 
         //CoinDefinition.initCheckpoints(checkpoints);
 
-        dnsSeeds = CoinDefinition.dnsSeeds;
+        dnsSeeds = new String[] {
+                "dnsseed.dash.org"
+        };
 
         httpSeeds = null; /*new HttpDiscovery.Details[] {*/
 
