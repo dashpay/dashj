@@ -81,7 +81,7 @@ public class KeyChainGroup implements KeyBag {
 
     /** Creates a keychain group with no basic chain, and an HD chain initialized from the given seed. */
     public KeyChainGroup(NetworkParameters params, DeterministicSeed seed) {
-        this(params, null, ImmutableList.of(new DeterministicKeyChain(seed)), null, null);
+        this(params, null, ImmutableList.of(DeterministicKeyChain.builder().seed(seed).build()), null, null);
     }
 
     /**
@@ -89,7 +89,9 @@ public class KeyChainGroup implements KeyBag {
      * provided.
      */
     public KeyChainGroup(NetworkParameters params, DeterministicSeed seed, ImmutableList<ChildNumber> accountPath) {
-        this(params, null, ImmutableList.of(new DeterministicKeyChain(seed, accountPath)), null, null);
+        this(params, null,
+                ImmutableList.of(DeterministicKeyChain.builder().seed(seed).accountPath(accountPath).build()), null,
+                null);
     }
 
     /**
@@ -97,7 +99,7 @@ public class KeyChainGroup implements KeyBag {
      * This HAS to be an account key as returned by {@link DeterministicKeyChain#getWatchingKey()}.
      */
     public KeyChainGroup(NetworkParameters params, DeterministicKey watchKey) {
-        this(params, null, ImmutableList.of(DeterministicKeyChain.watch(watchKey)), null, null);
+        this(params, null, ImmutableList.of(DeterministicKeyChain.builder().watch(watchKey).build()), null, null);
     }
 
     /**
@@ -105,7 +107,8 @@ public class KeyChainGroup implements KeyBag {
      * This HAS to be an account key as returned by {@link DeterministicKeyChain#getWatchingKey()}.
      */
     public KeyChainGroup(NetworkParameters params, DeterministicKey accountKey, boolean watch) {
-        this(params, null, ImmutableList.of(watch ? DeterministicKeyChain.watch(accountKey) : DeterministicKeyChain.spend(accountKey)), null, null);
+        this(params, null, ImmutableList.of(watch ? DeterministicKeyChain.builder().watch(accountKey).build()
+                : DeterministicKeyChain.builder().spend(accountKey).build()), null, null);
     }
 
     private KeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain, List<DeterministicKeyChain> chains,
@@ -138,7 +141,7 @@ public class KeyChainGroup implements KeyBag {
     /** Adds a new HD chain to the chains list, and make it the default chain (from which keys are issued). */
     public void createAndActivateNewHDChain() {
         // We can't do auto upgrade here because we don't know the rotation time, if any.
-        final DeterministicKeyChain chain = new DeterministicKeyChain(new SecureRandom());
+        final DeterministicKeyChain chain = DeterministicKeyChain.builder().random(new SecureRandom()).build();
         addAndActivateHDChain(chain);
     }
 
@@ -745,7 +748,8 @@ public class KeyChainGroup implements KeyBag {
         entropy = Arrays.copyOfRange(entropy, 0, DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS / 8);    // final argument is exclusive range.
         checkState(entropy.length == DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS / 8);
         String passphrase = ""; // FIXME allow non-empty passphrase
-        DeterministicKeyChain chain = new DeterministicKeyChain(entropy, passphrase, keyToUse.getCreationTimeSeconds());
+        DeterministicKeyChain chain = DeterministicKeyChain.builder()
+                .entropy(entropy, keyToUse.getCreationTimeSeconds()).passphrase(passphrase).build();
         if (aesKey != null) {
             chain = chain.toEncrypted(checkNotNull(basic.getKeyCrypter()), aesKey);
         }
