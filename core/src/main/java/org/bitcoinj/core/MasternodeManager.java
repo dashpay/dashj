@@ -1979,7 +1979,7 @@ public class MasternodeManager extends AbstractManager {
     void updatedBlockTip(StoredBlock block)
     {
         nCachedBlockHeight = block.getHeight();
-        if(tipCount++ % 10 == 0)
+        if(tipCount++ % 100 == 0)
             log.info("masternode--CMasternodeMan::UpdatedBlockTip -- nCachedBlockHeight={}", nCachedBlockHeight);
 
         checkSameAddr();

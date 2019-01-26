@@ -6,6 +6,7 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Set;
@@ -129,11 +130,12 @@ public class MasternodeSync {
         nTimeLastFailure = 0;
     }
 
-    public void BumpAssetLastTime(String strFuncName)
+    public void BumpAssetLastTime(@Nullable String strFuncName)
     {
         if(isSynced() || isFailed()) return;
         nTimeLastBumped = Utils.currentTimeSeconds();
-        log.info("mnsync--CMasternodeSync::BumpAssetLastTime -- "+ strFuncName);
+        if(strFuncName != null)
+            log.info("mnsync--CMasternodeSync::BumpAssetLastTime -- "+ strFuncName);
     }
 
     void addedMasternodeList(Sha256Hash hash) {
@@ -685,7 +687,7 @@ public class MasternodeSync {
     static boolean fReachedBestHeader = false;
     void updateBlockTip(StoredBlock pindexNew, boolean fInitialDownload)
     {
-        if(!fInitialDownload || pindexNew.getHeight() % 100 == 0)
+        if(!fInitialDownload && pindexNew.getHeight() % 100 == 0)
             log.info("mnsync--CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight:  "+pindexNew.getHeight()+" fInitialDownload="+fInitialDownload);
 
         if (isFailed() || isSynced() /*|| !pindexBestHeader*/)
@@ -693,7 +695,7 @@ public class MasternodeSync {
 
         if (!isBlockchainSynced()) {
             // Postpone timeout each time new block arrives while we are still syncing blockchain
-            BumpAssetLastTime("CMasternodeSync::UpdatedBlockTip");
+            BumpAssetLastTime(null);
         }
 
         if (fInitialDownload) {
@@ -722,7 +724,8 @@ public class MasternodeSync {
 
         fReachedBestHeader = fReachedBestHeaderNew;
 
-        log.info("mnsync--CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight: "+pindexNew.getHeight()+" pindexBestHeader->nHeight: "+pindexBestHeader.getHeight()+" fInitialDownload="+fInitialDownload+" fReachedBestHeader="+
+        if(pindexNew.getHeight() % 100 == 0)
+            log.info("mnsync--CMasternodeSync::UpdatedBlockTip -- pindexNew->nHeight: "+pindexNew.getHeight()+" pindexBestHeader->nHeight: "+pindexBestHeader.getHeight()+" fInitialDownload="+fInitialDownload+" fReachedBestHeader="+
                 fReachedBestHeader);
 
         if (!isBlockchainSynced() && fReachedBestHeader) {
