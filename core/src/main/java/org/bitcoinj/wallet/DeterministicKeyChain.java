@@ -197,7 +197,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         protected SecureRandom random;
         protected int bits = DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS;
         protected String passphrase;
-        protected long seedCreationTimeSecs;
+        protected long creationTimeSecs;
         protected byte[] entropy;
         protected DeterministicSeed seed;
         protected DeterministicKey watchingKey = null;
@@ -216,8 +216,9 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
          * if the starting entropy is the same. You should provide the creation time in seconds since the UNIX epoch for the
          * seed: this lets us know from what part of the chain we can expect to see derived keys appear.
          */
-        public T entropy(byte[] entropy) {
+        public T entropy(byte[] entropy, long creationTimeSecs) {
             this.entropy = entropy;
+            this.creationTimeSecs = creationTimeSecs;
             return self();
         }
 
@@ -260,11 +261,6 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             return self();
         }
 
-        public T seedCreationTimeSecs(long seedCreationTimeSecs) {
-            this.seedCreationTimeSecs = seedCreationTimeSecs;
-            return self();
-        }
-
         /** The passphrase to use with the generated mnemonic, or null if you would like to use the default empty string. Currently must be the empty string. */
         public T passphrase(String passphrase) {
             // FIXME support non-empty passphrase
@@ -291,15 +287,12 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             DeterministicKeyChain chain;
             if (random != null) {
                 // Default passphrase to "" if not specified
-                checkState(seedCreationTimeSecs == 0);
                 chain = new DeterministicKeyChain(new DeterministicSeed(random, bits, getPassphrase()), null, accountPath);
             } else if (entropy != null) {
-                chain = new DeterministicKeyChain(new DeterministicSeed(entropy, getPassphrase(), seedCreationTimeSecs), null, accountPath);
+                chain = new DeterministicKeyChain(new DeterministicSeed(entropy, getPassphrase(), creationTimeSecs), null, accountPath);
             } else if (seed != null) {
-                seed.setCreationTimeSeconds(seedCreationTimeSecs);
                 chain = new DeterministicKeyChain(seed, null, accountPath);
             } else {
-                watchingKey.setCreationTimeSeconds(seedCreationTimeSecs);
                 chain = new DeterministicKeyChain(watchingKey);
             }
 
