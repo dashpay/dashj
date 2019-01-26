@@ -14,6 +14,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static java.lang.Math.max;
+import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_DMN_LIST;
 import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE;
 import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST;
 
@@ -40,6 +41,7 @@ public class MasternodeSync {
         SYNC_PROPOSALS,
         SYNC_TRIGGERS,
         SYNC_GOVERNANCE_VOTES,
+        SYNC_DMN_LIST;
     }
 
     public Set<SYNC_FLAGS> syncFlags;
@@ -101,11 +103,14 @@ public class MasternodeSync {
         this.mapSeenSyncMNB = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNW = new HashMap<Sha256Hash, Integer>();
         this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
-        this.syncFlags = this.context.isLiteMode() ? EnumSet.noneOf(SYNC_FLAGS.class) : SYNC_ALL_OBJECTS;
-        this.syncFlags = EnumSet.noneOf(SYNC_FLAGS.class);
-        syncFlags.add(SYNC_MASTERNODE_LIST);
-        syncFlags.add(SYNC_GOVERNANCE);
-
+        if(context.isLiteMode())
+            this.syncFlags = EnumSet.of(SYNC_DMN_LIST);
+        else {
+            this.syncFlags = EnumSet.noneOf(SYNC_FLAGS.class);
+            syncFlags.add(SYNC_MASTERNODE_LIST);
+            syncFlags.add(SYNC_GOVERNANCE);
+            syncFlags.add(SYNC_DMN_LIST);
+        }
         reset();
     }
 
