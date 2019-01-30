@@ -38,7 +38,7 @@ public class ScriptPatternTest {
     @Test
     public void testCommonScripts() {
         assertTrue(ScriptPattern.isPayToPubKeyHash(
-                ScriptBuilder.createOutputScript(Address.fromKey(MAINNET, keys.get(0)))
+                ScriptBuilder.createP2PKHOutputScript(keys.get(0))
         ));
         assertTrue(ScriptPattern.isPayToScriptHash(
                 ScriptBuilder.createP2SHOutputScript(2, keys)
