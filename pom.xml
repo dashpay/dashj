@@ -15,11 +15,11 @@
     <module>bls</module>
   </modules>
 
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>7</version>
-    </parent>
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
 
 
   <scm>
@@ -54,11 +54,19 @@
   </mailingLists>
 
   <distributionManagement>
+
     <repository>
       <id>bintray-dash-Dashj</id>
       <name>dash-Dashj</name>
       <url>https://api.bintray.com/maven/dash/Dashj/org.dashj/;publish=1</url>
     </repository>
+
+    <snapshotRepository>
+      <id>snapshots</id>
+      <name>oss-jfrog-artifactory-snapshots</name>
+      <url>https://oss.jfrog.org/artifactory/oss-snapshot-local</url>
+    </snapshotRepository>
+
   </distributionManagement>
 
   <!-- Common build plugin configuration -->
