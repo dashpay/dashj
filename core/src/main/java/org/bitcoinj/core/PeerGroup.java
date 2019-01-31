@@ -1534,11 +1534,14 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             for (Wallet wallet : wallets)
                 peer.addWallet(wallet);
             if (downloadPeer == null) {
-                // Kick off chain download if we aren't already doing it.
-                setDownloadPeer(selectDownloadPeer(peers));
-                boolean shouldDownloadChain = downloadListener != null && chain != null;
-                if (shouldDownloadChain) {
-                    startBlockChainDownloadFromPeer(downloadPeer);
+                Peer newDownloadPeer = selectDownloadPeer(peers);
+                if (newDownloadPeer != null) {
+                    setDownloadPeer(newDownloadPeer);
+                    // Kick off chain download if we aren't already doing it.
+                    boolean shouldDownloadChain = downloadListener != null && chain != null;
+                    if (shouldDownloadChain) {
+                        startBlockChainDownloadFromPeer(downloadPeer);
+                    }
                 }
             }
             // Make sure the peer knows how to upload transactions that are requested from us.
