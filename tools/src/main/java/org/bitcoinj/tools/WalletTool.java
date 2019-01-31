@@ -1242,6 +1242,8 @@ public class WalletTool {
                     System.exit(1);
                 }
             }
+        } else {
+            peerGroup.setRequiredServices(0);
         }
     }
 
