@@ -49,6 +49,8 @@ public class VersionMessage extends Message {
     // NODE_XTHIN means the node supports Xtreme Thinblocks
     // If this is turned off then the node will not service nor make xthin requests
     public static final int NODE_XTHIN = (1 << 4);
+    /** A service bit that denotes whether the peer has at least the last two days worth of blockchain (BIP159). */
+    public static final int NODE_NETWORK_LIMITED = 1 << 10;
 
     /**
      * The version number of the protocol spoken.
@@ -183,14 +185,6 @@ public class VersionMessage extends Message {
         }
     }
 
-    /**
-     * Returns true if the version message indicates the sender has a full copy of the block chain,
-     * or if it's running in client mode (only has the headers).
-     */
-    public boolean hasBlockChain() {
-        return (localServices & NODE_NETWORK) == NODE_NETWORK;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -296,5 +290,18 @@ public class VersionMessage extends Message {
     public boolean isGetUTXOsSupported() {
         return clientVersion >= GetUTXOsMessage.MIN_PROTOCOL_VERSION &&
                 (localServices & NODE_GETUTXOS) == NODE_GETUTXOS;
+    }
+
+    /**
+     * Returns true if the version message indicates the sender has a full copy of the block chain, or false if it's
+     * running in client mode (only has the headers).
+     */
+    public boolean hasBlockChain() {
+        return (localServices & NODE_NETWORK) == NODE_NETWORK;
+    }
+
+    /** Returns true if the peer has at least the last two days worth of blockchain (BIP159). */
+    public boolean hasLimitedBlockChain() {
+        return hasBlockChain() || (localServices & NODE_NETWORK_LIMITED) == NODE_NETWORK_LIMITED;
     }
 }
