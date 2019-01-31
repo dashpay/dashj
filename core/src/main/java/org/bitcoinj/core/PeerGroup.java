@@ -2292,6 +2292,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 candidates2.add(peer);
             }
         }
+        if (candidates2.isEmpty())
+            return null;
         int index = (int) (Math.random() * candidates2.size());
         return candidates2.get(index);
     }
