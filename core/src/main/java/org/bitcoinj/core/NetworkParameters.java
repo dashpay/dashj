@@ -640,6 +640,7 @@ public abstract class NetworkParameters {
         MINIMUM(70214),
         PONG(60001),
         BLOOM_FILTER(MINIMUM.getBitcoinProtocolVersion()),
+        BLOOL_FILTER_BIP111(MINIMUM.getBitcoinProtocolVersion()),
         DMN_LIST(70214),
         CURRENT(70214);
 
