@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
 
 public class SimplifiedMasternodeListManager extends AbstractManager {
     private static final Logger log = LoggerFactory.getLogger(MasternodeManager.class);
@@ -125,7 +127,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public void updateMNList() {
         log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + context.blockChain.getChainHead().getHeight());
-        context.peerGroup.getDownloadPeer().sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, context.blockChain.getChainHead().getHeader().getHash()));
+        Peer peer = context.peerGroup.getDownloadPeer();
+        if(peer == null) {
+            List<Peer> peers = context.peerGroup.getConnectedPeers();
+            peer = peers.get(new Random().nextInt(peers.size()));
+        }
+        if(peer != null)
+            peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, context.blockChain.getChainHead().getHeader().getHash()));
     }
 
     @Override
