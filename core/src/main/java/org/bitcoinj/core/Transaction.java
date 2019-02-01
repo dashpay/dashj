@@ -166,8 +166,7 @@ public class Transaction extends ChildMessage {
     public static final int MAX_INPUTS_FOR_AUTO_IX = 4;
 
     // These are bitcoin serialized.
-    private int version;
-    private Type type;
+    private long version;
     private ArrayList<TransactionInput> inputs;
     private ArrayList<TransactionOutput> outputs;
 
@@ -248,7 +247,6 @@ public class Transaction extends ChildMessage {
     public Transaction(NetworkParameters params) {
         super(params);
         version = 1;
-        type = Type.TRANSACTION_NORMAL;
         inputs = new ArrayList<TransactionInput>();
         outputs = new ArrayList<TransactionOutput>();
         // We don't initialize appearsIn deliberately as it's only useful for transactions stored in the wallet.
@@ -257,8 +255,7 @@ public class Transaction extends ChildMessage {
 
     public Transaction(NetworkParameters params, SpecialTxPayload specialTxPayload) {
         this(params);
-        version = 3;
-        type = specialTxPayload.getType();
+        setVersionAndType(3, specialTxPayload.getType());
         setExtraPayload(specialTxPayload, false);
     }
 
@@ -615,8 +612,7 @@ public class Transaction extends ChildMessage {
     protected void parse() throws ProtocolException {
         cursor = offset;
 
-        version = readUint16();
-        type = Type.fromValue(readUint16());
+        version = readUint32();
         optimalEncodingMessageSize = 4;
 
         // First come the inputs.
@@ -643,7 +639,7 @@ public class Transaction extends ChildMessage {
         }
         lockTime = readUint32();
         optimalEncodingMessageSize += 4;
-        if(version >= 3 && type != Type.TRANSACTION_NORMAL) {
+        if(getVersionShort() >= 3 && getType() != Type.TRANSACTION_NORMAL) {
             extraPayload = readByteArray();
             setExtraPayloadObject();
         }
@@ -713,7 +709,8 @@ public class Transaction extends ChildMessage {
             s.append("  updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
         if (version != 1)
             s.append("  version ").append(version).append('\n');
-        s.append("  type ").append(getTypeString()).append('(').append(type.getValue()).append(")\n");
+        Type type = (getVersionShort() >= 3) ? getType() : Type.TRANSACTION_NORMAL;
+        s.append("  type ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
         if (isTimeLocked()) {
             s.append("  time locked until ");
             if (lockTime < LOCKTIME_THRESHOLD) {
@@ -1143,8 +1140,7 @@ public class Transaction extends ChildMessage {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        uint16ToByteStreamLE(version, stream);
-        uint16ToByteStreamLE(type.getValue(), stream);
+        uint32ToByteStreamLE(version, stream);
         stream.write(new VarInt(inputs.size()).encode());
         for (TransactionInput in : inputs)
             in.bitcoinSerialize(stream);
@@ -1152,7 +1148,7 @@ public class Transaction extends ChildMessage {
         for (TransactionOutput out : outputs)
             out.bitcoinSerialize(stream);
         uint32ToByteStreamLE(lockTime, stream);
-        if(version >= 3 && type != Type.TRANSACTION_NORMAL) {
+        if(getVersionShort() >= 3 && getType() != Type.TRANSACTION_NORMAL) {
             stream.write(new VarInt(extraPayload.length).encode());
             stream.write(extraPayload);
         }
@@ -1192,39 +1188,52 @@ public class Transaction extends ChildMessage {
         this.lockTime = lockTime;
     }
 
-    public int getVersion() {
+    public long getVersion() {
         return version;
     }
 
-    public void setVersion(int version) {
+    public void setVersion(long version) {
         this.version = version;
         hash = null;
     }
 
+    public void setVersionAndType(int versionShort, int type) {
+        version = versionShort & type << 16;
+    }
+
+    public void setVersionAndType(int versionShort, Type type) {
+        version = versionShort & type.getValue() << 16;
+    }
+
+    public int getVersionShort() {
+        return versionFromLegacyVersion(version);
+    }
+
+    static int versionFromLegacyVersion(long version) {
+        return (int)(version & 0xffff);
+    }
+
+    static int typeFromLegacyVersion(long version) {
+        return (int)(version >> 16 & 0xffff);
+    }
+
     public Type getType() {
-        return type;
+        return versionFromLegacyVersion(version) >= 3 ?
+            Type.fromValue(typeFromLegacyVersion(version)) :
+                Type.TRANSACTION_NORMAL;
     }
 
     public void setType(int type) {
-        setType(Type.fromValue(type));
-    }
-
-    public void setType(Type type) {
-        this.type = type;
+        version = versionFromLegacyVersion(version) | type << 16;
         hash = null;
     }
 
+    public void setType(Type type) {
+        setType(type.getValue());
+    }
+
     public String getTypeString() {
-        return type.toString();//type == Type.TRANSACTION_NORMAL ? "Normal" : extraPayloadObject.getTypeName();
-    }
-
-    public long getVersion32bit() {
-        return version | type.getValue() << 16;
-    }
-
-    public void setVersion32bit(long version32bit) {
-        version = (int)(0xffff & version32bit);
-        type = Type.fromValue((int)(0xffff & (version32bit >> 16)));
+        return getType().toString();
     }
 
     /** Returns an unmodifiable view of all inputs. */
@@ -1366,7 +1375,7 @@ public class Transaction extends ChildMessage {
      * @throws VerificationException
      */
     public void verify() throws VerificationException {
-        if ((inputs.size() == 0 || outputs.size() == 0) && type != Type.TRANSACTION_SUBTX_RESETKEY)
+        if ((inputs.size() == 0 || outputs.size() == 0) && getType() != Type.TRANSACTION_SUBTX_RESETKEY)
             throw new VerificationException.EmptyInputsOrOutputs();
         if (this.getMessageSize() > Block.MAX_BLOCK_SIZE)
             throw new VerificationException.LargerThanMaxBlockSize();
@@ -1534,7 +1543,7 @@ public class Transaction extends ChildMessage {
 
     protected void setExtraPayloadObject() {
         extraPayloadObject = null;
-        switch (type) {
+        switch (getType()) {
             case TRANSACTION_NORMAL:
                 break;
             case TRANSACTION_PROVIDER_REGISTER:

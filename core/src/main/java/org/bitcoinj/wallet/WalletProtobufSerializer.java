@@ -234,7 +234,7 @@ public class WalletProtobufSerializer {
 
         txBuilder.setPool(getProtoPool(wtx))
                  .setHash(hashToByteString(tx.getHash()))
-                 .setVersion((int) tx.getVersion32bit());
+                 .setVersion((int) tx.getVersion());
 
         if (tx.getUpdateTime() != null) {
             txBuilder.setUpdatedAt(tx.getUpdateTime().getTime());
@@ -620,7 +620,7 @@ public class WalletProtobufSerializer {
         boolean isIX = txProto.getConfidence().hasIxType() && txProto.getConfidence().getIxType() != Protos.TransactionConfidence.IXType.IX_NONE;
         Transaction tx = !isIX ? new Transaction(params) : new TransactionLockRequest(params);
 
-        tx.setVersion32bit(txProto.getVersion());
+        tx.setVersion(txProto.getVersion());
 
         if (txProto.hasUpdatedAt()) {
             tx.setUpdateTime(new Date(txProto.getUpdatedAt()));

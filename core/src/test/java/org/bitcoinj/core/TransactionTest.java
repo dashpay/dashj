@@ -394,4 +394,17 @@ public class TransactionTest {
             };
         }
     }
+
+    @Test
+    public void testVersionNumbers() {
+        long type8192 = 536870912;
+
+        assertEquals(0, Transaction.versionFromLegacyVersion(type8192));
+        assertEquals(8192, Transaction.typeFromLegacyVersion(type8192));
+
+        Transaction.Type type = Transaction.Type.fromValue(8192);
+
+        assertEquals(null, type);  //type 8192 is invalid
+        assertEquals(Transaction.Type.TRANSACTION_COINBASE, Transaction.Type.fromValue(5));
+    }
 }

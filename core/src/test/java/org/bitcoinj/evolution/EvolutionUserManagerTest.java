@@ -61,11 +61,11 @@ public class EvolutionUserManagerTest {
         tx.setExtraPayload(subtx.getPayload());
 
         tx.addSignedInput(txin, ScriptBuilder.createOutputScript(inputAddress), privateKey, Transaction.SigHash.ALL, false);
-        assertEquals(3, tx.getVersion());
+        assertEquals(3, tx.getVersionShort());
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
             tx.bitcoinSerialize(bos);
-            assertEquals(tx.getVersion(), 3);
+            assertEquals(tx.getVersionShort(), 3);
         } catch (IOException x) {
             fail();
         }
