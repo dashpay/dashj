@@ -44,7 +44,7 @@ public class ScriptPatternTest {
                 ScriptBuilder.createP2SHOutputScript(2, keys)
         ));
         assertTrue(ScriptPattern.isPayToPubKey(
-                ScriptBuilder.createOutputScript(keys.get(0))
+                ScriptBuilder.createP2PKOutputScript(keys.get(0))
         ));
         assertTrue(ScriptPattern.isSentToMultisig(
                 ScriptBuilder.createMultiSigOutputScript(2, keys)

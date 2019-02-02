@@ -93,7 +93,7 @@ public class ScriptTest {
         List<ECKey> pubkeys = new ArrayList<>(3);
         for (ECKey key : keys) pubkeys.add(ECKey.fromPublicOnly(key.getPubKeyPoint()));
         assertEquals(script.getPubKeys(), pubkeys);
-        assertFalse(ScriptPattern.isSentToMultisig(ScriptBuilder.createOutputScript(new ECKey())));
+        assertFalse(ScriptPattern.isSentToMultisig(ScriptBuilder.createP2PKOutputScript(new ECKey())));
         try {
             // Fail if we ask for more signatures than keys.
             Script.createMultiSigOutputScript(4, keys);
@@ -452,6 +452,6 @@ public class ScriptTest {
 
     @Test(expected = ScriptException.class)
     public void getToAddressNoPubKey() throws Exception {
-        ScriptBuilder.createOutputScript(new ECKey()).getToAddress(TESTNET, false);
+        ScriptBuilder.createP2PKOutputScript(new ECKey()).getToAddress(TESTNET, false);
     }
 }
