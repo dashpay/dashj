@@ -1376,6 +1376,8 @@ public class ECKey implements EncryptableItem {
         final Address address = Address.fromKey(params, this);
         builder.append("  addr:");
         builder.append(address.toString());
+        if (!isCompressed())
+            builder.append("  UNCOMPRESSED");
         builder.append("  hash160:");
         builder.append(Utils.HEX.encode(getPubKeyHash()));
         if (creationTimeSeconds > 0)
