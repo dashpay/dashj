@@ -33,6 +33,7 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletTransaction.Pool;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -194,7 +195,8 @@ public class Transaction extends ChildMessage {
     // list of transactions from a wallet, which is helpful for presenting to users.
     private Date updatedAt;
 
-    // This is an in memory helper only.
+    // This is an in memory helper only. It contains the transaction hash (aka txid), used as a reference by transaction
+    // inputs via outpoints.
     private Sha256Hash hash;
 
     // Data about how confirmed this tx is. Serialized, may be null.
@@ -311,12 +313,19 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * Returns the transaction hash as you see them in the block explorer.
+     * Returns the transaction hash (aka txid) as you see them in block explorers. It is used as a reference by
+     * transaction inputs via outpoints.
      */
     @Override
     public Sha256Hash getHash() {
         if (hash == null) {
-            hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(unsafeBitcoinSerialize()));
+            ByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(length < 32 ? 32 : length + 32);
+            try {
+                bitcoinSerializeToStream(stream);
+            } catch (IOException e) {
+                // Cannot happen, we are serializing to a memory stream.
+            }
+            hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(stream.toByteArray()));
         }
         return hash;
     }
@@ -331,6 +340,9 @@ public class Transaction extends ChildMessage {
         this.hash = hash;
     }
 
+    /**
+     * Returns the transaction hash (aka txid) as you see them in block explorers, as a hex string.
+     */
     public String getHashAsString() {
         return getHash().toString();
     }
@@ -619,14 +631,35 @@ public class Transaction extends ChildMessage {
         return cursor - offset + 4;
     }
 
+    /**
+     * Deserialize.
+     */
     @Override
     protected void parse() throws ProtocolException {
         cursor = offset;
-
-        version = readUint32();
         optimalEncodingMessageSize = 4;
 
-        // First come the inputs.
+        // version
+        version = readUint32();
+
+        // txin_count, txins
+        parseInputs();
+        // txout_count, txouts
+        parseOutputs();
+
+        // lock_time
+        lockTime = readUint32();
+        optimalEncodingMessageSize += 4;
+
+        if(getVersionShort() >= 3 && getType() != Type.TRANSACTION_NORMAL) {
+            extraPayload = readByteArray();
+            setExtraPayloadObject();
+            optimalEncodingMessageSize += extraPayload.length;
+        }
+        length = cursor - offset;
+    }
+
+    private void parseInputs() {
         long numInputs = readVarInt();
         optimalEncodingMessageSize += VarInt.sizeOf(numInputs);
         inputs = new ArrayList<>(Math.min((int) numInputs, Utils.MAX_INITIAL_ARRAY_LENGTH));
@@ -637,7 +670,9 @@ public class Transaction extends ChildMessage {
             optimalEncodingMessageSize += TransactionOutPoint.MESSAGE_LENGTH + VarInt.sizeOf(scriptLen) + scriptLen + 4;
             cursor += scriptLen + 4;
         }
-        // Now the outputs
+    }
+
+    private void parseOutputs() {
         long numOutputs = readVarInt();
         optimalEncodingMessageSize += VarInt.sizeOf(numOutputs);
         outputs = new ArrayList<>(Math.min((int) numOutputs, Utils.MAX_INITIAL_ARRAY_LENGTH));
@@ -648,13 +683,6 @@ public class Transaction extends ChildMessage {
             optimalEncodingMessageSize += 8 + VarInt.sizeOf(scriptLen) + scriptLen;
             cursor += scriptLen;
         }
-        lockTime = readUint32();
-        optimalEncodingMessageSize += 4;
-        if(getVersionShort() >= 3 && getType() != Type.TRANSACTION_NORMAL) {
-            extraPayload = readByteArray();
-            setExtraPayloadObject();
-        }
-        length = cursor - offset;
     }
 
     public int getOptimalEncodingMessageSize() {
@@ -706,24 +734,28 @@ public class Transaction extends ChildMessage {
 
     @Override
     public String toString() {
-        return toString(null);
+        MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this);
+        helper.addValue(toString(null, null));
+        return helper.toString();
     }
 
     /**
      * A human readable version of the transaction useful for debugging. The format is not guaranteed to be stable.
      * @param chain If provided, will be used to estimate lock times (if set). Can be null.
      */
-    public String toString(@Nullable AbstractBlockChain chain) {
+    public String toString(@Nullable AbstractBlockChain chain, @Nullable CharSequence indent) {
+        if (indent == null)
+            indent = "";
         StringBuilder s = new StringBuilder();
-        s.append("  ").append(getHashAsString()).append('\n');
+        s.append(indent).append(getHashAsString()).append('\n');
         if (updatedAt != null)
-            s.append("  updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
+            s.append(indent).append("updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
         if (version != 1)
-            s.append("  version ").append(version).append('\n');
+            s.append(indent).append("version ").append(version).append('\n');
         Type type = (getVersionShort() == 3) ? getType() : Type.TRANSACTION_NORMAL;
         s.append("  type ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
         if (isTimeLocked()) {
-            s.append("  time locked until ");
+            s.append(indent).append("time locked until ");
             if (lockTime < LOCKTIME_THRESHOLD) {
                 s.append("block ").append(lockTime);
                 if (chain != null) {
@@ -736,7 +768,7 @@ public class Transaction extends ChildMessage {
             s.append('\n');
         }
         if (hasRelativeLockTime()) {
-            s.append("  has relative lock time\n");
+            s.append(indent).append("has relative lock time\n");
         }
         if (isCoinBase()) {
             String script;
@@ -748,91 +780,92 @@ public class Transaction extends ChildMessage {
                 script = "???";
                 script2 = "???";
             }
-            s.append("     == COINBASE TXN (scriptSig ").append(script)
-                .append(")  (scriptPubKey ").append(script2).append(")\n");
+            s.append(indent).append("   == COINBASE TXN (scriptSig ").append(script).append(")  (scriptPubKey ").append(script2)
+                    .append(")\n");
             return s.toString();
         }
         if (!requiresInputs()) {
             // no ins, no outs
             if (getVersionShort() == 3 && type.isSpecial())
-                s.append("  payload ").append(getExtraPayloadObject()).append('\n');
+                s.append(indent).append("payload ").append(getExtraPayloadObject()).append('\n');
 
             return s.toString();
         }
         if (!inputs.isEmpty()) {
+            int i = 0;
             for (TransactionInput in : inputs) {
-                s.append("     ");
+                s.append(indent).append("   ");
                 s.append("in   ");
 
                 try {
                     s.append(in.getScriptSig());
                     final Coin value = in.getValue();
                     if (value != null)
-                        s.append(" ").append(value.toFriendlyString());
-                    s.append("\n          ");
-                    s.append("outpoint:");
+                        s.append("  ").append(value.toFriendlyString());
+                    s.append('\n');
                     final TransactionOutPoint outpoint = in.getOutpoint();
-                    s.append(outpoint.toString());
                     final TransactionOutput connectedOutput = outpoint.getConnectedOutput();
                     if (connectedOutput != null) {
                         Script scriptPubKey = connectedOutput.getScriptPubKey();
-                        try {
-                            byte[] pubKeyHash = scriptPubKey.getPubKeyHash();
-                            s.append(" hash160:");
-                            s.append(Utils.HEX.encode(pubKeyHash));
-                        } catch (ScriptException x) {
-                            // ignore
-                        }
+                        ScriptType scriptType = scriptPubKey.getScriptType();
+                        s.append(indent).append("        ");
+                        if (scriptType != null)
+                            s.append(scriptType).append(" addr:").append(scriptPubKey.getToAddress(params))
+                                    .append("  ");
+                        s.append("outpoint:").append(outpoint).append('\n');
                     }
                     if (in.hasSequence()) {
-                        s.append("\n          sequence:").append(Long.toHexString(in.getSequenceNumber()));
-                        if (version >=2 && in.hasRelativeLockTime())
+                        s.append(indent).append("        sequence:").append(Long.toHexString(in.getSequenceNumber()));
+                        if (version >= 2 && in.hasRelativeLockTime())
                             s.append(", has RLT");
+                        s.append('\n');
                     }
                 } catch (Exception e) {
-                    s.append("[exception: ").append(e.getMessage()).append("]");
+                    s.append("[exception: ").append(e.getMessage()).append("]\n");
                 }
-                s.append('\n');
+                i++;
             }
         } else {
-            s.append("     ");
+            s.append(indent).append("   ");
             s.append("INCOMPLETE: No inputs!\n");
         }
         for (TransactionOutput out : outputs) {
-            s.append("     ");
+            s.append(indent).append("   ");
             s.append("out  ");
             try {
                 Script scriptPubKey = out.getScriptPubKey();
                 s.append(scriptPubKey.getChunks().size() > 0 ? scriptPubKey.toString() : "<no scriptPubKey>");
-                s.append(" ");
+                s.append("  ");
                 s.append(out.getValue().toFriendlyString());
-                if (!out.isAvailableForSpending()) {
-                    s.append(" Spent");
-                }
-                final TransactionInput spentBy = out.getSpentBy();
-                if (spentBy != null) {
-                    s.append(" by ");
-                    s.append(spentBy.getParentTransaction().getHashAsString());
-                }
                 s.append('\n');
                 ScriptType scriptType = scriptPubKey.getScriptType();
                 if (scriptType != null)
-                    s.append("          " + scriptType + " addr:" + scriptPubKey.getToAddress(params));
+                    s.append(indent).append("        " + scriptType + " addr:" + scriptPubKey.getToAddress(params));
+                if (!out.isAvailableForSpending()) {
+                    s.append("  spent");
+                    final TransactionInput spentBy = out.getSpentBy();
+                    if (spentBy != null) {
+                        s.append(" by:");
+                        s.append(spentBy.getParentTransaction().getHashAsString()).append(':')
+                                .append(spentBy.getIndex());
+                    }
+                }
+                if (scriptType != null || !out.isAvailableForSpending())
+                    s.append('\n');
             } catch (Exception e) {
-                s.append("[exception: ").append(e.getMessage()).append("]");
+                s.append("[exception: ").append(e.getMessage()).append("]\n");
             }
-            s.append('\n');
         }
         final Coin fee = getFee();
         if (fee != null) {
             final int size = unsafeBitcoinSerialize().length;
-            s.append("     fee  ").append(fee.multiply(1000).divide(size).toFriendlyString()).append("/kB, ")
+            s.append(indent).append("   fee  ").append(fee.multiply(1000).divide(size).toFriendlyString()).append("/kB, ")
                     .append(fee.toFriendlyString()).append(" for ").append(size).append(" bytes\n");
         }
         if (purpose != null)
-            s.append("     prps ").append(purpose).append('\n');
+            s.append(indent).append("   prps ").append(purpose).append('\n');
         if (getVersionShort() == 3 && type.isSpecial())
-            s.append("  payload ").append(getExtraPayloadObject()).append('\n');
+            s.append(indent).append("  payload ").append(getExtraPayloadObject()).append('\n');
         return s.toString();
     }
 
@@ -1224,7 +1257,6 @@ public class Transaction extends ChildMessage {
             stream.write(extraPayload);
         }
     }
-
 
     /**
      * Transactions can have an associated lock time, specified either as a block height or in seconds since the
