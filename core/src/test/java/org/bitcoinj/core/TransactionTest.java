@@ -43,6 +43,7 @@ import static org.junit.Assert.*;
  */
 public class TransactionTest {
     private static final NetworkParameters UNITTEST = UnitTestParams.get();
+    private static final NetworkParameters TESTNET = TestNet3Params.get();
     private static final Address ADDRESS = Address.fromKey(UNITTEST, new ECKey());
 
     private Transaction tx;
@@ -406,7 +407,7 @@ public class TransactionTest {
                     genesis.getTransactions().get(0).getOutput(0).getOutPointFor());
 
         final Transaction tx = block1.getTransactions().get(1);
-        final String txHash = tx.getHashAsString();
+        final Sha256Hash txHash = tx.getTxId();
         final String txNormalizedHash = tx.hashForSignature(
                 0,
                 new byte[0],
@@ -415,7 +416,7 @@ public class TransactionTest {
 
         for (int i = 0; i < 100; i++) {
             // ensure the transaction object itself was not modified; if it was, the hash will change
-            assertEquals(txHash, tx.getHashAsString());
+            assertEquals(txHash, tx.getTxId());
             new Thread(){
                 public void run() {
                     assertEquals(
