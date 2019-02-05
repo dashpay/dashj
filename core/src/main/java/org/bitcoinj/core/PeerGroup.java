@@ -2082,7 +2082,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         // If we don't have a record of where this tx came from already, set it to be ourselves so Peer doesn't end up
         // redownloading it from the network redundantly.
         if (tx.getConfidence().getSource().equals(TransactionConfidence.Source.UNKNOWN)) {
-            log.info("Transaction source unknown, setting to SELF: {}", tx.getHashAsString());
+            log.info("Transaction source unknown, setting to SELF: {}", tx.getTxId());
             tx.getConfidence().setSource(TransactionConfidence.Source.SELF);
         }
         tx.getConfidence().setPeerInfo(getConnectedPeers().size(), minConnections);

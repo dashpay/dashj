@@ -17,9 +17,23 @@
 
 package org.bitcoinj.store;
 
-import org.bitcoinj.core.*;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.BlockTest;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Context;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.PeerAddress;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
+import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.UnitTestParams;
@@ -370,7 +384,7 @@ public class WalletProtobufSerializerTest {
         Transaction tx = new Transaction(UNITTEST, Utils.HEX.decode(
                 "0200000001d7902864af9310420c6e606b814c8f89f7902d40c130594e85df2e757a7cc301070000006b483045022100ca1757afa1af85c2bb014382d9ce411e1628d2b3d478df9d5d3e9e93cb25dcdd02206c5d272b31a23baf64e82793ee5c816e2bbef251e733a638b630ff2331fc83ba0121026ac2316508287761befbd0f7495ea794b396dbc5b556bf276639f56c0bd08911feffffff0274730700000000001976a91456da2d038a098c42390c77ef163e1cc23aedf24088ac91062300000000001976a9148ebf3467b9a8d7ae7b290da719e61142793392c188ac22e00600"));
         assertEquals(tx.getVersion(), 2);
-        assertEquals(tx.getHashAsString(), "0321b1413ed9048199815bd6bc2650cab1a9e8d543f109a42c769b1f18df4174");
+        assertEquals(tx.getTxId().toString(), "0321b1413ed9048199815bd6bc2650cab1a9e8d543f109a42c769b1f18df4174");
         myWallet.addWalletTransaction(new WalletTransaction(Pool.UNSPENT, tx));
         Wallet wallet1 = roundTrip(myWallet);
         Transaction tx2 = wallet1.getTransaction(tx.getHash());
