@@ -277,6 +277,22 @@ public class Superblock extends GovernanceObject {
                 ((nBlockHeight % params.getSuperblockCycle()) == 0);
     }
 
+    public static boolean isValidBudgetBlockHeight(NetworkParameters params, int blockHeight) {
+        if(blockHeight < params.getBudgetPaymentsStartBlock())
+            return false;
+        if(blockHeight < params.getSuperblockStartBlock()) {
+            //use 12.0 budge system rules
+            int offset = blockHeight % params.getBudgetPaymentsCycleBlocks();
+            if(blockHeight >= params.getBudgetPaymentsStartBlock() &&
+                    offset < params.getBudgetPaymentsWindowBlocks())
+                return true;
+            else return false;
+        } else {
+            //use Superblock rules
+            return isValidBlockHeight(params, blockHeight);
+        }
+    }
+
     public boolean isValid(Transaction txNew, int nBlockHeight, Coin blockReward) {
         // TODO : LOCK(cs);
         // No reason for a lock here now since this method only accesses data
