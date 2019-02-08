@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.governance.Superblock;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.Script.VerifyFlag;
 import org.bitcoinj.store.BlockStoreException;
@@ -313,8 +314,11 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     listScriptVerificationResults.add(future);
                 }
             }
-            if (totalFees.compareTo(params.getMaxMoney()) > 0 || block.getBlockInflation(height, storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0)
-                throw new VerificationException("Transaction fees out of range");
+            boolean feesDontMatch = block.getBlockInflation(height, storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0;
+            if (totalFees.compareTo(params.getMaxMoney()) > 0 || feesDontMatch) {
+                if(feesDontMatch && !Superblock.isValidBudgetBlockHeight(params, height))
+                    throw new VerificationException("Transaction fees out of range");
+            }
             for (Future<VerificationException> future : listScriptVerificationResults) {
                 VerificationException e;
                 try {
@@ -444,9 +448,12 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                         listScriptVerificationResults.add(future);
                     }
                 }
-                if (totalFees.compareTo(params.getMaxMoney()) > 0 ||
-                        newBlock.getHeader().getBlockInflation(newBlock.getHeight(), storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0)
-                    throw new VerificationException("Transaction fees out of range");
+
+                boolean feesDontMatch = newBlock.getHeader().getBlockInflation(newBlock.getHeight(), storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0;
+                if (totalFees.compareTo(params.getMaxMoney()) > 0 || feesDontMatch) {
+                    if(feesDontMatch && !Superblock.isValidBudgetBlockHeight(params, newBlock.getHeight()))
+                        throw new VerificationException("Transaction fees out of range");
+                }
                 txOutChanges = new TransactionOutputChanges(txOutsCreated, txOutsSpent);
                 for (Future<VerificationException> future : listScriptVerificationResults) {
                     VerificationException e;
