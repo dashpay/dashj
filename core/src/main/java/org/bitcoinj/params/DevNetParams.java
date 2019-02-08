@@ -85,6 +85,9 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         bip32HeaderPriv = 0x04358394;
 
         strSporkAddress = sporkAddress;
+        budgetPaymentsStartBlock = 4100;
+        budgetPaymentsCycleBlocks = 50;
+        budgetPaymentsWindowBlocks = 10;
 
         majorityEnforceBlockUpgrade = TestNet2Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
         majorityRejectBlockOutdated = TestNet2Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;

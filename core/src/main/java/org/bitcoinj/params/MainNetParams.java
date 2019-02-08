@@ -370,6 +370,8 @@ public class MainNetParams extends AbstractBitcoinNetParams {
 
         strSporkAddress = "Xgtyuk76vhuFW2iT7UAiHgNdWXCf3J34wh";
         budgetPaymentsStartBlock = 328008;
+        budgetPaymentsCycleBlocks = 16616;
+        budgetPaymentsWindowBlocks = 100;
 
         DIP0001Window = MAINNET_MAJORITY_DIP0001_WINDOW;
         DIP0001Upgrade = MAINNET_MAJORITY_DIP0001_THRESHOLD;

@@ -53,6 +53,10 @@ public class RegTestParams extends TestNet2Params {
         powNoRetargeting = true;
 
         instantSendConfirmationsRequired = 2;
+
+        budgetPaymentsStartBlock = 1000;
+        budgetPaymentsCycleBlocks = 50;
+        budgetPaymentsWindowBlocks = 10;
     }
 
     @Override
