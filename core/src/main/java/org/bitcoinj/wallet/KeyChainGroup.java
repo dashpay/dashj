@@ -19,9 +19,16 @@ package org.bitcoinj.wallet;
 
 import com.google.common.collect.*;
 import com.google.protobuf.*;
-import org.bitcoinj.core.*;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.BloomFilter;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.script.*;
+import org.bitcoinj.script.Script.ScriptType;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.slf4j.*;
@@ -35,11 +42,15 @@ import java.util.concurrent.*;
 import static com.google.common.base.Preconditions.*;
 
 /**
- * <p>A KeyChainGroup is used by the {@link Wallet} and
- * manages: a {@link BasicKeyChain} object (which will normally be empty), and zero or more
- * {@link DeterministicKeyChain}s. A deterministic key chain will be created lazily/on demand
- * when a fresh or current key is requested, possibly being initialized from the private key bytes of the earliest non
- * rotating key in the basic key chain if one is available, or from a fresh random seed if not.</p>
+ * <p>A KeyChainGroup is used by the {@link Wallet} and manages: a {@link BasicKeyChain} object
+ * (which will normally be empty), and zero or more {@link DeterministicKeyChain}s. The last added
+ * deterministic keychain is always the default active keychain, that's the one we normally derive keys and
+ * addresses from.</p>
+ *
+ * <p>There can be active keychains for each output script type. However this class almost entirely only works on
+ * the default active keychain (see {@link #getActiveKeyChain()}). The other active keychains
+ * (see {@link #getActiveKeyChain(ScriptType, long)}) are meant as fallback for if a sender doesn't understand a
+ * certain new script type (e.g. P2WPKH which comes with the new Bech32 address format).</p>
  *
  * <p>If a key rotation time is set, it may be necessary to add a new DeterministicKeyChain with a fresh seed
  * and also preserve the old one, so funds can be swept from the rotating keys. In this case, there may be
@@ -70,27 +81,41 @@ public class KeyChainGroup implements KeyBag {
         }
 
         /**
-         * Add chain from a random source.
+         * <p>Add chain from a random source.</p>
+         * <p>In the case of P2PKH, just a P2PKH chain is created and activated which is then the default chain for fresh
+         * addresses. It can be upgraded to P2WPKH later.</p>
+         * <p>In the case of P2WPKH, both a P2PKH and a P2WPKH chain are created and activated, the latter being the default
+         * chain. This behaviour will likely be changed with bitcoinj 0.16 such that only a P2WPKH chain is created and
+         * activated.</p>
          * @param outputScriptType type of addresses (aka output scripts) to generate for receiving
          */
         public Builder fromRandom(Script.ScriptType outputScriptType) {
-            this.chains.clear();
-            DeterministicKeyChain chain = DeterministicKeyChain.builder().random(new SecureRandom())
-                    .outputScriptType(outputScriptType).accountPath(structure.accountPathFor(outputScriptType)).build();
-            this.chains.add(chain);
+            DeterministicSeed seed = new DeterministicSeed(new SecureRandom(),
+                    DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS, "");
+            fromSeed(seed, outputScriptType);
             return this;
         }
 
         /**
-         * Add chain from a given seed.
+         * <p>Add chain from a given seed.</p>
+         * <p>In the case of P2PKH, just a P2PKH chain is created and activated which is then the default chain for fresh
+         * addresses. It can be upgraded to P2WPKH later.</p>
+         * <p>In the case of P2WPKH, both a P2PKH and a P2WPKH chain are created and activated, the latter being the default
+         * chain. This behaviour will likely be changed with bitcoinj 0.16 such that only a P2WPKH chain is created and
+         * activated.</p>
          * @param seed deterministic seed to derive all keys from
          * @param outputScriptType type of addresses (aka output scripts) to generate for receiving
          */
         public Builder fromSeed(DeterministicSeed seed, Script.ScriptType outputScriptType) {
-            this.chains.clear();
-            DeterministicKeyChain chain = DeterministicKeyChain.builder().seed(seed).outputScriptType(outputScriptType)
-                    .accountPath(structure.accountPathFor(outputScriptType)).build();
-            this.chains.add(chain);
+            if (outputScriptType == Script.ScriptType.P2PKH) {
+                DeterministicKeyChain chain = DeterministicKeyChain.builder().seed(seed)
+                        .outputScriptType(Script.ScriptType.P2PKH)
+                        .accountPath(structure.accountPathFor(Script.ScriptType.P2PKH)).build();
+                this.chains.clear();
+                this.chains.add(chain);
+            } else {
+                throw new IllegalArgumentException(outputScriptType.toString());
+            }
             return this;
         }
 
@@ -220,21 +245,13 @@ public class KeyChainGroup implements KeyBag {
         }
     }
 
-    /** Adds a new HD chain to the chains list, and make it the default chain (from which keys are issued). */
-    public void createAndActivateNewHDChain() {
-        checkState(isSupportsDeterministicChains(), "doesn't support deterministic chains");
-        // We can't do auto upgrade here because we don't know the rotation time, if any.
-        final DeterministicKeyChain chain = DeterministicKeyChain.builder().random(new SecureRandom()).build();
-        addAndActivateHDChain(chain);
-    }
-
     /**
      * Adds an HD chain to the chains list, and make it the default chain (from which keys are issued).
      * Useful for adding a complex pre-configured keychain, such as a married wallet.
      */
     public void addAndActivateHDChain(DeterministicKeyChain chain) {
         checkState(isSupportsDeterministicChains(), "doesn't support deterministic chains");
-        log.info("Creating and activating a new HD chain: {}", chain);
+        log.info("Activating a new HD chain: {}", chain);
         for (ListenerRegistration<KeyChainEventListener> registration : basic.getListeners())
             chain.addEventListener(registration.listener, registration.executor);
         if (lookaheadSize >= 0)
@@ -327,6 +344,18 @@ public class KeyChainGroup implements KeyBag {
     }
 
     /**
+     * <p>Returns a fresh address for a given {@link KeyChain.KeyPurpose} and of a given
+     * {@link Script.ScriptType}.</p>
+     * <p>This method is meant for when you really need a fallback address. Normally, you should be
+     * using {@link #freshAddress(KeyChain.KeyPurpose)} or
+     * {@link #currentAddress(KeyChain.KeyPurpose)}.</p>
+     */
+    public Address freshAddress(KeyChain.KeyPurpose purpose, Script.ScriptType outputScriptType, long keyRotationTimeSecs) {
+        DeterministicKeyChain chain = getActiveKeyChain(outputScriptType, keyRotationTimeSecs);
+        return Address.fromKey(params, chain.getKey(purpose), outputScriptType);
+    }
+
+    /**
      * Returns address for a {@link #freshKey(KeyChain.KeyPurpose)}
      */
     public Address freshAddress(KeyChain.KeyPurpose purpose) {
@@ -347,19 +376,41 @@ public class KeyChainGroup implements KeyBag {
         }
     }
 
-    /** Returns the key chain that's used for generation of fresh/current keys. This is always the newest HD chain. */
+    /**
+     * Returns the key chains that are used for generation of fresh/current keys, in the order of how they
+     * were added. The default active chain will come last in the list.
+     */
+    public List<DeterministicKeyChain> getActiveKeyChains(long keyRotationTimeSecs) {
+        checkState(isSupportsDeterministicChains(), "doesn't support deterministic chains");
+        List<DeterministicKeyChain> activeChains = new LinkedList<>();
+        for (DeterministicKeyChain chain : chains)
+            if (chain.getEarliestKeyCreationTime() >= keyRotationTimeSecs)
+                activeChains.add(chain);
+        return activeChains;
+    }
+
+    /**
+     * Returns the key chain that's used for generation of fresh/current keys of the given type. If it's not the default
+     * type and no active chain for this type exists, {@code null} is returned. No upgrade or downgrade is tried.
+     */
+    public final DeterministicKeyChain getActiveKeyChain(Script.ScriptType outputScriptType, long keyRotationTimeSecs) {
+        checkState(isSupportsDeterministicChains(), "doesn't support deterministic chains");
+        for (DeterministicKeyChain chain : ImmutableList.copyOf(chains).reverse())
+            if (chain.getOutputScriptType() == outputScriptType
+                    && chain.getEarliestKeyCreationTime() >= keyRotationTimeSecs)
+                return chain;
+        return null;
+    }
+
+    /**
+     * Returns the key chain that's used for generation of default fresh/current keys. This is always the newest
+     * deterministic chain. If no deterministic chain is present but imported keys instead, a deterministic upgrate is
+     * tried.
+     */
     public final DeterministicKeyChain getActiveKeyChain() {
         checkState(isSupportsDeterministicChains(), "doesn't support deterministic chains");
-        if (chains.isEmpty()) {
-            if (basic.numKeys() > 0) {
-                log.warn("No HD chain present but random keys are: you probably deserialized an old wallet.");
-                // If called from the wallet (most likely) it'll try to upgrade us, as it knows the rotation time
-                // but not the password.
-                throw new DeterministicUpgradeRequiredException();
-            }
-            // Otherwise we have no HD chains and no random keys: we are a new born! So a random seed is fine.
-            createAndActivateNewHDChain();
-        }
+        if (chains.isEmpty())
+            throw new DeterministicUpgradeRequiredException();
         return chains.get(chains.size() - 1);
     }
 
@@ -590,21 +641,17 @@ public class KeyChainGroup implements KeyBag {
     public void encrypt(KeyCrypter keyCrypter, KeyParameter aesKey) {
         checkNotNull(keyCrypter);
         checkNotNull(aesKey);
+        checkState(chains == null || !chains.isEmpty() || basic.numKeys() != 0, "can't encrypt entirely empty wallet");
         // This code must be exception safe.
         BasicKeyChain newBasic = basic.toEncrypted(keyCrypter, aesKey);
-        List<DeterministicKeyChain> newChains = new ArrayList<>(chains.size());
-        if (chains != null && chains.isEmpty() && basic.numKeys() == 0) {
-            // No HD chains and no random keys: encrypting an entirely empty keychain group. But we can't do that, we
-            // must have something to encrypt: so instantiate a new HD chain here.
-            createAndActivateNewHDChain();
-        }
+        List<DeterministicKeyChain> newChains = new ArrayList<>();
         if (chains != null)
             for (DeterministicKeyChain chain : chains)
                 newChains.add(chain.toEncrypted(keyCrypter, aesKey));
         this.keyCrypter = keyCrypter;
         basic = newBasic;
-        chains.clear();
-        chains.addAll(newChains);
+        this.chains.clear();
+        this.chains.addAll(newChains);
     }
 
     /**
