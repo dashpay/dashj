@@ -16,14 +16,15 @@
 
 package org.bitcoinj.examples;
 
-import java.net.InetAddress;
 import org.bitcoinj.core.FullPrunedBlockChain;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.store.FullPrunedBlockStore;
 import org.bitcoinj.store.LevelDBFullPrunedBlockStore;
 
-public class LevelDB {
+import java.net.InetAddress;
+
+public class LevelDBFullChain {
     public static void main(String[] args) throws Exception {
         /*
          * This is just a test runner that will download blockchain till block
@@ -31,7 +32,8 @@ public class LevelDB {
          */
         FullPrunedBlockStore store = new LevelDBFullPrunedBlockStore(
                 MainNetParams.get(), args[0], 1000, 100 * 1024 * 1024l,
-                10 * 1024 * 1024, 100000, true, 390000);
+                10 * 1024 * 1024, 100000, true, Integer.MAX_VALUE
+        );
 
         FullPrunedBlockChain vChain = new FullPrunedBlockChain(
                 MainNetParams.get(), store);
