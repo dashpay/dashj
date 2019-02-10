@@ -44,6 +44,7 @@ import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.KeyChain;
+import org.bitcoinj.wallet.KeyChainGroup;
 
 import com.google.common.io.ByteStreams;
 import com.google.protobuf.ByteString;
@@ -92,12 +93,10 @@ public class WalletProtobufSerializerTest {
         BriefLogFormatter.initVerbose();
         Context ctx = new Context(UNITTEST);
         myWatchedKey = new ECKey();
-        myWallet = new Wallet(UNITTEST);
         myKey = new ECKey();
         myKey.setCreationTimeSeconds(123456789L);
-        myWallet.importKey(myKey);
         myAddress = Address.fromKey(UNITTEST, myKey);
-        myWallet = new Wallet(UNITTEST);
+        myWallet = new Wallet(UNITTEST, KeyChainGroup.builder(UNITTEST).build());
         myWallet.importKey(myKey);
         mScriptCreationTime = new Date().getTime() / 1000 - 1234;
         myWallet.addWatchedAddress(Address.fromKey(UNITTEST, myWatchedKey), mScriptCreationTime);
