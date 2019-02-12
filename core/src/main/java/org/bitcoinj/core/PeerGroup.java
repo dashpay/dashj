@@ -475,11 +475,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             // Don't hold the lock across discovery as this process can be very slow.
             boolean discoverySuccess = false;
             if (doDiscovery) {
-                try {
-                    discoverySuccess = discoverPeers() > 0;
-                } catch (PeerDiscoveryException e) {
-                    log.error("Peer discovery failure", e);
-                }
+                discoverySuccess = discoverPeers() > 0;
             }
 
             long retryTime;
@@ -941,7 +937,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     /** Returns number of discovered peers. */
-    protected int discoverPeers() throws PeerDiscoveryException {
+    protected int discoverPeers() {
         // Don't hold the lock whilst doing peer discovery: it can take a long time and cause high API latency.
         checkState(!lock.isHeldByCurrentThread());
         int maxPeersToDiscoverCount = this.vMaxPeersToDiscoverCount;
@@ -950,7 +946,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         final List<PeerAddress> addressList = Lists.newLinkedList();
         for (PeerDiscovery peerDiscovery : peerDiscoverers /* COW */) {
             InetSocketAddress[] addresses;
-            addresses = peerDiscovery.getPeers(requiredServices, peerDiscoveryTimeoutMillis, TimeUnit.MILLISECONDS);
+            try {
+                addresses = peerDiscovery.getPeers(requiredServices, peerDiscoveryTimeoutMillis, TimeUnit.MILLISECONDS);
+            } catch (PeerDiscoveryException e) {
+                log.warn(e.getMessage());
+                continue;
+            }
             for (InetSocketAddress address : addresses) addressList.add(new PeerAddress(params, address));
             if (addressList.size() >= maxPeersToDiscoverCount) break;
         }
