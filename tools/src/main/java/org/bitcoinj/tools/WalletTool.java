@@ -32,8 +32,6 @@ import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.DeterministicUpgradeRequiredException;
-import org.bitcoinj.wallet.DeterministicUpgradeRequiresPassword;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
@@ -1358,43 +1356,6 @@ public class WalletTool {
     }
 
     private static void addKey() {
-        // If we're being given precise details, we have to import the key.
-        if (options.has("privkey") || options.has("pubkey")) {
-            importKey();
-        } else {
-            ECKey key;
-            try {
-                key = wallet.freshReceiveKey();
-            } catch (DeterministicUpgradeRequiredException e) {
-                try {
-                    KeyParameter aesKey = passwordToKey(false);
-                    wallet.upgradeToDeterministic(aesKey);
-                } catch (DeterministicUpgradeRequiresPassword e2) {
-                    System.err.println("This wallet must be upgraded to be deterministic, but it's encrypted: please supply the password and try again.");
-                    return;
-                }
-                key = wallet.freshReceiveKey();
-            }
-            System.out.println(Address.fromKey(params, key) + " " + key);
-        }
-    }
-
-    @Nullable
-    private static KeyParameter passwordToKey(boolean printError) {
-        if (password == null) {
-            if (printError)
-                System.err.println("You must provide a password.");
-            return null;
-        }
-        if (!wallet.checkPassword(password)) {
-            if (printError)
-                System.err.println("The password is incorrect.");
-            return null;
-        }
-        return checkNotNull(wallet.getKeyCrypter()).deriveKey(password);
-    }
-
-    private static void importKey() {
         ECKey key;
         long creationTimeSeconds = getCreationTimeSeconds();
         if (options.has("privkey")) {
@@ -1420,7 +1381,8 @@ public class WalletTool {
             key = ECKey.fromPublicOnly(pubkey);
             key.setCreationTimeSeconds(creationTimeSeconds);
         } else {
-            throw new IllegalStateException();
+            System.err.println("Either --privkey or --pubkey must be specified.");
+            return;
         }
         if (wallet.hasKey(key)) {
             System.err.println("That key already exists in this wallet.");
@@ -1442,6 +1404,21 @@ public class WalletTool {
             System.out.println("WARNING: Importing an uncompressed key");
         wallet.importKey(key);
         System.out.println(Address.fromKey(params, key) + " " + key);
+    }
+
+    @Nullable
+    private static KeyParameter passwordToKey(boolean printError) {
+        if (password == null) {
+            if (printError)
+                System.err.println("You must provide a password.");
+            return null;
+        }
+        if (!wallet.checkPassword(password)) {
+            if (printError)
+                System.err.println("The password is incorrect.");
+            return null;
+        }
+        return checkNotNull(wallet.getKeyCrypter()).deriveKey(password);
     }
 
     /**
