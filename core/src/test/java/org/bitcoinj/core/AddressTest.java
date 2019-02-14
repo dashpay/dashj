@@ -24,7 +24,6 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.script.Script.ScriptType;
-import org.bitcoinj.script.ScriptPattern;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -69,7 +68,7 @@ public class AddressTest {
         assertEquals("XhSqUwiG6PGjRCXD5sksyvRNE1ZV8jkaVC", b.toString());
         assertEquals(Script.ScriptType.P2PKH, b.getOutputScriptType());
     }
-    
+
     @Test
     public void decoding() throws Exception {
         Address a = Address.fromBase58(TESTNET, "yjSeawEuRUJDpr9FMmGx1oFtPrEjQG3vkg");
@@ -78,7 +77,7 @@ public class AddressTest {
         Address b = Address.fromBase58(MAINNET, "XhSqUwiG6PGjRCXD5sksyvRNE1ZV8jkaVC");
         assertEquals("4a22c3c4cbb31e4d03b15550636762bda0baf85a", Utils.HEX.encode(b.getHash()));
     }
-    
+
     @Test
     public void errorPaths() {
         // Check what happens if we try and decode garbage.
@@ -147,7 +146,7 @@ public class AddressTest {
             fail();
         } catch (AddressFormatException e) { }
     }
-    
+
     @Test
     public void p2shAddress() throws Exception {
         // Test that we can construct P2SH addresses
@@ -172,7 +171,7 @@ public class AddressTest {
         Address b = Address.fromScriptHash(TESTNET, HEX.decode("18a0e827269b5211eb51a4af1b2fa69333efa722"));
         assertEquals("8gfggfujFTJDtRMtrkWBKHX4Uz6uufXNC2", b.toString());
         Address c = Address.fromScriptHash(MAINNET,
-                ScriptPattern.extractHashFromPayToScriptHash(ScriptBuilder.createP2SHOutputScript(hex)));
+                ScriptPattern.extractHashFromP2SH(ScriptBuilder.createP2SHOutputScript(hex)));
         assertEquals("7WJnm5FSpJttSr72bWWqFFZrXwB8ZzsK7b", c.toString());
     }
 
@@ -189,7 +188,7 @@ public class AddressTest {
         List<ECKey> keys = Arrays.asList(key1, key2, key3);
         Script p2shScript = ScriptBuilder.createP2SHOutputScript(2, keys);
         Address address = Address.fromScriptHash(MAINNET,
-                ScriptPattern.extractHashFromPayToScriptHash(p2shScript));
+                ScriptPattern.extractHashFromP2SH(p2shScript));
         assertEquals("7pUXwZyXEMWv87j2vnY6SiWDB1bi2rHEb4", address.toString());
     }
 

@@ -931,11 +931,11 @@ public class Transaction extends ChildMessage {
         TransactionInput input = new TransactionInput(params, this, new byte[] {}, prevOut);
         addInput(input);
         int inputIndex = inputs.size() - 1;
-        if (ScriptPattern.isPayToPubKey(scriptPubKey)) {
+        if (ScriptPattern.isP2PK(scriptPubKey)) {
             TransactionSignature signature = calculateSignature(inputIndex, sigKey, scriptPubKey, sigHash,
                     anyoneCanPay);
             input.setScriptSig(ScriptBuilder.createInputScript(signature));
-        } else if (ScriptPattern.isPayToPubKeyHash(scriptPubKey)) {
+        } else if (ScriptPattern.isP2PKH(scriptPubKey)) {
             TransactionSignature signature = calculateSignature(inputIndex, sigKey, scriptPubKey, sigHash,
                     anyoneCanPay);
             input.setScriptSig(ScriptBuilder.createInputScript(signature, sigKey));
