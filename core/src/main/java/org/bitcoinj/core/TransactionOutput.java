@@ -122,17 +122,17 @@ public class TransactionOutput extends ChildMessage {
     @Nullable
     @Deprecated
     public Address getAddressFromP2PKHScript(NetworkParameters params) throws ScriptException {
-        if (ScriptPattern.isPayToPubKeyHash(getScriptPubKey()))
+        if (ScriptPattern.isP2PKH(getScriptPubKey()))
             return Address.fromPubKeyHash(params,
-                    ScriptPattern.extractHashFromPayToPubKeyHash(getScriptPubKey()));
+                    ScriptPattern.extractHashFromP2PKH(getScriptPubKey()));
         return null;
     }
 
     @Nullable
     @Deprecated
     public Address getAddressFromP2SH(NetworkParameters params) throws ScriptException {
-        if (ScriptPattern.isPayToScriptHash(getScriptPubKey()))
-            return Address.fromScriptHash(params, ScriptPattern.extractHashFromPayToScriptHash(getScriptPubKey()));
+        if (ScriptPattern.isP2SH(getScriptPubKey()))
+            return Address.fromScriptHash(params, ScriptPattern.extractHashFromP2SH(getScriptPubKey()));
         return null;
     }
 
@@ -301,12 +301,12 @@ public class TransactionOutput extends ChildMessage {
     public boolean isMine(TransactionBag transactionBag) {
         try {
             Script script = getScriptPubKey();
-            if (ScriptPattern.isPayToPubKey(script))
-                return transactionBag.isPubKeyMine(ScriptPattern.extractKeyFromPayToPubKey(script));
-            else if (ScriptPattern.isPayToScriptHash(script))
-                return transactionBag.isPayToScriptHashMine(ScriptPattern.extractHashFromPayToScriptHash(script));
-            else if (ScriptPattern.isPayToPubKeyHash(script))
-                return transactionBag.isPubKeyHashMine(ScriptPattern.extractHashFromPayToPubKeyHash(script),
+            if (ScriptPattern.isP2PK(script))
+                return transactionBag.isPubKeyMine(ScriptPattern.extractKeyFromP2PK(script));
+            else if (ScriptPattern.isP2SH(script))
+                return transactionBag.isPayToScriptHashMine(ScriptPattern.extractHashFromP2SH(script));
+            else if (ScriptPattern.isP2PKH(script))
+                return transactionBag.isPubKeyHashMine(ScriptPattern.extractHashFromP2PKH(script),
                         Script.ScriptType.P2PKH);
             else
                 return false;
@@ -326,11 +326,11 @@ public class TransactionOutput extends ChildMessage {
             Script script = getScriptPubKey();
             StringBuilder buf = new StringBuilder("TxOut of ");
             buf.append(Coin.valueOf(value).toFriendlyString());
-            if (ScriptPattern.isPayToPubKeyHash(script)
-                    || ScriptPattern.isPayToScriptHash(script))
+            if (ScriptPattern.isP2PKH(script)
+                    || ScriptPattern.isP2SH(script))
                 buf.append(" to ").append(script.getToAddress(params));
-            else if (ScriptPattern.isPayToPubKey(script))
-                buf.append(" to pubkey ").append(Utils.HEX.encode(ScriptPattern.extractKeyFromPayToPubKey(script)));
+            else if (ScriptPattern.isP2PK(script))
+                buf.append(" to pubkey ").append(Utils.HEX.encode(ScriptPattern.extractKeyFromP2PK(script)));
             else if (ScriptPattern.isSentToMultisig(script))
                 buf.append(" to multisig");
             else

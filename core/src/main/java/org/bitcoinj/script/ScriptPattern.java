@@ -18,6 +18,7 @@
 package org.bitcoinj.script;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Sha256Hash;
 
 import com.google.common.io.BaseEncoding;
 
@@ -38,7 +39,7 @@ public class ScriptPattern {
      * to send somebody money with a written code because their node is offline, but over time has become the standard
      * way to make payments due to the short and recognizable base58 form addresses come in.
      */
-    public static boolean isPayToPubKeyHash(Script script) {
+    public static boolean isP2PKH(Script script) {
         List<ScriptChunk> chunks = script.chunks;
         if (chunks.size() != 5)
             return false;
@@ -60,9 +61,9 @@ public class ScriptPattern {
 
     /**
      * Extract the pubkey hash from a P2PKH scriptPubKey. It's important that the script is in the correct form, so you
-     * will want to guard calls to this method with {@link #isPayToPubKeyHash(Script)}.
+     * will want to guard calls to this method with {@link #isP2PKH(Script)}.
      */
-    public static byte[] extractHashFromPayToPubKeyHash(Script script) {
+    public static byte[] extractHashFromP2PKH(Script script) {
         return script.chunks.get(2).data;
     }
 
@@ -76,7 +77,7 @@ public class ScriptPattern {
      * P2SH is described by <a href="https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki">BIP16</a>.
      * </p>
      */
-    public static boolean isPayToScriptHash(Script script) {
+    public static boolean isP2SH(Script script) {
         List<ScriptChunk> chunks = script.chunks;
         // We check for the effective serialized form because BIP16 defines a P2SH output using an exact byte
         // template, not the logical program structure. Thus you can have two programs that look identical when
@@ -102,9 +103,9 @@ public class ScriptPattern {
 
     /**
      * Extract the script hash from a P2SH scriptPubKey. It's important that the script is in the correct form, so you
-     * will want to guard calls to this method with {@link #isPayToScriptHash(Script)}.
+     * will want to guard calls to this method with {@link #isP2SH(Script)}.
      */
-    public static byte[] extractHashFromPayToScriptHash(Script script) {
+    public static byte[] extractHashFromP2SH(Script script) {
         return script.chunks.get(1).data;
     }
 
@@ -114,7 +115,7 @@ public class ScriptPattern {
      * of operation being susceptible to man-in-the-middle attacks. It is still used in coinbase outputs and can be
      * useful more exotic types of transaction, but today most payments are to addresses.
      */
-    public static boolean isPayToPubKey(Script script) {
+    public static boolean isP2PK(Script script) {
         List<ScriptChunk> chunks = script.chunks;
         if (chunks.size() != 2)
             return false;
@@ -133,9 +134,9 @@ public class ScriptPattern {
 
     /**
      * Extract the pubkey from a P2SH scriptPubKey. It's important that the script is in the correct form, so you will
-     * want to guard calls to this method with {@link #isPayToPubKey(Script)}.
+     * want to guard calls to this method with {@link #isP2PK(Script)}.
      */
-    public static byte[] extractKeyFromPayToPubKey(Script script) {
+    public static byte[] extractKeyFromP2PK(Script script) {
         return script.chunks.get(0).data;
     }
 

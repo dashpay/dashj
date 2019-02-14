@@ -163,12 +163,12 @@ public class Address extends AbstractAddress {
 
     /**
      * @deprecated use {@link #fromScriptHash(NetworkParameters, byte[])} in combination with
-     *             {@link ScriptPattern#extractHashFromPayToScriptHash(Script)}
+     *             {@link ScriptPattern#extractHashFromP2SH(Script)}
      */
     @Deprecated
     public static Address fromP2SHScript(NetworkParameters params, Script scriptPubKey) {
-        checkArgument(ScriptPattern.isPayToScriptHash(scriptPubKey), "Not a P2SH script");
-        return fromP2SHHash(params, ScriptPattern.extractHashFromPayToScriptHash(scriptPubKey));
+        checkArgument(ScriptPattern.isP2SH(scriptPubKey), "Not a P2SH script");
+        return fromP2SHHash(params, ScriptPattern.extractHashFromP2SH(scriptPubKey));
     }
 
     /**

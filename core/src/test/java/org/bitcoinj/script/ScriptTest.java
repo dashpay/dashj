@@ -80,7 +80,7 @@ public class ScriptTest {
         byte[] pubkeyBytes = HEX.decode(pubkeyProg);
         Script pubkey = new Script(pubkeyBytes);
         assertEquals("DUP HASH160 PUSHDATA(20)[33e81a941e64cda12c6a299ed322ddbdd03f8d0e] EQUALVERIFY CHECKSIG", pubkey.toString());
-        Address toAddr = Address.fromPubKeyHash(TESTNET, ScriptPattern.extractHashFromPayToPubKeyHash(pubkey));
+        Address toAddr = Address.fromPubKeyHash(TESTNET, ScriptPattern.extractHashFromP2PKH(pubkey));
         assertEquals("yR3uMqqBZFidFRFTgXWnPiKhvVF1EtUZ16", toAddr.toString());
     }
 
@@ -113,14 +113,14 @@ public class ScriptTest {
     @Test
     public void testP2SHOutputScript() throws Exception {
         Address p2shAddress = Address.fromBase58(MAINNET, "7WJnm5FSpJttSr72bWWqFFZrXwB8ZzsK7b");
-        assertTrue(ScriptPattern.isPayToScriptHash(ScriptBuilder.createOutputScript(p2shAddress)));
+        assertTrue(ScriptPattern.isP2SH(ScriptBuilder.createOutputScript(p2shAddress)));
     }
 
     @Test
     public void testIp() throws Exception {
         byte[] bytes = HEX.decode("41043e96222332ea7848323c08116dddafbfa917b8e37f0bdf63841628267148588a09a43540942d58d49717ad3fabfe14978cf4f0a8b84d2435dad16e9aa4d7f935ac");
         Script s = new Script(bytes);
-        assertTrue(ScriptPattern.isPayToPubKey(s));
+        assertTrue(ScriptPattern.isP2PK(s));
     }
     
     @Test
@@ -446,7 +446,7 @@ public class ScriptTest {
         // pay to script hash
         Script p2shScript = ScriptBuilder.createP2SHOutputScript(new byte[20]);
         Address scriptAddress = Address.fromScriptHash(TESTNET,
-                ScriptPattern.extractHashFromPayToScriptHash(p2shScript));
+                ScriptPattern.extractHashFromP2PKH(p2shScript));
         assertEquals(scriptAddress, p2shScript.getToAddress(TESTNET, true));
     }
 
