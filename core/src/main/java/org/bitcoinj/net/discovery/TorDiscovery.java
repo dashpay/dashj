@@ -156,7 +156,7 @@ public class TorDiscovery implements PeerDiscovery {
                     public void onFailure(Throwable thrown) {
                         doneSignal.countDown();
                     }
-                });
+                }, MoreExecutors.directExecutor());
                 circuitFutures.add(openCircuit);
             }
 

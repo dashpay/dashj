@@ -147,7 +147,7 @@
                                     <!-- classifier is "null" if not present -->
                                     <urns>
                                         <urn>junit:junit:4.12:jar:null:test:2973d150c0dc1fefe998f834810d68f278ea58ec</urn>
-                                        <urn>com.google.guava:guava:18.0:jar:null:compile:cce0823396aa693798f8882e64213b1772032b09</urn>
+                                        <urn>com.google.guava:guava:27.0.1-android:jar:null:compile:b7e1c37f66ef193796ccd7ea6e80c2b05426182d</urn>
                                         <!-- A check for the rules themselves -->
                                         <urn>uk.co.froot.maven.enforcer:digest-enforcer-rules:0.0.1:jar:null:runtime:16a9e04f3fe4bb143c42782d07d5faf65b32106f</urn>
                                     </urns>
@@ -280,7 +280,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>18.0</version>
+            <version>27.0.1-android</version>
         </dependency>
     </dependencies>
 

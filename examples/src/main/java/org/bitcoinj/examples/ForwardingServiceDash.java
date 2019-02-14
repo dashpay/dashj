@@ -151,7 +151,7 @@ public class ForwardingServiceDash {
                         // This kind of future can't fail, just rethrow in case something weird happens.
                         throw new RuntimeException(t);
                     }
-                });
+                }, MoreExecutors.directExecutor());
 
                 Futures.addCallback(tx.getConfidence().getDepthFuture(2), new FutureCallback<TransactionConfidence>() {
                     @Override
@@ -164,7 +164,7 @@ public class ForwardingServiceDash {
                         // This kind of future can't fail, just rethrow in case something weird happens.
                         throw new RuntimeException(t);
                     }
-                });
+                }, MoreExecutors.directExecutor());
 
                 Futures.addCallback(tx.getConfidence().getDepthFuture(3), new FutureCallback<TransactionConfidence>() {
                     @Override
@@ -177,7 +177,7 @@ public class ForwardingServiceDash {
                         // This kind of future can't fail, just rethrow in case something weird happens.
                         throw new RuntimeException(t);
                     }
-                });
+                }, MoreExecutors.directExecutor());
 
                 Futures.addCallback(tx.getConfidence().getDepthFuture(4), new FutureCallback<TransactionConfidence>() {
                     @Override
@@ -190,7 +190,7 @@ public class ForwardingServiceDash {
                         // This kind of future can't fail, just rethrow in case something weird happens.
                         throw new RuntimeException(t);
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
         });
 

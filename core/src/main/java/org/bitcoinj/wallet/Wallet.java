@@ -5268,7 +5268,7 @@ public class Wallet extends BaseTaggableObject
                     public void onFailure(Throwable throwable) {
                         log.error("Failed to broadcast key rotation tx", throwable);
                     }
-                });
+                }, MoreExecutors.directExecutor());
             } catch (Exception e) {
                 log.error("Failed to broadcast rekey tx", e);
             }

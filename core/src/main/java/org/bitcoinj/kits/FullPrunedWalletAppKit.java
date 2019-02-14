@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.subgraph.orchid.TorClient;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
@@ -364,7 +365,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
                         throw new RuntimeException(t);
 
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
         } catch (BlockStoreException e) {
             throw new IOException(e);
