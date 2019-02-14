@@ -844,7 +844,8 @@ public class InstantSend {
             Transaction transaction = entry.getValue();
             TransactionConfidence confidence = transaction.getConfidence();
             TransactionConfidence.IXType confidenceType = confidence.getIXType();
-            if (confidenceType == TransactionConfidence.IXType.IX_REQUEST) {
+            if (confidenceType == TransactionConfidence.IXType.IX_REQUEST &&
+                    confidence.getSentAt() != null) {
                 long sentAt = confidence.getSentAt().getTime();
                 long now = System.currentTimeMillis();
                 long txSentMillisAgo = now - sentAt;
