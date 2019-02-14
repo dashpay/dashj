@@ -1567,7 +1567,7 @@ public class Script {
         if (stack.size() == 0)
             throw new ScriptException(ScriptError.SCRIPT_ERR_EVAL_FALSE, "Stack empty at end of script execution.");
 
-        List<byte[]> stackCopy = new LinkedList<byte[]>(stack);
+        List<byte[]> stackCopy = new LinkedList<>(stack);
         if (!castToBool(stack.pollLast()))
             throw new ScriptException(ScriptError.SCRIPT_ERR_EVAL_FALSE,
                     "Script resulted in a non-true stack: " + Utils.toString(stackCopy));
@@ -1598,7 +1598,7 @@ public class Script {
             if (p2shStack.size() == 0)
                 throw new ScriptException(ScriptError.SCRIPT_ERR_EVAL_FALSE, "P2SH stack empty at end of script execution.");
             
-            List<byte[]> p2shStackCopy = new LinkedList<byte[]>(p2shStack);
+            List<byte[]> p2shStackCopy = new LinkedList<>(p2shStack);
             if (!castToBool(p2shStack.pollLast()))
                 throw new ScriptException(ScriptError.SCRIPT_ERR_EVAL_FALSE,
                         "P2SH script execution resulted in a non-true stack: " + Utils.toString(p2shStackCopy));
