@@ -1959,7 +1959,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     public List<Peer> findPeersOfAtLeastVersion(long protocolVersion) {
         lock.lock();
         try {
-            ArrayList<Peer> results = new ArrayList<Peer>(peers.size());
+            ArrayList<Peer> results = new ArrayList<>(peers.size());
             for (Peer peer : peers)
                 if (peer.getPeerVersionMessage().clientVersion >= protocolVersion)
                     results.add(peer);
@@ -2006,7 +2006,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     public List<Peer> findPeersWithServiceMask(int mask) {
         lock.lock();
         try {
-            ArrayList<Peer> results = new ArrayList<Peer>(peers.size());
+            ArrayList<Peer> results = new ArrayList<>(peers.size());
             for (Peer peer : peers)
                 if ((peer.getPeerVersionMessage().localServices & mask) == mask)
                     results.add(peer);
