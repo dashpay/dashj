@@ -339,7 +339,7 @@ public class WalletAppKit extends AbstractIdleService {
                             vStore.close();
                             if (!chainFile.delete())
                                 throw new IOException("Failed to delete chain file in preparation for restore.");
-                            vStore = new SPVBlockStore(params, chainFile);
+                            vStore = provideBlockStore(chainFile);
                         }
                     } else if (restoreFromKey != null) {
                         time = restoreFromKey.getCreationTimeSeconds();
@@ -348,7 +348,7 @@ public class WalletAppKit extends AbstractIdleService {
                             vStore.close();
                             if (!chainFile.delete())
                                 throw new IOException("Failed to delete chain file in preparation for restore.");
-                            vStore = new SPVBlockStore(params, chainFile);
+                            vStore = provideBlockStore(chainFile);
                         }
                     }
                     else
@@ -364,7 +364,7 @@ public class WalletAppKit extends AbstractIdleService {
                     vStore.close();
                     if (!chainFile.delete())
                         throw new IOException("Failed to delete chain file in preparation for restore.");
-                    vStore = new SPVBlockStore(params, chainFile);
+                    vStore = provideBlockStore(chainFile);
                 }
             }
             vChain = new BlockChain(params, vStore);
