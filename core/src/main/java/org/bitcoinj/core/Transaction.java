@@ -772,6 +772,8 @@ public class Transaction extends ChildMessage {
         if (hasRelativeLockTime()) {
             s.append(indent).append("has relative lock time\n");
         }
+        if (purpose != null)
+            s.append(indent).append("purpose: ").append(purpose).append('\n');
         if (isCoinBase()) {
             String script;
             String script2;
@@ -864,8 +866,6 @@ public class Transaction extends ChildMessage {
             s.append(indent).append("   fee  ").append(fee.multiply(1000).divide(size).toFriendlyString()).append("/kB, ")
                     .append(fee.toFriendlyString()).append(" for ").append(size).append(" bytes\n");
         }
-        if (purpose != null)
-            s.append(indent).append("   prps ").append(purpose).append('\n');
         if (getVersionShort() == 3 && type.isSpecial())
             s.append(indent).append("  payload ").append(getExtraPayloadObject()).append('\n');
         return s.toString();
