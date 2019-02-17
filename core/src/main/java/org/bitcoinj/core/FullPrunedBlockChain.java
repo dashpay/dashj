@@ -236,7 +236,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 // BIP30 document for more details on this: https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki
                 for (Transaction tx : block.transactions) {
                     final Set<VerifyFlag> verifyFlags = params.getTransactionVerificationFlags(block, tx, getVersionTally(), height);
-                    Sha256Hash hash = tx.getHash();
+                    Sha256Hash hash = tx.getTxId();
                     // If we already have unspent outputs for this hash, we saw the tx already. Either the block is
                     // being added twice (bug) or the block is a BIP30 violator.
                     if (blockStore.hasUnspentOutputs(hash, tx.getOutputs().size()))
@@ -284,7 +284,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                         txOutsSpent.add(prevOut);
                     }
                 }
-                Sha256Hash hash = tx.getHash();
+                Sha256Hash hash = tx.getTxId();
                 for (TransactionOutput out : tx.getOutputs()) {
                     valueOut = valueOut.add(out.getValue());
                     // For each output, add it to the set of unspent outputs so it can be consumed in future.
@@ -374,7 +374,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
 
                 if (!params.isCheckpoint(newBlock.getHeight())) {
                     for (Transaction tx : transactions) {
-                        Sha256Hash hash = tx.getHash();
+                        Sha256Hash hash = tx.getTxId();
                         if (blockStore.hasUnspentOutputs(hash, tx.getOutputs().size()))
                             throw new VerificationException("Block failed BIP30 test!");
                     }
@@ -418,7 +418,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                             txOutsSpent.add(prevOut);
                         }
                     }
-                    Sha256Hash hash = tx.getHash();
+                    Sha256Hash hash = tx.getTxId();
                     for (TransactionOutput out : tx.getOutputs()) {
                         valueOut = valueOut.add(out.getValue());
                         Script script = getScript(out.getScriptBytes());
