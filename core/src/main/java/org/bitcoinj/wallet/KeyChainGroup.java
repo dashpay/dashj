@@ -262,6 +262,8 @@ public class KeyChainGroup implements KeyBag {
         if (lookaheadThreshold >= 0)
             chain.setLookaheadThreshold(lookaheadThreshold);
         chains.add(chain);
+        currentKeys.clear();
+        currentAddresses.clear();
     }
 
     /**
