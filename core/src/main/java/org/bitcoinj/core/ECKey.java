@@ -1374,7 +1374,7 @@ public class ECKey implements EncryptableItem {
     }
 
     public void formatKeyWithAddress(boolean includePrivateKeys, @Nullable KeyParameter aesKey, StringBuilder builder,
-            NetworkParameters params, Script.ScriptType outputScriptType) {
+            NetworkParameters params, Script.ScriptType outputScriptType, @Nullable String comment) {
         builder.append("  addr:");
         if (outputScriptType != null) {
             builder.append(Address.fromKey(params, this, outputScriptType));
@@ -1388,6 +1388,8 @@ public class ECKey implements EncryptableItem {
         if (creationTimeSeconds > 0)
             builder.append("  creationTimeSeconds:").append(creationTimeSeconds).append(" [")
                     .append(Utils.dateTimeFormat(creationTimeSeconds * 1000)).append("]");
+        if (comment != null)
+            builder.append("  (").append(comment).append(")");
         builder.append("\n");
         if (includePrivateKeys) {
             builder.append("  ");
