@@ -3578,4 +3578,16 @@ public class WalletTest extends TestWithWallet {
         assertTrue(wallet.isAddressMine(Address.fromKey(UNITTEST, p2pkhKey)));
         assertEquals(p2pkhKey, wallet.findKeyFromAddress(Address.fromKey(UNITTEST, p2pkhKey)));
     }
+
+    @Test
+    public void roundtripViaMnemonicCode() {
+        Wallet wallet = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2WPKH);
+        List<String> mnemonicCode = wallet.getKeyChainSeed().getMnemonicCode();
+        final DeterministicSeed clonedSeed = new DeterministicSeed(mnemonicCode, null, "",
+                wallet.getEarliestKeyCreationTime());
+        Wallet clone = Wallet.fromSeed(UNITTEST, clonedSeed, Script.ScriptType.P2WPKH);
+        assertEquals(wallet.currentReceiveKey(), clone.currentReceiveKey());
+        assertEquals(wallet.freshReceiveAddress(Script.ScriptType.P2PKH),
+                clone.freshReceiveAddress(Script.ScriptType.P2PKH));
+    }
 }
