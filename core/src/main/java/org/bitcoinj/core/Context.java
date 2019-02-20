@@ -18,7 +18,6 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import javax.annotation.Nullable;
-import org.bitcoinj.core.listeners.BlockChainListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.EvolutionUserManager;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
@@ -399,36 +398,6 @@ public class Context {
         }
     };
 
-    BlockChainListener updateHeadListener = new BlockChainListener () {
-        public void notifyNewBestBlock(StoredBlock block) throws VerificationException
-        {
-
-        }
-
-        public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks,
-                        List<StoredBlock> newBlocks) throws VerificationException{}
-
-        public boolean isTransactionRelevant(Transaction tx) throws ScriptException
-        {
-            return false;
-        }
-
-        public void receiveFromBlock(Transaction tx, StoredBlock block,
-                              BlockChain.NewBlockType blockType,
-                              int relativityOffset) throws VerificationException
-        {
-
-        }
-
-
-
-        public boolean notifyTransactionIsInBlock(Sha256Hash txHash, StoredBlock block,
-                                           BlockChain.NewBlockType blockType,
-                                           int relativityOffset) throws VerificationException
-        {
-            return false;
-        }
-    };
     /**
      * The default fee per 1000 bytes of transaction data to pay when completing transactions. For details, see {@link SendRequest#feePerKb}.
      */
