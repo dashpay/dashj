@@ -19,8 +19,7 @@ package org.bitcoinj.script;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Sha256Hash;
-
-import com.google.common.io.BaseEncoding;
+import org.bitcoinj.core.Utils;
 
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -221,6 +220,4 @@ public class ScriptPattern {
         List<ScriptChunk> chunks = script.chunks;
         return chunks.size() > 0 && chunks.get(0).equalsOpCode(ScriptOpCodes.OP_RETURN);
     }
-
-    private static final BaseEncoding HEX = BaseEncoding.base16().lowerCase();
 }
