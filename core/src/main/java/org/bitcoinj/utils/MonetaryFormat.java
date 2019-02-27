@@ -16,8 +16,11 @@
 
 package org.bitcoinj.utils;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Monetary;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.math.LongMath.checkedMultiply;
+import static com.google.common.math.LongMath.checkedPow;
+import static com.google.common.math.LongMath.divide;
 
 import java.math.RoundingMode;
 import java.text.DecimalFormatSymbols;
@@ -27,9 +30,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.math.LongMath.*;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Monetary;
 
 /**
  * <p>
@@ -58,6 +60,12 @@ public final class MonetaryFormat {
     public static final String CODE_MBTC = "mDASH";
     /** Currency code for base 1/1000000 Bitcoin. */
     public static final String CODE_UBTC = "µDASH";
+    /** Currency symbol for base 1 Bitcoin. */
+    public static final String SYMBOL_BTC = "\u00d0";
+    /** Currency symbol for base 1/1000 Bitcoin. */
+    public static final String SYMBOL_MBTC = "m" + SYMBOL_BTC;
+    /** Currency symbol for base 1/1000000 Bitcoin. */
+    public static final String SYMBOL_UBTC = "µ" + SYMBOL_BTC;
 
     public static final int MAX_DECIMALS = 8;
 
@@ -313,6 +321,10 @@ public final class MonetaryFormat {
     }
 
     public MonetaryFormat() {
+        this(false);
+    }
+
+    public MonetaryFormat(boolean useBitcoinSymbol) {
         // defaults
         this.locale = Locale.US;
         this.negativeSign = '-';
@@ -325,9 +337,9 @@ public final class MonetaryFormat {
         this.shift = 0;
         this.roundingMode = RoundingMode.HALF_UP;
         this.codes = new String[MAX_DECIMALS];
-        this.codes[0] = CODE_BTC;
-        this.codes[3] = CODE_MBTC;
-        this.codes[6] = CODE_UBTC;
+        this.codes[0] = useBitcoinSymbol ? SYMBOL_BTC : CODE_BTC;
+        this.codes[3] = useBitcoinSymbol ? SYMBOL_MBTC : CODE_MBTC;
+        this.codes[6] = useBitcoinSymbol ? SYMBOL_UBTC : CODE_UBTC;
         this.codeSeparator = ' ';
         this.codePrefixed = true;
     }
