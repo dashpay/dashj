@@ -1791,7 +1791,7 @@ public class Peer extends PeerSocketHandler {
             if (!future.isDone()) {
                 long elapsed = Utils.currentTimeMillis() - startTimeMsec;
                 Peer.this.addPingTimeData(elapsed);
-                log.debug("{}: ping time is {} msec", Peer.this.toString(), elapsed);
+                log.debug("{}: ping time is {} ms", Peer.this.toString(), elapsed);
                 future.set(elapsed);
             }
         }
