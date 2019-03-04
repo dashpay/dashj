@@ -46,11 +46,19 @@ public class DevNetParams extends AbstractBitcoinNetParams {
     BigInteger maxUint256 = new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
 
 
+    private static int DEFAULT_PROTOCOL_VERSION = 70211;
+    private int protocolVersion;
+
+
     public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds) {
-        this(devNetName, sporkAddress, defaultPort, dnsSeeds, false);
+        this(devNetName, sporkAddress, defaultPort, dnsSeeds, false, DEFAULT_PROTOCOL_VERSION);
     }
 
     public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsEvolution) {
+        this(devNetName, sporkAddress, defaultPort, dnsSeeds, supportsEvolution, DEFAULT_PROTOCOL_VERSION);
+    }
+
+    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsEvolution, int protocolVersion) {
         super();
         this.devNetName = "devnet-" + devNetName;
         id = ID_DEVNET + "." + devNetName;
@@ -112,6 +120,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
 
         instantSendConfirmationsRequired = 2;
         instantSendKeepLock = 6;
+
+        this.protocolVersion = protocolVersion;
     }
 
     //support more than one DevNet
@@ -312,5 +322,16 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         newTarget = newTarget.divide(BigInteger.valueOf(targetTimespan));
         verifyDifficulty(storedPrev, nextBlock, newTarget);
 
+    }
+
+    @Override
+    public int getProtocolVersionNum(ProtocolVersion version) {
+        switch(version) {
+            case MINIMUM:
+            case CURRENT:
+            case BLOOM_FILTER:
+                return protocolVersion;
+        }
+        return super.getProtocolVersionNum(version);
     }
 }
