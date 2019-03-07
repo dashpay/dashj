@@ -1,11 +1,8 @@
-plugins {
-    id 'java'
-    id 'application'
-    id 'eclipse'
-}
+apply plugin: 'java'
+apply plugin: 'eclipse'
 
 dependencies {
-    implementation project(':core')
+    implementation project(':dashj-core')
     implementation 'com.google.guava:guava:28.2-android'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
     implementation 'org.slf4j:slf4j-jdk14:1.7.30'
