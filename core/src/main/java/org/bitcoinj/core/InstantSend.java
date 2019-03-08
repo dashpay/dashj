@@ -1,6 +1,7 @@
 package org.bitcoinj.core;
 
 import com.google.common.collect.Lists;
+import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,7 @@ public class InstantSend {
     public void setBlockChain(AbstractBlockChain blockChain)
     {
         this.blockChain = blockChain;
+        this.blockChain.addTransactionReceivedListener(transactionReceivedInBlockListener);
     }
     Context context;
 
@@ -775,7 +777,7 @@ public class InstantSend {
                     while(itOutpointLock.hasNext())
                     {
                         TransactionOutPoint outpoint = itOutpointLock.next().getKey();
-                        mapLockedOutpoints.remove(outpoint);
+                        itOutpointLock.remove();
                         mapVotedOutpoints.remove(outpoint);
                     }
                     mapLockRequestAccepted.remove(txHash);
@@ -807,7 +809,7 @@ public class InstantSend {
                 Map.Entry<Sha256Hash, TransactionLockVote> vote = itOrphanVote.next();
                 if (vote.getValue().isTimedOut()) {
                     log.info("instantsend--CInstantSend::CheckAndRemove -- Removing timed out orphan vote: txid="+vote.getValue().getTxHash()+"  masternode="+ vote.getValue().getOutpointMasternode().toStringShort());
-                    mapTxLockVotes.remove(vote.getKey());
+                    //mapTxLockVotes.remove(vote.getKey());
                     itOrphanVote.remove();
                 } else {
                     ;
@@ -1139,5 +1141,21 @@ public class InstantSend {
             return Context.get().sporkManager.isSporkActive(SPORK_16_INSTANTSEND_AUTOLOCKS);
         else return false;
     }
+
+    TransactionReceivedInBlockListener transactionReceivedInBlockListener = new TransactionReceivedInBlockListener() {
+        @Override
+        public void receiveFromBlock(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
+
+            // Call syncTransaction to update lock candidates and votes
+            if(!mapTxLockCandidates.isEmpty() && blockType == AbstractBlockChain.NewBlockType.BEST_CHAIN) {
+                syncTransaction(tx, block);
+            }
+        }
+
+        @Override
+        public boolean notifyTransactionIsInBlock(Sha256Hash txHash, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
+            return false;
+        }
+    };
 }
 
