@@ -108,10 +108,19 @@ public class MasternodeSync {
             this.syncFlags = EnumSet.of(SYNC_DMN_LIST);
         else {
             this.syncFlags = EnumSet.noneOf(SYNC_FLAGS.class);
-            syncFlags.add(SYNC_MASTERNODE_LIST);
-            syncFlags.add(SYNC_GOVERNANCE);
-            syncFlags.add(SYNC_DMN_LIST);
+            //TODO:add other flags here to get other information such as governance messsages, by default
         }
+        reset();
+    }
+
+    public MasternodeSync(Context context, EnumSet<SYNC_FLAGS> syncFlags)
+    {
+        this.context = context;
+        this.mapSeenSyncBudget = new HashMap<Sha256Hash, Integer>();
+        this.mapSeenSyncMNB = new HashMap<Sha256Hash, Integer>();
+        this.mapSeenSyncMNW = new HashMap<Sha256Hash, Integer>();
+        this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
+        this.syncFlags = syncFlags;
         reset();
     }
 
