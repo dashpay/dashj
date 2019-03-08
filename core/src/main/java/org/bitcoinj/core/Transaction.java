@@ -99,6 +99,7 @@ public class Transaction extends ChildMessage {
         TRANSACTION_PROVIDER_UPDATE_REGISTRAR(3),
         TRANSACTION_PROVIDER_UPDATE_REVOKE(4),
         TRANSACTION_COINBASE(5),
+        TRANSACTION_QUORUM_COMMITMENT(6),
         TRANSACTION_SUBTX_REGISTER(8),
         TRANSACTION_SUBTX_TOPUP(9),
         TRANSACTION_SUBTX_RESETKEY(10),
@@ -741,6 +742,11 @@ public class Transaction extends ChildMessage {
                 .append(")  (scriptPubKey ").append(script2).append(")\n");
             return s.toString();
         }
+        if (!requiresInputs()) {
+            // no ins, no outs
+            // TODO print the extra payload?
+            return s.toString();
+        }
         if (!inputs.isEmpty()) {
             for (TransactionInput in : inputs) {
                 s.append("     ");
@@ -1375,7 +1381,7 @@ public class Transaction extends ChildMessage {
      * @throws VerificationException
      */
     public void verify() throws VerificationException {
-        if ((inputs.size() == 0 || outputs.size() == 0) && getType() != Type.TRANSACTION_SUBTX_RESETKEY)
+        if ((inputs.size() == 0 || outputs.size() == 0) && requiresInputs())
             throw new VerificationException.EmptyInputsOrOutputs();
         if (this.getMessageSize() > Block.MAX_BLOCK_SIZE)
             throw new VerificationException.LargerThanMaxBlockSize();
@@ -1554,6 +1560,8 @@ public class Transaction extends ChildMessage {
             case TRANSACTION_COINBASE:
                 extraPayloadObject = new CoinbaseTx(params, this);
                 break;
+            case TRANSACTION_QUORUM_COMMITMENT:
+                break;
             case TRANSACTION_SUBTX_REGISTER:
                 extraPayloadObject = new SubTxRegister(params, this);
                 break;
@@ -1580,5 +1588,15 @@ public class Transaction extends ChildMessage {
         }
 
         return true;
+    }
+
+    public boolean requiresInputs() {
+        switch (getType()) {
+            case TRANSACTION_QUORUM_COMMITMENT:
+            case TRANSACTION_SUBTX_RESETKEY:
+                return false;
+            default:
+                return true;
+        }
     }
 }
