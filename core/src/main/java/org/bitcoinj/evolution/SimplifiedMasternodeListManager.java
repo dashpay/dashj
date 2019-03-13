@@ -26,6 +26,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     AbstractBlockChain blockChain;
 
+    Sha256Hash lastRequestHash = Sha256Hash.ZERO_HASH;
+    int lastRequestCount;
+
     public SimplifiedMasternodeListManager(Context context) {
         super(context);
         tipBlockHash = Sha256Hash.ZERO_HASH;
@@ -108,7 +111,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(isDeterministicMNsSporkActive()) {
                 if (tipBlockHash.equals(Sha256Hash.ZERO_HASH) || tipHeight < blockChain.getBestChainHeight()) {
                     if(Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < 60 * 60)
-                        peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, blockChain.getChainHead().getHeader().getHash()));
+                        requestMNListDiff(peer, blockChain.getChainHead());
                 }
             }
         }
@@ -121,19 +124,45 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public void requestMNListDiff(StoredBlock block) {
-        log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + block.getHeight());
-        context.peerGroup.getDownloadPeer().sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, block.getHeader().getHash()));
-    }
-
-    public void updateMNList() {
-        log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + context.blockChain.getChainHead().getHeight());
         Peer peer = context.peerGroup.getDownloadPeer();
         if(peer == null) {
             List<Peer> peers = context.peerGroup.getConnectedPeers();
             peer = peers.get(new Random().nextInt(peers.size()));
         }
         if(peer != null)
-            peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, context.blockChain.getChainHead().getHeader().getHash()));
+            requestMNListDiff(peer, block);
+    }
+
+    public void requestMNListDiff(Peer peer, StoredBlock block) {
+        Sha256Hash hash = block.getHeader().getHash();
+        log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + block.getHeight());
+
+        //If we are requesting the block we have already, then skip the request
+        if(hash.equals(tipBlockHash) && !hash.equals(Sha256Hash.ZERO_HASH))
+            return;
+
+        if(lastRequestHash.equals(tipBlockHash)) {
+            lastRequestCount++;
+            if(lastRequestCount > 24) {
+                lastRequestCount = 0;
+                tipBlockHash = Sha256Hash.ZERO_HASH;
+                tipHeight = 0;
+                mnList = new SimplifiedMasternodeList(params);
+            }
+            log.info("Requesting the same mnlistdiff " + lastRequestCount + " times");
+            if(lastRequestCount > 5) {
+                log.info("Stopping at 5 times to wait for a reply");
+                return;
+            }
+        } else {
+            lastRequestCount = 0;
+        }
+        peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, hash));
+        lastRequestHash = tipBlockHash;
+    }
+
+    public void updateMNList() {
+        requestMNListDiff(context.blockChain.getChainHead());
     }
 
     @Override
