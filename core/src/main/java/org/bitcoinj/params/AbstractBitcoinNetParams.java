@@ -255,7 +255,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
 
     protected void KimotoGravityWell(StoredBlock storedPrev, Block nextBlock, BlockStore blockStore)
             throws BlockStoreException, VerificationException {
-	/* current difficulty formula, megacoin - kimoto gravity well */
+    /* current difficulty formula, megacoin - kimoto gravity well */
 
         StoredBlock         BlockLastSolved             = storedPrev;
         StoredBlock         BlockReading                = storedPrev;
