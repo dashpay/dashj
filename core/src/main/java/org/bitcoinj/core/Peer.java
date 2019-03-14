@@ -140,6 +140,7 @@ public class Peer extends PeerSocketHandler {
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private final HashSet<TransactionConfidence> pendingTxDownloads = new HashSet<TransactionConfidence>();
     private final HashSet<GovernanceVoteConfidence> pendingVotes = new HashSet<GovernanceVoteConfidence>();
+    private static final int PENDING_TX_DOWNLOADS_LIMIT = 100;
     // The lowest version number we're willing to accept. Lower than this will result in an immediate disconnect.
     private volatile int vMinProtocolVersion;
     // When an API user explicitly requests a block or transaction from a peer, the InventoryItem is put here
@@ -1434,6 +1435,12 @@ public class Peer extends PeerSocketHandler {
                 it.remove();
             } else {
                 log.debug("{}: getdata on tx {}", getAddress(), item.hash);
+                getdata.addTransaction(item.hash);
+                if (pendingTxDownloads.size() > PENDING_TX_DOWNLOADS_LIMIT) {
+                    log.info("{}: Too many pending transactions, disconnecting", this);
+                    close();
+                    return;
+                }
                 getdata.addItem(item);
                 // Register with the garbage collector that we care about the confidence data for a while.
                 pendingTxDownloads.add(conf);
@@ -1461,6 +1468,12 @@ public class Peer extends PeerSocketHandler {
             } else {
                 log.debug("{}: getdata on tx {}", getAddress(), item.hash);
                 getdata.addItem(item);
+                getdata.addTransaction(item.hash);
+                if (pendingTxDownloads.size() > PENDING_TX_DOWNLOADS_LIMIT) {
+                    log.info("{}: Too many pending transactions, disconnecting", this);
+                    close();
+                    return;
+                }
                 // Register with the garbage collector that we care about the confidence data for a while.
                 pendingTxDownloads.add(conf);
             }
