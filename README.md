@@ -20,10 +20,21 @@ The dashj library is a Java implementation of the Dash protocol, which allows it
 To get started, it is best to have the latest JDK and Maven installed. The HEAD of the `master` branch contains the latest development code and various production releases are provided on feature branches.
 
 #### Building from the command line
-
-To perform a full build use
+To initialize the repo after cloning it: 
+```
+git submodule update  --init --recursive
+```
+To perform a full build use (this includes the dashjbls shared library):
 ```
 mvn clean package
+```
+To perform a full build without building the bls shared library and skip the test:
+```
+mvn clean package -Pno-build-bls -DskipTests
+```
+To perform a full build and install it in the local maven repository:
+```
+mvn clean install
 ```
 You can also run
 ```
@@ -36,6 +47,8 @@ The outputs are under the `target` directory.
 #### Building from an IDE
 
 Alternatively, just import the project using your IDE. [IntelliJ](http://www.jetbrains.com/idea/download/) has Maven integration built-in and has a free Community Edition. Simply use `File | Import Project` and locate the `pom.xml` in the root of the cloned project source tree.
+
+The dashjbls library must still be built with `mvn`.
 
 ### Example applications
 
