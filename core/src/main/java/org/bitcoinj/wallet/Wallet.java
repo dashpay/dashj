@@ -4918,9 +4918,6 @@ public class Wallet extends BaseTaggableObject
         try {
             if (!watchedScripts.isEmpty())
                 return true;
-            for (DeterministicKeyChain chain : keyChainGroup.chains)
-                if (chain.getOutputScriptType() == Script.ScriptType.P2WPKH)
-                    return true;
             return false;
         } finally {
             keyChainGroupLock.unlock();
