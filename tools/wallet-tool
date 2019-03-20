@@ -16,4 +16,4 @@
 
 set -e
 args="$@"
-./gradlew -q --no-daemon wallet_tool "-PappArgs=$args"
+./gradlew -q --no-daemon --console=plain wallet_tool "-PappArgs=$args"
