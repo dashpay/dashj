@@ -32,6 +32,7 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.evolution.SubTxTransition;
 import org.bitcoinj.evolution.SubTxRegister;
 import org.bitcoinj.evolution.SubTxResetKey;
 import org.bitcoinj.evolution.SubTxTopup;
@@ -234,6 +235,19 @@ public class SendRequest {
         req.tx.setVersion(3);
         req.tx.setType(Transaction.Type.TRANSACTION_SUBTX_RESETKEY);
         req.tx.setExtraPayload(subTxResetKey);
+        return req;
+    }
+
+    /**
+     * <p>Creates a new SendRequest for a SubTxTransition (State Transition) with credits.</p>
+     * The SubTxTransition payload must already be signed.
+     */
+    public static SendRequest forSubTxTransition(NetworkParameters params, SubTxTransition subTxTransition) {
+        SendRequest req = new SendRequest();
+        req.tx = new Transaction(params);
+        req.tx.setVersion(3);
+        req.tx.setType(Transaction.Type.TRANSACTION_SUBTX_TRANSITION);
+        req.tx.setExtraPayload(subTxTransition);
         return req;
     }
 

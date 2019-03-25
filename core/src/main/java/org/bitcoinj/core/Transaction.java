@@ -1572,7 +1572,9 @@ public class Transaction extends ChildMessage {
                 extraPayloadObject = new SubTxTopup(params, this);
                 break;
             case TRANSACTION_SUBTX_CLOSEACCOUNT:
+                break;
             case TRANSACTION_SUBTX_TRANSITION:
+                extraPayloadObject = new SubTxTransition(params, this);
                 break;
         }
     }
