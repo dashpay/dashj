@@ -136,7 +136,7 @@ public abstract class NetworkParameters {
     protected int[] addrSeeds;
     protected HttpDiscovery.Details[] httpSeeds = {};
     protected Map<Integer, Sha256Hash> checkpoints = new HashMap<>();
-    protected transient MessageSerializer defaultSerializer = null;
+    protected volatile transient MessageSerializer defaultSerializer = null;
 
 
 
