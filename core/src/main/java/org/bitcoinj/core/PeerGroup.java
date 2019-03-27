@@ -557,8 +557,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 discoverySuccess = discoverPeers() > 0;
             }
 
-            long retryTime;
-            PeerAddress addrToTry;
             lock.lock();
             try {
                 if (doDiscovery) {
@@ -582,12 +580,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                         // were given a fixed set of addresses in some test scenario.
                     }
                     return;
-                } else {
-                    do {
-                        addrToTry = inactives.poll();
-                    } while (ipv6Unreachable && addrToTry.getAddr() instanceof Inet6Address);
-                    retryTime = backoffMap.get(addrToTry).getRetryTime();
                 }
+                PeerAddress addrToTry;
+                do {
+                    addrToTry = inactives.poll();
+                } while (ipv6Unreachable && addrToTry.getAddr() instanceof Inet6Address);
+                long retryTime = backoffMap.get(addrToTry).getRetryTime();
                 retryTime = Math.max(retryTime, groupBackoff.getRetryTime());
                 if (retryTime > now) {
                     long delay = retryTime - now;
