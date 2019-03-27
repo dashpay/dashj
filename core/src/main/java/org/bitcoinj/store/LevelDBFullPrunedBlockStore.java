@@ -933,7 +933,25 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
             return false;
         }
         // no index is fine as will find any entry with any index...
-        // TODO should I be checking uncommitted inserts/deletes???
+
+        // first check the uncommitted cache
+        int foundInCache = 0;
+        for(int i = 0; i < numOutputs; ++i) {
+            byte[] key = getTxKey(KeyType.OPENOUT_ALL, hash, i);
+            if (utxoUncommittedDeletedCache.contains(ByteBuffer.wrap(key))) {
+                // has been deleted so return false;
+                foundInCache++;
+            }
+        }
+
+        if(foundInCache == numOutputs) {
+            hasFalse++;
+            if (instrument)
+                endMethod("hasUnspentOutputs");
+            return false;
+        }
+
+        //now check what has been committed
         byte[] key = getTxKey(KeyType.OPENOUT_ALL, hash);
         byte[] subResult = new byte[key.length];
         DBIterator iterator = db.iterator();
