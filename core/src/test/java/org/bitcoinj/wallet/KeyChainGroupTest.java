@@ -661,8 +661,6 @@ public class KeyChainGroupTest {
         group = KeyChainGroup.createBasic(MAINNET);
         final ECKey key = ECKey.fromPrivate(BigInteger.TEN);
         group.importKeys(key);
-        KeyCrypterScrypt scrypt = new KeyCrypterScrypt(2);
-        KeyParameter aesKey = scrypt.deriveKey("password");
-        group.encrypt(scrypt, aesKey);
+        group.encrypt(KEY_CRYPTER, AES_KEY);
     }
 }
