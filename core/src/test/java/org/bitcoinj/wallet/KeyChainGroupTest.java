@@ -655,4 +655,14 @@ public class KeyChainGroupTest {
         group.importKeys(key);
         group.isWatching();
     }
+
+    @Test
+    public void onlyBasicKeyEncryption() {
+        group = KeyChainGroup.createBasic(MAINNET);
+        final ECKey key = ECKey.fromPrivate(BigInteger.TEN);
+        group.importKeys(key);
+        KeyCrypterScrypt scrypt = new KeyCrypterScrypt(2);
+        KeyParameter aesKey = scrypt.deriveKey("password");
+        group.encrypt(scrypt, aesKey);
+    }
 }
