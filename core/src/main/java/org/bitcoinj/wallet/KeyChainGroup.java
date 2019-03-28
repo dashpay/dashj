@@ -658,21 +658,18 @@ public class KeyChainGroup implements KeyBag {
         checkNotNull(keyCrypter);
         checkNotNull(aesKey);
         checkState((chains != null && !chains.isEmpty()) || basic.numKeys() != 0, "can't encrypt entirely empty wallet");
+        // This code must be exception safe.
 
         BasicKeyChain newBasic = basic.toEncrypted(keyCrypter, aesKey);
+        this.basic = newBasic;
         List<DeterministicKeyChain> newChains = new ArrayList<>();
         if (chains != null) {
             for (DeterministicKeyChain chain : chains)
                 newChains.add(chain.toEncrypted(keyCrypter, aesKey));
-        }
-
-        // Code below this point must be exception safe.
-        this.keyCrypter = keyCrypter;
-        this.basic = newBasic;
-        if (chains != null) {
             this.chains.clear();
             this.chains.addAll(newChains);
         }
+        this.keyCrypter = keyCrypter;
     }
 
     /**
