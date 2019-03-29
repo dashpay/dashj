@@ -845,10 +845,6 @@ public class Peer extends PeerSocketHandler {
             TransactionConfidence confidence = tx.getConfidence();
             confidence.setSource(TransactionConfidence.Source.NETWORK);
 
-            //Dash Specific
-            if(context != null && context.instantSend != null) // for unit tests that are not initialized.
-                context.instantSend.syncTransaction(tx, null);
-
             pendingTxDownloads.remove(confidence);
             if (maybeHandleRequestedData(tx)) {
                 return;
@@ -865,8 +861,10 @@ public class Peer extends PeerSocketHandler {
             }
 
             //Dash Specific
-            if(context.instantSend != null)
-                context.instantSend.processTxLockRequest(tx);
+            if(context != null && context.instantSend != null) {
+                if(context.instantSend.processTxLockRequest(tx))
+                    context.instantSend.syncTransaction(tx, null);
+            }
 
             // It's a broadcast transaction. Tell all wallets about this tx so they can check if it's relevant or not.
             for (final Wallet wallet : wallets) {
