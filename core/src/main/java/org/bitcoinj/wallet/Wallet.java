@@ -4401,8 +4401,7 @@ public class Wallet extends BaseTaggableObject
             }
 
             if (req.emptyWallet) {
-                final Coin feePerKb = req.feePerKb == null ? Coin.ZERO : req.feePerKb;
-                if (!adjustOutputDownwardsForFee(req.tx, bestCoinSelection, feePerKb, req.ensureMinRequiredFee, req.useInstantSend))
+                if (!adjustOutputDownwardsForFee(req.tx, bestCoinSelection, req.feePerKb, req.ensureMinRequiredFee, req.useInstantSend))
                     throw new CouldNotAdjustDownwards();
             }
 
