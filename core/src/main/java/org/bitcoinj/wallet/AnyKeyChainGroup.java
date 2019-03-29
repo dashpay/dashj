@@ -685,15 +685,17 @@ public class AnyKeyChainGroup implements IKeyBag {
         // This code must be exception safe.
 
         AnyBasicKeyChain newBasic = basic.toEncrypted(keyCrypter, aesKey);
-        this.basic = newBasic;
         List<AnyDeterministicKeyChain> newChains = new ArrayList<>();
         if (chains != null) {
             for (AnyDeterministicKeyChain chain : chains)
                 newChains.add(chain.toEncrypted(keyCrypter, aesKey));
+        }
+        this.keyCrypter = keyCrypter;
+        this.basic = newBasic;
+        if (chains != null) {
             this.chains.clear();
             this.chains.addAll(newChains);
         }
-        this.keyCrypter = keyCrypter;
     }
 
     /**
