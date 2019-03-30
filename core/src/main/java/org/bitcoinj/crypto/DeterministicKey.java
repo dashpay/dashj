@@ -24,7 +24,6 @@ import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.math.ec.ECPoint;
@@ -34,6 +33,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Objects;
 
 import static org.bitcoinj.core.Utils.HEX;
 import static com.google.common.base.Preconditions.*;
@@ -750,12 +750,12 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         DeterministicKey other = (DeterministicKey) o;
         return super.equals(other)
                 && Arrays.equals(this.chainCode, other.chainCode)
-                && Objects.equal(this.childNumberPath, other.childNumberPath);
+                && Objects.equals(this.childNumberPath, other.childNumberPath);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(super.hashCode(), Arrays.hashCode(chainCode), childNumberPath);
+        return Objects.hash(super.hashCode(), Arrays.hashCode(chainCode), childNumberPath);
     }
 
     @Override

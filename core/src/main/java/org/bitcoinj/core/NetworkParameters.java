@@ -17,8 +17,10 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.VerificationException;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.*;
 import org.bitcoinj.script.*;
@@ -298,7 +300,7 @@ public abstract class NetworkParameters {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(getId());
+        return Objects.hash(getId());
     }
 
     /** Returns the network parameters for the given string ID or NULL if not recognized. */
