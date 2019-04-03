@@ -1204,11 +1204,11 @@ public class Transaction extends ChildMessage {
     }
 
     public void setVersionAndType(int versionShort, int type) {
-        version = versionShort & type << 16;
+        version = versionShort | type << 16;
     }
 
     public void setVersionAndType(int versionShort, Type type) {
-        version = versionShort & type.getValue() << 16;
+        version = versionShort | type.getValue() << 16;
     }
 
     public int getVersionShort() {
