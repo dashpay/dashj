@@ -1,14 +1,15 @@
 plugins {
     id 'java'
+    id 'com.google.protobuf'
+    id 'maven'
+    id 'eclipse'
     id 'maven-publish'
     id 'signing'
     id 'org.jreleaser' version '1.17.0'
+    id 'jacaco'
 }
 
-apply plugin: 'com.google.protobuf'
-apply plugin: 'eclipse'
-apply plugin: 'jacoco'
-// apply plugin:  'com.github.spotbugs'
+// TODO: apply plugin:  'com.github.spotbugs'
 
 version = '22.0.0-SNAPSHOT'
 archivesBaseName = 'dashj-core'
