@@ -102,6 +102,11 @@ public abstract class NetworkParameters {
     protected int DIP0001BlockHeight;
     protected boolean DIP0001ActiveAtTip = false;
 
+    /** Used to check for DIP0003 upgrade and DETERMINISTIC_MNS_ENABLED */
+    protected int DIP0003BlockHeight;
+    protected int deterministicMasternodesEnabledHeight;
+    protected boolean deterministicMasternodesEnabled = false;
+
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
      * by looking at the port number.
@@ -705,5 +710,17 @@ public abstract class NetworkParameters {
 
     public int getInstantSendKeepLock() {
         return instantSendKeepLock;
+    }
+
+    public int getDIP0003BlockHeight() {
+        return DIP0003BlockHeight;
+    }
+
+    public int getDeterministicMasternodesEnabledHeight() {
+        return deterministicMasternodesEnabledHeight;
+    }
+
+    public boolean isDeterministicMasternodesEnabled() {
+        return deterministicMasternodesEnabled;
     }
 }

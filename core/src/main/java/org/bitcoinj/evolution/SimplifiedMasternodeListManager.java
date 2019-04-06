@@ -179,11 +179,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             height = tipHeight;
         }
 
-        return height > getSpork15Value();
+        return height > params.getDeterministicMasternodesEnabledHeight();
     }
 
     public boolean isDeterministicMNsSporkActive() {
-        return isDeterministicMNsSporkActive(-1);
+        return isDeterministicMNsSporkActive(-1) || params.isDeterministicMasternodesEnabled();
     }
 
     public SimplifiedMasternodeList getListAtChainTip() {

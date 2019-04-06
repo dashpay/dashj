@@ -147,6 +147,9 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         instantSendConfirmationsRequired = 2;
         instantSendKeepLock = 6;
 
+        DIP0003BlockHeight = 7000;
+        deterministicMasternodesEnabledHeight = 7300;
+        deterministicMasternodesEnabled = true;
     }
 
     private static TestNet3Params instance;

@@ -420,6 +420,10 @@ public class MainNetParams extends AbstractBitcoinNetParams {
 
         instantSendConfirmationsRequired = 6;
         instantSendKeepLock = 24;
+
+        DIP0003BlockHeight = 1028160;
+        deterministicMasternodesEnabledHeight = 1047200;
+        deterministicMasternodesEnabled = true;
     }
 
     private static MainNetParams instance;
