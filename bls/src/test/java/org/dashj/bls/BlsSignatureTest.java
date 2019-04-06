@@ -185,6 +185,18 @@ public class BlsSignatureTest extends BaseTest {
 
         pkChild.Serialize(buffer1);
         skChild.Serialize(buffer2);
+        //skChild = ExtendedPrivateKey.FromSeed(new byte [0], 0);
+        //skChild.GetPrivateKey().Sign(new byte [0], -);
+    }
+
+    @Test
+    public void voidNullTest() {
+        try {
+            InsecureSignature insecureSignature = InsecureSignature.FromBytes(null);
+            fail();
+        } catch(NullPointerException x) {
+
+        }
     }
 
 }

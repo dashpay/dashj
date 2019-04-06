@@ -26,6 +26,7 @@ public class MessageHashVector extends java.util.AbstractList<byte []> {
   protected transient boolean swigCMemOwn;
 
   protected MessageHashVector(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }

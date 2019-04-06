@@ -19,6 +19,8 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class PrivateKey extends BLSObject {
 
   protected PrivateKey(long cPtr, boolean cMemoryOwn) {
@@ -34,14 +36,20 @@ public class PrivateKey extends BLSObject {
   }
 
   public static PrivateKey FromSeed(byte[] seed, long seedLen) {
+    Preconditions.checkArgument(seed != null);
+    Preconditions.checkArgument(seedLen <= seed.length);
     return new PrivateKey(JNI.PrivateKey_FromSeed(seed, seedLen), true);
   }
 
   public static PrivateKey FromBytes(byte[] bytes, boolean modOrder) {
+    Preconditions.checkArgument(bytes != null);
+    Preconditions.checkArgument(bytes.length == PRIVATE_KEY_SIZE);
     return new PrivateKey(JNI.PrivateKey_FromBytes__SWIG_0(bytes, modOrder), true);
   }
 
   public static PrivateKey FromBytes(byte[] bytes) {
+    Preconditions.checkArgument(bytes != null);
+    Preconditions.checkArgument(bytes.length == PRIVATE_KEY_SIZE);
     return new PrivateKey(JNI.PrivateKey_FromBytes__SWIG_1(bytes), true);
   }
 
@@ -62,6 +70,8 @@ public class PrivateKey extends BLSObject {
   }
 
   public void Serialize(byte[] buffer) {
+    Preconditions.checkNotNull(buffer);
+    Preconditions.checkArgument(buffer.length >= PRIVATE_KEY_SIZE);
     JNI.PrivateKey_Serialize__SWIG_0(cPointer, this, buffer);
   }
 
@@ -70,18 +80,24 @@ public class PrivateKey extends BLSObject {
   }
 
   public InsecureSignature SignInsecure(byte[] msg, long len) {
+    Preconditions.checkNotNull(msg);
+    Preconditions.checkArgument(msg.length == len);
     return new InsecureSignature(JNI.PrivateKey_SignInsecure(cPointer, this, msg, len), true);
   }
 
   public InsecureSignature SignInsecurePrehashed(byte[] hash) {
+    Preconditions.checkNotNull(hash);
     return new InsecureSignature(JNI.PrivateKey_SignInsecurePrehashed(cPointer, this, hash), true);
   }
 
   public Signature Sign(byte[] msg, long len) {
+    Preconditions.checkNotNull(msg);
+    Preconditions.checkArgument(msg.length == len);
     return new Signature(JNI.PrivateKey_Sign(cPointer, this, msg, len), true);
   }
 
   public Signature SignPrehashed(byte[] hash) {
+    Preconditions.checkNotNull(hash);
     return new Signature(JNI.PrivateKey_SignPrehashed(cPointer, this, hash), true);
   }
 

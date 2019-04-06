@@ -19,11 +19,14 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class PublicKeyVector extends java.util.AbstractList<PublicKey> {
   private transient long cPointer;
   protected transient boolean owner;
 
   protected PublicKeyVector(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     owner = cMemoryOwn;
     cPointer = cPtr;
   }
@@ -78,6 +81,7 @@ public class PublicKeyVector extends java.util.AbstractList<PublicKey> {
   }
 
   public void push_back(PublicKey x) {
+    Preconditions.checkNotNull(x);
     JNI.PublicKeyVec_push_back(cPointer, this, PublicKey.getCPtr(x), x);
   }
 
@@ -86,6 +90,7 @@ public class PublicKeyVector extends java.util.AbstractList<PublicKey> {
   }
 
   public PublicKey set(int i, PublicKey VECTOR_VALUE_IN) {
+    Preconditions.checkNotNull(VECTOR_VALUE_IN);
     return new PublicKey(JNI.PublicKeyVec_set(cPointer, this, i, PublicKey.getCPtr(VECTOR_VALUE_IN), VECTOR_VALUE_IN), true);
   }
 

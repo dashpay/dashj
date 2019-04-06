@@ -19,11 +19,14 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class BLS {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected BLS(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }

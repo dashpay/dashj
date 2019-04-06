@@ -19,11 +19,14 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class ExtendedPublicKey {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected ExtendedPublicKey(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
@@ -47,6 +50,8 @@ public class ExtendedPublicKey {
   }
 
   public static ExtendedPublicKey FromBytes(byte[] serialized) {
+    Preconditions.checkArgument(serialized != null);
+    Preconditions.checkArgument(serialized.length == EXTENDED_PUBLIC_KEY_SIZE);
     return new ExtendedPublicKey(JNI.ExtendedPublicKey_FromBytes(serialized), true);
   }
 
@@ -79,6 +84,8 @@ public class ExtendedPublicKey {
   }
 
   public void Serialize(byte[] buffer) {
+    Preconditions.checkNotNull(buffer);
+    Preconditions.checkArgument(buffer.length >= EXTENDED_PUBLIC_KEY_SIZE);
     JNI.ExtendedPublicKey_Serialize__SWIG_0(swigCPtr, this, buffer);
   }
 

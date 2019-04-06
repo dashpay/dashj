@@ -19,11 +19,14 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class BigIntegerVector extends java.util.AbstractList<SWIGTYPE_p_bn_t> {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected BigIntegerVector(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
@@ -82,6 +85,7 @@ public class BigIntegerVector extends java.util.AbstractList<SWIGTYPE_p_bn_t> {
   }
 
   public void push_back(SWIGTYPE_p_bn_t x) {
+    Preconditions.checkNotNull(x);
     JNI.BigIntegerVec_push_back(swigCPtr, this, SWIGTYPE_p_bn_t.getCPtr(x));
   }
 
@@ -91,6 +95,7 @@ public class BigIntegerVector extends java.util.AbstractList<SWIGTYPE_p_bn_t> {
   }
 
   public SWIGTYPE_p_bn_t set(int i, SWIGTYPE_p_bn_t VECTOR_VALUE_IN) {
+    Preconditions.checkNotNull(VECTOR_VALUE_IN);
     long cPtr = JNI.BigIntegerVec_set(swigCPtr, this, i, SWIGTYPE_p_bn_t.getCPtr(VECTOR_VALUE_IN));
     return (cPtr == 0) ? null : new SWIGTYPE_p_bn_t(cPtr, false);
   }

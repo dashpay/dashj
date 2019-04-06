@@ -17,11 +17,14 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public abstract class BLSObject {
     protected transient long cPointer;
     protected transient boolean owner;
 
     protected BLSObject(long cPointer, boolean owner) {
+        Preconditions.checkArgument(cPointer != 0);
         this.cPointer = cPointer;
         this.owner = owner;
     }

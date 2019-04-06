@@ -37,6 +37,7 @@ public class PublicKey extends BLSObject{
   }
 
   public static PublicKey FromBytes(byte[] key) {
+    Preconditions.checkArgument(key != null);
     Preconditions.checkArgument(key.length == PUBLIC_KEY_SIZE);
     return new PublicKey(JNI.PublicKey_FromBytes(key), true);
   }
@@ -58,6 +59,8 @@ public class PublicKey extends BLSObject{
   }
 
   public void Serialize(byte[] buffer) {
+    Preconditions.checkNotNull(buffer);
+    Preconditions.checkArgument(buffer.length >= PUBLIC_KEY_SIZE);
     JNI.PublicKey_Serialize__SWIG_0(cPointer, this, buffer);
   }
 

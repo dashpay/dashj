@@ -19,11 +19,14 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class InsecureSignature {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected InsecureSignature(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
@@ -47,6 +50,8 @@ public class InsecureSignature {
   }
 
   public static InsecureSignature FromBytes(byte [] data) {
+    Preconditions.checkNotNull(data);
+    Preconditions.checkArgument(data.length == SIGNATURE_SIZE);
     return new InsecureSignature(JNI.InsecureSignature_FromBytes(data), true);
   }
 
@@ -63,6 +68,8 @@ public class InsecureSignature {
   }
 
   public boolean Verify(byte [] hash, PublicKey pubKey) {
+    Preconditions.checkNotNull(hash);
+    Preconditions.checkNotNull(pubKey);
     PublicKeyVector pubKeys = new PublicKeyVector();
     pubKeys.push_back(pubKey);
     MessageHashVector hashes = new MessageHashVector();
@@ -79,6 +86,8 @@ public class InsecureSignature {
   }
 
   public void Serialize(byte[] buffer) {
+    Preconditions.checkNotNull(buffer);
+    Preconditions.checkArgument(buffer.length >= SIGNATURE_SIZE);
     JNI.InsecureSignature_Serialize__SWIG_0(swigCPtr, this, buffer);
   }
 
