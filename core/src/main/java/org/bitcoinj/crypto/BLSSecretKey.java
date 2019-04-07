@@ -3,7 +3,6 @@ package org.bitcoinj.crypto;
 import com.google.common.base.Preconditions;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
-import org.dashj.bls.BLS;
 import org.dashj.bls.PrivateKey;
 import org.dashj.bls.PrivateKeyVector;
 
@@ -18,7 +17,7 @@ public class BLSSecretKey extends BLSAbstractObject
         super(BLS_CURVE_SECKEY_SIZE);
     }
 
-    BLSSecretKey(PrivateKey sk) {
+    public BLSSecretKey(PrivateKey sk) {
         super(BLS_CURVE_SECKEY_SIZE);
         valid = true;
         privateKey = sk;
