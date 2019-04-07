@@ -21,6 +21,10 @@ public abstract class SpecialTxPayload extends Message {
         this.version = version;
     }
 
+    SpecialTxPayload(NetworkParameters params, int version) {
+        super(params);
+        this.version = version;
+    }
 
     @Override
     protected void parse() throws ProtocolException {
