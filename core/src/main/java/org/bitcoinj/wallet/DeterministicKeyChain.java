@@ -118,6 +118,37 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED);
     public static final ImmutableList<ChildNumber> BIP44_ACCOUNT_ZERO_PATH_TESTNET = ImmutableList.of(new ChildNumber(44, true),
             ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED);
+
+    // m / 9' / 5' / 3' / 0' - 1000 DASH for masternode
+    public static final ImmutableList<ChildNumber> MASTERNODE_HOLDINGS_PATH = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), ChildNumber.ZERO_HARDENED);
+    public static final ImmutableList<ChildNumber> MASTERNODE_HOLDINGS_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.ONE_HARDENED, new ChildNumber(3, true), ChildNumber.ZERO_HARDENED);
+
+    // m / 9' / 5' / 3' / 1' - Masternode Voting Path
+    public static final ImmutableList<ChildNumber> PROVIDER_VOTING_PATH = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), ChildNumber.ONE_HARDENED);
+    public static final ImmutableList<ChildNumber> PROVIDER_VOTING_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.ONE_HARDENED, new ChildNumber(3, true), ChildNumber.ONE_HARDENED);
+
+    // m / 9' / 5' / 3' / 2' - Masternode Owner Path
+    public static final ImmutableList<ChildNumber> PROVIDER_OWNER_PATH = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), new ChildNumber(2, true));
+    public static final ImmutableList<ChildNumber> PROVIDER_OWNER_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.ONE_HARDENED, new ChildNumber(3, true), new ChildNumber(2, true));
+
+    // m / 9' / 5' / 3' / 3' - Masternode Operator Path
+    public static final ImmutableList<ChildNumber> PROVIDER_OPERATOR_PATH = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), new ChildNumber(3, true));
+    public static final ImmutableList<ChildNumber> PROVIDER_OPERATOR_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.ONE_HARDENED, new ChildNumber(3, true), new ChildNumber(3, true));
+
+    // m / 9' / 5' / 5' / 0' - Blockchain User Path
+    public static final ImmutableList<ChildNumber> BLOCKCHAIN_USER_PATH = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.FIVE_HARDENED, new ChildNumber(5, true), new ChildNumber(0, true));
+    public static final ImmutableList<ChildNumber> BLOCKCHAIN_USER_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.ONE_HARDENED, new ChildNumber(5, true), new ChildNumber(0, true));
+
     public static final ImmutableList<ChildNumber> EXTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ZERO);
     public static final ImmutableList<ChildNumber> INTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ONE);
 
