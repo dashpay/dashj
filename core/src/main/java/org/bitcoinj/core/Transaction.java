@@ -1541,9 +1541,8 @@ public class Transaction extends ChildMessage {
     }
 
     public void setExtraPayload(SpecialTxPayload specialTxPayload) {
-        assert(specialTxPayload.getType() != Type.TRANSACTION_NORMAL);
         setExtraPayload(specialTxPayload.getPayload());
-        setType(specialTxPayload.getType());
+        setVersionAndType(3, specialTxPayload.getType());
         unCache();
     }
 
@@ -1553,9 +1552,16 @@ public class Transaction extends ChildMessage {
             case TRANSACTION_NORMAL:
                 break;
             case TRANSACTION_PROVIDER_REGISTER:
+                extraPayloadObject = new ProviderRegisterTx(params, this);
+                break;
             case TRANSACTION_PROVIDER_UPDATE_REGISTRAR:
+                extraPayloadObject = new ProviderUpdateRegistarTx(params, this);
+                break;
             case TRANSACTION_PROVIDER_UPDATE_REVOKE:
+                extraPayloadObject = new ProviderUpdateRevocationTx(params, this);
+                break;
             case TRANSACTION_PROVIDER_UPDATE_SERVICE:
+                extraPayloadObject = new ProviderUpdateServiceTx(params, this);
                 break;
             case TRANSACTION_COINBASE:
                 extraPayloadObject = new CoinbaseTx(params, this);
@@ -1599,4 +1605,31 @@ public class Transaction extends ChildMessage {
                 return true;
         }
     }
+
+    public Sha256Hash calculateInputsHash() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(36*inputs.size());
+            for (TransactionInput input : inputs) {
+                bos.write(input.getOutpoint().getHash().getReversedBytes());
+                Utils.uint32ToByteStreamLE(input.getOutpoint().getIndex(), bos);
+            }
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+
+        } catch(IOException x){
+            throw new RuntimeException(x.getMessage());
+        }
+    }
+
+    public static Sha256Hash calculateInputsHash(TransactionInput input) {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(32+4);
+            bos.write(input.getOutpoint().getHash().getReversedBytes());
+            Utils.uint32ToByteStreamLE(input.getOutpoint().getIndex(), bos);
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+
+        } catch(IOException x){
+            throw new RuntimeException(x.getMessage());
+        }
+    }
+
 }
