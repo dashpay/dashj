@@ -92,6 +92,8 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
             payee = scriptOperatorPayout.getToAddress(params).toString();
         } catch (AddressFormatException x) {
             //swallow
+        } catch (ScriptException x) {
+            //swallow
         }
         return String.format("ProUpServTx(version=%d, proTxHash=%s, address=%s, operatorPayoutAddress=%s)",
                 version, proTxHash, address, payee);

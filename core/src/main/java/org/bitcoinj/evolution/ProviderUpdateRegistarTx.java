@@ -100,6 +100,8 @@ public class ProviderUpdateRegistarTx extends SpecialTxPayload {
             payee = scriptPayout.getToAddress(params).toString();
         } catch (AddressFormatException x) {
             //swallow
+        } catch (ScriptException x) {
+            //swallow
         }
         return String.format("ProUpRegTx(version=%d, proTxHash=%s, pubkeyOperator=%s, votingAddress=%s, payoutAddress=%s)",
                 version, proTxHash, pubkeyOperator, keyIDVoting, payee);
