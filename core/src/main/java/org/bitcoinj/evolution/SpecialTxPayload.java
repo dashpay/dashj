@@ -12,7 +12,7 @@ public abstract class SpecialTxPayload extends Message {
     int version;
     Transaction parentTransaction;
 
-    SpecialTxPayload(NetworkParameters params, Transaction tx) {
+    public SpecialTxPayload(NetworkParameters params, Transaction tx) {
         super(params, tx.getExtraPayload(), 0);
         this.parentTransaction = tx;
     }
