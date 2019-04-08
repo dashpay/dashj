@@ -811,6 +811,8 @@ public class Transaction extends ChildMessage {
         }
         if (purpose != null)
             s.append("     prps ").append(purpose).append('\n');
+        if (getVersionShort() == 3 && type != Type.TRANSACTION_NORMAL)
+            s.append("  payload ").append(getExtraPayloadObject()).append('\n');
         return s.toString();
     }
 
