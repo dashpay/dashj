@@ -16,6 +16,22 @@ public class ProviderUpdateRevocationTx extends SpecialTxPayload {
     public static final int MESSAGE_SIZE = 164;
     public static final int MESSAGE_SIZE_WITHOUT_SIGNATURE = MESSAGE_SIZE - 96;
 
+    enum Reason {
+        REASON_NOT_SPECIFIED(0),
+        REASON_TERMINATION_OF_SERVICE(1),
+        REASON_COMPROMISED_KEYS(2),
+        REASON_CHANGE_OF_KEYS(3),
+        REASON_LAST(REASON_CHANGE_OF_KEYS.value);
+
+        int value;
+        Reason(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+    }
 
     Sha256Hash proTxHash;
     int reason;
@@ -77,7 +93,6 @@ public class ProviderUpdateRevocationTx extends SpecialTxPayload {
     }
 
     public String toString() {
-        String payee = "unknown";
         return String.format("ProUpRevTx(version=%d, proTxHash=%s, reason=%s)",
                 version, proTxHash, reason);
 

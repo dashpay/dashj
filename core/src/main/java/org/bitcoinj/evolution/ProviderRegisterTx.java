@@ -126,6 +126,8 @@ public class ProviderRegisterTx extends SpecialTxPayload {
             payee = scriptPayout.getToAddress(params).toString();
         } catch (AddressFormatException x) {
             //swallow
+        } catch (ScriptException x) {
+            //swallow
         }
         return String.format("ProRegTx(version=%d, collateralOutpoint=%s, address=%s, operatorReward=%f, ownerAddress=%s, pubKeyOperator=%s, votingAddress=%s, scriptPayout=%s)",
                 version, collateralOutpoint.toStringShort(), address, (double)operatorReward / 100,
