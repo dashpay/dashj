@@ -5394,4 +5394,32 @@ public class Wallet extends BaseTaggableObject
             keyChainGroupLock.unlock();
         }
     }
+
+    AuthenticationKeyChain providerOwnerKeyChain;
+    AuthenticationKeyChain providerVoterKeyChain;
+    AuthenticationKeyChain blockchainUserKeyChain;
+    KeyChainGroup authenticationGroup;
+
+    public void initializeAuthenticationKeyChains(DeterministicSeed seed, KeyCrypter keyCrypter) {
+        boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
+        providerOwnerKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.PROVIDER_OWNER_PATH : DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET);
+        providerVoterKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.PROVIDER_VOTING_PATH : DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET);
+        blockchainUserKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.BLOCKCHAIN_USER_PATH : DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET);
+        authenticationGroup = new KeyChainGroup(getParams());
+        authenticationGroup.addAndActivateHDChain(providerOwnerKeyChain);
+        authenticationGroup.addAndActivateHDChain(providerVoterKeyChain);
+        authenticationGroup.addAndActivateHDChain(blockchainUserKeyChain);
+    }
+
+    public AuthenticationKeyChain getProviderOwnerKeyChain() {
+        return providerOwnerKeyChain;
+    }
+
+    public AuthenticationKeyChain getProviderVoterKeyChain() {
+        return providerVoterKeyChain;
+    }
+
+    public AuthenticationKeyChain getBlockchainUserKeyChain() {
+        return blockchainUserKeyChain;
+    }
 }
