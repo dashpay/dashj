@@ -404,7 +404,7 @@ public class TransactionTest {
 
         Transaction.Type type = Transaction.Type.fromValue(8192);
 
-        assertEquals(null, type);  //type 8192 is invalid
+        assertEquals(Transaction.Type.TRANSACTION_UNKNOWN, type);  //type 8192 is invalid
         assertEquals(Transaction.Type.TRANSACTION_COINBASE, Transaction.Type.fromValue(5));
     }
 }
