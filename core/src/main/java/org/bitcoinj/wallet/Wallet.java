@@ -4623,6 +4623,10 @@ public class Wallet extends BaseTaggableObject
     //region Bloom filtering
 
     private final ArrayList<TransactionOutPoint> bloomOutPoints = Lists.newArrayList();
+    private final ArrayList<Sha256Hash> bloomSpecialTxHashes = Lists.newArrayList();
+    private final ArrayList<Script> bloomSpecialTxScripts = Lists.newArrayList();
+    private final ArrayList<TransactionOutPoint> bloomSpecialTxOutpoints = Lists.newArrayList();
+
     // Used to track whether we must automatically begin/end a filter calculation and calc outpoints/take the locks.
     private final AtomicInteger bloomFilterGuard = new AtomicInteger(0);
 
@@ -4634,6 +4638,7 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         //noinspection FieldAccessNotGuarded
         calcBloomOutPointsLocked();
+        calcBloomSpecialTxPayloads();
     }
 
     private void calcBloomOutPointsLocked() {
@@ -4651,6 +4656,26 @@ public class Wallet extends BaseTaggableObject
                 } catch (ScriptException e) {
                     // If it is ours, we parsed the script correctly, so this shouldn't happen.
                     throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
+
+    private void calcBloomSpecialTxPayloads() {
+        bloomSpecialTxHashes.clear();
+        bloomSpecialTxOutpoints.clear();
+        bloomSpecialTxScripts.clear();
+        Set<Transaction> all = new HashSet<Transaction>();
+        all.addAll(unspent.values());
+        all.addAll(spent.values());
+        all.addAll(pending.values());
+
+        for (Transaction tx : all) {
+            if(tx.getVersionShort() == 3 && tx.getType() != Transaction.Type.TRANSACTION_NORMAL) {
+                if(tx.getType() == Transaction.Type.TRANSACTION_PROVIDER_REGISTER ||
+                    tx.getType() == Transaction.Type.TRANSACTION_SUBTX_REGISTER) {
+                    bloomSpecialTxHashes.add(tx.getHash());
                 }
             }
         }
@@ -4676,9 +4701,15 @@ public class Wallet extends BaseTaggableObject
         try {
             int size = bloomOutPoints.size();
             size += keyChainGroup.getBloomFilterElementCount();
+            if(authenticationGroup != null)
+                size += authenticationGroup.getBloomFilterElementCount(); //authentication keys
             // Some scripts may have more than one bloom element.  That should normally be okay, because under-counting
             // just increases false-positive rate.
             size += watchedScripts.size();
+            // include other special transaction elements
+            size += bloomSpecialTxHashes.size();
+            size += bloomSpecialTxScripts.size();
+            size += bloomSpecialTxOutpoints.size();
             return size;
         } finally {
             endBloomFilterCalculation();
@@ -4743,6 +4774,28 @@ public class Wallet extends BaseTaggableObject
             }
             for (TransactionOutPoint point : bloomOutPoints)
                 filter.insert(point.unsafeBitcoinSerialize());
+
+            // add special transaction information
+            for (TransactionOutPoint point : bloomSpecialTxOutpoints)
+                filter.insert(point.unsafeBitcoinSerialize());
+            for (Sha256Hash hash : bloomSpecialTxHashes)
+                filter.insert(hash.getReversedBytes());
+            for (Script script : bloomSpecialTxScripts) {
+                for (ScriptChunk chunk : script.getChunks()) {
+                    // Only add long (at least 64 bit) data to the bloom filter.
+                    // If any long constants become popular in scripts, we will need logic
+                    // here to exclude them.
+                    if (!chunk.isOpCode() && chunk.data.length >= MINIMUM_BLOOM_DATA_LENGTH) {
+                        filter.insert(chunk.data);
+                    }
+                }
+            }
+
+            // add authentication keys
+            if(authenticationGroup != null) {
+                BloomFilter authFilter = authenticationGroup.getBloomFilter(size, falsePositiveRate, nTweak);
+                filter.merge(authFilter);
+            }
             return filter;
         } finally {
             endBloomFilterCalculation();
