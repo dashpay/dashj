@@ -104,7 +104,8 @@ public class Transaction extends ChildMessage {
         TRANSACTION_SUBTX_TOPUP(9),
         TRANSACTION_SUBTX_RESETKEY(10),
         TRANSACTION_SUBTX_CLOSEACCOUNT(11),
-        TRANSACTION_SUBTX_TRANSITION(12);
+        TRANSACTION_SUBTX_TRANSITION(12),
+        TRANSACTION_UNKNOWN(1024);
 
         int value;
 
@@ -130,7 +131,12 @@ public class Transaction extends ChildMessage {
         }
 
         public static Type fromValue(int value) {
-            return getMappings().get(value);
+            Type type = getMappings().get(value);
+            return type == null ? TRANSACTION_UNKNOWN : type;
+        }
+
+        public boolean isSpecial() {
+            return this != TRANSACTION_UNKNOWN || this != TRANSACTION_NORMAL;
         }
     }
 
@@ -710,7 +716,7 @@ public class Transaction extends ChildMessage {
             s.append("  updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
         if (version != 1)
             s.append("  version ").append(version).append('\n');
-        Type type = (getVersionShort() >= 3) ? getType() : Type.TRANSACTION_NORMAL;
+        Type type = (getVersionShort() == 3) ? getType() : Type.TRANSACTION_NORMAL;
         s.append("  type ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
         if (isTimeLocked()) {
             s.append("  time locked until ");
@@ -744,7 +750,9 @@ public class Transaction extends ChildMessage {
         }
         if (!requiresInputs()) {
             // no ins, no outs
-            // TODO print the extra payload?
+            if (getVersionShort() == 3 && type.isSpecial())
+                s.append("  payload ").append(getExtraPayloadObject()).append('\n');
+
             return s.toString();
         }
         if (!inputs.isEmpty()) {
@@ -811,7 +819,7 @@ public class Transaction extends ChildMessage {
         }
         if (purpose != null)
             s.append("     prps ").append(purpose).append('\n');
-        if (getVersionShort() == 3 && type != Type.TRANSACTION_NORMAL)
+        if (getVersionShort() == 3 && type.isSpecial())
             s.append("  payload ").append(getExtraPayloadObject()).append('\n');
         return s.toString();
     }
