@@ -255,26 +255,32 @@ public class Context {
         governanceManager = null;
     }
 
-    public void initDashSync(String directory)
+    public void initDashSync(final String directory)
     {
-        FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(directory, "mncache.dat", "magicMasternodeCache");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Context.propagate(Context.this);
+                FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(directory, "mncache.dat", "magicMasternodeCache");
 
-        boolean success = mndb.load(masternodeManager);
+                boolean success = mndb.load(masternodeManager);
 
-        FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
+                FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
 
-        success = gmdb.load(governanceManager);
+                success = gmdb.load(governanceManager);
 
-        FlatDB<EvolutionUserManager> evdb = new FlatDB<EvolutionUserManager>(directory, "user.dat", "magicMasternodeCache");
+                FlatDB<EvolutionUserManager> evdb = new FlatDB<EvolutionUserManager>(directory, "user.dat", "magicMasternodeCache");
 
-        success = evdb.load(evoUserManager);
+                success = evdb.load(evoUserManager);
 
-        FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(this, directory, false);
+                FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(Context.this, directory, false);
 
-        success = smnl.load(masternodeListManager);
+                success = smnl.load(masternodeListManager);
 
-        //other functions
-        darkSendPool.startBackgroundProcessing();
+                //other functions
+                darkSendPool.startBackgroundProcessing();
+            }
+        }).start();
 
     }
 
