@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static java.lang.Math.min;
 
 /**
  * A collection of various utility methods that are helpful for working with the Bitcoin protocol.
@@ -74,7 +75,7 @@ public class Utils {
         byte[] bytes = new byte[numBytes];
         byte[] biBytes = b.toByteArray();
         int start = (biBytes.length == numBytes + 1) ? 1 : 0;
-        int length = Math.min(biBytes.length, numBytes);
+        int length = min(biBytes.length, numBytes);
         System.arraycopy(biBytes, start, bytes, numBytes - length, length);
         return bytes;        
     }
@@ -470,7 +471,7 @@ public class Utils {
 
     public static byte[] copyOf(byte[] in, int length) {
         byte[] out = new byte[length];
-        System.arraycopy(in, 0, out, 0, Math.min(length, in.length));
+        System.arraycopy(in, 0, out, 0, min(length, in.length));
         return out;
     }
 
@@ -806,5 +807,16 @@ public class Utils {
             host = in;
         }
         return new org.bitcoinj.utils.Pair<Integer, String>(port, host);
+    }
+
+    public static void booleanArrayListToStream(ArrayList<Boolean> vec, OutputStream stream) throws IOException
+    {
+        int size = vec.size();
+        byte [] vBytes = new byte [((size + 7) / 8)];
+        int ms = min(size, vec.size());
+        for (int p = 0; p < ms; p++)
+            vBytes[p / 8] |= (vec.get(p) ? 1 : 0) << (p % 8);
+        stream.write(VarInt.sizeOf((size + 7) / 8));
+        stream.write(vBytes);
     }
 }
