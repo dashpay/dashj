@@ -104,7 +104,7 @@ public class BLSSignature extends BLSAbstractObject {
         }
     }
 
-    boolean verifyInsecureAggregated(ArrayList<BLSPublicKey> pubKeys, ArrayList<Sha256Hash> hashes)
+    public boolean verifyInsecureAggregated(ArrayList<BLSPublicKey> pubKeys, ArrayList<Sha256Hash> hashes)
     {
         if (!valid) {
             return false;
@@ -131,7 +131,7 @@ public class BLSSignature extends BLSAbstractObject {
         }
     }
 
-    boolean verifySecureAggregated(ArrayList<BLSPublicKey> pks, Sha256Hash hash)
+    public boolean verifySecureAggregated(ArrayList<BLSPublicKey> pks, Sha256Hash hash)
     {
         if (pks.isEmpty()) {
             return false;
