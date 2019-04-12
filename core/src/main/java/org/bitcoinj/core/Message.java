@@ -17,11 +17,13 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -384,5 +386,25 @@ public abstract class Message {
         if (null != params) {
             this.serializer = params.getDefaultSerializer();
         }
+    }
+
+    public ArrayList<Boolean> readBooleanArrayList()
+    {
+        ArrayList<Boolean> vec = Lists.newArrayList();
+        int size = (int)readVarInt();
+
+        byte[] vBytes = readBytes((int)((size + 7) / 8));
+
+
+        for (int p = 0; p < size; p++)
+            vec.add((vBytes[p / 8] & (1 << (p % 8))) != 0);
+        if (vBytes.length * 8 != size) {
+            int rem = vBytes.length * 8 - size;
+            byte m = (byte)~(0xff >> rem);
+            if ((vBytes[vBytes.length - 1] & m) != 0) {
+                throw new ArrayIndexOutOfBoundsException("Out-of-range bits set");
+            }
+        }
+        return vec;
     }
 }
