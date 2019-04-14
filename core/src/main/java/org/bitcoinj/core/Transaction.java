@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.evolution.*;
+import org.bitcoinj.quorums.FinalCommitmentTxPayload;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
@@ -1577,6 +1578,7 @@ public class Transaction extends ChildMessage {
                 extraPayloadObject = new CoinbaseTx(params, this);
                 break;
             case TRANSACTION_QUORUM_COMMITMENT:
+                extraPayloadObject = new FinalCommitmentTxPayload(params, this);
                 break;
             case TRANSACTION_SUBTX_REGISTER:
                 extraPayloadObject = new SubTxRegister(params, this);
