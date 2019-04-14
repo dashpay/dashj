@@ -562,6 +562,8 @@ public class Peer extends PeerSocketHandler {
             context.instantSendManager.processInstantSendLock(this, (InstantSendLock) m);
         } else if(m instanceof ChainLockSignature) {
             context.chainLockHandler.processChainLockSignature(this, (ChainLockSignature)m);
+        } else if (m instanceof SendHeadersMessage) {
+            // We ignore this message, because we don't announce new blocks.
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
