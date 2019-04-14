@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import com.google.common.base.Objects;
 import org.bitcoinj.net.discovery.HttpDiscovery;
 import org.bitcoinj.params.*;
+import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
@@ -722,5 +723,22 @@ public abstract class NetworkParameters {
 
     public boolean isDeterministicMasternodesEnabled() {
         return deterministicMasternodesEnabled;
+    }
+
+    //LLMQ parameters
+    protected HashMap<LLMQParameters.LLMQType, LLMQParameters> llmqs;
+    protected LLMQParameters.LLMQType llmqChainLocks;
+    protected LLMQParameters.LLMQType llmqForInstantSend;
+
+    public HashMap<LLMQParameters.LLMQType, LLMQParameters> getLlmqs() {
+        return llmqs;
+    }
+
+    public LLMQParameters.LLMQType getLlmqChainLocks() {
+        return llmqChainLocks;
+    }
+
+    public LLMQParameters.LLMQType getLlmqForInstantSend() {
+        return llmqForInstantSend;
     }
 }

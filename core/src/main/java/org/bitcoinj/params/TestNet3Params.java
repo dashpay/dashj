@@ -23,7 +23,9 @@ import static org.bitcoinj.core.Utils.HEX;
 
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.HashMap;
 
+import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 
@@ -150,6 +152,14 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         DIP0003BlockHeight = 7000;
         deterministicMasternodesEnabledHeight = 7300;
         deterministicMasternodesEnabled = true;
+
+        //LLMQ parameters
+        llmqs = new HashMap<LLMQParameters.LLMQType, LLMQParameters>(3);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_60, LLMQParameters.llmq400_60);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
+        llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
+        llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
     }
 
     private static TestNet3Params instance;

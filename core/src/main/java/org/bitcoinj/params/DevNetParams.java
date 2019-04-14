@@ -19,6 +19,7 @@ package org.bitcoinj.params;
 
 import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.*;
+import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
@@ -122,6 +123,14 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         instantSendKeepLock = 6;
 
         this.protocolVersion = protocolVersion;
+
+        //LLMQ parameters
+        llmqs = new HashMap<LLMQParameters.LLMQType, LLMQParameters>(3);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_60, LLMQParameters.llmq400_60);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
+        llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
+        llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
     }
 
     //support more than one DevNet
