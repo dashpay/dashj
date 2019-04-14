@@ -17,13 +17,17 @@ public abstract class SpecialTxPayload extends Message {
         this.parentTransaction = tx;
     }
 
-    SpecialTxPayload(int version) {
+    public SpecialTxPayload(int version) {
         this.version = version;
     }
 
     SpecialTxPayload(NetworkParameters params, int version) {
         super(params);
         this.version = version;
+    }
+
+    public SpecialTxPayload(NetworkParameters params, byte [] payload, int offset) {
+        super(params, payload, offset);
     }
 
     @Override
