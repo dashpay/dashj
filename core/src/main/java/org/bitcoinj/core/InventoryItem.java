@@ -48,6 +48,17 @@ public class InventoryItem {
         GovernanceObject,
         GovernanceObjectVote,
         MasternodeVerify,
+        CompactBlock,
+        QuorumFinalCommitment,
+        QuorumDummyCommitment,
+        QuorumContribution,
+        QuorumComplaint,
+        QuorumJustifciation,
+        QuorumPrematureCommitment,
+        QuorumDebugStatus,
+        QuorumRecoveredSignature,
+        ChainLockSignature,
+        InstantSendLock,
         None,
 
 
