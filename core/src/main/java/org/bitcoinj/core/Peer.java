@@ -549,17 +549,6 @@ public class Peer extends PeerSocketHandler {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
         } else if(m instanceof DarkSendQueue) {
             //do nothing
-        } else if(m instanceof MasternodeBroadcast) {
-            if(!context.isLiteMode())
-                context.masternodeManager.processMasternodeBroadcast(this, (MasternodeBroadcast)m);
-
-        }
-        else if(m instanceof MasternodePing) {
-            if(!context.isLiteMode())
-                context.masternodeManager.processMasternodePing(this, (MasternodePing)m);
-        } else if(m instanceof MasternodeVerification) {
-            if(!context.isLiteMode())
-                context.masternodeManager.processMasternodeVerify(this, (MasternodeVerification)m);
         }
         else if(m instanceof SporkMessage)
         {
@@ -1327,10 +1316,7 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> blocks = new LinkedList<InventoryItem>();
         List<InventoryItem> instantxLockRequests = new LinkedList<InventoryItem>();
         List<InventoryItem> instantxLocks = new LinkedList<InventoryItem>();
-        List<InventoryItem> masternodePings = new LinkedList<InventoryItem>();
-        List<InventoryItem> masternodeBroadcasts = new LinkedList<InventoryItem>();
         List<InventoryItem> sporks = new LinkedList<InventoryItem>();
-        List<InventoryItem> masternodeVerifications = new LinkedList<InventoryItem>();
         List<InventoryItem> goveranceObjects = new LinkedList<InventoryItem>();
 
         //InstantSend instantSend = InstantSend.get(blockChain);
@@ -1364,14 +1350,8 @@ public class Peer extends PeerSocketHandler {
                 case BudgetFinalized: break;
                 case BudgetFinalizedVote: break;
                 case MasternodeQuorum: break;
-                case MasternodeAnnounce:
-                    if(context.isLiteMode()) break;
-                    masternodeBroadcasts.add(item);
-                    break;
-                case MasternodePing:
-                    if(context.isLiteMode() || context.masternodeManager.size() == 0) break;
-                    masternodePings.add(item);
-                    break;
+                case MasternodeAnnounce: break;
+                case MasternodePing: break;
                 case DarkSendTransaction:
                     break;
                 case GovernanceObject:
@@ -1380,10 +1360,7 @@ public class Peer extends PeerSocketHandler {
                 case GovernanceObjectVote:
                     goveranceObjects.add(item);
                     break;
-                case MasternodeVerify:
-                    if(context.isLiteMode()) break;
-                    masternodeVerifications.add(item);
-                    break;
+                case MasternodeVerify: break;
                 default:
                     break;
                     //throw new IllegalStateException("Not implemented: " + item.type);
@@ -1484,46 +1461,6 @@ public class Peer extends PeerSocketHandler {
             }
         }
 
-        //masternodepings
-
-        //if(blockChain.getBestChainHeight() > (this.getBestHeight() - 100))
-        if(context.masternodeSync != null && context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST))
-        {
-
-           //if(context.masternodeSync.isSynced()) {
-                it = masternodePings.iterator();
-
-                while (it.hasNext()) {
-                    InventoryItem item = it.next();
-                    if (!alreadyHave(item)) {
-                        //log.info("inv - received MasternodePing :" + item.hash + " new ping");
-                        getdata.addItem(item);
-                    } //else
-                        //log.info("inv - received MasternodePing :" + item.hash + " already seen");
-                }
-           // }
-
-            it = masternodeBroadcasts.iterator();
-
-            while (it.hasNext()) {
-                InventoryItem item = it.next();
-                //log.info("inv - received MasternodeBroadcast :" + item.hash);
-
-                //if(!instantSend.mapTxLockVotes.containsKey(item.hash))
-                //{
-                if(!alreadyHave(item))
-                    getdata.addItem(item);
-                //}
-            }
-
-            it = masternodeVerifications.iterator();
-
-            while (it.hasNext()) {
-                InventoryItem item = it.next();
-                if(!alreadyHave(item))
-                    getdata.addItem(item);
-            }
-        }
         it = sporks.iterator();
 
         while (it.hasNext()) {
