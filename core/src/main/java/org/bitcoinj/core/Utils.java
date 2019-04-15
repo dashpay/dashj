@@ -816,7 +816,7 @@ public class Utils {
         int ms = min(size, vec.size());
         for (int p = 0; p < ms; p++)
             vBytes[p / 8] |= (vec.get(p) ? 1 : 0) << (p % 8);
-        stream.write(VarInt.sizeOf((size + 7) / 8));
+        stream.write(new VarInt(vec.size()).encode());
         stream.write(vBytes);
     }
 }
