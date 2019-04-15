@@ -8,10 +8,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class CoinbaseTx extends SpecialTxPayload {
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
 
     long height;
     Sha256Hash merkleRootMasternodeList;
+    Sha256Hash merkleRootQuorums; //v2
 
     public CoinbaseTx(NetworkParameters params, Transaction tx) {
         super(params, tx);
@@ -22,6 +23,8 @@ public class CoinbaseTx extends SpecialTxPayload {
         super.parse();
         height = readUint32();
         merkleRootMasternodeList = readHash();
+        if(version >= 2)
+            merkleRootQuorums = readHash();
         length = cursor - offset;
     }
 
@@ -30,6 +33,8 @@ public class CoinbaseTx extends SpecialTxPayload {
         super.bitcoinSerializeToStream(stream);
         Utils.uint32ToByteStreamLE(height, stream);
         stream.write(merkleRootMasternodeList.getReversedBytes());
+        if(version >= 2)
+            stream.write(merkleRootQuorums.getReversedBytes());
     }
 
     public int getCurrentVersion() {
@@ -37,8 +42,8 @@ public class CoinbaseTx extends SpecialTxPayload {
     }
 
     public String toString() {
-        return String.format("CoinbaseTx(height=%d, merkleRootMNList=%s)",
-                height, merkleRootMasternodeList.toString());
+        return String.format("CoinbaseTx(height=%d, merkleRootMNList=%s, merkleRootQuorums=%s)",
+                height, merkleRootMasternodeList.toString(), merkleRootQuorums);
     }
 
     @Override
@@ -56,6 +61,7 @@ public class CoinbaseTx extends SpecialTxPayload {
         JSONObject result = new JSONObject();
         result.append("height", height);
         result.append("merkleRootMNList", merkleRootMasternodeList);
+        result.append("merkleRootQuorums", merkleRootQuorums);
         return result;
     }
 
@@ -63,5 +69,9 @@ public class CoinbaseTx extends SpecialTxPayload {
 
     public Sha256Hash getMerkleRootMasternodeList() {
         return merkleRootMasternodeList;
+    }
+
+    public Sha256Hash getMerkleRootQuorums() {
+        return merkleRootQuorums;
     }
 }
