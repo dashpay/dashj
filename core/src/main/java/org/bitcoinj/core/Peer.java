@@ -890,7 +890,8 @@ public class Peer extends PeerSocketHandler {
                                         {
                                             context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
                                         }
-                                        context.evoUserManager.processSpecialTransaction(tx, null);
+                                        if(context.evoUserManager != null)
+                                            context.evoUserManager.processSpecialTransaction(tx, null);
                                     } catch (VerificationException e) {
                                         log.error("{}: Wallet failed to process pending transaction {}", getAddress(), tx.getHash());
                                         log.error("Error was: ", e);
@@ -1427,13 +1428,13 @@ public class Peer extends PeerSocketHandler {
                 it.remove();
             } else {
                 log.debug("{}: getdata on tx {}", getAddress(), item.hash);
-                getdata.addTransaction(item.hash);
+                getdata.addItem(item);
                 if (pendingTxDownloads.size() > PENDING_TX_DOWNLOADS_LIMIT) {
                     log.info("{}: Too many pending transactions, disconnecting", this);
                     close();
                     return;
                 }
-                getdata.addItem(item);
+
                 // Register with the garbage collector that we care about the confidence data for a while.
                 pendingTxDownloads.add(conf);
             }
@@ -1460,7 +1461,6 @@ public class Peer extends PeerSocketHandler {
             } else {
                 log.debug("{}: getdata on tx {}", getAddress(), item.hash);
                 getdata.addItem(item);
-                getdata.addTransaction(item.hash);
                 if (pendingTxDownloads.size() > PENDING_TX_DOWNLOADS_LIMIT) {
                     log.info("{}: Too many pending transactions, disconnecting", this);
                     close();
