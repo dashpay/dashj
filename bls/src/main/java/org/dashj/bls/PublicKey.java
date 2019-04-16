@@ -37,7 +37,7 @@ public class PublicKey extends BLSObject{
   }
 
   public static PublicKey FromBytes(byte[] key) {
-    Preconditions.checkArgument(key != null);
+    Preconditions.checkNotNull(key);
     Preconditions.checkArgument(key.length == PUBLIC_KEY_SIZE);
     return new PublicKey(JNI.PublicKey_FromBytes(key), true);
   }

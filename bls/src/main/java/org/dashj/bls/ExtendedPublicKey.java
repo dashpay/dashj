@@ -50,7 +50,7 @@ public class ExtendedPublicKey {
   }
 
   public static ExtendedPublicKey FromBytes(byte[] serialized) {
-    Preconditions.checkArgument(serialized != null);
+    Preconditions.checkNotNull(serialized);
     Preconditions.checkArgument(serialized.length == EXTENDED_PUBLIC_KEY_SIZE);
     return new ExtendedPublicKey(JNI.ExtendedPublicKey_FromBytes(serialized), true);
   }

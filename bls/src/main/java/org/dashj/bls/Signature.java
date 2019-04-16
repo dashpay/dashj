@@ -36,7 +36,7 @@ public class Signature extends BLSObject {
   }
 
   public static Signature FromBytes(byte [] data) {
-    Preconditions.checkArgument(data != null);
+    Preconditions.checkNotNull(data);
     Preconditions.checkArgument(data.length == SIGNATURE_SIZE);
     return new Signature(JNI.Signature_FromBytes__SWIG_0(data), true);
   }

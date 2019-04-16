@@ -50,13 +50,13 @@ public class ExtendedPrivateKey {
   }
 
   public static ExtendedPrivateKey FromSeed(byte[] seed, long seedLen) {
-    Preconditions.checkArgument(seed != null);
+    Preconditions.checkNotNull(seed);
     Preconditions.checkArgument(seedLen <= seed.length);
     return new ExtendedPrivateKey(JNI.ExtendedPrivateKey_FromSeed(seed, seedLen), true);
   }
 
   public static ExtendedPrivateKey FromBytes(byte[] serialized) {
-    Preconditions.checkArgument(serialized != null);
+    Preconditions.checkNotNull(serialized);
     Preconditions.checkArgument(serialized.length == EXTENDED_PRIVATE_KEY_SIZE);
     return new ExtendedPrivateKey(JNI.ExtendedPrivateKey_FromBytes(serialized), true);
   }

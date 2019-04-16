@@ -36,19 +36,19 @@ public class PrivateKey extends BLSObject {
   }
 
   public static PrivateKey FromSeed(byte[] seed, long seedLen) {
-    Preconditions.checkArgument(seed != null);
+    Preconditions.checkNotNull(seed);
     Preconditions.checkArgument(seedLen <= seed.length);
     return new PrivateKey(JNI.PrivateKey_FromSeed(seed, seedLen), true);
   }
 
   public static PrivateKey FromBytes(byte[] bytes, boolean modOrder) {
-    Preconditions.checkArgument(bytes != null);
+    Preconditions.checkNotNull(bytes);
     Preconditions.checkArgument(bytes.length == PRIVATE_KEY_SIZE);
     return new PrivateKey(JNI.PrivateKey_FromBytes__SWIG_0(bytes, modOrder), true);
   }
 
   public static PrivateKey FromBytes(byte[] bytes) {
-    Preconditions.checkArgument(bytes != null);
+    Preconditions.checkNotNull(bytes);
     Preconditions.checkArgument(bytes.length == PRIVATE_KEY_SIZE);
     return new PrivateKey(JNI.PrivateKey_FromBytes__SWIG_1(bytes), true);
   }
