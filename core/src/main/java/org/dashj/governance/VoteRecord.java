@@ -1,6 +1,6 @@
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 import java.io.IOException;
 import java.io.OutputStream;

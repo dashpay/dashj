@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.*;
+import org.dashj.utils.ListenerRegistration;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.Wallet;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -337,7 +337,7 @@ public class GovernanceVoteConfidence {
     /**
      * The source of a vote tries to identify where it came from originally. For instance, did we download it
      * from the peer to peer network, or make it ourselves, or receive it via Bluetooth, or import it from another app,
-     * and so on. This information is useful for {@link org.bitcoinj.wallet.CoinSelector} implementations to risk analyze
+     * and so on. This information is useful for {@link org.dashj.wallet.CoinSelector} implementations to risk analyze
      * transactions and decide when to spend them.
      */
     public synchronized Source getSource() {
@@ -347,7 +347,7 @@ public class GovernanceVoteConfidence {
     /**
      * The source of a vote tries to identify where it came from originally. For instance, did we download it
      * from the peer to peer network, or make it ourselves, or receive it via Bluetooth, or import it from another app,
-     * and so on. This information is useful for {@link org.bitcoinj.wallet.CoinSelector} implementations to risk analyze
+     * and so on. This information is useful for {@link org.dashj.wallet.CoinSelector} implementations to risk analyze
      * transactions and decide when to spend them.
      */
     public synchronized void setSource(Source source) {

@@ -1,8 +1,8 @@
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Sha256Hash;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.ProtocolException;
+import org.dashj.core.Sha256Hash;
 
 public class BLSId extends BLSAbstractObject {
     public static int BLS_CURVE_ID_SIZE  = 32;

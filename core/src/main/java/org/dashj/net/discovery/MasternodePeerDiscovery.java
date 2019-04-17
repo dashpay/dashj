@@ -1,7 +1,7 @@
-package org.bitcoinj.net.discovery;
+package org.dashj.net.discovery;
 
-import org.bitcoinj.evolution.SimplifiedMasternodeList;
-import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
+import org.dashj.evolution.SimplifiedMasternodeList;
+import org.dashj.evolution.SimplifiedMasternodeListEntry;
 
 import javax.annotation.Nullable;
 import java.net.InetSocketAddress;

@@ -16,12 +16,12 @@ package wallettemplate;
 
 import com.google.common.util.concurrent.*;
 import javafx.scene.input.*;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.params.*;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.DeterministicSeed;
+import org.dashj.core.NetworkParameters;
+import org.dashj.kits.WalletAppKit;
+import org.dashj.params.*;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.DeterministicSeed;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;

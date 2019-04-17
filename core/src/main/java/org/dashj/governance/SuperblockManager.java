@@ -1,12 +1,12 @@
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 
-import static org.bitcoinj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_FUNDING;
+import static org.dashj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_FUNDING;
 
 /**
  * Created by Hash Engineering on 6/6/2018.

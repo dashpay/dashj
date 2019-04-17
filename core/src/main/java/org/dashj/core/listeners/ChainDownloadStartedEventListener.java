@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core.listeners;
+package org.dashj.core.listeners;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 /**
  * <p>Implementors can listen to events like blocks being downloaded/transactions being broadcast/connect/disconnects,

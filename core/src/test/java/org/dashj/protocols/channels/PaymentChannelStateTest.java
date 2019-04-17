@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.testing.TestWithWallet;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.*;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.testing.TestWithWallet;
+import org.dashj.wallet.SendRequest;
+import org.dashj.wallet.Wallet;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -40,9 +40,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static org.bitcoinj.core.Coin.*;
-import static org.bitcoinj.testing.FakeTxBuilder.createFakeTx;
-import static org.bitcoinj.testing.FakeTxBuilder.makeSolvedTestBlock;
+import static org.dashj.core.Coin.*;
+import static org.dashj.testing.FakeTxBuilder.createFakeTx;
+import static org.dashj.testing.FakeTxBuilder.makeSolvedTestBlock;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)

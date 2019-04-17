@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.store;
+package org.dashj.store;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 import java.sql.*;
 import java.util.ArrayList;

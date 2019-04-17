@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
-import org.bitcoinj.core.Utils;
+import org.dashj.core.Utils;
 import com.google.common.primitives.Longs;
 
 import static com.google.common.base.Preconditions.checkArgument;

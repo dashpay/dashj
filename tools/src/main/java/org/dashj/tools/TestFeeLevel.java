@@ -12,16 +12,16 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.tools;
+package org.dashj.tools;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.core.listeners.PeerConnectedEventListener;
-import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.*;
+import org.dashj.core.listeners.PeerConnectedEventListener;
+import org.dashj.core.listeners.PeerDisconnectedEventListener;
+import org.dashj.kits.WalletAppKit;
+import org.dashj.params.MainNetParams;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.wallet.SendRequest;
+import org.dashj.wallet.Wallet;
 
 import java.io.File;
 

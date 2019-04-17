@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.store;
+package org.dashj.store;
 
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.params.UnitTestParams;
+import org.dashj.core.Address;
+import org.dashj.core.ECKey;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.StoredBlock;
+import org.dashj.params.UnitTestParams;
 import org.junit.Before;
 import org.junit.Test;
 

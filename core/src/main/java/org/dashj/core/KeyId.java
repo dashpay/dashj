@@ -1,4 +1,4 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import java.io.IOException;
 import java.io.OutputStream;

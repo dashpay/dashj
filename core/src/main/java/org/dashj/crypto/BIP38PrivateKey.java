@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 import com.google.common.primitives.Bytes;

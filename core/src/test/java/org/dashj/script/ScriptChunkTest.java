@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.script;
+package org.dashj.script;
 
-import static org.bitcoinj.script.ScriptOpCodes.OP_PUSHDATA1;
-import static org.bitcoinj.script.ScriptOpCodes.OP_PUSHDATA2;
-import static org.bitcoinj.script.ScriptOpCodes.OP_PUSHDATA4;
+import static org.dashj.script.ScriptOpCodes.OP_PUSHDATA1;
+import static org.dashj.script.ScriptOpCodes.OP_PUSHDATA2;
+import static org.dashj.script.ScriptOpCodes.OP_PUSHDATA4;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 

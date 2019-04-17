@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.*;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.listeners.KeyChainEventListener;
+import org.dashj.core.*;
+import org.dashj.crypto.*;
+import org.dashj.params.MainNetParams;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.listeners.KeyChainEventListener;
 
 import com.google.common.collect.ImmutableList;
 import org.junit.Before;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
 public class HDDerivationException extends RuntimeException {
     public HDDerivationException(String message) {

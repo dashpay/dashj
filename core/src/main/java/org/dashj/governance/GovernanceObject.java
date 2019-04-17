@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
 import com.google.common.collect.LinkedHashMultimap;
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.Pair;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.*;
+import org.dashj.utils.Pair;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,15 +31,15 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 import org.json.*;
 
-import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
-import static org.bitcoinj.governance.GovernanceException.Type.*;
-import static org.bitcoinj.governance.GovernanceVote.MAX_SUPPORTED_VOTE_SIGNAL;
-import static org.bitcoinj.governance.GovernanceVote.VoteOutcome;
-import static org.bitcoinj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_ABSTAIN;
-import static org.bitcoinj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_NO;
-import static org.bitcoinj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_YES;
-import static org.bitcoinj.governance.GovernanceVote.VoteSignal;
-import static org.bitcoinj.governance.GovernanceVote.VoteSignal.*;
+import static org.dashj.core.SporkManager.SPORK_6_NEW_SIGS;
+import static org.dashj.governance.GovernanceException.Type.*;
+import static org.dashj.governance.GovernanceVote.MAX_SUPPORTED_VOTE_SIGNAL;
+import static org.dashj.governance.GovernanceVote.VoteOutcome;
+import static org.dashj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_ABSTAIN;
+import static org.dashj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_NO;
+import static org.dashj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_YES;
+import static org.dashj.governance.GovernanceVote.VoteSignal;
+import static org.dashj.governance.GovernanceVote.VoteSignal.*;
 
 public class GovernanceObject extends Message implements Serializable {
 

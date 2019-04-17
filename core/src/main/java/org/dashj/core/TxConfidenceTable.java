@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.utils.*;
+import org.dashj.utils.*;
 
 import javax.annotation.*;
 import java.lang.ref.*;
@@ -131,7 +131,7 @@ public class TxConfidenceTable {
 
     /**
      * Called by peers when they see a transaction advertised in an "inv" message. It passes the data on to the relevant
-     * {@link org.bitcoinj.core.TransactionConfidence} object, creating it if needed.
+     * {@link org.dashj.core.TransactionConfidence} object, creating it if needed.
      *
      * @return the number of peers that have now announced this hash (including the caller)
      */

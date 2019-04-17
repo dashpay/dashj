@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.io.ByteStreams;
 
-import org.bitcoinj.core.AbstractBlockChain.NewBlockType;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.TestNet2Params;
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.script.ScriptOpCodes;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.dashj.core.AbstractBlockChain.NewBlockType;
+import org.dashj.params.MainNetParams;
+import org.dashj.params.TestNet2Params;
+import org.dashj.params.TestNet3Params;
+import org.dashj.params.UnitTestParams;
+import org.dashj.script.ScriptOpCodes;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.Wallet.BalanceType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,7 +35,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
-import static org.bitcoinj.core.Utils.HEX;
+import static org.dashj.core.Utils.HEX;
 import static org.junit.Assert.*;
 
 public class BlockTest {

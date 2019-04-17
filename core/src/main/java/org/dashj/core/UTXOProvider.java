@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import java.util.List;
 
@@ -22,7 +22,7 @@ import java.util.List;
  * A UTXOProvider encapsulates functionality for returning unspent transaction outputs,
  * for use by the wallet or other code that crafts spends.
  *
- * <p>A {@link org.bitcoinj.store.FullPrunedBlockStore} is an internal implementation within bitcoinj.</p>
+ * <p>A {@link org.dashj.store.FullPrunedBlockStore} is an internal implementation within bitcoinj.</p>
  */
 public interface UTXOProvider {
 

@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.wallet.AllowUnconfirmedCoinSelector;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.*;
+import org.dashj.crypto.TransactionSignature;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.wallet.AllowUnconfirmedCoinSelector;
+import org.dashj.wallet.SendRequest;
+import org.dashj.wallet.Wallet;
 import org.spongycastle.crypto.params.KeyParameter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -116,7 +116,7 @@ public class PaymentChannelV1ClientState extends PaymentChannelClientState {
      * Creates the initial multisig contract and incomplete refund transaction which can be requested at the appropriate
      * time using {@link PaymentChannelV1ClientState#getIncompleteRefundTransaction} and
      * {@link PaymentChannelV1ClientState#getContract()}. The way the contract is crafted can be adjusted by
-     * overriding {@link PaymentChannelV1ClientState#editContractSendRequest(org.bitcoinj.core.Wallet.SendRequest)}.
+     * overriding {@link PaymentChannelV1ClientState#editContractSendRequest(org.dashj.core.Wallet.SendRequest)}.
      * By default unconfirmed coins are allowed to be used, as for micropayments the risk should be relatively low.
      * @param userKey Key derived from a user password, needed for any signing when the wallet is encrypted.
      *                  The wallet KeyCrypter is assumed.

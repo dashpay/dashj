@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
 import static org.junit.Assert.assertEquals;
 
@@ -24,7 +24,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import org.junit.Test;
-import org.bitcoinj.core.Coin;
+import org.dashj.core.Coin;
 
 public class ExchangeRateTest {
 

@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptChunk;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptChunk;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
@@ -103,7 +103,7 @@ public class BloomFilter extends Message {
      * It should be a random value, however secureness of the random value is of no great consequence.</p>
      * 
      * <p>updateFlag is used to control filter behaviour on the server (remote node) side when it encounters a hit.
-     * See {@link org.bitcoinj.core.BloomFilter.BloomUpdate} for a brief description of each mode. The purpose
+     * See {@link org.dashj.core.BloomFilter.BloomUpdate} for a brief description of each mode. The purpose
      * of this flag is to reduce network round-tripping and avoid over-dirtying the filter for the most common
      * wallet configurations.</p>
      */
@@ -268,7 +268,7 @@ public class BloomFilter extends Message {
     }
 
     /**
-     * Returns true if this filter will match anything. See {@link org.bitcoinj.core.BloomFilter#setMatchAll()}
+     * Returns true if this filter will match anything. See {@link org.dashj.core.BloomFilter#setMatchAll()}
      * for when this can be a useful thing to do.
      */
     public synchronized boolean matchesAll() {

@@ -1,18 +1,18 @@
-package org.bitcoinj.kits;
+package org.dashj.kits;
 
 import com.google.common.collect.ImmutableList;
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.KeyChainGroup;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.Context;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.Utils;
+import org.dashj.crypto.ChildNumber;
+import org.dashj.wallet.DeterministicSeed;
+import org.dashj.wallet.KeyChainGroup;
+import org.dashj.wallet.Wallet;
 
 import java.io.File;
 import java.security.SecureRandom;
 
-import static org.bitcoinj.wallet.DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS;
+import static org.dashj.wallet.DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS;
 
 public class EvolutionWalletAppKit extends WalletAppKit {
 

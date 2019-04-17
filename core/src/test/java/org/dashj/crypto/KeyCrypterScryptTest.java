@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.utils.BriefLogFormatter;
+import org.dashj.core.Utils;
+import org.dashj.utils.BriefLogFormatter;
 import com.google.protobuf.ByteString;
 
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.Protos.ScryptParameters;
+import org.dashj.wallet.Protos;
+import org.dashj.wallet.Protos.ScryptParameters;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;

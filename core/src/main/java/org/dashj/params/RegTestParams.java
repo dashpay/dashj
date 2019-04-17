@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.params;
+package org.dashj.params;
 
-import org.bitcoinj.core.Block;
+import org.dashj.core.Block;
 
 import java.math.BigInteger;
 

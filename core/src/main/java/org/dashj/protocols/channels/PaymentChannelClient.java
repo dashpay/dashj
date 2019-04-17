@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.protocols.channels.PaymentChannelCloseException.CloseReason;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.*;
+import org.dashj.protocols.channels.PaymentChannelCloseException.CloseReason;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.Wallet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
 import net.jcip.annotations.GuardedBy;
-import org.bitcoin.paymentchannel.Protos;
+import org.dash.paymentchannel.Protos;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
 
@@ -214,7 +214,7 @@ public class PaymentChannelClient implements IPaymentChannelClient {
      *                 attempt will be made to resume that channel.
      * @param timeWindow The time in seconds, relative to now, on how long this channel should be kept open. Note that is is
      *                   a proposal to the server. The server may in turn propose something different.
-     *                   See {@link org.bitcoinj.protocols.channels.IPaymentChannelClient.ClientConnection#acceptExpireTime(long)}
+     *                   See {@link org.dashj.protocols.channels.IPaymentChannelClient.ClientConnection#acceptExpireTime(long)}
      * @param userKeySetup Key derived from a user password, used to decrypt myKey, if it is encrypted, during setup.
      * @param conn A callback listener which represents the connection to the server (forwards messages we generate to
      *             the server)
@@ -239,7 +239,7 @@ public class PaymentChannelClient implements IPaymentChannelClient {
      *                 attempt will be made to resume that channel.
      * @param timeWindow The time in seconds, relative to now, on how long this channel should be kept open. Note that is is
      *                   a proposal to the server. The server may in turn propose something different.
-     *                   See {@link org.bitcoinj.protocols.channels.IPaymentChannelClient.ClientConnection#acceptExpireTime(long)}
+     *                   See {@link org.dashj.protocols.channels.IPaymentChannelClient.ClientConnection#acceptExpireTime(long)}
      * @param userKeySetup Key derived from a user password, used to decrypt myKey, if it is encrypted, during setup.
      * @param conn A callback listener which represents the connection to the server (forwards messages we generate to
      *             the server)
@@ -563,7 +563,7 @@ public class PaymentChannelClient implements IPaymentChannelClient {
      * intending to reopen the channel later. There is likely little reason to use this in a stateless protocol.</p>
      *
      * <p>Note that this <b>MUST</b> still be called even after either
-     * {@link ClientConnection#destroyConnection(org.bitcoinj.protocols.channels.PaymentChannelCloseException.CloseReason)} or
+     * {@link ClientConnection#destroyConnection(org.dashj.protocols.channels.PaymentChannelCloseException.CloseReason)} or
      * {@link PaymentChannelClient#settle()} is called, to actually handle the connection close logic.</p>
      */
     @Override

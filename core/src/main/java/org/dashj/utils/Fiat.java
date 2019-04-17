@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 
-import org.bitcoinj.core.Monetary;
+import org.dashj.core.Monetary;
 import com.google.common.base.Objects;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Longs;
 
 /**
- * Represents a monetary fiat value. It was decided to not fold this into {@link org.bitcoinj.core.Coin} because of type
+ * Represents a monetary fiat value. It was decided to not fold this into {@link org.dashj.core.Coin} because of type
  * safety. Fiat values always come with an attached currency code.
  * 
  * This class is immutable.

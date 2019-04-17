@@ -1,14 +1,14 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.script.ScriptChunk;
+import org.dashj.core.*;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.script.ScriptChunk;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static org.bitcoinj.script.ScriptOpCodes.OP_RETURN;
+import static org.dashj.script.ScriptOpCodes.OP_RETURN;
 
 public class SubTxTopup extends SpecialTxPayload {
 

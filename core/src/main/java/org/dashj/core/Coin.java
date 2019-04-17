@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dashj.utils.MonetaryFormat;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Longs;
 

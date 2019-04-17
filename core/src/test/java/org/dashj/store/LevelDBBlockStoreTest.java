@@ -12,10 +12,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.store;
+package org.dashj.store;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.params.*;
+import org.dashj.core.*;
+import org.dashj.params.*;
 import org.junit.*;
 
 import java.io.*;

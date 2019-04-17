@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
 /**
  * <p>An object implementing this interface can be added to a {@link Wallet} and provide arbitrary byte arrays that will

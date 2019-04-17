@@ -1,4 +1,4 @@
-package org.bitcoinj.store;
+package org.dashj.store;
 
 /**
  * Created by Hash Engineering on 2/26/2016.
@@ -7,7 +7,7 @@ package org.bitcoinj.store;
 /** Access to the MN database (mncache.dat)
  */
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

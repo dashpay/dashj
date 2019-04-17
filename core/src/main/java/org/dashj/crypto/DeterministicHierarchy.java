@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;

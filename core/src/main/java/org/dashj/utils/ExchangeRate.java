@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.io.Serializable;
 import java.math.BigInteger;
 
-import org.bitcoinj.core.Coin;
+import org.dashj.core.Coin;
 
 import com.google.common.base.Objects;
 

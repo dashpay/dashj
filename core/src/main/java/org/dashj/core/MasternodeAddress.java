@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.net.InetAddresses;
-import org.bitcoinj.params.MainNetParams;
+import org.dashj.params.MainNetParams;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -28,8 +28,8 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
-import static org.bitcoinj.core.Utils.uint64ToByteStreamLE;
+import static org.dashj.core.Utils.uint32ToByteStreamLE;
+import static org.dashj.core.Utils.uint64ToByteStreamLE;
 
 /**
  * A PeerAddress holds an IP address and port number representing the network location of

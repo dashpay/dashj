@@ -1,7 +1,7 @@
 package org.darkcoinj;
 
-import org.bitcoinj.core.DarkSendQueue;
-import org.bitcoinj.core.Sha256Hash;
+import org.dashj.core.DarkSendQueue;
+import org.dashj.core.Sha256Hash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.jni;
+package org.dashj.jni;
 
-import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.listeners.ScriptsChangeEventListener;
+import org.dashj.script.Script;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.listeners.ScriptsChangeEventListener;
 
 import java.util.List;
 

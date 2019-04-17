@@ -1,11 +1,11 @@
-package org.bitcoinj.masternode.owner;
+package org.dashj.masternode.owner;
 
 import com.google.common.base.Preconditions;
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.utils.Pair;
+import org.dashj.core.Context;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.Utils;
+import org.dashj.params.MainNetParams;
+import org.dashj.utils.Pair;
 
 import java.io.*;
 import java.util.ArrayList;

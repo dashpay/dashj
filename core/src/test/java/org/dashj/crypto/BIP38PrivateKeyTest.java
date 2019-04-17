@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.DumpedPrivateKey;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.crypto.BIP38PrivateKey.BadPassphraseException;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.TestNet3Params;
+import org.dashj.core.DumpedPrivateKey;
+import org.dashj.core.ECKey;
+import org.dashj.crypto.BIP38PrivateKey.BadPassphraseException;
+import org.dashj.params.MainNetParams;
+import org.dashj.params.TestNet3Params;
 import org.junit.Ignore;
 import org.junit.Test;
 

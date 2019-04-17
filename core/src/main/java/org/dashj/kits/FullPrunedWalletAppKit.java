@@ -16,22 +16,22 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.kits;
+package org.dashj.kits;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.bitcoinj.core.*;
-import org.bitcoinj.core.listeners.DownloadProgressTracker;
-import org.bitcoinj.net.discovery.DnsDiscovery;
-import org.bitcoinj.net.discovery.PeerDiscovery;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.protocols.channels.StoredPaymentChannelClientStates;
-import org.bitcoinj.protocols.channels.StoredPaymentChannelServerStates;
-import org.bitcoinj.store.*;
-import org.bitcoinj.wallet.*;
+import org.dashj.core.*;
+import org.dashj.core.listeners.DownloadProgressTracker;
+import org.dashj.net.discovery.DnsDiscovery;
+import org.dashj.net.discovery.PeerDiscovery;
+import org.dashj.params.MainNetParams;
+import org.dashj.protocols.channels.StoredPaymentChannelClientStates;
+import org.dashj.protocols.channels.StoredPaymentChannelServerStates;
+import org.dashj.store.*;
+import org.dashj.wallet.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -165,7 +165,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
 
     /**
      * If you want to learn about the sync process, you can provide a listener here. For instance, a
-     * {@link org.bitcoinj.core.listeners.DownloadProgressTracker} is a good choice. This has no effect unless setBlockingStartup(false) has been called
+     * {@link org.dashj.core.listeners.DownloadProgressTracker} is a good choice. This has no effect unless setBlockingStartup(false) has been called
      * too, due to some missing implementation code.
      */
     public FullPrunedWalletAppKit setDownloadListener(DownloadProgressTracker listener) {

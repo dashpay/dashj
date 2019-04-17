@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.InsufficientMoneyException;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.net.NioClient;
-import org.bitcoinj.net.ProtobufConnection;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.Coin;
+import org.dashj.core.ECKey;
+import org.dashj.core.InsufficientMoneyException;
+import org.dashj.core.Sha256Hash;
+import org.dashj.core.Utils;
+import org.dashj.net.NioClient;
+import org.dashj.net.ProtobufConnection;
+import org.dashj.wallet.Wallet;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 
 import com.google.protobuf.ByteString;
-import org.bitcoin.paymentchannel.Protos;
+import org.dash.paymentchannel.Protos;
 import org.spongycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
@@ -49,7 +49,7 @@ public class PaymentChannelClientConnection {
     /**
      * Attempts to open a new connection to and open a payment channel with the given host and port, blocking until the
      * connection is open. The server is requested to keep the channel open for
-     * {@link org.bitcoinj.protocols.channels.PaymentChannelClient#DEFAULT_TIME_WINDOW}
+     * {@link org.dashj.protocols.channels.PaymentChannelClient#DEFAULT_TIME_WINDOW}
      * seconds. If the server proposes a longer time the channel will be closed.
      *
      * @param server         The host/port pair where the server is listening.
@@ -75,7 +75,7 @@ public class PaymentChannelClientConnection {
     /**
      * Attempts to open a new connection to and open a payment channel with the given host and port, blocking until the
      * connection is open. The server is requested to keep the channel open for
-     * {@link org.bitcoinj.protocols.channels.PaymentChannelClient#DEFAULT_TIME_WINDOW}
+     * {@link org.dashj.protocols.channels.PaymentChannelClient#DEFAULT_TIME_WINDOW}
      * seconds. If the server proposes a longer time the channel will be closed.
      *
      * @param server          The host/port pair where the server is listening.

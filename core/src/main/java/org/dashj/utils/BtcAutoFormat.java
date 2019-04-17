@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
-import static org.bitcoinj.core.Coin.SMALLEST_UNIT_EXPONENT;
+import static org.dashj.core.Coin.SMALLEST_UNIT_EXPONENT;
 import com.google.common.collect.ImmutableList;
 
 import java.math.BigInteger;
@@ -54,7 +54,7 @@ import java.util.Locale;
  * @see          java.text.NumberFormat
  * @see          java.text.DecimalFormat
  * @see          DecimalFormatSymbols
- * @see          org.bitcoinj.core.Coin
+ * @see          org.dashj.core.Coin
  */
 
 public final class BtcAutoFormat extends BtcFormat {

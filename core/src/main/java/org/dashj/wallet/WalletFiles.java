@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.*;
+import org.dashj.core.*;
+import org.dashj.utils.*;
 import org.slf4j.*;
 
 import com.google.common.base.Stopwatch;

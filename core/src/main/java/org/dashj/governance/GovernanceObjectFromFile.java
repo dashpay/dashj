@@ -1,7 +1,7 @@
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ProtocolException;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.ProtocolException;
 
 /**
  * Created by Eric on 6/21/2018.

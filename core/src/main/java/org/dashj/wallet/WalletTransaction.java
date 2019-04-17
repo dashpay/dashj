@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.Transaction;
+import org.dashj.core.Transaction;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Stores data about a transaction that is only relevant to the {@link org.bitcoinj.wallet.Wallet} class.
+ * Stores data about a transaction that is only relevant to the {@link org.dashj.wallet.Wallet} class.
  */
 public class WalletTransaction {
     public enum Pool {

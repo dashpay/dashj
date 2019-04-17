@@ -1,4 +1,4 @@
-package org.bitcoinj.net;
+package org.dashj.net;
 
 /**
  * Created by Hash Engineering on 3/8/2018.

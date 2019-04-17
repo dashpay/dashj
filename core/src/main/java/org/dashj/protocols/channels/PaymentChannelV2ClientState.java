@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.wallet.AllowUnconfirmedCoinSelector;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.*;
+import org.dashj.crypto.TransactionSignature;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.wallet.AllowUnconfirmedCoinSelector;
+import org.dashj.wallet.SendRequest;
+import org.dashj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;

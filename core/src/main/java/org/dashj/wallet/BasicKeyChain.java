@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.BloomFilter;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.crypto.*;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.listeners.KeyChainEventListener;
+import org.dashj.core.BloomFilter;
+import org.dashj.core.ECKey;
+import org.dashj.crypto.*;
+import org.dashj.utils.ListenerRegistration;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.listeners.KeyChainEventListener;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -349,8 +349,8 @@ public class BasicKeyChain implements EncryptableKeyChain {
     /**
      * Returns a new BasicKeyChain that contains all basic, ORIGINAL type keys and also any encrypted keys extracted
      * from the list. Unrecognised key types are ignored.
-     * @throws org.bitcoinj.wallet.UnreadableWalletException.BadPassword if the password doesn't seem to match
-     * @throws org.bitcoinj.wallet.UnreadableWalletException if the data structures are corrupted/inconsistent
+     * @throws org.dashj.wallet.UnreadableWalletException.BadPassword if the password doesn't seem to match
+     * @throws org.dashj.wallet.UnreadableWalletException if the data structures are corrupted/inconsistent
      */
     public static BasicKeyChain fromProtobufEncrypted(List<Protos.Key> keys, KeyCrypter crypter) throws UnreadableWalletException {
         BasicKeyChain chain = new BasicKeyChain(checkNotNull(crypter));
@@ -434,7 +434,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Convenience wrapper around {@link #toEncrypted(org.bitcoinj.crypto.KeyCrypter,
+     * Convenience wrapper around {@link #toEncrypted(org.dashj.crypto.KeyCrypter,
      * org.spongycastle.crypto.params.KeyParameter)} which uses the default Scrypt key derivation algorithm and
      * parameters, derives a key from the given password and returns the created key.
      */
@@ -449,7 +449,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
 
     /**
      * Encrypt the wallet using the KeyCrypter and the AES key. A good default KeyCrypter to use is
-     * {@link org.bitcoinj.crypto.KeyCrypterScrypt}.
+     * {@link org.dashj.crypto.KeyCrypterScrypt}.
      *
      * @param keyCrypter The KeyCrypter that specifies how to encrypt/ decrypt a key
      * @param aesKey AES key to use (normally created using KeyCrypter#deriveKey and cached as it is time consuming

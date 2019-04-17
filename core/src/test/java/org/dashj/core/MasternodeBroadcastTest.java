@@ -1,8 +1,8 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.net.Dos;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.UnitTestParams;
+import org.dashj.net.Dos;
+import org.dashj.params.MainNetParams;
+import org.dashj.params.UnitTestParams;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Ignore;

@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.ECKey;
+import org.dashj.core.ECKey;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;

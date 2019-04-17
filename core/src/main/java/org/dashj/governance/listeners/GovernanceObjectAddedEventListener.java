@@ -1,7 +1,7 @@
-package org.bitcoinj.governance.listeners;
+package org.dashj.governance.listeners;
 
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.governance.GovernanceObject;
+import org.dashj.core.Sha256Hash;
+import org.dashj.governance.GovernanceObject;
 
 public interface GovernanceObjectAddedEventListener {
     void onGovernanceObjectAdded(Sha256Hash nHash, GovernanceObject object);

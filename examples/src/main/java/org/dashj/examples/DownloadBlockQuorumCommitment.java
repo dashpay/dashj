@@ -1,11 +1,11 @@
-package org.bitcoinj.examples;
+package org.dashj.examples;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.net.discovery.DnsDiscovery;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.MemoryBlockStore;
+import org.dashj.core.*;
+import org.dashj.net.discovery.DnsDiscovery;
+import org.dashj.params.MainNetParams;
+import org.dashj.store.BlockStore;
+import org.dashj.store.BlockStoreException;
+import org.dashj.store.MemoryBlockStore;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;

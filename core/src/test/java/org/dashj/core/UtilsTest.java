@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import java.math.BigInteger;
 import java.util.Date;

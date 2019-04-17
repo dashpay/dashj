@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.params;
+package org.dashj.params;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

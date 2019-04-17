@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.crypto.BLSSignature;
-import org.bitcoinj.evolution.SimplifiedMasternodeList;
-import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
-import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.dashj.crypto.BLSSignature;
+import org.dashj.evolution.SimplifiedMasternodeList;
+import org.dashj.evolution.SimplifiedMasternodeListEntry;
+import org.dashj.evolution.SimplifiedMasternodeListManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static org.bitcoinj.core.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
+import static org.dashj.core.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
 
 public class TransactionLockVote extends Message implements Serializable {
 

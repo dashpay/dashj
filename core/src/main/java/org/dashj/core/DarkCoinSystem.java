@@ -1,6 +1,6 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.store.BlockStore;
+import org.dashj.store.BlockStore;
 import org.darkcoinj.DarkSend;
 
 import java.util.ArrayList;

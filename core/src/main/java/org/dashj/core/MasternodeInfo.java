@@ -1,4 +1,4 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import java.util.HashMap;
 import java.util.Map;

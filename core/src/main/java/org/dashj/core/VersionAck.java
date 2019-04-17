@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 /**
  * <p>The verack message, sent by a client accepting the version message they

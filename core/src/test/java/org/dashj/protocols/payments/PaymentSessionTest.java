@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.payments;
+package org.dashj.protocols.payments;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.TrustStoreLoader;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.TestNet3Params;
+import org.dashj.core.*;
+import org.dashj.crypto.TrustStoreLoader;
+import org.dashj.params.MainNetParams;
+import org.dashj.params.TestNet3Params;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
-import org.bitcoin.protocols.payments.Protos;
+import org.dash.protocols.payments.Protos;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -33,7 +33,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 
-import static org.bitcoinj.core.Coin.COIN;
+import static org.dashj.core.Coin.COIN;
 import static org.junit.Assert.*;
 
 public class PaymentSessionTest {

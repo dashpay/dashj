@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.signers;
+package org.dashj.signers;
 
 /**
  * A signer that doesn't have any state to be serialized.

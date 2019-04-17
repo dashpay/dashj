@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
 import com.google.common.collect.*;
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.spongycastle.math.ec.*;
 
 import java.math.*;

@@ -1,13 +1,13 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.net.Dos;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Pair;
-import org.bitcoinj.utils.Threading;
+import org.dashj.net.Dos;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.store.BlockStore;
+import org.dashj.store.BlockStoreException;
+import org.dashj.utils.ListenerRegistration;
+import org.dashj.utils.Pair;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,8 +19,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.Masternode.*;
-import static org.bitcoinj.core.VersionMessage.NODE_NETWORK;
+import static org.dashj.core.Masternode.*;
+import static org.dashj.core.VersionMessage.NODE_NETWORK;
 
 /**
  * Created by Hash Engineering on 2/20/2016.

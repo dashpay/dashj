@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.collect.*;
-import org.bitcoinj.core.listeners.*;
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.testing.FakeTxBuilder;
-import org.bitcoinj.testing.InboundMessageQueuer;
-import org.bitcoinj.testing.TestWithNetworkConnections;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.dashj.core.listeners.*;
+import org.dashj.params.TestNet3Params;
+import org.dashj.testing.FakeTxBuilder;
+import org.dashj.testing.InboundMessageQueuer;
+import org.dashj.testing.TestWithNetworkConnections;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.listeners.WalletCoinsReceivedEventListener;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -53,8 +53,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.bitcoinj.core.Coin.*;
-import static org.bitcoinj.testing.FakeTxBuilder.*;
+import static org.dashj.core.Coin.*;
+import static org.dashj.testing.FakeTxBuilder.*;
 import static org.junit.Assert.*;
 
 @RunWith(value = Parameterized.class)

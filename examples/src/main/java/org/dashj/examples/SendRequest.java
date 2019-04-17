@@ -12,18 +12,18 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.examples;
+package org.dashj.examples;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.dashj.core.*;
+import org.dashj.kits.WalletAppKit;
+import org.dashj.params.TestNet3Params;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.Wallet.BalanceType;
 
 import java.io.File;
 

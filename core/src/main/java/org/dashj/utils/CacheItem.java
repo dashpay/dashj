@@ -1,7 +1,7 @@
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.governance.GovernanceVote;
+import org.dashj.core.*;
+import org.dashj.governance.GovernanceVote;
 
 import java.io.IOException;
 import java.io.OutputStream;

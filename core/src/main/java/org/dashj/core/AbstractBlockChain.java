@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
-import org.bitcoinj.core.listeners.*;
-import org.bitcoinj.store.*;
-import org.bitcoinj.utils.*;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.listeners.*;
+import org.dashj.store.*;
+import org.dashj.utils.*;
+import org.dashj.wallet.Wallet;
 import org.slf4j.*;
 
 import javax.annotation.*;
@@ -44,7 +44,7 @@ import static com.google.common.base.Preconditions.*;
  * <p>An AbstractBlockChain implementation must be connected to a {@link BlockStore} implementation. The chain object
  * by itself doesn't store any data, that's delegated to the store. Which store you use is a decision best made by
  * reading the getting started guide, but briefly, fully validating block chains need fully validating stores. In
- * the lightweight SPV mode, a {@link org.bitcoinj.store.SPVBlockStore} is the right choice.</p>
+ * the lightweight SPV mode, a {@link org.dashj.store.SPVBlockStore} is the right choice.</p>
  *
  * <p>This class implements an abstract class which makes it simple to create a BlockChain that does/doesn't do full
  * verification.  It verifies headers and is implements most of what is required to implement SPV mode, but
@@ -53,7 +53,7 @@ import static com.google.common.base.Preconditions.*;
  * <p>There are two subclasses of AbstractBlockChain that are useful: {@link BlockChain}, which is the simplest
  * class and implements <i>simplified payment verification</i>. This is a lightweight and efficient mode that does
  * not verify the contents of blocks, just their headers. A {@link FullPrunedBlockChain} paired with a
- * {@link org.bitcoinj.store.H2FullPrunedBlockStore} implements full verification, which is equivalent to
+ * {@link org.dashj.store.H2FullPrunedBlockStore} implements full verification, which is equivalent to
  * Bitcoin Core. To learn more about the alternative security models, please consult the articles on the
  * website.</p>
  *

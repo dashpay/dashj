@@ -1,8 +1,8 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.core.listeners.NewBestBlockListener;
-import org.bitcoinj.core.listeners.PeerConnectedEventListener;
+import org.dashj.core.*;
+import org.dashj.core.listeners.NewBestBlockListener;
+import org.dashj.core.listeners.PeerConnectedEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

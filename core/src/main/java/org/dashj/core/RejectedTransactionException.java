@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 /**
  * This exception is used by the TransactionBroadcast class to indicate that a broadcast

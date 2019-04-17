@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.store;
+package org.dashj.store;
 
 /**
  * Thrown when something goes wrong with storing a block. Examples: out of disk space.

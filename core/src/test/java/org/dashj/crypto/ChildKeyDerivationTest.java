@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.params.*;
+import org.dashj.core.*;
+import org.dashj.params.*;
 import org.junit.*;
 import org.spongycastle.crypto.params.*;
 
-import static org.bitcoinj.core.Utils.*;
+import static org.dashj.core.Utils.*;
 import static org.junit.Assert.*;
 
 /**

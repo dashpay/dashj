@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.Transaction.SigHash;
+import org.dashj.core.ECKey;
+import org.dashj.core.Transaction;
+import org.dashj.core.VerificationException;
+import org.dashj.core.Transaction.SigHash;
 import com.google.common.base.Preconditions;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 
 /**
- * A TransactionSignature wraps an {@link org.bitcoinj.core.ECKey.ECDSASignature} and adds methods for handling
+ * A TransactionSignature wraps an {@link org.dashj.core.ECKey.ECDSASignature} and adds methods for handling
  * the additional SIGHASH mode byte that is used.
  */
 public class TransactionSignature extends ECKey.ECDSASignature {

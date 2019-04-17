@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.Utils;
+import org.dashj.core.Utils;
 import com.google.common.collect.Lists;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.bitcoinj.core.Utils.HEX;
+import static org.dashj.core.Utils.HEX;
 import static org.junit.Assert.assertEquals;
 
 public class MnemonicCodeTest {

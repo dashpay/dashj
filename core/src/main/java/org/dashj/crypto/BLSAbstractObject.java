@@ -1,7 +1,7 @@
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
 import com.google.common.base.Preconditions;
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.dashj.bls.BLSObject;
 import org.dashj.bls.JNI;
 

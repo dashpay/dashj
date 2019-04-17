@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.testing.TestWithWallet;
+import org.dashj.core.*;
+import org.dashj.params.UnitTestParams;
+import org.dashj.testing.TestWithWallet;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

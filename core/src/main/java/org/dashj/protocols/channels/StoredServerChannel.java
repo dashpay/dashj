@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.*;
+import org.dashj.wallet.Wallet;
 
 import javax.annotation.Nullable;
 import java.util.Date;
@@ -88,7 +88,7 @@ public class StoredServerChannel {
     }
 
     /**
-     * If a handler is connected, call its {@link org.bitcoinj.protocols.channels.PaymentChannelServer#close()}
+     * If a handler is connected, call its {@link org.dashj.protocols.channels.PaymentChannelServer#close()}
      * method thus disconnecting the TCP connection.
      */
     synchronized void closeConnectedHandler() {

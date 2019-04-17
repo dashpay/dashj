@@ -15,20 +15,20 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.store.MemoryBlockStore;
-import org.bitcoinj.testing.FakeTxBuilder;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletTransaction;
-import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
-import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
-import org.bitcoinj.wallet.listeners.WalletReorganizeEventListener;
+import org.dashj.core.listeners.TransactionConfidenceEventListener;
+import org.dashj.core.TransactionConfidence.ConfidenceType;
+import org.dashj.params.UnitTestParams;
+import org.dashj.store.MemoryBlockStore;
+import org.dashj.testing.FakeTxBuilder;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.WalletTransaction;
+import org.dashj.wallet.listeners.WalletChangeEventListener;
+import org.dashj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.dashj.wallet.listeners.WalletReorganizeEventListener;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -42,7 +42,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.bitcoinj.core.Coin.*;
+import static org.dashj.core.Coin.*;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.*;
 

@@ -1,14 +1,14 @@
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Utils;
+import org.dashj.core.Context;
+import org.dashj.core.Sha256Hash;
+import org.dashj.core.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static org.bitcoinj.governance.GovernanceObject.*;
+import static org.dashj.governance.GovernanceObject.*;
 
 public class GovernanceTriggerManager {
 

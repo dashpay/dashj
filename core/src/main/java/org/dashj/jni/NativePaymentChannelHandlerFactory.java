@@ -12,10 +12,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.jni;
+package org.dashj.jni;
 
-import org.bitcoinj.protocols.channels.PaymentChannelServerListener;
-import org.bitcoinj.protocols.channels.ServerConnectionEventHandler;
+import org.dashj.protocols.channels.PaymentChannelServerListener;
+import org.dashj.protocols.channels.ServerConnectionEventHandler;
 
 import javax.annotation.Nullable;
 import java.net.SocketAddress;

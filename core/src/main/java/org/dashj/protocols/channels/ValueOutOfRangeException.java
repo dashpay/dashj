@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
 /**
  * Used when a given value is either too large too afford or too small for the network to accept.

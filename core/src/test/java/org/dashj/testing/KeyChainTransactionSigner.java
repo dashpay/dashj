@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.testing;
+package org.dashj.testing;
 
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.signers.CustomTransactionSigner;
-import org.bitcoinj.wallet.DeterministicKeyChain;
+import org.dashj.core.Sha256Hash;
+import org.dashj.crypto.ChildNumber;
+import org.dashj.crypto.DeterministicKey;
+import org.dashj.signers.CustomTransactionSigner;
+import org.dashj.wallet.DeterministicKeyChain;
 import com.google.common.collect.ImmutableList;
 
 import java.util.List;

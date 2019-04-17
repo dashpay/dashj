@@ -1,7 +1,7 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.base.Charsets;
-import org.bitcoinj.crypto.KeyCrypterException;
+import org.dashj.crypto.KeyCrypterException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

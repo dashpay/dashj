@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
 import com.google.common.collect.*;
 import com.google.protobuf.*;
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.*;
-import org.bitcoinj.script.*;
-import org.bitcoinj.utils.*;
-import org.bitcoinj.wallet.listeners.KeyChainEventListener;
+import org.dashj.core.*;
+import org.dashj.crypto.*;
+import org.dashj.script.*;
+import org.dashj.utils.*;
+import org.dashj.wallet.listeners.KeyChainEventListener;
 import org.slf4j.*;
 import org.spongycastle.crypto.params.*;
 
@@ -35,7 +35,7 @@ import java.util.concurrent.*;
 import static com.google.common.base.Preconditions.*;
 
 /**
- * <p>A KeyChainGroup is used by the {@link org.bitcoinj.wallet.Wallet} and
+ * <p>A KeyChainGroup is used by the {@link org.dashj.wallet.Wallet} and
  * manages: a {@link BasicKeyChain} object (which will normally be empty), and zero or more
  * {@link DeterministicKeyChain}s. A deterministic key chain will be created lazily/on demand
  * when a fresh or current key is requested, possibly being initialized from the private key bytes of the earliest non
@@ -480,7 +480,7 @@ public class KeyChainGroup implements KeyBag {
     /**
      * Whether the active keychain is married.  A keychain is married when it vends P2SH addresses
      * from multiple keychains in a multisig relationship.
-     * @see org.bitcoinj.wallet.MarriedKeyChain
+     * @see org.dashj.wallet.MarriedKeyChain
      */
     public final boolean isMarried() {
         return !chains.isEmpty() && getActiveKeyChain().isMarried();
@@ -488,9 +488,9 @@ public class KeyChainGroup implements KeyBag {
 
     /**
      * Encrypt the keys in the group using the KeyCrypter and the AES key. A good default KeyCrypter to use is
-     * {@link org.bitcoinj.crypto.KeyCrypterScrypt}.
+     * {@link org.dashj.crypto.KeyCrypterScrypt}.
      *
-     * @throws org.bitcoinj.crypto.KeyCrypterException Thrown if the wallet encryption fails for some reason,
+     * @throws org.dashj.crypto.KeyCrypterException Thrown if the wallet encryption fails for some reason,
      *         leaving the group unchanged.
      * @throws DeterministicUpgradeRequiredException Thrown if there are random keys but no HD chain.
      */
@@ -515,9 +515,9 @@ public class KeyChainGroup implements KeyBag {
 
     /**
      * Decrypt the keys in the group using the previously given key crypter and the AES key. A good default
-     * KeyCrypter to use is {@link org.bitcoinj.crypto.KeyCrypterScrypt}.
+     * KeyCrypter to use is {@link org.dashj.crypto.KeyCrypterScrypt}.
      *
-     * @throws org.bitcoinj.crypto.KeyCrypterException Thrown if the wallet decryption fails for some reason, leaving the group unchanged.
+     * @throws org.dashj.crypto.KeyCrypterException Thrown if the wallet decryption fails for some reason, leaving the group unchanged.
      */
     public void decrypt(KeyParameter aesKey) {
         // This code must be exception safe.

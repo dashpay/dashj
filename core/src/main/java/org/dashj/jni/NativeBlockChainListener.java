@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.jni;
+package org.dashj.jni;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 import java.util.List;
-import org.bitcoinj.core.listeners.NewBestBlockListener;
-import org.bitcoinj.core.listeners.ReorganizeListener;
-import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
+import org.dashj.core.listeners.NewBestBlockListener;
+import org.dashj.core.listeners.ReorganizeListener;
+import org.dashj.core.listeners.TransactionReceivedInBlockListener;
 
 /**
  * An event listener that relays events to a native C++ object. A pointer to that object is stored in

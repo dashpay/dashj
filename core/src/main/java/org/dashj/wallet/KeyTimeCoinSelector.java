@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.script.Script;
+import org.dashj.core.*;
+import org.dashj.script.Script;
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +34,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class KeyTimeCoinSelector implements CoinSelector {
     private static final Logger log = LoggerFactory.getLogger(KeyTimeCoinSelector.class);
 
-    /** A number of inputs chosen to avoid hitting {@link org.bitcoinj.core.Transaction#MAX_STANDARD_TX_SIZE} */
+    /** A number of inputs chosen to avoid hitting {@link org.dashj.core.Transaction#MAX_STANDARD_TX_SIZE} */
     public static final int MAX_SIMULTANEOUS_INPUTS = 600;
 
     private final long unixTimeSeconds;

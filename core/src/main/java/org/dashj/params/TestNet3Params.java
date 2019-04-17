@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.params;
+package org.dashj.params;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
-import static org.bitcoinj.core.Utils.HEX;
+import static org.dashj.core.Utils.HEX;
 
 import java.math.BigInteger;
 import java.util.Date;
 
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
+import org.dashj.store.BlockStore;
+import org.dashj.store.BlockStoreException;
 
 import static com.google.common.base.Preconditions.checkState;
 
