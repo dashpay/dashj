@@ -112,6 +112,9 @@ public class SimplifiedMasternodeListEntry extends ChildMessage {
         return service;
     }
 
+    public KeyId getKeyIdOwner() { return null; }
+
+    //legacy key
     public KeyId getKeyIdOperator() {
         return keyIdOperator;
     }
