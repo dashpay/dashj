@@ -216,7 +216,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     private final PeerListener peerListener = new PeerListener();
 
     private int minBroadcastConnections = 0;
-    private final ScriptsChangeEventListener walletScriptEventListener = new ScriptsChangeEventListener() {
+    private final ScriptsChangeEventListener walletScriptsEventListener = new ScriptsChangeEventListener() {
         @Override public void onScriptsChanged(Wallet wallet, List<Script> scripts, boolean isAddingScripts) {
             recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
         }
@@ -1482,7 +1482,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletCoinsReceivedEventListener);
             wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletCoinsSentEventListener);
             wallet.addKeyChainEventListener(Threading.SAME_THREAD, walletKeyEventListener);
-            wallet.addScriptChangeEventListener(Threading.SAME_THREAD, walletScriptEventListener);
+            wallet.addScriptsChangeEventListener(Threading.SAME_THREAD, walletScriptsEventListener);
             addPeerFilterProvider(wallet);
             for (Peer peer : peers) {
                 peer.addWallet(wallet);
@@ -1555,7 +1555,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         wallet.removeCoinsReceivedEventListener(walletCoinsReceivedEventListener);
         wallet.removeCoinsSentEventListener(walletCoinsSentEventListener);
         wallet.removeKeyChainEventListener(walletKeyEventListener);
-        wallet.removeScriptChangeEventListener(walletScriptEventListener);
+        wallet.removeScriptsChangeEventListener(walletScriptsEventListener);
         wallet.setTransactionBroadcaster(null);
         for (Peer peer : peers) {
             peer.removeWallet(wallet);

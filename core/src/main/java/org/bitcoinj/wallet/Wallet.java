@@ -211,7 +211,7 @@ public class Wallet extends BaseTaggableObject
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<WalletResetEventListener>> resetListeners
         = new CopyOnWriteArrayList<>();
-    private final CopyOnWriteArrayList<ListenerRegistration<ScriptsChangeEventListener>> scriptChangeListeners
+    private final CopyOnWriteArrayList<ListenerRegistration<ScriptsChangeEventListener>> scriptsChangeListeners
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<TransactionConfidenceEventListener>> transactionConfidenceListeners
         = new CopyOnWriteArrayList<>();
@@ -3225,16 +3225,16 @@ public class Wallet extends BaseTaggableObject
      * watched by this wallet change. Runs the listener methods in the user thread.
      */
     public void addScriptsChangeEventListener(ScriptsChangeEventListener listener) {
-        addScriptChangeEventListener(Threading.USER_THREAD, listener);
+        addScriptsChangeEventListener(Threading.USER_THREAD, listener);
     }
 
     /**
      * Adds an event listener object. Methods on this object are called when scripts
      * watched by this wallet change. The listener is executed by the given executor.
      */
-    public void addScriptChangeEventListener(Executor executor, ScriptsChangeEventListener listener) {
+    public void addScriptsChangeEventListener(Executor executor, ScriptsChangeEventListener listener) {
         // This is thread safe, so we don't need to take the lock.
-        scriptChangeListeners.add(new ListenerRegistration<>(listener, executor));
+        scriptsChangeListeners.add(new ListenerRegistration<>(listener, executor));
     }
 
     /**
@@ -3313,8 +3313,8 @@ public class Wallet extends BaseTaggableObject
      * Removes the given event listener object. Returns true if the listener was removed, false if that listener
      * was never added.
      */
-    public boolean removeScriptChangeEventListener(ScriptsChangeEventListener listener) {
-        return ListenerRegistration.removeFromList(listener, scriptChangeListeners);
+    public boolean removeScriptsChangeEventListener(ScriptsChangeEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, scriptsChangeListeners);
     }
 
     /**
@@ -3408,7 +3408,7 @@ public class Wallet extends BaseTaggableObject
     }
 
     protected void queueOnScriptsChanged(final List<Script> scripts, final boolean isAddingScripts) {
-        for (final ListenerRegistration<ScriptsChangeEventListener> registration : scriptChangeListeners) {
+        for (final ListenerRegistration<ScriptsChangeEventListener> registration : scriptsChangeListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
                 public void run() {
