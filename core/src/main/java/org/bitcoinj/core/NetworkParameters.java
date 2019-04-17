@@ -645,7 +645,7 @@ public abstract class NetworkParameters {
         PONG(60001),
         BLOOM_FILTER(MINIMUM.getBitcoinProtocolVersion()),
         DMN_LIST(70213),
-        CURRENT(70213);
+        CURRENT(70214);
 
         private final int bitcoinProtocol;
 
