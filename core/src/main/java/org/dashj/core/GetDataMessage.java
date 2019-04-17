@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 /**
  * <p>Represents the "getdata" P2P network message, which requests the contents of blocks or transactions given their

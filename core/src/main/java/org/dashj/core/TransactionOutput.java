@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.base.Objects;
-import org.bitcoinj.script.*;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.script.*;
+import org.dashj.wallet.Wallet;
 import org.slf4j.*;
 
 import javax.annotation.*;
@@ -223,7 +223,7 @@ public class TransactionOutput extends ChildMessage {
      * so we call them "dust outputs" and they're made non standard. The choice of one third is somewhat arbitrary and
      * may change in future.</p>
      *
-     * <p>You probably should use {@link org.bitcoinj.core.TransactionOutput#getMinNonDustValue()} which uses
+     * <p>You probably should use {@link org.dashj.core.TransactionOutput#getMinNonDustValue()} which uses
      * a safe fee-per-kb by default.</p>
      *
      * @param feePerKb The fee required per kilobyte. Note that this is the same as Bitcoin Core's -minrelaytxfee * 3

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.testing;
+package org.dashj.testing;
 
-import org.bitcoinj.signers.TransactionSigner;
-import org.bitcoinj.wallet.KeyBag;
+import org.dashj.signers.TransactionSigner;
+import org.dashj.wallet.KeyBag;
 
 public class NopTransactionSigner implements TransactionSigner {
     private boolean isReady;

@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.signers;
+package org.dashj.signers;
 
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptChunk;
-import org.bitcoinj.wallet.KeyBag;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.ECKey;
+import org.dashj.core.TransactionInput;
+import org.dashj.crypto.TransactionSignature;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptChunk;
+import org.dashj.wallet.KeyBag;
+import org.dashj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This transaction signer resolves missing signatures in accordance with the given {@link org.bitcoinj.wallet.Wallet.MissingSigsMode}.
+ * This transaction signer resolves missing signatures in accordance with the given {@link org.dashj.wallet.Wallet.MissingSigsMode}.
  * If missingSigsMode is USE_OP_ZERO this signer does nothing assuming missing signatures are already presented in
  * scriptSigs as OP_0.
  * In MissingSigsMode.THROW mode this signer will throw an exception. It would be MissingSignatureException

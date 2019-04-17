@@ -12,22 +12,22 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.payments;
+package org.dashj.protocols.payments;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.TrustStoreLoader;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.protocols.payments.PaymentProtocol.PkiVerificationData;
-import org.bitcoinj.uri.BitcoinURI;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.SendRequest;
+import org.dashj.core.*;
+import org.dashj.crypto.TrustStoreLoader;
+import org.dashj.params.MainNetParams;
+import org.dashj.protocols.payments.PaymentProtocol.PkiVerificationData;
+import org.dashj.uri.BitcoinURI;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.SendRequest;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import org.bitcoin.protocols.payments.Protos;
+import org.dash.protocols.payments.Protos;
 
 import javax.annotation.Nullable;
 

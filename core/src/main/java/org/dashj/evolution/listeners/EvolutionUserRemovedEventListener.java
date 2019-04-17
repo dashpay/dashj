@@ -1,6 +1,6 @@
-package org.bitcoinj.evolution.listeners;
+package org.dashj.evolution.listeners;
 
-import org.bitcoinj.evolution.EvolutionUser;
+import org.dashj.evolution.EvolutionUser;
 
 public interface EvolutionUserRemovedEventListener {
 

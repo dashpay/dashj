@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.script.Script;
+import org.dashj.core.ECKey;
+import org.dashj.script.Script;
 
 import java.util.ArrayList;
 import java.util.Collections;

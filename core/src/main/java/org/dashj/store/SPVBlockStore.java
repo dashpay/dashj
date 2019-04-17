@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.store;
+package org.dashj.store;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.*;
+import org.dashj.core.*;
+import org.dashj.utils.*;
 import org.slf4j.*;
 
 import javax.annotation.*;

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.WalletTransaction;
+import org.dashj.script.Script;
+import org.dashj.wallet.WalletTransaction;
 
 import java.util.Map;
 
 /**
- * This interface is used to abstract the {@link org.bitcoinj.wallet.Wallet} and the {@link org.bitcoinj.core.Transaction}
+ * This interface is used to abstract the {@link org.dashj.wallet.Wallet} and the {@link org.dashj.core.Transaction}
  */
 public interface TransactionBag {
     /** Returns true if this wallet contains a public key which hashes to the given hash. */

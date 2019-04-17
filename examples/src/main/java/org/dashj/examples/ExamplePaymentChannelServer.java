@@ -15,20 +15,20 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.examples;
+package org.dashj.examples;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.protocols.channels.*;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.WalletExtension;
+import org.dashj.core.Coin;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.Sha256Hash;
+import org.dashj.core.VerificationException;
+import org.dashj.kits.WalletAppKit;
+import org.dashj.params.RegTestParams;
+import org.dashj.protocols.channels.*;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.wallet.WalletExtension;
 
 import com.google.common.collect.ImmutableList;
 

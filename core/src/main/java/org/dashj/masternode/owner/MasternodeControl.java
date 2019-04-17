@@ -1,15 +1,15 @@
-package org.bitcoinj.masternode.owner;
+package org.dashj.masternode.owner;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.governance.GovernanceException;
-import org.bitcoinj.governance.GovernanceVote;
-import org.bitcoinj.governance.GovernanceVoteBroadcast;
-import org.bitcoinj.governance.GovernanceVoting;
+import org.dashj.core.*;
+import org.dashj.governance.GovernanceException;
+import org.dashj.governance.GovernanceVote;
+import org.dashj.governance.GovernanceVoteBroadcast;
+import org.dashj.governance.GovernanceVoting;
 
 import java.io.File;
 
-import static org.bitcoinj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_NONE;
-import static org.bitcoinj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_NONE;
+import static org.dashj.governance.GovernanceVote.VoteOutcome.VOTE_OUTCOME_NONE;
+import static org.dashj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_NONE;
 
 /**
  * Created by Eric on 7/8/2018.

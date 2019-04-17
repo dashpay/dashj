@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.jni;
+package org.dashj.jni;
 
 import com.google.common.util.concurrent.FutureCallback;
 

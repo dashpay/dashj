@@ -1,6 +1,6 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.json.JSONObject;
 
 import java.io.IOException;

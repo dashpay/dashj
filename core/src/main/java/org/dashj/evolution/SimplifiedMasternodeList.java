@@ -1,14 +1,14 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
 import com.google.common.base.Preconditions;
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.Pair;
+import org.dashj.core.*;
+import org.dashj.utils.Pair;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
 
-import static org.bitcoinj.core.Sha256Hash.hashTwice;
+import static org.dashj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedMasternodeList extends Message {
 

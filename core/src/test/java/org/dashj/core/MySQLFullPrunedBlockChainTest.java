@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.FullPrunedBlockStore;
-import org.bitcoinj.store.MySQLFullPrunedBlockStore;
+import org.dashj.store.BlockStoreException;
+import org.dashj.store.FullPrunedBlockStore;
+import org.dashj.store.MySQLFullPrunedBlockStore;
 import org.junit.After;
 import org.junit.Ignore;
 

@@ -17,8 +17,8 @@
 package com.hashengineering.crypto;
 
 import com.google.common.io.ByteStreams;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Utils;
+import org.dashj.core.Sha256Hash;
+import org.dashj.core.Utils;
 import org.spongycastle.util.encoders.Hex;
 
 import java.io.File;

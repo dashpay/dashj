@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.testing;
+package org.dashj.testing;
 
-import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
-import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
-import org.bitcoinj.core.*;
-import org.bitcoinj.net.*;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.MemoryBlockStore;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.listeners.PeerDisconnectedEventListener;
+import org.dashj.core.listeners.PreMessageReceivedEventListener;
+import org.dashj.core.*;
+import org.dashj.net.*;
+import org.dashj.params.UnitTestParams;
+import org.dashj.store.BlockStore;
+import org.dashj.store.MemoryBlockStore;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.Wallet;
 
 import com.google.common.util.concurrent.SettableFuture;
 

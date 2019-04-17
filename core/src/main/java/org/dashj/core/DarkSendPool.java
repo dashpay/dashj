@@ -1,8 +1,8 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.script.Script;
-import org.bitcoinj.utils.ContextPropagatingThreadFactory;
-import org.bitcoinj.utils.Threading;
+import org.dashj.script.Script;
+import org.dashj.utils.ContextPropagatingThreadFactory;
+import org.dashj.utils.Threading;
 import org.darkcoinj.DarkSendEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +11,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.MasternodeManager.MASTERNODES_DUMP_SECONDS;
+import static org.dashj.core.MasternodeManager.MASTERNODES_DUMP_SECONDS;
 
 /**
  * Created by Eric on 2/8/2015.

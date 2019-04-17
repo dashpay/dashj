@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.net.AbstractTimeoutHandler;
-import org.bitcoinj.net.MessageWriteTarget;
-import org.bitcoinj.net.NioClient;
-import org.bitcoinj.net.NioClientManager;
-import org.bitcoinj.net.StreamConnection;
-import org.bitcoinj.utils.Threading;
+import org.dashj.net.AbstractTimeoutHandler;
+import org.dashj.net.MessageWriteTarget;
+import org.dashj.net.NioClient;
+import org.dashj.net.NioClientManager;
+import org.dashj.net.StreamConnection;
+import org.dashj.utils.Threading;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +39,7 @@ import static com.google.common.base.Preconditions.*;
 
 /**
  * Handles high-level message (de)serialization for peers, acting as the bridge between the
- * {@code org.bitcoinj.net} classes and {@link Peer}.
+ * {@code org.dashj.net} classes and {@link Peer}.
  */
 public abstract class PeerSocketHandler extends AbstractTimeoutHandler implements StreamConnection {
     private static final Logger log = LoggerFactory.getLogger(PeerSocketHandler.class);

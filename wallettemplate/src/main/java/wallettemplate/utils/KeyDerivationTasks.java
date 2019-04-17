@@ -14,7 +14,7 @@
 
 package wallettemplate.utils;
 
-import org.bitcoinj.crypto.KeyCrypterScrypt;
+import org.dashj.crypto.KeyCrypterScrypt;
 import com.google.common.util.concurrent.Uninterruptibles;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.concurrent.Task;

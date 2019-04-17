@@ -12,18 +12,18 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.TransactionBroadcaster;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.Coin;
+import org.dashj.core.Sha256Hash;
+import org.dashj.core.TransactionBroadcaster;
+import org.dashj.wallet.Wallet;
 
 import com.google.common.base.Objects;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
-import org.bitcoin.paymentchannel.Protos;
+import org.dash.paymentchannel.Protos;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.BlockingQueue;

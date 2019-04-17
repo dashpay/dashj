@@ -15,25 +15,25 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.examples;
+package org.dashj.examples;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.kits.LevelDBWalletAppKit;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.store.FlatDB;
-import org.bitcoinj.store.MasternodeDB;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.dashj.core.*;
+import org.dashj.crypto.KeyCrypterException;
+import org.dashj.kits.LevelDBWalletAppKit;
+import org.dashj.kits.WalletAppKit;
+import org.dashj.params.MainNetParams;
+import org.dashj.params.RegTestParams;
+import org.dashj.params.TestNet3Params;
+import org.dashj.store.FlatDB;
+import org.dashj.store.MasternodeDB;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.listeners.WalletCoinsReceivedEventListener;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.bitcoinj.utils.Pair;
+import org.dashj.utils.Pair;
 
 import java.io.File;
 import java.util.ArrayList;

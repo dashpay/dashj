@@ -1,11 +1,11 @@
-package org.bitcoinj.kits;
+package org.dashj.kits;
 
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.LevelDBBlockStore;
-import org.bitcoinj.store.SPVBlockStore;
+import org.dashj.core.Context;
+import org.dashj.core.NetworkParameters;
+import org.dashj.store.BlockStore;
+import org.dashj.store.BlockStoreException;
+import org.dashj.store.LevelDBBlockStore;
+import org.dashj.store.SPVBlockStore;
 
 import java.io.File;
 

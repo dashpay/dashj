@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.params.MainNetParams;
+import org.dashj.params.MainNetParams;
 import com.google.common.base.Objects;
 import com.google.common.net.InetAddresses;
 
@@ -28,8 +28,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
-import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
-import static org.bitcoinj.core.Utils.uint64ToByteStreamLE;
+import static org.dashj.core.Utils.uint32ToByteStreamLE;
+import static org.dashj.core.Utils.uint64ToByteStreamLE;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**

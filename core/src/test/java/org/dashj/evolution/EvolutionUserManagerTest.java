@@ -1,8 +1,8 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.script.ScriptBuilder;
+import org.dashj.core.*;
+import org.dashj.params.UnitTestParams;
+import org.dashj.script.ScriptBuilder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -12,8 +12,8 @@ import java.io.IOException;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.fail;
-import static org.bitcoinj.core.Utils.HEX;
-import static org.bitcoinj.script.ScriptOpCodes.OP_RETURN;
+import static org.dashj.core.Utils.HEX;
+import static org.dashj.script.ScriptOpCodes.OP_RETURN;
 import static org.junit.Assert.assertArrayEquals;
 
 public class EvolutionUserManagerTest {

@@ -1,4 +1,4 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
+import static org.dashj.core.SporkManager.SPORK_6_NEW_SIGS;
 
 /**
  * Created by Hash Engineering on 2/8/2015.

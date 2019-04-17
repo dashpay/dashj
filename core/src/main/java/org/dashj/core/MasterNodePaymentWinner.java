@@ -1,11 +1,11 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
-import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
+import static org.dashj.core.Utils.int64ToByteStreamLE;
+import static org.dashj.core.Utils.uint32ToByteStreamLE;
 
 /**
  * Created by Eric on 2/8/2015.

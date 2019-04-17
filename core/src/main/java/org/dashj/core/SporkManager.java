@@ -1,9 +1,9 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.core.listeners.PeerConnectedEventListener;
-import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.listeners.PeerConnectedEventListener;
+import org.dashj.core.listeners.SporkUpdatedEventListener;
+import org.dashj.utils.ListenerRegistration;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

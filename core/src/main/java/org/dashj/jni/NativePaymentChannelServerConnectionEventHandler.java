@@ -12,11 +12,11 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.jni;
+package org.dashj.jni;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.protocols.channels.PaymentChannelCloseException;
-import org.bitcoinj.protocols.channels.ServerConnectionEventHandler;
+import org.dashj.core.*;
+import org.dashj.protocols.channels.PaymentChannelCloseException;
+import org.dashj.protocols.channels.ServerConnectionEventHandler;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
 

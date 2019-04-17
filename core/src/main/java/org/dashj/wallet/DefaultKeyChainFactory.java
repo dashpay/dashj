@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.crypto.*;
+import org.dashj.crypto.*;
 
 import com.google.common.collect.ImmutableList;
 

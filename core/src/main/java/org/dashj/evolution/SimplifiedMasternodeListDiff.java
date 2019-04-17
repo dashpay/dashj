@@ -1,12 +1,12 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
 
-import static org.bitcoinj.core.Sha256Hash.hashTwice;
+import static org.dashj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedMasternodeListDiff extends Message {
     public Sha256Hash prevBlockHash;

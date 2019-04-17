@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.payments;
+package org.dashj.protocols.payments;
 
 import java.security.cert.X509Certificate;
 import java.util.List;

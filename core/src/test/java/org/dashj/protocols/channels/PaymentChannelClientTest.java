@@ -12,12 +12,12 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletExtension;
-import org.bitcoin.paymentchannel.Protos;
+import org.dashj.core.*;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.WalletExtension;
+import org.dash.paymentchannel.Protos;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Before;
@@ -30,8 +30,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 
-import static org.bitcoin.paymentchannel.Protos.TwoWayChannelMessage;
-import static org.bitcoin.paymentchannel.Protos.TwoWayChannelMessage.MessageType.*;
+import static org.dash.paymentchannel.Protos.TwoWayChannelMessage;
+import static org.dash.paymentchannel.Protos.TwoWayChannelMessage.MessageType.*;
 import static org.easymock.EasyMock.capture;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.replay;

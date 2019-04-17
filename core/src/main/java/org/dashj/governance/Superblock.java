@@ -1,6 +1,6 @@
-package org.bitcoinj.governance;
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.BtcFormat;
+package org.dashj.governance;
+import org.dashj.core.*;
+import org.dashj.utils.BtcFormat;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

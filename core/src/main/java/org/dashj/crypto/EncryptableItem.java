@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.wallet.Protos;
+import org.dashj.wallet.Protos;
 
 import javax.annotation.Nullable;
 
 /**
  * Provides a uniform way to access something that can be optionally encrypted with a
- * {@link org.bitcoinj.crypto.KeyCrypter}, yielding an {@link org.bitcoinj.crypto.EncryptedData}, and
+ * {@link org.dashj.crypto.KeyCrypter}, yielding an {@link org.dashj.crypto.EncryptedData}, and
  * which can have a creation time associated with it.
  */
 public interface EncryptableItem {

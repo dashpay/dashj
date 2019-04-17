@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.store;
+package org.dashj.store;
 
 /**
  * Thrown by {@link SPVBlockStore} when the process cannot gain exclusive access to the chain file.

@@ -1,7 +1,7 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 
-import org.bitcoinj.store.FlatDB;
+import org.dashj.store.FlatDB;
 
 import java.io.OutputStream;
 

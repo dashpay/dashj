@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.ECKey;
+import org.dashj.core.ECKey;
 
 import javax.annotation.Nullable;
 

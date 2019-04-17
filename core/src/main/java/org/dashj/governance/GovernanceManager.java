@@ -1,9 +1,9 @@
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.governance.listeners.GovernanceObjectAddedEventListener;
-import org.bitcoinj.governance.listeners.GovernanceVoteConfidenceEventListener;
-import org.bitcoinj.utils.*;
+import org.dashj.core.*;
+import org.dashj.governance.listeners.GovernanceObjectAddedEventListener;
+import org.dashj.governance.listeners.GovernanceVoteConfidenceEventListener;
+import org.dashj.utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
@@ -16,9 +16,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
-import static org.bitcoinj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_PERMANENT_ERROR;
-import static org.bitcoinj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_WARNING;
-import static org.bitcoinj.governance.GovernanceObject.*;
+import static org.dashj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_PERMANENT_ERROR;
+import static org.dashj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_WARNING;
+import static org.dashj.governance.GovernanceObject.*;
 
 /**
  * Created by HashEngineering on 5/11/2018.

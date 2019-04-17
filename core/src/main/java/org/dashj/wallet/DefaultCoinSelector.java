@@ -12,13 +12,13 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionOutput;
+import org.dashj.core.Coin;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.Transaction;
+import org.dashj.core.TransactionConfidence;
+import org.dashj.core.TransactionOutput;
 import com.google.common.annotations.VisibleForTesting;
 
 import java.math.BigInteger;

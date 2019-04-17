@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core.listeners;
+package org.dashj.core.listeners;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 /**
  * Called when a new transaction is broadcast over the network.

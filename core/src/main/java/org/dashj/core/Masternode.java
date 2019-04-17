@@ -1,8 +1,8 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.net.Dos;
-import org.bitcoinj.utils.Pair;
-import org.bitcoinj.utils.Threading;
+import org.dashj.net.Dos;
+import org.dashj.utils.Pair;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,11 +15,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.CoinDefinition.PROTOCOL_VERSION;
-import static org.bitcoinj.core.Context.fMasterNode;
-import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_SPV_ASSUME_VALID;
-import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_UTXO_NOT_FOUND;
-import static org.bitcoinj.core.MasternodeInfo.State.*;
+import static org.dashj.core.CoinDefinition.PROTOCOL_VERSION;
+import static org.dashj.core.Context.fMasterNode;
+import static org.dashj.core.Masternode.CollateralStatus.COLLATERAL_SPV_ASSUME_VALID;
+import static org.dashj.core.Masternode.CollateralStatus.COLLATERAL_UTXO_NOT_FOUND;
+import static org.dashj.core.MasternodeInfo.State.*;
 
 /**
  * Created by Hash Engineering on 2/8/2015.

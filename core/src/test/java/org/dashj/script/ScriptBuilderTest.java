@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.script;
+package org.dashj.script;
 
 import static org.junit.Assert.assertTrue;
 

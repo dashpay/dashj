@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.bitcoinj.core.Utils.*;
+import static org.dashj.core.Utils.*;
 import com.google.common.base.Objects;
 
 /**

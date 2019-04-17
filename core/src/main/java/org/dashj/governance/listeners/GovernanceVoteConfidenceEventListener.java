@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.governance.listeners;
+package org.dashj.governance.listeners;
 
-import org.bitcoinj.governance.GovernanceVote;
+import org.dashj.governance.GovernanceVote;
 
 /**
  * <p>Implementors are called when confidence of a transaction changes.</p>

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionBroadcast;
+import org.dashj.core.Transaction;
+import org.dashj.core.TransactionBroadcast;
 
 /**
  * A general interface which declares the ability to broadcast votes. This is implemented
- * by {@link org.bitcoinj.core.PeerGroup}.
+ * by {@link org.dashj.core.PeerGroup}.
  */
 public interface GovernanceVoteBroadcaster {
     /** Broadcast the given transaction on the network */

@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
-import static org.bitcoinj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_ENDORSED;
+import static org.dashj.core.SporkManager.SPORK_6_NEW_SIGS;
+import static org.dashj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_ENDORSED;
 
 //
 // GovernanceVote - Allow a masternode node to vote and broadcast throughout the network
@@ -163,7 +163,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     }
 
     /**
-     * Returns the confidence object for this transaction from the {@link org.bitcoinj.core.TxConfidenceTable}
+     * Returns the confidence object for this transaction from the {@link org.dashj.core.TxConfidenceTable}
      * referenced by the given {@link Context}.
      */
     public GovernanceVoteConfidence getConfidence(Context context) {
@@ -171,7 +171,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     }
 
     /**
-     * Returns the confidence object for this transaction from the {@link org.bitcoinj.core.TxConfidenceTable}
+     * Returns the confidence object for this transaction from the {@link org.dashj.core.TxConfidenceTable}
      */
     public GovernanceVoteConfidence getConfidence(VoteConfidenceTable table) {
         if (confidence == null)

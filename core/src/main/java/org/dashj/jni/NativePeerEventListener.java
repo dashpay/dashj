@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.jni;
+package org.dashj.jni;
 
-import org.bitcoinj.core.listeners.*;
-import org.bitcoinj.core.*;
+import org.dashj.core.listeners.*;
+import org.dashj.core.*;
 
 import javax.annotation.*;
 import java.util.List;

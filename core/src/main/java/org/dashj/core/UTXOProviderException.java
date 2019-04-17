@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 public class UTXOProviderException extends Exception {
     public UTXOProviderException() {

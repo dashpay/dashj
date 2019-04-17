@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.listeners;
+package org.dashj.wallet.listeners;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.Coin;
+import org.dashj.core.ECKey;
+import org.dashj.core.Transaction;
+import org.dashj.script.Script;
+import org.dashj.wallet.Wallet;
 
 import java.util.List;
 

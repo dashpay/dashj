@@ -15,22 +15,22 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
 import com.google.common.collect.*;
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.*;
-import org.bitcoinj.params.*;
-import org.bitcoinj.script.*;
-import org.bitcoinj.testing.FakeTxBuilder;
-import org.bitcoinj.wallet.DefaultRiskAnalysis.*;
+import org.dashj.core.*;
+import org.dashj.crypto.*;
+import org.dashj.params.*;
+import org.dashj.script.*;
+import org.dashj.testing.FakeTxBuilder;
+import org.dashj.wallet.DefaultRiskAnalysis.*;
 import org.junit.*;
 
 import java.util.*;
 
 import static com.google.common.base.Preconditions.checkState;
-import static org.bitcoinj.core.Coin.*;
-import static org.bitcoinj.script.ScriptOpCodes.*;
+import static org.dashj.core.Coin.*;
+import static org.dashj.script.ScriptOpCodes.*;
 import static org.junit.Assert.*;
 
 public class DefaultRiskAnalysisTest {

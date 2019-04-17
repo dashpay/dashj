@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.governance.Superblock;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.Script.VerifyFlag;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.FullPrunedBlockStore;
-import org.bitcoinj.utils.*;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.governance.Superblock;
+import org.dashj.script.Script;
+import org.dashj.script.Script.VerifyFlag;
+import org.dashj.store.BlockStoreException;
+import org.dashj.store.FullPrunedBlockStore;
+import org.dashj.utils.*;
+import org.dashj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

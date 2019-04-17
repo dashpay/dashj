@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.Utils;
+import org.dashj.core.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

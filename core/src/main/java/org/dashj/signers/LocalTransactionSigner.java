@@ -14,24 +14,24 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.signers;
+package org.dashj.signers;
 
 import java.util.EnumSet;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.ScriptException;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.Script.VerifyFlag;
-import org.bitcoinj.wallet.KeyBag;
-import org.bitcoinj.wallet.RedeemData;
+import org.dashj.core.ECKey;
+import org.dashj.core.ScriptException;
+import org.dashj.core.Transaction;
+import org.dashj.core.TransactionInput;
+import org.dashj.crypto.DeterministicKey;
+import org.dashj.crypto.TransactionSignature;
+import org.dashj.script.Script;
+import org.dashj.script.Script.VerifyFlag;
+import org.dashj.wallet.KeyBag;
+import org.dashj.wallet.RedeemData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * <p>{@link TransactionSigner} implementation for signing inputs using keys from provided {@link org.bitcoinj.wallet.KeyBag}.</p>
+ * <p>{@link TransactionSigner} implementation for signing inputs using keys from provided {@link org.dashj.wallet.KeyBag}.</p>
  * <p>This signer doesn't create input scripts for tx inputs. Instead it expects inputs to contain scripts with
  * empty sigs and replaces one of the empty sigs with calculated signature.
  * </p>
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * {@link ProposedTransaction} object that will be also passed then to the next signer in chain. This allows other
  * signers to use correct signing key for P2SH inputs, because all the keys involved in a single P2SH address have
  * the same derivation path.</p>
- * <p>This signer always uses {@link org.bitcoinj.core.Transaction.SigHash#ALL} signing mode.</p>
+ * <p>This signer always uses {@link org.dashj.core.Transaction.SigHash#ALL} signing mode.</p>
  */
 public class LocalTransactionSigner extends StatelessTransactionSigner {
     private static final Logger log = LoggerFactory.getLogger(LocalTransactionSigner.class);

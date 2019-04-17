@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import org.bitcoinj.core.*;
-import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.*;
+import org.dashj.core.listeners.PreMessageReceivedEventListener;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

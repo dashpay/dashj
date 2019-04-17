@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.params;
+package org.dashj.params;
 
-import org.bitcoinj.core.CoinDefinition;
-import org.bitcoinj.core.Utils;
+import org.dashj.core.CoinDefinition;
+import org.dashj.core.Utils;
 
 
 import static com.google.common.base.Preconditions.checkState;

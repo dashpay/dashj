@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

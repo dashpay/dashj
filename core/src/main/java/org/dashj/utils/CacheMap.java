@@ -1,6 +1,6 @@
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 import java.io.IOException;
 import java.io.OutputStream;

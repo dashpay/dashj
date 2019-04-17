@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.base.Objects;
 import java.io.IOException;
@@ -28,7 +28,7 @@ import java.util.List;
  * {@link GetUTXOsMessage} ("getutxos"). Note that both this message and the query that generates it are not
  * supported by Bitcoin Core. An implementation is available in <a href="https://github.com/bitcoinxt/bitcoinxt">Bitcoin XT</a>,
  * a patch set on top of Core. Thus if you want to use it, you must find some XT peers to connect to. This can be done
- * using a {@link org.bitcoinj.net.discovery.HttpDiscovery} class combined with an HTTP/Cartographer seed.</p>
+ * using a {@link org.dashj.net.discovery.HttpDiscovery} class combined with an HTTP/Cartographer seed.</p>
  *
  * <p>The getutxos/utxos protocol is defined in <a href="https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki">BIP 65</a>.
  * In that document you can find a discussion of the security of this protocol (briefly, there is none). Because the
