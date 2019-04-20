@@ -3,6 +3,7 @@ package org.bitcoinj.evolution;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
+import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,9 +12,11 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class SimplifiedMasternodeListManager extends AbstractManager {
     private static final Logger log = LoggerFactory.getLogger(MasternodeManager.class);
+    private ReentrantLock lock = Threading.lock("SimplifiedMasternodeListManager");
 
 
     public static final int SNAPSHOT_LIST_PERIOD = 576; // once per day
@@ -66,9 +69,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        mnList.bitcoinSerialize(stream);
-        stream.write(tipBlockHash.getReversedBytes());
-        Utils.uint32ToByteStreamLE(tipHeight, stream);
+        lock.lock();
+        try {
+            mnList.bitcoinSerialize(stream);
+            stream.write(tipBlockHash.getReversedBytes());
+            Utils.uint32ToByteStreamLE(tipHeight, stream);
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void updatedBlockTip(StoredBlock tip) {
@@ -77,6 +85,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff) {
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         log.info("processing mnlistdiff between : " + tipHeight + " & " + newHeight + "; " + mnlistdiff);
+        lock.lock();
         try {
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
             newMNList.verify(mnlistdiff.coinBaseTx);
@@ -85,13 +94,16 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             tipBlockHash = mnlistdiff.blockHash;
             log.info(this.toString());
             unCache();
-            save();
+            if(mnlistdiff.hasChanges())
+                save();
         } catch(IllegalArgumentException x) {
             //we already have this mnlistdiff or doesn't match our current tipBlockHash
             log.info(x.getMessage());
         } catch(NullPointerException x) {
             //file name is not set, do not save
             log.info(x.getMessage());
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -137,28 +149,33 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         Sha256Hash hash = block.getHeader().getHash();
         log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + block.getHeight());
 
-        //If we are requesting the block we have already, then skip the request
-        if(hash.equals(tipBlockHash) && !hash.equals(Sha256Hash.ZERO_HASH))
-            return;
-
-        if(lastRequestHash.equals(tipBlockHash)) {
-            lastRequestCount++;
-            if(lastRequestCount > 24) {
-                lastRequestCount = 0;
-                tipBlockHash = Sha256Hash.ZERO_HASH;
-                tipHeight = 0;
-                mnList = new SimplifiedMasternodeList(params);
-            }
-            log.info("Requesting the same mnlistdiff " + lastRequestCount + " times");
-            if(lastRequestCount > 5) {
-                log.info("Stopping at 5 times to wait for a reply");
+        lock.lock();
+        try {
+            //If we are requesting the block we have already, then skip the request
+            if (hash.equals(tipBlockHash) && !hash.equals(Sha256Hash.ZERO_HASH))
                 return;
+
+            if (lastRequestHash.equals(tipBlockHash)) {
+                lastRequestCount++;
+                if (lastRequestCount > 24) {
+                    lastRequestCount = 0;
+                    tipBlockHash = Sha256Hash.ZERO_HASH;
+                    tipHeight = 0;
+                    mnList = new SimplifiedMasternodeList(params);
+                }
+                log.info("Requesting the same mnlistdiff " + lastRequestCount + " times");
+                if (lastRequestCount > 5) {
+                    log.info("Stopping at 5 times to wait for a reply");
+                    return;
+                }
+            } else {
+                lastRequestCount = 0;
             }
-        } else {
-            lastRequestCount = 0;
+            peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, hash));
+            lastRequestHash = tipBlockHash;
+        } finally {
+            lock.unlock();
         }
-        peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, hash));
-        lastRequestHash = tipBlockHash;
     }
 
     public void updateMNList() {
