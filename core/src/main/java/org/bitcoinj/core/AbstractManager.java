@@ -2,6 +2,8 @@ package org.bitcoinj.core;
 
 
 import org.bitcoinj.store.FlatDB;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.OutputStream;
 
@@ -15,6 +17,8 @@ import static com.google.common.base.Preconditions.checkState;
  * to serialize data to a file with FlatDB.
  */
 public abstract class AbstractManager extends Message {
+
+    private static final Logger log = LoggerFactory.getLogger(AbstractManager.class);
 
     /**
      * The Context.
@@ -167,8 +171,17 @@ public abstract class AbstractManager extends Message {
      */
     public void save() throws NullPointerException {
         if(filename != null) {
-            FlatDB<AbstractManager> flatDB = new FlatDB<AbstractManager>(context, filename, true);
-            flatDB.dump(this);
+            //save in a separate thread
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    long start = Utils.currentTimeMillis();
+                    FlatDB<AbstractManager> flatDB = new FlatDB<AbstractManager>(context, filename, true);
+                    flatDB.dump(AbstractManager.this);
+                    long end = Utils.currentTimeMillis();
+                    log.info(AbstractManager.class.getCanonicalName() + " Save time:  " + (end - start) + "ms");
+                }
+            }).start();
         } else throw new NullPointerException("filename is not set");
     }
 
