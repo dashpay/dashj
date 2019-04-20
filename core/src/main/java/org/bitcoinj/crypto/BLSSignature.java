@@ -7,6 +7,7 @@ import org.bitcoinj.core.Sha256Hash;
 import org.dashj.bls.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class BLSSignature extends BLSAbstractObject {
 
@@ -182,4 +183,16 @@ public class BLSSignature extends BLSAbstractObject {
         updateHash();
         return true;
     }*/
+
+    public boolean checkMalleable(byte [] buf, int size)
+    {
+        byte [] buf2 = getBuffer(serializedSize);
+        if (!Arrays.equals(buf, buf2)) {
+            // TODO not sure if this is actually possible with the BLS libs. I'm assuming here that somewhere deep inside
+            // these libs masking might happen, so that 2 different binary representations could result in the same object
+            // representation
+            return false;
+        }
+        return true;
+    }
 }
