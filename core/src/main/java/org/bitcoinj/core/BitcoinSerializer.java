@@ -22,6 +22,7 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.governance.GovernanceObject;
 import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.governance.GovernanceVote;
+import org.bitcoinj.quorums.InstantSendLock;
 import org.bitcoinj.quorums.QuorumSendRecoveredSignatures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +99,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(SimplifiedMasternodeListDiff.class, "mnlistdiff");
         names.put(SendDsq.class, "senddsq");
         names.put(QuorumSendRecoveredSignatures.class, "qsendrecsigs");
+        names.put(InstantSendLock.class, "islock");
 
     }
 
@@ -295,6 +297,8 @@ public class BitcoinSerializer extends MessageSerializer {
             return new SendDsq(params);
         } else if(command.equals("qsendrecsigs")) {
             return new QuorumSendRecoveredSignatures(params);
+        } else if(command.equals("islock")) {
+            return new InstantSendLock(params, payloadBytes);
         } else {
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);

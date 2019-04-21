@@ -28,6 +28,7 @@ import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.governance.GovernanceVote;
 import org.bitcoinj.governance.GovernanceVoteConfidence;
 import org.bitcoinj.net.StreamConnection;
+import org.bitcoinj.quorums.InstantSendLock;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
@@ -1303,6 +1304,8 @@ public class Peer extends PeerSocketHandler {
                 return !context.governanceManager.confirmInventoryRequest(inv);
             case GovernanceObjectVote:
                 return !context.governanceManager.confirmInventoryRequest(inv);
+            case InstantSendLock:
+                return context.instantSendManager.alreadyHave(inv);
         }
         // Don't know what it is, just say we already got one
         return true;
@@ -1318,6 +1321,7 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> instantxLocks = new LinkedList<InventoryItem>();
         List<InventoryItem> sporks = new LinkedList<InventoryItem>();
         List<InventoryItem> goveranceObjects = new LinkedList<InventoryItem>();
+        List<InventoryItem> instantSendLocks = new LinkedList<InventoryItem>();
 
         //InstantSend instantSend = InstantSend.get(blockChain);
 
@@ -1361,6 +1365,9 @@ public class Peer extends PeerSocketHandler {
                     goveranceObjects.add(item);
                     break;
                 case MasternodeVerify: break;
+                case InstantSendLock:
+                    instantSendLocks.add(item);
+                    break;
                 default:
                     break;
                     //throw new IllegalStateException("Not implemented: " + item.type);
@@ -1457,6 +1464,16 @@ public class Peer extends PeerSocketHandler {
 
 //            if(!instantSend.mapTxLockVotes.containsKey(item.hash))
             {
+                getdata.addItem(item);
+            }
+        }
+
+        // The New InstantSendLock (ISLOCK)
+        it = instantSendLocks.iterator();
+        while (it.hasNext()) {
+            InventoryItem item = it.next();
+            if(!alreadyHave(item)) {
+                log.info("found instantSendLock:" + item.hash);
                 getdata.addItem(item);
             }
         }
