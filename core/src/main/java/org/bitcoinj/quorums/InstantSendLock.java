@@ -55,6 +55,7 @@ public class InstantSendLock extends Message {
         try {
             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
             Utils.stringToByteStream(ISLOCK_REQUESTID_PREFIX, bos);
+            bos.write(new VarInt(inputs.size()).encode());
             for(TransactionOutPoint outpoint : inputs) {
                 outpoint.bitcoinSerialize(bos);
             }
