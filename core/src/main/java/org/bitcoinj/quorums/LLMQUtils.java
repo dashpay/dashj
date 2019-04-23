@@ -23,4 +23,24 @@ public class LLMQUtils {
             throw new RuntimeException(x);
         }
     }
+
+
+    static public Sha256Hash buildSignHash(int llmqType, Sha256Hash quorumHash, Sha256Hash id, Sha256Hash msgHash)
+    {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
+            bos.write(llmqType);
+            bos.write(quorumHash.getReversedBytes());
+            bos.write(id.getBytes());
+            bos.write(msgHash.getReversedBytes());
+            return Sha256Hash.wrap(Sha256Hash.hashTwice(bos.toByteArray()));
+        } catch (IOException x) {
+            throw new RuntimeException(x);
+        }
+    }
+
+    static public Sha256Hash buildSignHash(LLMQParameters.LLMQType llmqType, Sha256Hash quorumHash, Sha256Hash id, Sha256Hash msgHash)
+    {
+        return buildSignHash(llmqType.getValue(), quorumHash, id, msgHash);
+    }
 }
