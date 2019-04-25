@@ -54,7 +54,7 @@ public class FlatDB<Type extends AbstractManager> {
 
     public FlatDB(Context context, String fileOrDirectory, boolean isFileName, String magicMessage, int version) {
         this.context = context;
-        this.magicMessage = magicMessage + "-" + version;
+        this.magicMessage = magicMessage + ((version > 1) ? "-" + version : "");
         if(isFileName) {
             this.pathDB = fileOrDirectory;
             this.directory = new File(fileOrDirectory).getParentFile().getAbsolutePath();
@@ -93,6 +93,9 @@ public class FlatDB<Type extends AbstractManager> {
             if(magicMessage == null) {
                 magicMessage = object.getMagicMessage();
             }
+
+            if(!magicMessage.contains("-"))
+                magicMessage = object.getMagicMessage();
             // serialize, checksum data up to that point, then append checksum
             UnsafeByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(object.calculateMessageSizeInBytes()+4+magicMessage.getBytes().length);
             stream.write(magicMessage.getBytes());
@@ -204,10 +207,17 @@ public class FlatDB<Type extends AbstractManager> {
 
                 strMagicMessageTmp = new String(vchData, 0, magicMessage.length());
 
+                log.info("file magic message: " + strMagicMessageTmp);
                 // ... verify the message matches predefined one
                 if (!magicMessage.equals(strMagicMessageTmp)) {
-                    log.error("Invalid masternode cache magic message");
-                    return ReadResult.IncorrectMagicMessage;
+                    String startStrMagicMessageTmp = strMagicMessageTmp.substring(0, strMagicMessageTmp.lastIndexOf('-'));
+
+                    String startMagicMessage = strMagicMessageTmp.substring(0, strMagicMessageTmp.lastIndexOf('-'));
+
+                    if(!startMagicMessage.equals(startStrMagicMessageTmp)) {
+                        log.error("Invalid cache magic message");
+                        return ReadResult.IncorrectMagicMessage;
+                    }
                 }
 
                 // de-serialize file header (network specific magic number) and ..
@@ -220,8 +230,16 @@ public class FlatDB<Type extends AbstractManager> {
                     return ReadResult.IncorrectMagicNumber;
                 }
                 // de-serialize data into CMasternodeMan object
-
-                object.load(vchData, magicMessage.length()+ 4);
+                int version = 1;
+                try {
+                    String fileVersionString = strMagicMessageTmp.substring(strMagicMessageTmp.lastIndexOf('-') + 1);
+                    version = fileVersionString != null ? Integer.parseInt(fileVersionString) : 1;
+                } catch (IndexOutOfBoundsException x) {
+                    //swallow
+                } catch (NumberFormatException x) {
+                    //swallow
+                }
+                object.load(vchData, magicMessage.length()+ 4, version);
 
             } catch (Exception e){
                 object.clear();

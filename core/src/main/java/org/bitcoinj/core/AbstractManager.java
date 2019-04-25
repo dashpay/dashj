@@ -111,10 +111,15 @@ public abstract class AbstractManager extends Message {
      */
     public void load(byte [] payload, int offset)
     {
+        load(payload, offset, getFormatVersion());
+    }
+
+    public void load(byte [] payload, int offset, int version) {
         this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
         this.payload = payload;
         this.cursor = this.offset = offset;
         this.length = payload.length;
+        this.formatVersion = version;
 
         if (this.length == UNKNOWN_LENGTH)
             checkState(false, "Length field has not been set in constructor for %s after %s parse. " +
@@ -164,6 +169,14 @@ public abstract class AbstractManager extends Message {
         return formatVersion;
     }
 
+    public int getCurrentFormatVersion() {
+        return formatVersion;
+    }
+
+    public void setFormatVersion(int formatVersion) {
+        this.formatVersion = formatVersion;
+    }
+
     /**
      * Save.
      *
@@ -176,7 +189,7 @@ public abstract class AbstractManager extends Message {
                 @Override
                 public void run() {
                     long start = Utils.currentTimeMillis();
-                    FlatDB<AbstractManager> flatDB = new FlatDB<AbstractManager>(context, filename, true);
+                    FlatDB<AbstractManager> flatDB = new FlatDB<AbstractManager>(context, filename, true, magicMessage, getFormatVersion());
                     flatDB.dump(AbstractManager.this);
                     long end = Utils.currentTimeMillis();
                     log.info(AbstractManager.class.getCanonicalName() + " Save time:  " + (end - start) + "ms");
