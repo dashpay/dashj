@@ -90,14 +90,16 @@ public class SporkManager {
             Sha256Hash hash = spork.getHash();
             if (mapSporksActive.containsKey(spork.nSporkID)) {
                 if (mapSporksActive.get(spork.nSporkID).nTimeSigned >= spork.nTimeSigned) {
-                    log.info("spork - seen "+hash.toString()+" block " + blockChain.getBestChainHeight());
+                    log.info("spork - seen "+ getSporkNameByID(spork.nSporkID) +" block " + blockChain.getBestChainHeight() + "hash: " + hash.toString());
                     return;
                 } else {
-                    log.info("spork - got updated spork "+hash.toString()+" block " +blockChain.getBestChainHeight());
+                    log.info("spork - got updated spork "+ getSporkNameByID(spork.nSporkID) +" block " +blockChain.getBestChainHeight() +
+                            "hash: " + hash.toString());
                 }
             }
 
-            log.info("spork - new "+hash.toString()+" ID "+spork.nSporkID+" Time "+spork.nTimeSigned+" bestHeight" + blockChain.getBestChainHeight());
+            log.info("spork - new ID "+spork.nSporkID+" "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" Time "+spork.nTimeSigned+" bestHeight " + blockChain.getBestChainHeight() +
+                    "hash: " + hash.toString());
 
             if (!spork.checkSignature(sporkPubKeyId)) {
                 log.info("spork - invalid signature");
@@ -179,6 +181,8 @@ public class SporkManager {
                 context.masternodeListManager.updateMNList();
             if(context.getParams().isSupportingEvolution())
                 context.peerGroup.setMinRequiredProtocolVersionAndDisconnect(NetworkParameters.ProtocolVersion.DMN_LIST.getBitcoinProtocolVersion());
+        } else if(nSporkID == SPORK_17_QUORUM_DKG_ENABLED) {
+            context.masternodeListManager.resetMNList();
         }
     }
 

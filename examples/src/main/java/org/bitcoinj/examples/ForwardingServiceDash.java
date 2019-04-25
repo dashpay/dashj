@@ -23,6 +23,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicHierarchy;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.evolution.*;
 import org.bitcoinj.governance.GovernanceManager;
@@ -31,6 +33,9 @@ import org.bitcoinj.governance.GovernanceVoteBroadcast;
 import org.bitcoinj.kits.EvolutionWalletAppKit;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.masternode.owner.MasternodeControl;
+import org.bitcoinj.net.discovery.DnsDiscovery;
+import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
+import org.bitcoinj.net.discovery.SeedPeers;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
@@ -38,6 +43,7 @@ import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.DeterministicKeyChain;
+import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
@@ -88,15 +94,26 @@ public class ForwardingServiceDash {
         forwardingAddress = Address.fromBase58(params, args[0]);
 
         // Start up a basic app using a class that automates some boilerplate.
-        if(args[1] == "devnet") {
+        if(args[1] != "devnet") {
             kit = new WalletAppKit(params, new File("."), filePrefix, false) {
                 @Override
                 protected void onSetupCompleted() {
                     super.onSetupCompleted();
                     peerGroup().setMinBroadcastConnections(2);
-                    peerGroup().setMaxConnections(3);
+                    peerGroup().setMaxConnections(10);
+                }
+
+                @Override
+                protected Wallet createWallet() {
+                    Wallet wallet = super.createWallet();
+                    wallet.initializeAuthenticationKeyChains(wallet.getKeyChainSeed(), wallet.getKeyCrypter());
+                    if(wallet.getKeyChainGroupSize() != 2)
+                        wallet.addAndActivateHDChain(new DeterministicKeyChain(wallet.getKeyChainSeed(), DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET));
+
+                    return wallet;
                 }
             };
+            //kit.restoreWalletFromSeed(new DeterministicSeed("enemy check owner stumble unaware debris suffer peanut good fabric bleak outside", null, "", DeterministicHierarchy.BIP32_STANDARDISATION_TIME_SECS));
         } else {
             kit = new EvolutionWalletAppKit(params, new File("."), filePrefix, false) {
                 @Override
@@ -106,10 +123,20 @@ public class ForwardingServiceDash {
                     peerGroup().setMaxConnections(3);
                 }
             };
+
         }
 
+        SimplifiedMasternodeListManager manager = Context.get().masternodeListManager;
+        //FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), ".", false);
+        //db.load(manager);
 
-        //kit = new LevelDBWalletAppKit(params, new File("."), filePrefix);
+        //String [] mySeeds = {"192.168.1.120"};
+        //DnsDiscovery dns = new DnsDiscovery(mySeeds, params);
+        //kit.setDiscovery(dns);
+        if(manager.getListAtChainTip().size() > 0)
+            kit.setDiscovery(new MasternodePeerDiscovery(manager.getListAtChainTip()));
+
+
 
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.
@@ -121,6 +148,13 @@ public class ForwardingServiceDash {
         kit.startAsync();
         kit.awaitRunning();
 
+   /*     if(kit.wallet().getBlockchainUserKeyChain() == null) {
+            kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), kit.wallet().getKeyCrypter());
+            kit.setAutoSave(true);
+        }
+*/
+
+        System.out.println(kit.wallet().toString(true, true, false, null));
         // We want to know when we receive money.
         kit.wallet().addCoinsReceivedEventListener(new WalletCoinsReceivedEventListener() {
             @Override
@@ -140,6 +174,7 @@ public class ForwardingServiceDash {
                 // to be double spent, no harm done. Wallet.allowSpendingUnconfirmedTransactions() would have to
                 // be called in onSetupCompleted() above. But we don't do that here to demonstrate the more common
                 // case of waiting for a block.
+                /*
                 Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>() {
                     @Override
                     public void onSuccess(TransactionConfidence result) {
@@ -177,9 +212,9 @@ public class ForwardingServiceDash {
                         // This kind of future can't fail, just rethrow in case something weird happens.
                         throw new RuntimeException(t);
                     }
-                }, MoreExecutors.directExecutor());
+                }, MoreExecutors.directExecutor());*/
 
-                Futures.addCallback(tx.getConfidence().getDepthFuture(4), new FutureCallback<TransactionConfidence>() {
+                Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>() {
                     @Override
                     public void onSuccess(TransactionConfidence result) {
                         forwardCoins(tx);
@@ -255,8 +290,8 @@ public class ForwardingServiceDash {
         try {
 
             Coin amount = Coin.parseCoin("0.001");
-            privKey = ECKey.fromPrivate(kit.wallet().getActiveKeyChain().getKeyByPath(DeterministicKeyChain.ACCOUNT_ZERO_PATH, false).getPrivKeyBytes());
-            newPrivKey = ECKey.fromPrivate(kit.wallet().getActiveKeyChain().getKeyByPath(ImmutableList.of(ChildNumber.ONE_HARDENED), true).getPrivKeyBytes());
+            privKey = ECKey.fromPrivate(kit.wallet().getBlockchainUserKeyChain().getKey(0).getPrivKeyBytes());
+            newPrivKey = ECKey.fromPrivate(kit.wallet().getBlockchainUserKeyChain().getKey(0).getPrivKeyBytes());
             SendRequest req = SendRequest.forSubTxRegister(kit.params(),
                     new SubTxRegister(1, "hashengineering"+new Random().nextInt()/1000,
                             privKey),
