@@ -3,6 +3,7 @@ package org.bitcoinj.quorums;
 import com.google.common.base.Preconditions;
 import org.bitcoinj.core.*;
 import org.bitcoinj.evolution.CoinbaseTx;
+import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -23,7 +24,7 @@ public class SimplifiedQuorumList extends Message {
     private Sha256Hash blockHash;
     private long height;
     HashMap<Pair<Integer, Sha256Hash>, Sha256Hash> minableCommitmentsByQuorum;
-    HashMap<Sha256Hash, FinalCommitment> minableCommitments;
+    LinkedHashMap<Sha256Hash, FinalCommitment> minableCommitments;
 
 
     public SimplifiedQuorumList(NetworkParameters params) {
@@ -31,7 +32,7 @@ public class SimplifiedQuorumList extends Message {
         blockHash = Sha256Hash.ZERO_HASH;
         height = -1;
         minableCommitmentsByQuorum = new HashMap<Pair<Integer, Sha256Hash>, Sha256Hash>(10);
-        minableCommitments = new HashMap<Sha256Hash, FinalCommitment>(10);
+        minableCommitments = new LinkedHashMap<Sha256Hash, FinalCommitment>(10);
     }
 
     public SimplifiedQuorumList(NetworkParameters params, byte [] payload, int offset) {
@@ -43,7 +44,7 @@ public class SimplifiedQuorumList extends Message {
         this.blockHash = other.blockHash;
         this.height = other.height;
         minableCommitmentsByQuorum = new HashMap<Pair<Integer, Sha256Hash>, Sha256Hash>(other.minableCommitmentsByQuorum);
-        minableCommitments = new HashMap<Sha256Hash, FinalCommitment>(other.minableCommitments);
+        minableCommitments = new LinkedHashMap<Sha256Hash, FinalCommitment>(other.minableCommitments);
     }
 
     @Override
@@ -61,7 +62,7 @@ public class SimplifiedQuorumList extends Message {
         }
 
         size = (int)readVarInt();
-        minableCommitments = new HashMap<Sha256Hash, FinalCommitment>(size);
+        minableCommitments = new LinkedHashMap<Sha256Hash, FinalCommitment>(size);
         for(long i = 0; i < size; ++i)
         {
             Sha256Hash hash = readHash();
@@ -166,7 +167,7 @@ public class SimplifiedQuorumList extends Message {
     }
 
 
-    public boolean verify(Transaction coinbaseTx) throws VerificationException {
+    public boolean verify(Transaction coinbaseTx, SimplifiedMasternodeList mnList) throws VerificationException {
         lock.lock();
 
         try {
@@ -191,6 +192,7 @@ public class SimplifiedQuorumList extends Message {
 
             if (!cbtx.getMerkleRootQuorums().equals(calculateMerkleRoot(commitmentHashes)))
                 throw new VerificationException("MerkleRoot of quorum list does not match coinbaseTx - " + commitmentHashes.size());
+
             return true;
         } finally {
             lock.unlock();
@@ -279,7 +281,7 @@ public class SimplifiedQuorumList extends Message {
     }
 
     public interface ForeachQuorumCallback {
-        void processQuorum(FinalCommitment mn);
+        void processQuorum(FinalCommitment finalCommitment);
     }
 
     public void forEachQuorum(boolean onlyValid, ForeachQuorumCallback callback) {
@@ -299,14 +301,22 @@ public class SimplifiedQuorumList extends Message {
     {
         int count = 0;
         for (Map.Entry<Sha256Hash, FinalCommitment> p : minableCommitments.entrySet()) {
-        if (isCommitmentValid(p.getValue())) {
-            count++;
+            if (isCommitmentValid(p.getValue())) {
+                count++;
+            }
         }
-    }
         return count;
     }
 
     public boolean isCommitmentValid(FinalCommitment entry) {
         return !entry.isNull();
+    }
+
+    public Sha256Hash getBlockHash() {
+        return blockHash;
+    }
+
+    public long getHeight() {
+        return height;
     }
 }
