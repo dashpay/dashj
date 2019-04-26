@@ -1464,7 +1464,7 @@ public class Peer extends PeerSocketHandler {
             }
         }
 
-        if(context.instantSendManager.isOldInstantSendEnabled()) {
+        if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
             it = oldTxLockVotes.iterator();
             while (it.hasNext()) {
                 InventoryItem item = it.next();
@@ -1475,7 +1475,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         // The New InstantSendLock (ISLOCK)
-        if(context.instantSendManager.isNewInstantSendEnabled()) {
+        if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled()) {
             it = instantSendLocks.iterator();
             while (it.hasNext()) {
                 InventoryItem item = it.next();
@@ -1487,7 +1487,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         // The ChainLock (CLSIG)
-        if(context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED)) {
+        if(context.sporkManager != null && context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED)) {
             it = chainLocks.iterator();
             while (it.hasNext()) {
                 InventoryItem item = it.next();
