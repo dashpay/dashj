@@ -57,7 +57,7 @@ import javax.annotation.Nullable;
 /**
  * <p>
  * An implementation of a Fully Pruned Block Store using a leveldb implementation as the backing data store.
- * <p>
+ * </p>
  * 
  * <p>
  * Includes number of caches to optimise the initial blockchain download.
