@@ -70,11 +70,10 @@ public class TestWithWallet {
 
     public void setUp() throws Exception {
         BriefLogFormatter.init();
-        Context context = new Context(UNITTEST, 100, Coin.ZERO, false);
-        Context.propagate(context);
-        wallet = Wallet.createDeterministic(context, Script.ScriptType.P2PKH);
-        myKey = wallet.currentReceiveKey();
-        myAddress = Address.fromKey(UNITTEST, myKey);
+        Context.propagate(new Context(UNITTEST, 100, Coin.ZERO, false));
+        wallet = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2PKH);
+        myKey = wallet.freshReceiveKey();
+        myAddress = wallet.freshReceiveAddress(Script.ScriptType.P2PKH);
         blockStore = new MemoryBlockStore(UNITTEST);
         chain = new BlockChain(UNITTEST, wallet, blockStore);
     }
