@@ -20,7 +20,14 @@ package org.bitcoinj.params;
 import java.math.BigInteger;
 import java.util.concurrent.TimeUnit;
 
-import org.bitcoinj.core.*;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -336,7 +343,9 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
         return MAX_MONEY;
     }
 
+    /** @deprecated use {@link TransactionOutput#getMinNonDustValue()} */
     @Override
+    @Deprecated
     public Coin getMinNonDustOutput() {
         return Transaction.MIN_NONDUST_OUTPUT;
     }
