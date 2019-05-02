@@ -1027,13 +1027,13 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                     if (seed == null && key.hasSecretBytes()) {
                         DeterministicKey accountKey = new DeterministicKey(immutablePath, chainCode, pubkey, new BigInteger(1, key.getSecretBytes().toByteArray()), null);
                         accountKey.setCreationTimeSeconds(key.getCreationTimestamp() / 1000);
-                        chain = factory.makeSpendingKeyChain(key, iter.peek(), accountKey, isMarried, outputScriptType);
+                        chain = factory.makeSpendingKeyChain(accountKey, isMarried, outputScriptType);
                         isSpendingKey = true;
                     } else if (seed == null) {
                         DeterministicKey accountKey = new DeterministicKey(immutablePath, chainCode, pubkey, null, null);
                         accountKey.setCreationTimeSeconds(key.getCreationTimestamp() / 1000);
                         if (simple) {
-                            chain = factory.makeWatchingKeyChain(key, iter.peek(), accountKey, isFollowingKey, isMarried,
+                            chain = factory.makeWatchingKeyChain(accountKey, isFollowingKey, isMarried,
                                     outputScriptType);
                         } else {
                             chain = factory.makeWatchingFriendKeyChain(accountKey, immutablePath);
@@ -1041,7 +1041,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                         isWatchingAccountKey = true;
                     } else {
                         if (simple)
-                            chain = factory.makeKeyChain(key, iter.peek(), seed, crypter, isMarried,
+                            chain = factory.makeKeyChain(seed, crypter, isMarried,
                                     outputScriptType, ImmutableList.<ChildNumber> builder().addAll(accountPath).build());
                         else
                             chain = factory.makeSpendingFriendKeyChain(key, iter.peek(), seed, crypter, isMarried,
