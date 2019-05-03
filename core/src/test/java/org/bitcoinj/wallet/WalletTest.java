@@ -3024,6 +3024,7 @@ public class WalletTest extends TestWithWallet {
         int numKeys = activeKeyChain.getKeys(false, true).size();
         int numIssuedInternal = activeKeyChain.getIssuedInternalKeys();
         int numIssuedExternal = activeKeyChain.getIssuedExternalKeys();
+        DeterministicKey rootKey = wallet.getActiveKeyChain().getRootKey();
         DeterministicKey watchingKey = activeKeyChain.getWatchingKey();
         ImmutableList<ChildNumber> accountPath = activeKeyChain.getAccountPath();
         Script.ScriptType outputScriptType = activeKeyChain.getOutputScriptType();
@@ -3036,6 +3037,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(numKeys, roundTrippedActiveKeyChain.getKeys(false, true).size());
         assertEquals(numIssuedInternal, roundTrippedActiveKeyChain.getIssuedInternalKeys());
         assertEquals(numIssuedExternal, roundTrippedActiveKeyChain.getIssuedExternalKeys());
+        assertEquals(rootKey, roundTrippedWallet.getActiveKeyChain().getRootKey());
         assertEquals(watchingKey, roundTrippedActiveKeyChain.getWatchingKey());
         assertEquals(accountPath, roundTrippedActiveKeyChain.getAccountPath());
         assertEquals(outputScriptType, roundTrippedActiveKeyChain.getOutputScriptType());
