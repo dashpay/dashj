@@ -13,8 +13,8 @@ public interface InstantSendDatabase {
     void removeInstantSendLock(Sha256Hash hash, InstantSendLock islock);
     //void removeInstantSendLock(CDBBatch& batch, Sha256Hash hash, InstantSendLock islock);
 
-    void writeInstantSendLockMined(Sha256Hash hash, int nHeight);
-    void removeInstantSendLockMined(Sha256Hash hash, int nHeight);
+    void writeInstantSendLockMined(Sha256Hash hash, long nHeight);
+    void removeInstantSendLockMined(Sha256Hash hash, long nHeight);
     HashMap<Sha256Hash, InstantSendLock> removeConfirmedInstantSendLocks(int nUntilHeight);
 
     InstantSendLock getInstantSendLockByHash(Sha256Hash hash);

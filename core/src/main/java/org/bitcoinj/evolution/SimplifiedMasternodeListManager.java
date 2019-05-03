@@ -100,8 +100,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         try {
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
             newMNList.verify(mnlistdiff.coinBaseTx);
-            SimplifiedQuorumList newQuorumList = quorumList.applyDiff(mnlistdiff);
-            newQuorumList.verify(mnlistdiff.coinBaseTx, newMNList);
+            SimplifiedQuorumList newQuorumList = null;
+            if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
+                newQuorumList = quorumList.applyDiff(mnlistdiff);
+                newQuorumList.verify(mnlistdiff.coinBaseTx, newMNList);
+            }
             mnList = newMNList;
             quorumList = newQuorumList;
             tipHeight = newHeight;
@@ -109,7 +112,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             log.info(this.toString());
             unCache();
             if(mnlistdiff.hasChanges()) {
-                if(quorumList.size() > 0)
+                if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
                     setFormatVersion(LLMQ_FORMAT_VERSION);
                 save();
             }

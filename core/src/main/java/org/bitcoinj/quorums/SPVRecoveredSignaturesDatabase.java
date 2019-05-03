@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class SPVRecoveredSignaturesDatabase extends AbstractManager implements RecoveredSignaturesDatabase {
@@ -25,6 +26,7 @@ public class SPVRecoveredSignaturesDatabase extends AbstractManager implements R
     HashMap<Pair<Integer, Sha256Hash>, Boolean> hasSigForIdCache;
     HashMap<Sha256Hash, Boolean> hasSigForSessionCache;
     HashMap<Sha256Hash, Boolean> hasSigForHashCache;
+    HashMap<Sha256Hash, Long> mapTimeStamps;
 
 
     public SPVRecoveredSignaturesDatabase(Context context) {
@@ -36,6 +38,7 @@ public class SPVRecoveredSignaturesDatabase extends AbstractManager implements R
         mapBySignHash = new HashMap<Sha256Hash, RecoveredSignature>();
         mapById = new HashMap<Pair<Integer, Sha256Hash>, RecoveredSignature>();
         mapVotes = new HashMap<Pair<Integer, Sha256Hash>, Sha256Hash>();
+        mapTimeStamps = new HashMap<Sha256Hash, Long>();
     }
 
     public boolean hasRecoveredSig(LLMQParameters.LLMQType llmqType, Sha256Hash id, Sha256Hash msgHash){
@@ -102,7 +105,8 @@ public class SPVRecoveredSignaturesDatabase extends AbstractManager implements R
             hasSigForIdCache.put(idPair, true);
             hasSigForSessionCache.put(signHash, true);
             hasSigForHashCache.put(recSig.getHash(), true);
-            save();
+            mapTimeStamps.put(signHash, Utils.currentTimeMillis());
+            //save();
         } finally {
             lock.unlock();
         }
@@ -110,7 +114,29 @@ public class SPVRecoveredSignaturesDatabase extends AbstractManager implements R
 
     public void cleanupOldRecoveredSignatures(long maxAge) {
 
-    }
+            lock.lock();
+            try {
+                ArrayList<Sha256Hash> toDelete = new ArrayList<Sha256Hash>();
+
+                for(Map.Entry<Sha256Hash, Long> entry : mapTimeStamps.entrySet()) {
+                    if(entry.getValue() > maxAge)
+                        toDelete.add(entry.getKey());
+                }
+
+                for(Sha256Hash signHash : toDelete) {
+                    RecoveredSignature recSig = mapBySignHash.get(signHash);
+                    hasSigForIdCache.remove(new Pair(recSig.llmqType, recSig.id));
+                    hasSigForSessionCache.remove(signHash);
+                    hasSigForHashCache.remove(recSig.getHash());
+                    mapTimeStamps.remove(signHash);
+                    recoveredSignatures.remove(recSig);
+                    mapBySignHash.remove(signHash);
+                    mapById.remove(new Pair(recSig.llmqType, recSig.id));
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
 
     // votes are removed when the recovered sig is written to the db
     public boolean hasVotedOnId(LLMQParameters.LLMQType llmqType, Sha256Hash id) {

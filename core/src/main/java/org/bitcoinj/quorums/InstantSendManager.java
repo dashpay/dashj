@@ -29,8 +29,10 @@ public class InstantSendManager implements RecoveredSignatureListener {
     ReentrantLock lock = Threading.lock("InstantSendManager");
     InstantSendDatabase db;
     Thread workThread;
-    boolean runWithoutThread;
+    public boolean runWithoutThread;
     AbstractBlockChain blockChain;
+
+    HashMap<Sha256Hash, Transaction> mapTx;
 
 
     /**
@@ -63,6 +65,14 @@ public class InstantSendManager implements RecoveredSignatureListener {
         pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
         pendingRetryTxs = new HashSet<Sha256Hash>();
         txToCreatingInstantSendLocks = new HashMap<Sha256Hash, InstantSendLock>();
+        mapTx = new HashMap<Sha256Hash, Transaction>();
+        inputRequestIds = new HashSet<Sha256Hash>();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("InstantSendManager:  pendingInstantSendLocks %d, mapTx: %d, DB: %s", pendingInstantSendLocks.size(),
+                mapTx.size(), db);
     }
 
     public InstantSendManager(Context context, InstantSendDatabase db, boolean runWithoutThread) {
@@ -70,10 +80,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
         this.runWithoutThread = runWithoutThread;
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain) {
+    public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.blockChain.addTransactionReceivedListener(this.transactionReceivedInBlockListener);
         this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
+        peerGroup.addOnTransactionBroadcastListener(this.transactionBroadcastListener);
     }
 
     public boolean isOldInstantSendEnabled()
@@ -434,6 +445,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         
         try {
             pend = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>(pendingInstantSendLocks);
+            pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
         } finally {
             lock.unlock();
         }
@@ -526,7 +538,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 RecoveredSignature recSig = it.getSecond();
                 if (!quorumSigningManager.hasRecoveredSigForId(llmqType, recSig.id)) {
                     recSig.updateHash();
-                    log.info("instantsend", "CInstantSendManager::{} -- txid={}, islock={}: passing reconstructed recSig to signing mgr, peer={}",
+                    log.info("instantsend--CInstantSendManager::{} -- txid={}, islock={}: passing reconstructed recSig to signing mgr, peer={}",
                             islock.txid.toString(), hash.toString(), nodeId);
                     quorumSigningManager.pushReconstructedRecoveredSig(recSig, quorum);
                 }
@@ -540,6 +552,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
     {
         StoredBlock minedBlock = null;
         Transaction tx = null;
+
+        tx = mapTx.get(islock.txid);
         /*if(blockChain.getBlockStore() instanceof FullPrunedBlockStore) {
             FullPrunedBlockStore blockStore = (FullPrunedBlockStore)blockChain.getBlockStore();
             Transaction tx;
@@ -623,6 +637,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
             return;
         }
 
+        if(!mapTx.containsKey(tx.getHash()) && posInBlock == -1)
+        {
+            mapTx.put(tx.getHash(), tx);
+        }
+
         Sha256Hash islockHash;
         lock.lock();
         try {
@@ -640,8 +659,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
             lock.unlock();
         }
 
-        //boolean chainlocked = block && chainLocksHandler.HasChainLock(block.getHeight(), block.getHeader().getHash());
-        if (!islockHash.equals(Sha256Hash.ZERO_HASH) /*|| chainlocked*/) {
+        boolean chainlocked = block != null && context.chainLockHandler.hasChainLock(block.getHeight(), block.getHeader().getHash());
+        if (islockHash != null && !islockHash.equals(Sha256Hash.ZERO_HASH) || chainlocked) {
             lock.lock();
             try {
                 pendingRetryTxs.add(tx.getHash());
@@ -875,7 +894,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
         return didWork;
   */
-        return true;
+        return false;
     }
 
     InstantSendLock getInstantSendLockByHash(Sha256Hash hash)

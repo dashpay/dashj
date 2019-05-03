@@ -60,4 +60,8 @@ public abstract class QuorumManager {
         return null;
     }
 
+    boolean isQuorumActive(LLMQParameters.LLMQType llmqType, Sha256Hash quorumHash) {
+        return false;
+    }
+
 }

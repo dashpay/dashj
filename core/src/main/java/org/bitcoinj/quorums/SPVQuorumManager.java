@@ -56,5 +56,19 @@ public class SPVQuorumManager extends QuorumManager {
         return scanQuorums(llmqType, maxCount);
     }
 
+    boolean isQuorumActive(LLMQParameters.LLMQType llmqType, Sha256Hash quorumHash) {
 
+        final LLMQParameters llmqParameters = context.getParams().getLlmqs().get(llmqType);
+
+        // sig shares and recovered sigs are only accepted from recent/active quorums
+        // we allow one more active quorum as specified in consensus, as otherwise there is a small window where things could
+        // fail while we are on the brink of a new quorum
+        ArrayList<Quorum> quorums = scanQuorums(llmqType, (int)llmqParameters.signingActiveQuorumCount + 1);
+        for (Quorum q : quorums) {
+            if (q.commitment.quorumHash.equals(quorumHash)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

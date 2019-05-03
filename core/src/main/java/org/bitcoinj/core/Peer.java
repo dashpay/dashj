@@ -850,7 +850,7 @@ public class Peer extends PeerSocketHandler {
 
             //Dash Specific
             if(context != null && context.instantSend != null) {
-                if(context.instantSend.processTxLockRequest(tx))
+                if(context.instantSendManager.isOldInstantSendEnabled() && context.instantSend.processTxLockRequest(tx))
                     context.instantSend.syncTransaction(tx, null);
                 context.instantSendManager.syncTransaction(tx, blockChain.getChainHead(), -1);
             }

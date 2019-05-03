@@ -86,6 +86,7 @@ public class Context {
     public QuorumManager quorumManager;
     private RecoveredSignaturesDatabase recoveredSigsDB;
     public ChainLockHandler chainLockHandler;
+    private LLMQBackgroundThread llmqBackgroundThread;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -252,6 +253,7 @@ public class Context {
         instantSendDB = new SPVInstantSendDatabase(this);
         instantSendManager = new InstantSendManager(this, instantSendDB);
         chainLockHandler = new ChainLockHandler(this);
+        llmqBackgroundThread = new LLMQBackgroundThread(this);
 
     }
 
@@ -295,13 +297,17 @@ public class Context {
                 //other functions
                 darkSendPool.startBackgroundProcessing();
 
-                instantSendManager.start();
+                //instantSendManager.start();
+                llmqBackgroundThread.start();
+                //instantSendManager.runWithoutThread = true;
+
             }
         }).start();
     }
 
     public void close() {
-        instantSendManager.stop();
+        llmqBackgroundThread.stop();
+        //instantSendManager.stop();
     }
 
     public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)
@@ -317,7 +323,7 @@ public class Context {
             instantSend.setBlockChain(chain);
             masternodeListManager.setBlockChain(chain, peerGroup);
             chain.addTransactionReceivedListener(evoUserManager);
-            instantSendManager.setBlockChain(chain);
+            instantSendManager.setBlockChain(chain, peerGroup);
             signingManager.setBlockChain(chain);
             chainLockHandler.setBlockChain(chain);
             quorumManager.setBlockChain(chain);

@@ -48,9 +48,7 @@ public class RecoveredSignature extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException{
-        super.bitcoinSerializeToStream(stream);
         stream.write(llmqType);
-
         stream.write(quorumHash.getReversedBytes());
         stream.write(id.getReversedBytes());
         stream.write(msgHash.getReversedBytes());

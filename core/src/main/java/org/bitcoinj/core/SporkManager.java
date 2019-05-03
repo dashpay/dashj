@@ -260,7 +260,7 @@ public class SporkManager {
         if (strName == "SPORK_19_CHAINLOCKS_ENABLED")               return SPORK_19_CHAINLOCKS_ENABLED;
         if (strName == "SPORK_20_INSTANTSEND_LLMQ_BASED")           return SPORK_20_INSTANTSEND_LLMQ_BASED;
 
-        log.info("spork", "CSporkManager::GetSporkIDByName -- Unknown Spork name: "+ strName);
+        log.info("SporkManager.getSporkIDByName -- Unknown Spork name: "+ strName);
         return -1;
     }
 
@@ -283,7 +283,7 @@ public class SporkManager {
             case SPORK_19_CHAINLOCKS_ENABLED:               return "SPORK_19_CHAINLOCKS_ENABLED";
             case SPORK_20_INSTANTSEND_LLMQ_BASED:           return "SPORK_20_INSTANTSEND_LLMQ_BASED";
             default:
-                log.info("spork", "CSporkManager::GetSporkNameByID -- Unknown Spork ID "+ id);
+                log.info("sporkManagergetSporkNameByID -- Unknown Spork ID "+ id);
                 return "Unknown";
         }
     }

@@ -8,23 +8,33 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class SPVInstantSendDatabase extends AbstractManager implements InstantSendDatabase {
 
-    private static final Logger log = LoggerFactory.getLogger(MasternodeManager.class);
+    private static final Logger log = LoggerFactory.getLogger(SPVInstantSendDatabase.class);
     private ReentrantLock lock = Threading.lock("SPVInstantSendDatabase");
 
     InstantSendManager manager;
     HashMap<Sha256Hash, InstantSendLock> islockCache;
     HashMap<Sha256Hash, Sha256Hash> txidCache;
     HashMap<TransactionOutPoint, Sha256Hash> outpointCache;
+    HashMap<Sha256Hash, Long> isLockHashHeight;
+
+    @Override
+    public String toString() {
+        return String.format("SPVISDB:  isLockCache:  %d, txidCache: %d, outpointCache: %d, isLockHashHeight: %d",
+                islockCache.size(), txidCache.size(), outpointCache.size(), isLockHashHeight.size());
+    }
 
     public SPVInstantSendDatabase(Context context) {
         super(context);
         islockCache = new HashMap<Sha256Hash, InstantSendLock>();
         txidCache = new HashMap<Sha256Hash, Sha256Hash>();
         outpointCache = new HashMap<TransactionOutPoint, Sha256Hash>();
+        isLockHashHeight = new HashMap<Sha256Hash, Long>();
     }
 
     @Override
@@ -59,49 +69,43 @@ public class SPVInstantSendDatabase extends AbstractManager implements InstantSe
     }
     //void removeInstantSendLock(CDBBatch& batch, Sha256Hash hash, InstantSendLock islock);
 
-    public void writeInstantSendLockMined(Sha256Hash hash, int nHeight) {
 
-    }
-    public void removeInstantSendLockMined(Sha256Hash hash, int nHeight) {
-
-    }
-
-    public HashMap<Sha256Hash, InstantSendLock> removeConfirmedInstantSendLocks(int nUntilHeight) {
-        /*auto it = std::unique_ptr<CDBIterator>(db.NewIterator());
-
-        auto firstKey = BuildInversedISLockMinedKey(nUntilHeight, uint256());
-
-        it->Seek(firstKey);
-
-        CDBBatch deleteBatch(db);
-        HashMap<Sha256Hash, InstantSendLock> ret = new HashMap<Sha256Hash, InstantSendLock>();
-        while (it->Valid()) {
-            decltype(firstKey) curKey;
-            if (!it->GetKey(curKey) || std::get<0>(curKey) != "is_m") {
-                break;
-            }
-            uint32_t nHeight = std::numeric_limits<uint32_t>::max() - be32toh(std::get<1>(curKey));
-            if (nHeight > nUntilHeight) {
-                break;
-            }
-
-            auto& islockHash = std::get<2>(curKey);
-            auto islock = GetInstantSendLockByHash(islockHash);
-            if (islock) {
-                RemoveInstantSendLock(deleteBatch, islockHash, islock);
-                ret.emplace(islockHash, islock);
-            }
-
-            deleteBatch.Erase(curKey);
-
-            it->Next();
+    public void writeInstantSendLockMined(Sha256Hash hash, long height) {
+        lock.lock();
+        try {
+            isLockHashHeight.put(hash, height);
+        } finally {
+            lock.unlock();
         }
+    }
+    public void removeInstantSendLockMined(Sha256Hash hash, long height) {
+        lock.lock();
+        try {
+            if(isLockHashHeight.containsKey(hash))
+                isLockHashHeight.remove(hash);
+        } finally {
+            lock.unlock();
+        }
+    }
 
-        db.WriteBatch(deleteBatch);
+    public HashMap<Sha256Hash, InstantSendLock> removeConfirmedInstantSendLocks(int untilHeight) {
 
-        return ret;
-        */
-        return null;
+        HashMap<Sha256Hash, InstantSendLock> result = new HashMap<Sha256Hash, InstantSendLock>();
+
+        Iterator<Map.Entry<Sha256Hash, Long>> iterator = isLockHashHeight.entrySet().iterator();
+        while(iterator.hasNext()) {
+            Map.Entry<Sha256Hash, Long> entry = iterator.next();
+            long height = entry.getValue();
+            if(height > untilHeight)
+                break;
+            Sha256Hash lockHash = entry.getKey();
+            InstantSendLock islock = getInstantSendLockByHash(lockHash);
+            if(islock != null) {
+                removeInstantSendLock(lockHash, islock);
+                result.put(lockHash, islock);
+            }
+        }
+        return result;
     }
 
     public InstantSendLock getInstantSendLockByHash(Sha256Hash hash) {

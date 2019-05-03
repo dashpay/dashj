@@ -5,8 +5,11 @@ import org.bitcoinj.core.UnsafeByteArrayOutputStream;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSPublicKey;
 
+import javax.xml.soap.Node;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 
 public class LLMQUtils {
     static public Sha256Hash buildCommitmentHash(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash, ArrayList<Boolean> validMembers, BLSPublicKey pubKey, Sha256Hash vvecHash)
@@ -42,5 +45,10 @@ public class LLMQUtils {
     static public Sha256Hash buildSignHash(LLMQParameters.LLMQType llmqType, Sha256Hash quorumHash, Sha256Hash id, Sha256Hash msgHash)
     {
         return buildSignHash(llmqType.getValue(), quorumHash, id, msgHash);
+    }
+
+    public static Sha256Hash buildSignHash(RecoveredSignature recoveredSignature) {
+        return buildSignHash(recoveredSignature.llmqType, recoveredSignature.quorumHash, recoveredSignature.id,
+                recoveredSignature.msgHash);
     }
 }

@@ -1,6 +1,7 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSBatchVerifier;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
 import org.bitcoinj.utils.ListenerRegistration;
@@ -48,6 +49,7 @@ public class SigningManager {
         this.quorumManager = context.quorumManager;
         this.recoveredSigsListeners = new CopyOnWriteArrayList<ListenerRegistration<RecoveredSignatureListener>>();
         this.pendingReconstructedRecoveredSigs = new ArrayList<Pair<RecoveredSignature, Quorum>>();
+        this.pendingRecoveredSigs = new HashMap<Integer, ArrayList<RecoveredSignature>>();
     }
 
     public void setBlockChain(AbstractBlockChain blockChain) {
@@ -186,6 +188,200 @@ public class SigningManager {
         return quorums.get(scores.get(0).getSecond());
     }
 
+    void collectPendingRecoveredSigsToVerify(long maxUniqueSessions,
+            HashMap<Integer, ArrayList<RecoveredSignature>> retSigShares,
+            HashMap<Pair<LLMQParameters.LLMQType, Sha256Hash>, Quorum> retQuorums)
+    {
+        lock.lock();
+        try {
+            if (pendingRecoveredSigs.isEmpty()) {
+                return;
+            }
+
+            HashSet<Pair<Integer, Sha256Hash>> uniqueSignHashes = new HashSet<Pair<Integer, Sha256Hash>>();
+
+            for (Map.Entry<Integer, ArrayList<RecoveredSignature>> entry : pendingRecoveredSigs.entrySet()) {
+                if (uniqueSignHashes.size() < maxUniqueSessions)
+                    break;
+                if (entry.getValue().isEmpty())
+                    continue;
+
+                RecoveredSignature recSig = entry.getValue().get(0);
+
+                boolean alreadyHave = db.hasRecoveredSigForHash(recSig.getHash());
+                if (!alreadyHave) {
+                    uniqueSignHashes.add(new Pair(entry.getKey(), LLMQUtils.buildSignHash(recSig)));
+                    if (retSigShares.containsKey(entry.getKey())) {
+                        retSigShares.get(entry.getKey()).add(recSig);
+                    } else {
+                        ArrayList<RecoveredSignature> recSigs = new ArrayList<RecoveredSignature>();
+                        recSigs.add(recSig);
+                        retSigShares.put(entry.getKey(), recSigs);
+                    }
+                }
+
+            }
+        } finally {
+            lock.unlock();
+        }
+
+
+        for (Map.Entry<Integer, ArrayList<RecoveredSignature>> p : retSigShares.entrySet()) {
+            int nodeId = p.getKey();
+            ArrayList<RecoveredSignature> v = p.getValue();
+
+            Iterator<RecoveredSignature> it = v.iterator();
+            while (it.hasNext()) {
+
+                RecoveredSignature recSig = it.next();
+                LLMQParameters.LLMQType llmqType = LLMQParameters.LLMQType.fromValue(recSig.llmqType);
+                Pair<LLMQParameters.LLMQType, Sha256Hash> quorumKey = new Pair(LLMQParameters.LLMQType.fromValue(recSig.llmqType), recSig.quorumHash);
+                if (!retQuorums.containsKey(quorumKey)) {
+                    Quorum quorum = quorumManager.getQuorum(llmqType, recSig.quorumHash);
+                    if (quorum == null) {
+                        log.error("llmq--CSigningManager::%s -- quorum {} not found, node={}",
+                                recSig.quorumHash.toString(), nodeId);
+                        it.remove();
+                        continue;
+                    }
+                    if (quorumManager.isQuorumActive(llmqType, quorum.commitment.quorumHash)) {
+                        log.info("llmq", "CSigningManager::%s -- quorum {} not active anymore, node={}",
+                                recSig.quorumHash.toString(), nodeId);
+                        it.remove();
+                        continue;
+                    }
+
+                    retQuorums.put(quorumKey, quorum);
+                }
+            }
+        }
+    }
+
+    void processPendingReconstructedRecoveredSigs()
+    {
+        ArrayList<Pair<RecoveredSignature, Quorum>> listCopy;
+        lock.lock();
+        try {
+            listCopy = new ArrayList<Pair<RecoveredSignature, Quorum>>(pendingReconstructedRecoveredSigs);
+            pendingReconstructedRecoveredSigs = new ArrayList<Pair<RecoveredSignature, Quorum>>();
+        } finally {
+            lock.unlock();
+        }
+        for (Pair<RecoveredSignature, Quorum> pair : listCopy) {
+            processRecoveredSig(-1, pair.getFirst(), pair.getSecond());
+        }
+    }
+
+    boolean processPendingRecoveredSigs()
+    {
+        HashMap<Integer, ArrayList<RecoveredSignature>> recSigsByNode = new HashMap<Integer, ArrayList<RecoveredSignature>>();
+        HashMap<Pair<LLMQParameters.LLMQType, Sha256Hash>, Quorum> quorums = new HashMap<Pair<LLMQParameters.LLMQType, Sha256Hash>, Quorum>();
+
+        processPendingReconstructedRecoveredSigs();
+
+        collectPendingRecoveredSigsToVerify(32, recSigsByNode, quorums);
+        if (recSigsByNode.isEmpty()) {
+            return false;
+        }
+
+        // It's ok to perform insecure batched verification here as we verify against the quorum public keys, which are not
+        // craftable by individual entities, making the rogue public key attack impossible
+        BLSBatchVerifier<Integer, Sha256Hash> batchVerifier = new BLSBatchVerifier<Integer, Sha256Hash>(false, false);
+
+        long verifyCount = 0;
+        for (Map.Entry<Integer, ArrayList<RecoveredSignature>> p : recSigsByNode.entrySet()) {
+            int nodeId = p.getKey();
+            ArrayList<RecoveredSignature> v = p.getValue();
+
+            for (RecoveredSignature recSig : v) {
+                // we didn't verify the lazy signature until now
+                if (!recSig.signature.getSignature().isValid()) {
+                    batchVerifier.getBadSources().add(nodeId);
+                    break;
+                }
+
+                Quorum quorum = quorums.get(new Pair(recSig.llmqType, recSig.quorumHash));
+                batchVerifier.pushMessage(nodeId, recSig.getHash(), LLMQUtils.buildSignHash(recSig), recSig.signature.getSignature(), quorum.commitment.quorumPublicKey);
+                verifyCount++;
+            }
+        }
+
+        //cxxtimer::Timer verifyTimer(true);
+        long start = Utils.currentTimeMillis();
+        batchVerifier.verify();
+        long end = Utils.currentTimeMillis();
+        //verifyTimer.stop();
+
+        log.info("llmq--CSigningManager:: -- verified recovered sig(s). count={}, vt={}, nodes={}", verifyCount, end-start, recSigsByNode.size());
+
+        HashSet<Sha256Hash> processed = new HashSet<Sha256Hash>();
+        for (Map.Entry<Integer, ArrayList<RecoveredSignature>> p : recSigsByNode.entrySet()) {
+            int nodeId = p.getKey();
+            ArrayList<RecoveredSignature> v = p.getValue();
+
+            if (batchVerifier.getBadSources().contains(nodeId)) {
+                //LOCK(cs_main);
+                //LogPrintf("CSigningManager::%s -- invalid recSig from other node, banning peer=%d", nodeId);
+                //Misbehaving(nodeId, 100);
+                continue;
+            }
+
+            for (RecoveredSignature recSig : v) {
+                if (!processed.add(recSig.getHash())) {
+                    continue;
+                }
+
+                Quorum quorum = quorums.get(new Pair(recSig.llmqType, recSig.quorumHash));
+                processRecoveredSig(nodeId, recSig, quorum);
+            }
+        }
+
+        return true;
+    }
+
+    // signature must be verified already
+    void processRecoveredSig(int nodeId, RecoveredSignature recoveredSig, Quorum quorum)
+    {
+        LLMQParameters.LLMQType llmqType = LLMQParameters.LLMQType.fromValue(recoveredSig.llmqType);
+
+        lock.lock();
+        try {
+            
+
+            Sha256Hash signHash = LLMQUtils.buildSignHash(recoveredSig);
+
+            log.info("llmq--processRecoveredSig -- valid recSig. signHash={}, id={}, msgHash={}, node={}",
+                    signHash.toString(), recoveredSig.id.toString(), recoveredSig.msgHash.toString(), nodeId);
+
+            if (db.hasRecoveredSigForId(llmqType, recoveredSig.id)) {
+                RecoveredSignature otherRecoveredSig = db.getRecoveredSigById(llmqType, recoveredSig.id);
+                if (otherRecoveredSig != null) {
+                    Sha256Hash otherSignHash = LLMQUtils.buildSignHash(recoveredSig);
+                    if (!signHash.equals(otherSignHash)) {
+                        // this should really not happen, as each masternode is participating in only one vote,
+                        // even if it's a member of multiple quorums. so a majority is only possible on one quorum and one msgHash per id
+                        log.info("CSigningManager::processRecoveredSig -- conflicting recoveredSig for signHash={}, id={}, msgHash={}, otherSignHash={}",
+                                signHash.toString(), recoveredSig.id.toString(), recoveredSig.msgHash.toString(), otherSignHash.toString());
+                    } else {
+                        // Looks like we're trying to process a recSig that is already known. This might happen if the same
+                        // recSig comes in through regular QRECSIG messages and at the same time through some other message
+                        // which allowed to reconstruct a recSig (e.g. ISLOCK). In this case, just bail out.
+                    }
+                    return;
+                } else {
+                    // This case is very unlikely. It can only happen when cleanup caused this specific recSig to vanish
+                    // between the HasRecoveredSigForId and GetRecoveredSigById call. If that happens, treat it as if we
+                    // never had that recSig
+                }
+            }
+            db.writeRecoveredSig(recoveredSig);
+
+            queueRecoveredSignatureListeners(recoveredSig);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public void pushReconstructedRecoveredSig(RecoveredSignature recoveredSig, Quorum quorum)
     {
         lock.lock();
@@ -207,5 +403,19 @@ public class SigningManager {
 
         Sha256Hash signHash = LLMQUtils.buildSignHash(llmqParams.type, quorum.commitment.quorumHash, id, msgHash);
         return sig.verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
+    }
+
+    void cleanup()
+    {
+        long now = Utils.currentTimeMillis();
+        if (now - lastCleanupTime < 5000) {
+            return;
+        }
+
+        long maxAge = DEFAULT_MAX_RECOVERED_SIGS_AGE;
+
+        db.cleanupOldRecoveredSignatures(maxAge);
+
+        lastCleanupTime = Utils.currentTimeMillis();
     }
 }
