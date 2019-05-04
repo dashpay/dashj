@@ -1480,7 +1480,6 @@ public class Peer extends PeerSocketHandler {
             while (it.hasNext()) {
                 InventoryItem item = it.next();
                 if(!alreadyHave(item)) {
-                    log.info("found instantSendLock:" + item.hash);
                     getdata.addItem(item);
                 }
             }
@@ -1492,7 +1491,6 @@ public class Peer extends PeerSocketHandler {
             while (it.hasNext()) {
                 InventoryItem item = it.next();
                 if (!alreadyHave(item)) {
-                    log.info("found chainLock:" + item.hash);
                     getdata.addItem(item);
                 }
             }

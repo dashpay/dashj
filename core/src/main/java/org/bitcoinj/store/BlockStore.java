@@ -65,4 +65,9 @@ public interface BlockStore {
      * @return The network params.
      */
     NetworkParameters getParams();
+
+    /**
+     * Returns the StoredBlock given a height.  If no such block is found, returns null.
+     */
+    StoredBlock get(int height) throws BlockStoreException;
 }

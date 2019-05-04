@@ -3,6 +3,7 @@ package org.bitcoinj.evolution;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
+import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.slf4j.Logger;
@@ -98,6 +99,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         log.info("processing mnlistdiff between : " + tipHeight + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
+            StoredBlock block = blockChain.getBlockStore().get(mnlistdiff.blockHash);
+            if(block.getHeight() != newHeight)
+                throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
             newMNList.verify(mnlistdiff.coinBaseTx);
             SimplifiedQuorumList newQuorumList = null;
@@ -122,6 +126,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         } catch(NullPointerException x) {
             //file name is not set, do not save
             log.info(x.getMessage());
+        } catch(BlockStoreException x) {
+            log.info(x.getMessage());
+            throw new ProtocolException(x);
         } finally {
             lock.unlock();
         }

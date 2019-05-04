@@ -18,6 +18,7 @@ package org.bitcoinj.store;
 
 import org.bitcoinj.core.*;
 
+import javax.annotation.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -82,5 +83,24 @@ public class MemoryBlockStore implements BlockStore {
     @Override
     public NetworkParameters getParams() {
         return params;
+    }
+
+    @Nullable
+    public synchronized StoredBlock get(int blockHeight) throws BlockStoreException {
+
+        StoredBlock cursor = getChainHead();
+
+        if(cursor.getHeight() < blockHeight)
+            return null;
+
+
+        while (cursor != null) {
+            if(cursor.getHeight() == blockHeight)
+                return cursor;
+
+            cursor = get(cursor.getHeader().getPrevBlockHash());
+        }
+
+        return null;
     }
 }

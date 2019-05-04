@@ -50,6 +50,8 @@ import static org.fusesource.leveldbjni.JniDBFactory.*;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 
+import javax.annotation.Nullable;
+
 /**
  * <p>
  * An implementation of a Fully Pruned Block Store using a leveldb implementation as the backing data store.
@@ -1147,5 +1149,24 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
                 c.delete();
         }
         openDB();
+    }
+
+    @Nullable
+    public StoredBlock get(int blockHeight) throws BlockStoreException {
+
+        StoredBlock cursor = getChainHead();
+
+        if(cursor.getHeight() < blockHeight)
+            return null;
+
+
+        while (cursor != null) {
+            if(cursor.getHeight() == blockHeight)
+                return cursor;
+
+            cursor = get(cursor.getHeader().getPrevBlockHash());
+        }
+
+        return null;
     }
 }

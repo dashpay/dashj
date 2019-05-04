@@ -1,12 +1,15 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
 import org.bitcoinj.crypto.BLSBatchVerifier;
+import org.bitcoinj.quorums.listeners.ChainLockListener;
 import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
+import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -17,7 +20,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static com.google.common.base.Preconditions.checkState;
 
 public class ChainLockHandler implements RecoveredSignatureListener {
 
@@ -63,11 +70,13 @@ public class ChainLockHandler implements RecoveredSignatureListener {
         txFirstSeenTime = new HashMap<Sha256Hash, Long>();
         seenChainLocks = new HashMap<Sha256Hash, Long>();
         lastCleanupTime = 0;
+        chainLockListeners = new CopyOnWriteArrayList<ListenerRegistration<ChainLockListener>>();
     }
 
     public void setBlockChain(AbstractBlockChain blockChain) {
         this.blockChain = blockChain;
         this.blockChain.addTransactionReceivedListener(this.transactionReceivedInBlockListener);
+        this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
         this.quorumSigningManager = context.signingManager;
         this.quorumInstantSendManager = context.instantSendManager;
     }
@@ -108,8 +117,6 @@ public class ChainLockHandler implements RecoveredSignatureListener {
         /*scheduler->scheduleEvery([&]() {
         CheckActiveState();
         EnforceBestChainLock();
-        // regularly retry signing the current chaintip as it might have failed before due to missing ixlocks
-        TrySignChainTip();
     }, 5000);*/
     }
 
@@ -224,6 +231,8 @@ public class ChainLockHandler implements RecoveredSignatureListener {
         CheckActiveState();
         EnforceBestChainLock();
     }, 0);*/
+        checkActiveState();
+        enforceBestChainLock();
 
         log.info("chainlocks {} -- processed new CLSIG ({}), peer={}",
                  clsig.toString(), from);
@@ -267,6 +276,8 @@ public class ChainLockHandler implements RecoveredSignatureListener {
                 return;
             }
             tryLockChainTipScheduled = true;
+            checkActiveState();
+            enforceBestChainLock();
            /* scheduler -> scheduleFromNow([ &]() {
                 CheckActiveState();
                 EnforceBestChainLock();
@@ -442,20 +453,25 @@ public class ChainLockHandler implements RecoveredSignatureListener {
         if (activateNeeded && !ActivateBestChain(state, Params())) {
             log.info(("{} -- ActivateBestChain failed: {}\n",  FormatStateMessage(state));
         }
+        */
+        lock.lock();
+        try {
+            StoredBlock blockNotify = null;
+            if (lastNotifyChainLockBlock == null || (!lastNotifyChainLockBlock.equals(currentBestChainLockBlock)) &&
+                    blockChain.getBlockStore().get(currentBestChainLockBlock.getHeight()).equals(currentBestChainLockBlock)) {
+                lastNotifyChainLockBlock = currentBestChainLockBlock;
+                blockNotify = currentBestChainLockBlock;
+            }
 
-    StoredBlock pindexNotify = nullptr;
-        {
-            LOCK(cs_main);
-            if (lastNotifyChainLockBlockIndex != currentBestChainLockBlockIndex &&
-                    chainActive.Tip()->getAncestor(currentBestChainLockBlockIndex->height) == currentBestChainLockBlockIndex) {
-            lastNotifyChainLockBlockIndex = currentBestChainLockBlockIndex;
-            pindexNotify = currentBestChainLockBlockIndex;
-        }
+            if (blockNotify != null) {
+                queueChainLockListeners(blockNotify);
+            }
+        } catch (BlockStoreException x) {
+
+        } finally {
+            lock.unlock();
         }
 
-        if (pindexNotify) {
-            getMainSignals().NotifyChainLock(pindexNotify);
-        }*/
     }
 
     /*
@@ -498,7 +514,7 @@ public class ChainLockHandler implements RecoveredSignatureListener {
 
     boolean internalHasChainLock(long height, Sha256Hash blockHash)
     {
-        lock.lock();
+        checkState(lock.isHeldByCurrentThread());
         try {
             if (!isEnforced) {
                 return false;
@@ -523,10 +539,7 @@ public class ChainLockHandler implements RecoveredSignatureListener {
             return cursor != null && cursor.getHeader().getHash().equals(blockHash);
         } catch (BlockStoreException x) {
             return false;
-        } finally {
-            lock.unlock();
         }
-
     }
 
     public boolean hasConflictingChainLock(long height, Sha256Hash blockHash)
@@ -541,11 +554,14 @@ public class ChainLockHandler implements RecoveredSignatureListener {
 
     boolean internalHasConflictingChainLock(long height, Sha256Hash blockHash)
     {
-        lock.lock();
+        checkState(lock.isHeldByCurrentThread());
         try {
             if (!isEnforced) {
                 return false;
             }
+
+            if(bestChainLockBlock == null)
+                return false;
 
             if (height > bestChainLockBlock.getHeight()) {
                 return false;
@@ -562,8 +578,6 @@ public class ChainLockHandler implements RecoveredSignatureListener {
             return cursor != null && !cursor.getHeader().getHash().equals(blockHash);
         } catch (BlockStoreException x) {
             return false;
-        } finally {
-            lock.unlock();
         }
 
     }
@@ -629,6 +643,13 @@ public class ChainLockHandler implements RecoveredSignatureListener {
 */
     }
 
+    NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
+        @Override
+        public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+            updatedBlockTip(block, null);
+        }
+    };
+
     TransactionReceivedInBlockListener transactionReceivedInBlockListener = new TransactionReceivedInBlockListener() {
         @Override
         public void receiveFromBlock(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
@@ -644,4 +665,47 @@ public class ChainLockHandler implements RecoveredSignatureListener {
             return false;
         }
     };
+
+    private transient CopyOnWriteArrayList<ListenerRegistration<ChainLockListener>> chainLockListeners;
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addChainLockListener(ChainLockListener listener) {
+        addChainLockListener(listener, Threading.USER_THREAD);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addChainLockListener(ChainLockListener listener, Executor executor) {
+        // This is thread safe, so we don't need to take the lock.
+        chainLockListeners.add(new ListenerRegistration<ChainLockListener>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeChainLockListener(ChainLockListener listener) {
+        return ListenerRegistration.removeFromList(listener, chainLockListeners);
+    }
+
+    private void queueChainLockListeners(final StoredBlock block) {
+        checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<ChainLockListener> registration : chainLockListeners) {
+            if (registration.executor == Threading.SAME_THREAD) {
+                registration.listener.onNewChainLock(block);
+            } else {
+                registration.executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        registration.listener.onNewChainLock(block);
+                    }
+                });
+            }
+        }
+    }
 }

@@ -1,11 +1,15 @@
 package org.bitcoinj.quorums.listeners;
 
 import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.quorums.ChainLockSignature;
 
 /**
- * Created by hashengineering on 5/1/19.
+ * The interface ChainLock listener.
  */
-interface ChainLockListener {
-    void onNewChainLock(StoredBlock block, ChainLockSignature clsig);
+public interface ChainLockListener {
+    /**
+     * Called when a new chainlock is verified.
+     *
+     * @param block the block that is associated with the ChainLock
+     */
+    void onNewChainLock(StoredBlock block);
 }

@@ -6,6 +6,7 @@ import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
 import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
 import org.bitcoinj.crypto.BLSBatchVerifier;
 import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
+import org.bitcoinj.quorums.listeners.ChainLockListener;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
@@ -34,22 +35,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     HashMap<Sha256Hash, Transaction> mapTx;
 
-
-    /**
-     * Request ids of inputs that we signed. Used to determine if a recovered signature belongs to an
-     * in-progress input lock.
-     */
-    HashSet<Sha256Hash> inputRequestIds;
-
-    /**
-     * These are the islocks that are currently in the middle of being created. Entries are created when we observed
-     * recovered signatures for all inputs of a TX. At the same time, we initiate signing of our sigshare for the islock.
-     * When the recovered sig for the islock later arrives, we can finish the islock and propagate it.
-     */
-    HashMap<Sha256Hash, InstantSendLock> creatingInstantSendLocks;
-    // maps from txid to the in-progress islock
-    HashMap<Sha256Hash, InstantSendLock> txToCreatingInstantSendLocks;
-
     // Incoming and not verified yet
     HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pendingInstantSendLocks;
 
@@ -61,12 +46,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
         this.context = context;
         this.db = db;
         this.quorumSigningManager = context.signingManager;
-        creatingInstantSendLocks = new HashMap<Sha256Hash, InstantSendLock>();
         pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
         pendingRetryTxs = new HashSet<Sha256Hash>();
-        txToCreatingInstantSendLocks = new HashMap<Sha256Hash, InstantSendLock>();
         mapTx = new HashMap<Sha256Hash, Transaction>();
-        inputRequestIds = new HashSet<Sha256Hash>();
     }
 
     @Override
@@ -85,6 +67,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         this.blockChain.addTransactionReceivedListener(this.transactionReceivedInBlockListener);
         this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
         peerGroup.addOnTransactionBroadcastListener(this.transactionBroadcastListener);
+        context.chainLockHandler.addChainLockListener(this.chainLockListener, Threading.SAME_THREAD);
     }
 
     public boolean isOldInstantSendEnabled()
@@ -335,106 +318,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
         return true;
     }
 
-
-
-    void handleNewInputLockRecoveredSig(RecoveredSignature recoveredSig, Sha256Hash txid)
-    {
-/*        LLMQParameters.LLMQType llmqType = context.getParams().getLlmqForInstantSend();
-
-        if(blockChain.getBlockStore() instanceof FullPrunedBlockStore) {
-            FullPrunedBlockStore blockStore = (FullPrunedBlockStore)blockChain.getBlockStore();
-            Transaction tx;
-            Sha256Hash hashBlock;
-            UTXO utxo = blockStore.getTransactionOutput()
-            if (!GetTransaction(txid, tx, hashBlock, true)) {
-                return;
-            }
-
-            //if (LogAcceptCategory("instantsend")) {
-                for (TransactionInput in :tx.getInputs()){
-                    Sha256Hash id = ::SerializeHash(std::make_pair (INPUTLOCK_REQUESTID_PREFIX, in.prevout));
-                    if (id == recoveredSig.id) {
-                        log.info("instantsend--CInstantSendManager::{} -- txid={}: got recovered sig for input {}",
-                                txid.toString(), in.getOutpoint().toStringShort());
-                        break;
-                    }
-                }
-            //}
-        }
-
-        trySignInstantSendLock(tx);
-        */
-    }
-
-    void trySignInstantSendLock(Transaction tx)
-    {
-        /*LLMQParameters.LLMQType llmqType = context.getParams().getLlmqForInstantSend();
-
-        for (TransactionInput in : tx.getInputs()) {
-            auto id = ::SerializeHash(std::make_pair(INPUTLOCK_REQUESTID_PREFIX, in.prevout));
-            if (!quorumSigningManager.hasRecoveredSignature(llmqType, id, tx.getHash())) {
-                return;
-            }
-        }
-
-        log.info("instantsend", "CInstantSendManager::{} -- txid={}: got all recovered sigs, creating CInstantSendLock\n", __func__,
-                tx.getHash().toString());
-
-        InstantSendLock islock = new InstantSendLock();
-        islock.txid = tx.getHash();
-        for (TransactionInput in : tx.getInputs()) {
-            islock.inputs.add(in.getOutpoint());
-        }
-
-        Sha256Hash id = islock.getRequestId();
-
-        if (quorumSigningManager.hasRecoveredSigForId(llmqType, id)) {
-            return;
-        }
-
-        try {
-            InstantSendLock e = creatingInstantSendLocks.put(id, islock);
-            if (e == null) {
-                return;
-            }
-            txToCreatingInstantSendLocks.put(tx.getHash(), e);
-        } finally {
-            lock.unlock();
-        }
-
-        quorumSigningManager.asyncSignIfMember(llmqType, id, tx.getHash());
-        */
-    }
-
-    void handleNewInstantSendLockRecoveredSig(RecoveredSignature recoveredSig)
-    {
-        InstantSendLock islock;
-
-        lock.lock();
-        try {
-            islock = creatingInstantSendLocks.get(recoveredSig.id);
-            if (islock == null) {
-                return;
-            }
-
-            creatingInstantSendLocks.remove(islock);
-            txToCreatingInstantSendLocks.remove(islock.txid);
-        } finally {
-            lock.unlock();
-        }
-
-        if (islock.txid != recoveredSig.msgHash) {
-            log.info("CInstantSendManager::{} -- txid={}: islock conflicts with {}, dropping own version",
-                    islock.txid.toString(), recoveredSig.msgHash.toString());
-            return;
-        }
-
-        islock.signature = recoveredSig.signature;
-        processInstantSendLock(-1, islock.getHash(), islock);
-    }
-    
-
-
     boolean processPendingInstantSendLocks()
     {
         LLMQParameters.LLMQType llmqType = context.getParams().getLlmqForInstantSend();
@@ -585,9 +468,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
             log.info("instantsend-- txid={}, islock={}: processsing islock, peer={}",
                     islock.txid.toString(), hash.toString(), from);
 
-            creatingInstantSendLocks.remove(islock.getRequestId());
-            txToCreatingInstantSendLocks.remove(islock.txid);
-
             InstantSendLock otherIsLock;
             if (db.getInstantSendLockByHash(hash) != null) {
                 return;
@@ -672,9 +552,15 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
     }
 
+    ChainLockListener chainLockListener = new ChainLockListener() {
+        public void onNewChainLock(StoredBlock block) {
+            handleFullyConfirmedBlock(block.getHeight());
+        }
+    };
+
     void notifyChainLock(StoredBlock pindexChainLock)
     {
-        handleFullyConfirmedBlock(pindexChainLock);
+        handleFullyConfirmedBlock(pindexChainLock.getHeight());
     }
 
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
@@ -688,34 +574,27 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 return;
             }
 
-            int nConfirmedHeight = block.getHeight() - context.getParams().getInstantSendKeepLock();
-            //const CBlockIndex* pindex = pindexNew.GetAncestor(nConfirmedHeight);
+            int confirmedHeight = block.getHeight() - context.getParams().getInstantSendKeepLock();
 
-            //if (pindex) {
-            //    handleFullyConfirmedBlock(pindex);
-            //}
+            handleFullyConfirmedBlock(confirmedHeight);
+
         }
     };
 
 
-    void handleFullyConfirmedBlock(StoredBlock block)
+    void handleFullyConfirmedBlock(int height)
     {
         HashMap<Sha256Hash, InstantSendLock> removeISLocks;
 
         lock.lock();
         try {
 
-            removeISLocks = db.removeConfirmedInstantSendLocks(block.getHeight());
+            removeISLocks = db.removeConfirmedInstantSendLocks(height);
             for (Map.Entry<Sha256Hash, InstantSendLock> p : removeISLocks.entrySet()) {
                 Sha256Hash islockHash = p.getKey();
                 InstantSendLock islock = p.getValue();
                 log.info("instantsend--CInstantSendManager::{} -- txid={}, islock={}: removed islock as it got fully confirmed",
                         islock.txid.toString(), islockHash.toString());
-
-                for (TransactionOutPoint in : islock.inputs) {
-                    Sha256Hash inputRequestId = getRequestId(in);
-                    inputRequestIds.remove(inputRequestId);
-                }
             }
 
             // Retry all not yet locked mempool TXs and TX which where mined after the fully confirmed block
@@ -725,7 +604,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
 
         for (Map.Entry<Sha256Hash, InstantSendLock> p : removeISLocks.entrySet()) {
-            updateWalletTransaction(p.getValue().txid, null);
+            updateWalletTransaction(p.getValue().txid, mapTx.get(p.getValue().txid));
+            mapTx.remove(p.getValue().txid);
         }
     }
     static final String INPUTLOCK_REQUESTID_PREFIX = "inlock";
@@ -970,28 +850,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
         LLMQParameters.LLMQType llmqType = context.getParams().getLlmqForInstantSend();
         if (llmqType == LLMQParameters.LLMQType.LLMQ_NONE) {
             return;
-        }
-        LLMQParameters llmqParameters = context.getParams().getLlmqs().get(llmqType);
-        
-        Sha256Hash txid = null;
-        boolean isInstantSendLock = false;
-        {
-            lock.lock();
-            try {
-                if (inputRequestIds.contains(recoveredSig.id)) {
-                    txid = recoveredSig.msgHash;
-                }
-                if (creatingInstantSendLocks.containsKey(recoveredSig.id)) {
-                    isInstantSendLock = true;
-                }
-            } finally {
-                lock.unlock();
-            }
-        }
-        if (txid != null && !txid.equals(Sha256Hash.ZERO_HASH)) {
-            handleNewInputLockRecoveredSig(recoveredSig, txid);
-        } else if (isInstantSendLock) {
-            handleNewInstantSendLockRecoveredSig(recoveredSig);
         }
     }
 

@@ -251,4 +251,36 @@ public class FinalCommitment extends SpecialTxPayload {
             throw new RuntimeException(x);
         }
     }
+
+    public Sha256Hash getQuorumHash() {
+        return quorumHash;
+    }
+
+    public int getLlmqType() {
+        return llmqType;
+    }
+
+    public BLSPublicKey getQuorumPublicKey() {
+        return quorumPublicKey;
+    }
+
+    public Sha256Hash getQuorumVvecHash() {
+        return quorumVvecHash;
+    }
+
+    public BLSSignature getMembersSignature() {
+        return membersSignature;
+    }
+
+    public BLSSignature getQuorumSignature() {
+        return quorumSignature;
+    }
+
+    public ArrayList<Boolean> getSigners() {
+        return signers;
+    }
+
+    public ArrayList<Boolean> getValidMembers() {
+        return validMembers;
+    }
 }

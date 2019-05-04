@@ -298,7 +298,8 @@ public class Context {
                 darkSendPool.startBackgroundProcessing();
 
                 //instantSendManager.start();
-                llmqBackgroundThread.start();
+                if(!llmqBackgroundThread.isAlive())
+                    llmqBackgroundThread.start();
                 //instantSendManager.runWithoutThread = true;
 
             }

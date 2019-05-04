@@ -5,6 +5,7 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.evolution.CoinbaseTx;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
+import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 
@@ -100,8 +101,7 @@ public class SimplifiedQuorumList extends Message {
         return "Simplified Quorum List:  count:  " + size();
     }
 
-    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff)
-    {
+    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff) {
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
@@ -115,9 +115,20 @@ public class SimplifiedQuorumList extends Message {
                 result.removeCommitment(quorum);
             }
             for (FinalCommitment entry : diff.getNewQuorums()) {
+                StoredBlock block = Context.get().blockChain.getBlockStore().get(entry.getQuorumHash());
+                if(block != null) {
+                    LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(entry.getLlmqType()));
+                    if(llmqParameters == null)
+                        throw new ProtocolException("Quorum llmqType is invalid: " + entry.llmqType);
+                    int dkgInterval = llmqParameters.dkgInterval;
+                    if (block.getHeight() % dkgInterval != 0)
+                        throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
+                } else throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
                 result.addCommitment(entry);
             }
             return result;
+        } catch (BlockStoreException x) {
+            throw new ProtocolException(x);
         } finally {
             lock.unlock();
         }
