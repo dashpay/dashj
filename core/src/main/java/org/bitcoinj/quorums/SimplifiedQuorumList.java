@@ -123,7 +123,7 @@ public class SimplifiedQuorumList extends Message {
                     int dkgInterval = llmqParameters.dkgInterval;
                     if (block.getHeight() % dkgInterval != 0)
                         throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
-                } else throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
+                } /*else throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);*/
                 result.addCommitment(entry);
             }
             return result;
