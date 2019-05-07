@@ -17,6 +17,8 @@
 
 package org.bitcoinj.core;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.Networks;
 import org.bitcoinj.params.TestNet3Params;
@@ -39,6 +41,16 @@ import static org.junit.Assert.*;
 public class AddressTest {
     private static final NetworkParameters TESTNET = TestNet3Params.get();
     private static final NetworkParameters MAINNET = MainNetParams.get();
+
+    @Test
+    public void equalsContract() {
+        EqualsVerifier.forClass(LegacyAddress.class)
+                .withPrefabValues(NetworkParameters.class, MAINNET, TESTNET)
+                .suppress(Warning.NULL_FIELDS)
+                .suppress(Warning.TRANSIENT_FIELDS)
+                .usingGetClass()
+                .verify();
+    }
 
     @Test
     public void testJavaSerialization() throws Exception {
