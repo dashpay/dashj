@@ -22,6 +22,7 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceTriggerManager;
 import org.bitcoinj.governance.VoteConfidenceTable;
+import org.bitcoinj.quorums.*;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.slf4j.*;
@@ -79,6 +80,13 @@ public class Context {
     public SimplifiedMasternodeListManager masternodeListManager;
     public static boolean fMasterNode = false;
     private VoteConfidenceTable voteConfidenceTable;
+    private InstantSendDatabase instantSendDB;
+    public InstantSendManager instantSendManager;
+    public SigningManager signingManager;
+    public QuorumManager quorumManager;
+    private RecoveredSignaturesDatabase recoveredSigsDB;
+    public ChainLocksHandler chainLockHandler;
+    private LLMQBackgroundThread llmqBackgroundThread;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -238,6 +246,15 @@ public class Context {
         netFullfilledRequestManager = new NetFullfilledRequestManager(this);
         evoUserManager = new EvolutionUserManager(this);
         masternodeListManager = new SimplifiedMasternodeListManager(this);
+        recoveredSigsDB = new SPVRecoveredSignaturesDatabase(this);
+        quorumManager = new SPVQuorumManager(this, masternodeListManager);
+        signingManager = new SigningManager(this, recoveredSigsDB);
+
+        instantSendDB = new SPVInstantSendDatabase(this);
+        instantSendManager = new InstantSendManager(this, instantSendDB);
+        chainLockHandler = new ChainLocksHandler(this);
+        llmqBackgroundThread = new LLMQBackgroundThread(this);
+
     }
 
     public void closeDash() {
@@ -279,9 +296,19 @@ public class Context {
 
                 //other functions
                 darkSendPool.startBackgroundProcessing();
+
+                //instantSendManager.start();
+                if(!llmqBackgroundThread.isAlive())
+                    llmqBackgroundThread.start();
+                //instantSendManager.runWithoutThread = true;
+
             }
         }).start();
+    }
 
+    public void close() {
+        llmqBackgroundThread.stop();
+        //instantSendManager.stop();
     }
 
     public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)
@@ -297,6 +324,10 @@ public class Context {
             instantSend.setBlockChain(chain);
             masternodeListManager.setBlockChain(chain, peerGroup);
             chain.addTransactionReceivedListener(evoUserManager);
+            instantSendManager.setBlockChain(chain, peerGroup);
+            signingManager.setBlockChain(chain);
+            chainLockHandler.setBlockChain(chain);
+            quorumManager.setBlockChain(chain);
             updatedChainHead(chain.getChainHead());
         }
         params.setDIPActiveAtTip(chain.getBestChainHeight() >= params.getDIP0001BlockHeight());
