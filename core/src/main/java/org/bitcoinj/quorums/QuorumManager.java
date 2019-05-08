@@ -15,8 +15,6 @@ public abstract class QuorumManager {
     Context context;
     AbstractBlockChain blockChain;
 
-    SigningManager quorumSigningManager;
-
     private static final Logger log = LoggerFactory.getLogger(QuorumManager.class);
     protected ReentrantLock lock = Threading.lock("QuorumManager");
 
@@ -58,6 +56,10 @@ public abstract class QuorumManager {
 
     Quorum getQuorum(LLMQParameters.LLMQType llmqType, StoredBlock block) {
         return null;
+    }
+
+    boolean isQuorumActive(LLMQParameters.LLMQType llmqType, Sha256Hash quorumHash) {
+        return false;
     }
 
 }
