@@ -300,4 +300,26 @@ public class SPVBlockStore implements BlockStore {
         checkArgument(newCursor >= 0);
         buffer.putInt(4, newCursor);
     }
+
+    @Nullable
+    public StoredBlock get(int blockHeight) throws BlockStoreException {
+
+        lock.lock();
+        try {
+            StoredBlock cursor = getChainHead();
+
+            if(cursor.getHeight() < blockHeight)
+                return null;
+
+
+            while (cursor != null) {
+                if(cursor.getHeight() == blockHeight)
+                    return cursor;
+
+                cursor = get(cursor.getHeader().getPrevBlockHash());
+            }
+
+            return null;
+        } finally { lock.unlock(); }
+    }
 }

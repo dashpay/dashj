@@ -1268,4 +1268,23 @@ public abstract class DatabaseFullPrunedBlockStore implements FullPrunedBlockSto
 
         s.close();
     }
+
+    @Nullable
+    public StoredBlock get(int blockHeight) throws BlockStoreException {
+
+        StoredBlock cursor = getChainHead();
+
+        if(cursor.getHeight() < blockHeight)
+            return null;
+
+
+        while (cursor != null) {
+            if(cursor.getHeight() == blockHeight)
+                return cursor;
+
+            cursor = get(cursor.getHeader().getPrevBlockHash());
+        }
+
+        return null;
+    }
 }
