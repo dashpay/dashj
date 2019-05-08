@@ -28,6 +28,7 @@ import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.governance.GovernanceVote;
 import org.bitcoinj.governance.GovernanceVoteConfidence;
 import org.bitcoinj.net.StreamConnection;
+import org.bitcoinj.quorums.ChainLockSignature;
 import org.bitcoinj.quorums.InstantSendLock;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -568,7 +569,11 @@ public class Peer extends PeerSocketHandler {
         } else if(m instanceof GovernanceVote) {
             context.governanceManager.processGovernanceObjectVote(this, (GovernanceVote)m);
         } else if (m instanceof SimplifiedMasternodeListDiff) {
-            context.masternodeListManager.processMasternodeListDiff((SimplifiedMasternodeListDiff)m);
+            context.masternodeListManager.processMasternodeListDiff((SimplifiedMasternodeListDiff) m);
+        } else if(m instanceof InstantSendLock) {
+            context.instantSendManager.processInstantSendLock(this, (InstantSendLock) m);
+        } else if(m instanceof ChainLockSignature) {
+            context.chainLockHandler.processChainLockSignature(this, (ChainLockSignature)m);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
@@ -845,8 +850,9 @@ public class Peer extends PeerSocketHandler {
 
             //Dash Specific
             if(context != null && context.instantSend != null) {
-                if(context.instantSend.processTxLockRequest(tx))
+                if(context.instantSendManager.isOldInstantSendEnabled() && context.instantSend.processTxLockRequest(tx))
                     context.instantSend.syncTransaction(tx, null);
+                context.instantSendManager.syncTransaction(tx, blockChain.getChainHead(), -1);
             }
 
             // It's a broadcast transaction. Tell all wallets about this tx so they can check if it's relevant or not.
@@ -876,7 +882,7 @@ public class Peer extends PeerSocketHandler {
                                         log.info("{}: Dependency download complete!", getAddress());
                                         wallet.receivePending(tx, dependencies);
 
-                                        if(tx instanceof TransactionLockRequest)
+                                        if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled() && tx instanceof TransactionLockRequest)
                                         {
                                             context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
                                         }
@@ -899,7 +905,7 @@ public class Peer extends PeerSocketHandler {
                         } else {
                             wallet.receivePending(tx, null);
 
-                            if(tx instanceof TransactionLockRequest)
+                            if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled() && tx instanceof TransactionLockRequest)
                             {
                                 context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
                             }
@@ -1306,6 +1312,8 @@ public class Peer extends PeerSocketHandler {
                 return !context.governanceManager.confirmInventoryRequest(inv);
             case InstantSendLock:
                 return context.instantSendManager.alreadyHave(inv);
+            case ChainLockSignature:
+                return context.chainLockHandler.alreadyHave(inv);
         }
         // Don't know what it is, just say we already got one
         return true;
@@ -1317,11 +1325,12 @@ public class Peer extends PeerSocketHandler {
         // Separate out the blocks and transactions, we'll handle them differently
         List<InventoryItem> transactions = new LinkedList<InventoryItem>();
         List<InventoryItem> blocks = new LinkedList<InventoryItem>();
-        List<InventoryItem> instantxLockRequests = new LinkedList<InventoryItem>();
-        List<InventoryItem> instantxLocks = new LinkedList<InventoryItem>();
+        List<InventoryItem> oldTxLockRequests = new LinkedList<InventoryItem>();
+        List<InventoryItem> oldTxLockVotes = new LinkedList<InventoryItem>();
         List<InventoryItem> sporks = new LinkedList<InventoryItem>();
         List<InventoryItem> goveranceObjects = new LinkedList<InventoryItem>();
         List<InventoryItem> instantSendLocks = new LinkedList<InventoryItem>();
+        List<InventoryItem> chainLocks = new LinkedList<InventoryItem>();
 
         //InstantSend instantSend = InstantSend.get(blockChain);
 
@@ -1331,16 +1340,13 @@ public class Peer extends PeerSocketHandler {
                     transactions.add(item);
                     break;
                 case TransactionLockRequest:
-                    //if(instantSend.isEnabled())
-                        instantxLockRequests.add(item);
-                    //transactions.add(item);
+                    oldTxLockRequests.add(item);
                     break;
                 case Block:
                     blocks.add(item);
                     break;
                 case TransactionLockVote:
-                    //if(instantSend.isEnabled())
-                        instantxLocks.add(item);
+                    oldTxLockVotes.add(item);
                     break;
                 case Spork:
                     sporks.add(item);
@@ -1367,6 +1373,9 @@ public class Peer extends PeerSocketHandler {
                 case MasternodeVerify: break;
                 case InstantSendLock:
                     instantSendLocks.add(item);
+                    break;
+                case ChainLockSignature:
+                    chainLocks.add(item);
                     break;
                 default:
                     break;
@@ -1424,7 +1433,7 @@ public class Peer extends PeerSocketHandler {
             }
         }
 
-        it = instantxLockRequests.iterator();
+        it = oldTxLockRequests.iterator();
         while (it.hasNext()) {
             InventoryItem item = it.next();
             // Only download the transaction if we are the first peer that saw it be advertised. Other peers will also
@@ -1455,31 +1464,39 @@ public class Peer extends PeerSocketHandler {
             }
         }
 
-
-
-        it = instantxLocks.iterator();
-        //InstantSend instantSend = InstantSend.get(blockChain);
-        while (it.hasNext()) {
-            InventoryItem item = it.next();
-
-//            if(!instantSend.mapTxLockVotes.containsKey(item.hash))
-            {
-                getdata.addItem(item);
+        if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
+            it = oldTxLockVotes.iterator();
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                {
+                    getdata.addItem(item);
+                }
             }
         }
 
         // The New InstantSendLock (ISLOCK)
-        it = instantSendLocks.iterator();
-        while (it.hasNext()) {
-            InventoryItem item = it.next();
-            if(!alreadyHave(item)) {
-                log.info("found instantSendLock:" + item.hash);
-                getdata.addItem(item);
+        if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled()) {
+            it = instantSendLocks.iterator();
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                if(!alreadyHave(item)) {
+                    getdata.addItem(item);
+                }
+            }
+        }
+
+        // The ChainLock (CLSIG)
+        if(context.sporkManager != null && context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED)) {
+            it = chainLocks.iterator();
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                if (!alreadyHave(item)) {
+                    getdata.addItem(item);
+                }
             }
         }
 
         it = sporks.iterator();
-
         while (it.hasNext()) {
             InventoryItem item = it.next();
 

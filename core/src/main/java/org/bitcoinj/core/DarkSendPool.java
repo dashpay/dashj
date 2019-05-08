@@ -216,7 +216,8 @@ public class DarkSendPool {
                         // check whether the outgoing simple transactions were auto locked
                         // within the specific time frame
                         if (tick % 2 == 0) {
-                            context.instantSend.notifyLockStatus();
+                            if(context.instantSendManager.isOldInstantSendEnabled())
+                                context.instantSend.notifyLockStatus();
                         }
 
                     }
