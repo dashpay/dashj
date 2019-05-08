@@ -104,7 +104,7 @@ public class SimplifiedMasternodeListDiff extends Message {
     @Override
     public String toString() {
         return "Simplified MNList Diff:  adding " + mnList.size() + " and removing " + deletedMNs.size() + " masternodes" +
-                " while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums";
+                (coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "");
     }
 
     public Transaction getCoinBaseTx() {
