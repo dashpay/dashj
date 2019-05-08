@@ -90,18 +90,19 @@ public class SporkManager {
             Sha256Hash hash = spork.getHash();
             if (mapSporksActive.containsKey(spork.nSporkID)) {
                 if (mapSporksActive.get(spork.nSporkID).nTimeSigned >= spork.nTimeSigned) {
-                    log.info("spork - seen "+hash.toString()+" block " + blockChain.getBestChainHeight());
+                    log.info("spork - seen "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" block " + blockChain.getBestChainHeight() + "hash: " + hash.toString());
                     return;
                 } else {
-                    log.info("spork - got updated spork "+hash.toString()+" block " +blockChain.getBestChainHeight());
+                    log.info("received updated spork "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" block " +blockChain.getBestChainHeight() +
+                            "hash: " + hash.toString());
                 }
             }
 
-            log.info("spork - new "+hash.toString()+" ID "+spork.nSporkID+" Time "+spork.nTimeSigned+" bestHeight" + blockChain.getBestChainHeight());
+            log.info("spork - new ID "+spork.nSporkID+" "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" Time "+spork.nTimeSigned+" bestHeight " + blockChain.getBestChainHeight() +
+                    "hash: " + hash.toString());
 
             if (!spork.checkSignature(sporkPubKeyId)) {
                 log.info("spork - invalid signature");
-                //Misbehaving(pfrom -> GetId(), 100);
                 return;
             }
 
@@ -148,7 +149,7 @@ public class SporkManager {
         } else if (mapSporkDefaults.containsKey(nSporkID)) {
             r = mapSporkDefaults.get(nSporkID);
         } else {
-            log.warn("spork--CSporkManager::IsSporkActive -- Unknown Spork ID {}", nSporkID);
+            log.warn("isSporkActive:  Unknown Spork ID {}", nSporkID);
             r = 4070908800L; // 2099-1-1 i.e. off by default
         }
 
@@ -165,7 +166,7 @@ public class SporkManager {
             return mapSporkDefaults.get(nSporkID);
         }
 
-        log.info("spork--CSporkManager::GetSporkValue -- Unknown Spork ID {}", nSporkID);
+        log.info("getSporkValue:  Unknown Spork ID {}", nSporkID);
         return -1;
     }
 
@@ -179,6 +180,8 @@ public class SporkManager {
                 context.masternodeListManager.updateMNList();
             if(context.getParams().isSupportingEvolution())
                 context.peerGroup.setMinRequiredProtocolVersionAndDisconnect(NetworkParameters.ProtocolVersion.DMN_LIST.getBitcoinProtocolVersion());
+        } else if(nSporkID == SPORK_17_QUORUM_DKG_ENABLED) {
+            context.masternodeListManager.resetMNList();
         }
     }
 
@@ -216,30 +219,30 @@ public class SporkManager {
         ECKey pubkey = ECKey.fromPublicOnly(key.getPubKey());
 
         if (key == null) {
-            log.error("CSporkManager::SetPrivKey -- Failed to parse private key");
+            log.error("setPrivKey -- Failed to parse private key");
             return false;
         }
 
         if (!pubkey.getPubKeyHash().equals(sporkPubKeyId)) {
-            log.error("CSporkManager::SetPrivKey -- New private key does not belong to spork address\n");
+            log.error("setPrivKey -- New private key does not belong to spork address\n");
             return false;
         }
 
         SporkMessage spork = new SporkMessage(context.getParams());
         if (spork.sign(key)) {
             // Test signing successful, proceed
-            log.info("CSporkManager::SetPrivKey -- Successfully initialized as spork signer");
+            log.info("setPrivKey -- Successfully initialized as spork signer");
 
             sporkPrivKey = key;
             return true;
         } else {
-            log.error("CSporkManager::SetPrivKey -- Test signing failed");
+            log.error("setPrivKey -- Test signing failed");
             return false;
         }
     }
 
 
-    int getSporkIDByName(String strName)
+    public int getSporkIDByName(String strName)
     {
         if (strName == "SPORK_2_INSTANTSEND_ENABLED")               return SPORK_2_INSTANTSEND_ENABLED;
         if (strName == "SPORK_3_INSTANTSEND_BLOCK_FILTERING")       return SPORK_3_INSTANTSEND_BLOCK_FILTERING;
@@ -256,11 +259,10 @@ public class SporkManager {
         if (strName == "SPORK_19_CHAINLOCKS_ENABLED")               return SPORK_19_CHAINLOCKS_ENABLED;
         if (strName == "SPORK_20_INSTANTSEND_LLMQ_BASED")           return SPORK_20_INSTANTSEND_LLMQ_BASED;
 
-        log.info("spork", "CSporkManager::GetSporkIDByName -- Unknown Spork name: "+ strName);
         return -1;
     }
 
-    String getSporkNameByID(int id)
+    public String getSporkNameByID(int id)
     {
         switch (id) {
             case SPORK_2_INSTANTSEND_ENABLED:               return "SPORK_2_INSTANTSEND_ENABLED";
@@ -279,7 +281,6 @@ public class SporkManager {
             case SPORK_19_CHAINLOCKS_ENABLED:               return "SPORK_19_CHAINLOCKS_ENABLED";
             case SPORK_20_INSTANTSEND_LLMQ_BASED:           return "SPORK_20_INSTANTSEND_LLMQ_BASED";
             default:
-                log.info("spork", "CSporkManager::GetSporkNameByID -- Unknown Spork ID "+ id);
                 return "Unknown";
         }
     }
@@ -289,7 +290,7 @@ public class SporkManager {
             Address address = Address.fromBase58(context.getParams(), strAddress);
             sporkPubKeyId = address.getHash160();
         } catch (AddressFormatException x) {
-            log.error("CSporkManager::SetSporkAddress -- Failed to parse spork address");
+            log.error("Failed to parse spork address");
             return false;
         }
         return true;
