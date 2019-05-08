@@ -1,8 +1,10 @@
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.listeners.ChainDownloadStartedEventListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
+import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
@@ -12,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.locks.ReentrantLock;
@@ -25,6 +29,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public static final int SNAPSHOT_LIST_PERIOD = 576; // once per day
     public static final int LISTS_CACHE_SIZE = 576;
+    public static final int SNAPSHOT_TIME_PERIOD = 60 * 60 * 30;
 
     HashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache;
     SimplifiedMasternodeList mnList;
@@ -36,12 +41,22 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     Sha256Hash lastRequestHash = Sha256Hash.ZERO_HASH;
     int lastRequestCount;
+    long lastRequestTime;
+    static final long WAIT_GETMNLISTDIFF = 5000;
+    Peer downloadPeer;
+    boolean waitingForMNListDiff;
+    LinkedHashMap<Sha256Hash, StoredBlock> pendingBlocksMap;
+    ArrayList<StoredBlock> pendingBlocks;
 
     public SimplifiedMasternodeListManager(Context context) {
         super(context);
         tipBlockHash = Sha256Hash.ZERO_HASH;
         mnList = new SimplifiedMasternodeList(context.getParams());
         quorumList = new SimplifiedQuorumList(context.getParams());
+        lastRequestTime = 0;
+        waitingForMNListDiff = true;
+        pendingBlocks = new ArrayList<StoredBlock>();
+        pendingBlocksMap = new LinkedHashMap<Sha256Hash, StoredBlock>();
     }
 
     @Override
@@ -132,6 +147,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             log.info(x.getMessage());
             throw new ProtocolException(x);
         } finally {
+            waitingForMNListDiff = false;
+            requestNextMNListDiff();
             lock.unlock();
         }
     }
@@ -140,7 +157,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
             if(isDeterministicMNsSporkActive()) {
-                if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < 60 * 60)
+                if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < 60 * 60 * 25)
                     requestMNListDiff(block);
             }
         }
@@ -150,35 +167,144 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
             if(isDeterministicMNsSporkActive()) {
+                if(downloadPeer == null)
+                    downloadPeer = peer;
+                maybeGetMNListDiffFresh();
                 if (tipBlockHash.equals(Sha256Hash.ZERO_HASH) || tipHeight < blockChain.getBestChainHeight()) {
-                    if(Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < 60 * 60)
+                    if(Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < SNAPSHOT_TIME_PERIOD)
                         requestMNListDiff(peer, blockChain.getChainHead());
                 }
             }
         }
     };
 
+    PeerDisconnectedEventListener peerDisconnectedEventListener = new PeerDisconnectedEventListener() {
+        @Override
+        public void onPeerDisconnected(Peer peer, int peerCount) {
+            if(downloadPeer == peer) {
+                downloadPeer = null;
+                List<Peer> peers = context.peerGroup.getConnectedPeers();
+                if(peers != null && !peers.isEmpty()) {
+                    downloadPeer = peers.get(new Random().nextInt(peers.size()));
+                }
+            }
+        }
+    };
+
+    ChainDownloadStartedEventListener chainDownloadStartedEventListener = new ChainDownloadStartedEventListener() {
+        @Override
+        public void onChainDownloadStarted(Peer peer, int blocksLeft) {
+            lock.lock();
+            try {
+                downloadPeer = peer;
+                maybeGetMNListDiffFresh();
+            } finally {
+                lock.unlock();
+            }
+
+        }
+    };
+
+    void maybeGetMNListDiffFresh() {
+        if(lastRequestTime + WAIT_GETMNLISTDIFF > Utils.currentTimeMillis())
+            return;
+
+        if(mnList.size() == 0 || tipBlockHash.equals(Sha256Hash.ZERO_HASH) ||
+                tipHeight < blockChain.getChainHead().getHeight() - 3000) {
+            mnList = new SimplifiedMasternodeList(params);
+            tipHeight = -1;
+            tipBlockHash = Sha256Hash.ZERO_HASH;
+        } else {
+            if(tipBlockHash.equals(blockChain.getChainHead().getHeader().getHash()))
+                return;
+        }
+
+        if(downloadPeer != null ) {
+            downloadPeer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, blockChain.getChainHead().getHeader().getHash()));
+            lastRequestHash = tipBlockHash;
+            lastRequestTime = Utils.currentTimeMillis();
+            waitingForMNListDiff = true;
+        }
+    }
+
+    void requestNextMNListDiff() {
+        lock.lock();
+        try {
+            log.info("handling next mnlistdiff: " + pendingBlocks.size());
+            if(pendingBlocks.size() == 0)
+                return;
+            if(downloadPeer != null) {
+                int count = 0;
+                for(int i = 0; i < pendingBlocks.size(); ++i) {
+                    if(pendingBlocks.get(i).getHeight() <= tipHeight) {
+                        count++;
+                        log.info("ignoring requests that we have" + count);
+                        continue;
+                    }
+                    break;
+                }
+                if(count < pendingBlocks.size()) {
+                    StoredBlock nextBlock = pendingBlocks.get(count);
+                    log.info("requesting mnlistdiff from {} to {}", tipHeight, nextBlock.getHeight());
+                    downloadPeer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, nextBlock.getHeader().getHash()));
+                    waitingForMNListDiff = true;
+                }
+
+                if(count == 0) {
+                    log.info("removing {} blocks from the pending queue", 1);
+                    StoredBlock block = pendingBlocks.get(0);
+                    pendingBlocksMap.remove(block);
+                    pendingBlocks.remove(0);
+                } else {
+                    log.info("removing {} blocks from the pending queue", count);
+                    for (int i = count - 1; i >= 0; --i) {
+                        StoredBlock block = pendingBlocks.get(i);
+                        pendingBlocksMap.remove(block);
+                        pendingBlocks.remove(i);
+                    }
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+
+    }
+
     public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
         this.blockChain = blockChain;
-        blockChain.addNewBestBlockListener(newBestBlockListener);
+        blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
         peerGroup.addConnectedEventListener(peerConnectedEventListener);
+        peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+        peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
     }
 
     public void requestMNListDiff(StoredBlock block) {
-        Peer peer = context.peerGroup.getDownloadPeer();
+        /*Peer peer = context.peerGroup.getDownloadPeer();
         if(peer == null) {
             List<Peer> peers = context.peerGroup.getConnectedPeers();
             peer = peers.get(new Random().nextInt(peers.size()));
         }
-        if(peer != null)
-            requestMNListDiff(peer, block);
+        if(peer != null)*/
+        requestMNListDiff(/*peer*/null, block);
     }
 
     public void requestMNListDiff(Peer peer, StoredBlock block) {
         Sha256Hash hash = block.getHeader().getHash();
-        log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + block.getHeight());
+        //log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + block.getHeight());
 
-        lock.lock();
+        //if(waitingForMNListDiff) {
+        log.info("adding 1 block to the pending queue: {} - {}", block.getHeight(), block.getHeader().getHash());
+        if(pendingBlocksMap.put(hash, block) == null)
+            pendingBlocks.add(block);
+        //    return;
+        //} else
+        //
+        if(!waitingForMNListDiff)
+            requestNextMNListDiff();
+
+
+
+        /*lock.lock();
         try {
             //If we are requesting the block we have already, then skip the request
             if (hash.equals(tipBlockHash) && !hash.equals(Sha256Hash.ZERO_HASH))
@@ -193,8 +319,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     mnList = new SimplifiedMasternodeList(params);
                 }
                 log.info("Requesting the same mnlistdiff " + lastRequestCount + " times");
-                if (lastRequestCount > 5) {
-                    log.info("Stopping at 5 times to wait for a reply");
+                if (lastRequestCount > 1) {
+                    log.info("Stopping at 1 times to wait for a reply");
                     return;
                 }
             } else {
@@ -202,9 +328,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
             peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, hash));
             lastRequestHash = tipBlockHash;
+            lastRequestTime = Utils.currentTimeMillis();
         } finally {
             lock.unlock();
-        }
+        }*/
     }
 
     public void updateMNList() {
