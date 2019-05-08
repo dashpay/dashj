@@ -43,4 +43,9 @@ public class LLMQUtils {
     {
         return buildSignHash(llmqType.getValue(), quorumHash, id, msgHash);
     }
+
+    public static Sha256Hash buildSignHash(RecoveredSignature recoveredSignature) {
+        return buildSignHash(recoveredSignature.llmqType, recoveredSignature.quorumHash, recoveredSignature.id,
+                recoveredSignature.msgHash);
+    }
 }
