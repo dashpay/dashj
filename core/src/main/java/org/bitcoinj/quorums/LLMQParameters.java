@@ -14,9 +14,27 @@ public class LLMQParameters {
         int value;
         LLMQType(int value) {
             this.value = value;
+            getMappings().put(value, this);
         }
         public int getValue() {
             return value;
+        }
+
+        private static java.util.HashMap<Integer, LLMQType> mappings;
+        private static java.util.HashMap<Integer, LLMQType> getMappings() {
+            if (mappings == null) {
+                synchronized (LLMQType.class) {
+                    if (mappings == null) {
+                        mappings = new java.util.HashMap<Integer, LLMQType>();
+                    }
+                }
+            }
+            return mappings;
+        }
+
+        public static LLMQType fromValue(int value) {
+            LLMQType type = getMappings().get(value);
+            return type == null ? LLMQ_NONE : type;
         }
     }
 
