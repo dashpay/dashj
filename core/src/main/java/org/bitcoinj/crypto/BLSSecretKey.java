@@ -51,7 +51,7 @@ public class BLSSecretKey extends BLSAbstractObject
     @Override
     protected void parse() throws ProtocolException {
         byte buffer[] = readBytes(BLS_CURVE_SECKEY_SIZE);
-        internalSetBuffer(buffer);
+        valid = internalSetBuffer(buffer);
         serializedSize = BLS_CURVE_SECKEY_SIZE;
         length = cursor - offset;
     }
