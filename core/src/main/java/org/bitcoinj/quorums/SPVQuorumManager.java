@@ -33,6 +33,8 @@ public class SPVQuorumManager extends QuorumManager {
     public ArrayList<Quorum> scanQuorums(final LLMQParameters.LLMQType llmqType, final long maxCount) {
         final ArrayList<Quorum> result = new ArrayList<Quorum>();
         SimplifiedQuorumList list = masternodeListManager.getQuorumListAtTip();
+        if(list == null)
+            return result;  // return empty list
         final LLMQParameters llmqParameters = context.getParams().getLlmqs().get(llmqType);
         list.forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
             int found = 0;
