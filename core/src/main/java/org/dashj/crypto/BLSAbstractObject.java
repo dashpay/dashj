@@ -40,7 +40,6 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     BLSAbstractObject(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
-        this.valid = true;
         updateHash();
     }
 
