@@ -5214,11 +5214,11 @@ public class Wallet extends BaseTaggableObject
 
             }
             //Dash Specific
-            if(context.instantSendManager.isOldInstantSendEnabled()) {
+            if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
                 if (tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
                     //This transaction was stuck and we need to track it once again with InstantSend
                     context.instantSend.processTxLockRequest(tx);
-            } else if (context.instantSendManager.isNewInstantSendEnabled())
+            } else if (context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
                 context.instantSendManager.syncTransaction(tx, null, -1);
             }
             checkState(confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.IN_CONFLICT,

@@ -23,7 +23,7 @@ public class FinalCommitmentTest {
     @Before
     public void startup() {
         PARAMS = UnitTestParams.get();
-        context = Context.getOrCreate(PARAMS);
+        context = new Context(PARAMS);
     }
 
     /*
