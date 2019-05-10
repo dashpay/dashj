@@ -46,7 +46,14 @@ public class BLSSignature extends BLSAbstractObject {
             signatureImpl = InsecureSignature.FromBytes(buffer);
             return true;
         } catch (Exception x) {
-            return false;
+            //This is added in as a hack, because for some reason when all the unit
+            //line above fails with an exception, but we can run it again.
+            try {
+                signatureImpl = InsecureSignature.FromBytes(buffer);
+                return true;
+            } catch (Exception x2) {
+                return false;
+            }
         }
     }
 
