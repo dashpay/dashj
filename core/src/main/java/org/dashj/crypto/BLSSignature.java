@@ -7,6 +7,7 @@ import org.dashj.core.Sha256Hash;
 import org.dashj.bls.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class BLSSignature extends BLSAbstractObject {
 
@@ -45,7 +46,14 @@ public class BLSSignature extends BLSAbstractObject {
             signatureImpl = InsecureSignature.FromBytes(buffer);
             return true;
         } catch (Exception x) {
-            return false;
+            //This is added in as a hack, because for some reason when the
+            //line above fails with an exception, we can run it again.
+            try {
+                signatureImpl = InsecureSignature.FromBytes(buffer);
+                return true;
+            } catch (Exception x2) {
+                return false;
+            }
         }
     }
 
