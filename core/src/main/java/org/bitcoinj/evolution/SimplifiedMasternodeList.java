@@ -464,4 +464,16 @@ public class SimplifiedMasternodeList extends Message {
             //lock.unlock();
         }
     }
+
+    public long getHeight() {
+        return height;
+    }
+
+    protected void setHeight(int height) {
+        this.height = height;
+    }
+
+    public Sha256Hash getBlockHash() {
+        return blockHash;
+    }
 }
