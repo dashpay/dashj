@@ -90,6 +90,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         if(getFormatVersion() >= 2) {
             quorumList = new SimplifiedQuorumList(params, payload, cursor);
             cursor += quorumList.getMessageSize();
+        } else {
+            quorumList = new SimplifiedQuorumList(params);
         }
         length = cursor - offset;
     }
@@ -124,7 +126,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
             newMNList.verify(mnlistdiff.coinBaseTx);
-            SimplifiedQuorumList newQuorumList = null;
+            SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
                 newQuorumList = quorumList.applyDiff(mnlistdiff);
                 newQuorumList.verify(mnlistdiff.coinBaseTx, newMNList);
@@ -353,7 +355,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     @Override
     public String toString() {
-        return "SimplifiedMNListManager:  {" + mnList + ", tipHeight "+ mnList.getHeight() +"}";
+        return "SimplifiedMNListManager:  {" + mnList + ", tipHeight: "+ mnList.getHeight() + quorumList +"}";
     }
 
     public long getSpork15Value() {
