@@ -63,6 +63,10 @@ public class ChainLocksHandler implements RecoveredSignatureListener {
         this.quorumInstantSendManager = context.instantSendManager;
     }
 
+    public void close() {
+        this.blockChain.removeNewBestBlockListener(this.newBestBlockListener);
+    }
+
     @Override
     public void onNewRecoveredSignature(RecoveredSignature recoveredSig) {
         ChainLockSignature clsig;

@@ -198,4 +198,9 @@ public class SPVRecoveredSignaturesDatabase extends AbstractManager implements R
     public int calculateMessageSizeInBytes() {
         return 0;
     }
+
+    @Override
+    public void close() {
+
+    }
 }

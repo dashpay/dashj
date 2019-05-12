@@ -532,4 +532,9 @@ public class EvolutionUserManager extends AbstractManager implements Transaction
     public String toString() {
         return "EvolutionUserManager:  " + userMap.size() + " users.";
     }
+
+    @Override
+    public void close() {
+
+    }
 }

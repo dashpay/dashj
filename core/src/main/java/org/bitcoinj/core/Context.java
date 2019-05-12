@@ -297,18 +297,27 @@ public class Context {
                 //other functions
                 darkSendPool.startBackgroundProcessing();
 
-                //instantSendManager.start();
                 if(!llmqBackgroundThread.isAlive())
                     llmqBackgroundThread.start();
-                //instantSendManager.runWithoutThread = true;
 
             }
         }).start();
     }
 
     public void close() {
-        llmqBackgroundThread.stop();
-        //instantSendManager.stop();
+        llmqBackgroundThread.interrupt();
+        blockChain.removeNewBestBlockListener(newBestBlockListener);
+        if(initializedDash) {
+            sporkManager.close(peerGroup);
+            masternodeSync.close();
+            instantSend.close();
+            masternodeListManager.close();
+            blockChain.removeTransactionReceivedListener(evoUserManager);
+            instantSendManager.close(peerGroup);
+            signingManager.close();
+            chainLockHandler.close();
+            quorumManager.close();
+        }
     }
 
     public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)

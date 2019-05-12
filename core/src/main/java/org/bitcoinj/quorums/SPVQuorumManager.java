@@ -74,4 +74,8 @@ public class SPVQuorumManager extends QuorumManager {
         }
         return false;
     }
+
+    @Override
+    public void close() {
+    }
 }

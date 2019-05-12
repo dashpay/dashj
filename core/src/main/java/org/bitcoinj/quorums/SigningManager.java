@@ -56,6 +56,10 @@ public class SigningManager {
         this.blockChain = blockChain;
     }
 
+    public void close() {
+
+    }
+
     private transient CopyOnWriteArrayList<ListenerRegistration<RecoveredSignatureListener>> recoveredSigsListeners;
 
     /**

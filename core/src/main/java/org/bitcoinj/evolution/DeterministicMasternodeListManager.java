@@ -49,4 +49,8 @@ public class DeterministicMasternodeListManager extends AbstractManager {
         super.bitcoinSerializeToStream(stream);
     }
 
+    @Override
+    public void close() {
+
+    }
 }

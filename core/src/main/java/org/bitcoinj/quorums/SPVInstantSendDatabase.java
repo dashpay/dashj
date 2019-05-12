@@ -180,4 +180,9 @@ public class SPVInstantSendDatabase extends AbstractManager implements InstantSe
     public int calculateMessageSizeInBytes() {
         return 0;
     }
+
+    @Override
+    public void close() {
+
+    }
 }

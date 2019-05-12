@@ -191,4 +191,9 @@ public class NetFullfilledRequestManager extends AbstractManager {
     public AbstractManager createEmpty() {
         return new NetFullfilledRequestManager(null);
     }
+
+    @Override
+    public void close() {
+
+    }
 }

@@ -62,4 +62,5 @@ public abstract class QuorumManager {
         return false;
     }
 
+    public void close() { }
 }

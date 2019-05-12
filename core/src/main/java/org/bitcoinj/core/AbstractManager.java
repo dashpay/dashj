@@ -206,4 +206,6 @@ public abstract class AbstractManager extends Message {
     public void setFilename(String filename) {
         this.filename = filename;
     }
+
+    public abstract void close();
 }

@@ -97,6 +97,10 @@ public class MasternodeSync {
 
     void setBlockChain(AbstractBlockChain blockChain) { this.blockChain = blockChain; updateBlockTip(blockChain.chainHead, true);}
 
+    public void close() {
+
+    }
+
     public MasternodeSync(Context context)
     {
         this.context = context;

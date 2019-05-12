@@ -1627,4 +1627,9 @@ public class GovernanceManager extends AbstractManager {
             }
         }
     }
+
+    @Override
+    public void close() {
+
+    }
 }

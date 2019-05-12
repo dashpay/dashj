@@ -84,6 +84,10 @@ public class SporkManager {
         peerGroup.addConnectedEventListener(peerConnectedEventListener);
     }
 
+    public void close(PeerGroup peerGroup) {
+        peerGroup.removeConnectedEventListener(peerConnectedEventListener);
+    }
+
     void processSpork(Peer from, SporkMessage spork) {
         if (context.isLiteMode() && !context.allowInstantXinLiteMode()) return; //disable all darksend/masternode related functionality
 

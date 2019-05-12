@@ -2074,4 +2074,9 @@ public class MasternodeManager extends AbstractManager {
             lock.unlock();
         }
     }
+
+    @Override
+    public void close() {
+
+    }
 }

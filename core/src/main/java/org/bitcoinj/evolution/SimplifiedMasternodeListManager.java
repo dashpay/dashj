@@ -48,6 +48,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     LinkedHashMap<Sha256Hash, StoredBlock> pendingBlocksMap;
     ArrayList<StoredBlock> pendingBlocks;
 
+    PeerGroup peerGroup;
+
     public SimplifiedMasternodeListManager(Context context) {
         super(context);
         tipBlockHash = Sha256Hash.ZERO_HASH;
@@ -272,10 +274,19 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
         this.blockChain = blockChain;
+        this.peerGroup = peerGroup;
         blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
         peerGroup.addConnectedEventListener(peerConnectedEventListener);
         peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
         peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
+    }
+
+    @Override
+    public void close() {
+        blockChain.removeNewBestBlockListener(newBestBlockListener);
+        peerGroup.removeConnectedEventListener(peerConnectedEventListener);
+        peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+        peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
     }
 
     public void requestMNListDiff(StoredBlock block) {

@@ -65,6 +65,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
         context.chainLockHandler.addChainLockListener(this.chainLockListener, Threading.SAME_THREAD);
     }
 
+    public void close(PeerGroup peerGroup) {
+        blockChain.removeTransactionReceivedListener(this.transactionReceivedInBlockListener);
+        blockChain.removeNewBestBlockListener(this.newBestBlockListener);
+        peerGroup.removeOnTransactionBroadcastListener(this.transactionBroadcastListener);
+        context.chainLockHandler.removeChainLockListener(this.chainLockListener);
+    }
+
     public boolean isOldInstantSendEnabled()
     {
         return context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) &&
