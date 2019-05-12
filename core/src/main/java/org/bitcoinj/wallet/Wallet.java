@@ -5482,4 +5482,22 @@ public class Wallet extends BaseTaggableObject
     public AuthenticationKeyChain getBlockchainUserKeyChain() {
         return blockchainUserKeyChain;
     }
+
+    public void setAuthenticationKeyChain(AuthenticationKeyChain chain, AuthenticationKeyChain.KeyChainType type) {
+        switch(type) {
+            case MASTERNODE_VOTING:
+                providerVoterKeyChain = chain;
+                break;
+            case MASTERNODE_OWNER:
+                providerOwnerKeyChain = chain;
+                break;
+            case BLOCKCHAIN_USER:
+                blockchainUserKeyChain = chain;
+                break;
+        }
+    }
+
+    public boolean hasAuthenticationKeyChains() {
+        return blockchainUserKeyChain != null || providerOwnerKeyChain != null || providerVoterKeyChain != null;
+    }
 }

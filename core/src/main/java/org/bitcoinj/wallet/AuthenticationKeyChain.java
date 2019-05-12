@@ -4,18 +4,22 @@ import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class AuthenticationKeyChain extends DeterministicKeyChain {
 
-    enum KeyChainType {
+    public enum KeyChainType {
         BLOCKCHAIN_USER,
         MASTERNODE_HOLDINGS,
         MASTERNODE_OWNER,
         MASTERNODE_OPERATOR,
         MASTERNODE_VOTING,
+        INVALID_KEY_CHAIN
     }
     KeyChainType type;
     int currentIndex;
@@ -23,10 +27,12 @@ public class AuthenticationKeyChain extends DeterministicKeyChain {
 
     public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
         super(seed, path);
+        setLookaheadSize(5);
     }
 
     public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path) {
         super(seed, keyCrypter, path);
+        setLookaheadSize(5);
     }
 
     @Override
@@ -50,17 +56,8 @@ public class AuthenticationKeyChain extends DeterministicKeyChain {
                 default:
                     throw new UnsupportedOperationException();
             }
-            // Optimization: potentially do a very quick key generation for just the number of keys we need if we
-            // didn't already create them, ignoring the configured lookahead size. This ensures we'll be able to
-            // retrieve the keys in the following loop, but if we're totally fresh and didn't get a chance to
-            // calculate the lookahead keys yet, this will not block waiting to calculate 100+ EC point multiplies.
-            // On slow/crappy Android phones looking ahead 100 keys can take ~5 seconds but the OS will kill us
-            // if we block for just one second on the UI thread. Because UI threads may need an address in order
-            // to render the screen, we need getKeys to be fast even if the wallet is totally brand new and lookahead
-            // didn't happen yet.
-            //
-            // It's safe to do this because when a network thread tries to calculate a Bloom filter, we'll go ahead
-            // and calculate the full lookahead zone there, so network requests will always use the right amount.
+
+            //TODO: do we need to look ahead here, even for one key?  Does anything get saved?
             //List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
             //basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<DeterministicKey>(numberOfKeys);
@@ -73,7 +70,7 @@ public class AuthenticationKeyChain extends DeterministicKeyChain {
                 // places that lost money due to bitflips causing addresses to not match keys. Of course in an
                 // environment with flaky RAM there's no real way to always win: bitflips could be introduced at any
                 // other layer. But as we're potentially retrieving from long term storage here, check anyway.
-                //checkForBitFlip(k);
+                checkForBitFlip(k);
                 keys.add(k);
             }
             return keys;
@@ -82,8 +79,17 @@ public class AuthenticationKeyChain extends DeterministicKeyChain {
         }
     }
 
+    private void checkForBitFlip(DeterministicKey k) {
+        DeterministicKey parent = checkNotNull(k.getParent());
+        byte[] rederived = HDKeyDerivation.deriveChildKeyBytesFromPublic(parent, k.getChildNumber(), HDKeyDerivation.PublicDeriveMode.WITH_INVERSION).keyBytes;
+        byte[] actual = k.getPubKey();
+        if (!Arrays.equals(rederived, actual))
+            throw new IllegalStateException(String.format(Locale.US, "Bit-flip check failed: %s vs %s", Arrays.toString(rederived), Arrays.toString(actual)));
+    }
+
     public DeterministicKey getKey(int index) {
-        return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, false))).build(), true); }
+        return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, false))).build(), true);
+    }
 
     public int getCurrentIndex() {
         return currentIndex;

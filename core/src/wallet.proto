@@ -353,6 +353,26 @@ message TransactionSigner {
 	optional bytes data = 2;
 }
 
+/**
+ * A wallet can contain other keychains that are not for spending, but for signing special transactions
+*/
+message ExtendedKeyChain {
+  enum ExtendedKeyChainType {
+    BLOCKCHAIN_USER = 0;
+    MASTERNODE_HOLDINGS = 1;
+    MASTERNODE_OWNER = 2;
+    MASTERNODE_OPERATOR = 3;
+    MASTERNODE_VOTING = 4;
+  }
+  enum KeyType {
+    ECDSA = 0;
+    BLS = 1;
+  }
+  required ExtendedKeyChainType type = 1;
+  required KeyType keyType = 2;
+  repeated Key key = 3;
+}
+
 /** A bitcoin wallet */
 message Wallet {
   /**
@@ -409,6 +429,7 @@ message Wallet {
   // transaction signers added to the wallet
   repeated TransactionSigner transaction_signers = 17;
 
+  repeated ExtendedKeyChain extKeyChains = 18;
   // Next tag: 18
 }
 
