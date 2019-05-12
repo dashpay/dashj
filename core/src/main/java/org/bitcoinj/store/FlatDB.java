@@ -171,6 +171,10 @@ public class FlatDB<Type extends AbstractManager> {
             // Don't try to resize to a negative number if file is small
             if (dataSize < 0)
                 dataSize = 0;
+            if(dataSize == 0) {
+                fileStream.close();
+                return ReadResult.FileError;
+            }
 
             //vector<unsigned char>vchData;
             //vchData.resize(dataSize);
