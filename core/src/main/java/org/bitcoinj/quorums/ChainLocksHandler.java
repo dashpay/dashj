@@ -561,4 +561,20 @@ public class ChainLocksHandler implements RecoveredSignatureListener {
             }
         }
     }
+
+    public StoredBlock getBestChainLockBlock() {
+        return bestChainLockBlock;
+    }
+
+    public Sha256Hash getBestChainLockHash() {
+        return bestChainLockHash;
+    }
+
+    public long getLastSignedHeight() {
+        return lastSignedHeight;
+    }
+
+    public Sha256Hash getLastSignedRequestId() {
+        return lastSignedRequestId;
+    }
 }
