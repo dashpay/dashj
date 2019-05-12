@@ -97,8 +97,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         lock.lock();
         try {
             mnList.bitcoinSerialize(stream);
-            stream.write(tipBlockHash.getReversedBytes());
-            Utils.uint32ToByteStreamLE(tipHeight, stream);
+            stream.write(mnList.getBlockHash().getReversedBytes());
+            Utils.uint32ToByteStreamLE(mnList.getHeight(), stream);
             if(getFormatVersion() >= 2)
                 quorumList.bitcoinSerialize(stream);
         } finally {
@@ -110,12 +110,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff) {
+        StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
-        log.info("processing mnlistdiff between : " + tipHeight + " & " + newHeight + "; " + mnlistdiff);
+        log.info("processing mnlistdiff between : " + mnList.getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
             if(!params.getId().equals(NetworkParameters.ID_UNITTESTNET)) {
-                StoredBlock block = blockChain.getBlockStore().get(mnlistdiff.blockHash);
+                block = blockChain.getBlockStore().get(mnlistdiff.blockHash);
                 if(block.getHeight() != newHeight)
                     throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
             }
@@ -128,8 +129,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
             mnList = newMNList;
             quorumList = newQuorumList;
-            tipHeight = newHeight;
-            tipBlockHash = mnlistdiff.blockHash;
             log.info(this.toString());
             unCache();
             if(mnlistdiff.hasChanges()) {
@@ -157,7 +156,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
             if(isDeterministicMNsSporkActive()) {
-                if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < 60 * 60 * 25)
+                if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < SNAPSHOT_TIME_PERIOD)
                     requestMNListDiff(block);
             }
         }
@@ -170,7 +169,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 if(downloadPeer == null)
                     downloadPeer = peer;
                 maybeGetMNListDiffFresh();
-                if (tipBlockHash.equals(Sha256Hash.ZERO_HASH) || tipHeight < blockChain.getBestChainHeight()) {
+                if (mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH) || mnList.getHeight() < blockChain.getBestChainHeight()) {
                     if(Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < SNAPSHOT_TIME_PERIOD)
                         requestMNListDiff(peer, blockChain.getChainHead());
                 }
@@ -209,22 +208,23 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         if(lastRequestTime + WAIT_GETMNLISTDIFF > Utils.currentTimeMillis())
             return;
 
-        if(mnList.size() == 0 || tipBlockHash.equals(Sha256Hash.ZERO_HASH) ||
-                tipHeight < blockChain.getChainHead().getHeight() - 3000) {
+        //Should we reset our masternode/quorum list
+        if(mnList.size() == 0 || mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
             mnList = new SimplifiedMasternodeList(params);
-            tipHeight = -1;
-            tipBlockHash = Sha256Hash.ZERO_HASH;
         } else {
-            if(tipBlockHash.equals(blockChain.getChainHead().getHeader().getHash()))
+            if(mnList.getBlockHash().equals(blockChain.getChainHead().getHeader().getHash()))
                 return;
         }
 
-        if(downloadPeer != null ) {
-            downloadPeer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, blockChain.getChainHead().getHeader().getHash()));
-            lastRequestHash = tipBlockHash;
-            lastRequestTime = Utils.currentTimeMillis();
-            waitingForMNListDiff = true;
+        if(downloadPeer == null)
+        {
+            downloadPeer = context.peerGroup.getDownloadPeer();
         }
+
+        downloadPeer.sendMessage(new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), blockChain.getChainHead().getHeader().getHash()));
+        lastRequestHash = mnList.getBlockHash();
+        lastRequestTime = Utils.currentTimeMillis();
+        waitingForMNListDiff = true;
     }
 
     void requestNextMNListDiff() {
@@ -236,17 +236,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(downloadPeer != null) {
                 int count = 0;
                 for(int i = 0; i < pendingBlocks.size(); ++i) {
-                    if(pendingBlocks.get(i).getHeight() <= tipHeight) {
+                    if(pendingBlocks.get(i).getHeight() <= mnList.getHeight()) {
                         count++;
-                        log.info("ignoring requests that we have" + count);
+                        log.info("ignoring requests that we have: " + count);
                         continue;
                     }
                     break;
                 }
                 if(count < pendingBlocks.size()) {
                     StoredBlock nextBlock = pendingBlocks.get(count);
-                    log.info("requesting mnlistdiff from {} to {}", tipHeight, nextBlock.getHeight());
-                    downloadPeer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, nextBlock.getHeader().getHash()));
+                    log.info("requesting mnlistdiff from {} to {}", mnList.getHeight(), nextBlock.getHeight());
+                    downloadPeer.sendMessage(new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), nextBlock.getHeader().getHash()));
                     waitingForMNListDiff = true;
                 }
 
@@ -302,7 +302,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         if(!waitingForMNListDiff)
             requestNextMNListDiff();
 
-
+        if(lastRequestTime + WAIT_GETMNLISTDIFF * 4 < Utils.currentTimeMillis()) {
+            maybeGetMNListDiffFresh();
+        }
 
         /*lock.lock();
         try {
@@ -340,7 +342,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     @Override
     public String toString() {
-        return "SimplifiedMNListManager:  {" + mnList + ", tipHeight "+ tipHeight +"}";
+        return "SimplifiedMNListManager:  {" + mnList + ", tipHeight "+ mnList.getHeight() +"}";
     }
 
     public long getSpork15Value() {
@@ -349,7 +351,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public boolean isDeterministicMNsSporkActive(long height) {
         if(height == -1) {
-            height = tipHeight;
+            height = mnList.getHeight();
         }
 
         return height > params.getDeterministicMasternodesEnabledHeight();
@@ -374,8 +376,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public void resetMNList() {
         if(getFormatVersion() < LLMQ_FORMAT_VERSION) {
-            tipHeight = -1;
-            tipBlockHash = Sha256Hash.ZERO_HASH;
             mnList = new SimplifiedMasternodeList(context.getParams());
             requestMNListDiff(blockChain.getChainHead());
         }
