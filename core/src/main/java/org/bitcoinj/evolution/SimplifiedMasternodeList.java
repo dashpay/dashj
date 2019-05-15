@@ -105,35 +105,26 @@ public class SimplifiedMasternodeList extends Message {
         return "Simplified MN List:  count:  " + size();
     }
 
-    SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff)
+    SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff) throws MasternodeListDiffException
     {
         CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
-        Preconditions.checkArgument(diff.prevBlockHash.equals(blockHash), "The mnlistdiff does not connect to this list.  height: " + height + " vs " + cbtx.getHeight());
+        if(!diff.prevBlockHash.equals(blockHash))
+            throw new MasternodeListDiffException("The mnlistdiff does not connect to this list.  height: " + height + " vs " + cbtx.getHeight(), false, false);
 
         lock.lock();
         try {
-            SimplifiedMasternodeList result;
-            if(diff.hasChanges()) {
-                //Since there are changes, make a copy of this list
-                result = new SimplifiedMasternodeList(this);
+            SimplifiedMasternodeList result = new SimplifiedMasternodeList(this);
 
-                result.blockHash = diff.blockHash;
-                result.height = cbtx.getHeight();
+            result.blockHash = diff.blockHash;
+            result.height = cbtx.getHeight();
 
-                for (Sha256Hash hash : diff.deletedMNs) {
-                    result.removeMN(hash);
-                }
-                for (SimplifiedMasternodeListEntry entry : diff.mnList) {
-                    result.addMN(entry);
-                }
-                return result;
-            } else {
-                //since there are no changes, modify this
-                this.blockHash = diff.blockHash;
-                this.height = cbtx.getHeight();
-                return this;
+            for (Sha256Hash hash : diff.deletedMNs) {
+                result.removeMN(hash);
             }
-
+            for (SimplifiedMasternodeListEntry entry : diff.mnList) {
+                result.addMN(entry);
+            }
+            return result;
         } finally {
             lock.unlock();
         }

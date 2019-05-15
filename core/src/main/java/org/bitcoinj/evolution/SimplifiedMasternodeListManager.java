@@ -13,11 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class SimplifiedMasternodeListManager extends AbstractManager {
@@ -31,7 +27,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public static final int LISTS_CACHE_SIZE = 576;
     public static final int SNAPSHOT_TIME_PERIOD = 60 * 60 * 30;
 
-    HashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache;
+    public static final int MAX_CACHE_SIZE = 10;
+
     SimplifiedMasternodeList mnList;
     SimplifiedQuorumList quorumList;
     long tipHeight;
@@ -40,13 +37,16 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     AbstractBlockChain blockChain;
 
     Sha256Hash lastRequestHash = Sha256Hash.ZERO_HASH;
-    int lastRequestCount;
+    GetSimplifiedMasternodeListDiff lastRequestMessage;
     long lastRequestTime;
     static final long WAIT_GETMNLISTDIFF = 5000;
     Peer downloadPeer;
     boolean waitingForMNListDiff;
     LinkedHashMap<Sha256Hash, StoredBlock> pendingBlocksMap;
     ArrayList<StoredBlock> pendingBlocks;
+
+    int failedAttempts;
+    static final int MAX_ATTEMPTS = 10;
 
     PeerGroup peerGroup;
 
@@ -56,7 +56,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         mnList = new SimplifiedMasternodeList(context.getParams());
         quorumList = new SimplifiedQuorumList(context.getParams());
         lastRequestTime = 0;
-        waitingForMNListDiff = true;
+        waitingForMNListDiff = false;
         pendingBlocks = new ArrayList<StoredBlock>();
         pendingBlocksMap = new LinkedHashMap<Sha256Hash, StoredBlock>();
     }
@@ -130,24 +130,52 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
                 newQuorumList = quorumList.applyDiff(mnlistdiff);
                 newQuorumList.verify(mnlistdiff.coinBaseTx, newMNList);
+            } else {
+                quorumList.syncWithMasternodeList(newMNList);
             }
             mnList = newMNList;
             quorumList = newQuorumList;
             log.info(this.toString());
             unCache();
+            failedAttempts = 0;
+
+            StoredBlock thisBlock = pendingBlocks.get(0);
+            pendingBlocks.remove(0);
+            pendingBlocksMap.remove(thisBlock.getHeader().getHash());
+
             if(mnlistdiff.hasChanges()) {
                 if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
                     setFormatVersion(LLMQ_FORMAT_VERSION);
                 save();
             }
-        } catch(IllegalArgumentException x) {
+        } catch(MasternodeListDiffException x) {
             //we already have this mnlistdiff or doesn't match our current tipBlockHash
-            log.info(x.getMessage());
+            if(mnList.getBlockHash().equals(mnlistdiff.blockHash)) {
+                log.info("heights are the same:  " + x.getMessage());
+                log.info("mnList = {} vs mnlistdiff {}", mnList.getBlockHash(), mnlistdiff.prevBlockHash);
+                log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
+                log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
+            } else {
+                log.info("heights are different " + x.getMessage());
+                log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, mnList.getHeight(), quorumList.getHeight());
+                log.info("mnList = {} vs mnlistdiff = {}", mnList.getBlockHash(), mnlistdiff.prevBlockHash);
+                log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
+                log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
+                failedAttempts++;
+                if(failedAttempts > MAX_ATTEMPTS)
+                    resetMNList(true);
+            }
+        } catch(VerificationException x) {
+            //request this block again and close this peer
+            log.info("verification error: close this peer" + x.getMessage());
+            failedAttempts++;
+            throw x;
         } catch(NullPointerException x) {
             //file name is not set, do not save
             log.info(x.getMessage());
         } catch(BlockStoreException x) {
             log.info(x.getMessage());
+            failedAttempts++;
             throw new ProtocolException(x);
         } finally {
             waitingForMNListDiff = false;
@@ -186,13 +214,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         public void onPeerDisconnected(Peer peer, int peerCount) {
             if(downloadPeer == peer) {
                 downloadPeer = null;
-                List<Peer> peers = context.peerGroup.getConnectedPeers();
-                if(peers != null && !peers.isEmpty()) {
-                    downloadPeer = peers.get(new Random().nextInt(peers.size()));
-                }
+                chooseRandomDownloadPeer();
             }
         }
     };
+
+    void chooseRandomDownloadPeer() {
+        List<Peer> peers = context.peerGroup.getConnectedPeers();
+        if(peers != null && !peers.isEmpty()) {
+            downloadPeer = peers.get(new Random().nextInt(peers.size()));
+        }
+    }
 
     ChainDownloadStartedEventListener chainDownloadStartedEventListener = new ChainDownloadStartedEventListener() {
         @Override
@@ -209,12 +241,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     };
 
     void maybeGetMNListDiffFresh() {
-        if(lastRequestTime + WAIT_GETMNLISTDIFF > Utils.currentTimeMillis())
+        if(pendingBlocks.size() > 0 || lastRequestTime + WAIT_GETMNLISTDIFF > Utils.currentTimeMillis() ||
+                blockChain.getChainHead().getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - SNAPSHOT_TIME_PERIOD)
             return;
 
         //Should we reset our masternode/quorum list
         if(mnList.size() == 0 || mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
             mnList = new SimplifiedMasternodeList(params);
+            quorumList = new SimplifiedQuorumList(params);
         } else {
             if(mnList.getBlockHash().equals(blockChain.getChainHead().getHeader().getHash()))
                 return;
@@ -225,7 +259,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             downloadPeer = context.peerGroup.getDownloadPeer();
         }
 
-        downloadPeer.sendMessage(new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), blockChain.getChainHead().getHeader().getHash()));
+        StoredBlock block = blockChain.getChainHead();
+        log.info("maybe requesting mnlistdiff from {} to {}; \n  From {}\n  To {}", mnList.getHeight(), block.getHeight(), mnList.getBlockHash(), block.getHeader().getHash());
+
+        lastRequestMessage = new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), blockChain.getChainHead().getHeader().getHash());
+        downloadPeer.sendMessage(lastRequestMessage);
         lastRequestHash = mnList.getBlockHash();
         lastRequestTime = Utils.currentTimeMillis();
         waitingForMNListDiff = true;
@@ -237,35 +275,26 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             log.info("handling next mnlistdiff: " + pendingBlocks.size());
             if(pendingBlocks.size() == 0)
                 return;
+
             if(downloadPeer != null) {
-                int count = 0;
-                for(int i = 0; i < pendingBlocks.size(); ++i) {
-                    if(pendingBlocks.get(i).getHeight() <= mnList.getHeight()) {
-                        count++;
-                        log.info("ignoring requests that we have: " + count);
-                        continue;
+
+                Iterator<StoredBlock> blockIterator = pendingBlocks.iterator();
+                StoredBlock nextBlock;
+                while(blockIterator.hasNext()) {
+                    nextBlock = blockIterator.next();
+                    if(nextBlock.getHeight() <= mnList.getHeight()) {
+                        blockIterator.remove();
+                        pendingBlocksMap.remove(nextBlock.getHeader().getHash());
                     }
-                    break;
-                }
-                if(count < pendingBlocks.size()) {
-                    StoredBlock nextBlock = pendingBlocks.get(count);
-                    log.info("requesting mnlistdiff from {} to {}", mnList.getHeight(), nextBlock.getHeight());
-                    downloadPeer.sendMessage(new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), nextBlock.getHeader().getHash()));
-                    waitingForMNListDiff = true;
+                    else break;
                 }
 
-                if(count == 0) {
-                    log.info("removing {} blocks from the pending queue", 1);
-                    StoredBlock block = pendingBlocks.get(0);
-                    pendingBlocksMap.remove(block);
-                    pendingBlocks.remove(0);
-                } else {
-                    log.info("removing {} blocks from the pending queue", count);
-                    for (int i = count - 1; i >= 0; --i) {
-                        StoredBlock block = pendingBlocks.get(i);
-                        pendingBlocksMap.remove(block);
-                        pendingBlocks.remove(i);
-                    }
+                if(pendingBlocks.size() != 0) {
+                    nextBlock = pendingBlocks.get(0);
+                    log.info("requesting mnlistdiff from {} to {}; \n  From {}\n To {}", mnList.getHeight(), nextBlock.getHeight(), mnList.getBlockHash(), nextBlock.getHeader().getHash());
+                    lastRequestMessage = new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), nextBlock.getHeader().getHash());
+                    downloadPeer.sendMessage(lastRequestMessage);
+                    waitingForMNListDiff = true;
                 }
             }
         } finally {
@@ -292,61 +321,32 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public void requestMNListDiff(StoredBlock block) {
-        /*Peer peer = context.peerGroup.getDownloadPeer();
-        if(peer == null) {
-            List<Peer> peers = context.peerGroup.getConnectedPeers();
-            peer = peers.get(new Random().nextInt(peers.size()));
-        }
-        if(peer != null)*/
-        requestMNListDiff(/*peer*/null, block);
+        requestMNListDiff(null, block);
     }
 
     public void requestMNListDiff(Peer peer, StoredBlock block) {
         Sha256Hash hash = block.getHeader().getHash();
         //log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + block.getHeight());
 
-        //if(waitingForMNListDiff) {
-        log.info("adding 1 block to the pending queue: {} - {}", block.getHeight(), block.getHeader().getHash());
-        if(pendingBlocksMap.put(hash, block) == null)
+        if(block.getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - SNAPSHOT_TIME_PERIOD)
+            return;
+
+        if(failedAttempts > MAX_ATTEMPTS) {
+            log.info("failed attempts maximum reached");
+            resetMNList(true);
+        }
+
+        if(pendingBlocksMap.put(hash, block) == null) {
+            log.info("adding 1 block to the pending queue: {} - {}", block.getHeight(), block.getHeader().getHash());
             pendingBlocks.add(block);
-        //    return;
-        //} else
-        //
+        }
+
         if(!waitingForMNListDiff)
             requestNextMNListDiff();
 
         if(lastRequestTime + WAIT_GETMNLISTDIFF * 4 < Utils.currentTimeMillis()) {
             maybeGetMNListDiffFresh();
         }
-
-        /*lock.lock();
-        try {
-            //If we are requesting the block we have already, then skip the request
-            if (hash.equals(tipBlockHash) && !hash.equals(Sha256Hash.ZERO_HASH))
-                return;
-
-            if (lastRequestHash.equals(tipBlockHash)) {
-                lastRequestCount++;
-                if (lastRequestCount > 24) {
-                    lastRequestCount = 0;
-                    tipBlockHash = Sha256Hash.ZERO_HASH;
-                    tipHeight = 0;
-                    mnList = new SimplifiedMasternodeList(params);
-                }
-                log.info("Requesting the same mnlistdiff " + lastRequestCount + " times");
-                if (lastRequestCount > 1) {
-                    log.info("Stopping at 1 times to wait for a reply");
-                    return;
-                }
-            } else {
-                lastRequestCount = 0;
-            }
-            peer.sendMessage(new GetSimplifiedMasternodeListDiff(tipBlockHash, hash));
-            lastRequestHash = tipBlockHash;
-            lastRequestTime = Utils.currentTimeMillis();
-        } finally {
-            lock.unlock();
-        }*/
     }
 
     public void updateMNList() {
@@ -355,7 +355,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     @Override
     public String toString() {
-        return "SimplifiedMNListManager:  {" + mnList + ", tipHeight: "+ mnList.getHeight() + quorumList +"}";
+        return "SimplifiedMNListManager:  {" + mnList + ", tipHeight: "+ mnList.getHeight() + " " + quorumList +" height:" + quorumList.getHeight() + "}";
     }
 
     public long getSpork15Value() {
@@ -388,8 +388,16 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public void resetMNList() {
-        if(getFormatVersion() < LLMQ_FORMAT_VERSION) {
+        resetMNList(false);
+    }
+
+    public void resetMNList(boolean force) {
+        if(force || getFormatVersion() < LLMQ_FORMAT_VERSION) {
+            log.info("resetting masternode list");
             mnList = new SimplifiedMasternodeList(context.getParams());
+            quorumList = new SimplifiedQuorumList(context.getParams());
+            pendingBlocks.clear();
+            pendingBlocksMap.clear();
             requestMNListDiff(blockChain.getChainHead());
         }
     }

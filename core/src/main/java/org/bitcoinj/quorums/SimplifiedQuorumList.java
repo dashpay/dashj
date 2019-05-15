@@ -3,6 +3,7 @@ package org.bitcoinj.quorums;
 import com.google.common.base.Preconditions;
 import org.bitcoinj.core.*;
 import org.bitcoinj.evolution.CoinbaseTx;
+import org.bitcoinj.evolution.MasternodeListDiffException;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.store.BlockStoreException;
@@ -98,14 +99,16 @@ public class SimplifiedQuorumList extends Message {
 
     @Override
     public String toString() {
-        return "Simplified Quorum List:  count:  " + size();
+        return "SimplifiedQuorumList(count: " + size() + ")";
     }
 
-    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff) {
+    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff) throws MasternodeListDiffException{
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
-            Preconditions.checkArgument(diff.prevBlockHash.equals(blockHash), "The mnlistdiff does not connect to this list.  height: " + height + " vs " + cbtx.getHeight());
+            if(!diff.prevBlockHash.equals(blockHash))
+                throw new MasternodeListDiffException("The mnlistdiff does not connect to this quorum.  height: " +
+                        height + " vs " + cbtx.getHeight(), false, false);
 
             SimplifiedQuorumList result = new SimplifiedQuorumList(this);
             result.blockHash = diff.blockHash;
@@ -332,5 +335,10 @@ public class SimplifiedQuorumList extends Message {
 
     public long getHeight() {
         return height;
+    }
+
+    public void syncWithMasternodeList(SimplifiedMasternodeList masternodeList) {
+        height = masternodeList.getHeight();
+        blockHash = masternodeList.getBlockHash();
     }
 }
