@@ -34,6 +34,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
     AbstractBlockChain blockChain;
 
     HashMap<Sha256Hash, Transaction> mapTx;
+    HashSet<InstantSendLock> invalidInstantSendLocks;
 
     // Incoming and not verified yet
     HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pendingInstantSendLocks;
@@ -44,6 +45,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         this.quorumSigningManager = context.signingManager;
         pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
         mapTx = new HashMap<Sha256Hash, Transaction>();
+        invalidInstantSendLocks = new HashSet<InstantSendLock>();
     }
 
     @Override
@@ -442,6 +444,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (batchVerifier.getBadMessages().contains(hash)) {
                 log.info("-- txid={}, islock={}: invalid sig in islock, peer={}",
                         islock.txid.toString(), hash.toString(), nodeId);
+                invalidInstantSendLocks.add(islock);
                 continue;
             }
 
@@ -619,6 +622,12 @@ public class InstantSendManager implements RecoveredSignatureListener {
             updateWalletTransaction(p.getValue().txid, mapTx.get(p.getValue().txid));
             mapTx.remove(p.getValue().txid);
         }
+
+        //remove invalid signature related tx's
+        for(InstantSendLock islock : invalidInstantSendLocks) {
+            mapTx.remove(islock.txid);
+        }
+        invalidInstantSendLocks.clear();
     }
     static final String INPUTLOCK_REQUESTID_PREFIX = "inlock";
 
