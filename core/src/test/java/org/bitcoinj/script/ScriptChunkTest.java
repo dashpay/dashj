@@ -27,12 +27,20 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Random;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 import org.bouncycastle.util.Arrays;
 
 public class ScriptChunkTest {
 
     private static final Random RANDOM = new Random(42);
+
+    @Test
+    public void equalsContract() {
+        EqualsVerifier.forClass(ScriptChunk.class)
+                .usingGetClass()
+                .verify();
+    }
 
     @Test
     public void testShortestPossibleDataPush() {
