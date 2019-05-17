@@ -74,4 +74,19 @@ public class InstantSendLock extends Message {
             throw new RuntimeException(x);
         }
     }
+
+    @Override
+    public String toString() {
+        return String.format("InstantSendLock(%d inputs, txid=%s, sig=%s)", inputs.size(), txid, signature);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        InstantSendLock islock = (InstantSendLock)o;
+
+        return getHash().equals(islock.getHash());
+    }
 }

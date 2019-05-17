@@ -65,6 +65,16 @@ public class ChainLockSignature extends Message {
 
     @Override
     public String toString() {
-        return String.format("ChainLockSignature(height=%d, blockHash=%s)", height, blockHash);
+        return String.format("ChainLockSignature(height=%d, blockHash=%s, sig=%s)", height, blockHash, signature);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ChainLockSignature clsig = (ChainLockSignature)o;
+
+        return getHash().equals(clsig.getHash());
     }
 }
