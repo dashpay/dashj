@@ -1,6 +1,5 @@
 package org.bitcoinj.quorums;
 
-import com.google.common.base.Preconditions;
 import org.bitcoinj.core.*;
 import org.bitcoinj.evolution.CoinbaseTx;
 import org.bitcoinj.evolution.MasternodeListDiffException;
@@ -27,6 +26,8 @@ public class SimplifiedQuorumList extends Message {
     private long height;
     HashMap<Pair<Integer, Sha256Hash>, Sha256Hash> minableCommitmentsByQuorum;
     LinkedHashMap<Sha256Hash, FinalCommitment> minableCommitments;
+
+    static final Sha256Hash invalidTestNetQuorumHash72000 = Sha256Hash.wrap("0000000007697fd69a799bfa26576a177e817bc0e45b9fcfbf48b362b05aeff2");
 
 
     public SimplifiedQuorumList(NetworkParameters params) {
@@ -127,8 +128,9 @@ public class SimplifiedQuorumList extends Message {
                     if (block.getHeight() % dkgInterval != 0)
                         throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
                 } else {
-                    //TODO:  for some reason llmqType 2 quorumHashs return null on SPV mode
-                    //throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
+                    //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
+                    if(entry.llmqType != 2 && !entry.quorumHash.equals(invalidTestNetQuorumHash72000))
+                        throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
                 }
                 result.addCommitment(entry);
             }
