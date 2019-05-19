@@ -48,4 +48,16 @@ public class LLMQUtils {
         return buildSignHash(recoveredSignature.llmqType, recoveredSignature.quorumHash, recoveredSignature.id,
                 recoveredSignature.msgHash);
     }
+
+    static public Sha256Hash buildLLMQBlockHash(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
+    {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
+            bos.write(llmqType.getValue());
+            bos.write(blockHash.getReversedBytes());
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+        } catch (IOException x) {
+            throw new RuntimeException(x);
+        }
+    }
 }
