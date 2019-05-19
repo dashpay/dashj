@@ -149,7 +149,14 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
         lock.lock();
         try {
-            return db.getInstantSendLockByHash(inv.hash) != null || pendingInstantSendLocks.containsKey(inv.hash);
+            boolean haslock = db.getInstantSendLockByHash(inv.hash) != null || pendingInstantSendLocks.containsKey(inv.hash);
+            if(!invalidInstantSendLocks.isEmpty()) {
+                for(InstantSendLock islock : invalidInstantSendLocks) {
+                    if(inv.hash.equals(islock.getHash()))
+                        return true;
+                }
+            }
+            return haslock;
         } finally {
             lock.unlock();
         }
