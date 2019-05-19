@@ -31,8 +31,16 @@ public class SPVQuorumManager extends QuorumManager {
 
     @Override
     public ArrayList<Quorum> scanQuorums(final LLMQParameters.LLMQType llmqType, final long maxCount) {
+        return scanQuorums(llmqType, blockChain.getChainHead(), maxCount);
+    }
+
+    // this one is cs_main-free
+    @Override
+    public ArrayList<Quorum> scanQuorums(final LLMQParameters.LLMQType llmqType, StoredBlock start, final long maxCount) {
+        if(start != null && start.getHeight() > masternodeListManager.getQuorumListAtTip().getHeight())
+            log.warn("quorum list is old, the quorums may not match");
         final ArrayList<Quorum> result = new ArrayList<Quorum>();
-        SimplifiedQuorumList list = masternodeListManager.getQuorumListAtTip();
+        SimplifiedQuorumList list = masternodeListManager.getQuorumListForBlock(start.getHeader().getHash());
         if(list == null)
             return result;  // return empty list
         final LLMQParameters llmqParameters = context.getParams().getLlmqs().get(llmqType);
@@ -49,14 +57,6 @@ public class SPVQuorumManager extends QuorumManager {
             }
         });
         return result;
-    }
-
-    // this one is cs_main-free
-    @Override
-    public ArrayList<Quorum> scanQuorums(LLMQParameters.LLMQType llmqType, StoredBlock start, long maxCount) {
-        if(start != null && start.getHeight() > masternodeListManager.getQuorumListAtTip().getHeight())
-            log.warn("quorum list is old, the quorums may not match");
-        return scanQuorums(llmqType, maxCount);
     }
 
     boolean isQuorumActive(LLMQParameters.LLMQType llmqType, Sha256Hash quorumHash) {
