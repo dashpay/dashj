@@ -3,6 +3,7 @@ package org.bitcoinj.crypto;
 import org.bitcoinj.core.ChildMessage;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.utils.Threading;
 
 import java.io.IOException;
@@ -56,7 +57,7 @@ public class BLSLazySignature extends ChildMessage {
         }
     }
 
-    BLSLazySignature assign(BLSLazySignature blsLazySignature) {
+    public BLSLazySignature assign(BLSLazySignature blsLazySignature) {
         lock.lock();
         try {
             buffer = new byte[BLSSignature.BLS_CURVE_SIG_SIZE];
@@ -107,5 +108,10 @@ public class BLSLazySignature extends ChildMessage {
         } finally {
             lock.unlock();
         }
+    }
+
+    @Override
+    public String toString() {
+        return isSingatureInitialized ? signature.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
     }
 }
