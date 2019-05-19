@@ -4,6 +4,7 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSBatchVerifier;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
+import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -154,14 +155,11 @@ public class SigningManager {
         long startBlockHeight = signHeight - SIGN_HEIGHT_OFFSET;
         if(startBlockHeight > blockChain.getBestChainHeight())
             return null;
-        //startBlock = blockChain.getAncestor(startBlockHeight);
-        {
-            /*LOCK(cs_main);
-            int startBlockHeight = signHeight - SIGN_HEIGHT_OFFSET;
-            if (startBlockHeight > chainActive.Height()) {
-                return nullptr;
-            }
-            pindexStart = chainActive[startBlockHeight];*/
+
+        try {
+            startBlock = blockChain.getBlockStore().get((int) startBlockHeight);
+        } catch (BlockStoreException x) {
+            throw new RuntimeException(x);
         }
 
         ArrayList<Quorum> quorums = quorumManager.scanQuorums(llmqType, startBlock, poolSize);
