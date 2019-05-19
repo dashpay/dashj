@@ -127,4 +127,51 @@ public class LLMQParameters {
         this.keepOldConnections = keepOldConnections;
     }
 
+    public LLMQType getType() {
+        return type;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public int getMinSize() {
+        return minSize;
+    }
+
+    public int getThreshold() {
+        return threshold;
+    }
+
+    public int getDkgInterval() {
+        return dkgInterval;
+    }
+
+    public int getDkgPhaseBlocks() {
+        return dkgPhaseBlocks;
+    }
+
+    public int getDkgMiningWindowStart() {
+        return dkgMiningWindowStart;
+    }
+
+    public int getDkgMiningWindowEnd() {
+        return dkgMiningWindowEnd;
+    }
+
+    public int getDkgBadVotesThreshold() {
+        return dkgBadVotesThreshold;
+    }
+
+    public int getSigningActiveQuorumCount() {
+        return signingActiveQuorumCount;
+    }
+
+    public int getKeepOldConnections() {
+        return keepOldConnections;
+    }
 }
