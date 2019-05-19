@@ -17,7 +17,7 @@ eclipse.project.name = 'dashj-core'
 dependencies {
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation 'com.google.guava:guava:30.0-jre'
-    implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
+    implementation 'com.google.protobuf:protobuf-javalite:3.7.1'
     implementation 'com.squareup.okhttp3:okhttp:3.12.8'
     implementation 'org.slf4j:slf4j-api:1.7.30'
     implementation 'net.jcip:jcip-annotations:1.0'
