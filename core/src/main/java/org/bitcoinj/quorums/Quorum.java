@@ -12,6 +12,6 @@ public class Quorum {
 
     @Override
     public String toString() {
-        return String.format("Quorum(type=%d, qc=%s)", llmqParameters.type.value, commitment.quorumHash);
+        return String.format("Quorum(type=%d, quorumHash=%s, qfc=%s)", llmqParameters.type.value, commitment.quorumHash, commitment);
     }
 }
