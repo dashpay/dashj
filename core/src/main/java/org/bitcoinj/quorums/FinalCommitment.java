@@ -129,12 +129,12 @@ public class FinalCommitment extends SpecialTxPayload {
         if(getVersion() == 0 || getVersion() > CURRENT_VERSION)
             return false;
 
-        if(!params.getLlmqs().containsKey(llmqType)) {
-            log.error("invalid llmqType" + llmqType);
+        if(!params.getLlmqs().containsKey(LLMQParameters.LLMQType.fromValue(llmqType))) {
+            log.error("invalid llmqType " + llmqType);
             return false;
         }
 
-        LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
+        LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(llmqType));
 
         if(!verifySizes(llmqParameters))
             return false;
@@ -166,11 +166,11 @@ public class FinalCommitment extends SpecialTxPayload {
 
         for (int i = members.size(); i < llmqParameters.size; i++) {
             if (validMembers.get(i)) {
-                log.error("invalid validMembers bitset. bit {1} should not be set", i);
+                log.error("invalid validMembers bitset. bit {} should not be set", i);
                 return false;
             }
             if (signers.get(i)) {
-                log.error("invalid signers bitset. bit {1} should not be set", i);
+                log.error("invalid signers bitset. bit {} should not be set", i);
                 return false;
             }
         }
