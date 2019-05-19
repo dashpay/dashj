@@ -6,7 +6,7 @@ import org.bitcoinj.crypto.BLSPublicKey;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class SimplifiedMasternodeListEntry extends ChildMessage {
+public class SimplifiedMasternodeListEntry extends Masternode {
 
     Sha256Hash proRegTxHash;
     Sha256Hash confirmedHash;
