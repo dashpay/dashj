@@ -5,6 +5,8 @@ import org.bitcoinj.core.listeners.ChainDownloadStartedEventListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.quorums.LLMQParameters;
+import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
@@ -13,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -25,9 +28,23 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public static final int SNAPSHOT_LIST_PERIOD = 576; // once per day
     public static final int LISTS_CACHE_SIZE = 576;
-    public static final int SNAPSHOT_TIME_PERIOD = 60 * 60 * 30;
+    public static final int SNAPSHOT_TIME_PERIOD = 60 * 60 * 26;
 
-    public static final int MAX_CACHE_SIZE = 10;
+    public static final int MAX_CACHE_SIZE = 16;
+
+    LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache = new LinkedHashMap<Sha256Hash, SimplifiedMasternodeList>() {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Sha256Hash, SimplifiedMasternodeList> eldest) {
+            return size() > MAX_CACHE_SIZE;
+        }
+    };
+
+    LinkedHashMap<Sha256Hash, SimplifiedQuorumList> quorumsCache = new LinkedHashMap<Sha256Hash, SimplifiedQuorumList>() {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Sha256Hash, SimplifiedQuorumList> eldest) {
+            return size() > MAX_CACHE_SIZE;
+        }
+    };
 
     SimplifiedMasternodeList mnList;
     SimplifiedQuorumList quorumList;
@@ -90,6 +107,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         if(getFormatVersion() >= 2) {
             quorumList = new SimplifiedQuorumList(params, payload, cursor);
             cursor += quorumList.getMessageSize();
+
+            //read pending blocks
+            int size = (int)readVarInt();
+            ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
+            for(int i = 0; i < size; ++i) {
+                buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
+                buffer.rewind();
+                StoredBlock block = StoredBlock.deserializeCompact(params, buffer);
+                pendingBlocks.add(block);
+                pendingBlocksMap.put(block.getHeader().getHash(), block);
+                buffer.rewind();
+            }
         } else {
             quorumList = new SimplifiedQuorumList(params);
         }
@@ -100,11 +129,42 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         lock.lock();
         try {
-            mnList.bitcoinSerialize(stream);
-            stream.write(mnList.getBlockHash().getReversedBytes());
-            Utils.uint32ToByteStreamLE(mnList.getHeight(), stream);
-            if(getFormatVersion() >= 2)
-                quorumList.bitcoinSerialize(stream);
+            SimplifiedMasternodeList mnListToSave = null;
+            SimplifiedQuorumList quorumListToSave = null;
+            ArrayList<StoredBlock> otherPendingBlocks = new ArrayList<StoredBlock>(MAX_CACHE_SIZE);
+            if(mnListsCache.size() > 0) {
+                for(Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry : mnListsCache.entrySet()) {
+                    if(mnListToSave == null) {
+                        mnListToSave = entry.getValue();
+                        quorumListToSave = quorumsCache.get(entry.getKey());
+                    } else {
+                        otherPendingBlocks.add(entry.getValue().getStoredblock());
+                    }
+                }
+            } else {
+                mnListToSave = mnList;
+                quorumListToSave = quorumList;
+            }
+
+            mnListToSave.bitcoinSerialize(stream);
+            stream.write(mnListToSave.getBlockHash().getReversedBytes());
+            Utils.uint32ToByteStreamLE(mnListToSave.getHeight(), stream);
+            if(getFormatVersion() >= 2) {
+                quorumListToSave.bitcoinSerialize(stream);
+                stream.write(new VarInt(pendingBlocks.size()+otherPendingBlocks.size()).encode());
+                ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
+                log.info("saving {} blocks to catch up mnList", otherPendingBlocks.size());
+                for(StoredBlock block : otherPendingBlocks) {
+                    block.serializeCompact(buffer);
+                    stream.write(buffer.array());
+                    buffer.clear();
+                }
+                for(StoredBlock block : pendingBlocks) {
+                    block.serializeCompact(buffer);
+                    stream.write(buffer.array());
+                    buffer.clear();
+                }
+            }
         } finally {
             lock.unlock();
         }
@@ -126,6 +186,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
             newMNList.verify(mnlistdiff.coinBaseTx);
+            newMNList.setBlock(block, block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
             SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
                 newQuorumList = quorumList.applyDiff(mnlistdiff);
@@ -133,6 +194,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             } else {
                 quorumList.syncWithMasternodeList(newMNList);
             }
+            mnListsCache.put(newMNList.getBlockHash(), newMNList);
+            quorumsCache.put(newQuorumList.getBlockHash(), newQuorumList);
             mnList = newMNList;
             quorumList = newQuorumList;
             log.info(this.toString());
@@ -143,7 +206,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             pendingBlocks.remove(0);
             pendingBlocksMap.remove(thisBlock.getHeader().getHash());
 
-            if(mnlistdiff.hasChanges()) {
+            if(mnlistdiff.hasQuorumChanges()) {
                 if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
                     setFormatVersion(LLMQ_FORMAT_VERSION);
                 save();
@@ -155,6 +218,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 log.info("mnList = {} vs mnlistdiff {}", mnList.getBlockHash(), mnlistdiff.prevBlockHash);
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
                 log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
+                //remove this block from the list
+                if(pendingBlocks.size() > 0) {
+                    StoredBlock thisBlock = pendingBlocks.get(0);
+                    if(thisBlock.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash) &&
+                            thisBlock.getHeader().getHash().equals(mnlistdiff.prevBlockHash)) {
+                        pendingBlocks.remove(0);
+                        pendingBlocksMap.remove(thisBlock.getHeader().getHash());
+                    }
+                }
             } else {
                 log.info("heights are different " + x.getMessage());
                 log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, mnList.getHeight(), quorumList.getHeight());
@@ -241,9 +313,23 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     };
 
     void maybeGetMNListDiffFresh() {
-        if(pendingBlocks.size() > 0 || lastRequestTime + WAIT_GETMNLISTDIFF > Utils.currentTimeMillis() ||
-                blockChain.getChainHead().getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - SNAPSHOT_TIME_PERIOD)
+        if (pendingBlocks.size() > 0) {
+            if (!waitingForMNListDiff) {
+                requestNextMNListDiff();
+                return;
+            }
+            if(lastRequestTime + WAIT_GETMNLISTDIFF < Utils.currentTimeMillis()) {
+                waitingForMNListDiff = false;
+                requestNextMNListDiff();
+                return;
+            }
+            //if (lastRequestTime + WAIT_GETMNLISTDIFF < Utils.currentTimeMillis())
+            //    return;
             return;
+        } else if (lastRequestTime + WAIT_GETMNLISTDIFF > Utils.currentTimeMillis() ||
+                blockChain.getChainHead().getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - SNAPSHOT_TIME_PERIOD) {
+            return;
+        }
 
         //Should we reset our masternode/quorum list
         if(mnList.size() == 0 || mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
@@ -272,6 +358,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     void requestNextMNListDiff() {
         lock.lock();
         try {
+            if(waitingForMNListDiff)
+                return;
+
             log.info("handling next mnlistdiff: " + pendingBlocks.size());
             if(pendingBlocks.size() == 0)
                 return;
@@ -294,6 +383,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     log.info("requesting mnlistdiff from {} to {}; \n  From {}\n To {}", mnList.getHeight(), nextBlock.getHeight(), mnList.getBlockHash(), nextBlock.getHeader().getHash());
                     lastRequestMessage = new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), nextBlock.getHeader().getHash());
                     downloadPeer.sendMessage(lastRequestMessage);
+                    lastRequestTime = Utils.currentTimeMillis();
                     waitingForMNListDiff = true;
                 }
             }
@@ -333,6 +423,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
         if(failedAttempts > MAX_ATTEMPTS) {
             log.info("failed attempts maximum reached");
+            failedAttempts = 0;
             resetMNList(true);
         }
 
@@ -355,7 +446,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     @Override
     public String toString() {
-        return "SimplifiedMNListManager:  {" + mnList + ", tipHeight: "+ mnList.getHeight() + " " + quorumList +" height:" + quorumList.getHeight() + "}";
+        return "SimplifiedMNListManager:  {tip:" + mnList + ", " + quorumList + ", pending blocks: " + pendingBlocks.size() + "}";
     }
 
     public long getSpork15Value() {
@@ -399,6 +490,40 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             pendingBlocks.clear();
             pendingBlocksMap.clear();
             requestMNListDiff(blockChain.getChainHead());
+        }
+    }
+
+    public SimplifiedMasternodeList getListForBlock(Sha256Hash blockHash) {
+        lock.lock();
+        try {
+            return mnListsCache.get(blockHash);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public SimplifiedQuorumList getQuorumListForBlock(Sha256Hash blockHash) {
+        lock.lock();
+        try {
+            return quorumsCache.get(blockHash);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
+    {
+        lock.lock();
+        try {
+            LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
+            SimplifiedMasternodeList allMns = getListForBlock(blockHash);
+            if (allMns != null) {
+                Sha256Hash modifier = LLMQUtils.buildLLMQBlockHash(llmqType, blockHash);
+                return allMns.calculateQuorum(llmqParameters.getSize(), modifier);
+            }
+            return null;
+        } finally {
+            lock.unlock();
         }
     }
 }

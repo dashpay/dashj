@@ -118,4 +118,12 @@ public class SimplifiedMasternodeListDiff extends Message {
     public ArrayList<FinalCommitment> getNewQuorums() {
         return newQuorums;
     }
+
+    public boolean hasQuorumChanges() {
+        return newQuorums.size() + deletedQuorums.size() > 0;
+    }
+
+    public boolean hasMasternodeListChanges() {
+        return mnList.size() + deletedMNs.size() > 0;
+    }
 }

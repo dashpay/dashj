@@ -7,6 +7,7 @@ import org.bitcoinj.utils.Threading;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -18,6 +19,8 @@ public class SimplifiedMasternodeList extends Message {
 
     private Sha256Hash blockHash;
     private long height;
+    private StoredBlock storedblock;
+    private boolean storedBlockMatchesRequest;
     HashMap<Sha256Hash, SimplifiedMasternodeListEntry> mnMap;
     HashMap<Sha256Hash, Pair<Sha256Hash, Integer>> mnUniquePropertyMap;
 
@@ -75,6 +78,13 @@ public class SimplifiedMasternodeList extends Message {
             int second = (int)readUint32();
             mnUniquePropertyMap.put(hash, new Pair<Sha256Hash, Integer>(first, second));
         }
+        if(Context.get().masternodeListManager.getFormatVersion() >= 2) {
+            ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
+            buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
+            buffer.rewind();
+            storedblock = StoredBlock.deserializeCompact(params, buffer);
+            storedBlockMatchesRequest = false;
+        }
         length = cursor - offset;
     }
 
@@ -94,6 +104,9 @@ public class SimplifiedMasternodeList extends Message {
             stream.write(entry.getValue().getFirst().getReversedBytes());
             Utils.uint32ToByteStreamLE(entry.getValue().getSecond().intValue(), stream);
         }
+        ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
+        storedblock.serializeCompact(buffer);
+        stream.write(buffer.array());
     }
 
     public int size() {
@@ -102,7 +115,7 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     public String toString() {
-        return "Simplified MN List:  count:  " + size();
+        return "Simplified MN List(count:  " + size() + "height: " + height + ")";
     }
 
     SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff) throws MasternodeListDiffException
@@ -379,9 +392,9 @@ public class SimplifiedMasternodeList extends Message {
         return entry.isValid;
     }
 
-    ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>> calculateScores(final Sha256Hash modifier)
+    ArrayList<Pair<Sha256Hash, Masternode>> calculateScores(final Sha256Hash modifier)
     {
-        final ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>> scores = new ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>>(getAllMNsCount());
+        final ArrayList<Pair<Sha256Hash, Masternode>> scores = new ArrayList<Pair<Sha256Hash, Masternode>>(getAllMNsCount());
 
         forEachMN(true, new ForeachMNCallback() {
             @Override
@@ -433,10 +446,10 @@ public class SimplifiedMasternodeList extends Message {
         if (mnExisting == null)
             return -1;
 
-        //lock.lock();
+        lock.lock();
         try {
 
-            ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>> vecMasternodeScores = calculateScores(quorumModifierHash);
+            ArrayList<Pair<Sha256Hash, Masternode>> vecMasternodeScores = calculateScores(quorumModifierHash);
             if (vecMasternodeScores.isEmpty())
                 return -1;
 
@@ -444,7 +457,7 @@ public class SimplifiedMasternodeList extends Message {
 
 
             rank = 0;
-            for (Pair<Sha256Hash, SimplifiedMasternodeListEntry> scorePair : vecMasternodeScores) {
+            for (Pair<Sha256Hash, Masternode> scorePair : vecMasternodeScores) {
                 rank++;
                 if (scorePair.getSecond().getProRegTxHash().equals(proTxHash)) {
                     return rank;
@@ -452,7 +465,7 @@ public class SimplifiedMasternodeList extends Message {
             }
             return -1;
         } finally {
-            //lock.unlock();
+            lock.unlock();
         }
     }
 
@@ -466,5 +479,29 @@ public class SimplifiedMasternodeList extends Message {
 
     public Sha256Hash getBlockHash() {
         return blockHash;
+    }
+
+    ArrayList<Masternode> calculateQuorum(int maxSize, Sha256Hash modifier)
+    {
+        ArrayList<Pair<Sha256Hash, Masternode>> scores = calculateScores(modifier);
+
+        // sort is descending order
+        Collections.sort(scores, Collections.reverseOrder(new CompareScoreMN()));
+
+        // take top maxSize entries and return it
+        ArrayList<Masternode> result = new ArrayList<Masternode>(maxSize);
+        for (int i = 0; i < maxSize; i++) {
+            result.add(scores.get(i).getSecond());
+        }
+        return result;
+    }
+
+    protected void setBlock(StoredBlock storedblock, boolean storedBlockMatchesRequest) {
+        this.storedblock = storedblock;
+        this.storedBlockMatchesRequest = storedBlockMatchesRequest;
+    }
+
+    public StoredBlock getStoredblock() {
+        return storedblock;
     }
 }

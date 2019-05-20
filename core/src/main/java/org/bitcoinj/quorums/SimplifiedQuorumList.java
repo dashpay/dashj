@@ -1,10 +1,9 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.evolution.CoinbaseTx;
-import org.bitcoinj.evolution.MasternodeListDiffException;
-import org.bitcoinj.evolution.SimplifiedMasternodeList;
-import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
+import org.bitcoinj.evolution.*;
+import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -24,6 +23,7 @@ public class SimplifiedQuorumList extends Message {
 
     private Sha256Hash blockHash;
     private long height;
+    private boolean isFirstQuorumCheck;
     HashMap<Pair<Integer, Sha256Hash>, Sha256Hash> minableCommitmentsByQuorum;
     LinkedHashMap<Sha256Hash, FinalCommitment> minableCommitments;
 
@@ -36,6 +36,7 @@ public class SimplifiedQuorumList extends Message {
         height = -1;
         minableCommitmentsByQuorum = new HashMap<Pair<Integer, Sha256Hash>, Sha256Hash>(10);
         minableCommitments = new LinkedHashMap<Sha256Hash, FinalCommitment>(10);
+        isFirstQuorumCheck = true;
     }
 
     public SimplifiedQuorumList(NetworkParameters params, byte [] payload, int offset) {
@@ -48,6 +49,7 @@ public class SimplifiedQuorumList extends Message {
         this.height = other.height;
         minableCommitmentsByQuorum = new HashMap<Pair<Integer, Sha256Hash>, Sha256Hash>(other.minableCommitmentsByQuorum);
         minableCommitments = new LinkedHashMap<Sha256Hash, FinalCommitment>(other.minableCommitments);
+        this.isFirstQuorumCheck = other.isFirstQuorumCheck;
     }
 
     @Override
@@ -73,6 +75,7 @@ public class SimplifiedQuorumList extends Message {
             cursor += commitment.getMessageSize();
             minableCommitments.put(hash, commitment);
         }
+        isFirstQuorumCheck = true;
         length = cursor - offset;
     }
 
@@ -127,9 +130,11 @@ public class SimplifiedQuorumList extends Message {
                     int dkgInterval = llmqParameters.dkgInterval;
                     if (block.getHeight() % dkgInterval != 0)
                         throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
+                    checkCommitment(entry, Context.get().blockChain.getChainHead(), Context.get().masternodeListManager);
+                    isFirstQuorumCheck = false;
                 } else {
                     //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
-                    if(entry.llmqType != 2 && !entry.quorumHash.equals(invalidTestNetQuorumHash72000))
+                    if(!isFirstQuorumCheck && entry.llmqType != 2 && !entry.quorumHash.equals(invalidTestNetQuorumHash72000))
                         throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
                 }
                 result.addCommitment(entry);
@@ -342,5 +347,50 @@ public class SimplifiedQuorumList extends Message {
     public void syncWithMasternodeList(SimplifiedMasternodeList masternodeList) {
         height = masternodeList.getHeight();
         blockHash = masternodeList.getBlockHash();
+    }
+
+    void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager) throws BlockStoreException
+    {
+        if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitmentTxPayload.CURRENT_VERSION) {
+            throw new VerificationException("invalid quorum commitment version" + commitment.getVersion());
+        }
+
+        BlockStore blockStore = Context.get().blockChain.getBlockStore();
+        StoredBlock quorumBlock = blockStore.get(commitment.quorumHash);
+        if(quorumBlock == null)
+            throw new VerificationException("invalid quorum hash: " + commitment.quorumHash);
+
+        StoredBlock cursor = prevBlock;
+        while(cursor != null) {
+            if(cursor.getHeader().getHash().equals(quorumBlock.getHeader().getHash()))
+                break;
+            cursor = cursor.getPrev(blockStore);
+        }
+
+        if(cursor == null)
+            throw new VerificationException("invalid quorum hash: " + commitment.quorumHash);
+
+
+        if (!params.getLlmqs().containsKey(LLMQParameters.LLMQType.fromValue(commitment.llmqType))) {
+            throw new VerificationException("invalid LLMQType: " + commitment.llmqType);
+        }
+
+        LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(commitment.llmqType));
+
+
+        if (commitment.isNull()) {
+            if (!commitment.verifyNull()) {
+                throw new VerificationException("invalid commitment: null value");
+            }
+        }
+
+        ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
+        if(members == null) {
+            //no information about this quorum because it is before we were downloading
+            return;
+        }
+        if (!commitment.verify(members, true)) {
+            throw new VerificationException("invalid quorum commitment");
+        }
     }
 }
