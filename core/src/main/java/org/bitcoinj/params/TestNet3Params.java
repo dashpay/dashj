@@ -68,10 +68,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         alertSigningKey = HEX.decode(CoinDefinition.TESTNET_SATOSHI_KEY);
 
         dnsSeeds = new String[] {
-                "testnet-seed.dashdot.io",
-                "35.161.101.35",
-                "54.91.130.170",
-                "95.183.51.146"
+                "testnet-seed.dashdot.io"
         };
 
         checkpoints.put(    261, Sha256Hash.wrap("00000c26026d0815a7e2ce4fa270775f61403c040647ff2c3091f99e894a4618"));
