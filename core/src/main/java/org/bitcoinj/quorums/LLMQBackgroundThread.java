@@ -36,12 +36,15 @@ public class LLMQBackgroundThread extends Thread {
 
                 if (!didWork) {
                     Thread.sleep(100);
-                } else {
-                    debugTimer++;
-                    if(debugTimer % 100 == 0) {
-                        log.info(context.instantSendManager.toString());
-                    }
                 }
+
+                debugTimer++;
+                if(debugTimer % 200 == 0) {
+                    log.info(context.instantSendManager.toString());
+                    if(debugTimer == 1000)
+                        debugTimer = 0;
+                }
+
             }
         } catch (InterruptedException x) {
             //let the thread stop
