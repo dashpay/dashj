@@ -557,7 +557,8 @@ public class Peer extends PeerSocketHandler {
             context.sporkManager.processSpork(this, (SporkMessage)m);
         }
         else if(m instanceof TransactionLockVote) {
-            context.instantSend.processTransactionLockVoteMessage(this, (TransactionLockVote)m);
+            if(context.instantSendManager.isOldInstantSendEnabled())
+                context.instantSend.processTransactionLockVoteMessage(this, (TransactionLockVote)m);
         }
         else if(m instanceof SyncStatusCount) {
             context.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
