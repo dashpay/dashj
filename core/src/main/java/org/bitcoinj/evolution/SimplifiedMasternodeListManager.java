@@ -179,14 +179,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         log.info("processing mnlistdiff between : " + mnList.getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
-            if(!params.getId().equals(NetworkParameters.ID_UNITTESTNET)) {
-                block = blockChain.getBlockStore().get(mnlistdiff.blockHash);
-                if(block.getHeight() != newHeight)
-                    throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
-            }
+            block = blockChain.getBlockStore().get(mnlistdiff.blockHash);
+            if(block.getHeight() != newHeight)
+                throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
+
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
             newMNList.verify(mnlistdiff.coinBaseTx);
-            newMNList.setBlock(block, block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
+            newMNList.setBlock(block, block == null ? false : block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
             SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
                 newQuorumList = quorumList.applyDiff(mnlistdiff);
