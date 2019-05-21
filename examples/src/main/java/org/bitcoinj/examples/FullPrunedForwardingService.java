@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.kits.FullPrunedWalletAppKit;
+import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -74,6 +75,8 @@ public class FullPrunedForwardingService {
 
         // Start up a basic app using a class that automates some boilerplate.
         kit = new FullPrunedWalletAppKit(params, new File("."), filePrefix);
+
+        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
 
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.
