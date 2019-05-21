@@ -103,6 +103,7 @@ public class SPVInstantSendDatabase extends AbstractManager implements InstantSe
             if(islock != null) {
                 removeInstantSendLock(lockHash, islock);
                 result.put(lockHash, islock);
+                iterator.remove();
             }
         }
         return result;
