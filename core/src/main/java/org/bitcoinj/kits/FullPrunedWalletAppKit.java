@@ -322,7 +322,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
                     vStore = provideBlockStore(chainFolder);
                 }
             }
-            vChain = new FullPrunedBlockChain(params, vWallet, vStore);
+            vChain = new FullPrunedBlockChain(params, vStore);
             vPeerGroup = createPeerGroup();
             if (this.userAgent != null)
                 vPeerGroup.setUserAgent(userAgent, version);
