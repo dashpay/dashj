@@ -16,6 +16,7 @@ import static org.bitcoinj.core.MasternodePing.MASTERNODE_MIN_MNP_SECONDS;
  *
  * Translated from CActiveMasternode class (dash/src/activemasternode.cpp)
  */
+@Deprecated
 public class ActiveMasternode {
     private static final Logger log = LoggerFactory.getLogger(ActiveMasternode.class);
     ReentrantLock lock = Threading.lock("activemasternode");

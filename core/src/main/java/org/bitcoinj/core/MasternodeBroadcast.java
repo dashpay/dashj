@@ -22,6 +22,7 @@ import static org.bitcoinj.core.MasternodeInfo.State.MASTERNODE_EXPIRED;
 /**
  * Created by Hash Engineering on 2/20/2015.
  */
+@Deprecated
 public class MasternodeBroadcast extends Masternode {
     private static final Logger log = LoggerFactory.getLogger(MasternodeBroadcast.class);
 

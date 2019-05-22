@@ -29,6 +29,7 @@ import static org.bitcoinj.core.Masternode.MASTERNODE_EXPIRATION_SECONDS;
 import static org.bitcoinj.core.Masternode.MASTERNODE_NEW_START_REQUIRED_SECONDS;
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 
+@Deprecated
 public class MasternodePing extends Message implements Serializable {
 
     private static final Logger log = LoggerFactory.getLogger(MasternodePing.class);

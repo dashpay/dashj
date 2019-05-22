@@ -25,6 +25,7 @@ import static org.bitcoinj.core.VersionMessage.NODE_NETWORK;
 /**
  * Created by Hash Engineering on 2/20/2016.
  */
+@Deprecated
 public class MasternodeManager extends AbstractManager {
     private static final Logger log = LoggerFactory.getLogger(MasternodeManager.class);
 
