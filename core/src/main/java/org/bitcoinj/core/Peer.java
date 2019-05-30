@@ -853,7 +853,6 @@ public class Peer extends PeerSocketHandler {
             if(context != null && context.instantSend != null) {
                 if(context.instantSendManager.isOldInstantSendEnabled() && context.instantSend.processTxLockRequest(tx))
                     context.instantSend.syncTransaction(tx, null);
-                context.instantSendManager.syncTransaction(tx, blockChain.getChainHead(), -1);
             }
 
             // It's a broadcast transaction. Tell all wallets about this tx so they can check if it's relevant or not.
