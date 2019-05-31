@@ -118,7 +118,7 @@ public class WalletTest extends TestWithWallet {
         blockStore = new MemoryBlockStore(UNITTEST);
         chain = new BlockChain(UNITTEST, wallet, blockStore);
 
-        List<DeterministicKey> followingKeys = Lists.newArrayList();
+        List<DeterministicKey> followingKeys = new ArrayList<>();
         for (int i = 0; i < numKeys - 1; i++) {
             final DeterministicKeyChain keyChain = DeterministicKeyChain.builder().random(new SecureRandom()).build();
             DeterministicKey partnerKey = DeterministicKey.deserializeB58(null, keyChain.getWatchingKey().serializePubB58(UNITTEST), UNITTEST);
@@ -454,7 +454,7 @@ public class WalletTest extends TestWithWallet {
     }
 
     private static void broadcastAndCommit(Wallet wallet, Transaction t) throws Exception {
-        final LinkedList<Transaction> txns = Lists.newLinkedList();
+        final LinkedList<Transaction> txns = new LinkedList<>();
         wallet.addCoinsSentEventListener(new WalletCoinsSentEventListener() {
             @Override
             public void onCoinsSent(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
@@ -3317,8 +3317,8 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void keyEvents() throws Exception {
         // Check that we can register an event listener, generate some keys and the callbacks are invoked properly.
-        wallet = new Wallet(UNITTEST, KeyChainGroup.builder(UNITTEST).addChain(DeterministicKeyChain.builder().random(new SecureRandom()).build()).build());
-        final List<IKey> keys = Lists.newLinkedList();
+        wallet = new Wallet(UNITTEST, KeyChainGroup.builder(UNITTEST).fromRandom(Script.ScriptType.P2PKH).build());
+        final List<IKey> keys = new LinkedList<>();
         wallet.addKeyChainEventListener(Threading.SAME_THREAD, new KeyChainEventListener() {
             @Override
             public void onKeysAdded(List<IKey> k) {

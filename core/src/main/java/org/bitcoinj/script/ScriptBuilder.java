@@ -18,8 +18,6 @@
 
 package org.bitcoinj.script;
 
-import com.google.common.collect.Lists;
-
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Transaction;
@@ -32,6 +30,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
 
@@ -49,7 +48,7 @@ public class ScriptBuilder {
 
     /** Creates a fresh ScriptBuilder with an empty program. */
     public ScriptBuilder() {
-        chunks = Lists.newLinkedList();
+        chunks = new LinkedList<>();
     }
 
     /** Creates a fresh ScriptBuilder with the given program as the starting point. */

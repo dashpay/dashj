@@ -1184,7 +1184,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         int maxPeersToDiscoverCount = this.vMaxPeersToDiscoverCount;
         long peerDiscoveryTimeoutMillis = this.vPeerDiscoveryTimeoutMillis;
         final Stopwatch watch = Stopwatch.createStarted();
-        final List<PeerAddress> addressList = Lists.newLinkedList();
+        final List<PeerAddress> addressList = new LinkedList<>();
         for (PeerDiscovery peerDiscovery : peerDiscoverers /* COW */) {
             InetSocketAddress[] addresses;
             try {

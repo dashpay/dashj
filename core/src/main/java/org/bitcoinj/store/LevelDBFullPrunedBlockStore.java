@@ -50,7 +50,6 @@ import org.slf4j.LoggerFactory;
 import static org.fusesource.leveldbjni.JniDBFactory.*;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 
@@ -332,7 +331,7 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
             // because of how the reference client inits
             // its database - the genesis transaction isn't actually in the db
             // so its spent flags can never be updated.
-            List<Transaction> genesisTransactions = Lists.newLinkedList();
+            List<Transaction> genesisTransactions = new LinkedList<>();
             StoredUndoableBlock storedGenesis = new StoredUndoableBlock(params.getGenesisBlock().getHash(),
                     genesisTransactions);
             beginDatabaseBatchWrite();

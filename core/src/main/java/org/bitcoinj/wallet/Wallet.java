@@ -1057,7 +1057,7 @@ public class Wallet extends BaseTaggableObject
      * @return how many addresses were added successfully
      */
     public int addWatchedAddresses(final List<Address> addresses, long creationTime) {
-        List<Script> scripts = Lists.newArrayList();
+        List<Script> scripts = new ArrayList<>();
 
         for (Address address : addresses) {
             Script script = ScriptBuilder.createOutputScript(address);
@@ -1116,7 +1116,7 @@ public class Wallet extends BaseTaggableObject
      * @return true if successful
      */
     public boolean removeWatchedAddresses(final List<Address> addresses) {
-        List<Script> scripts = Lists.newArrayList();
+        List<Script> scripts = new ArrayList<>();
 
         for (Address address : addresses) {
             Script script = ScriptBuilder.createOutputScript(address);
@@ -3732,7 +3732,7 @@ public class Wallet extends BaseTaggableObject
         lock.readLock().lock();
         keyChainGroupLock.lock();
         try {
-            LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
+            LinkedList<TransactionOutput> candidates = new LinkedList<>();
             for (Transaction tx : Iterables.concat(unspent.values(), pending.values())) {
                 if (excludeImmatureCoinbases && !tx.isMature()) continue;
                 for (TransactionOutput output : tx.getOutputs()) {
@@ -4291,7 +4291,7 @@ public class Wallet extends BaseTaggableObject
         public Coin value;
         public BalanceType type;
     }
-    @GuardedBy("lock") private List<BalanceFutureRequest> balanceFutureRequests = Lists.newLinkedList();
+    @GuardedBy("lock") private List<BalanceFutureRequest> balanceFutureRequests = new LinkedList<>();
 
     /**
      * <p>Returns a future that will complete when the balance of the given type has becom equal or larger to the given
@@ -5003,7 +5003,7 @@ public class Wallet extends BaseTaggableObject
     protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases) {
         // checkState(lock.isHeldByCurrentThread());
         UTXOProvider utxoProvider = checkNotNull(vUTXOProvider, "No UTXO provider has been set");
-        LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
+        LinkedList<TransactionOutput> candidates = new LinkedList<>();
         try {
             int chainHeight = utxoProvider.getChainHeadHeight();
             for (UTXO output : getStoredOutputsFromUTXOProvider()) {
@@ -5247,7 +5247,7 @@ public class Wallet extends BaseTaggableObject
             Collections.reverse(newBlocks);  // Need bottom-to-top but we get top-to-bottom.
 
             // For each block in the old chain, disconnect the transactions in reverse order.
-            LinkedList<Transaction> oldChainTxns = Lists.newLinkedList();
+            LinkedList<Transaction> oldChainTxns = new LinkedList<>();
             for (Sha256Hash blockHash : oldBlockHashes) {
                 for (TxOffsetPair pair : mapBlockTx.get(blockHash)) {
                     Transaction tx = pair.tx;
@@ -5362,10 +5362,10 @@ public class Wallet extends BaseTaggableObject
 
     //region Bloom filtering
 
-    private final ArrayList<TransactionOutPoint> bloomOutPoints = Lists.newArrayList();
-    private final ArrayList<Sha256Hash> bloomSpecialTxHashes = Lists.newArrayList();
-    private final ArrayList<Script> bloomSpecialTxScripts = Lists.newArrayList();
-    private final ArrayList<TransactionOutPoint> bloomSpecialTxOutpoints = Lists.newArrayList();
+    private final ArrayList<TransactionOutPoint> bloomOutPoints = new ArrayList<>();
+    private final ArrayList<Sha256Hash> bloomSpecialTxHashes = new ArrayList<>();
+    private final ArrayList<Script> bloomSpecialTxScripts = new ArrayList<>();
+    private final ArrayList<TransactionOutPoint> bloomSpecialTxOutpoints = new ArrayList<>();
 
     // Used to track whether we must automatically begin/end a filter calculation and calc outpoints/take the locks.
     private final AtomicInteger bloomFilterGuard = new AtomicInteger(0);
@@ -6113,7 +6113,7 @@ public class Wallet extends BaseTaggableObject
             boolean sign) throws DeterministicUpgradeRequiresPassword {
         checkState(lock.writeLock().isHeldByCurrentThread());
         checkState(keyChainGroupLock.isHeldByCurrentThread());
-        List<Transaction> results = Lists.newLinkedList();
+        List<Transaction> results = new LinkedList<>();
         // TODO: Handle chain replays here.
         final long keyRotationTimestamp = vKeyRotationTimestamp;
         if (keyRotationTimestamp == 0) return results;  // Nothing to do.
