@@ -106,7 +106,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     @Nullable private DeterministicKey rootKey;
     @Nullable private DeterministicSeed seed;
     private final Script.ScriptType outputScriptType;
-    private final ImmutableList<ChildNumber> accountPath;
+    private final HDPath accountPath;
 
     // Paths through the key tree. External keys are ones that are communicated to other parties. Internal keys are
     // keys created for change addresses, coinbases, mixing, etc - anything that isn't communicated. The distinction
@@ -115,47 +115,47 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     // a payment request that can generate lots of addresses independently.
     // The account path may be overridden by subclasses.
     // m / 0'
-    public static final ImmutableList<ChildNumber> ACCOUNT_ZERO_PATH = ImmutableList.of(ChildNumber.ZERO_HARDENED);
+    public static final HDPath ACCOUNT_ZERO_PATH = HDPath.of(ChildNumber.ZERO_HARDENED);
     // m / 1'
-    public static final ImmutableList<ChildNumber> ACCOUNT_ONE_PATH = ImmutableList.of(ChildNumber.ONE_HARDENED);
+    public static final HDPath ACCOUNT_ONE_PATH = HDPath.of(ChildNumber.ONE_HARDENED);
     // m / 44' / 0' / 0'
-    public static final ImmutableList<ChildNumber> BIP44_ACCOUNT_ZERO_PATH = ImmutableList.of(new ChildNumber(44, true),
+    public static final HDPath BIP44_ACCOUNT_ZERO_PATH = ImmutableList.of(new ChildNumber(44, true),
             ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED);
-    public static final ImmutableList<ChildNumber> BIP44_ACCOUNT_ZERO_PATH_TESTNET = ImmutableList.of(new ChildNumber(44, true),
+    public static final HDPath BIP44_ACCOUNT_ZERO_PATH_TESTNET = ImmutableList.of(new ChildNumber(44, true),
             ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED);
 
     // m / 9' / 5' / 3' / 0' - 1000 DASH for masternode
-    public static final ImmutableList<ChildNumber> MASTERNODE_HOLDINGS_PATH = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath MASTERNODE_HOLDINGS_PATH = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), ChildNumber.ZERO_HARDENED);
-    public static final ImmutableList<ChildNumber> MASTERNODE_HOLDINGS_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath MASTERNODE_HOLDINGS_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.ONE_HARDENED, new ChildNumber(3, true), ChildNumber.ZERO_HARDENED);
 
     // m / 9' / 5' / 3' / 1' - Masternode Voting Path
-    public static final ImmutableList<ChildNumber> PROVIDER_VOTING_PATH = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath PROVIDER_VOTING_PATH = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), ChildNumber.ONE_HARDENED);
-    public static final ImmutableList<ChildNumber> PROVIDER_VOTING_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath PROVIDER_VOTING_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.ONE_HARDENED, new ChildNumber(3, true), ChildNumber.ONE_HARDENED);
 
     // m / 9' / 5' / 3' / 2' - Masternode Owner Path
-    public static final ImmutableList<ChildNumber> PROVIDER_OWNER_PATH = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath PROVIDER_OWNER_PATH = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), new ChildNumber(2, true));
-    public static final ImmutableList<ChildNumber> PROVIDER_OWNER_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath PROVIDER_OWNER_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.ONE_HARDENED, new ChildNumber(3, true), new ChildNumber(2, true));
 
     // m / 9' / 5' / 3' / 3' - Masternode Operator Path
-    public static final ImmutableList<ChildNumber> PROVIDER_OPERATOR_PATH = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath PROVIDER_OPERATOR_PATH = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), new ChildNumber(3, true));
-    public static final ImmutableList<ChildNumber> PROVIDER_OPERATOR_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath PROVIDER_OPERATOR_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.ONE_HARDENED, new ChildNumber(3, true), new ChildNumber(3, true));
 
     // m / 9' / 5' / 5' / 0' - Blockchain User Path
-    public static final ImmutableList<ChildNumber> BLOCKCHAIN_USER_PATH = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath BLOCKCHAIN_USER_PATH = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.FIVE_HARDENED, new ChildNumber(5, true), new ChildNumber(0, true));
-    public static final ImmutableList<ChildNumber> BLOCKCHAIN_USER_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+    public static final HDPath BLOCKCHAIN_USER_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.ONE_HARDENED, new ChildNumber(5, true), new ChildNumber(0, true));
 
-    public static final ImmutableList<ChildNumber> EXTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ZERO);
-    public static final ImmutableList<ChildNumber> INTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ONE);
+    public static final HDPath EXTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ZERO);
+    public static final HDPath INTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ONE);
 
     // We try to ensure we have at least this many keys ready and waiting to be handed out via getKey().
     // See docs for getLookaheadSize() for more info on what this is for. The -1 value means it hasn't been calculated
@@ -208,7 +208,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         protected DeterministicKey watchingKey = null;
         protected boolean isFollowing = false;
         protected DeterministicKey spendingKey = null;
-        protected ImmutableList<ChildNumber> accountPath = null;
+        protected HDPath accountPath = null;
 
         protected Builder() {
         }
@@ -308,9 +308,9 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         /**
          * Use an account path other than the default {@link DeterministicKeyChain#ACCOUNT_ZERO_PATH}.
          */
-        public T accountPath(ImmutableList<ChildNumber> accountPath) {
+        public T accountPath(List<ChildNumber> accountPath) {
             checkState(watchingKey == null, "either watch or accountPath");
-            this.accountPath = checkNotNull(accountPath);
+            this.accountPath = HDPath.of(checkNotNull(accountPath));
             return self();
         }
 
@@ -411,11 +411,11 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
      * </p>
      */
     protected DeterministicKeyChain(DeterministicSeed seed, @Nullable KeyCrypter crypter,
-            Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath) {
+            Script.ScriptType outputScriptType, List<ChildNumber> accountPath) {
         checkArgument(outputScriptType == null || outputScriptType == Script.ScriptType.P2PKH,
                  "Only P2PKH is allowed.");
         this.outputScriptType = outputScriptType != null ? outputScriptType : Script.ScriptType.P2PKH;
-        this.accountPath = accountPath;
+        this.accountPath = HDPath.of(accountPath);
         this.seed = seed;
         basicKeyChain = new BasicKeyChain(crypter);
         if (!seed.isEncrypted()) {
@@ -437,7 +437,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
      * For use in encryption when {@link #toEncrypted(KeyCrypter, KeyParameter)} is called, so that
      * subclasses can override that method and create an instance of the right class.
      *
-     * See also {@link #makeKeyChainFromSeed(DeterministicSeed, ImmutableList, Script.ScriptType)}
+     * See also {@link #makeKeyChainFromSeed(DeterministicSeed, List, Script.ScriptType)}
      */
     protected DeterministicKeyChain(KeyCrypter crypter, KeyParameter aesKey, DeterministicKeyChain chain) {
         // Can't encrypt a watching chain.
@@ -487,7 +487,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         }
     }
 
-    public ImmutableList<ChildNumber> getAccountPath() {
+    public HDPath getAccountPath() {
         return accountPath;
     }
 
@@ -496,7 +496,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     }
 
     private DeterministicKey encryptNonLeaf(KeyParameter aesKey, DeterministicKeyChain chain,
-                                            DeterministicKey parent, ImmutableList<ChildNumber> path) {
+                                            DeterministicKey parent, List<ChildNumber> path) {
         DeterministicKey key = chain.hierarchy.get(path, false, false);
         key = key.encrypt(checkNotNull(basicKeyChain.getKeyCrypter()), aesKey, parent);
         hierarchy.putKey(key);
@@ -562,7 +562,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
-                ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
+                HDPath path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
                 DeterministicKey k = hierarchy.get(path, false, false);
                 // Just a last minute sanity check before we hand the key out to the app for usage. This isn't inspired
                 // by any real problem reports from bitcoinj users, but I've heard of cases via the grapevine of
@@ -672,7 +672,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
 
     /** Returns the deterministic key for the given absolute path in the hierarchy. */
     protected DeterministicKey getKeyByPath(ChildNumber... path) {
-        return getKeyByPath(ImmutableList.copyOf(path));
+        return getKeyByPath(HDPath.of(Arrays.asList(path)));
     }
 
     /** Returns the deterministic key for the given absolute path in the hierarchy. */
@@ -1002,7 +1002,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                 }
                 // Deserialize the public key and path.
                 LazyECPoint pubkey = new LazyECPoint(ECKey.CURVE.getCurve(), key.getPublicKey().toByteArray());
-                final ImmutableList<ChildNumber> immutablePath = ImmutableList.copyOf(path);
+                final HDPath immutablePath = HDPath.of(path);
                 if (key.hasOutputScriptType())
                     outputScriptType = Script.ScriptType.valueOf(key.getOutputScriptType().name());
                 // Possibly create the chain, if we didn't already do so yet.
@@ -1045,10 +1045,10 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                     } else {
                         if (simple)
                             chain = factory.makeKeyChain(seed, crypter, isMarried,
-                                    outputScriptType, ImmutableList.<ChildNumber> builder().addAll(accountPath).build());
+                                    outputScriptType, HDPath.of(accountPath));
                         else
                             chain = factory.makeSpendingFriendKeyChain(seed, crypter, isMarried,
-                                    ImmutableList.<ChildNumber> builder().addAll(accountPath).build());
+                                    HDPath.of(accountPath));
                         chain.lookaheadSize = LAZY_CALCULATE_LOOKAHEAD;
                         // If the seed is encrypted, then the chain is incomplete at this point. However, we will load
                         // it up below as we parse in the keys. We just need to check at the end that we've loaded
@@ -1196,7 +1196,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
      * Subclasses should override this to create an instance of the subclass instead of a plain DKC.
      * This is used in encryption/decryption.
      */
-    protected DeterministicKeyChain makeKeyChainFromSeed(DeterministicSeed seed, ImmutableList<ChildNumber> accountPath,
+    protected DeterministicKeyChain makeKeyChainFromSeed(DeterministicSeed seed, List<ChildNumber> accountPath,
             Script.ScriptType outputScriptType) {
         return new DeterministicKeyChain(seed, null, outputScriptType, accountPath);
     }
