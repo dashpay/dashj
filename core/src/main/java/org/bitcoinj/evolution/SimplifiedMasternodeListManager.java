@@ -290,6 +290,40 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         }
     };
 
+    ReorganizeListener reorganizeListener = new ReorganizeListener() {
+        @Override
+        public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks, List<StoredBlock> newBlocks) throws VerificationException {
+            lock.lock();
+            try {
+                SimplifiedMasternodeList mnlistAtSplitPoint = mnListsCache.get(splitPoint.getHeader().getHash());
+                if (mnlistAtSplitPoint != null) {
+                    Iterator<Map.Entry<Sha256Hash, SimplifiedMasternodeList>> iterator = mnListsCache.entrySet().iterator();
+                    boolean foundSplitPoint = true;
+                    while (iterator.hasNext()) {
+                        Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry = iterator.next();
+                        if (entry.getValue().equals(splitPoint.getHeader().getHash())) {
+                            foundSplitPoint = true;
+                            continue;
+                        }
+                        if (foundSplitPoint)
+                            iterator.remove();
+                    }
+                    pendingBlocks.clear();
+                    pendingBlocksMap.clear();
+                    for (StoredBlock newBlock : newBlocks) {
+                        pendingBlocks.add(newBlock);
+                        pendingBlocksMap.put(newBlock.getHeader().getHash(), newBlock);
+                    }
+                    requestNextMNListDiff();
+                } else {
+                    resetMNList(true);
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+    };
+
     void chooseRandomDownloadPeer() {
         List<Peer> peers = context.peerGroup.getConnectedPeers();
         if(peers != null && !peers.isEmpty()) {
@@ -396,6 +430,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
         blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
+        blockChain.addReorganizeListener(reorganizeListener);
         peerGroup.addConnectedEventListener(peerConnectedEventListener);
         peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
         peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
@@ -404,6 +439,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     @Override
     public void close() {
         blockChain.removeNewBestBlockListener(newBestBlockListener);
+        blockChain.removeReorganizeListener(reorganizeListener);
         peerGroup.removeConnectedEventListener(peerConnectedEventListener);
         peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
         peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
@@ -482,13 +518,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public void resetMNList(boolean force) {
-        if(force || getFormatVersion() < LLMQ_FORMAT_VERSION) {
-            log.info("resetting masternode list");
-            mnList = new SimplifiedMasternodeList(context.getParams());
-            quorumList = new SimplifiedQuorumList(context.getParams());
-            pendingBlocks.clear();
-            pendingBlocksMap.clear();
-            requestMNListDiff(blockChain.getChainHead());
+        try {
+            if(force || getFormatVersion() < LLMQ_FORMAT_VERSION) {
+                log.info("resetting masternode list");
+                mnList = new SimplifiedMasternodeList(context.getParams());
+                quorumList = new SimplifiedQuorumList(context.getParams());
+                pendingBlocks.clear();
+                pendingBlocksMap.clear();
+                StoredBlock resetBlock = blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SNAPSHOT_LIST_PERIOD);
+                requestMNListDiff(resetBlock != null ? resetBlock : blockChain.getChainHead());
+            }
+        } catch (BlockStoreException x) {
+            throw new RuntimeException(x);
         }
     }
 
