@@ -563,6 +563,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
             mapTx.put(tx.getHash(), tx);
         }
 
+        boolean isDisconnect = block != null && posInBlock == -1;
+
         Sha256Hash islockHash;
         lock.lock();
         try {
@@ -570,7 +572,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
             // update DB about when an IS lock was mined
             if (islockHash != null && !islockHash.equals(Sha256Hash.ZERO_HASH) && block != null) {
-                if (posInBlock == -1) {
+                if (isDisconnect) {
                     db.removeInstantSendLockMined(islockHash, block.getHeight());
                 } else {
                     db.writeInstantSendLockMined(islockHash, block.getHeight());
