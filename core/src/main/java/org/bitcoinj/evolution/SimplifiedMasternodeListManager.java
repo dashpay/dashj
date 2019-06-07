@@ -5,6 +5,7 @@ import org.bitcoinj.core.listeners.ChainDownloadStartedEventListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.core.listeners.ReorganizeListener;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.store.BlockStoreException;
