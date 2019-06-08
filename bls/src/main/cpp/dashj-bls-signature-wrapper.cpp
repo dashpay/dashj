@@ -1779,8 +1779,16 @@ SWIGEXPORT jboolean JNICALL Java_org_dashj_bls_JNI_InsecureSignature_1Verify(JNI
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< bls::PublicKey > const & reference is null");
     return 0;
   } 
-  result = (bool)((bls::InsecureSignature const *)arg1)->Verify((std::vector< uint8_t const * > const &)*arg2,(std::vector< bls::PublicKey > const &)*arg3);
-  jresult = (jboolean)result; 
+  try {
+      result = (bool)((bls::InsecureSignature const *)arg1)->Verify((std::vector< uint8_t const * > const &)*arg2,(std::vector< bls::PublicKey > const &)*arg3);
+  } catch (std::string & x) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+      return 0;
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "Unknown error");
+      return 0;
+  }
+  jresult = (jboolean)result;
   return jresult;
 }
 
