@@ -259,6 +259,7 @@ public class Context {
 
     public void closeDash() {
         //Dash Specific
+        close();
         sporkManager = null;
 
         masternodePayments = null;
@@ -305,8 +306,6 @@ public class Context {
     }
 
     public void close() {
-        llmqBackgroundThread.interrupt();
-        blockChain.removeNewBestBlockListener(newBestBlockListener);
         if(initializedDash) {
             sporkManager.close(peerGroup);
             masternodeSync.close();
@@ -317,6 +316,8 @@ public class Context {
             signingManager.close();
             chainLockHandler.close();
             quorumManager.close();
+            llmqBackgroundThread.interrupt();
+            blockChain.removeNewBestBlockListener(newBestBlockListener);
         }
     }
 
