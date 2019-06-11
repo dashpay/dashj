@@ -206,11 +206,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             pendingBlocks.remove(0);
             pendingBlocksMap.remove(thisBlock.getHeader().getHash());
 
-            if(mnlistdiff.hasQuorumChanges()) {
-                if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
-                    setFormatVersion(LLMQ_FORMAT_VERSION);
-                save();
-            }
+            if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
+                setFormatVersion(LLMQ_FORMAT_VERSION);
+            save();
         } catch(MasternodeListDiffException x) {
             //we already have this mnlistdiff or doesn't match our current tipBlockHash
             if(mnList.getBlockHash().equals(mnlistdiff.blockHash)) {
@@ -444,6 +442,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         peerGroup.removeConnectedEventListener(peerConnectedEventListener);
         peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
         peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
+        save();
     }
 
     public void requestMNListDiff(StoredBlock block) {
