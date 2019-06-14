@@ -17,8 +17,10 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.quorums.LLMQParameters;
 
 import java.math.BigInteger;
+import java.util.HashMap;
 
 /**
  * Network parameters used by the bitcoinj unit tests (and potentially your own). This lets you solve a block using
@@ -68,6 +70,14 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
 
         instantSendConfirmationsRequired = MainNetParams.get().getInstantSendConfirmationsRequired();
         instantSendKeepLock = MainNetParams.get().getInstantSendKeepLock();
+
+        //LLMQ parameters
+        llmqs = new HashMap<LLMQParameters.LLMQType, LLMQParameters>(3);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_60, LLMQParameters.llmq400_60);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
+        llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
+        llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
     }
 
     private static UnitTestParams instance;

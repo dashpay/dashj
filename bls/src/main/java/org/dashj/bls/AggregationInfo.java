@@ -19,11 +19,14 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class AggregationInfo {
   private transient long cPointer;
   protected transient boolean owner;
 
   protected AggregationInfo(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     owner = cMemoryOwn;
     cPointer = cPtr;
   }

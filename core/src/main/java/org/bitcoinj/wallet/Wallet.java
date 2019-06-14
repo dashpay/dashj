@@ -2502,11 +2502,12 @@ public class Wallet extends BaseTaggableObject
                 // Add to the pending pool and schedule confidence listener notifications.
                 log.info("->pending: {}", tx.getHashAsString());
                 tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
-                if(tx instanceof TransactionLockRequest ||
-                        (InstantSend.canAutoLock() && tx.isSimple())) //TODO:InstantX - may need to adjust the ones above too?
-                    tx.getConfidence().setIXType(IXType.IX_REQUEST);//setConfidenceType(ConfidenceType.INSTANTX_PENDING);
-                //else tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
-                confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
+                if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
+                    if (tx instanceof TransactionLockRequest ||
+                            (InstantSend.canAutoLock() && tx.isSimple())) //TODO:InstantX - may need to adjust the ones above too?
+                        tx.getConfidence().setIXType(IXType.IX_REQUEST);
+                    confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
+                }
                 addWalletTransaction(Pool.PENDING, tx);
             }
             if (log.isInfoEnabled())
@@ -2535,9 +2536,12 @@ public class Wallet extends BaseTaggableObject
             isConsistentOrThrow();
 
             //Dash Specific
-            if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
-                context.instantSend.processTxLockRequest(tx);
-            }
+            if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
+                if (tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
+                    context.instantSend.processTxLockRequest(tx);
+                }
+            } else if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
+                context.instantSendManager.syncTransaction(tx, null, -1);
 
             informConfidenceListenersIfNotReorganizing();
             saveNow();
@@ -4162,7 +4166,7 @@ public class Wallet extends BaseTaggableObject
         Coin fee = feePerKb.multiply(size).divide(1000);
         if (ensureMinRequiredFee && fee.compareTo(params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
             fee = params.isDIP0001ActiveAtTip() ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
-        if(useInstantSend)
+        if(useInstantSend && context.instantSendManager.isOldInstantSendEnabled())
             fee = TransactionLockRequest.MIN_FEE.multiply(tx.getInputs().size()).div(params.isDIP0001ActiveAtTip() ? 10 : 1);
         TransactionOutput output = tx.getOutput(0);
         output.setValue(output.getValue().subtract(fee));
@@ -4623,6 +4627,10 @@ public class Wallet extends BaseTaggableObject
     //region Bloom filtering
 
     private final ArrayList<TransactionOutPoint> bloomOutPoints = Lists.newArrayList();
+    private final ArrayList<Sha256Hash> bloomSpecialTxHashes = Lists.newArrayList();
+    private final ArrayList<Script> bloomSpecialTxScripts = Lists.newArrayList();
+    private final ArrayList<TransactionOutPoint> bloomSpecialTxOutpoints = Lists.newArrayList();
+
     // Used to track whether we must automatically begin/end a filter calculation and calc outpoints/take the locks.
     private final AtomicInteger bloomFilterGuard = new AtomicInteger(0);
 
@@ -4634,6 +4642,7 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         //noinspection FieldAccessNotGuarded
         calcBloomOutPointsLocked();
+        calcBloomSpecialTxPayloads();
     }
 
     private void calcBloomOutPointsLocked() {
@@ -4651,6 +4660,26 @@ public class Wallet extends BaseTaggableObject
                 } catch (ScriptException e) {
                     // If it is ours, we parsed the script correctly, so this shouldn't happen.
                     throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
+
+    private void calcBloomSpecialTxPayloads() {
+        bloomSpecialTxHashes.clear();
+        bloomSpecialTxOutpoints.clear();
+        bloomSpecialTxScripts.clear();
+        Set<Transaction> all = new HashSet<Transaction>();
+        all.addAll(unspent.values());
+        all.addAll(spent.values());
+        all.addAll(pending.values());
+
+        for (Transaction tx : all) {
+            if(tx.getVersionShort() == 3 && tx.getType() != Transaction.Type.TRANSACTION_NORMAL) {
+                if(tx.getType() == Transaction.Type.TRANSACTION_PROVIDER_REGISTER ||
+                    tx.getType() == Transaction.Type.TRANSACTION_SUBTX_REGISTER) {
+                    bloomSpecialTxHashes.add(tx.getHash());
                 }
             }
         }
@@ -4676,9 +4705,15 @@ public class Wallet extends BaseTaggableObject
         try {
             int size = bloomOutPoints.size();
             size += keyChainGroup.getBloomFilterElementCount();
+            if(authenticationGroup != null)
+                size += authenticationGroup.getBloomFilterElementCount(); //authentication keys
             // Some scripts may have more than one bloom element.  That should normally be okay, because under-counting
             // just increases false-positive rate.
             size += watchedScripts.size();
+            // include other special transaction elements
+            size += bloomSpecialTxHashes.size();
+            size += bloomSpecialTxScripts.size();
+            size += bloomSpecialTxOutpoints.size();
             return size;
         } finally {
             endBloomFilterCalculation();
@@ -4743,6 +4778,28 @@ public class Wallet extends BaseTaggableObject
             }
             for (TransactionOutPoint point : bloomOutPoints)
                 filter.insert(point.unsafeBitcoinSerialize());
+
+            // add special transaction information
+            for (TransactionOutPoint point : bloomSpecialTxOutpoints)
+                filter.insert(point.unsafeBitcoinSerialize());
+            for (Sha256Hash hash : bloomSpecialTxHashes)
+                filter.insert(hash.getReversedBytes());
+            for (Script script : bloomSpecialTxScripts) {
+                for (ScriptChunk chunk : script.getChunks()) {
+                    // Only add long (at least 64 bit) data to the bloom filter.
+                    // If any long constants become popular in scripts, we will need logic
+                    // here to exclude them.
+                    if (!chunk.isOpCode() && chunk.data.length >= MINIMUM_BLOOM_DATA_LENGTH) {
+                        filter.insert(chunk.data);
+                    }
+                }
+            }
+
+            // add authentication keys
+            if(authenticationGroup != null) {
+                BloomFilter authFilter = authenticationGroup.getBloomFilter(size, falsePositiveRate, nTweak);
+                filter.merge(authFilter);
+            }
             return filter;
         } finally {
             endBloomFilterCalculation();
@@ -4916,7 +4973,7 @@ public class Wallet extends BaseTaggableObject
                 fees = dip0001Active ? Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(10) : Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
 
             //Dash instantSend
-            if(req.useInstantSend) {
+            if(req.useInstantSend && context.instantSendManager.isOldInstantSendEnabled()) {
                 Coin ixFee = dip0001Active ? TransactionLockRequest.MIN_FEE.div(10) : TransactionLockRequest.MIN_FEE;
                 fees = Coin.valueOf(max(ixFee.getValue(), ixFee.multiply(lastCalculatedInputs).getValue()));
             }
@@ -5157,9 +5214,12 @@ public class Wallet extends BaseTaggableObject
 
             }
             //Dash Specific
-            if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
-                //This transaction was stuck and we need to track it once again with InstantSend
-                context.instantSend.processTxLockRequest(tx);
+            if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
+                if (tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
+                    //This transaction was stuck and we need to track it once again with InstantSend
+                    context.instantSend.processTxLockRequest(tx);
+            } else if (context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
+                context.instantSendManager.syncTransaction(tx, null, -1);
             }
             checkState(confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.IN_CONFLICT,
                     "Expected PENDING or IN_CONFLICT, was %s.", confidenceType);
@@ -5268,7 +5328,7 @@ public class Wallet extends BaseTaggableObject
                     public void onFailure(Throwable throwable) {
                         log.error("Failed to broadcast key rotation tx", throwable);
                     }
-                });
+                }, MoreExecutors.directExecutor());
             } catch (Exception e) {
                 log.error("Failed to broadcast rekey tx", e);
             }
@@ -5393,5 +5453,33 @@ public class Wallet extends BaseTaggableObject
         finally {
             keyChainGroupLock.unlock();
         }
+    }
+
+    AuthenticationKeyChain providerOwnerKeyChain;
+    AuthenticationKeyChain providerVoterKeyChain;
+    AuthenticationKeyChain blockchainUserKeyChain;
+    KeyChainGroup authenticationGroup;
+
+    public void initializeAuthenticationKeyChains(DeterministicSeed seed, KeyCrypter keyCrypter) {
+        boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
+        providerOwnerKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.PROVIDER_OWNER_PATH : DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET);
+        providerVoterKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.PROVIDER_VOTING_PATH : DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET);
+        blockchainUserKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.BLOCKCHAIN_USER_PATH : DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET);
+        authenticationGroup = new KeyChainGroup(getParams());
+        authenticationGroup.addAndActivateHDChain(providerOwnerKeyChain);
+        authenticationGroup.addAndActivateHDChain(providerVoterKeyChain);
+        authenticationGroup.addAndActivateHDChain(blockchainUserKeyChain);
+    }
+
+    public AuthenticationKeyChain getProviderOwnerKeyChain() {
+        return providerOwnerKeyChain;
+    }
+
+    public AuthenticationKeyChain getProviderVoterKeyChain() {
+        return providerVoterKeyChain;
+    }
+
+    public AuthenticationKeyChain getBlockchainUserKeyChain() {
+        return blockchainUserKeyChain;
     }
 }

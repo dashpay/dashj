@@ -13,6 +13,6 @@
  */
 
 /**
- * Classes that know how to discover peers in the P2P network using DNS, IRC or DNS via Tor (orchid).
+ * Classes that know how to discover peers in the P2P network using DNS or HTTP.
  */
 package org.bitcoinj.net.discovery;

@@ -56,6 +56,11 @@ public class InstantSend {
         this.blockChain = blockChain;
         this.blockChain.addTransactionReceivedListener(transactionReceivedInBlockListener);
     }
+
+    public void close() {
+        this.blockChain.removeTransactionReceivedListener(transactionReceivedInBlockListener);
+    }
+
     Context context;
 
     boolean enabled = false;

@@ -3,17 +3,24 @@ package org.bitcoinj.evolution;
 import com.google.common.base.Preconditions;
 import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Pair;
+import org.bitcoinj.utils.Threading;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedMasternodeList extends Message {
 
+    private ReentrantLock lock = Threading.lock("SimplifiedMasternodeList");
+
     private Sha256Hash blockHash;
     private long height;
+    private StoredBlock storedblock;
+    private boolean storedBlockMatchesRequest;
     HashMap<Sha256Hash, SimplifiedMasternodeListEntry> mnMap;
     HashMap<Sha256Hash, Pair<Sha256Hash, Integer>> mnUniquePropertyMap;
 
@@ -71,6 +78,13 @@ public class SimplifiedMasternodeList extends Message {
             int second = (int)readUint32();
             mnUniquePropertyMap.put(hash, new Pair<Sha256Hash, Integer>(first, second));
         }
+        if(Context.get().masternodeListManager.getFormatVersion() >= 2) {
+            ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
+            buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
+            buffer.rewind();
+            storedblock = StoredBlock.deserializeCompact(params, buffer);
+            storedBlockMatchesRequest = false;
+        }
         length = cursor - offset;
     }
 
@@ -90,6 +104,9 @@ public class SimplifiedMasternodeList extends Message {
             stream.write(entry.getValue().getFirst().getReversedBytes());
             Utils.uint32ToByteStreamLE(entry.getValue().getSecond().intValue(), stream);
         }
+        ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
+        storedblock.serializeCompact(buffer);
+        stream.write(buffer.array());
     }
 
     public int size() {
@@ -98,82 +115,112 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     public String toString() {
-        return "Simplified MN List:  count:  " + size();
+        return "Simplified MN List(count:  " + size() + "height: " + height + ")";
     }
 
-    SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff)
+    SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff) throws MasternodeListDiffException
     {
         CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
-        Preconditions.checkArgument(diff.prevBlockHash.equals(blockHash), "The mnlistdiff does not connect to this list.  height: " + height + " vs " + cbtx.getHeight());
+        if(!diff.prevBlockHash.equals(blockHash))
+            throw new MasternodeListDiffException("The mnlistdiff does not connect to this list.  height: " + height + " vs " + cbtx.getHeight(), false, false);
 
-        SimplifiedMasternodeList result = new SimplifiedMasternodeList(this);
+        lock.lock();
+        try {
+            SimplifiedMasternodeList result = new SimplifiedMasternodeList(this);
 
-        result.blockHash = diff.blockHash;
-        result.height = cbtx.getHeight();
+            result.blockHash = diff.blockHash;
+            result.height = cbtx.getHeight();
 
-        for (Sha256Hash hash : diff.deletedMNs) {
-            result.removeMN(hash);
+            for (Sha256Hash hash : diff.deletedMNs) {
+                result.removeMN(hash);
+            }
+            for (SimplifiedMasternodeListEntry entry : diff.mnList) {
+                result.addMN(entry);
+            }
+            return result;
+        } finally {
+            lock.unlock();
         }
-        for (SimplifiedMasternodeListEntry entry : diff.mnList) {
-            result.addMN(entry);
-        }
-        return result;
     }
 
     void addMN(SimplifiedMasternodeListEntry dmn)
     {
-        mnMap.put(dmn.proRegTxHash, dmn);
-        addUniqueProperty(dmn, dmn.service);
-        addUniqueProperty(dmn, dmn.keyIdVoting);
-        if(params.isSupportingEvolution())
-            addUniqueProperty(dmn, dmn.pubKeyOperator);
-        else
-            addUniqueProperty(dmn, dmn.keyIdOperator);
+        lock.lock();
+        try {
+            mnMap.put(dmn.proRegTxHash, dmn);
+            addUniqueProperty(dmn, dmn.service);
+            addUniqueProperty(dmn, dmn.keyIdVoting);
+            if (params.isSupportingEvolution())
+                addUniqueProperty(dmn, dmn.pubKeyOperator);
+            else
+                addUniqueProperty(dmn, dmn.keyIdOperator);
+        } finally {
+            lock.unlock();
+        }
     }
 
-    void removeMN(Sha256Hash proTxHash)
-    {
-        SimplifiedMasternodeListEntry dmn = getMN(proTxHash);
-        if(dmn != null) {
-            deleteUniqueProperty(dmn, dmn.service);
-            deleteUniqueProperty(dmn, dmn.keyIdVoting);
-            deleteUniqueProperty(dmn, dmn.pubKeyOperator);
-            mnMap.remove(proTxHash);
+    void removeMN(Sha256Hash proTxHash) {
+        lock.lock();
+        try {
+            SimplifiedMasternodeListEntry dmn = getMN(proTxHash);
+            if (dmn != null) {
+                deleteUniqueProperty(dmn, dmn.service);
+                deleteUniqueProperty(dmn, dmn.keyIdVoting);
+                deleteUniqueProperty(dmn, dmn.pubKeyOperator);
+                mnMap.remove(proTxHash);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
     public SimplifiedMasternodeListEntry getMN(Sha256Hash proTxHash)
     {
-        SimplifiedMasternodeListEntry p = mnMap.get(proTxHash);
-        if (p == null) {
-            return null;
+        lock.lock();
+        try {
+            SimplifiedMasternodeListEntry p = mnMap.get(proTxHash);
+            if (p == null) {
+                return null;
+            }
+            return p;
+        } finally {
+            lock.unlock();
         }
-        return p;
     }
 
 
     <T extends ChildMessage> void addUniqueProperty(SimplifiedMasternodeListEntry dmn, T value)
     {
-        Sha256Hash hash = value.getHash();
-        int i = 1;
-        Pair<Sha256Hash, Integer> oldEntry = mnUniquePropertyMap.get(hash);
-        //assert(oldEntry == null || oldEntry.getFirst().equals(dmn.proRegTxHash));
-        if(oldEntry != null)
-            i = oldEntry.getSecond() + 1;
-        Pair<Sha256Hash, Integer> newEntry = new Pair(dmn.proRegTxHash, i);
+        lock.lock();
+        try {
+            Sha256Hash hash = value.getHash();
+            int i = 1;
+            Pair<Sha256Hash, Integer> oldEntry = mnUniquePropertyMap.get(hash);
+            //assert(oldEntry == null || oldEntry.getFirst().equals(dmn.proRegTxHash));
+            if (oldEntry != null)
+                i = oldEntry.getSecond() + 1;
+            Pair<Sha256Hash, Integer> newEntry = new Pair(dmn.proRegTxHash, i);
 
-        mnUniquePropertyMap.put(hash, newEntry);
+            mnUniquePropertyMap.put(hash, newEntry);
+        } finally {
+            lock.unlock();
+        }
     }
     <T extends ChildMessage>
     void deleteUniqueProperty(SimplifiedMasternodeListEntry dmn, T oldValue)
     {
-        Sha256Hash oldHash = oldValue.getHash();
-        Pair<Sha256Hash, Integer> p = mnUniquePropertyMap.get(oldHash);
-        //assert(p != null && p.getFirst() == dmn.proRegTxHash);
-        if (p.getSecond() == 1) {
-            mnUniquePropertyMap.remove(oldHash);
-        } else {
-            mnUniquePropertyMap.put(oldHash, new Pair<Sha256Hash, Integer>(dmn.proRegTxHash, p.getSecond() - 1));
+        lock.lock();
+        try {
+            Sha256Hash oldHash = oldValue.getHash();
+            Pair<Sha256Hash, Integer> p = mnUniquePropertyMap.get(oldHash);
+            //assert(p != null && p.getFirst() == dmn.proRegTxHash);
+            if (p.getSecond() == 1) {
+                mnUniquePropertyMap.remove(oldHash);
+            } else {
+                mnUniquePropertyMap.put(oldHash, new Pair<Sha256Hash, Integer>(dmn.proRegTxHash, p.getSecond() - 1));
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -186,53 +233,62 @@ public class SimplifiedMasternodeList extends Message {
 
         CoinbaseTx cbtx = (CoinbaseTx)coinbaseTx.getExtraPayloadObject();
 
-        ArrayList<Sha256Hash> proTxHashes = new ArrayList<Sha256Hash>(mnMap.size());
-        for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
-            proTxHashes.add(entry.getValue().proRegTxHash);
-        }
-        Collections.sort(proTxHashes, new Comparator<Sha256Hash>() {
-            @Override
-            public int compare(Sha256Hash o1, Sha256Hash o2) {
-                return o1.compareTo(o2);
+        lock.lock();
+        try {
+            ArrayList<Sha256Hash> proTxHashes = new ArrayList<Sha256Hash>(mnMap.size());
+            for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+                proTxHashes.add(entry.getValue().proRegTxHash);
             }
-        });
+            Collections.sort(proTxHashes, new Comparator<Sha256Hash>() {
+                @Override
+                public int compare(Sha256Hash o1, Sha256Hash o2) {
+                    return o1.compareTo(o2);
+                }
+            });
 
-        ArrayList<Sha256Hash> smnlHashes = new ArrayList<Sha256Hash>(mnMap.size());
-        for(Sha256Hash hash : proTxHashes) {
-            for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet())
-                if(entry.getValue().proRegTxHash.equals(hash))
-                    smnlHashes.add(entry.getValue().getHash());
-        }
+            ArrayList<Sha256Hash> smnlHashes = new ArrayList<Sha256Hash>(mnMap.size());
+            for (Sha256Hash hash : proTxHashes) {
+                for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet())
+                    if (entry.getValue().proRegTxHash.equals(hash))
+                        smnlHashes.add(entry.getValue().getHash());
+            }
 
+            if (smnlHashes.size() == 0)
+                return true;
 
-        if(smnlHashes.size() == 0)
+            if (!cbtx.merkleRootMasternodeList.equals(calculateMerkleRoot(smnlHashes)))
+                throw new VerificationException("MerkleRoot of masternode list does not match coinbaseTx");
             return true;
-
-        if(!cbtx.merkleRootMasternodeList.equals(calculateMerkleRoot(smnlHashes)))
-            throw new VerificationException("MerkleRoot of masternode list does not match coinbaseTx");
-        return true;
+        } finally {
+            lock.unlock();
+        }
     }
 
     public Sha256Hash calculateMerkleRoot() {
-        ArrayList<Sha256Hash> proTxHashes = new ArrayList<Sha256Hash>(mnMap.size());
-        for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
-            proTxHashes.add(entry.getValue().proRegTxHash);
-        }
-
-        Collections.sort(proTxHashes, new Comparator<Sha256Hash>() {
-            @Override
-            public int compare(Sha256Hash o1, Sha256Hash o2) {
-                return o1.compareTo(o2);
+        lock.lock();
+        try {
+            ArrayList<Sha256Hash> proTxHashes = new ArrayList<Sha256Hash>(mnMap.size());
+            for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+                proTxHashes.add(entry.getValue().proRegTxHash);
             }
-        });
-        ArrayList<Sha256Hash> smnlHashes = new ArrayList<Sha256Hash>(mnMap.size());
-        for(Sha256Hash hash : proTxHashes) {
-            for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet())
-                if(entry.getValue().proRegTxHash.equals(hash))
-                    smnlHashes.add(entry.getValue().getHash());
-        }
 
-        return calculateMerkleRoot(smnlHashes);
+            Collections.sort(proTxHashes, new Comparator<Sha256Hash>() {
+                @Override
+                public int compare(Sha256Hash o1, Sha256Hash o2) {
+                    return o1.compareTo(o2);
+                }
+            });
+            ArrayList<Sha256Hash> smnlHashes = new ArrayList<Sha256Hash>(mnMap.size());
+            for (Sha256Hash hash : proTxHashes) {
+                for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet())
+                    if (entry.getValue().proRegTxHash.equals(hash))
+                        smnlHashes.add(entry.getValue().getHash());
+            }
+
+            return calculateMerkleRoot(smnlHashes);
+        } finally {
+            lock.unlock();
+        }
     }
 
     private Sha256Hash calculateMerkleRoot(List<Sha256Hash> hashes) {
@@ -299,10 +355,15 @@ public class SimplifiedMasternodeList extends Message {
     }
 
     public void forEachMN(boolean onlyValid, ForeachMNCallback callback) {
-        for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
-            if(!onlyValid || isMNValid(entry.getValue())) {
-                callback.processMN(entry.getValue());
+        lock.lock();
+        try {
+            for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+                if (!onlyValid || isMNValid(entry.getValue())) {
+                    callback.processMN(entry.getValue());
+                }
             }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -313,22 +374,27 @@ public class SimplifiedMasternodeList extends Message {
 
     public int getValidMNsCount()
     {
-        int count = 0;
-        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> p : mnMap.entrySet()) {
-        if (isMNValid(p.getValue())) {
-            count++;
+        lock.lock();
+        try {
+            int count = 0;
+            for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> p : mnMap.entrySet()) {
+                if (isMNValid(p.getValue())) {
+                    count++;
+                }
+            }
+            return count;
+        } finally {
+            lock.unlock();
         }
-    }
-        return count;
     }
 
     public boolean isMNValid(SimplifiedMasternodeListEntry entry) {
         return entry.isValid;
     }
 
-    ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>> calculateScores(final Sha256Hash modifier)
+    ArrayList<Pair<Sha256Hash, Masternode>> calculateScores(final Sha256Hash modifier)
     {
-        final ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>> scores = new ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>>(getAllMNsCount());
+        final ArrayList<Pair<Sha256Hash, Masternode>> scores = new ArrayList<Pair<Sha256Hash, Masternode>>(getAllMNsCount());
 
         forEachMN(true, new ForeachMNCallback() {
             @Override
@@ -380,10 +446,10 @@ public class SimplifiedMasternodeList extends Message {
         if (mnExisting == null)
             return -1;
 
-        //lock.lock();
+        lock.lock();
         try {
 
-            ArrayList<Pair<Sha256Hash, SimplifiedMasternodeListEntry>> vecMasternodeScores = calculateScores(quorumModifierHash);
+            ArrayList<Pair<Sha256Hash, Masternode>> vecMasternodeScores = calculateScores(quorumModifierHash);
             if (vecMasternodeScores.isEmpty())
                 return -1;
 
@@ -391,7 +457,7 @@ public class SimplifiedMasternodeList extends Message {
 
 
             rank = 0;
-            for (Pair<Sha256Hash, SimplifiedMasternodeListEntry> scorePair : vecMasternodeScores) {
+            for (Pair<Sha256Hash, Masternode> scorePair : vecMasternodeScores) {
                 rank++;
                 if (scorePair.getSecond().getProRegTxHash().equals(proTxHash)) {
                     return rank;
@@ -399,7 +465,43 @@ public class SimplifiedMasternodeList extends Message {
             }
             return -1;
         } finally {
-            //lock.unlock();
+            lock.unlock();
         }
+    }
+
+    public long getHeight() {
+        return height;
+    }
+
+    protected void setHeight(int height) {
+        this.height = height;
+    }
+
+    public Sha256Hash getBlockHash() {
+        return blockHash;
+    }
+
+    ArrayList<Masternode> calculateQuorum(int maxSize, Sha256Hash modifier)
+    {
+        ArrayList<Pair<Sha256Hash, Masternode>> scores = calculateScores(modifier);
+
+        // sort is descending order
+        Collections.sort(scores, Collections.reverseOrder(new CompareScoreMN()));
+
+        // take top maxSize entries and return it
+        ArrayList<Masternode> result = new ArrayList<Masternode>(maxSize);
+        for (int i = 0; i < maxSize; i++) {
+            result.add(scores.get(i).getSecond());
+        }
+        return result;
+    }
+
+    protected void setBlock(StoredBlock storedblock, boolean storedBlockMatchesRequest) {
+        this.storedblock = storedblock;
+        this.storedBlockMatchesRequest = storedBlockMatchesRequest;
+    }
+
+    public StoredBlock getStoredblock() {
+        return storedblock;
     }
 }

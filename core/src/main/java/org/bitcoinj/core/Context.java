@@ -22,6 +22,7 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceTriggerManager;
 import org.bitcoinj.governance.VoteConfidenceTable;
+import org.bitcoinj.quorums.*;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.slf4j.*;
@@ -38,7 +39,6 @@ import static com.google.common.base.Preconditions.*;
 // TODO: Move Threading.USER_THREAD to here and leave behind just a source code stub. Allow different instantiations of the library to use different user threads.
 // TODO: Keep a URI to where library internal data files can be found, to abstract over the lack of JAR files on Android.
 // TODO: Stash anything else that resembles global library configuration in here and use it to clean up the rest of the API without breaking people.
-// TODO: Move the TorClient into Context, so different parts of the library can read data over Tor without having to request it directly. (or maybe a general socket factory??)
 
 /**
  * <p>The Context object holds various objects and pieces of configuration that are scoped to a specific instantiation of
@@ -80,6 +80,13 @@ public class Context {
     public SimplifiedMasternodeListManager masternodeListManager;
     public static boolean fMasterNode = false;
     private VoteConfidenceTable voteConfidenceTable;
+    private InstantSendDatabase instantSendDB;
+    public InstantSendManager instantSendManager;
+    public SigningManager signingManager;
+    public QuorumManager quorumManager;
+    private RecoveredSignaturesDatabase recoveredSigsDB;
+    public ChainLocksHandler chainLockHandler;
+    private LLMQBackgroundThread llmqBackgroundThread;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -239,6 +246,15 @@ public class Context {
         netFullfilledRequestManager = new NetFullfilledRequestManager(this);
         evoUserManager = new EvolutionUserManager(this);
         masternodeListManager = new SimplifiedMasternodeListManager(this);
+        recoveredSigsDB = new SPVRecoveredSignaturesDatabase(this);
+        quorumManager = new SPVQuorumManager(this, masternodeListManager);
+        signingManager = new SigningManager(this, recoveredSigsDB);
+
+        instantSendDB = new SPVInstantSendDatabase(this);
+        instantSendManager = new InstantSendManager(this, instantSendDB);
+        chainLockHandler = new ChainLocksHandler(this);
+        llmqBackgroundThread = new LLMQBackgroundThread(this);
+
     }
 
     public void closeDash() {
@@ -256,27 +272,52 @@ public class Context {
         governanceManager = null;
     }
 
-    public void initDashSync(String directory)
+    public void initDashSync(final String directory)
     {
-        FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(directory, "mncache.dat", "magicMasternodeCache");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Context.propagate(Context.this);
+                FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(directory, "mncache.dat", "magicMasternodeCache");
 
-        boolean success = mndb.load(masternodeManager);
+                boolean success = mndb.load(masternodeManager);
 
-        FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
+                FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
 
-        success = gmdb.load(governanceManager);
+                success = gmdb.load(governanceManager);
 
-        FlatDB<EvolutionUserManager> evdb = new FlatDB<EvolutionUserManager>(directory, "user.dat", "magicMasternodeCache");
+                FlatDB<EvolutionUserManager> evdb = new FlatDB<EvolutionUserManager>(directory, "user.dat", "magicMasternodeCache");
 
-        success = evdb.load(evoUserManager);
+                success = evdb.load(evoUserManager);
 
-        FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(this, directory, false);
+                FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(Context.this, directory, false);
 
-        success = smnl.load(masternodeListManager);
+                success = smnl.load(masternodeListManager);
 
-        //other functions
-        darkSendPool.startBackgroundProcessing();
+                //other functions
+                darkSendPool.startBackgroundProcessing();
 
+                if(!llmqBackgroundThread.isAlive())
+                    llmqBackgroundThread.start();
+
+            }
+        }).start();
+    }
+
+    public void close() {
+        llmqBackgroundThread.interrupt();
+        blockChain.removeNewBestBlockListener(newBestBlockListener);
+        if(initializedDash) {
+            sporkManager.close(peerGroup);
+            masternodeSync.close();
+            instantSend.close();
+            masternodeListManager.close();
+            blockChain.removeTransactionReceivedListener(evoUserManager);
+            instantSendManager.close(peerGroup);
+            signingManager.close();
+            chainLockHandler.close();
+            quorumManager.close();
+        }
     }
 
     public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)
@@ -292,6 +333,10 @@ public class Context {
             instantSend.setBlockChain(chain);
             masternodeListManager.setBlockChain(chain, peerGroup);
             chain.addTransactionReceivedListener(evoUserManager);
+            instantSendManager.setBlockChain(chain, peerGroup);
+            signingManager.setBlockChain(chain);
+            chainLockHandler.setBlockChain(chain);
+            quorumManager.setBlockChain(chain);
             updatedChainHead(chain.getChainHead());
         }
         params.setDIPActiveAtTip(chain.getBestChainHeight() >= params.getDIP0001BlockHeight());

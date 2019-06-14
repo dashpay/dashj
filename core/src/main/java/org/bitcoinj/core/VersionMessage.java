@@ -41,8 +41,11 @@ public class VersionMessage extends Message {
     public static final int NODE_NETWORK = 1 << 0;
     /** A service bit that denotes whether the peer supports the getutxos message or not. */
     public static final int NODE_GETUTXOS = 1 << 1;
-    /** A service bit used by Bitcoin-ABC to announce Bitcoin Cash nodes. */
-    public static final int NODE_BITCOIN_CASH = 1 << 5;
+    // NODE_BLOOM means the node is capable and willing to handle bloom-filtered connections.
+    public static final int NODE_BLOOM = (1 << 2);
+    // NODE_XTHIN means the node supports Xtreme Thinblocks
+    // If this is turned off then the node will not service nor make xthin requests
+    public static final int NODE_XTHIN = (1 << 4);
 
     /**
      * The version number of the protocol spoken.
@@ -80,7 +83,7 @@ public class VersionMessage extends Message {
     public boolean relayTxesBeforeFilter;
 
     /** The version of this library release, as a string. */
-    public static final String BITCOINJ_VERSION = "0.15.1";
+    public static final String BITCOINJ_VERSION = "0.16-SNAPSHOT";
 
     /** The value that is prepended to the subVer field of this application. */
     public static final String LIBRARY_SUBVER = "/"+CoinDefinition.coinName+"J:" + BITCOINJ_VERSION + "/";

@@ -19,11 +19,14 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class ExtendedPrivateKey {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected ExtendedPrivateKey(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
@@ -47,10 +50,14 @@ public class ExtendedPrivateKey {
   }
 
   public static ExtendedPrivateKey FromSeed(byte[] seed, long seedLen) {
+    Preconditions.checkNotNull(seed);
+    Preconditions.checkArgument(seedLen <= seed.length);
     return new ExtendedPrivateKey(JNI.ExtendedPrivateKey_FromSeed(seed, seedLen), true);
   }
 
   public static ExtendedPrivateKey FromBytes(byte[] serialized) {
+    Preconditions.checkNotNull(serialized);
+    Preconditions.checkArgument(serialized.length == EXTENDED_PRIVATE_KEY_SIZE);
     return new ExtendedPrivateKey(JNI.ExtendedPrivateKey_FromBytes(serialized), true);
   }
 
@@ -95,6 +102,8 @@ public class ExtendedPrivateKey {
   }
 
   public void Serialize(byte[] buffer) {
+    Preconditions.checkNotNull(buffer);
+    Preconditions.checkArgument(buffer.length >= EXTENDED_PRIVATE_KEY_SIZE);
     JNI.ExtendedPrivateKey_Serialize__SWIG_0(swigCPtr, this, buffer);
   }
 

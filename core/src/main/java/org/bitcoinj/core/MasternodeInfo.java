@@ -6,6 +6,7 @@ import java.util.Map;
 /**
  * Created by Hash Engineering on 2/8/2017.
  */
+@Deprecated
 public class MasternodeInfo {
 
     enum State {

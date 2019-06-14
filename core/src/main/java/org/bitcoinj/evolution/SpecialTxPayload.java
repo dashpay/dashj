@@ -12,15 +12,23 @@ public abstract class SpecialTxPayload extends Message {
     int version;
     Transaction parentTransaction;
 
-    SpecialTxPayload(NetworkParameters params, Transaction tx) {
+    public SpecialTxPayload(NetworkParameters params, Transaction tx) {
         super(params, tx.getExtraPayload(), 0);
         this.parentTransaction = tx;
     }
 
-    SpecialTxPayload(int version) {
+    public SpecialTxPayload(int version) {
         this.version = version;
     }
 
+    SpecialTxPayload(NetworkParameters params, int version) {
+        super(params);
+        this.version = version;
+    }
+
+    public SpecialTxPayload(NetworkParameters params, byte [] payload, int offset) {
+        super(params, payload, offset);
+    }
 
     @Override
     protected void parse() throws ProtocolException {

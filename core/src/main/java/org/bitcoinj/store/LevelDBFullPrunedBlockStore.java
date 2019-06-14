@@ -50,6 +50,8 @@ import static org.fusesource.leveldbjni.JniDBFactory.*;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 
+import javax.annotation.Nullable;
+
 /**
  * <p>
  * An implementation of a Fully Pruned Block Store using a leveldb implementation as the backing data store.
@@ -933,7 +935,25 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
             return false;
         }
         // no index is fine as will find any entry with any index...
-        // TODO should I be checking uncommitted inserts/deletes???
+
+        // first check the uncommitted cache
+        int foundInCache = 0;
+        for(int i = 0; i < numOutputs; ++i) {
+            byte[] key = getTxKey(KeyType.OPENOUT_ALL, hash, i);
+            if (utxoUncommittedDeletedCache.contains(ByteBuffer.wrap(key))) {
+                // has been deleted so return false;
+                foundInCache++;
+            }
+        }
+
+        if(foundInCache == numOutputs) {
+            hasFalse++;
+            if (instrument)
+                endMethod("hasUnspentOutputs");
+            return false;
+        }
+
+        //now check what has been committed
         byte[] key = getTxKey(KeyType.OPENOUT_ALL, hash);
         byte[] subResult = new byte[key.length];
         DBIterator iterator = db.iterator();
@@ -1129,5 +1149,24 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
                 c.delete();
         }
         openDB();
+    }
+
+    @Nullable
+    public StoredBlock get(int blockHeight) throws BlockStoreException {
+
+        StoredBlock cursor = getChainHead();
+
+        if(cursor.getHeight() < blockHeight)
+            return null;
+
+
+        while (cursor != null) {
+            if(cursor.getHeight() == blockHeight)
+                return cursor;
+
+            cursor = get(cursor.getHeader().getPrevBlockHash());
+        }
+
+        return null;
     }
 }

@@ -17,8 +17,10 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.Block;
+import org.bitcoinj.quorums.LLMQParameters;
 
 import java.math.BigInteger;
+import java.util.HashMap;
 
 /**
  * Network parameters for the regression test mode of bitcoind in which all blocks are trivially solvable.
@@ -57,6 +59,13 @@ public class RegTestParams extends TestNet2Params {
         budgetPaymentsStartBlock = 1000;
         budgetPaymentsCycleBlocks = 50;
         budgetPaymentsWindowBlocks = 10;
+
+        //LLMQ parameters
+        llmqs = new HashMap<LLMQParameters.LLMQType, LLMQParameters>(2);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_5_60, LLMQParameters.llmq5_60);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
+        llmqChainLocks = LLMQParameters.LLMQType.LLMQ_5_60;
+        llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_5_60;
     }
 
     @Override

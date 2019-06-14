@@ -7,10 +7,12 @@ import org.bitcoinj.core.Sha256Hash;
 import org.dashj.bls.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class BLSSignature extends BLSAbstractObject {
 
     public static int BLS_CURVE_SIG_SIZE   = 96;
+    static byte [] emptySignatureBytes = new byte[BLS_CURVE_SIG_SIZE];
     InsecureSignature signatureImpl;
 
     BLSSignature() {
@@ -39,10 +41,19 @@ public class BLSSignature extends BLSAbstractObject {
     @Override
     boolean internalSetBuffer(byte[] buffer) {
         try {
+            if(Arrays.equals(buffer, emptySignatureBytes))
+                return false;
             signatureImpl = InsecureSignature.FromBytes(buffer);
             return true;
         } catch (Exception x) {
-            return false;
+            //This is added in as a hack, because for some reason when all the unit
+            //line above fails with an exception, but we can run it again.
+            try {
+                signatureImpl = InsecureSignature.FromBytes(buffer);
+                return true;
+            } catch (Exception x2) {
+                return false;
+            }
         }
     }
 
@@ -55,7 +66,7 @@ public class BLSSignature extends BLSAbstractObject {
     @Override
     protected void parse() throws ProtocolException {
         byte buffer[] = readBytes(BLS_CURVE_SIG_SIZE);
-        internalSetBuffer(buffer);
+        valid = internalSetBuffer(buffer);
         serializedSize = BLS_CURVE_SIG_SIZE;
         length = cursor - offset;
     }
@@ -104,7 +115,7 @@ public class BLSSignature extends BLSAbstractObject {
         }
     }
 
-    boolean verifyInsecureAggregated(ArrayList<BLSPublicKey> pubKeys, ArrayList<Sha256Hash> hashes)
+    public boolean verifyInsecureAggregated(ArrayList<BLSPublicKey> pubKeys, ArrayList<Sha256Hash> hashes)
     {
         if (!valid) {
             return false;
@@ -131,7 +142,7 @@ public class BLSSignature extends BLSAbstractObject {
         }
     }
 
-    boolean verifySecureAggregated(ArrayList<BLSPublicKey> pks, Sha256Hash hash)
+    public boolean verifySecureAggregated(ArrayList<BLSPublicKey> pks, Sha256Hash hash)
     {
         if (pks.isEmpty()) {
             return false;
@@ -182,4 +193,16 @@ public class BLSSignature extends BLSAbstractObject {
         updateHash();
         return true;
     }*/
+
+    public boolean checkMalleable(byte [] buf, int size)
+    {
+        byte [] buf2 = getBuffer(serializedSize);
+        if (!Arrays.equals(buf, buf2)) {
+            // TODO not sure if this is actually possible with the BLS libs. I'm assuming here that somewhere deep inside
+            // these libs masking might happen, so that 2 different binary representations could result in the same object
+            // representation
+            return false;
+        }
+        return true;
+    }
 }

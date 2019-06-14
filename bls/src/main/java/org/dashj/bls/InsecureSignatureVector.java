@@ -20,11 +20,14 @@
 package org.dashj.bls;
 
 
+import com.google.common.base.Preconditions;
+
 public class InsecureSignatureVector extends java.util.AbstractList<InsecureSignature> {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected InsecureSignatureVector(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
@@ -79,6 +82,7 @@ public class InsecureSignatureVector extends java.util.AbstractList<InsecureSign
   }
 
   public void push_back(InsecureSignature x) {
+    Preconditions.checkNotNull(x);
     JNI.InsecureSignatureVector_push_back(swigCPtr, this, InsecureSignature.getCPtr(x), x);
   }
 
@@ -87,6 +91,7 @@ public class InsecureSignatureVector extends java.util.AbstractList<InsecureSign
   }
 
   public InsecureSignature set(int i, InsecureSignature VECTOR_VALUE_IN) {
+    Preconditions.checkNotNull(VECTOR_VALUE_IN);
     return new InsecureSignature(JNI.InsecureSignatureVector_set(swigCPtr, this, i, InsecureSignature.getCPtr(VECTOR_VALUE_IN), VECTOR_VALUE_IN), true);
   }
 

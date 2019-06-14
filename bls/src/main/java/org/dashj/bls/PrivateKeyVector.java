@@ -19,11 +19,14 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class PrivateKeyVector extends java.util.AbstractList<PrivateKey> {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected PrivateKeyVector(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
@@ -78,6 +81,7 @@ public class PrivateKeyVector extends java.util.AbstractList<PrivateKey> {
   }
 
   public void push_back(PrivateKey x) {
+    Preconditions.checkNotNull(x);
     JNI.PrivateKeyVec_push_back(swigCPtr, this, PrivateKey.getCPtr(x), x);
   }
 
@@ -86,6 +90,7 @@ public class PrivateKeyVector extends java.util.AbstractList<PrivateKey> {
   }
 
   public PrivateKey set(int i, PrivateKey VECTOR_VALUE_IN) {
+    Preconditions.checkNotNull(VECTOR_VALUE_IN);
     return new PrivateKey(JNI.PrivateKeyVec_set(swigCPtr, this, i, PrivateKey.getCPtr(VECTOR_VALUE_IN), VECTOR_VALUE_IN), true);
   }
 

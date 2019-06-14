@@ -23,7 +23,9 @@ import static org.bitcoinj.core.Utils.HEX;
 
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.HashMap;
 
+import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 
@@ -66,10 +68,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         alertSigningKey = HEX.decode(CoinDefinition.TESTNET_SATOSHI_KEY);
 
         dnsSeeds = new String[] {
-                "testnet-seed.dashdot.io",
-                "35.161.101.35",
-                "54.91.130.170",
-                "95.183.51.146"
+                "testnet-seed.dashdot.io"
         };
 
         checkpoints.put(    261, Sha256Hash.wrap("00000c26026d0815a7e2ce4fa270775f61403c040647ff2c3091f99e894a4618"));
@@ -147,6 +146,17 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         instantSendConfirmationsRequired = 2;
         instantSendKeepLock = 6;
 
+        DIP0003BlockHeight = 7000;
+        deterministicMasternodesEnabledHeight = 7300;
+        deterministicMasternodesEnabled = true;
+
+        //LLMQ parameters
+        llmqs = new HashMap<LLMQParameters.LLMQType, LLMQParameters>(3);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_60, LLMQParameters.llmq400_60);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
+        llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
+        llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
     }
 
     private static TestNet3Params instance;

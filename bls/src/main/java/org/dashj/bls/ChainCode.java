@@ -18,11 +18,14 @@
  */
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class ChainCode {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected ChainCode(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
@@ -46,6 +49,8 @@ public class ChainCode {
   }
 
   public static ChainCode FromBytes(byte[] bytes) {
+    Preconditions.checkNotNull(bytes);
+    Preconditions.checkArgument(bytes.length == CHAIN_CODE_SIZE);
     return new ChainCode(JNI.ChainCode_FromBytes(bytes), true);
   }
 
@@ -54,6 +59,8 @@ public class ChainCode {
   }
 
   public void Serialize(byte[] buffer) {
+    Preconditions.checkNotNull(buffer);
+    Preconditions.checkArgument(buffer.length >= CHAIN_CODE_SIZE);
     JNI.ChainCode_Serialize__SWIG_0(swigCPtr, this, buffer);
   }
 

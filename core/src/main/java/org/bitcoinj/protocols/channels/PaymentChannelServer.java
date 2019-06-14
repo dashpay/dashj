@@ -17,6 +17,7 @@
 package org.bitcoinj.protocols.channels;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.*;
 import org.bitcoinj.protocols.channels.PaymentChannelCloseException.CloseReason;
 import org.bitcoinj.utils.Threading;
@@ -425,7 +426,7 @@ public class PaymentChannelServer {
                         log.info("Failed retrieving paymentIncrease info future");
                         error("Failed processing payment update", Protos.Error.ErrorCode.OTHER, CloseReason.UPDATE_PAYMENT_FAILED);
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
         }
 
@@ -520,6 +521,7 @@ public class PaymentChannelServer {
         // close() on us here below via the stored channel state.
         // TODO: Strongly separate the lifecycle of the payment channel from the TCP connection in these classes.
         channelSettling = true;
+        //TODO:  Missing code from https://github.com/bitcoinj/bitcoinj/commit/f24a4aa19a1b75e9dee5eed724bcd32102cfbf1e#diff-51fef6a7d0be7eec3fc17d6e256edc25R557
         Futures.addCallback(state.close(), new FutureCallback<Transaction>() {
             @Override
             public void onSuccess(Transaction result) {
@@ -543,7 +545,7 @@ public class PaymentChannelServer {
                 log.error("Failed to broadcast settlement tx", t);
                 conn.destroyConnection(clientRequestedClose);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     /**

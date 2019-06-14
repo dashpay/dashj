@@ -19,6 +19,8 @@
 
 package org.dashj.bls;
 
+import com.google.common.base.Preconditions;
+
 public class Signature extends BLSObject {
 
   protected Signature(long cPtr, boolean cMemoryOwn) {
@@ -34,10 +36,14 @@ public class Signature extends BLSObject {
   }
 
   public static Signature FromBytes(byte [] data) {
+    Preconditions.checkNotNull(data);
+    Preconditions.checkArgument(data.length == SIGNATURE_SIZE);
     return new Signature(JNI.Signature_FromBytes__SWIG_0(data), true);
   }
 
   public static Signature FromBytes(byte [] data, AggregationInfo info) {
+    Preconditions.checkNotNull(data);
+    Preconditions.checkArgument(data.length == SIGNATURE_SIZE);
     return new Signature(JNI.Signature_FromBytes__SWIG_1(data, AggregationInfo.getCPtr(info)), true);
   }
 
@@ -83,6 +89,8 @@ public class Signature extends BLSObject {
   }
 
   public void Serialize(byte[] buffer) {
+    Preconditions.checkNotNull(buffer);
+    Preconditions.checkArgument(buffer.length >= SIGNATURE_SIZE);
     JNI.Signature_Serialize__SWIG_0(cPointer, this, buffer);
   }
 

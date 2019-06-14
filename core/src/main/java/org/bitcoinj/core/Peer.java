@@ -28,6 +28,8 @@ import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.governance.GovernanceVote;
 import org.bitcoinj.governance.GovernanceVoteConfidence;
 import org.bitcoinj.net.StreamConnection;
+import org.bitcoinj.quorums.ChainLockSignature;
+import org.bitcoinj.quorums.InstantSendLock;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
@@ -38,6 +40,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import net.jcip.annotations.GuardedBy;
 import org.slf4j.Logger;
@@ -140,6 +143,7 @@ public class Peer extends PeerSocketHandler {
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private final HashSet<TransactionConfidence> pendingTxDownloads = new HashSet<TransactionConfidence>();
     private final HashSet<GovernanceVoteConfidence> pendingVotes = new HashSet<GovernanceVoteConfidence>();
+    private static final int PENDING_TX_DOWNLOADS_LIMIT = 100;
     // The lowest version number we're willing to accept. Lower than this will result in an immediate disconnect.
     private volatile int vMinProtocolVersion;
     // When an API user explicitly requests a block or transaction from a peer, the InventoryItem is put here
@@ -161,6 +165,8 @@ public class Peer extends PeerSocketHandler {
     private final ReentrantLock lastPingTimesLock = new ReentrantLock();
     @GuardedBy("lastPingTimesLock") private long[] lastPingTimes = null;
     private final CopyOnWriteArrayList<PendingPing> pendingPings;
+    // Disconnect from a peer that is not responding to Pings
+    private static final int PENDING_PINGS_LIMIT = 50;
     private static final int PING_MOVING_AVERAGE_WINDOW = 20;
 
     private volatile VersionMessage vPeerVersionMessage;
@@ -180,7 +186,7 @@ public class Peer extends PeerSocketHandler {
                     checkState(peers.size() == 2 && peers.get(0) == peers.get(1));
                     return peers.get(0);
                 }
-            });
+            }, MoreExecutors.directExecutor());
 
     /**
      * <p>Construct a peer that reads/writes from the given block chain.</p>
@@ -545,24 +551,14 @@ public class Peer extends PeerSocketHandler {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
         } else if(m instanceof DarkSendQueue) {
             //do nothing
-        } else if(m instanceof MasternodeBroadcast) {
-            if(!context.isLiteMode())
-                context.masternodeManager.processMasternodeBroadcast(this, (MasternodeBroadcast)m);
-
-        }
-        else if(m instanceof MasternodePing) {
-            if(!context.isLiteMode())
-                context.masternodeManager.processMasternodePing(this, (MasternodePing)m);
-        } else if(m instanceof MasternodeVerification) {
-            if(!context.isLiteMode())
-                context.masternodeManager.processMasternodeVerify(this, (MasternodeVerification)m);
         }
         else if(m instanceof SporkMessage)
         {
             context.sporkManager.processSpork(this, (SporkMessage)m);
         }
         else if(m instanceof TransactionLockVote) {
-            context.instantSend.processTransactionLockVoteMessage(this, (TransactionLockVote)m);
+            if(context.instantSendManager.isOldInstantSendEnabled())
+                context.instantSend.processTransactionLockVoteMessage(this, (TransactionLockVote)m);
         }
         else if(m instanceof SyncStatusCount) {
             context.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
@@ -574,7 +570,11 @@ public class Peer extends PeerSocketHandler {
         } else if(m instanceof GovernanceVote) {
             context.governanceManager.processGovernanceObjectVote(this, (GovernanceVote)m);
         } else if (m instanceof SimplifiedMasternodeListDiff) {
-            context.masternodeListManager.processMasternodeListDiff((SimplifiedMasternodeListDiff)m);
+            context.masternodeListManager.processMasternodeListDiff((SimplifiedMasternodeListDiff) m);
+        } else if(m instanceof InstantSendLock) {
+            context.instantSendManager.processInstantSendLock(this, (InstantSendLock) m);
+        } else if(m instanceof ChainLockSignature) {
+            context.chainLockHandler.processChainLockSignature(this, (ChainLockSignature)m);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
@@ -624,13 +624,6 @@ public class Peer extends PeerSocketHandler {
                 (!params.allowEmptyPeerChain() && vPeerVersionMessage.bestHeight == 0)) {
             // Shut down the channel gracefully.
             log.info("{}: Peer does not have a copy of the block chain.", this);
-            close();
-            return;
-        }
-        if ((vPeerVersionMessage.localServices
-                & VersionMessage.NODE_BITCOIN_CASH) == VersionMessage.NODE_BITCOIN_CASH) {
-            log.info("{}: Peer follows an incompatible block chain.", this);
-            // Shut down the channel gracefully.
             close();
             return;
         }
@@ -841,10 +834,6 @@ public class Peer extends PeerSocketHandler {
             TransactionConfidence confidence = tx.getConfidence();
             confidence.setSource(TransactionConfidence.Source.NETWORK);
 
-            //Dash Specific
-            if(context != null && context.instantSend != null) // for unit tests that are not initialized.
-                context.instantSend.syncTransaction(tx, null);
-
             pendingTxDownloads.remove(confidence);
             if (maybeHandleRequestedData(tx)) {
                 return;
@@ -861,8 +850,10 @@ public class Peer extends PeerSocketHandler {
             }
 
             //Dash Specific
-            if(context.instantSend != null)
-                context.instantSend.processTxLockRequest(tx);
+            if(context != null && context.instantSend != null) {
+                if(context.instantSendManager.isOldInstantSendEnabled() && context.instantSend.processTxLockRequest(tx))
+                    context.instantSend.syncTransaction(tx, null);
+            }
 
             // It's a broadcast transaction. Tell all wallets about this tx so they can check if it's relevant or not.
             for (final Wallet wallet : wallets) {
@@ -891,11 +882,12 @@ public class Peer extends PeerSocketHandler {
                                         log.info("{}: Dependency download complete!", getAddress());
                                         wallet.receivePending(tx, dependencies);
 
-                                        if(tx instanceof TransactionLockRequest)
+                                        if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled() && tx instanceof TransactionLockRequest)
                                         {
                                             context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
                                         }
-                                        context.evoUserManager.processSpecialTransaction(tx, null);
+                                        if(context.evoUserManager != null)
+                                            context.evoUserManager.processSpecialTransaction(tx, null);
                                     } catch (VerificationException e) {
                                         log.error("{}: Wallet failed to process pending transaction {}", getAddress(), tx.getHash());
                                         log.error("Error was: ", e);
@@ -909,11 +901,11 @@ public class Peer extends PeerSocketHandler {
                                     log.error("Error was: ", throwable);
                                     // Not much more we can do at this point.
                                 }
-                            });
+                            }, MoreExecutors.directExecutor());
                         } else {
                             wallet.receivePending(tx, null);
 
-                            if(tx instanceof TransactionLockRequest)
+                            if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled() && tx instanceof TransactionLockRequest)
                             {
                                 context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
                             }
@@ -978,7 +970,7 @@ public class Peer extends PeerSocketHandler {
             public void onFailure(Throwable throwable) {
                 resultFuture.setException(throwable);
             }
-        });
+        }, MoreExecutors.directExecutor());
         return resultFuture;
     }
 
@@ -1042,7 +1034,7 @@ public class Peer extends PeerSocketHandler {
                             public void onFailure(Throwable throwable) {
                                 resultFuture.setException(throwable);
                             }
-                        });
+                        }, MoreExecutors.directExecutor());
                     }
                 }
 
@@ -1050,7 +1042,7 @@ public class Peer extends PeerSocketHandler {
                 public void onFailure(Throwable throwable) {
                     resultFuture.setException(throwable);
                 }
-            });
+            }, MoreExecutors.directExecutor());
             // Start the operation.
             sendMessage(getdata);
         } catch (Exception e) {
@@ -1318,6 +1310,10 @@ public class Peer extends PeerSocketHandler {
                 return !context.governanceManager.confirmInventoryRequest(inv);
             case GovernanceObjectVote:
                 return !context.governanceManager.confirmInventoryRequest(inv);
+            case InstantSendLock:
+                return context.instantSendManager.alreadyHave(inv);
+            case ChainLockSignature:
+                return context.chainLockHandler.alreadyHave(inv);
         }
         // Don't know what it is, just say we already got one
         return true;
@@ -1329,13 +1325,12 @@ public class Peer extends PeerSocketHandler {
         // Separate out the blocks and transactions, we'll handle them differently
         List<InventoryItem> transactions = new LinkedList<InventoryItem>();
         List<InventoryItem> blocks = new LinkedList<InventoryItem>();
-        List<InventoryItem> instantxLockRequests = new LinkedList<InventoryItem>();
-        List<InventoryItem> instantxLocks = new LinkedList<InventoryItem>();
-        List<InventoryItem> masternodePings = new LinkedList<InventoryItem>();
-        List<InventoryItem> masternodeBroadcasts = new LinkedList<InventoryItem>();
+        List<InventoryItem> oldTxLockRequests = new LinkedList<InventoryItem>();
+        List<InventoryItem> oldTxLockVotes = new LinkedList<InventoryItem>();
         List<InventoryItem> sporks = new LinkedList<InventoryItem>();
-        List<InventoryItem> masternodeVerifications = new LinkedList<InventoryItem>();
         List<InventoryItem> goveranceObjects = new LinkedList<InventoryItem>();
+        List<InventoryItem> instantSendLocks = new LinkedList<InventoryItem>();
+        List<InventoryItem> chainLocks = new LinkedList<InventoryItem>();
 
         //InstantSend instantSend = InstantSend.get(blockChain);
 
@@ -1345,16 +1340,13 @@ public class Peer extends PeerSocketHandler {
                     transactions.add(item);
                     break;
                 case TransactionLockRequest:
-                    //if(instantSend.isEnabled())
-                        instantxLockRequests.add(item);
-                    //transactions.add(item);
+                    oldTxLockRequests.add(item);
                     break;
                 case Block:
                     blocks.add(item);
                     break;
                 case TransactionLockVote:
-                    //if(instantSend.isEnabled())
-                        instantxLocks.add(item);
+                    oldTxLockVotes.add(item);
                     break;
                 case Spork:
                     sporks.add(item);
@@ -1368,14 +1360,8 @@ public class Peer extends PeerSocketHandler {
                 case BudgetFinalized: break;
                 case BudgetFinalizedVote: break;
                 case MasternodeQuorum: break;
-                case MasternodeAnnounce:
-                    if(context.isLiteMode()) break;
-                    masternodeBroadcasts.add(item);
-                    break;
-                case MasternodePing:
-                    if(context.isLiteMode() || context.masternodeManager.size() == 0) break;
-                    masternodePings.add(item);
-                    break;
+                case MasternodeAnnounce: break;
+                case MasternodePing: break;
                 case DarkSendTransaction:
                     break;
                 case GovernanceObject:
@@ -1384,9 +1370,12 @@ public class Peer extends PeerSocketHandler {
                 case GovernanceObjectVote:
                     goveranceObjects.add(item);
                     break;
-                case MasternodeVerify:
-                    if(context.isLiteMode()) break;
-                    masternodeVerifications.add(item);
+                case MasternodeVerify: break;
+                case InstantSendLock:
+                    instantSendLocks.add(item);
+                    break;
+                case ChainLockSignature:
+                    chainLocks.add(item);
                     break;
                 default:
                     break;
@@ -1433,12 +1422,18 @@ public class Peer extends PeerSocketHandler {
             } else {
                 log.debug("{}: getdata on tx {}", getAddress(), item.hash);
                 getdata.addItem(item);
+                if (pendingTxDownloads.size() > PENDING_TX_DOWNLOADS_LIMIT) {
+                    log.info("{}: Too many pending transactions, disconnecting", this);
+                    close();
+                    return;
+                }
+
                 // Register with the garbage collector that we care about the confidence data for a while.
                 pendingTxDownloads.add(conf);
             }
         }
 
-        it = instantxLockRequests.iterator();
+        it = oldTxLockRequests.iterator();
         while (it.hasNext()) {
             InventoryItem item = it.next();
             // Only download the transaction if we are the first peer that saw it be advertised. Other peers will also
@@ -1459,66 +1454,49 @@ public class Peer extends PeerSocketHandler {
             } else {
                 log.debug("{}: getdata on tx {}", getAddress(), item.hash);
                 getdata.addItem(item);
+                if (pendingTxDownloads.size() > PENDING_TX_DOWNLOADS_LIMIT) {
+                    log.info("{}: Too many pending transactions, disconnecting", this);
+                    close();
+                    return;
+                }
                 // Register with the garbage collector that we care about the confidence data for a while.
                 pendingTxDownloads.add(conf);
             }
         }
 
-
-
-        it = instantxLocks.iterator();
-        //InstantSend instantSend = InstantSend.get(blockChain);
-        while (it.hasNext()) {
-            InventoryItem item = it.next();
-
-//            if(!instantSend.mapTxLockVotes.containsKey(item.hash))
-            {
-                getdata.addItem(item);
-            }
-        }
-
-        //masternodepings
-
-        //if(blockChain.getBestChainHeight() > (this.getBestHeight() - 100))
-        if(context.masternodeSync != null && context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST))
-        {
-
-           //if(context.masternodeSync.isSynced()) {
-                it = masternodePings.iterator();
-
-                while (it.hasNext()) {
-                    InventoryItem item = it.next();
-                    if (!alreadyHave(item)) {
-                        //log.info("inv - received MasternodePing :" + item.hash + " new ping");
-                        getdata.addItem(item);
-                    } //else
-                        //log.info("inv - received MasternodePing :" + item.hash + " already seen");
+        if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
+            it = oldTxLockVotes.iterator();
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                {
+                    getdata.addItem(item);
                 }
-           // }
-
-            it = masternodeBroadcasts.iterator();
-
-            while (it.hasNext()) {
-                InventoryItem item = it.next();
-                //log.info("inv - received MasternodeBroadcast :" + item.hash);
-
-                //if(!instantSend.mapTxLockVotes.containsKey(item.hash))
-                //{
-                if(!alreadyHave(item))
-                    getdata.addItem(item);
-                //}
-            }
-
-            it = masternodeVerifications.iterator();
-
-            while (it.hasNext()) {
-                InventoryItem item = it.next();
-                if(!alreadyHave(item))
-                    getdata.addItem(item);
             }
         }
-        it = sporks.iterator();
 
+        // The New InstantSendLock (ISLOCK)
+        if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled()) {
+            it = instantSendLocks.iterator();
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                if(!alreadyHave(item)) {
+                    getdata.addItem(item);
+                }
+            }
+        }
+
+        // The ChainLock (CLSIG)
+        if(context.sporkManager != null && context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED)) {
+            it = chainLocks.iterator();
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                if (!alreadyHave(item)) {
+                    getdata.addItem(item);
+                }
+            }
+        }
+
+        it = sporks.iterator();
         while (it.hasNext()) {
             InventoryItem item = it.next();
 
@@ -1882,6 +1860,10 @@ public class Peer extends PeerSocketHandler {
         final VersionMessage ver = vPeerVersionMessage;
         if (!ver.isPingPongSupported())
             throw new ProtocolException("Peer version is too low for measurable pings: " + ver);
+        if (pendingPings.size() > PENDING_PINGS_LIMIT) {
+            log.info("{}: Too many pending pings, disconnecting", this);
+            close();
+        }
         PendingPing pendingPing = new PendingPing(nonce);
         pendingPings.add(pendingPing);
         sendMessage(new Ping(pendingPing.nonce));

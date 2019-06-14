@@ -31,9 +31,14 @@ public class SporkManager {
     public static final int SPORK_14_REQUIRE_SENTINEL_FLAG                         = 10013;
     public static final int SPORK_15_DETERMINISTIC_MNS_ENABLED                     = 10014;
     public static final int SPORK_16_INSTANTSEND_AUTOLOCKS                         = 10015;
+    public static final int SPORK_17_QUORUM_DKG_ENABLED                            = 10016;
+    public static final int SPORK_18_QUORUM_DEBUG_ENABLED                          = 10017;
+    public static final int SPORK_19_CHAINLOCKS_ENABLED                            = 10018;
+    public static final int SPORK_20_INSTANTSEND_LLMQ_BASED                        = 10019;
+
 
     static final int SPORK_START = SPORK_2_INSTANTSEND_ENABLED;
-    static final int SPORK_END   = SPORK_16_INSTANTSEND_AUTOLOCKS;
+    static final int SPORK_END   = SPORK_20_INSTANTSEND_LLMQ_BASED;
 
     private static HashMap<Integer, Long> mapSporkDefaults;
     static {
@@ -42,13 +47,16 @@ public class SporkManager {
         mapSporkDefaults.put(SPORK_3_INSTANTSEND_BLOCK_FILTERING, 0L);
         mapSporkDefaults.put(SPORK_5_INSTANTSEND_MAX_VALUE, 1000L);
         mapSporkDefaults.put(SPORK_6_NEW_SIGS, 4070908800L);
-        mapSporkDefaults.put(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT, 4070908800L);
         mapSporkDefaults.put(SPORK_9_SUPERBLOCKS_ENABLED, 4070908800L);
         mapSporkDefaults.put(SPORK_10_MASTERNODE_PAY_UPDATED_NODES, 4070908800L);
         mapSporkDefaults.put(SPORK_12_RECONSIDER_BLOCKS, 0L);
         mapSporkDefaults.put(SPORK_14_REQUIRE_SENTINEL_FLAG, 4070908800L);
         mapSporkDefaults.put(SPORK_15_DETERMINISTIC_MNS_ENABLED, 4070908800L); // OFF
         mapSporkDefaults.put(SPORK_16_INSTANTSEND_AUTOLOCKS,         4070908800L); // OFF
+        mapSporkDefaults.put(SPORK_17_QUORUM_DKG_ENABLED,            4070908800L);// OFF
+        mapSporkDefaults.put(SPORK_18_QUORUM_DEBUG_ENABLED,          4070908800L); // OFF
+        mapSporkDefaults.put(SPORK_19_CHAINLOCKS_ENABLED,            4070908800L); // OFF
+        mapSporkDefaults.put(SPORK_20_INSTANTSEND_LLMQ_BASED,        4070908800L); // OFF
     }
 
     MasternodeSignature sig;
@@ -76,24 +84,29 @@ public class SporkManager {
         peerGroup.addConnectedEventListener(peerConnectedEventListener);
     }
 
+    public void close(PeerGroup peerGroup) {
+        peerGroup.removeConnectedEventListener(peerConnectedEventListener);
+    }
+
     void processSpork(Peer from, SporkMessage spork) {
         if (context.isLiteMode() && !context.allowInstantXinLiteMode()) return; //disable all darksend/masternode related functionality
 
             Sha256Hash hash = spork.getHash();
             if (mapSporksActive.containsKey(spork.nSporkID)) {
                 if (mapSporksActive.get(spork.nSporkID).nTimeSigned >= spork.nTimeSigned) {
-                    log.info("spork - seen "+hash.toString()+" block " + blockChain.getBestChainHeight());
+                    log.info("spork - seen "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" block " + blockChain.getBestChainHeight() + "hash: " + hash.toString());
                     return;
                 } else {
-                    log.info("spork - got updated spork "+hash.toString()+" block " +blockChain.getBestChainHeight());
+                    log.info("received updated spork "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" block " +blockChain.getBestChainHeight() +
+                            "hash: " + hash.toString());
                 }
             }
 
-            log.info("spork - new "+hash.toString()+" ID "+spork.nSporkID+" Time "+spork.nTimeSigned+" bestHeight" + blockChain.getBestChainHeight());
+            log.info("spork - new ID "+spork.nSporkID+" "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" Time "+spork.nTimeSigned+" bestHeight " + blockChain.getBestChainHeight() +
+                    "hash: " + hash.toString());
 
             if (!spork.checkSignature(sporkPubKeyId)) {
                 log.info("spork - invalid signature");
-                //Misbehaving(pfrom -> GetId(), 100);
                 return;
             }
 
@@ -140,7 +153,7 @@ public class SporkManager {
         } else if (mapSporkDefaults.containsKey(nSporkID)) {
             r = mapSporkDefaults.get(nSporkID);
         } else {
-            log.warn("spork--CSporkManager::IsSporkActive -- Unknown Spork ID {}", nSporkID);
+            log.warn("isSporkActive:  Unknown Spork ID {}", nSporkID);
             r = 4070908800L; // 2099-1-1 i.e. off by default
         }
 
@@ -157,7 +170,7 @@ public class SporkManager {
             return mapSporkDefaults.get(nSporkID);
         }
 
-        log.info("spork--CSporkManager::GetSporkValue -- Unknown Spork ID {}", nSporkID);
+        log.info("getSporkValue:  Unknown Spork ID {}", nSporkID);
         return -1;
     }
 
@@ -171,6 +184,8 @@ public class SporkManager {
                 context.masternodeListManager.updateMNList();
             if(context.getParams().isSupportingEvolution())
                 context.peerGroup.setMinRequiredProtocolVersionAndDisconnect(NetworkParameters.ProtocolVersion.DMN_LIST.getBitcoinProtocolVersion());
+        } else if(nSporkID == SPORK_17_QUORUM_DKG_ENABLED) {
+            context.masternodeListManager.resetMNList();
         }
     }
 
@@ -208,48 +223,50 @@ public class SporkManager {
         ECKey pubkey = ECKey.fromPublicOnly(key.getPubKey());
 
         if (key == null) {
-            log.error("CSporkManager::SetPrivKey -- Failed to parse private key");
+            log.error("setPrivKey -- Failed to parse private key");
             return false;
         }
 
         if (!pubkey.getPubKeyHash().equals(sporkPubKeyId)) {
-            log.error("CSporkManager::SetPrivKey -- New private key does not belong to spork address\n");
+            log.error("setPrivKey -- New private key does not belong to spork address\n");
             return false;
         }
 
         SporkMessage spork = new SporkMessage(context.getParams());
         if (spork.sign(key)) {
             // Test signing successful, proceed
-            log.info("CSporkManager::SetPrivKey -- Successfully initialized as spork signer");
+            log.info("setPrivKey -- Successfully initialized as spork signer");
 
             sporkPrivKey = key;
             return true;
         } else {
-            log.error("CSporkManager::SetPrivKey -- Test signing failed");
+            log.error("setPrivKey -- Test signing failed");
             return false;
         }
     }
 
 
-    int getSporkIDByName(String strName)
+    public int getSporkIDByName(String strName)
     {
         if (strName == "SPORK_2_INSTANTSEND_ENABLED")               return SPORK_2_INSTANTSEND_ENABLED;
         if (strName == "SPORK_3_INSTANTSEND_BLOCK_FILTERING")       return SPORK_3_INSTANTSEND_BLOCK_FILTERING;
         if (strName == "SPORK_5_INSTANTSEND_MAX_VALUE")             return SPORK_5_INSTANTSEND_MAX_VALUE;
         if (strName == "SPORK_6_NEW_SIGS")                          return SPORK_6_NEW_SIGS;
-        if (strName == "SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT")    return SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT;
         if (strName == "SPORK_9_SUPERBLOCKS_ENABLED")               return SPORK_9_SUPERBLOCKS_ENABLED;
         if (strName == "SPORK_10_MASTERNODE_PAY_UPDATED_NODES")     return SPORK_10_MASTERNODE_PAY_UPDATED_NODES;
         if (strName == "SPORK_12_RECONSIDER_BLOCKS")                return SPORK_12_RECONSIDER_BLOCKS;
         if (strName == "SPORK_14_REQUIRE_SENTINEL_FLAG")            return SPORK_14_REQUIRE_SENTINEL_FLAG;
         if (strName == "SPORK_15_DETERMINISTIC_MNS_ENABLED")        return SPORK_15_DETERMINISTIC_MNS_ENABLED;
         if (strName == "SPORK_16_INSTANTSEND_AUTOLOCKS")            return SPORK_16_INSTANTSEND_AUTOLOCKS;
+        if (strName == "SPORK_17_QUORUM_DKG_ENABLED")               return SPORK_17_QUORUM_DKG_ENABLED;
+        if (strName == "SPORK_18_QUORUM_DEBUG_ENABLED")             return SPORK_18_QUORUM_DEBUG_ENABLED;
+        if (strName == "SPORK_19_CHAINLOCKS_ENABLED")               return SPORK_19_CHAINLOCKS_ENABLED;
+        if (strName == "SPORK_20_INSTANTSEND_LLMQ_BASED")           return SPORK_20_INSTANTSEND_LLMQ_BASED;
 
-        log.info("spork", "CSporkManager::GetSporkIDByName -- Unknown Spork name: "+ strName);
         return -1;
     }
 
-    String getSporkNameByID(int id)
+    public String getSporkNameByID(int id)
     {
         switch (id) {
             case SPORK_2_INSTANTSEND_ENABLED:               return "SPORK_2_INSTANTSEND_ENABLED";
@@ -263,8 +280,11 @@ public class SporkManager {
             case SPORK_14_REQUIRE_SENTINEL_FLAG:            return "SPORK_14_REQUIRE_SENTINEL_FLAG";
             case SPORK_15_DETERMINISTIC_MNS_ENABLED:        return "SPORK_15_DETERMINISTIC_MNS_ENABLED";
             case SPORK_16_INSTANTSEND_AUTOLOCKS:            return "SPORK_16_INSTANTSEND_AUTOLOCKS";
+            case SPORK_17_QUORUM_DKG_ENABLED:               return "SPORK_17_QUORUM_DKG_ENABLED";
+            case SPORK_18_QUORUM_DEBUG_ENABLED:             return "SPORK_18_QUORUM_DEBUG_ENABLED";
+            case SPORK_19_CHAINLOCKS_ENABLED:               return "SPORK_19_CHAINLOCKS_ENABLED";
+            case SPORK_20_INSTANTSEND_LLMQ_BASED:           return "SPORK_20_INSTANTSEND_LLMQ_BASED";
             default:
-                log.info("spork", "CSporkManager::GetSporkNameByID -- Unknown Spork ID "+ id);
                 return "Unknown";
         }
     }
@@ -274,7 +294,7 @@ public class SporkManager {
             Address address = Address.fromBase58(context.getParams(), strAddress);
             sporkPubKeyId = address.getHash160();
         } catch (AddressFormatException x) {
-            log.error("CSporkManager::SetSporkAddress -- Failed to parse spork address");
+            log.error("Failed to parse spork address");
             return false;
         }
         return true;

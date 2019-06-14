@@ -1,6 +1,8 @@
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.quorums.FinalCommitment;
+import org.bitcoinj.utils.Pair;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -15,6 +17,9 @@ public class SimplifiedMasternodeListDiff extends Message {
     Transaction coinBaseTx;
     protected HashSet<Sha256Hash> deletedMNs;
     protected ArrayList<SimplifiedMasternodeListEntry> mnList;
+
+    protected ArrayList<Pair<Integer, Sha256Hash>> deletedQuorums;
+    protected ArrayList<FinalCommitment> newQuorums;
 
 
     public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload) {
@@ -46,6 +51,25 @@ public class SimplifiedMasternodeListDiff extends Message {
             cursor += mn.getMessageSize();
             mnList.add(mn);
         }
+
+        //0.14 format include quorum information
+        if(payload.length > cursor - offset) {
+            size = (int)readVarInt();
+            deletedQuorums = new ArrayList<Pair<Integer, Sha256Hash>>(size);
+            for(int i = 0; i < size; ++i) {
+                deletedQuorums.add(new Pair((int)readBytes(1)[0], readHash()));
+            }
+
+            size = (int)readVarInt();
+            newQuorums = new ArrayList<FinalCommitment>(size);
+            for(int i = 0; i < size; ++i) {
+                FinalCommitment commitment = new FinalCommitment(params, payload, cursor);
+                cursor += commitment.getMessageSize();
+                newQuorums.add(commitment);
+
+            }
+        }
+
         length = cursor - offset;
     }
 
@@ -79,6 +103,27 @@ public class SimplifiedMasternodeListDiff extends Message {
 
     @Override
     public String toString() {
-        return "Simplified MNList Diff:  adding " + mnList.size() + " and removing " + deletedMNs.size() + " masternodes";
+        return "Simplified MNList Diff:  adding " + mnList.size() + " and removing " + deletedMNs.size() + " masternodes" +
+                (coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "");
+    }
+
+    public Transaction getCoinBaseTx() {
+        return coinBaseTx;
+    }
+
+    public ArrayList<Pair<Integer, Sha256Hash>> getDeletedQuorums() {
+        return deletedQuorums;
+    }
+
+    public ArrayList<FinalCommitment> getNewQuorums() {
+        return newQuorums;
+    }
+
+    public boolean hasQuorumChanges() {
+        return newQuorums.size() + deletedQuorums.size() > 0;
+    }
+
+    public boolean hasMasternodeListChanges() {
+        return mnList.size() + deletedMNs.size() > 0;
     }
 }

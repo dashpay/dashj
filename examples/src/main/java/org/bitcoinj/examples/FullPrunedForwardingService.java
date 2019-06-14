@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.kits.FullPrunedWalletAppKit;
+import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -75,6 +76,8 @@ public class FullPrunedForwardingService {
         // Start up a basic app using a class that automates some boilerplate.
         kit = new FullPrunedWalletAppKit(params, new File("."), filePrefix);
 
+        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
+
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.
             // If you pick this mode, you're expected to be running a local "bitcoind -regtest" instance.
@@ -112,7 +115,7 @@ public class FullPrunedForwardingService {
                         // This kind of future can't fail, just rethrow in case something weird happens.
                         throw new RuntimeException(t);
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
         });
 
@@ -156,7 +159,7 @@ public class FullPrunedForwardingService {
                     // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
                     System.out.println("Sent coins onwards! Transaction hash is " + sendResult.tx.getHashAsString());
                 }
-            }, MoreExecutors.sameThreadExecutor());
+            }, MoreExecutors.directExecutor());
 
             //MasternodeDB.dumpMasternodes();
             FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(kit.directory().getAbsolutePath(),"mncache.dat", "magicMasternodeCache");

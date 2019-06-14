@@ -7,6 +7,7 @@ import org.dashj.bls.JNI;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 public abstract class BLSAbstractObject extends ChildMessage {
     protected Sha256Hash hash;
@@ -40,7 +41,6 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     BLSAbstractObject(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
-        this.valid = true;
         updateHash();
     }
 
@@ -121,5 +121,12 @@ public abstract class BLSAbstractObject extends ChildMessage {
     @Override
     public String toString() {
         return Utils.HEX.encode(getBuffer(serializedSize));
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!(obj instanceof BLSAbstractObject))
+            return false;
+        return Arrays.equals(((BLSAbstractObject) obj).getBuffer(), getBuffer());
     }
 }

@@ -22,6 +22,9 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.governance.GovernanceObject;
 import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.governance.GovernanceVote;
+import org.bitcoinj.quorums.ChainLockSignature;
+import org.bitcoinj.quorums.InstantSendLock;
+import org.bitcoinj.quorums.QuorumSendRecoveredSignatures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +98,10 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(GovernanceVote.class, "govobjvote");
         names.put(GetSimplifiedMasternodeListDiff.class, "getmnlistd");
         names.put(SimplifiedMasternodeListDiff.class, "mnlistdiff");
-
+        names.put(SendDsq.class, "senddsq");
+        names.put(QuorumSendRecoveredSignatures.class, "qsendrecsigs");
+        names.put(InstantSendLock.class, "islock");
+        names.put(ChainLockSignature.class, "clsig");
     }
 
     /**
@@ -288,6 +294,14 @@ public class BitcoinSerializer extends MessageSerializer {
             return new GetSimplifiedMasternodeListDiff(params, payloadBytes);
         } else if(command.equals("mnlistdiff")) {
             return new SimplifiedMasternodeListDiff(params, payloadBytes);
+        } else if(command.equals("senddsq")) {
+            return new SendDsq(params);
+        } else if(command.equals("qsendrecsigs")) {
+            return new QuorumSendRecoveredSignatures(params);
+        } else if(command.equals("islock")) {
+            return new InstantSendLock(params, payloadBytes);
+        } else if(command.equals("clsig")) {
+            return new ChainLockSignature(params, payloadBytes);
         } else {
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);

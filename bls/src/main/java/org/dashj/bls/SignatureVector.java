@@ -20,11 +20,14 @@
 package org.dashj.bls;
 
 
+import com.google.common.base.Preconditions;
+
 public class SignatureVector extends java.util.AbstractList<Signature> {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected SignatureVector(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
@@ -79,6 +82,7 @@ public class SignatureVector extends java.util.AbstractList<Signature> {
   }
 
   public void push_back(Signature x) {
+    Preconditions.checkNotNull(x);
     JNI.SignatureVector_push_back(swigCPtr, this, Signature.getCPtr(x), x);
   }
 
@@ -87,6 +91,7 @@ public class SignatureVector extends java.util.AbstractList<Signature> {
   }
 
   public Signature set(int i, Signature VECTOR_VALUE_IN) {
+    Preconditions.checkNotNull(VECTOR_VALUE_IN);
     return new Signature(JNI.SignatureVector_set(swigCPtr, this, i, Signature.getCPtr(VECTOR_VALUE_IN), VECTOR_VALUE_IN), true);
   }
 

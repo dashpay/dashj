@@ -24,6 +24,7 @@ import static org.bitcoinj.core.MasternodeInfo.State.*;
 /**
  * Created by Hash Engineering on 2/8/2015.
  */
+@Deprecated
 public class Masternode extends Message {
     private static final Logger log = LoggerFactory.getLogger(Masternode.class);
     ReentrantLock lock = Threading.lock("Masternode");

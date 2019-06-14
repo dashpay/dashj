@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.evolution.*;
+import org.bitcoinj.quorums.FinalCommitmentTxPayload;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
@@ -104,7 +105,8 @@ public class Transaction extends ChildMessage {
         TRANSACTION_SUBTX_TOPUP(9),
         TRANSACTION_SUBTX_RESETKEY(10),
         TRANSACTION_SUBTX_CLOSEACCOUNT(11),
-        TRANSACTION_SUBTX_TRANSITION(12);
+        TRANSACTION_SUBTX_TRANSITION(12),
+        TRANSACTION_UNKNOWN(1024);
 
         int value;
 
@@ -130,7 +132,12 @@ public class Transaction extends ChildMessage {
         }
 
         public static Type fromValue(int value) {
-            return getMappings().get(value);
+            Type type = getMappings().get(value);
+            return type == null ? TRANSACTION_UNKNOWN : type;
+        }
+
+        public boolean isSpecial() {
+            return this != TRANSACTION_UNKNOWN || this != TRANSACTION_NORMAL;
         }
     }
 
@@ -710,7 +717,7 @@ public class Transaction extends ChildMessage {
             s.append("  updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
         if (version != 1)
             s.append("  version ").append(version).append('\n');
-        Type type = (getVersionShort() >= 3) ? getType() : Type.TRANSACTION_NORMAL;
+        Type type = (getVersionShort() == 3) ? getType() : Type.TRANSACTION_NORMAL;
         s.append("  type ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
         if (isTimeLocked()) {
             s.append("  time locked until ");
@@ -744,7 +751,9 @@ public class Transaction extends ChildMessage {
         }
         if (!requiresInputs()) {
             // no ins, no outs
-            // TODO print the extra payload?
+            if (getVersionShort() == 3 && type.isSpecial())
+                s.append("  payload ").append(getExtraPayloadObject()).append('\n');
+
             return s.toString();
         }
         if (!inputs.isEmpty()) {
@@ -811,6 +820,8 @@ public class Transaction extends ChildMessage {
         }
         if (purpose != null)
             s.append("     prps ").append(purpose).append('\n');
+        if (getVersionShort() == 3 && type.isSpecial())
+            s.append("  payload ").append(getExtraPayloadObject()).append('\n');
         return s.toString();
     }
 
@@ -1204,11 +1215,11 @@ public class Transaction extends ChildMessage {
     }
 
     public void setVersionAndType(int versionShort, int type) {
-        version = versionShort & type << 16;
+        version = versionShort | type << 16;
     }
 
     public void setVersionAndType(int versionShort, Type type) {
-        version = versionShort & type.getValue() << 16;
+        version = versionShort | type.getValue() << 16;
     }
 
     public int getVersionShort() {
@@ -1541,9 +1552,8 @@ public class Transaction extends ChildMessage {
     }
 
     public void setExtraPayload(SpecialTxPayload specialTxPayload) {
-        assert(specialTxPayload.getType() != Type.TRANSACTION_NORMAL);
         setExtraPayload(specialTxPayload.getPayload());
-        setType(specialTxPayload.getType());
+        setVersionAndType(3, specialTxPayload.getType());
         unCache();
     }
 
@@ -1553,14 +1563,22 @@ public class Transaction extends ChildMessage {
             case TRANSACTION_NORMAL:
                 break;
             case TRANSACTION_PROVIDER_REGISTER:
+                extraPayloadObject = new ProviderRegisterTx(params, this);
+                break;
             case TRANSACTION_PROVIDER_UPDATE_REGISTRAR:
+                extraPayloadObject = new ProviderUpdateRegistarTx(params, this);
+                break;
             case TRANSACTION_PROVIDER_UPDATE_REVOKE:
+                extraPayloadObject = new ProviderUpdateRevocationTx(params, this);
+                break;
             case TRANSACTION_PROVIDER_UPDATE_SERVICE:
+                extraPayloadObject = new ProviderUpdateServiceTx(params, this);
                 break;
             case TRANSACTION_COINBASE:
                 extraPayloadObject = new CoinbaseTx(params, this);
                 break;
             case TRANSACTION_QUORUM_COMMITMENT:
+                extraPayloadObject = new FinalCommitmentTxPayload(params, this);
                 break;
             case TRANSACTION_SUBTX_REGISTER:
                 extraPayloadObject = new SubTxRegister(params, this);
@@ -1601,4 +1619,31 @@ public class Transaction extends ChildMessage {
                 return true;
         }
     }
+
+    public Sha256Hash calculateInputsHash() {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(36*inputs.size());
+            for (TransactionInput input : inputs) {
+                bos.write(input.getOutpoint().getHash().getReversedBytes());
+                Utils.uint32ToByteStreamLE(input.getOutpoint().getIndex(), bos);
+            }
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+
+        } catch(IOException x){
+            throw new RuntimeException(x.getMessage());
+        }
+    }
+
+    public static Sha256Hash calculateInputsHash(TransactionInput input) {
+        try {
+            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(32+4);
+            bos.write(input.getOutpoint().getHash().getReversedBytes());
+            Utils.uint32ToByteStreamLE(input.getOutpoint().getIndex(), bos);
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+
+        } catch(IOException x){
+            throw new RuntimeException(x.getMessage());
+        }
+    }
+
 }

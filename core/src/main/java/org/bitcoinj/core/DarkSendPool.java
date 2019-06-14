@@ -176,7 +176,11 @@ public class DarkSendPool {
 
                     if (context.masternodeSync.isBlockchainSynced()) {
 
-                        tick++;
+                        boolean processGovernance = context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) ||
+                                context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE_VOTES);
+                        boolean processMNs = context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST);
+
+                            tick++;
 
                         // check if we should activate or ping every few minutes,
                         // start right after sync is considered to be done
@@ -185,19 +189,24 @@ public class DarkSendPool {
 
                         if (tick % 60 == 0) {
                             context.masternodeManager.processMasternodeConnections();
-                            context.masternodeManager.checkAndRemove();
+                            if(processMNs)
+                                context.masternodeManager.checkAndRemove();
                             context.masternodePayments.checkAndRemove();
-                            context.governanceManager.checkAndRemove();
+                            if(processGovernance)
+                                context.governanceManager.checkAndRemove();
                             context.instantSend.checkAndRemove();
                         }
                         //hashengineering added this
                         if(tick % 30 == 0) {
-                            log.info(context.masternodeManager.toString());
-                            log.info(context.governanceManager.toString());
+                            if(processMNs)
+                                log.info(context.masternodeManager.toString());
+                            if(processGovernance)
+                                log.info(context.governanceManager.toString());
                         }
 
                         if(tick % (60 * 5) == 0) {
-                            context.governanceManager.doMaintenance();
+                            if(processGovernance)
+                                context.governanceManager.doMaintenance();
                         }
 
                         if(tick % MASTERNODES_DUMP_SECONDS == 0) {
@@ -207,7 +216,8 @@ public class DarkSendPool {
                         // check whether the outgoing simple transactions were auto locked
                         // within the specific time frame
                         if (tick % 2 == 0) {
-                            context.instantSend.notifyLockStatus();
+                            if(context.instantSendManager.isOldInstantSendEnabled())
+                                context.instantSend.notifyLockStatus();
                         }
 
                     }

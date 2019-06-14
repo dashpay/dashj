@@ -24,6 +24,7 @@ import java.io.Serializable;
 
 import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
 
+@Deprecated
 public class MasternodeVerification extends Message implements Serializable{
 
     private static final Logger log = LoggerFactory.getLogger(MasternodeVerification.class);

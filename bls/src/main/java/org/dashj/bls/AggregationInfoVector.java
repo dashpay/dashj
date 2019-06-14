@@ -20,11 +20,14 @@
 package org.dashj.bls;
 
 
+import com.google.common.base.Preconditions;
+
 public class AggregationInfoVector extends java.util.AbstractList<AggregationInfo> {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
   protected AggregationInfoVector(long cPtr, boolean cMemoryOwn) {
+    Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
@@ -79,6 +82,7 @@ public class AggregationInfoVector extends java.util.AbstractList<AggregationInf
   }
 
   public void push_back(AggregationInfo x) {
+    Preconditions.checkNotNull(x);
     JNI.AggregationInfoVector_push_back(swigCPtr, this, AggregationInfo.getCPtr(x), x);
   }
 
@@ -87,6 +91,7 @@ public class AggregationInfoVector extends java.util.AbstractList<AggregationInf
   }
 
   public AggregationInfo set(int i, AggregationInfo VECTOR_VALUE_IN) {
+    Preconditions.checkNotNull(VECTOR_VALUE_IN);
     return new AggregationInfo(JNI.AggregationInfoVector_set(swigCPtr, this, i, AggregationInfo.getCPtr(VECTOR_VALUE_IN), VECTOR_VALUE_IN), true);
   }
 

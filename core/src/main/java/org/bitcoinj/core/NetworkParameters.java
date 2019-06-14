@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import com.google.common.base.Objects;
 import org.bitcoinj.net.discovery.HttpDiscovery;
 import org.bitcoinj.params.*;
+import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
@@ -101,6 +102,11 @@ public abstract class NetworkParameters {
     protected int DIP0001Upgrade;
     protected int DIP0001BlockHeight;
     protected boolean DIP0001ActiveAtTip = false;
+
+    /** Used to check for DIP0003 upgrade and DETERMINISTIC_MNS_ENABLED */
+    protected int DIP0003BlockHeight;
+    protected int deterministicMasternodesEnabledHeight;
+    protected boolean deterministicMasternodesEnabled = false;
 
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
@@ -639,7 +645,7 @@ public abstract class NetworkParameters {
         PONG(60001),
         BLOOM_FILTER(MINIMUM.getBitcoinProtocolVersion()),
         DMN_LIST(70213),
-        CURRENT(70213);
+        CURRENT(70214);
 
         private final int bitcoinProtocol;
 
@@ -705,5 +711,34 @@ public abstract class NetworkParameters {
 
     public int getInstantSendKeepLock() {
         return instantSendKeepLock;
+    }
+
+    public int getDIP0003BlockHeight() {
+        return DIP0003BlockHeight;
+    }
+
+    public int getDeterministicMasternodesEnabledHeight() {
+        return deterministicMasternodesEnabledHeight;
+    }
+
+    public boolean isDeterministicMasternodesEnabled() {
+        return deterministicMasternodesEnabled;
+    }
+
+    //LLMQ parameters
+    protected HashMap<LLMQParameters.LLMQType, LLMQParameters> llmqs;
+    protected LLMQParameters.LLMQType llmqChainLocks;
+    protected LLMQParameters.LLMQType llmqForInstantSend;
+
+    public HashMap<LLMQParameters.LLMQType, LLMQParameters> getLlmqs() {
+        return llmqs;
+    }
+
+    public LLMQParameters.LLMQType getLlmqChainLocks() {
+        return llmqChainLocks;
+    }
+
+    public LLMQParameters.LLMQType getLlmqForInstantSend() {
+        return llmqForInstantSend;
     }
 }

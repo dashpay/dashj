@@ -146,6 +146,39 @@ public abstract class ListMessage extends Message {
                 case 19:
                     type = InventoryItem.Type.MasternodeVerify;
                     break;
+                case 20:
+                    type = InventoryItem.Type.CompactBlock;
+                    break;
+                case 21:
+                    type = InventoryItem.Type.QuorumFinalCommitment;
+                    break;
+                case 22:
+                    type = InventoryItem.Type.QuorumDummyCommitment;
+                    break;
+                case 23:
+                    type = InventoryItem.Type.QuorumContribution;
+                    break;
+                case 24:
+                    type = InventoryItem.Type.QuorumComplaint;
+                    break;
+                case 25:
+                    type = InventoryItem.Type.QuorumJustifciation;
+                    break;
+                case 26:
+                    type = InventoryItem.Type.QuorumPrematureCommitment;
+                    break;
+                case 27:
+                    type = InventoryItem.Type.QuorumDebugStatus;
+                    break;
+                case 28:
+                    type = InventoryItem.Type.QuorumRecoveredSignature;
+                    break;
+                case 29:
+                    type = InventoryItem.Type.ChainLockSignature;
+                    break;
+                case 30:
+                    type = InventoryItem.Type.InstantSendLock;
+                    break;
                 default:
                     //throw new ProtocolException("Unknown CInv type: " + typeCode);
                     type = InventoryItem.Type.None;

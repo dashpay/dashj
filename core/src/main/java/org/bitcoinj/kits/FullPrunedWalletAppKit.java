@@ -22,7 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import com.subgraph.orchid.TorClient;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -322,7 +322,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
                     vStore = provideBlockStore(chainFolder);
                 }
             }
-            vChain = new FullPrunedBlockChain(params, vWallet, vStore);
+            vChain = new FullPrunedBlockChain(params, vStore);
             vPeerGroup = createPeerGroup();
             if (this.userAgent != null)
                 vPeerGroup.setUserAgent(userAgent, version);
@@ -364,7 +364,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
                         throw new RuntimeException(t);
 
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
         } catch (BlockStoreException e) {
             throw new IOException(e);
@@ -472,13 +472,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
 
 
     protected PeerGroup createPeerGroup() throws TimeoutException {
-        if (useTor) {
-            TorClient torClient = new TorClient();
-            torClient.getConfig().setDataDirectory(directory);
-            return PeerGroup.newWithTor(params, vChain, torClient);
-        }
-        else
-            return new PeerGroup(params, vChain);
+        return new PeerGroup(params, vChain);
     }
 
     private void installShutdownHook() {
