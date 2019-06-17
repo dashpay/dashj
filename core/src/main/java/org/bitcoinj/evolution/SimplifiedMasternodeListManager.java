@@ -525,6 +525,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 quorumList = new SimplifiedQuorumList(context.getParams());
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
+                save();
                 StoredBlock resetBlock = blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SNAPSHOT_LIST_PERIOD);
                 requestMNListDiff(resetBlock != null ? resetBlock : blockChain.getChainHead());
             }
