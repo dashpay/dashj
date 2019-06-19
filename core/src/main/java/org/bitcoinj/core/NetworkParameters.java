@@ -108,6 +108,9 @@ public abstract class NetworkParameters {
     protected int deterministicMasternodesEnabledHeight;
     protected boolean deterministicMasternodesEnabled = false;
 
+    /** Used to check for DIP0008 upgrade */
+    protected int DIP0008BlockHeight;
+
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
      * by looking at the port number.
@@ -740,5 +743,9 @@ public abstract class NetworkParameters {
 
     public LLMQParameters.LLMQType getLlmqForInstantSend() {
         return llmqForInstantSend;
+    }
+
+    public int getDIP0008BlockHeight() {
+        return DIP0008BlockHeight;
     }
 }

@@ -427,6 +427,8 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         deterministicMasternodesEnabledHeight = 1047200;
         deterministicMasternodesEnabled = true;
 
+        DIP0008BlockHeight = 1088640;
+
         // long living quorum params
         llmqs = new HashMap<LLMQParameters.LLMQType, LLMQParameters>(3);
         llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
