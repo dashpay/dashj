@@ -567,4 +567,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             lock.unlock();
         }
     }
+
+    public boolean isSynced() {
+        return pendingBlocks.isEmpty();
+    }
 }
