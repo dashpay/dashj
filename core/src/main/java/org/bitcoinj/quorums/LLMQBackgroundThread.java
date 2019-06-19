@@ -26,22 +26,22 @@ public class LLMQBackgroundThread extends Thread {
             while (!isInterrupted()) {
                 boolean didWork = false;
 
-                didWork |= context.instantSendManager.processPendingInstantSendLocks();
+                if(context.masternodeListManager.isSynced()) {
+                    didWork |= context.instantSendManager.processPendingInstantSendLocks();
 
-                didWork |= context.signingManager.processPendingRecoveredSigs();
+                    didWork |= context.signingManager.processPendingRecoveredSigs();
 
-                context.signingManager.cleanup();
-
-
+                    context.signingManager.cleanup();
+                }
 
                 if (!didWork) {
                     Thread.sleep(100);
                 }
 
                 debugTimer++;
-                if(debugTimer % 200 == 0) {
+                if(debugTimer % 400 == 0) {
                     log.info(context.instantSendManager.toString());
-                    if(debugTimer == 1000)
+                    if(debugTimer == 2000)
                         debugTimer = 0;
                 }
 
