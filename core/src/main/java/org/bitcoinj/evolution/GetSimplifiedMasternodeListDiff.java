@@ -37,4 +37,13 @@ public class GetSimplifiedMasternodeListDiff extends Message {
         stream.write(baseBlockHash.getReversedBytes());
         stream.write(blockHash.getReversedBytes());
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+
+        GetSimplifiedMasternodeListDiff diff = (GetSimplifiedMasternodeListDiff)obj;
+        return diff.blockHash.equals(blockHash) && diff.baseBlockHash.equals(baseBlockHash);
+    }
 }
