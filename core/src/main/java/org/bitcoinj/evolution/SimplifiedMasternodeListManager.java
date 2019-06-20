@@ -33,6 +33,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public static final int MAX_CACHE_SIZE = 16;
 
+    enum SaveOptions {
+        SAVE_EVERY_BLOCK,
+        SAVE_EVERY_CHANGE,
+    };
+
+    public SaveOptions saveOptions;
+
     LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache = new LinkedHashMap<Sha256Hash, SimplifiedMasternodeList>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<Sha256Hash, SimplifiedMasternodeList> eldest) {
@@ -77,6 +84,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         waitingForMNListDiff = false;
         pendingBlocks = new ArrayList<StoredBlock>();
         pendingBlocksMap = new LinkedHashMap<Sha256Hash, StoredBlock>();
+        saveOptions = SaveOptions.SAVE_EVERY_CHANGE;
     }
 
     @Override
@@ -208,7 +216,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
                 setFormatVersion(LLMQ_FORMAT_VERSION);
-            save();
+            if(mnlistdiff.hasChanges() || pendingBlocks.size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
+                save();
         } catch(MasternodeListDiffException x) {
             //we already have this mnlistdiff or doesn't match our current tipBlockHash
             if(mnList.getBlockHash().equals(mnlistdiff.blockHash)) {
