@@ -1,6 +1,5 @@
 package org.bitcoinj.evolution;
 
-import com.google.common.base.Preconditions;
 import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -19,7 +18,7 @@ public class SimplifiedMasternodeList extends Message {
 
     private Sha256Hash blockHash;
     private long height;
-    private StoredBlock storedblock;
+    private StoredBlock storedBlock;
     private boolean storedBlockMatchesRequest;
     HashMap<Sha256Hash, SimplifiedMasternodeListEntry> mnMap;
     HashMap<Sha256Hash, Pair<Sha256Hash, Integer>> mnUniquePropertyMap;
@@ -30,6 +29,7 @@ public class SimplifiedMasternodeList extends Message {
         height = -1;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(5000);
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(5000);
+        storedBlock = new StoredBlock(params.getGenesisBlock(), BigInteger.ZERO, 0);
     }
 
     SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset) {
@@ -82,7 +82,7 @@ public class SimplifiedMasternodeList extends Message {
             ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
             buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
             buffer.rewind();
-            storedblock = StoredBlock.deserializeCompact(params, buffer);
+            storedBlock = StoredBlock.deserializeCompact(params, buffer);
             storedBlockMatchesRequest = false;
         }
         length = cursor - offset;
@@ -105,7 +105,7 @@ public class SimplifiedMasternodeList extends Message {
             Utils.uint32ToByteStreamLE(entry.getValue().getSecond().intValue(), stream);
         }
         ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
-        storedblock.serializeCompact(buffer);
+        storedBlock.serializeCompact(buffer);
         stream.write(buffer.array());
     }
 
@@ -497,11 +497,11 @@ public class SimplifiedMasternodeList extends Message {
     }
 
     protected void setBlock(StoredBlock storedblock, boolean storedBlockMatchesRequest) {
-        this.storedblock = storedblock;
+        this.storedBlock = storedblock;
         this.storedBlockMatchesRequest = storedBlockMatchesRequest;
     }
 
-    public StoredBlock getStoredblock() {
-        return storedblock;
+    public StoredBlock getStoredBlock() {
+        return storedBlock;
     }
 }
