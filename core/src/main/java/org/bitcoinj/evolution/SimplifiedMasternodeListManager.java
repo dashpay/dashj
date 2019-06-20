@@ -149,7 +149,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                         mnListToSave = entry.getValue();
                         quorumListToSave = quorumsCache.get(entry.getKey());
                     } else {
-                        otherPendingBlocks.add(entry.getValue().getStoredblock());
+                        otherPendingBlocks.add(entry.getValue().getStoredBlock());
                     }
                 }
             } else {
@@ -390,6 +390,16 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
         StoredBlock block = blockChain.getChainHead();
         log.info("maybe requesting mnlistdiff from {} to {}; \n  From {}\n  To {}", mnList.getHeight(), block.getHeight(), mnList.getBlockHash(), block.getHeader().getHash());
+        if(mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
+            resetMNList(true);
+            return;
+        }
+
+        if(!blockChain.getChainHead().getHeader().getPrevBlockHash().equals(mnList.getBlockHash())) {
+            fillPendingBlocksList(mnList.getBlockHash(), blockChain.getChainHead().getHeader().getHash());
+            requestNextMNListDiff();
+            return;
+        }
 
         lastRequestMessage = new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), blockChain.getChainHead().getHeader().getHash());
         downloadPeer.sendMessage(lastRequestMessage);
@@ -525,10 +535,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public void resetMNList() {
-        resetMNList(false);
+        resetMNList(false, true);
     }
 
     public void resetMNList(boolean force) {
+        resetMNList(force, true);
+    }
+
+
+    public void resetMNList(boolean force, boolean requestFreshList) {
         try {
             if(force || getFormatVersion() < LLMQ_FORMAT_VERSION) {
                 log.info("resetting masternode list");
@@ -536,9 +551,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 quorumList = new SimplifiedQuorumList(context.getParams());
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
+                waitingForMNListDiff = false;
                 save();
-                StoredBlock resetBlock = blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SNAPSHOT_LIST_PERIOD);
-                requestMNListDiff(resetBlock != null ? resetBlock : blockChain.getChainHead());
+                if(requestFreshList) {
+                    int height = blockChain.getBestChainHeight() - SNAPSHOT_LIST_PERIOD;
+                    if (height < params.getDIP0008BlockHeight())
+                        height = params.getDIP0008BlockHeight();
+                    StoredBlock resetBlock = blockChain.getBlockStore().get(height);
+                    if (resetBlock == null)
+                        resetBlock = blockChain.getChainHead();
+                    requestMNListDiff(resetBlock != null ? resetBlock : blockChain.getChainHead());
+                    fillPendingBlocksList(resetBlock.getHeader().getHash(), blockChain.getChainHead().getHeader().getHash());
+                }
             }
         } catch (BlockStoreException x) {
             throw new RuntimeException(x);
@@ -581,5 +605,21 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public boolean isSynced() {
         return pendingBlocks.isEmpty();
+    }
+
+    void fillPendingBlocksList(Sha256Hash first, Sha256Hash last) {
+        lock.lock();
+        try {
+            StoredBlock cursor = blockChain.getBlockStore().get(last);
+            while(cursor != null && !cursor.getHeader().getHash().equals(first)) {
+                pendingBlocks.add(0, cursor);
+                pendingBlocksMap.put(cursor.getHeader().getHash(), cursor);
+                cursor = cursor.getPrev(blockChain.getBlockStore());
+            }
+        } catch (BlockStoreException x) {
+            throw new RuntimeException(x);
+        } finally {
+            lock.unlock();
+        }
     }
 }
