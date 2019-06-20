@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.utils.Pair;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -59,15 +60,18 @@ public class ForwardingService {
         // Figure out which network we should connect to. Each one gets its own set of files.
         NetworkParameters params;
         String filePrefix;
+        String checkpoints = null;
         if (args.length > 1 && args[1].equals("testnet")) {
             params = TestNet3Params.get();
             filePrefix = "forwarding-service-testnet";
+            checkpoints = "checkpoints-testnet.txt";
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
         } else {
             params = MainNetParams.get();
             filePrefix = "forwarding-service";
+            checkpoints = "checkpoints.txt";
         }
         // Parse the address given as the first parameter.
         forwardingAddress = Address.fromBase58(params, args[0]);
@@ -81,6 +85,11 @@ public class ForwardingService {
             // Regression test mode is designed for testing and development only, so there's no public network for it.
             // If you pick this mode, you're expected to be running a local "bitcoind -regtest" instance.
             kit.connectToLocalHost();
+        }
+
+        if(checkpoints != null) {
+            FileInputStream checkpointStream = new FileInputStream("./" + checkpoints);
+            kit.setCheckpoints(checkpointStream);
         }
 
         // Download the block chain and wait until it's done.
