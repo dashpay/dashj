@@ -124,8 +124,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
                 buffer.rewind();
                 StoredBlock block = StoredBlock.deserializeCompact(params, buffer);
-                pendingBlocks.add(block);
-                pendingBlocksMap.put(block.getHeader().getHash(), block);
+                if(block.getHeight() != 0) {
+                    pendingBlocks.add(block);
+                    pendingBlocksMap.put(block.getHeader().getHash(), block);
+                }
                 buffer.rewind();
             }
         } else {
