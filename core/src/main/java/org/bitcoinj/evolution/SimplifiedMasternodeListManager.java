@@ -46,6 +46,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public SyncOptions syncOptions;
+    public int syncInterval;
 
     LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache = new LinkedHashMap<Sha256Hash, SimplifiedMasternodeList>() {
         @Override
@@ -93,6 +94,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         pendingBlocksMap = new LinkedHashMap<Sha256Hash, StoredBlock>();
         saveOptions = SaveOptions.SAVE_EVERY_CHANGE;
         syncOptions = SyncOptions.SYNC_CACHE_PERIOD;
+        syncInterval = 8;
     }
 
     @Override
