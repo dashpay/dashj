@@ -426,6 +426,29 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 return;
 
             log.info("handling next mnlistdiff: " + pendingBlocks.size());
+
+            //fill up the pending list with recent blocks
+            Sha256Hash tipHash = blockChain.getChainHead().getHeader().getHash();
+            ArrayList<StoredBlock> blocksToAdd = new ArrayList<StoredBlock>();
+            if(!mnListsCache.containsKey(tipHash) && !pendingBlocksMap.containsKey(tipHash)) {
+                StoredBlock cursor = blockChain.getChainHead();
+                do {
+                    if(!pendingBlocksMap.containsKey(cursor.getHeader().getHash())) {
+                        blocksToAdd.add(0, cursor);
+                    } else break;
+                    try {
+                        cursor = cursor.getPrev(blockChain.getBlockStore());
+                    } catch (BlockStoreException x) {
+                        break;
+                    }
+                } while(cursor != null);
+
+                for(StoredBlock block : blocksToAdd) {
+                    pendingBlocks.add(block);
+                    pendingBlocksMap.put(block.getHeader().getHash(), block);
+                }
+            }
+
             if(pendingBlocks.size() == 0)
                 return;
 
@@ -444,6 +467,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
                 if(pendingBlocks.size() != 0) {
                     nextBlock = pendingBlocks.get(0);
+                    if(syncInterval > 1 && nextBlock.getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - 60 * 60 && pendingBlocks.size() > syncInterval) {
+                        //lets skip up to the next syncInterval blocks
+                        while(blockIterator.hasNext()) {
+                            nextBlock = blockIterator.next();
+                            if(nextBlock.getHeight() % syncInterval == 0) break;
+                            blockIterator.remove();
+                        }
+                    }
                     log.info("requesting mnlistdiff from {} to {}; \n  From {}\n To {}", mnList.getHeight(), nextBlock.getHeight(), mnList.getBlockHash(), nextBlock.getHeader().getHash());
                     GetSimplifiedMasternodeListDiff requestMessage = new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), nextBlock.getHeader().getHash());
                     if(requestMessage.equals(lastRequestMessage)) {
