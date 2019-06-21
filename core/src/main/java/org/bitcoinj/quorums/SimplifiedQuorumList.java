@@ -7,6 +7,8 @@ import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -19,6 +21,7 @@ public class SimplifiedQuorumList extends Message {
 
     // critical section to protect the inner data structures
     ReentrantLock lock = Threading.lock("SimplifiedQuorumList");
+    private static final Logger log = LoggerFactory.getLogger(SimplifiedQuorumList.class);
 
 
     private Sha256Hash blockHash;
@@ -387,6 +390,7 @@ public class SimplifiedQuorumList extends Message {
         ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
         if(members == null) {
             //no information about this quorum because it is before we were downloading
+            log.warn("masternode list is missing to verify quorum");
             return;
         }
         if (!commitment.verify(members, true)) {
