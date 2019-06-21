@@ -6,6 +6,7 @@ import org.bitcoinj.utils.Threading;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
@@ -42,6 +43,7 @@ public class SimplifiedMasternodeList extends Message {
         this.height = other.height;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(other.mnMap);
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(other.mnUniquePropertyMap);
+        this.storedBlock = other.storedBlock;
     }
 
     SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries) {
@@ -52,6 +54,7 @@ public class SimplifiedMasternodeList extends Message {
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(entries.size());
         for(SimplifiedMasternodeListEntry entry : entries)
             addMN(entry);
+        storedBlock = new StoredBlock(params.getGenesisBlock(), BigInteger.ZERO, 0);
 
     }
 
@@ -84,6 +87,8 @@ public class SimplifiedMasternodeList extends Message {
             buffer.rewind();
             storedBlock = StoredBlock.deserializeCompact(params, buffer);
             storedBlockMatchesRequest = false;
+        } else {
+            storedBlock = new StoredBlock(params.getGenesisBlock(), BigInteger.ZERO, 0);
         }
         length = cursor - offset;
     }
