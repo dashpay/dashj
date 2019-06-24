@@ -103,12 +103,7 @@ public class SimplifiedMasternodeList extends Message {
             stream.write(entry.getKey().getReversedBytes());
             entry.getValue().bitcoinSerializeToStream(stream);
         }
-        stream.write(new VarInt(mnUniquePropertyMap.size()).encode());
-        for(Map.Entry<Sha256Hash, Pair<Sha256Hash, Integer>> entry : mnUniquePropertyMap.entrySet()) {
-            stream.write(entry.getKey().getReversedBytes());
-            stream.write(entry.getValue().getFirst().getReversedBytes());
-            Utils.uint32ToByteStreamLE(entry.getValue().getSecond().intValue(), stream);
-        }
+        stream.write(new VarInt(0).encode());
         ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
         storedBlock.serializeCompact(buffer);
         stream.write(buffer.array());
