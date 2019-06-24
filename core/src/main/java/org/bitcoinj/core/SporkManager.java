@@ -178,12 +178,7 @@ public class SporkManager {
     {
         //correct fork via spork technology
         if(nSporkID == SPORK_12_RECONSIDER_BLOCKS && nValue > 0) {
-            reprocessBlocks((int)nValue);
-        } else if(nSporkID == SPORK_15_DETERMINISTIC_MNS_ENABLED) {
-            if(nValue <= context.blockChain.getBestChainHeight())
-                context.masternodeListManager.updateMNList();
-            if(context.getParams().isSupportingEvolution())
-                context.peerGroup.setMinRequiredProtocolVersionAndDisconnect(NetworkParameters.ProtocolVersion.DMN_LIST.getBitcoinProtocolVersion());
+            reprocessBlocks((int) nValue);
         } else if(nSporkID == SPORK_17_QUORUM_DKG_ENABLED) {
             context.masternodeListManager.resetMNList();
         }
