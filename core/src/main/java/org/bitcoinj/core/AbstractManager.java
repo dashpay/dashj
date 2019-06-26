@@ -208,4 +208,8 @@ public abstract class AbstractManager extends Message {
     }
 
     public abstract void close();
+
+    public void onFirstSaveComplete() {
+
+    }
 }

@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -82,6 +83,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     int failedAttempts;
     static final int MAX_ATTEMPTS = 10;
+    boolean loadedFromFile;
+    boolean requiresLoadingFromFile;
 
     PeerGroup peerGroup;
 
@@ -97,6 +100,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         saveOptions = SaveOptions.SAVE_EVERY_CHANGE;
         syncOptions = SyncOptions.SYNC_MINIMUM;
         syncInterval = 8;
+        loadedFromFile = false;
+        requiresLoadingFromFile = true;
     }
 
     @Override
@@ -136,7 +141,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
                 buffer.rewind();
                 StoredBlock block = StoredBlock.deserializeCompact(params, buffer);
-                if(block.getHeight() != 0) {
+                if(block.getHeight() != 0 && syncOptions != SyncOptions.SYNC_MINIMUM) {
                     pendingBlocks.add(block);
                     pendingBlocksMap.put(block.getHeader().getHash(), block);
                 }
@@ -174,19 +179,21 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             Utils.uint32ToByteStreamLE(mnListToSave.getHeight(), stream);
             if(getFormatVersion() >= 2) {
                 quorumListToSave.bitcoinSerialize(stream);
-                stream.write(new VarInt(pendingBlocks.size()+otherPendingBlocks.size()).encode());
-                ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
-                log.info("saving {} blocks to catch up mnList", otherPendingBlocks.size());
-                for(StoredBlock block : otherPendingBlocks) {
-                    block.serializeCompact(buffer);
-                    stream.write(buffer.array());
-                    buffer.clear();
-                }
-                for(StoredBlock block : pendingBlocks) {
-                    block.serializeCompact(buffer);
-                    stream.write(buffer.array());
-                    buffer.clear();
-                }
+                if(syncOptions != SyncOptions.SYNC_MINIMUM) {
+                    stream.write(new VarInt(pendingBlocks.size() + otherPendingBlocks.size()).encode());
+                    ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
+                    log.info("saving {} blocks to catch up mnList", otherPendingBlocks.size());
+                    for (StoredBlock block : otherPendingBlocks) {
+                        block.serializeCompact(buffer);
+                        stream.write(buffer.array());
+                        buffer.clear();
+                    }
+                    for (StoredBlock block : pendingBlocks) {
+                        block.serializeCompact(buffer);
+                        stream.write(buffer.array());
+                        buffer.clear();
+                    }
+                } else stream.write(new VarInt(0).encode());
             }
         } finally {
             lock.unlock();
@@ -282,12 +289,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            if(isDeterministicMNsSporkActive()) {
+            if(isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                 long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE  * 3 * 60;
                 if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
                     if(syncOptions == SyncOptions.SYNC_MINIMUM) {
                         try {
                             StoredBlock requestBlock = blockChain.getBlockStore().get(block.getHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
+                            if(getListAtChainTip().getHeight() > requestBlock.getHeight())
+                                requestBlock = blockChain.getBlockStore().get((int)getListAtChainTip().getHeight()+1);
                             if (requestBlock != null) {
                                 block = requestBlock;
                             }
@@ -304,28 +313,35 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
-            if(isDeterministicMNsSporkActive()) {
-                if(downloadPeer == null)
+            lock.lock();
+            try {
+                if (downloadPeer == null)
                     downloadPeer = peer;
-                maybeGetMNListDiffFresh();
-                if (mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH) || mnList.getHeight() < blockChain.getBestChainHeight()) {
-                    long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE  * 3 * 60;
-                    if(Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < timePeriod)
-                    {
-                        StoredBlock block = blockChain.getChainHead();
-                        if(syncOptions == SyncOptions.SYNC_MINIMUM) {
-                            try {
-                                StoredBlock requestBlock = blockChain.getBlockStore().get(block.getHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
-                                if (requestBlock != null) {
-                                    block = requestBlock;
+                if (isDeterministicMNsSporkActive() && isLoadedFromFile()) {
+                    maybeGetMNListDiffFresh();
+                    if (!waitingForMNListDiff && mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH) || mnList.getHeight() < blockChain.getBestChainHeight()) {
+                        long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
+                        if (Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < timePeriod) {
+                            StoredBlock block = blockChain.getChainHead();
+                            if (syncOptions == SyncOptions.SYNC_MINIMUM) {
+                                try {
+                                    StoredBlock requestBlock = blockChain.getBlockStore().get(block.getHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
+                                    if (getListAtChainTip().getHeight() > requestBlock.getHeight())
+                                        requestBlock = blockChain.getBlockStore().get((int) getListAtChainTip().getHeight() + 1);
+                                    if (requestBlock != null) {
+                                        block = requestBlock;
+                                    }
+                                } catch (BlockStoreException x) {
+                                    //do nothing
                                 }
-                            } catch (BlockStoreException x) {
-                                //do nothing
                             }
+                            if (!pendingBlocksMap.containsKey(block.getHeader().getHash()))
+                                requestMNListDiff(peer, block);
                         }
-                        requestMNListDiff(peer, block);
                     }
                 }
+            } finally {
+                lock.unlock();
             }
         }
     };
@@ -387,7 +403,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             lock.lock();
             try {
                 downloadPeer = peer;
-                maybeGetMNListDiffFresh();
+                if(isLoadedFromFile())
+                    maybeGetMNListDiffFresh();
             } finally {
                 lock.unlock();
             }
@@ -396,67 +413,73 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     };
 
     void maybeGetMNListDiffFresh() {
-        long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE  * 3 * 60;
-        if (pendingBlocks.size() > 0) {
-            if (!waitingForMNListDiff) {
-                requestNextMNListDiff();
-                return;
-            }
-            if(lastRequestTime + WAIT_GETMNLISTDIFF < Utils.currentTimeMillis()) {
-                waitingForMNListDiff = false;
-                requestNextMNListDiff();
-                return;
-            }
-            //if (lastRequestTime + WAIT_GETMNLISTDIFF < Utils.currentTimeMillis())
-            //    return;
-            return;
-        } else if (lastRequestTime + WAIT_GETMNLISTDIFF > Utils.currentTimeMillis() ||
-                blockChain.getChainHead().getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - timePeriod) {
-            return;
-        }
-
-        //Should we reset our masternode/quorum list
-        if(mnList.size() == 0 || mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
-            mnList = new SimplifiedMasternodeList(params);
-            quorumList = new SimplifiedQuorumList(params);
-        } else {
-            if(mnList.getBlockHash().equals(blockChain.getChainHead().getHeader().getHash()))
-                return;
-        }
-
-        if(downloadPeer == null)
-        {
-            downloadPeer = context.peerGroup.getDownloadPeer();
-        }
-
-        StoredBlock block = blockChain.getChainHead();
-        log.info("maybe requesting mnlistdiff from {} to {}; \n  From {}\n  To {}", mnList.getHeight(), block.getHeight(), mnList.getBlockHash(), block.getHeader().getHash());
-        if(mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
-            resetMNList(true);
-            return;
-        }
-
-        if(!blockChain.getChainHead().getHeader().getPrevBlockHash().equals(mnList.getBlockHash())) {
-            if(syncOptions != SyncOptions.SYNC_MINIMUM)
-                fillPendingBlocksList(mnList.getBlockHash(), blockChain.getChainHead().getHeader().getHash(), pendingBlocks.size());
-            requestNextMNListDiff();
-            return;
-        }
-
-        StoredBlock endBlock = blockChain.getChainHead();
+        lock.lock();
         try {
-            if (syncOptions == SyncOptions.SYNC_MINIMUM)
-                endBlock = blockChain.getBlockStore().get(endBlock.getHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
-            if (endBlock == null)
-                endBlock = blockChain.getChainHead();
-        } catch (BlockStoreException x) {
-            // do nothing
+            long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
+            if (pendingBlocks.size() > 0) {
+                if (!waitingForMNListDiff) {
+                    requestNextMNListDiff();
+                    return;
+                }
+                if (lastRequestTime + WAIT_GETMNLISTDIFF < Utils.currentTimeMillis()) {
+                    waitingForMNListDiff = false;
+                    requestNextMNListDiff();
+                    return;
+                }
+                //if (lastRequestTime + WAIT_GETMNLISTDIFF < Utils.currentTimeMillis())
+                //    return;
+                return;
+            } else if (lastRequestTime + WAIT_GETMNLISTDIFF > Utils.currentTimeMillis() ||
+                    blockChain.getChainHead().getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - timePeriod) {
+                return;
+            }
+
+            //Should we reset our masternode/quorum list
+            if (mnList.size() == 0 || mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
+                mnList = new SimplifiedMasternodeList(params);
+                quorumList = new SimplifiedQuorumList(params);
+            } else {
+                if (mnList.getBlockHash().equals(blockChain.getChainHead().getHeader().getHash()))
+                    return;
+            }
+
+            if (downloadPeer == null) {
+                downloadPeer = context.peerGroup.getDownloadPeer();
+            }
+
+            StoredBlock block = blockChain.getChainHead();
+            log.info("maybe requesting mnlistdiff from {} to {}; \n  From {}\n  To {}", mnList.getHeight(), block.getHeight(), mnList.getBlockHash(), block.getHeader().getHash());
+            if (mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
+                resetMNList(true);
+                return;
+            }
+
+            if (!blockChain.getChainHead().getHeader().getPrevBlockHash().equals(mnList.getBlockHash())) {
+                if (syncOptions != SyncOptions.SYNC_MINIMUM)
+                    fillPendingBlocksList(mnList.getBlockHash(), blockChain.getChainHead().getHeader().getHash(), pendingBlocks.size());
+                requestNextMNListDiff();
+                return;
+            }
+
+            StoredBlock endBlock = blockChain.getChainHead();
+            try {
+                if (syncOptions == SyncOptions.SYNC_MINIMUM)
+                    endBlock = blockChain.getBlockStore().get(endBlock.getHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
+                if (mnListsCache.containsKey(endBlock.getHeader().getHash()))
+                    endBlock = blockChain.getBlockStore().get((int) getListAtChainTip().getHeight() + 1);
+                if (endBlock == null)
+                    endBlock = blockChain.getChainHead();
+            } catch (BlockStoreException x) {
+                // do nothing
+            }
+            lastRequestMessage = new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), endBlock.getHeader().getHash());
+            downloadPeer.sendMessage(lastRequestMessage);
+            lastRequestHash = mnList.getBlockHash();
+            lastRequestTime = Utils.currentTimeMillis();
+            waitingForMNListDiff = true;
+        } finally {
+            lock.unlock();
         }
-        lastRequestMessage = new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), endBlock.getHeader().getHash());
-        downloadPeer.sendMessage(lastRequestMessage);
-        lastRequestHash = mnList.getBlockHash();
-        lastRequestTime = Utils.currentTimeMillis();
-        waitingForMNListDiff = true;
     }
 
     void requestNextMNListDiff() {
@@ -494,6 +517,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(pendingBlocks.size() == 0)
                 return;
 
+            if(downloadPeer == null)
+                chooseRandomDownloadPeer();
+
             if(downloadPeer != null) {
 
                 Iterator<StoredBlock> blockIterator = pendingBlocks.iterator();
@@ -522,7 +548,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     if(requestMessage.equals(lastRequestMessage)) {
                         log.info("request for mnlistdiff is the same as the last request");
                     }
-                    downloadPeer.sendMessage(requestMessage);
+                    try {
+                        downloadPeer.sendMessage(requestMessage);
+                    } catch (CancelledKeyException x) {
+                        //the connection was closed
+                        chooseRandomDownloadPeer();
+                        downloadPeer.sendMessage(requestMessage);
+                    }
                     lastRequestMessage = requestMessage;
                     lastRequestTime = Utils.currentTimeMillis();
                     waitingForMNListDiff = true;
@@ -657,7 +689,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     if (resetBlock == null)
                         resetBlock = blockChain.getChainHead();
                     requestMNListDiff(resetBlock != null ? resetBlock : blockChain.getChainHead());
-                    fillPendingBlocksList(resetBlock.getHeader().getHash(), blockChain.getChainHead().getHeader().getHash(), 1);
                 }
             }
         } catch (BlockStoreException x) {
@@ -716,6 +747,46 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
         } catch (BlockStoreException x) {
             throw new RuntimeException(x);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void setRequiresLoadingFromFile(boolean requiresLoadingFromFile) {
+        this.requiresLoadingFromFile = requiresLoadingFromFile;
+    }
+
+    public void setLoadedFromFile(boolean loadedFromFile) {
+        this.loadedFromFile = loadedFromFile;
+    }
+
+    public boolean isLoadedFromFile() {
+        return loadedFromFile || !requiresLoadingFromFile;
+    }
+
+    @Override
+    public void onFirstSaveComplete() {
+        lock.lock();
+        try {
+            if(blockChain == null)
+                return;
+            StoredBlock block = blockChain.getChainHead();
+            long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
+            if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
+                if (syncOptions == SyncOptions.SYNC_MINIMUM) {
+                    try {
+                        StoredBlock requestBlock = blockChain.getBlockStore().get(block.getHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
+                        if (getListAtChainTip().getHeight() > requestBlock.getHeight())
+                            requestBlock = blockChain.getBlockStore().get((int) getListAtChainTip().getHeight() + 1);
+                        if (requestBlock != null) {
+                            block = requestBlock;
+                        }
+                    } catch (BlockStoreException x) {
+                        //do nothing
+                    }
+                }
+                requestMNListDiff(block);
+            }
         } finally {
             lock.unlock();
         }
