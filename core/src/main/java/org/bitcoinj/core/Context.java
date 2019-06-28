@@ -222,6 +222,11 @@ public class Context {
     // Dash Specific
     //
     private boolean initializedDash = false;
+
+    public boolean isInitializedDash() {
+        return initializedDash;
+    }
+
     public void initDash(boolean liteMode, boolean allowInstantX) {
         initDash(liteMode, allowInstantX, null);
     }
@@ -294,6 +299,8 @@ public class Context {
                 FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(Context.this, directory, false);
 
                 success = smnl.load(masternodeListManager);
+                masternodeListManager.setLoadedFromFile(true);
+                masternodeListManager.onFirstSaveComplete();
 
                 //other functions
                 darkSendPool.startBackgroundProcessing();
