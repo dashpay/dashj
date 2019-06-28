@@ -72,7 +72,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         super(priv, compressPoint(checkNotNull(publicAsPoint)));
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
@@ -95,7 +95,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         super(priv, ECKey.publicPointFromPrivate(priv), true);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
@@ -143,7 +143,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         super(null, compressPoint(checkNotNull(publicAsPoint)));
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -163,7 +163,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         super(priv, ECKey.publicPointFromPrivate(priv), true);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -669,8 +669,8 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
                 // This can happen when deserializing an account key for a watching wallet.  In this case, we assume that
                 // the client wants to conceal the key's position in the hierarchy.  The path is truncated at the
                 // parent's node.
-                path = HDPath.of(childNumber);
-            else path = HDPath.of();
+                path = HDPath.M(childNumber);
+            else path = HDPath.M();
         }
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);
