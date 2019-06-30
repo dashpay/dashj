@@ -18,8 +18,6 @@
 package org.bitcoinj.crypto;
 
 import org.bitcoinj.core.ECKey;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Iterables;
 import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.digests.SHA512Digest;
 import org.bouncycastle.crypto.macs.HMac;
@@ -27,16 +25,13 @@ import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
  * Static utilities used in BIP 32 Hierarchical Deterministic Wallets (HDW).
  */
 public final class HDUtils {
-    private static final Joiner PATH_JOINER = Joiner.on("/");
 
     public static HMac createHmacSha512Digest(byte[] key) {
         SHA512Digest digest = new SHA512Digest();
@@ -86,41 +81,43 @@ public final class HDUtils {
         return bytes;
     }
 
-    /** Append a derivation level to an existing path */
+    /**
+     * Append a derivation level to an existing path
+     *
+     * @deprecated Use {@code HDPath#extend}
+     */
+    @Deprecated
     public static HDPath append(List<ChildNumber> path, ChildNumber childNumber) {
         return new HDPath(path).extend(childNumber);
     }
 
-    /** Concatenate two derivation paths */
+    /**
+     * Concatenate two derivation paths
+     *
+     * @deprecated Use {@code HDPath#extend}
+     */
+    @Deprecated
     public static HDPath concat(List<ChildNumber> path, List<ChildNumber> path2) {
         return new HDPath(path).extend(path2);
     }
 
-    /** Convert to a string path, starting with "M/" */
+    /**
+     * Convert to a string path, starting with "M/"
+     *
+     * @deprecated Use {@code HDPath#toString}
+     */
+    @Deprecated
     public static String formatPath(List<ChildNumber> path) {
-        return PATH_JOINER.join(Iterables.concat(Collections.singleton("M"), path));
+        return HDPath.of(path).toString();
     }
 
     /**
-     * The path is a human-friendly representation of the deterministic path. For example:
+     * Create an HDPath from a path string.
      *
-     * "44H / 0H / 0H / 1 / 1"
-     *
-     * Where a letter "H" means hardened key. Spaces are ignored.
+     * @deprecated Use {@code HDPath.parsePath}
      */
+    @Deprecated
     public static HDPath parsePath(@Nonnull String path) {
-        String[] parsedNodes = path.replace("M", "").split("/");
-        List<ChildNumber> nodes = new ArrayList<>();
-
-        for (String n : parsedNodes) {
-            n = n.replaceAll(" ", "");
-            if (n.length() == 0) continue;
-            boolean isHard = n.endsWith("H");
-            if (isHard) n = n.substring(0, n.length() - 1);
-            int nodeNumber = Integer.parseInt(n);
-            nodes.add(new ChildNumber(nodeNumber, isHard));
-        }
-
-        return new HDPath(nodes);
+        return HDPath.parsePath(path);
     }
 }

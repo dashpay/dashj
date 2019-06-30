@@ -468,8 +468,8 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         DeterministicKey accountParent = hierarchy.get(getAccountPath().subList(0, getAccountPath().size() - 1), false, false);
 
         DeterministicKey account = encryptNonLeaf(aesKey, chain, accountParent, getAccountPath());
-        externalParentKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), EXTERNAL_SUBPATH));
-        internalParentKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), INTERNAL_SUBPATH));
+        externalParentKey = encryptNonLeaf(aesKey, chain, account, getAccountPath().extend(EXTERNAL_SUBPATH));
+        internalParentKey = encryptNonLeaf(aesKey, chain, account, getAccountPath().extend(INTERNAL_SUBPATH));
 
         // Now copy the (pubkey only) leaf keys across to avoid rederiving them. The private key bytes are missing
         // anyway so there's nothing to encrypt.
@@ -562,7 +562,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
-                HDPath path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
+                HDPath path = parentKey.getPath().extend(new ChildNumber(index - numberOfKeys + i, false));
                 DeterministicKey k = hierarchy.get(path, false, false);
                 // Just a last minute sanity check before we hand the key out to the app for usage. This isn't inspired
                 // by any real problem reports from bitcoinj users, but I've heard of cases via the grapevine of
