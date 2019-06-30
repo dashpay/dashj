@@ -64,7 +64,6 @@ public class ExtendedPrivateKey {
   }
 
   public ExtendedPrivateKey PrivateChild(long i) {
-    Preconditions.checkArgument(i < 255, "Cannot go further than 255 levels");
     return new ExtendedPrivateKey(JNI.ExtendedPrivateKey_PrivateChild(swigCPtr, this, i), true);
   }
 

@@ -2513,6 +2513,21 @@ SWIGEXPORT jboolean JNICALL Java_org_dashj_bls_JNI_AggregationInfo_1Empty(JNIEnv
   return jresult;
 }
 
+SWIGEXPORT jboolean JNICALL Java_org_dashj_bls_JNI_AggregationInfo_1Equals(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
+  jboolean jresult = 0 ;
+  bls::AggregationInfo *arg1 = (bls::AggregationInfo *) 0 ;
+  bls::AggregationInfo *arg2 = (bls::AggregationInfo *) 0 ;
+  bool result;
+
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(bls::AggregationInfo **)&jarg1;
+  arg2 = *(bls::AggregationInfo **)&jarg2;
+  result = (bool)((*(bls::AggregationInfo const *)arg1)==(*(bls::AggregationInfo const*)arg2));
+  jresult = (jboolean)result;
+  return jresult;
+}
 
 SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_new_1AggregationInfo_1_1SWIG_11(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;

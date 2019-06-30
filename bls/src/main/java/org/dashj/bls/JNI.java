@@ -129,6 +129,7 @@ public class JNI {
   public final static native long AggregationInfo_GetPubKeys(long jarg1, AggregationInfo jarg1_);
   public final static native long AggregationInfo_GetMessageHashes(long jarg1, AggregationInfo jarg1_);
   public final static native boolean AggregationInfo_Empty(long jarg1, AggregationInfo jarg1_);
+  public final static native boolean AggregationInfo_Equals(long jarg1, AggregationInfo jarg1_, long jarg2, AggregationInfo jarg2_);
   public final static native long new_AggregationInfo__SWIG_1();
   public final static native void delete_AggregationInfo(long jarg1);
   public final static native long new_PublicKeyVec__SWIG_0();

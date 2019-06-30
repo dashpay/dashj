@@ -21,6 +21,8 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Arrays;
+
 public class AggregationInfo {
   private transient long cPointer;
   protected transient boolean owner;
@@ -98,6 +100,18 @@ public class AggregationInfo {
 
   public AggregationInfo() {
     this(JNI.new_AggregationInfo__SWIG_1(), true);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof AggregationInfo))
+      return false;
+
+    AggregationInfo aggInfo = (AggregationInfo)obj;
+    MessageHashVector otherMessageHashes = aggInfo.GetMessageHashes();
+    PublicKeyVector otherPublicKeys = aggInfo.GetPubKeys();
+
+    return JNI.AggregationInfo_Equals(cPointer, this, AggregationInfo.getCPtr(aggInfo), aggInfo);
   }
 
 }

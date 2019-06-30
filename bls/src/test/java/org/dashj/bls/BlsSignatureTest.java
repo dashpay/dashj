@@ -1380,7 +1380,7 @@ public class BlsSignatureTest extends BaseTest {
             eskLong.GetChainCode().Serialize(chainCode);
         }
 
-
+        @Test
         public void shouldMatchDeriviationThroughPrivateAndPublicKeys() {
             byte [] seed = new byte []{1, 50, 6, (byte)244, 24, (byte)199, 1, 25};
             ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
@@ -1390,7 +1390,7 @@ public class BlsSignatureTest extends BaseTest {
             PublicKey pk1 = esk.PrivateChild(238757).GetPublicKey();
             PublicKey pk2 = epk.PublicChild(238757).GetPublicKey();
 
-            assertTrue(pk1 == pk2);
+            assertTrue(pk1.equals(pk2));
 
             PrivateKey sk3 = esk.PrivateChild(0)
                     .PrivateChild(3)
@@ -1403,7 +1403,7 @@ public class BlsSignatureTest extends BaseTest {
                     .PublicChild(8)
                     .PublicChild(1)
                     .GetPublicKey();
-            assertTrue(sk3.GetPublicKey() == pk4);
+            assertTrue(sk3.GetPublicKey().equals(pk4));
 
             Signature sig = sk3.Sign(seed, sizeof(seed));
 
@@ -1454,9 +1454,9 @@ public class BlsSignatureTest extends BaseTest {
                     .Sign(seed, sizeof(seed));
             System.out.println(sig1);
         }
-/*
-        public void("Should serialize extended keys") {
-            byte [] seed[] = {1, 50, 6, 244, 25, 199, 1, 25};
+
+        public void shouldSerializeExtendedKeys() {
+            byte [] seed = new byte[]{1, 50, 6, (byte)244, 25, (byte)199, 1, 25};
             ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
                     seed, sizeof(seed));
             ExtendedPublicKey epk = esk.GetExtendedPublicKey();
@@ -1475,368 +1475,313 @@ public class BlsSignatureTest extends BaseTest {
                     .PublicChild(3)
                     .PublicChild(8)
                     .PublicChild(1);
-            byte buffer1[ExtendedPrivateKey.EXTENDED_PRIVATE_KEY_SIZE];
-            byte buffer2[ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE];
-            byte buffer3[ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE];
+            byte [] buffer1 = new byte[(int)ExtendedPrivateKey.EXTENDED_PRIVATE_KEY_SIZE];
+            byte [] buffer2 = new byte[(int)ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE];
+            byte [] buffer3 = new byte[(int)ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE];
 
             sk3.Serialize(buffer1);
             sk3.GetExtendedPublicKey().Serialize(buffer2);
             pk4.Serialize(buffer3);
-            assertTrue(std.memcmp(buffer2, buffer3,
-                    ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE) == 0);
+            assertTrue(Arrays.equals(buffer2, buffer3));
         }
+    
+
+    //TEST_CASE("AggregationInfo") {
+    @Test
+    public void shouldCreateObject() {
+        byte [] message1 = new byte[]{1, 65, (byte)254, 88, 90, 45, 22};
+        byte [] message2 = new byte[]{1, 65, (byte)254, 88, 90, 45, 22, 12};
+        byte [] message3 = new byte[]{2, 65, (byte)254, 88, 90, 45, 22, 12};
+        byte [] message4 = new byte[]{3, 65, (byte)254, 88, 90, 45, 22, 12};
+        byte [] message5 = new byte[]{4, 65, (byte)254, 88, 90, 45, 22, 12};
+        byte [] message6 = new byte[]{5, 65, (byte)254, 88, 90, 45, 22, 12};
+        byte [] messageHash1 = getSHA256Hash(message1);
+        byte [] messageHash2 = getSHA256Hash(message2);
+        byte [] messageHash3 = getSHA256Hash(message3);
+        byte [] messageHash4 = getSHA256Hash(message4);
+        byte [] messageHash5 = getSHA256Hash(message5);
+        byte [] messageHash6 = getSHA256Hash(message6);
+
+        byte [] seed = getRandomSeed(32);
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        seed = getRandomSeed(32);
+        PrivateKey sk2 = PrivateKey.FromSeed(seed, 32);
+        seed = getRandomSeed(32);
+        PrivateKey sk3 = PrivateKey.FromSeed(seed, 32);
+        seed = getRandomSeed(32);
+        PrivateKey sk4 = PrivateKey.FromSeed(seed, 32);
+        seed = getRandomSeed(32);
+        PrivateKey sk5 = PrivateKey.FromSeed(seed, 32);
+        seed = getRandomSeed(32);
+        PrivateKey sk6 = PrivateKey.FromSeed(seed, 32);
+
+        PublicKey pk1 = sk1.GetPublicKey();
+        PublicKey pk2 = sk2.GetPublicKey();
+        PublicKey pk3 = sk3.GetPublicKey();
+        PublicKey pk4 = sk4.GetPublicKey();
+        PublicKey pk5 = sk5.GetPublicKey();
+        PublicKey pk6 = sk6.GetPublicKey();
+
+        AggregationInfo a1 = AggregationInfo.FromMsgHash(pk1, messageHash1);
+        AggregationInfo a2 = AggregationInfo.FromMsgHash(pk2, messageHash2);
+        AggregationInfoVector infosA = new AggregationInfoVector();
+        infosA.push_back(a1);
+        infosA.push_back(a2);
+        AggregationInfoVector infosAcopy = new AggregationInfoVector();
+        infosAcopy.push_back(a2);
+        infosAcopy.push_back(a1);
+        AggregationInfo a3 = AggregationInfo.FromMsgHash(pk3, messageHash1);
+        AggregationInfo a4 = AggregationInfo.FromMsgHash(pk4, messageHash1);
+        AggregationInfoVector infosB = new AggregationInfoVector();
+        infosB.push_back(a3);
+        infosB.push_back(a4);
+        AggregationInfoVector infosBcopy = new AggregationInfoVector();
+        infosBcopy.push_back(a4);
+        infosBcopy.push_back(a3);
+        AggregationInfoVector infosC = new AggregationInfoVector();
+        infosC.push_back(a1);
+        infosC.push_back(a2);
+        infosC.push_back(a3);
+        infosC.push_back(a4);
+        AggregationInfo a5 = AggregationInfo.MergeInfos(infosA);
+        AggregationInfo a5b = AggregationInfo.MergeInfos(infosAcopy);
+        AggregationInfo a6 = AggregationInfo.MergeInfos(infosB);
+        AggregationInfo a6b = AggregationInfo.MergeInfos(infosBcopy);
+        AggregationInfoVector infosD = new AggregationInfoVector();
+        infosD.push_back(a5);
+        infosD.push_back(a6);
+
+        AggregationInfo a7 = AggregationInfo.MergeInfos(infosC);
+        AggregationInfo a8 = AggregationInfo.MergeInfos(infosD);
+
+        assertTrue(a5.equals(a5b));
+        assertTrue(!a5.equals(a6));
+        assertTrue(a6.equals(a6b));
+
+        AggregationInfoVector infosE = new AggregationInfoVector();
+        infosE.push_back(a1);
+        infosE.push_back(a3);
+        infosE.push_back(a4);
+        AggregationInfo a9 = AggregationInfo.MergeInfos(infosE);
+        AggregationInfoVector infosF = new AggregationInfoVector();
+        infosF.push_back(a2);
+        infosF.push_back(a9);
+        AggregationInfo a10 = AggregationInfo.MergeInfos(infosF);
+
+        assertTrue(a10.equals(a7));
+
+        AggregationInfo a11 = AggregationInfo.FromMsgHash(pk1, messageHash1);
+        AggregationInfo a12 = AggregationInfo.FromMsgHash(pk2, messageHash2);
+        AggregationInfo a13 = AggregationInfo.FromMsgHash(pk3, messageHash3);
+        AggregationInfo a14 = AggregationInfo.FromMsgHash(pk4, messageHash4);
+        AggregationInfo a15 = AggregationInfo.FromMsgHash(pk5, messageHash5);
+        AggregationInfo a16 = AggregationInfo.FromMsgHash(pk6, messageHash6);
+        AggregationInfo a17 = AggregationInfo.FromMsgHash(pk6, messageHash5);
+        AggregationInfo a18 = AggregationInfo.FromMsgHash(pk5, messageHash6);
+
+        // Tree L
+        AggregationInfoVector L1 = new AggregationInfoVector();
+        L1.push_back(a15);
+        L1.push_back(a17);
+        AggregationInfoVector L2 = new AggregationInfoVector();
+        L2.push_back(a11);
+        L2.push_back(a13);
+        AggregationInfoVector L3 = new AggregationInfoVector();
+        L3.push_back(a18);
+        L3.push_back(a14);
+
+        AggregationInfo a19 = AggregationInfo.MergeInfos(L1);
+        AggregationInfo a20 = AggregationInfo.MergeInfos(L2);
+        AggregationInfo a21 = AggregationInfo.MergeInfos(L3);
+
+        AggregationInfoVector L4 = new AggregationInfoVector();
+        L4.push_back(a21);
+        L4.push_back(a16);
+        AggregationInfoVector L5 = new AggregationInfoVector();
+        L5.push_back(a19);
+        L5.push_back(a20);
+        AggregationInfo a22 = AggregationInfo.MergeInfos(L4);
+        AggregationInfo a23 = AggregationInfo.MergeInfos(L5);
+
+        AggregationInfoVector L6 = new AggregationInfoVector();
+        L6.push_back(a22);
+        L6.push_back(a12);
+        AggregationInfo a24 = AggregationInfo.MergeInfos(L6);
+        AggregationInfoVector L7 = new AggregationInfoVector();
+        L7.push_back(a23);
+        L7.push_back(a24);
+        AggregationInfo LFinal = AggregationInfo.MergeInfos(L7);
+
+        // Tree R
+        AggregationInfoVector R1 = new AggregationInfoVector();
+        R1.push_back(a17);
+        R1.push_back(a12);
+        R1.push_back(a11);
+        R1.push_back(a15);
+        AggregationInfoVector R2 = new AggregationInfoVector();
+        R2.push_back(a14);
+        R2.push_back(a18);
+
+
+        AggregationInfo a25 = AggregationInfo.MergeInfos(R1);
+        AggregationInfo a26 = AggregationInfo.MergeInfos(R2);
+
+        AggregationInfoVector R3 = new AggregationInfoVector();
+        R3.push_back(a26);
+        R3.push_back(a16);
+
+        AggregationInfo a27 = AggregationInfo.MergeInfos(R3);
+
+        AggregationInfoVector R4 = new AggregationInfoVector();
+        R4.push_back(a27);
+        R4.push_back(a13);
+
+        AggregationInfo a28 = AggregationInfo.MergeInfos(R4);
+        AggregationInfoVector R5 = new AggregationInfoVector();
+        R5.push_back(a25);
+        R5.push_back(a28);
+
+        AggregationInfo RFinal = AggregationInfo.MergeInfos(R5);
+
+        assertTrue(LFinal.equals(RFinal));
     }
 
-    TEST_CASE("AggregationInfo") {
-        public void("Should create object") {
-            byte [] message1[7] = {1, 65, (byte)254, 88, 90, 45, 22};
-            byte [] message2[8] = {1, 65, (byte)254, 88, 90, 45, 22, 12};
-            byte [] message3[8] = {2, 65, (byte)254, 88, 90, 45, 22, 12};
-            byte [] message4[8] = {3, 65, (byte)254, 88, 90, 45, 22, 12};
-            byte [] message5[8] = {4, 65, (byte)254, 88, 90, 45, 22, 12};
-            byte [] message6[8] = {5, 65, (byte)254, 88, 90, 45, 22, 12};
-            byte [] messageHash1[32];
-            byte [] messageHash2[32];
-            byte [] messageHash3[32];
-            byte [] messageHash4[32];
-            byte [] messageHash5[32];
-            byte [] messageHash6[32];
-            Util.Hash256(messageHash1, message1, 7);
-            Util.Hash256(messageHash2, message2, 8);
-            Util.Hash256(messageHash3, message3, 8);
-            Util.Hash256(messageHash4, message4, 8);
-            Util.Hash256(messageHash5, message5, 8);
-            Util.Hash256(messageHash6, message6, 8);
+    @Test
+    public void shouldAggregateWithMultipleLevels() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] message2 = {(byte)192, 29, 2, 0, 0, 45, 23, (byte)192};
+        byte [] message3 = {52, 29, 2, 0, 0, 45, 102};
+        byte [] message4 = {99, 29, 2, 0, 0, 45, (byte)222};
 
-            byte [] seed[32];
-            getRandomSeed(seed);
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            getRandomSeed(seed);
-            PrivateKey sk2 = PrivateKey.FromSeed(seed, 32);
-            getRandomSeed(seed);
-            PrivateKey sk3 = PrivateKey.FromSeed(seed, 32);
-            getRandomSeed(seed);
-            PrivateKey sk4 = PrivateKey.FromSeed(seed, 32);
-            getRandomSeed(seed);
-            PrivateKey sk5 = PrivateKey.FromSeed(seed, 32);
-            getRandomSeed(seed);
-            PrivateKey sk6 = PrivateKey.FromSeed(seed, 32);
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
 
-            PublicKey pk1 = sk1.GetPublicKey();
-            PublicKey pk2 = sk2.GetPublicKey();
-            PublicKey pk3 = sk3.GetPublicKey();
-            PublicKey pk4 = sk4.GetPublicKey();
-            PublicKey pk5 = sk5.GetPublicKey();
-            PublicKey pk6 = sk6.GetPublicKey();
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
 
-            AggregationInfo a1 = AggregationInfo.FromMsgHash(pk1, messageHash1);
-            AggregationInfo a2 = AggregationInfo.FromMsgHash(pk2, messageHash2);
-            std.vector<AggregationInfo> infosA = {a1, a2};
-            std.vector<AggregationInfo> infosAcopy = {a2, a1};
+        PublicKey pk1 = sk1.GetPublicKey();
+        PublicKey pk2 = sk2.GetPublicKey();
 
-            AggregationInfo a3 = AggregationInfo.FromMsgHash(pk3, messageHash1);
-            AggregationInfo a4 = AggregationInfo.FromMsgHash(pk4, messageHash1);
-            std.vector<AggregationInfo> infosB = {a3, a4};
-            std.vector<AggregationInfo> infosBcopy = {a4, a3};
-            std.vector<AggregationInfo> infosC = {a1, a2, a3, a4};
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk2.Sign(message2, sizeof(message2));
+        Signature sig3 = sk2.Sign(message1, sizeof(message1));
+        Signature sig4 = sk1.Sign(message3, sizeof(message3));
+        Signature sig5 = sk1.Sign(message4, sizeof(message4));
+        Signature sig6 = sk1.Sign(message1, sizeof(message1));
 
-            AggregationInfo a5 = AggregationInfo.MergeInfos(infosA);
-            AggregationInfo a5b = AggregationInfo.MergeInfos(infosAcopy);
-            AggregationInfo a6 = AggregationInfo.MergeInfos(infosB);
-            AggregationInfo a6b = AggregationInfo.MergeInfos(infosBcopy);
-            std.vector<AggregationInfo> infosD = {a5, a6};
-
-            AggregationInfo a7 = AggregationInfo.MergeInfos(infosC);
-            AggregationInfo a8 = AggregationInfo.MergeInfos(infosD);
-
-            assertTrue(a5 == a5b);
-            assertTrue(a5 != a6);
-            assertTrue(a6 == a6b);
-
-            std.vector<AggregationInfo> infosE = {a1, a3, a4};
-            AggregationInfo a9 = AggregationInfo.MergeInfos(infosE);
-            std.vector<AggregationInfo> infosF = {a2, a9};
-            AggregationInfo a10 = AggregationInfo.MergeInfos(infosF);
-
-            assertTrue(a10 == a7);
-
-            AggregationInfo a11 = AggregationInfo.FromMsgHash(pk1, messageHash1);
-            AggregationInfo a12 = AggregationInfo.FromMsgHash(pk2, messageHash2);
-            AggregationInfo a13 = AggregationInfo.FromMsgHash(pk3, messageHash3);
-            AggregationInfo a14 = AggregationInfo.FromMsgHash(pk4, messageHash4);
-            AggregationInfo a15 = AggregationInfo.FromMsgHash(pk5, messageHash5);
-            AggregationInfo a16 = AggregationInfo.FromMsgHash(pk6, messageHash6);
-            AggregationInfo a17 = AggregationInfo.FromMsgHash(pk6, messageHash5);
-            AggregationInfo a18 = AggregationInfo.FromMsgHash(pk5, messageHash6);
-
-            // Tree L
-            std.vector<AggregationInfo> L1 = {a15, a17};
-            std.vector<AggregationInfo> L2 = {a11, a13};
-            std.vector<AggregationInfo> L3 = {a18, a14};
-
-            AggregationInfo a19 = AggregationInfo.MergeInfos(L1);
-            AggregationInfo a20 = AggregationInfo.MergeInfos(L2);
-            AggregationInfo a21 = AggregationInfo.MergeInfos(L3);
-
-            std.vector<AggregationInfo> L4 = {a21, a16};
-            std.vector<AggregationInfo> L5 = {a19, a20};
-            AggregationInfo a22 = AggregationInfo.MergeInfos(L4);
-            AggregationInfo a23 = AggregationInfo.MergeInfos(L5);
-
-            std.vector<AggregationInfo> L6 = {a22, a12};
-            AggregationInfo a24 = AggregationInfo.MergeInfos(L6);
-            std.vector<AggregationInfo> L7 = {a23, a24};
-            AggregationInfo LFinal = AggregationInfo.MergeInfos(L7);
-
-            // Tree R
-            std.vector<AggregationInfo> R1 = {a17, a12, a11, a15};
-            std.vector<AggregationInfo> R2 = {a14, a18};
-
-            AggregationInfo a25 = AggregationInfo.MergeInfos(R1);
-            AggregationInfo a26 = AggregationInfo.MergeInfos(R2);
-
-            std.vector<AggregationInfo> R3 = {a26, a16};
-
-            AggregationInfo a27 = AggregationInfo.MergeInfos(R3);
-
-            std.vector<AggregationInfo> R4 = {a27, a13};
-            AggregationInfo a28 = AggregationInfo.MergeInfos(R4);
-            std.vector<AggregationInfo> R5 = {a25, a28};
-
-            AggregationInfo RFinal = AggregationInfo.MergeInfos(R5);
-
-            assertTrue(LFinal == RFinal);
-        }
-
-        public void("Should aggregate with multiple levels.") {
-            byte [] message1[7] = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] message2[8] = {192, 29, 2, 0, 0, 45, 23, 192};
-            byte [] message3[7] = {52, 29, 2, 0, 0, 45, 102};
-            byte [] message4[7] = {99, 29, 2, 0, 0, 45, 222};
-
-            byte [] seed[32];
-            getRandomSeed(seed);
-            byte [] seed2[32];
-            getRandomSeed(seed2);
-
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
-
-            PublicKey pk1 = sk1.GetPublicKey();
-            PublicKey pk2 = sk2.GetPublicKey();
-
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk2.Sign(message2, sizeof(message2));
-            Signature sig3 = sk2.Sign(message1, sizeof(message1));
-            Signature sig4 = sk1.Sign(message3, sizeof(message3));
-            Signature sig5 = sk1.Sign(message4, sizeof(message4));
-            Signature sig6 = sk1.Sign(message1, sizeof(message1));
-
-            SignatureVector final sigsL = {sig1, sig2};
-            PublicKeyVector final pksL = {pk1, pk2};
+        final SignatureVector sigsL = new SignatureVector();
+        sigsL.push_back(sig1);
+        sigsL.push_back(sig2);
+        final PublicKeyVector pksL = new PublicKeyVector();
+        pksL.push_back(pk1);
+        pksL.push_back(pk2);
         final Signature aggSigL = Signature.AggregateSigs(sigsL);
 
-            SignatureVector final sigsR = {sig3, sig4, sig6};
+        final SignatureVector sigsR = new SignatureVector();
+        sigsR.push_back(sig3);
+        sigsR.push_back(sig4);
+        sigsR.push_back(sig6);
         final Signature aggSigR = Signature.AggregateSigs(sigsR);
 
-            PublicKeyVector pk1Vec = {pk1};
+        PublicKeyVector pk1Vec = new PublicKeyVector();
+        pk1Vec.push_back(pk1);
 
-            SignatureVector sigs = {aggSigL, aggSigR, sig5};
+        SignatureVector sigs = new SignatureVector();
+        sigs.push_back(aggSigL);
+        sigs.push_back(aggSigR);
+        sigs.push_back(sig5);
 
         final Signature aggSig = Signature.AggregateSigs(sigs);
+        assertTrue(aggSig.Verify());
+    }
 
-            assertTrue(aggSig.Verify());
+    @Test
+    public void shouldAggregateWithMultipleLevelsDegenerate() {
+        byte [] message1 = new byte[]{100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] seed = getRandomSeed(32);
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
+        Signature aggSig = sk1.Sign(message1, sizeof(message1));
+
+        for (int i = 0; i < 10; i++) {
+            seed = getRandomSeed(32);
+            PrivateKey sk = PrivateKey.FromSeed(seed, 32);
+            PublicKey pk = sk.GetPublicKey();
+            Signature sig = sk.Sign(message1, sizeof(message1));
+            SignatureVector sigs = new SignatureVector();
+            sigs.push_back(aggSig);
+            sigs.push_back(sig);
+            aggSig = Signature.AggregateSigs(sigs);
         }
-
-        public void("Should aggregate with multiple levels, degenerate") {
-            byte [] message1[7] = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] seed[32];
-            getRandomSeed(seed);
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
-            Signature aggSig = sk1.Sign(message1, sizeof(message1));
-
-            for (size_t i = 0; i < 10; i++) {
-                getRandomSeed(seed);
-                PrivateKey sk = PrivateKey.FromSeed(seed, 32);
-                PublicKey pk = sk.GetPublicKey();
-                Signature sig = sk.Sign(message1, sizeof(message1));
-                SignatureVector sigs = {aggSig, sig};
-                aggSig = Signature.AggregateSigs(sigs);
-            }
-            assertTrue(aggSig.Verify());
-            byte sigSerialized[Signature.SIGNATURE_SIZE];
-            aggSig.Serialize(sigSerialized);
+        assertTrue(aggSig.Verify());
+        byte [] sigSerialized = new byte[(int)Signature.SIGNATURE_SIZE];
+        aggSig.Serialize(sigSerialized);
 
         final Signature aggSig2 = Signature.FromBytes(sigSerialized);
-            assertTrue(aggSig2.Verify() == false);
-        }
+        assertTrue(aggSig2.Verify() == false);
+    }
 
-        public void("Should aggregate with multiple levels, different messages") {
-            byte [] message1[7] = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] message2[7] = {192, 29, 2, 0, 0, 45, 23};
-            byte [] message3[7] = {52, 29, 2, 0, 0, 45, 102};
-            byte [] message4[7] = {99, 29, 2, 0, 0, 45, 222};
+    @Test
+    public void shouldAggregateWithMultipleLevelsDifferentMessage() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] message2 = {(byte)192, 29, 2, 0, 0, 45, 23};
+        byte [] message3 = {52, 29, 2, 0, 0, 45, 102};
+        byte [] message4 = {99, 29, 2, 0, 0, 45, (byte)222};
 
-            byte [] seed[32];
-            getRandomSeed(seed);
-            byte [] seed2[32];
-            getRandomSeed(seed2);
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
 
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
 
-            PublicKey pk1 = sk1.GetPublicKey();
-            PublicKey pk2 = sk2.GetPublicKey();
+        PublicKey pk1 = sk1.GetPublicKey();
+        PublicKey pk2 = sk2.GetPublicKey();
 
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk2.Sign(message2, sizeof(message2));
-            Signature sig3 = sk2.Sign(message3, sizeof(message4));
-            Signature sig4 = sk1.Sign(message4, sizeof(message4));
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk2.Sign(message2, sizeof(message2));
+        Signature sig3 = sk2.Sign(message3, sizeof(message4));
+        Signature sig4 = sk1.Sign(message4, sizeof(message4));
 
-            SignatureVector final sigsL = {sig1, sig2};
-            PublicKeyVector final pksL = {pk1, pk2};
-            std.vector<byte*> final messagesL = {message1, message2};
-            std.vector<size_t> final messageLensL = {sizeof(message1),
-                    sizeof(message2)};
+        SignatureVector sigsL = new SignatureVector();
+        sigsL.push_back(sig1);
+        sigsL.push_back(sig2);
+        PublicKeyVector pksL = new PublicKeyVector();
+        pksL.push_back(pk1);
+        pksL.push_back(pk2);
+        final byte [][] messagesL = {message1, message2};
+
         final Signature aggSigL = Signature.AggregateSigs(sigsL);
 
-            SignatureVector final sigsR = {sig3, sig4};
-            PublicKeyVector final pksR = {pk2, pk1};
-            std.vector<byte*> final messagesR = {message3, message4};
-            std.vector<size_t> final messageLensR = {sizeof(message3),
-                    sizeof(message4)};
+        SignatureVector  sigsR = new SignatureVector();
+        sigsR.push_back(sig3);
+        sigsR.push_back(sig4);
+        final PublicKeyVector pksR = new PublicKeyVector();
+        pksR.push_back(pk2);
+        pksR.push_back(pk1);
+        final byte [][] messagesR = {message3, message4};
+
         final Signature aggSigR = Signature.AggregateSigs(sigsR);
 
-            SignatureVector sigs = {aggSigL, aggSigR};
-            std.vector<PublicKeyVector > pks = {pksL, pksR};
-            std.vector<std.vector<byte*> > messages = {messagesL, messagesR};
-            std.vector<std.vector<size_t> > messageLens = {messageLensL, messageLensR};
+        SignatureVector sigs = new SignatureVector();
+        sigs.push_back(aggSigL);
+        sigs.push_back(aggSigR);
+        //PublicKeyVector pks = new PublicKeyVector();
+        //pks.push_back(pksL);
+        //pks.push_back(pksR);
+        //final byte [][][] messages = {messagesL, messagesR};
 
         final Signature aggSig = Signature.AggregateSigs(sigs);
 
-            PublicKeyVector allPks = {pk1, pk2, pk2, pk1};
-            std.vector<byte*> allMessages = {message1, message2,
-                    message3, message4};
-            std.vector<size_t> allMessageLens = {sizeof(message1), sizeof(message2),
-                    sizeof(message3), sizeof(message4)};
+        PublicKeyVector allPks = new PublicKeyVector();
+        allPks.push_back(pk1);
+        allPks.push_back(pk2);
+        allPks.push_back(pk2);
+        allPks.push_back(pk1);
+        final byte [][] allMessages = {message1, message2,
+                message3, message4};
 
-            assertTrue(aggSig.Verify());
-        }
-        public void("README") {
-            // Example seed, used to generate private key. Always use
-            // a secure RNG with sufficient entropy to generate a seed.
-            byte [] seed[] = {0, 50, 6, 244, 24, 199, 1, 25, 52, 88, 192,
-                    19, 18, 12, 89, 6, 220, 18, 102, 58, 209,
-                    82, 12, 62, 89, 110, 182, 9, 44, 20, (byte)254, 22};
+        assertTrue(aggSig.Verify());
+    }
 
-            PrivateKey sk = PrivateKey.FromSeed(seed, sizeof(seed));
-            PublicKey pk = sk.GetPublicKey();
-
-            byte msg[] = {100, 2, (byte)254, 88, 90, 45, 23};
-
-            Signature sig = sk.Sign(msg, sizeof(msg));
-
-            byte skBytes[PrivateKey.PRIVATE_KEY_SIZE];  // 32 byte array
-            byte pkBytes[PublicKey.PUBLIC_KEY_SIZE];    // 48 byte array
-            byte sigBytes[Signature.SIGNATURE_SIZE];    // 96 byte array
-
-            sk.Serialize(skBytes);   // 32 bytes
-            pk.Serialize(pkBytes);   // 48 bytes
-            sig.Serialize(sigBytes); // 96 bytes
-            // Takes array of 32 bytes
-            sk = PrivateKey.FromBytes(skBytes);
-
-            // Takes array of 48 bytes
-            pk = PublicKey.FromBytes(pkBytes);
-
-            // Takes array of 96 bytes
-            sig = Signature.FromBytes(sigBytes);
-            // Add information required for verification, to sig object
-            sig.SetAggregationInfo(AggregationInfo.FromMsg(pk, msg, sizeof(msg)));
-
-            bool ok = sig.Verify();
-            // Generate some more private keys
-            seed[0] = 1;
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, sizeof(seed));
-            seed[0] = 2;
-            PrivateKey sk2 = PrivateKey.FromSeed(seed, sizeof(seed));
-
-            // Generate first sig
-            PublicKey pk1 = sk1.GetPublicKey();
-            Signature sig1 = sk1.Sign(msg, sizeof(msg));
-
-            // Generate second sig
-            PublicKey pk2 = sk2.GetPublicKey();
-            Signature sig2 = sk2.Sign(msg, sizeof(msg));
-
-            // Aggregate signatures together
-            SignatureVector sigs = {sig1, sig2};
-            Signature aggSig = Signature.AggregateSigs(sigs);
-
-            // For same message, public keys can be aggregated into one.
-            // The signature can be verified the same as a single signature,
-            // using this public key.
-            PublicKeyVector pubKeys = {pk1, pk2};
-            PublicKey aggPubKey = PublicKey.Aggregate(pubKeys);
-            // Generate one more key
-            seed[0] = 3;
-            PrivateKey sk3 = PrivateKey.FromSeed(seed, sizeof(seed));
-            PublicKey pk3 = sk3.GetPublicKey();
-            byte msg2[] = {100, 2, (byte)254, 88, 90, 45, 23};
-
-            // Generate the signatures, assuming we have 3 private keys
-            sig1 = sk1.Sign(msg, sizeof(msg));
-            sig2 = sk2.Sign(msg, sizeof(msg));
-            Signature sig3 = sk3.Sign(msg2, sizeof(msg2));
-
-            // They can be noninteractively combined by anyone
-            // Aggregation below can also be done by the verifier, to
-            // make batch verification more efficient
-            SignatureVector sigsL = {sig1, sig2};
-            Signature aggSigL = Signature.AggregateSigs(sigsL);
-
-            // Arbitrary trees of aggregates
-            SignatureVector sigsFinal = {aggSigL, sig3};
-            Signature aggSigFinal = Signature.AggregateSigs(sigsFinal);
-
-            // Serialize the final signature
-            aggSigFinal.Serialize(sigBytes);
-            // Deserialize aggregate signature
-            aggSigFinal = Signature.FromBytes(sigBytes);
-
-            // Create aggregation information (or deserialize it)
-            AggregationInfo a1 = AggregationInfo.FromMsg(pk1, msg, sizeof(msg));
-            AggregationInfo a2 = AggregationInfo.FromMsg(pk2, msg, sizeof(msg));
-            AggregationInfo a3 = AggregationInfo.FromMsg(pk3, msg2, sizeof(msg2));
-            std.vector<AggregationInfo> infos = {a1, a2};
-            AggregationInfo a1a2 = AggregationInfo.MergeInfos(infos);
-            std.vector<AggregationInfo> infos2 = {a1a2, a3};
-            AggregationInfo aFinal = AggregationInfo.MergeInfos(infos2);
-
-            // Verify final signature using the aggregation info
-            aggSigFinal.SetAggregationInfo(aFinal);
-            ok = aggSigFinal.Verify();
-
-            // If you previously verified a signature, you can also divide
-            // the aggregate signature by the signature you already verified.
-            ok = aggSigL.Verify();
-            SignatureVector cache = {aggSigL};
-            aggSigFinal = aggSigFinal.DivideBy(cache);
-
-            // Final verification is now more efficient
-            ok = aggSigFinal.Verify();
-
-            PrivateKeyVector privateKeysList = {sk1, sk2};
-            PublicKeyVector pubKeysList = {pk1, pk2};
-
-            // Create an aggregate private key, that can generate
-            // aggregate signatures
-        final PrivateKey aggSk = PrivateKey.Aggregate(
-                    privateKeysList, pubKeysList);
-
-            Signature aggSig3 = aggSk.Sign(msg, sizeof(msg));
-        }
-    }*/
 
 }
