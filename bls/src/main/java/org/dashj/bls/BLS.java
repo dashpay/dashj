@@ -25,6 +25,17 @@ public class BLS {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
+  static {
+    boolean isLibraryLoaded;
+    try
+    {
+      System.loadLibrary(JNI.LIBRARY_NAME);
+      isLibraryLoaded = true;
+    } catch(UnsatisfiedLinkError x) {
+      throw new RuntimeException(x.getMessage());
+    }
+  }
+
   protected BLS(long cPtr, boolean cMemoryOwn) {
     Preconditions.checkArgument(cPtr != 0);
     swigCMemOwn = cMemoryOwn;
@@ -100,4 +111,19 @@ public class BLS {
   }
 
   public final static long MESSAGE_HASH_LEN = JNI.BLS_MESSAGE_HASH_LEN_get();
+
+  static long GetContext() {
+    return JNI.BLS_GetContext();
+  }
+  static long GetContextError() {
+    return JNI.BLS_GetContextError();
+  }
+
+  public static long STS_OK = 0;
+  public static long STS_ERR = 1;
+  static void SetContextError(long error) {
+    JNI.BLS_SetContextError(error);
+  }
+
+
 }

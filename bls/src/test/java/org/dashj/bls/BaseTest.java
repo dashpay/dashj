@@ -7,10 +7,11 @@ import static org.junit.Assert.fail;
  */
 public class BaseTest {
     static {
+        BLS.Init();/*
         try {
             System.loadLibrary(JNI.LIBRARY_NAME);
         } catch (UnsatisfiedLinkError x) {
             fail(x.getMessage());
-        }
+        }*/
     }
 }

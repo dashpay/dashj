@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 
+import static org.dashj.bls.BLS.STS_OK;
 import static org.junit.Assert.*;
 
 public class BlsSignatureTest extends BaseTest {
@@ -193,14 +194,12 @@ public class BlsSignatureTest extends BaseTest {
 
         pkChild.Serialize(buffer1);
         skChild.Serialize(buffer2);
-        //skChild = ExtendedPrivateKey.FromSeed(new byte [0], 0);
-        //skChild.GetPrivateKey().Sign(new byte [0], -);
     }
 
     @Test
     public void voidNullTest() {
         try {
-            InsecureSignature insecureSignature = InsecureSignature.FromBytes(null);
+            InsecureSignature.FromBytes(null);
             fail();
         } catch(NullPointerException x) {
 
@@ -456,6 +455,7 @@ public class BlsSignatureTest extends BaseTest {
             quotient.DivideBy(signatures_to_divide);
             fail();
         } catch (Exception x) {
+            assertTrue(x.getMessage().contains("Signature is not a subset"));
         }
         // Should not throw
         signatures_to_divide.clear();
@@ -545,6 +545,7 @@ public class BlsSignatureTest extends BaseTest {
             PrivateKey.FromBytes(skData);
             fail();
         } catch (Exception x) {
+            assertTrue(x.getMessage().contains("Key data too large, must be smaller than group order"));
         }
     }
 
@@ -557,81 +558,93 @@ public class BlsSignatureTest extends BaseTest {
     }
 
     @Test
-        public void shouldThrowOnBadPublicKey() {
-            byte [] buf = new byte[(int)PublicKey.PUBLIC_KEY_SIZE];
-            HashSet<Integer> invalid = new HashSet<>();
-            invalid.add(1);
-            invalid.add(2);
-            invalid.add(3);
-            invalid.add(4);
+    public void shouldThrowOnBadPublicKey() {
+        byte [] buf = new byte[(int)PublicKey.PUBLIC_KEY_SIZE];
+        HashSet<Integer> invalid = new HashSet<>();
+        invalid.add(1);
+        invalid.add(2);
+        invalid.add(3);
+        invalid.add(4);
 
-            for (int i = 0; i < 10; i++) {
-                buf[0] = (byte)i;
-                try {
-                    PublicKey.FromBytes(buf);
-                    assertTrue(!invalid.contains(i));
-                } catch (AssertionError x) {
-                    fail();
-                } catch (Exception x) {
-                    assertTrue(invalid.contains(i));
-                }
+        for (int i = 0; i < 10; i++) {
+            buf[0] = (byte)i;
+            try {
+                PublicKey.FromBytes(buf);
+                assertTrue(!invalid.contains(i));
+            } catch (AssertionError x) {
+                fail();
+            } catch (Exception x) {
+                assertTrue(invalid.contains(i));
             }
         }
+    }
 
-        @Test
-        public void shouldThrowOnBadSignature() {
-            byte [] buf = new byte[(int)Signature.SIGNATURE_SIZE];
-            HashSet<Integer> invalid = new HashSet<>(9);
-            int [] invalidValues = {0, 1, 2, 3, 5, 6, 7, 8};
-            for(int i : invalidValues)
-                invalid.add(i);
+    @Test
+    public void shouldThrowOnBadSignature() {
+        byte [] buf = new byte[(int)Signature.SIGNATURE_SIZE];
+        HashSet<Integer> invalid = new HashSet<>(9);
+        int [] invalidValues = {0, 1, 2, 3, 5, 6, 7, 8};
+        for(int i : invalidValues)
+            invalid.add(i);
 
-            for (int i = 0; i < 10; i++) {
-                buf[0] = (byte)i;
-                try {
-                    Signature.FromBytes(buf);
-                    assertTrue(!invalid.contains(i));
-                } catch (AssertionError x) {
-                    fail();
-                } catch (Exception x) {
-                    assertTrue(invalid.contains(i));
-                }
+        for (int i = 0; i < 10; i++) {
+            buf[0] = (byte)i;
+            try {
+                Signature.FromBytes(buf);
+                assertTrue(!invalid.contains(i));
+            } catch (AssertionError x) {
+                fail();
+            } catch (Exception x) {
+                assertTrue(invalid.contains(i));
             }
         }
+    }
 
-        /*  TODO::Make BLS ThreadSafe
-        @Ignore
-        @Test
-        public void errorHandlingShouldBeThreadSafe() {
-            core_get()->code = 10;
-            assertTrue(core_get()->code == 10);
+    //  TODO::Make BLS ThreadSafe
+    boolean ctxError = false;
+    @Test
+    public void errorHandlingShouldBeThreadSafe() throws InterruptedException {
+        System.out.println("First Thread Running");
+        BLS.SetContextError(10);
+        System.out.println("First Thread:  Set Error Code to 10");
+        assertTrue(BLS.GetContextError() == 10);
 
-            ctx_t* ctx1 = core_get();
-            boolean ctxError = false;
+        long ctx1 = BLS.GetContext();
+        System.out.println("First Thread Context:" + ctx1);
 
-            // spawn a thread and make sure it uses a different context
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    if (ctx1 == core_get()) {
-                        ctxError = true;
-                    }
-                    if (core_get()->code != STS_OK) {
-                        ctxError = true;
-                    }
-                    // this should not modify the code of the main thread
-                    core_get()->code = 1;
+
+        // spawn a thread and make sure it uses a different context
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("Second Thread Running");
+                BLS.Init();
+                if (ctx1 == BLS.GetContext()) {
+                    ctxError = true;
                 }
-            }).start();
+                System.out.println("Second Thread Context:" + BLS.GetContext());
 
-            assertTrue(!ctxError);
+                if (BLS.GetContextError() != STS_OK) {
+                    ctxError = true;
+                }
+                // this should not modify the code of the main thread
+                System.out.println("Second Thread:  Set Error Code to 1");
+                BLS.SetContextError(1);
+            }
+        });
+        thread.start();
 
-            // other thread should not modify code
-            assertTrue(core_get()->code == 10);
+        thread.join();
 
-            // reset so that future test cases don't fail
-            core_get()->code = STS_OK;
-        }*/
+        System.out.println("Checking different contexts");
+        assertTrue(!ctxError);
+
+        // other thread should not modify code
+        assertTrue(BLS.GetContextError() == 10);
+
+        // reset so that future test cases don't fail
+        BLS.SetContextError(STS_OK);
+    }
 
 
     //TEST_CASE("Util tests") {
@@ -646,33 +659,33 @@ public class BlsSignatureTest extends BaseTest {
 
     //TEST_CASE("Signatures") {
     @Test
-        public void shouldSignAndVerify() {
-            byte [] message1 = new byte[] {1, 65, (byte)254, 88, 90, 45, 22};
+    public void shouldSignAndVerify() {
+        byte [] message1 = new byte[] {1, 65, (byte)254, 88, 90, 45, 22};
 
-            byte [] seed = new byte[] {28, 20, 102, (byte)229, 1, (byte)157};
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, sizeof(seed));
-            PublicKey pk1 = sk1.GetPublicKey();
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        byte [] seed = new byte[] {28, 20, 102, (byte)229, 1, (byte)157};
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, sizeof(seed));
+        PublicKey pk1 = sk1.GetPublicKey();
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
 
-            sig1.SetAggregationInfo(
-                    AggregationInfo.FromMsg(pk1, message1, sizeof(message1)));
-            assertTrue(sig1.Verify());
+        sig1.SetAggregationInfo(
+                AggregationInfo.FromMsg(pk1, message1, sizeof(message1)));
+        assertTrue(sig1.Verify());
 
-            byte [] hash = getSHA256Hash(message1);
-            Signature sig2 = sk1.SignPrehashed(hash);
-            sig2.SetAggregationInfo(
-                    AggregationInfo.FromMsg(pk1, message1, sizeof(message1)));
-            assertTrue(sig1.equals(sig2));
-            assertTrue(sig2.Verify());
+        byte [] hash = getSHA256Hash(message1);
+        Signature sig2 = sk1.SignPrehashed(hash);
+        sig2.SetAggregationInfo(
+                AggregationInfo.FromMsg(pk1, message1, sizeof(message1)));
+        assertTrue(sig1.equals(sig2));
+        assertTrue(sig2.Verify());
 
-            // Hashing to g1
-            //byte mapMsg[0] = {};
-            //g1_t result;
-            //byte buf[49];
-            //ep_map(result, mapMsg, 0);
-            //g1_write_bin(buf, 49, result, 1);
-            //assertTrue(HEX.encode(buf + 1, 48) == "12fc5ad5a2fbe9d4b6eb0bc16d530e5f263b6d59cbaf26c3f2831962924aa588ab84d46cc80d3a433ce064adb307f256");
-        }
+        // Hashing to g1
+        //byte mapMsg[0] = {};
+        //g1_t result;
+        //byte buf[49];
+        //ep_map(result, mapMsg, 0);
+        //g1_write_bin(buf, 49, result, 1);
+        //assertTrue(HEX.encode(buf + 1, 48) == "12fc5ad5a2fbe9d4b6eb0bc16d530e5f263b6d59cbaf26c3f2831962924aa588ab84d46cc80d3a433ce064adb307f256");
+    }
 
     private byte [] getSHA256Hash(byte [] data) {
         try {
@@ -685,109 +698,109 @@ public class BlsSignatureTest extends BaseTest {
         return null;
     }
 
-        @Test
-        public void shouldUseCopyConstructor() {
-            byte [] message1 = new byte[] {1, 65, (byte)254, 88, 90, 45, 22};
+    @Test
+    public void shouldUseCopyConstructor() {
+        byte [] message1 = new byte[] {1, 65, (byte)254, 88, 90, 45, 22};
 
-            byte [] seed = getRandomSeed(32);
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
-            PrivateKey sk2 = new PrivateKey(sk1);
+        byte [] seed = getRandomSeed(32);
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
+        PrivateKey sk2 = new PrivateKey(sk1);
 
-            byte [] skBytes = new byte[(int)PrivateKey.PRIVATE_KEY_SIZE];
-            sk2.Serialize(skBytes);
-            PrivateKey sk4 = PrivateKey.FromBytes(skBytes);
+        byte [] skBytes = new byte[(int)PrivateKey.PRIVATE_KEY_SIZE];
+        sk2.Serialize(skBytes);
+        PrivateKey sk4 = PrivateKey.FromBytes(skBytes);
 
-            PublicKey pk2 = new PublicKey(pk1);
-            Signature sig1 = sk4.Sign(message1, sizeof(message1));
-            Signature sig2 = new Signature(sig1);
+        PublicKey pk2 = new PublicKey(pk1);
+        Signature sig1 = sk4.Sign(message1, sizeof(message1));
+        Signature sig2 = new Signature(sig1);
 
-            assertTrue(sig2.Verify());
-        }
+        assertTrue(sig2.Verify());
+    }
 
-        @Test
-        public void shouldUseOperators() {
-            byte [] message1 = {1, 65, (byte)254, 88, 90, 45, 22};
-            byte [] seed = getRandomSeed(32);
-            byte [] seed3 = getRandomSeed(32);
+    @Test
+    public void shouldUseOperators() {
+        byte [] message1 = {1, 65, (byte)254, 88, 90, 45, 22};
+        byte [] seed = getRandomSeed(32);
+        byte [] seed3 = getRandomSeed(32);
 
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PrivateKey sk2 = new PrivateKey(sk1);
-            PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
-            PublicKey pk2 = sk2.GetPublicKey();
-            PublicKey pk3 = new PublicKey(pk2);
-            PublicKey pk4 = sk3.GetPublicKey();
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk1.Sign(message1, sizeof(message1));
-            Signature sig3 = sk2.Sign(message1, sizeof(message1));
-            Signature sig4 = sk3.Sign(message1, sizeof(message1));
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PrivateKey sk2 = new PrivateKey(sk1);
+        PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
+        PublicKey pk2 = sk2.GetPublicKey();
+        PublicKey pk3 = new PublicKey(pk2);
+        PublicKey pk4 = sk3.GetPublicKey();
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk1.Sign(message1, sizeof(message1));
+        Signature sig3 = sk2.Sign(message1, sizeof(message1));
+        Signature sig4 = sk3.Sign(message1, sizeof(message1));
 
-            assertTrue(sk1.equals(sk2));
-            assertTrue(!sk1.equals(sk3));
-            assertTrue(pk1.equals(pk2));
-            assertTrue(pk2.equals(pk3));
-            assertTrue(!pk1.equals(pk4));
-            assertTrue(sig1.equals(sig2));
-            assertTrue(sig2.equals(sig3));
-            assertTrue(!sig3.equals(sig4));
+        assertTrue(sk1.equals(sk2));
+        assertTrue(!sk1.equals(sk3));
+        assertTrue(pk1.equals(pk2));
+        assertTrue(pk2.equals(pk3));
+        assertTrue(!pk1.equals(pk4));
+        assertTrue(sig1.equals(sig2));
+        assertTrue(sig2.equals(sig3));
+        assertTrue(!sig3.equals(sig4));
 
-            assertTrue(Arrays.equals(pk1.Serialize(), pk2.Serialize()));
-            assertTrue(Arrays.equals(sig1.Serialize(),sig2.Serialize()));
-        }
-        
-        @Test
-        public void shouldSerializeAndDeserialize() {
-            byte [] message1 = {1, 65, (byte)254, 88, 90, 45, 22};
+        assertTrue(Arrays.equals(pk1.Serialize(), pk2.Serialize()));
+        assertTrue(Arrays.equals(sig1.Serialize(),sig2.Serialize()));
+    }
 
-            byte [] seed = getRandomSeed(32);
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
+    @Test
+    public void shouldSerializeAndDeserialize() {
+        byte [] message1 = {1, 65, (byte)254, 88, 90, 45, 22};
 
-            byte [] skData = new byte [(int)PrivateKey.PRIVATE_KEY_SIZE];
-            sk1.Serialize(skData);
-            PrivateKey sk2 = PrivateKey.FromBytes(skData);
-            assertTrue(sk1.equals(sk2));
+        byte [] seed = getRandomSeed(32);
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
 
-            byte [] pkData = new byte[(int)PublicKey.PUBLIC_KEY_SIZE];
-            pk1.Serialize(pkData);
+        byte [] skData = new byte [(int)PrivateKey.PRIVATE_KEY_SIZE];
+        sk1.Serialize(skData);
+        PrivateKey sk2 = PrivateKey.FromBytes(skData);
+        assertTrue(sk1.equals(sk2));
 
-            PublicKey pk2 = PublicKey.FromBytes(pkData);
-            assertTrue(pk1.equals(pk2));
+        byte [] pkData = new byte[(int)PublicKey.PUBLIC_KEY_SIZE];
+        pk1.Serialize(pkData);
 
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        PublicKey pk2 = PublicKey.FromBytes(pkData);
+        assertTrue(pk1.equals(pk2));
 
-            byte [] sigData = new byte[(int)Signature.SIGNATURE_SIZE];
-            sig1.Serialize(sigData);
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
 
-            Signature sig2 = Signature.FromBytes(sigData);
-            assertTrue(sig1.equals(sig2));
-            sig2.SetAggregationInfo(AggregationInfo.FromMsg(
-                    pk2, message1, sizeof(message1)));
+        byte [] sigData = new byte[(int)Signature.SIGNATURE_SIZE];
+        sig1.Serialize(sigData);
 
-            assertTrue(sig2.Verify());
-            
-            InsecureSignature sig3 = InsecureSignature.FromBytes(sigData);
-            assertTrue(Signature.FromInsecureSig(sig3).equals(sig2));
-        }
+        Signature sig2 = Signature.FromBytes(sigData);
+        assertTrue(sig1.equals(sig2));
+        sig2.SetAggregationInfo(AggregationInfo.FromMsg(
+                pk2, message1, sizeof(message1)));
 
-        @Test
-        public void shouldNotValidateBadSignature() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 22};
-            byte [] seed = getRandomSeed(32);
-            byte [] seed2 = getRandomSeed(32);
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+        assertTrue(sig2.Verify());
 
-            PublicKey pk1 = sk1.GetPublicKey();
-            PublicKey pk2 = sk2.GetPublicKey();
+        InsecureSignature sig3 = InsecureSignature.FromBytes(sigData);
+        assertTrue(Signature.FromInsecureSig(sig3).equals(sig2));
+    }
 
-            Signature sig2 = sk2.Sign(message1, sizeof(message1));
-            sig2.SetAggregationInfo(AggregationInfo.FromMsg(
-                    pk1, message1, sizeof(message1)));
+    @Test
+    public void shouldNotValidateBadSignature() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 22};
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
 
-            assertTrue(sig2.Verify() == false);
-        }
+        PublicKey pk1 = sk1.GetPublicKey();
+        PublicKey pk2 = sk2.GetPublicKey();
+
+        Signature sig2 = sk2.Sign(message1, sizeof(message1));
+        sig2.SetAggregationInfo(AggregationInfo.FromMsg(
+                pk1, message1, sizeof(message1)));
+
+        assertTrue(sig2.Verify() == false);
+    }
 
     @Test
     public void shouldInsecureleyAggregateAndVerify() {
@@ -820,670 +833,672 @@ public class BlsSignatureTest extends BaseTest {
 
     @Test
     public void shouldInsecurelyAggregateAndVerifyAggregateDiffMessages() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] message2 = {100, 2, (byte)254, 88, 90, 45, 24, 1};
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] message2 = {100, 2, (byte)254, 88, 90, 45, 24, 1};
 
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
+
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+
+        byte [] hash1 = getSHA256Hash(message1);
+        byte [] hash2 = getSHA256Hash(message2);
+
+        InsecureSignature sig1 = sk1.SignInsecurePrehashed(hash1);
+        InsecureSignature sig2 = sk2.SignInsecurePrehashed(hash2);
+        assertTrue(sig1 != sig2);
+        assertTrue(sig1.Verify(hash1, sk1.GetPublicKey()));
+        assertTrue(sig2.Verify(hash2, sk2.GetPublicKey()));
+
+        InsecureSignatureVector sigs = new InsecureSignatureVector();
+        sigs.push_back(sig1);
+        sigs.push_back(sig2);
+        PublicKeyVector pks = new PublicKeyVector();
+        pks.push_back(sk1.GetPublicKey());
+        pks.push_back(sk2.GetPublicKey());
+        InsecureSignature aggSig = InsecureSignature.Aggregate(sigs);
+
+        // same message verification should fail
+        PublicKey aggPk = PublicKey.AggregateInsecure(pks);
+        assertTrue(!aggSig.Verify(hash1, aggPk));
+        assertTrue(!aggSig.Verify(hash2, aggPk));
+
+        // diff message verification should succeed
+        MessageHashVector hashes = new MessageHashVector();
+        hashes.push_back(hash1);
+        hashes.push_back(hash2);
+        assertTrue(aggSig.Verify(hashes, pks));
+    }
+
+    @Test
+    public void shouldSecurelyAggregateAndVerifyAggregate() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] message2 = {(byte)192, 29, 2, 0, 0, 45, 23};
+
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
+
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+
+        PublicKey pk1 = sk1.GetPublicKey();
+        PublicKey pk2 = sk2.GetPublicKey();
+
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk2.Sign(message2, sizeof(message2));
+
+        SignatureVector sigs = new SignatureVector();
+        sigs.push_back(sig1);
+        sigs.push_back(sig2);
+        Signature aggSig = Signature.AggregateSigs(sigs);
+
+        Signature sig3 = sk1.Sign(message1, sizeof(message1));
+        Signature sig4 = sk2.Sign(message2, sizeof(message2));
+
+        SignatureVector sigs2 = new SignatureVector();
+        sigs2.push_back(sig3);
+        sigs2.push_back(sig4);
+
+        Signature aggSig2 = Signature.AggregateSigs(sigs2);
+        assertTrue(sig1.equals(sig3));
+        assertTrue(sig2.equals(sig4));
+        assertTrue(aggSig.equals(aggSig2));
+        assertTrue(!sig1.equals(sig2));
+
+        assertTrue(aggSig.Verify());
+    }
+
+    @Test
+    public void shouldSecurelyAggregateManySignaturesDifferentMessage() {
+        PrivateKeyVector sks = new PrivateKeyVector();
+        SignatureVector sigs = new SignatureVector();
+
+        for (int i = 0; i < 78; i++) {
+            byte [] message = new byte[8];
+            message[0] = 0;
+            message[1] = 100;
+            message[2] = 2;
+            message[3] = 59;
+            message[4] = (byte)255;
+            message[5] = 92;
+            message[6] = 5;
+            message[7] = (byte)i;
             byte [] seed = getRandomSeed(32);
-            byte [] seed2 = getRandomSeed(32);
-
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
-
-            byte [] hash1 = getSHA256Hash(message1);
-            byte [] hash2 = getSHA256Hash(message2);
-
-            InsecureSignature sig1 = sk1.SignInsecurePrehashed(hash1);
-            InsecureSignature sig2 = sk2.SignInsecurePrehashed(hash2);
-            assertTrue(sig1 != sig2);
-            assertTrue(sig1.Verify(hash1, sk1.GetPublicKey()));
-            assertTrue(sig2.Verify(hash2, sk2.GetPublicKey()));
-
-            InsecureSignatureVector sigs = new InsecureSignatureVector();
-            sigs.push_back(sig1);
-            sigs.push_back(sig2);
-            PublicKeyVector pks = new PublicKeyVector();
-            pks.push_back(sk1.GetPublicKey());
-            pks.push_back(sk2.GetPublicKey());
-            InsecureSignature aggSig = InsecureSignature.Aggregate(sigs);
-
-            // same message verification should fail
-            PublicKey aggPk = PublicKey.AggregateInsecure(pks);
-            assertTrue(!aggSig.Verify(hash1, aggPk));
-            assertTrue(!aggSig.Verify(hash2, aggPk));
-
-            // diff message verification should succeed
-            MessageHashVector hashes = new MessageHashVector();
-            hashes.push_back(hash1);
-            hashes.push_back(hash2);
-            assertTrue(aggSig.Verify(hashes, pks));
+            final PrivateKey sk = PrivateKey.FromSeed(seed, 32);
+            final PublicKey pk = sk.GetPublicKey();
+            sks.push_back(sk);
+            sigs.push_back(sk.Sign(message, sizeof(message)));
         }
 
-        @Test
-        public void shouldSecurelyAggregateAndVerifyAggregate() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] message2 = {(byte)192, 29, 2, 0, 0, 45, 23};
+        Signature aggSig = Signature.AggregateSigs(sigs);
 
+        assertTrue(aggSig.Verify());
+    }
+
+    @Test
+    public void shouldInsecurelyAggregateManySignaturesDifferentMessage() {
+        PrivateKeyVector sks = new PrivateKeyVector();
+        PublicKeyVector pks = new PublicKeyVector();
+        InsecureSignatureVector sigs = new InsecureSignatureVector();
+        MessageHashVector hashes = new MessageHashVector();
+
+        for (int i = 0; i < 80; i++) {
+            byte [] message = new byte[8];
+            message[0] = 0;
+            message[1] = 100;
+            message[2] = 2;
+            message[3] = 59;
+            message[4] = (byte)255;
+            message[5] = 92;
+            message[6] = 5;
+            message[7] = (byte)i;
+            byte [] hash = getSHA256Hash(message);
+            hashes.push_back(hash);
             byte [] seed = getRandomSeed(32);
-            byte [] seed2 = getRandomSeed(32);
-
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
-
-            PublicKey pk1 = sk1.GetPublicKey();
-            PublicKey pk2 = sk2.GetPublicKey();
-
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk2.Sign(message2, sizeof(message2));
-
-            SignatureVector sigs = new SignatureVector();
-            sigs.push_back(sig1);
-            sigs.push_back(sig2);
-            Signature aggSig = Signature.AggregateSigs(sigs);
-
-            Signature sig3 = sk1.Sign(message1, sizeof(message1));
-            Signature sig4 = sk2.Sign(message2, sizeof(message2));
-
-            SignatureVector sigs2 = new SignatureVector();
-            sigs2.push_back(sig3);
-            sigs2.push_back(sig4);
-
-            Signature aggSig2 = Signature.AggregateSigs(sigs2);
-            assertTrue(sig1.equals(sig3));
-            assertTrue(sig2.equals(sig4));
-            assertTrue(aggSig.equals(aggSig2));
-            assertTrue(!sig1.equals(sig2));
-
-            assertTrue(aggSig.Verify());
+            final PrivateKey sk = PrivateKey.FromSeed(seed, 32);
+            final PublicKey pk = sk.GetPublicKey();
+            sks.push_back(sk);
+            pks.push_back(pk);
+            sigs.push_back(sk.SignInsecurePrehashed(hash));
         }
 
-        @Test
-        public void shouldSecurelyAggregateManySignaturesDifferentMessage() {
-            PrivateKeyVector sks = new PrivateKeyVector();
-            SignatureVector sigs = new SignatureVector();
+        InsecureSignature aggSig = InsecureSignature.Aggregate(sigs);
 
-            for (int i = 0; i < 78; i++) {
-                byte [] message = new byte[8];
-                message[0] = 0;
-                message[1] = 100;
-                message[2] = 2;
-                message[3] = 59;
-                message[4] = (byte)255;
-                message[5] = 92;
-                message[6] = 5;
-                message[7] = (byte)i;
-                byte [] seed = getRandomSeed(32);
-                final PrivateKey sk = PrivateKey.FromSeed(seed, 32);
-                final PublicKey pk = sk.GetPublicKey();
-                sks.push_back(sk);
-                sigs.push_back(sk.Sign(message, sizeof(message)));
-            }
+        assertTrue(aggSig.Verify(hashes, pks));
 
-            Signature aggSig = Signature.AggregateSigs(sigs);
+        //std.swap(pks[0], pks[1]);
+        PublicKey pks0 = new PublicKey(pks.get(0));
+        PublicKey pks1 = new PublicKey(pks.get(1));
+        pks.set(0, pks1);
+        pks.set(1, pks0);
+        assertTrue(!aggSig.Verify(hashes, pks));
+        //std.swap(hashes[0], hashes[1]);
+        byte [] hash0 = hashes.get(0);
+        byte [] hash1 = hashes.get(1);
+        hashes.set(0, hash1);
+        hashes.set(1, hash0);
+        assertTrue(aggSig.Verify(hashes, pks));
+    }
 
-            assertTrue(aggSig.Verify());
-        }
+    @Test
+    public void shouldSecurelyAggregateSameMessage() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
+        byte [] seed3 = getRandomSeed(32);
 
-        @Test
-        public void shouldInsecurelyAggregateManySignaturesDifferentMessage() {
-            PrivateKeyVector sks = new PrivateKeyVector();
-            PublicKeyVector pks = new PublicKeyVector();
-            InsecureSignatureVector sigs = new InsecureSignatureVector();
-            MessageHashVector hashes = new MessageHashVector();
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
 
-            for (int i = 0; i < 80; i++) {
-                byte [] message = new byte[8];
-                message[0] = 0;
-                message[1] = 100;
-                message[2] = 2;
-                message[3] = 59;
-                message[4] = (byte)255;
-                message[5] = 92;
-                message[6] = 5;
-                message[7] = (byte)i;
-                byte [] hash = getSHA256Hash(message);
-                hashes.push_back(hash);
-                byte [] seed = getRandomSeed(32);
-                final PrivateKey sk = PrivateKey.FromSeed(seed, 32);
-                final PublicKey pk = sk.GetPublicKey();
-                sks.push_back(sk);
-                pks.push_back(pk);
-                sigs.push_back(sk.SignInsecurePrehashed(hash));
-            }
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+        PublicKey pk2 = sk2.GetPublicKey();
 
-            InsecureSignature aggSig = InsecureSignature.Aggregate(sigs);
+        PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
+        PublicKey pk3 = sk3.GetPublicKey();
 
-            assertTrue(aggSig.Verify(hashes, pks));
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk2.Sign(message1, sizeof(message1));
+        Signature sig3 = sk3.Sign(message1, sizeof(message1));
 
-            //std.swap(pks[0], pks[1]);
-            PublicKey pks0 = new PublicKey(pks.get(0));
-            PublicKey pks1 = new PublicKey(pks.get(1));
-            pks.set(0, pks1);
-            pks.set(1, pks0);
-            assertTrue(!aggSig.Verify(hashes, pks));
-            //std.swap(hashes[0], hashes[1]);
-            byte [] hash0 = hashes.get(0);
-            byte [] hash1 = hashes.get(1);
-            hashes.set(0, hash1);
-            hashes.set(1, hash0);
-            assertTrue(aggSig.Verify(hashes, pks));
-        }
-
-        @Test
-        public void shouldSecurelyAggregateSameMessage() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] seed = getRandomSeed(32);
-            byte [] seed2 = getRandomSeed(32);
-            byte [] seed3 = getRandomSeed(32);
-
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
-
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
-            PublicKey pk2 = sk2.GetPublicKey();
-
-            PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
-            PublicKey pk3 = sk3.GetPublicKey();
-
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk2.Sign(message1, sizeof(message1));
-            Signature sig3 = sk3.Sign(message1, sizeof(message1));
-
-            SignatureVector sigs = new SignatureVector();
-            sigs.push_back(sig1);
-            sigs.push_back(sig2);
-            sigs.push_back(sig3);
-            PublicKeyVector pubKeys = new PublicKeyVector();
-            pubKeys.push_back(pk1);
-            pubKeys.push_back(pk2);
-            pubKeys.push_back(pk3);
-            Signature aggSig = Signature.AggregateSigs(sigs);
+        SignatureVector sigs = new SignatureVector();
+        sigs.push_back(sig1);
+        sigs.push_back(sig2);
+        sigs.push_back(sig3);
+        PublicKeyVector pubKeys = new PublicKeyVector();
+        pubKeys.push_back(pk1);
+        pubKeys.push_back(pk2);
+        pubKeys.push_back(pk3);
+        Signature aggSig = Signature.AggregateSigs(sigs);
 
         final PublicKey aggPubKey = PublicKey.Aggregate(pubKeys);
-            aggSig.SetAggregationInfo(AggregationInfo.FromMsg(
-                    aggPubKey, message1, sizeof(message1)));
-            assertTrue(aggSig.Verify());
-        }
+        aggSig.SetAggregationInfo(AggregationInfo.FromMsg(
+                aggPubKey, message1, sizeof(message1)));
+        assertTrue(aggSig.Verify());
+    }
 
-        @Test
-        public void shouldSecurelyDivideSignatures() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+    @Test
+    public void shouldSecurelyDivideSignatures() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
+        byte [] seed3 = getRandomSeed(32);
+
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
+
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+        PublicKey pk2 = sk2.GetPublicKey();
+
+        PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
+        PublicKey pk3 = sk3.GetPublicKey();
+
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk2.Sign(message1, sizeof(message1));
+        Signature sig3 = sk3.Sign(message1, sizeof(message1));
+
+        SignatureVector sigs = new SignatureVector();
+        sigs.push_back(sig1);
+        sigs.push_back(sig2);
+        sigs.push_back(sig3);
+        Signature aggSig = Signature.AggregateSigs(sigs);
+
+        assertTrue(sig2.Verify());
+        assertTrue(sig3.Verify());
+        SignatureVector divisorSigs = new SignatureVector();
+        divisorSigs.push_back(sig2);
+        divisorSigs.push_back(sig3);
+
+        assertTrue(aggSig.Verify());
+        assertTrue(aggSig.GetAggregationInfo().GetPubKeys().size() == 3);
+        final Signature aggSig2 = aggSig.DivideBy(divisorSigs);
+        assertTrue(aggSig.GetAggregationInfo().GetPubKeys().size() == 3);
+        assertTrue(aggSig2.GetAggregationInfo().GetPubKeys().size() == 1);
+
+        assertTrue(aggSig.Verify());
+        assertTrue(aggSig2.Verify());
+    }
+
+    @Test
+    public void shouldSecurelyDivideAggregateSignatures() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] message2 = {92, 20, 5, 89, 91, 15, 105};
+        byte [] message3 = {(byte)200, 10, 10, (byte)159, 4, 15, 24};
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
+        byte [] seed3 = getRandomSeed(32);
+        byte [] seed4 = getRandomSeed(32);
+
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
+
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+        PublicKey pk2 = sk2.GetPublicKey();
+
+        PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
+        PublicKey pk3 = sk3.GetPublicKey();
+
+        PrivateKey sk4 = PrivateKey.FromSeed(seed4, 32);
+        PublicKey pk4 = sk4.GetPublicKey();
+
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk2.Sign(message1, sizeof(message1));
+        Signature sig3 = sk3.Sign(message1, sizeof(message1));
+        Signature sig4 = sk4.Sign(message2, sizeof(message2));
+        Signature sig5 = sk4.Sign(message1, sizeof(message1));
+        Signature sig6 = sk2.Sign(message3, sizeof(message3));
+
+        SignatureVector sigsL = new SignatureVector();
+        sigsL.push_back(sig1);
+        sigsL.push_back(sig2);
+        SignatureVector sigsC = new SignatureVector();
+        sigsC.push_back(sig3);
+        sigsC.push_back(sig4);
+        SignatureVector sigsR = new SignatureVector();
+        sigsR.push_back(sig5);
+        sigsR.push_back(sig6);
+        Signature aggSigL = Signature.AggregateSigs(sigsL);
+        Signature aggSigC = Signature.AggregateSigs(sigsC);
+        Signature aggSigR = Signature.AggregateSigs(sigsR);
+
+        SignatureVector sigsL2 = new SignatureVector();
+        sigsL2.push_back(aggSigL);
+        sigsL2.push_back(aggSigC);
+        Signature aggSigL2 = Signature.AggregateSigs(sigsL2);
+
+        SignatureVector sigsFinal = new SignatureVector();
+        sigsFinal.push_back(aggSigL2);
+        sigsFinal.push_back(aggSigR);
+
+        Signature aggSigFinal = Signature.AggregateSigs(sigsFinal);
+
+        assertTrue(aggSigFinal.Verify());
+        assertTrue(aggSigFinal.GetAggregationInfo().GetPubKeys().size() == 6);
+        SignatureVector divisorSigs = new SignatureVector();
+        divisorSigs.push_back(aggSigL);
+        divisorSigs.push_back(sig6);
+        aggSigFinal = aggSigFinal.DivideBy(divisorSigs);
+        assertTrue(aggSigFinal.GetAggregationInfo().GetPubKeys().size() == 3);
+        assertTrue(aggSigFinal.Verify());
+
+        // Throws when the m/pk pair is not unique within the aggregate (sig1
+        // is in both aggSigL2 and sig1.
+        SignatureVector sigsFinal2 = new SignatureVector();
+        sigsFinal2.push_back(aggSigL2);
+        sigsFinal2.push_back(aggSigR);
+        sigsFinal2.push_back(sig1);
+
+        Signature aggSigFinal2 = Signature.AggregateSigs(sigsFinal2);
+        SignatureVector divisorSigs2 = new SignatureVector();
+        divisorSigs.push_back(aggSigL);
+        SignatureVector divisorSigs3 = new SignatureVector();
+        divisorSigs3.push_back(sig6);
+        aggSigFinal2 = aggSigFinal2.DivideBy(divisorSigs3);
+        try {
+            aggSigFinal2.DivideBy(divisorSigs);
+            fail();
+        } catch (Exception x) {
+        }
+    }
+
+    @Test
+    public void shouldInsecurelyAggregateManySigsSameMessage() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+
+        PrivateKeyVector sks = new PrivateKeyVector();
+        PublicKeyVector pks = new PublicKeyVector();
+        InsecureSignatureVector sigs = new InsecureSignatureVector();
+
+        byte [] hash1 = getSHA256Hash(message1);
+
+        for (int i = 0; i < 70; i++) {
             byte [] seed = getRandomSeed(32);
-            byte [] seed2 = getRandomSeed(32);
-            byte [] seed3 = getRandomSeed(32);
-
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
-
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
-            PublicKey pk2 = sk2.GetPublicKey();
-
-            PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
-            PublicKey pk3 = sk3.GetPublicKey();
-
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk2.Sign(message1, sizeof(message1));
-            Signature sig3 = sk3.Sign(message1, sizeof(message1));
-
-            SignatureVector sigs = new SignatureVector();
-            sigs.push_back(sig1);
-            sigs.push_back(sig2);
-            sigs.push_back(sig3);
-            Signature aggSig = Signature.AggregateSigs(sigs);
-
-            assertTrue(sig2.Verify());
-            assertTrue(sig3.Verify());
-            SignatureVector divisorSigs = new SignatureVector();
-            divisorSigs.push_back(sig2);
-            divisorSigs.push_back(sig3);
-
-            assertTrue(aggSig.Verify());
-            assertTrue(aggSig.GetAggregationInfo().GetPubKeys().size() == 3);
-            final Signature aggSig2 = aggSig.DivideBy(divisorSigs);
-            assertTrue(aggSig.GetAggregationInfo().GetPubKeys().size() == 3);
-            assertTrue(aggSig2.GetAggregationInfo().GetPubKeys().size() == 1);
-
-            assertTrue(aggSig.Verify());
-            assertTrue(aggSig2.Verify());
+            PrivateKey sk = PrivateKey.FromSeed(seed, 32);
+            final PublicKey pk = sk.GetPublicKey();
+            sks.push_back(sk);
+            pks.push_back(pk);
+            sigs.push_back(sk.SignInsecure(message1, sizeof(message1)));
         }
 
-        public void shouldSecurelyDivideAggregateSignatures() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] message2 = {92, 20, 5, 89, 91, 15, 105};
-            byte [] message3 = {(byte)200, 10, 10, (byte)159, 4, 15, 24};
+        InsecureSignature aggSig = InsecureSignature.Aggregate(sigs);
+        final PublicKey aggPubKey = PublicKey.AggregateInsecure(pks);
+        assertTrue(aggSig.Verify(hash1, aggPubKey));
+    }
+
+    @Test
+    public void shouldSecurelyAggreateManySigsSameMessage() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+
+        PrivateKeyVector sks = new PrivateKeyVector();
+        PublicKeyVector pks = new PublicKeyVector();
+        SignatureVector sigs = new SignatureVector();
+
+        for (int i = 0; i < 70; i++) {
             byte [] seed = getRandomSeed(32);
-            byte [] seed2 = getRandomSeed(32);
-            byte [] seed3 = getRandomSeed(32);
-            byte [] seed4 = getRandomSeed(32);
-
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
-
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
-            PublicKey pk2 = sk2.GetPublicKey();
-
-            PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
-            PublicKey pk3 = sk3.GetPublicKey();
-
-            PrivateKey sk4 = PrivateKey.FromSeed(seed4, 32);
-            PublicKey pk4 = sk4.GetPublicKey();
-
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk2.Sign(message1, sizeof(message1));
-            Signature sig3 = sk3.Sign(message1, sizeof(message1));
-            Signature sig4 = sk4.Sign(message2, sizeof(message2));
-            Signature sig5 = sk4.Sign(message1, sizeof(message1));
-            Signature sig6 = sk2.Sign(message3, sizeof(message3));
-
-            SignatureVector sigsL = new SignatureVector();
-            sigsL.push_back(sig1);
-            sigsL.push_back(sig2);
-            SignatureVector sigsC = new SignatureVector();
-            sigsC.push_back(sig3);
-            sigsC.push_back(sig4);
-            SignatureVector sigsR = new SignatureVector();
-            sigsR.push_back(sig5);
-            sigsR.push_back(sig6);
-            Signature aggSigL = Signature.AggregateSigs(sigsL);
-            Signature aggSigC = Signature.AggregateSigs(sigsC);
-            Signature aggSigR = Signature.AggregateSigs(sigsR);
-
-            SignatureVector sigsL2 = new SignatureVector();
-            sigsL2.push_back(aggSigL);
-            sigsL2.push_back(aggSigC);
-            Signature aggSigL2 = Signature.AggregateSigs(sigsL2);
-
-            SignatureVector sigsFinal = new SignatureVector();
-            sigsFinal.push_back(aggSigL2);
-            sigsFinal.push_back(aggSigR);
-
-            Signature aggSigFinal = Signature.AggregateSigs(sigsFinal);
-
-            assertTrue(aggSigFinal.Verify());
-            assertTrue(aggSigFinal.GetAggregationInfo().GetPubKeys().size() == 6);
-            SignatureVector divisorSigs = new SignatureVector();
-            divisorSigs.push_back(aggSigL);
-            divisorSigs.push_back(sig6);
-            aggSigFinal = aggSigFinal.DivideBy(divisorSigs);
-            assertTrue(aggSigFinal.GetAggregationInfo().GetPubKeys().size() == 3);
-            assertTrue(aggSigFinal.Verify());
-
-            // Throws when the m/pk pair is not unique within the aggregate (sig1
-            // is in both aggSigL2 and sig1.
-            SignatureVector sigsFinal2 = new SignatureVector();
-            sigsFinal2.push_back(aggSigL2);
-            sigsFinal2.push_back(aggSigR);
-            sigsFinal2.push_back(sig1);
-
-            Signature aggSigFinal2 = Signature.AggregateSigs(sigsFinal2);
-            SignatureVector divisorSigs2 = new SignatureVector();
-            divisorSigs.push_back(aggSigL);
-            SignatureVector divisorSigs3 = new SignatureVector();
-            divisorSigs3.push_back(sig6);
-            aggSigFinal2 = aggSigFinal2.DivideBy(divisorSigs3);
-            try {
-                aggSigFinal2.DivideBy(divisorSigs);
-                fail();
-            } catch (Exception x) {
-            }
+            PrivateKey sk = PrivateKey.FromSeed(seed, 32);
+            final PublicKey pk = sk.GetPublicKey();
+            sks.push_back(sk);
+            pks.push_back(pk);
+            sigs.push_back(sk.Sign(message1, sizeof(message1)));
         }
 
-        @Test
-        public void shouldInsecurelyAggregateManySigsSameMessage() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        Signature aggSig = Signature.AggregateSigs(sigs);
+        final PublicKey aggPubKey = PublicKey.Aggregate(pks);
+        aggSig.SetAggregationInfo(AggregationInfo.FromMsg(
+                aggPubKey, message1, sizeof(message1)));
+        assertTrue(aggSig.Verify());
+    }
 
-            PrivateKeyVector sks = new PrivateKeyVector();
-            PublicKeyVector pks = new PublicKeyVector();
-            InsecureSignatureVector sigs = new InsecureSignatureVector();
+    @Test
+    public void shouldHaveAtLeastOneSigWithAggregationInfo() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] seed = getRandomSeed(32);
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
 
-            byte [] hash1 = getSHA256Hash(message1);
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
 
-            for (int i = 0; i < 70; i++) {
-                byte [] seed = getRandomSeed(32);
-                PrivateKey sk = PrivateKey.FromSeed(seed, 32);
-                final PublicKey pk = sk.GetPublicKey();
-                sks.push_back(sk);
-                pks.push_back(pk);
-                sigs.push_back(sk.SignInsecure(message1, sizeof(message1)));
-            }
-
-            InsecureSignature aggSig = InsecureSignature.Aggregate(sigs);
-            final PublicKey aggPubKey = PublicKey.AggregateInsecure(pks);
-            assertTrue(aggSig.Verify(hash1, aggPubKey));
+        final SignatureVector sigs = new SignatureVector();
+        try {
+            Signature.AggregateSigs(sigs);
+            fail();
+        } catch (IllegalArgumentException x) {
+            fail();
+        } catch (Exception x) {
+            assertTrue(x.getMessage().contains("Must have atleast one signatures and key"));
         }
 
-        @Test
-        public void shouldSecurelyAggreateManySigsSameMessage() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        sig1.SetAggregationInfo(new AggregationInfo());
+        final SignatureVector sigs2 = new SignatureVector();
+        sigs2.push_back(sig1);
 
-            PrivateKeyVector sks = new PrivateKeyVector();
-            PublicKeyVector pks = new PublicKeyVector();
-            SignatureVector sigs = new SignatureVector();
-
-            for (int i = 0; i < 70; i++) {
-                byte [] seed = getRandomSeed(32);
-                PrivateKey sk = PrivateKey.FromSeed(seed, 32);
-                final PublicKey pk = sk.GetPublicKey();
-                sks.push_back(sk);
-                pks.push_back(pk);
-                sigs.push_back(sk.Sign(message1, sizeof(message1)));
-            }
-
-            Signature aggSig = Signature.AggregateSigs(sigs);
-            final PublicKey aggPubKey = PublicKey.Aggregate(pks);
-            aggSig.SetAggregationInfo(AggregationInfo.FromMsg(
-                    aggPubKey, message1, sizeof(message1)));
-            assertTrue(aggSig.Verify());
+        try {
+            Signature.AggregateSigs(sigs2);
+            fail();
+        } catch(Exception x) {
         }
+    }
 
-        @Test
-        public void shouldHaveAtLeastOneSigWithAggregationInfo() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] seed = getRandomSeed(32);
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
+    @Test
+    public void shouldPerformBatchVerification() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] message2 = {10, 28, (byte)254, 88, 90, 45, 29, 38};
+        byte [] message3 = {10, 28, (byte)254, 88, 90, 45, 29, 38, (byte)177};
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
+        byte [] seed3 = getRandomSeed(32);
+        byte [] seed4 = getRandomSeed(32);
 
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
 
-            final SignatureVector sigs = new SignatureVector();
-            try {
-                Signature.AggregateSigs(sigs);
-                fail();
-            } catch (IllegalArgumentException x) {
-                fail();
-            } catch (Exception x) {
-                assertTrue(x.getMessage().contains("Must have atleast one signatures and key"));
-            }
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+        PublicKey pk2 = sk2.GetPublicKey();
 
-            sig1.SetAggregationInfo(new AggregationInfo());
-            final SignatureVector sigs2 = new SignatureVector();
-            sigs2.push_back(sig1);
+        PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
+        PublicKey pk3 = sk3.GetPublicKey();
 
-            try {
-                Signature.AggregateSigs(sigs2);
-                fail();
-            } catch(Exception x) {
-            }
-        }
-
-        @Test
-        public void shouldPerformBatchVerification() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] message2 = {10, 28, (byte)254, 88, 90, 45, 29, 38};
-            byte [] message3 = {10, 28, (byte)254, 88, 90, 45, 29, 38, (byte)177};
-            byte [] seed = getRandomSeed(32);
-            byte [] seed2 = getRandomSeed(32);
-            byte [] seed3 = getRandomSeed(32);
-            byte [] seed4 = getRandomSeed(32);
-
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
-
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
-            PublicKey pk2 = sk2.GetPublicKey();
-
-            PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
-            PublicKey pk3 = sk3.GetPublicKey();
-
-            PrivateKey sk4 = PrivateKey.FromSeed(seed4, 32);
-            PublicKey pk4 = sk4.GetPublicKey();
+        PrivateKey sk4 = PrivateKey.FromSeed(seed4, 32);
+        PublicKey pk4 = sk4.GetPublicKey();
 
 
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk2.Sign(message1, sizeof(message1));
-            Signature sig3 = sk3.Sign(message2, sizeof(message2));
-            Signature sig4 = sk4.Sign(message3, sizeof(message3));
-            Signature sig5 = sk3.Sign(message1, sizeof(message1));
-            Signature sig6 = sk2.Sign(message1, sizeof(message1));
-            Signature sig7 = sk4.Sign(message2, sizeof(message2));
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk2.Sign(message1, sizeof(message1));
+        Signature sig3 = sk3.Sign(message2, sizeof(message2));
+        Signature sig4 = sk4.Sign(message3, sizeof(message3));
+        Signature sig5 = sk3.Sign(message1, sizeof(message1));
+        Signature sig6 = sk2.Sign(message1, sizeof(message1));
+        Signature sig7 = sk4.Sign(message2, sizeof(message2));
 
-            final SignatureVector sigs = new SignatureVector();
-            sigs.push_back(sig1);
-            sigs.push_back(sig2);
-            sigs.push_back(sig3);
-            sigs.push_back(sig4);
-            sigs.push_back(sig5);
-            sigs.push_back(sig6);
-            sigs.push_back(sig7);
-            final PublicKeyVector pubKeys = new PublicKeyVector();
-            PublicKey [] pks = new PublicKey[]{pk1, pk2, pk3, pk4, pk3, pk2, pk4};
-            for(PublicKey pk : pks)
-                pubKeys.push_back(pk);
+        final SignatureVector sigs = new SignatureVector();
+        sigs.push_back(sig1);
+        sigs.push_back(sig2);
+        sigs.push_back(sig3);
+        sigs.push_back(sig4);
+        sigs.push_back(sig5);
+        sigs.push_back(sig6);
+        sigs.push_back(sig7);
+        final PublicKeyVector pubKeys = new PublicKeyVector();
+        PublicKey [] pks = new PublicKey[]{pk1, pk2, pk3, pk4, pk3, pk2, pk4};
+        for(PublicKey pk : pks)
+            pubKeys.push_back(pk);
 
-            /*
-            byte [][] messages = new byte[][]
-                    {message1, message1, message2, message3, message1,
-                            message1, message2};
+        /*
+        byte [][] messages = new byte[][]
+                {message1, message1, message2, message3, message1,
+                        message1, message2};
 
 */
-            // Verifier generates a batch signature for efficiency
-            Signature aggSig = Signature.AggregateSigs(sigs);
-            assertTrue(aggSig.Verify());
-        }
+        // Verifier generates a batch signature for efficiency
+        Signature aggSig = Signature.AggregateSigs(sigs);
+        assertTrue(aggSig.Verify());
+    }
 
-        
-        @Test
-        public void shouldPeformBatchVerificationWithCacheOptimization() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] message2 = {10, 28, (byte)254, 88, 90, 45, 29, 38};
-            byte [] message3 = {10, 28, (byte)254, 88, 90, 45, 29, 38, (byte)177};
-            byte [] seed = getRandomSeed(32);
-            byte [] seed2 = getRandomSeed(32);
-            byte [] seed3 = getRandomSeed(32);
-            byte [] seed4 = getRandomSeed(32);
+    @Test
+    public void shouldPeformBatchVerificationWithCacheOptimization() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] message2 = {10, 28, (byte)254, 88, 90, 45, 29, 38};
+        byte [] message3 = {10, 28, (byte)254, 88, 90, 45, 29, 38, (byte)177};
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
+        byte [] seed3 = getRandomSeed(32);
+        byte [] seed4 = getRandomSeed(32);
 
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
 
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
-            PublicKey pk2 = sk2.GetPublicKey();
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+        PublicKey pk2 = sk2.GetPublicKey();
 
-            PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
-            PublicKey pk3 = sk3.GetPublicKey();
+        PrivateKey sk3 = PrivateKey.FromSeed(seed3, 32);
+        PublicKey pk3 = sk3.GetPublicKey();
 
-            PrivateKey sk4 = PrivateKey.FromSeed(seed4, 32);
-            PublicKey pk4 = sk4.GetPublicKey();
+        PrivateKey sk4 = PrivateKey.FromSeed(seed4, 32);
+        PublicKey pk4 = sk4.GetPublicKey();
 
 
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk2.Sign(message1, sizeof(message1));
-            Signature sig3 = sk3.Sign(message2, sizeof(message2));
-            Signature sig4 = sk4.Sign(message3, sizeof(message3));
-            Signature sig5 = sk3.Sign(message1, sizeof(message1));
-            Signature sig6 = sk2.Sign(message1, sizeof(message1));
-            Signature sig7 = sk4.Sign(message2, sizeof(message2));
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk2.Sign(message1, sizeof(message1));
+        Signature sig3 = sk3.Sign(message2, sizeof(message2));
+        Signature sig4 = sk4.Sign(message3, sizeof(message3));
+        Signature sig5 = sk3.Sign(message1, sizeof(message1));
+        Signature sig6 = sk2.Sign(message1, sizeof(message1));
+        Signature sig7 = sk4.Sign(message2, sizeof(message2));
 
-            final SignatureVector sigs = new SignatureVector();
-            sigs.push_back(sig1);
-            sigs.push_back(sig2);
-            sigs.push_back(sig3);
-            sigs.push_back(sig4);
-            sigs.push_back(sig5);
-            sigs.push_back(sig6);
-            sigs.push_back(sig7);
+        final SignatureVector sigs = new SignatureVector();
+        sigs.push_back(sig1);
+        sigs.push_back(sig2);
+        sigs.push_back(sig3);
+        sigs.push_back(sig4);
+        sigs.push_back(sig5);
+        sigs.push_back(sig6);
+        sigs.push_back(sig7);
 
-            assertTrue(sig1.Verify());
-            assertTrue(sig3.Verify());
-            assertTrue(sig4.Verify());
-            assertTrue(sig7.Verify());
-            SignatureVector cache = new SignatureVector();
-            cache.push_back(sig1);
-            cache.push_back(sig3);
-            cache.push_back(sig4);
-            cache.push_back(sig7);
+        assertTrue(sig1.Verify());
+        assertTrue(sig3.Verify());
+        assertTrue(sig4.Verify());
+        assertTrue(sig7.Verify());
+        SignatureVector cache = new SignatureVector();
+        cache.push_back(sig1);
+        cache.push_back(sig3);
+        cache.push_back(sig4);
+        cache.push_back(sig7);
 
-            // Verifier generates a batch signature for efficiency
-            Signature aggSig = Signature.AggregateSigs(sigs);
+        // Verifier generates a batch signature for efficiency
+        Signature aggSig = Signature.AggregateSigs(sigs);
 
-            final Signature aggSig2 = aggSig.DivideBy(cache);
-            assertTrue(aggSig.Verify());
-            assertTrue(aggSig2.Verify());
-        }
+        final Signature aggSig2 = aggSig.DivideBy(cache);
+        assertTrue(aggSig.Verify());
+        assertTrue(aggSig2.Verify());
+    }
 
-        public void shouldAggregateSameMessageWithAggSK() {
-            byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
-            byte [] seed = getRandomSeed(32);
-            byte [] seed2 = getRandomSeed(32);
+    @Test
+    public void shouldAggregateSameMessageWithAggSK() {
+        byte [] message1 = {100, 2, (byte)254, 88, 90, 45, 23};
+        byte [] seed = getRandomSeed(32);
+        byte [] seed2 = getRandomSeed(32);
 
-            PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
-            PublicKey pk1 = sk1.GetPublicKey();
+        PrivateKey sk1 = PrivateKey.FromSeed(seed, 32);
+        PublicKey pk1 = sk1.GetPublicKey();
 
-            PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
-            PublicKey pk2 = sk2.GetPublicKey();
+        PrivateKey sk2 = PrivateKey.FromSeed(seed2, 32);
+        PublicKey pk2 = sk2.GetPublicKey();
 
-            final PrivateKeyVector privateKeys = new PrivateKeyVector();
-            privateKeys.push_back(sk1);
-            privateKeys.push_back(sk2);
-            final PublicKeyVector pubKeys = new PublicKeyVector();
-            pubKeys.push_back(pk1);
-            pubKeys.push_back(pk2);
-            final PrivateKey aggSk = PrivateKey.Aggregate(
-                    privateKeys, pubKeys);
+        final PrivateKeyVector privateKeys = new PrivateKeyVector();
+        privateKeys.push_back(sk1);
+        privateKeys.push_back(sk2);
+        final PublicKeyVector pubKeys = new PublicKeyVector();
+        pubKeys.push_back(pk1);
+        pubKeys.push_back(pk2);
+        final PrivateKey aggSk = PrivateKey.Aggregate(
+                privateKeys, pubKeys);
 
-            Signature sig1 = sk1.Sign(message1, sizeof(message1));
-            Signature sig2 = sk2.Sign(message1, sizeof(message1));
+        Signature sig1 = sk1.Sign(message1, sizeof(message1));
+        Signature sig2 = sk2.Sign(message1, sizeof(message1));
 
-            Signature aggSig2 = aggSk.Sign(message1, sizeof(message1));
+        Signature aggSig2 = aggSk.Sign(message1, sizeof(message1));
 
-            final SignatureVector sigs = new SignatureVector();
-            sigs.push_back(sig1);
-            sigs.push_back(sig2);
-            byte [][] messages = {message1, message1};
-            Signature aggSig = Signature.AggregateSigs(sigs);
-            assertTrue(aggSig.equals(aggSig2));
+        final SignatureVector sigs = new SignatureVector();
+        sigs.push_back(sig1);
+        sigs.push_back(sig2);
+        byte [][] messages = {message1, message1};
+        Signature aggSig = Signature.AggregateSigs(sigs);
+        assertTrue(aggSig.equals(aggSig2));
 
-            final PublicKey aggPubKey = PublicKey.Aggregate(pubKeys);
-            assertTrue(aggSig.Verify());
-            assertTrue(aggSig2.Verify());
-        }
-
+        final PublicKey aggPubKey = PublicKey.Aggregate(pubKeys);
+        assertTrue(aggSig.Verify());
+        assertTrue(aggSig2.Verify());
+    }
 
     //TEST_CASE("HD keys") {
-        public void shouldCreateExtendedPrivateKeyFromSeed() {
-            byte [] seed = new byte [] {1, 50, 6, (byte)244, 24, (byte)199, 1, 25};
-            ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
-                    seed, sizeof(seed));
+    @Test
+    public void shouldCreateExtendedPrivateKeyFromSeed() {
+        byte [] seed = new byte [] {1, 50, 6, (byte)244, 24, (byte)199, 1, 25};
+        ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
+                seed, sizeof(seed));
 
-            ExtendedPrivateKey esk77 = esk.PrivateChild(77 + (1 << 31));
-            ExtendedPrivateKey esk77copy = esk.PrivateChild(77 + (1 << 31));
+        ExtendedPrivateKey esk77 = esk.PrivateChild(77 + (1 << 31));
+        ExtendedPrivateKey esk77copy = esk.PrivateChild(77 + (1 << 31));
 
-            assertTrue(esk77 == esk77copy);
+        assertTrue(esk77.equals(esk77copy));
 
-            ExtendedPrivateKey esk77nh = esk.PrivateChild(77);
+        ExtendedPrivateKey esk77nh = esk.PrivateChild(77);
 
-            ExtendedPrivateKey eskLong = esk.PrivateChild((1 << 31) + 5)
-                    .PrivateChild(0)
-                    .PrivateChild(0)
-                    .PrivateChild((1 << 31) + 56)
-                    .PrivateChild(70)
-                    .PrivateChild(4);
-            byte [] chainCode = new byte [32];
-            eskLong.GetChainCode().Serialize(chainCode);
+        ExtendedPrivateKey eskLong = esk.PrivateChild((1 << 31) + 5)
+                .PrivateChild(0)
+                .PrivateChild(0)
+                .PrivateChild((1 << 31) + 56)
+                .PrivateChild(70)
+                .PrivateChild(4);
+        byte [] chainCode = new byte [32];
+        eskLong.GetChainCode().Serialize(chainCode);
+    }
+
+    @Test
+    public void shouldMatchDeriviationThroughPrivateAndPublicKeys() {
+        byte [] seed = new byte []{1, 50, 6, (byte)244, 24, (byte)199, 1, 25};
+        ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
+                seed, sizeof(seed));
+        ExtendedPublicKey epk = esk.GetExtendedPublicKey();
+
+        PublicKey pk1 = esk.PrivateChild(238757).GetPublicKey();
+        PublicKey pk2 = epk.PublicChild(238757).GetPublicKey();
+
+        assertTrue(pk1.equals(pk2));
+
+        PrivateKey sk3 = esk.PrivateChild(0)
+                .PrivateChild(3)
+                .PrivateChild(8)
+                .PrivateChild(1)
+                .GetPrivateKey();
+
+        PublicKey pk4 = epk.PublicChild(0)
+                .PublicChild(3)
+                .PublicChild(8)
+                .PublicChild(1)
+                .GetPublicKey();
+        assertTrue(sk3.GetPublicKey().equals(pk4));
+
+        Signature sig = sk3.Sign(seed, sizeof(seed));
+
+        assertTrue(sig.Verify());
+    }
+
+    @Test
+    public void shouldPreventHardenedPKDerivation() {
+        byte [] seed = {1, 50, 6, (byte)244, 24, (byte)199, 1, 25};
+        ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
+                seed, sizeof(seed));
+        ExtendedPublicKey epk = esk.GetExtendedPublicKey();
+
+        ExtendedPrivateKey sk = esk.PrivateChild((1 << 31) + 3);
+        try {
+            epk.PublicChild((1 << 31) + 3);
+            fail();
+        } catch (Exception x) {
+
         }
+    }
 
-        @Test
-        public void shouldMatchDeriviationThroughPrivateAndPublicKeys() {
-            byte [] seed = new byte []{1, 50, 6, (byte)244, 24, (byte)199, 1, 25};
-            ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
-                    seed, sizeof(seed));
-            ExtendedPublicKey epk = esk.GetExtendedPublicKey();
+    @Test
+    public void shouldDerivePublicChildFromParent() {
+        byte [] seed = new byte[]{1, 50, 6, (byte)244, 24, (byte)199, 1, 0, 0, 0};
+        ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
+                seed, sizeof(seed));
+        ExtendedPublicKey epk = esk.GetExtendedPublicKey();
 
-            PublicKey pk1 = esk.PrivateChild(238757).GetPublicKey();
-            PublicKey pk2 = epk.PublicChild(238757).GetPublicKey();
+        ExtendedPublicKey pk1 = esk.PublicChild(13);
+        ExtendedPublicKey pk2 = epk.PublicChild(13);
 
-            assertTrue(pk1.equals(pk2));
+        assertTrue(pk1.equals(pk2));
+    }
 
-            PrivateKey sk3 = esk.PrivateChild(0)
-                    .PrivateChild(3)
-                    .PrivateChild(8)
-                    .PrivateChild(1)
-                    .GetPrivateKey();
+    @Test
+    public void shouldPrintStructures() {
+        byte [] seed = new byte[]{1, 50, 6, (byte)244, 24, (byte)199, 1, 0, 0, 0};
+        ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
+                seed, sizeof(seed));
+        ExtendedPublicKey epk = esk.GetExtendedPublicKey();
 
-            PublicKey pk4 = epk.PublicChild(0)
-                    .PublicChild(3)
-                    .PublicChild(8)
-                    .PublicChild(1)
-                    .GetPublicKey();
-            assertTrue(sk3.GetPublicKey().equals(pk4));
+        System.out.println(epk);
+        System.out.println(epk.GetPublicKey());
+        System.out.println(epk.GetChainCode());
 
-            Signature sig = sk3.Sign(seed, sizeof(seed));
+        Signature sig1 = esk.GetPrivateKey()
+                .Sign(seed, sizeof(seed));
+        System.out.println(sig1);
+    }
 
-            assertTrue(sig.Verify());
-        }
+    @Test
+    public void shouldSerializeExtendedKeys() {
+        byte [] seed = new byte[]{1, 50, 6, (byte)244, 25, (byte)199, 1, 25};
+        ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
+                seed, sizeof(seed));
+        ExtendedPublicKey epk = esk.GetExtendedPublicKey();
 
-        @Test
-        public void shouldPreventHardenedPKDerivation() {
-            byte [] seed = {1, 50, 6, (byte)244, 24, (byte)199, 1, 25};
-            ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
-                    seed, sizeof(seed));
-            ExtendedPublicKey epk = esk.GetExtendedPublicKey();
+        PublicKey pk1 = esk.PrivateChild(238757).GetPublicKey();
+        PublicKey pk2 = epk.PublicChild(238757).GetPublicKey();
 
-            ExtendedPrivateKey sk = esk.PrivateChild((1 << 31) + 3);
-            try {
-                epk.PublicChild((1 << 31) + 3);
-                fail();
-            } catch (Exception x) {
+        assertTrue(pk1.equals(pk2));
 
-            }
-        }
+        ExtendedPrivateKey sk3 = esk.PrivateChild(0)
+                .PrivateChild(3)
+                .PrivateChild(8)
+                .PrivateChild(1);
 
-        @Test
-        public void shouldDerivePublicChildFromParent() {
-            byte [] seed = new byte[]{1, 50, 6, (byte)244, 24, (byte)199, 1, 0, 0, 0};
-            ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
-                    seed, sizeof(seed));
-            ExtendedPublicKey epk = esk.GetExtendedPublicKey();
+        ExtendedPublicKey pk4 = epk.PublicChild(0)
+                .PublicChild(3)
+                .PublicChild(8)
+                .PublicChild(1);
+        byte [] buffer1 = new byte[(int)ExtendedPrivateKey.EXTENDED_PRIVATE_KEY_SIZE];
+        byte [] buffer2 = new byte[(int)ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE];
+        byte [] buffer3 = new byte[(int)ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE];
 
-            ExtendedPublicKey pk1 = esk.PublicChild(13);
-            ExtendedPublicKey pk2 = epk.PublicChild(13);
-
-            assertTrue(pk1.equals(pk2));
-        }
-
-        @Test
-        public void shouldPrintStructures() {
-            byte [] seed = new byte[]{1, 50, 6, (byte)244, 24, (byte)199, 1, 0, 0, 0};
-            ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
-                    seed, sizeof(seed));
-            ExtendedPublicKey epk = esk.GetExtendedPublicKey();
-
-            System.out.println(epk);
-            System.out.println(epk.GetPublicKey());
-            System.out.println(epk.GetChainCode());
-
-            Signature sig1 = esk.GetPrivateKey()
-                    .Sign(seed, sizeof(seed));
-            System.out.println(sig1);
-        }
-
-        public void shouldSerializeExtendedKeys() {
-            byte [] seed = new byte[]{1, 50, 6, (byte)244, 25, (byte)199, 1, 25};
-            ExtendedPrivateKey esk = ExtendedPrivateKey.FromSeed(
-                    seed, sizeof(seed));
-            ExtendedPublicKey epk = esk.GetExtendedPublicKey();
-
-            PublicKey pk1 = esk.PrivateChild(238757).GetPublicKey();
-            PublicKey pk2 = epk.PublicChild(238757).GetPublicKey();
-
-            assertTrue(pk1 == pk2);
-
-            ExtendedPrivateKey sk3 = esk.PrivateChild(0)
-                    .PrivateChild(3)
-                    .PrivateChild(8)
-                    .PrivateChild(1);
-
-            ExtendedPublicKey pk4 = epk.PublicChild(0)
-                    .PublicChild(3)
-                    .PublicChild(8)
-                    .PublicChild(1);
-            byte [] buffer1 = new byte[(int)ExtendedPrivateKey.EXTENDED_PRIVATE_KEY_SIZE];
-            byte [] buffer2 = new byte[(int)ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE];
-            byte [] buffer3 = new byte[(int)ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE];
-
-            sk3.Serialize(buffer1);
-            sk3.GetExtendedPublicKey().Serialize(buffer2);
-            pk4.Serialize(buffer3);
-            assertTrue(Arrays.equals(buffer2, buffer3));
-        }
+        sk3.Serialize(buffer1);
+        sk3.GetExtendedPublicKey().Serialize(buffer2);
+        pk4.Serialize(buffer3);
+        assertTrue(Arrays.equals(buffer2, buffer3));
+    }
     
 
     //TEST_CASE("AggregationInfo") {

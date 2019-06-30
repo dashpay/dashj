@@ -663,9 +663,32 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1DHKeyExchange(JNIEnv *jenv,
 SWIGEXPORT void JNICALL Java_org_dashj_bls_JNI_BLS_1CheckRelicErrors(JNIEnv *jenv, jclass jcls) {
   (void)jenv;
   (void)jcls;
-  bls::BLS::CheckRelicErrors();
+    try {
+    bls::BLS::CheckRelicErrors();
+  } catch (std::string & x) {
+    SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, x.c_str());
+  } catch (...) {
+      SWIG_JavaThrowException(jenv, DashJ_JavaBLSException, "unknown exception");
+  }
 }
 
+SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1GetContext(JNIEnv *jenv, jclass jcls) {
+  (void)jenv;
+  (void)jcls;
+  return (jlong)core_get();
+}
+
+SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1GetContextError(JNIEnv *jenv, jclass jcls) {
+  (void)jenv;
+  (void)jcls;
+  return core_get()->code;
+}
+
+SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1SetContextError(JNIEnv *jenv, jclass jcls, jlong error) {
+  (void)jenv;
+  (void)jcls;
+  core_get()->code = error;
+}
 
 SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_new_1BLS(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;

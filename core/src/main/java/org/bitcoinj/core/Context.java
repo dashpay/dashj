@@ -25,6 +25,7 @@ import org.bitcoinj.governance.VoteConfidenceTable;
 import org.bitcoinj.quorums.*;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
+import org.dashj.bls.BLS;
 import org.slf4j.*;
 
 import java.util.EnumSet;
@@ -102,6 +103,7 @@ public class Context {
         lastConstructed = this;
         // We may already have a context in our TLS slot. This can happen a lot during unit tests, so just ignore it.
         slot.set(this);
+        BLS.Init();
     }
 
     /**
