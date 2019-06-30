@@ -21,6 +21,8 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Arrays;
+
 public class PrivateKey extends BLSObject {
 
   protected PrivateKey(long cPtr, boolean cMemoryOwn) {
@@ -43,7 +45,7 @@ public class PrivateKey extends BLSObject {
 
   public static PrivateKey FromBytes(byte[] bytes, boolean modOrder) {
     Preconditions.checkNotNull(bytes);
-    Preconditions.checkArgument(bytes.length == PRIVATE_KEY_SIZE);
+    Preconditions.checkArgument(bytes.length == PRIVATE_KEY_SIZE, "bytes size is not " + PRIVATE_KEY_SIZE);
     return new PrivateKey(JNI.PrivateKey_FromBytes__SWIG_0(bytes, modOrder), true);
   }
 
@@ -62,10 +64,16 @@ public class PrivateKey extends BLSObject {
   }
 
   public static PrivateKey AggregateInsecure(PrivateKeyVector privateKeys) {
+    Preconditions.checkNotNull(privateKeys);
+    Preconditions.checkArgument(privateKeys.size() > 0, "The number of private keys must be larger than 1");
     return new PrivateKey(JNI.PrivateKey_AggregateInsecure(PrivateKeyVector.getCPtr(privateKeys), privateKeys), true);
   }
 
   public static PrivateKey Aggregate(PrivateKeyVector privateKeys, PublicKeyVector pubKeys) {
+    Preconditions.checkNotNull(privateKeys);
+    Preconditions.checkNotNull(pubKeys);
+    Preconditions.checkArgument(privateKeys.size() == pubKeys.size());
+    Preconditions.checkArgument(privateKeys.size() > 0, "The number of private keys must be larger than 1");
     return new PrivateKey(JNI.PrivateKey_Aggregate(PrivateKeyVector.getCPtr(privateKeys), privateKeys, PublicKeyVector.getCPtr(pubKeys)), true);
   }
 
@@ -75,8 +83,10 @@ public class PrivateKey extends BLSObject {
     JNI.PrivateKey_Serialize__SWIG_0(cPointer, this, buffer);
   }
 
-  public SWIGTYPE_p_std__vectorT_unsigned_char_t Serialize() {
-    return new SWIGTYPE_p_std__vectorT_unsigned_char_t(JNI.PrivateKey_Serialize__SWIG_1(cPointer, this), true);
+  public byte [] Serialize() {
+    byte [] bytes = new byte[(int)PRIVATE_KEY_SIZE];
+    Serialize(bytes);
+    return bytes;
   }
 
   public InsecureSignature SignInsecure(byte[] msg, long len) {
@@ -102,4 +112,16 @@ public class PrivateKey extends BLSObject {
   }
 
   public final static long PRIVATE_KEY_SIZE = JNI.PrivateKey_PRIVATE_KEY_SIZE_get();
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof PrivateKey))
+      return false;
+    PrivateKey privateKey = (PrivateKey) obj;
+    byte[] theseBytes = new byte[(int) PRIVATE_KEY_SIZE];
+    Serialize(theseBytes);
+    byte[] bytes = new byte[(int) PRIVATE_KEY_SIZE];
+    privateKey.Serialize(bytes);
+    return Arrays.equals(theseBytes, bytes);
+  }
 }

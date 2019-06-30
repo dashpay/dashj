@@ -21,6 +21,8 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Arrays;
+
 public class ExtendedPrivateKey {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
@@ -62,6 +64,7 @@ public class ExtendedPrivateKey {
   }
 
   public ExtendedPrivateKey PrivateChild(long i) {
+    Preconditions.checkArgument(i < 255, "Cannot go further than 255 levels");
     return new ExtendedPrivateKey(JNI.ExtendedPrivateKey_PrivateChild(swigCPtr, this, i), true);
   }
 
@@ -112,4 +115,16 @@ public class ExtendedPrivateKey {
   }
 
   public final static long EXTENDED_PRIVATE_KEY_SIZE = JNI.ExtendedPrivateKey_EXTENDED_PRIVATE_KEY_SIZE_get();
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof ExtendedPrivateKey))
+      return false;
+    ExtendedPrivateKey epk = (ExtendedPrivateKey) obj;
+    byte[] theseBytes = new byte[(int) EXTENDED_PRIVATE_KEY_SIZE];
+    Serialize(theseBytes);
+    byte[] bytes = new byte[(int) EXTENDED_PRIVATE_KEY_SIZE];
+    epk.Serialize(bytes);
+    return Arrays.equals(theseBytes, bytes);
+  }
 }

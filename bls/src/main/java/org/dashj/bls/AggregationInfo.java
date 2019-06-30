@@ -58,6 +58,10 @@ public class AggregationInfo {
   }
 
   public static AggregationInfo FromVectors(PublicKeyVector pubKeys, MessageHashVector messageHashes, BigIntegerVector exponents) {
+    Preconditions.checkNotNull(pubKeys);
+    Preconditions.checkNotNull(messageHashes);
+    Preconditions.checkNotNull(exponents);
+    Preconditions.checkArgument(pubKeys.size() == messageHashes.size(), "Invalid input, all std::vectors must have the same length (" + pubKeys.size() + " != " + messageHashes.size() + ")");
     return new AggregationInfo(JNI.AggregationInfo_FromVectors(PublicKeyVector.getCPtr(pubKeys), pubKeys, MessageHashVector.getCPtr(messageHashes), messageHashes, BigIntegerVector.getCPtr(exponents), exponents), true);
   }
 
@@ -70,6 +74,9 @@ public class AggregationInfo {
   }
 
   public void RemoveEntries(MessageHashVector messages, PublicKeyVector pubKeys) {
+    Preconditions.checkNotNull(messages);
+    Preconditions.checkNotNull(pubKeys);
+    Preconditions.checkArgument(messages.size() != pubKeys.size(), "Invalid entries");
     JNI.AggregationInfo_RemoveEntries(cPointer, this, MessageHashVector.getCPtr(messages), messages, PublicKeyVector.getCPtr(pubKeys), pubKeys);
   }
 

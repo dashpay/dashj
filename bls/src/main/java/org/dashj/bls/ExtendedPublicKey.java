@@ -21,6 +21,8 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Arrays;
+
 public class ExtendedPublicKey {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
@@ -51,11 +53,13 @@ public class ExtendedPublicKey {
 
   public static ExtendedPublicKey FromBytes(byte[] serialized) {
     Preconditions.checkNotNull(serialized);
-    Preconditions.checkArgument(serialized.length == EXTENDED_PUBLIC_KEY_SIZE);
+    //Preconditions.checkArgument(serialized.length == EXTENDED_PUBLIC_KEY_SIZE);
     return new ExtendedPublicKey(JNI.ExtendedPublicKey_FromBytes(serialized), true);
   }
 
   public ExtendedPublicKey PublicChild(long i) {
+    boolean hardened = (i & 1 << 31) != 0;
+    Preconditions.checkArgument (!hardened, "Cannot derive hardened children from public key");
     return new ExtendedPublicKey(JNI.ExtendedPublicKey_PublicChild(swigCPtr, this, i), true);
   }
 
@@ -95,4 +99,16 @@ public class ExtendedPublicKey {
 
   public final static long VERSION = JNI.ExtendedPublicKey_VERSION_get();
   public final static long EXTENDED_PUBLIC_KEY_SIZE = JNI.ExtendedPublicKey_EXTENDED_PUBLIC_KEY_SIZE_get();
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof ExtendedPublicKey))
+      return false;
+    ExtendedPublicKey epk = (ExtendedPublicKey) obj;
+    byte[] theseBytes = new byte[(int) EXTENDED_PUBLIC_KEY_SIZE];
+    Serialize(theseBytes);
+    byte[] bytes = new byte[(int) EXTENDED_PUBLIC_KEY_SIZE];
+    epk.Serialize(bytes);
+    return Arrays.equals(theseBytes, bytes);
+  }
 }

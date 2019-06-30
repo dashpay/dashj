@@ -21,6 +21,8 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Arrays;
+
 public class Signature extends BLSObject {
 
   protected Signature(long cPtr, boolean cMemoryOwn) {
@@ -72,10 +74,14 @@ public class Signature extends BLSObject {
   }
 
   public static Signature AggregateSigs(SignatureVector sigs) {
+    Preconditions.checkNotNull(sigs);
+    //Preconditions.checkArgument(sigs.size() > 0);
     return new Signature(JNI.Signature_AggregateSigs(SignatureVector.getCPtr(sigs)), true);
   }
 
   public Signature DivideBy(SignatureVector divisorSigs) {
+    Preconditions.checkNotNull(divisorSigs);
+    //Preconditions.checkArgument(divisorSigs.size() > 0);
     return new Signature(JNI.Signature_DivideBy(cPointer, this, SignatureVector.getCPtr(divisorSigs)), true);
   }
 
@@ -94,8 +100,22 @@ public class Signature extends BLSObject {
     JNI.Signature_Serialize__SWIG_0(cPointer, this, buffer);
   }
 
-  public SWIGTYPE_p_std__vectorT_unsigned_char_t Serialize() {
-    return new SWIGTYPE_p_std__vectorT_unsigned_char_t(JNI.Signature_Serialize__SWIG_1(cPointer, this), true);
+  public byte [] Serialize() {
+    byte [] bytes = new byte[(int)SIGNATURE_SIZE];
+    Serialize(bytes);
+    return bytes;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if(obj == null || !(obj instanceof Signature))
+      return false;
+    Signature signature = (Signature)obj;
+    byte [] theseBytes = new byte[(int)SIGNATURE_SIZE];
+    Serialize(theseBytes);
+    byte [] signatureBytes = new byte[(int)SIGNATURE_SIZE];
+    signature.Serialize(signatureBytes);
+    return Arrays.equals(theseBytes, signatureBytes);
   }
 
   public final static long SIGNATURE_SIZE = JNI.Signature_SIGNATURE_SIZE_get();

@@ -21,6 +21,8 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Arrays;
+
 public class PublicKey extends BLSObject{
 
   protected PublicKey(long cPtr, boolean cMemoryOwn) {
@@ -30,7 +32,6 @@ public class PublicKey extends BLSObject{
   //protected static long getCPtr(PublicKey obj) {
   //  return (obj == null) ? 0 : obj.cPointer;
   //}
-
 
   public synchronized void delete() {
         JNI.delete_PublicKey(cPointer);
@@ -51,10 +52,14 @@ public class PublicKey extends BLSObject{
   }
 
   public static PublicKey AggregateInsecure(PublicKeyVector pubKeys) {
+    Preconditions.checkNotNull(pubKeys);
+    Preconditions.checkArgument(pubKeys.size() > 0, "The number of public keys must be at least 1");
     return new PublicKey(JNI.PublicKey_AggregateInsecure(PublicKeyVector.getCPtr(pubKeys), pubKeys), true);
   }
 
   public static PublicKey Aggregate(PublicKeyVector pubKeys) {
+    Preconditions.checkNotNull(pubKeys);
+    Preconditions.checkArgument(pubKeys.size() > 0, "The number of public keys must be at least 1");
     return new PublicKey(JNI.PublicKey_Aggregate(PublicKeyVector.getCPtr(pubKeys), pubKeys), true);
   }
 
@@ -64,8 +69,15 @@ public class PublicKey extends BLSObject{
     JNI.PublicKey_Serialize__SWIG_0(cPointer, this, buffer);
   }
 
-  public SWIGTYPE_p_std__vectorT_unsigned_char_t Serialize() {
-    return new SWIGTYPE_p_std__vectorT_unsigned_char_t(JNI.PublicKey_Serialize__SWIG_1(cPointer, this), true);
+  public byte [] Serialize() {
+    byte [] bytes = new byte[(int)PUBLIC_KEY_SIZE];
+    Serialize(bytes);
+    return bytes;
+  }
+
+  @Override
+  public String toString() {
+    return "PublicKey(" + Utils.HEX.encode(Serialize()) + ")";
   }
 
   public long GetFingerprint() {
@@ -73,4 +85,16 @@ public class PublicKey extends BLSObject{
   }
 
   public final static long PUBLIC_KEY_SIZE = JNI.PublicKey_PUBLIC_KEY_SIZE_get();
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof PublicKey))
+      return false;
+    PublicKey publicKey = (PublicKey) obj;
+    byte[] theseBytes = new byte[(int) PUBLIC_KEY_SIZE];
+    Serialize(theseBytes);
+    byte[] bytes = new byte[(int) PUBLIC_KEY_SIZE];
+    publicKey.Serialize(bytes);
+    return Arrays.equals(theseBytes, bytes);
+  }
 }

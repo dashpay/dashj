@@ -64,6 +64,10 @@ public class InsecureSignature {
   }
 
   public boolean Verify(MessageHashVector hashes, PublicKeyVector pubKeys) {
+    Preconditions.checkNotNull(hashes);
+    Preconditions.checkNotNull(pubKeys);
+    Preconditions.checkArgument(hashes.size() == pubKeys.size(), "hashes and public keys  must be of the same size");
+    Preconditions.checkArgument(hashes.size() > 0, "hashes and public keys must be at least 1");
     return JNI.InsecureSignature_Verify(swigCPtr, this, MessageHashVector.getCPtr(hashes), PublicKeyVector.getCPtr(pubKeys), pubKeys);
   }
 
@@ -78,10 +82,14 @@ public class InsecureSignature {
   }
 
   public static InsecureSignature Aggregate(InsecureSignatureVector sigs) {
+    Preconditions.checkNotNull(sigs);
+    Preconditions.checkArgument(sigs.size() > 0);
     return new InsecureSignature(JNI.InsecureSignature_Aggregate(InsecureSignatureVector.getCPtr(sigs)), true);
   }
 
   public InsecureSignature DivideBy(InsecureSignatureVector sigs) {
+    Preconditions.checkNotNull(sigs);
+    Preconditions.checkArgument(sigs.size() > 0);
     return new InsecureSignature(JNI.InsecureSignature_DivideBy(swigCPtr, this, InsecureSignatureVector.getCPtr(sigs)), true);
   }
 
@@ -91,8 +99,10 @@ public class InsecureSignature {
     JNI.InsecureSignature_Serialize__SWIG_0(swigCPtr, this, buffer);
   }
 
-  public SWIGTYPE_p_std__vectorT_unsigned_char_t Serialize() {
-    return new SWIGTYPE_p_std__vectorT_unsigned_char_t(JNI.InsecureSignature_Serialize__SWIG_1(swigCPtr, this), true);
+  public byte [] Serialize() {
+    byte [] bytes = new byte[(int)SIGNATURE_SIZE];
+    Serialize(bytes);
+    return bytes;
   }
 
   public final static long SIGNATURE_SIZE = JNI.InsecureSignature_SIGNATURE_SIZE_get();
