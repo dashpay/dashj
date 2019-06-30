@@ -222,7 +222,6 @@ public class TransactionBroadcastTest extends TestWithPeerGroup {
             Message m = outbound(p1);
             // Hack: bloom filters are recalculated asynchronously to sending transactions to avoid lock
             // inversion, so we might or might not get the filter/mempool message first or second.
-            while (!(m instanceof Transaction)) m = outbound(p1);
             t1 = (Transaction) m;
         }
         assertNotNull(t1);
