@@ -5,6 +5,7 @@ import org.bitcoinj.store.FlatDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.OutputStream;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -182,7 +183,7 @@ public abstract class AbstractManager extends Message {
      *
      * @throws NullPointerException the null pointer exception
      */
-    public void save() throws NullPointerException {
+    public void save() throws FileNotFoundException {
         if(filename != null) {
             //save in a separate thread
             new Thread(new Runnable() {
@@ -195,7 +196,7 @@ public abstract class AbstractManager extends Message {
                     log.info(AbstractManager.class.getCanonicalName() + " Save time:  " + (end - start) + "ms");
                 }
             }).start();
-        } else throw new NullPointerException("filename is not set");
+        } else throw new FileNotFoundException("filename is not set");
     }
 
     /**

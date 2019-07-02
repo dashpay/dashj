@@ -15,6 +15,7 @@ import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -273,6 +274,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             failedAttempts++;
             throw x;
         } catch(NullPointerException x) {
+            log.info("NPE: close this peer" + x.getMessage());
+            log.info(x.getStackTrace().toString());
+            failedAttempts++;
+            throw new VerificationException("verification error: " + x.getMessage());
+        } catch(FileNotFoundException x) {
             //file name is not set, do not save
             log.info(x.getMessage());
         } catch(BlockStoreException x) {
@@ -583,7 +589,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         peerGroup.removeConnectedEventListener(peerConnectedEventListener);
         peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
         peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
-        save();
+        try {
+            save();
+        } catch (FileNotFoundException x) {
+            //do nothing
+        }
     }
 
     public void requestMNListDiff(StoredBlock block) {
@@ -675,7 +685,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 unCache();
                 try {
                     save();
-                } catch (NullPointerException x) {
+                } catch (FileNotFoundException x) {
                     //swallow, the file has no name
                 }
                 if(requestFreshList) {
