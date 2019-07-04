@@ -1,5 +1,6 @@
 package org.bitcoinj.evolution;
 
+import com.google.common.base.Preconditions;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.ChainDownloadStartedEventListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
@@ -15,16 +16,14 @@ import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class SimplifiedMasternodeListManager extends AbstractManager {
-    private static final Logger log = LoggerFactory.getLogger(MasternodeManager.class);
+    private static final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeListManager.class);
     private ReentrantLock lock = Threading.lock("SimplifiedMasternodeListManager");
 
     static final int DMN_FORMAT_VERSION = 1;
@@ -91,7 +90,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public SimplifiedMasternodeListManager(Context context) {
         super(context);
-        tipBlockHash = Sha256Hash.ZERO_HASH;
+        tipBlockHash = params.getGenesisBlock().getHash();
         mnList = new SimplifiedMasternodeList(context.getParams());
         quorumList = new SimplifiedQuorumList(context.getParams());
         lastRequestTime = 0;
@@ -205,13 +204,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff) {
+        processMasternodeListDiff(mnlistdiff, false);
+    }
+
+
+    public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap) {
         StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         log.info("processing mnlistdiff between : " + mnList.getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
             block = blockChain.getBlockStore().get(mnlistdiff.blockHash);
-            if(block.getHeight() != newHeight)
+            if(!isLoadingBootStrap && block.getHeight() != newHeight)
                 throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
 
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
@@ -275,7 +279,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             throw x;
         } catch(NullPointerException x) {
             log.info("NPE: close this peer" + x.getMessage());
-            log.info(x.getStackTrace().toString());
             failedAttempts++;
             throw new VerificationException("verification error: " + x.getMessage());
         } catch(FileNotFoundException x) {
@@ -325,7 +328,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     downloadPeer = peer;
                 if (isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                     maybeGetMNListDiffFresh();
-                    if (!waitingForMNListDiff && mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH) || mnList.getHeight() < blockChain.getBestChainHeight()) {
+                    if (!waitingForMNListDiff && mnList.getBlockHash().equals(params.getGenesisBlock().getHash()) || mnList.getHeight() < blockChain.getBestChainHeight()) {
                         long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
                         if (Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < timePeriod) {
                             StoredBlock block = blockChain.getChainHead();
@@ -355,6 +358,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     PeerDisconnectedEventListener peerDisconnectedEventListener = new PeerDisconnectedEventListener() {
         @Override
         public void onPeerDisconnected(Peer peer, int peerCount) {
+            log.info("Peer disconnected: " + peer.toString());
             if(downloadPeer == peer) {
                 downloadPeer = null;
                 chooseRandomDownloadPeer();
@@ -441,7 +445,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
 
             //Should we reset our masternode/quorum list
-            if (mnList.size() == 0 || mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
+            if (mnList.size() == 0 || mnList.getBlockHash().equals(params.getGenesisBlock().getHash())) {
                 mnList = new SimplifiedMasternodeList(params);
                 quorumList = new SimplifiedQuorumList(params);
             } else {
@@ -455,7 +459,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
             StoredBlock block = blockChain.getChainHead();
             log.info("maybe requesting mnlistdiff from {} to {}; \n  From {}\n  To {}", mnList.getHeight(), block.getHeight(), mnList.getBlockHash(), block.getHeader().getHash());
-            if (mnList.getBlockHash().equals(Sha256Hash.ZERO_HASH)) {
+            if (mnList.getBlockHash().equals(params.getGenesisBlock().getHash())) {
                 resetMNList(true);
                 return;
             }
@@ -523,8 +527,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(pendingBlocks.size() == 0)
                 return;
 
-            if(downloadPeer == null)
-                chooseRandomDownloadPeer();
+            //if(downloadPeer == null)
+            //    chooseRandomDownloadPeer();
 
             if(downloadPeer != null) {
 
@@ -554,13 +558,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     if(requestMessage.equals(lastRequestMessage)) {
                         log.info("request for mnlistdiff is the same as the last request");
                     }
-                    try {
+                    //try {
                         downloadPeer.sendMessage(requestMessage);
-                    } catch (CancelledKeyException x) {
+                    /*} catch (CancelledKeyException x) {
                         //the connection was closed
                         chooseRandomDownloadPeer();
                         downloadPeer.sendMessage(requestMessage);
-                    }
+                    }*/
                     lastRequestMessage = requestMessage;
                     lastRequestTime = Utils.currentTimeMillis();
                     waitingForMNListDiff = true;
@@ -679,31 +683,44 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 log.info("resetting masternode list");
                 mnList = new SimplifiedMasternodeList(context.getParams());
                 quorumList = new SimplifiedQuorumList(context.getParams());
+                mnListsCache.clear();
+                quorumsCache.clear();
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
                 unCache();
                 try {
-                    save();
+                    if(bootStrapFilePath == null)
+                        save();
                 } catch (FileNotFoundException x) {
                     //swallow, the file has no name
                 }
                 if(requestFreshList) {
-                    int rewindBlockCount = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_LIST_PERIOD : MAX_CACHE_SIZE;
-                    int height = blockChain.getBestChainHeight() - rewindBlockCount;
-                    if (height < params.getDIP0008BlockHeight())
-                        height = params.getDIP0008BlockHeight();
-                    if(syncOptions == SyncOptions.SYNC_MINIMUM)
-                        height = blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET;
-                    StoredBlock resetBlock = blockChain.getBlockStore().get(height);
-                    if (resetBlock == null)
-                        resetBlock = blockChain.getChainHead();
-                    requestMNListDiff(resetBlock != null ? resetBlock : blockChain.getChainHead());
+                    if(bootStrapFilePath == null && bootStrapStream == null) {
+                        requestAfterMNListReset();
+                    } else {
+                        waitingForMNListDiff = true;
+                        isLoadingBootStrap = true;
+                        loadBootstrapAndSync();
+                    }
                 }
             }
         } catch (BlockStoreException x) {
             throw new RuntimeException(x);
         }
+    }
+
+    protected void requestAfterMNListReset() throws BlockStoreException {
+        int rewindBlockCount = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_LIST_PERIOD : MAX_CACHE_SIZE;
+        int height = blockChain.getBestChainHeight() - rewindBlockCount;
+        if (height < params.getDIP0008BlockHeight())
+            height = params.getDIP0008BlockHeight();
+        if (syncOptions == SyncOptions.SYNC_MINIMUM)
+            height = blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET;
+        StoredBlock resetBlock = blockChain.getBlockStore().get(height);
+        if (resetBlock == null)
+            resetBlock = blockChain.getChainHead();
+        requestMNListDiff(resetBlock != null ? resetBlock : blockChain.getChainHead());
     }
 
     public SimplifiedMasternodeList getListForBlock(Sha256Hash blockHash) {
@@ -800,5 +817,63 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         } finally {
             lock.unlock();
         }
+    }
+
+    static String bootStrapFilePath = null;
+    static InputStream bootStrapStream = null;
+    boolean isLoadingBootStrap = false;
+
+    public static void setBootStrapFilePath(String bootStrapFilePath) {
+        SimplifiedMasternodeListManager.bootStrapFilePath = bootStrapFilePath;
+    }
+
+    public static void setBootStrapStream(InputStream bootStrapStream) {
+        SimplifiedMasternodeListManager.bootStrapStream = bootStrapStream;
+    }
+
+    protected void loadBootstrapAndSync() {
+        Preconditions.checkState(bootStrapFilePath != null || bootStrapStream != null);
+        Preconditions.checkState(mnList.size() == 0);
+        Preconditions.checkState(quorumList.size() == 0);
+        Preconditions.checkState(mnListsCache.size() == 0);
+        Preconditions.checkState(quorumsCache.size() == 0);
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+
+                log.info("loading mnlistdiff bootstrap file: " + bootStrapFilePath != null ? bootStrapFilePath : "input stream");
+                Context.propagate(context);
+                //load the file
+                InputStream stream = bootStrapStream;
+                try {
+                    if(stream != null)
+                        stream.reset();
+                    stream = stream != null ? stream : new FileInputStream(bootStrapFilePath);
+                    byte[] buffer = new byte[(int) stream.available()];
+                    stream.read(buffer);
+
+                    isLoadingBootStrap = true;
+                    SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, buffer);
+                    processMasternodeListDiff(mnlistdiff, true);
+                    log.info("finished loading mnlist bootstrap file");
+                } catch (FileNotFoundException x) {
+                    log.info("failed loading mnlist bootstrap file" + x.getMessage());
+                } catch (IOException x) {
+                    log.info("failed loading mnlist bootstrap file" + x.getMessage());
+                } finally {
+                    isLoadingBootStrap = false;
+                    try {
+                        if (stream != null)
+                            stream.close();
+                        requestAfterMNListReset();
+                    } catch (IOException x) {
+
+                    } catch (BlockStoreException x) {
+
+                    }
+                }
+            }
+        }).start();
     }
 }

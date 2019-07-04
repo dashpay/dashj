@@ -35,7 +35,7 @@ public class SimplifiedQuorumList extends Message {
 
     public SimplifiedQuorumList(NetworkParameters params) {
         super(params);
-        blockHash = Sha256Hash.ZERO_HASH;
+        blockHash = params.getGenesisBlock().getHash();
         height = -1;
         minableCommitmentsByQuorum = new HashMap<Pair<Integer, Sha256Hash>, Sha256Hash>(10);
         minableCommitments = new LinkedHashMap<Sha256Hash, FinalCommitment>(10);

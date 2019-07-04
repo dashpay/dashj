@@ -26,7 +26,7 @@ public class SimplifiedMasternodeList extends Message {
 
     SimplifiedMasternodeList(NetworkParameters params) {
         super(params);
-        blockHash = Sha256Hash.ZERO_HASH;
+        blockHash = params.getGenesisBlock().getHash();
         height = -1;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(5000);
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(5000);
@@ -48,7 +48,7 @@ public class SimplifiedMasternodeList extends Message {
 
     SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries) {
         super(params);
-        this.blockHash = Sha256Hash.ZERO_HASH;
+        this.blockHash = params.getGenesisBlock().getHash();
         this.height = -1;
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>();
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(entries.size());
@@ -148,12 +148,6 @@ public class SimplifiedMasternodeList extends Message {
         lock.lock();
         try {
             mnMap.put(dmn.proRegTxHash, dmn);
-            addUniqueProperty(dmn, dmn.service);
-            addUniqueProperty(dmn, dmn.keyIdVoting);
-            if (params.isSupportingEvolution())
-                addUniqueProperty(dmn, dmn.pubKeyOperator);
-            else
-                addUniqueProperty(dmn, dmn.keyIdOperator);
         } finally {
             lock.unlock();
         }
@@ -164,9 +158,6 @@ public class SimplifiedMasternodeList extends Message {
         try {
             SimplifiedMasternodeListEntry dmn = getMN(proTxHash);
             if (dmn != null) {
-                deleteUniqueProperty(dmn, dmn.service);
-                deleteUniqueProperty(dmn, dmn.keyIdVoting);
-                deleteUniqueProperty(dmn, dmn.pubKeyOperator);
                 mnMap.remove(proTxHash);
             }
         } finally {
@@ -497,7 +488,7 @@ public class SimplifiedMasternodeList extends Message {
     }
 
     protected void setBlock(StoredBlock storedblock, boolean storedBlockMatchesRequest) {
-        this.storedBlock = storedblock;
+        this.storedBlock = storedblock == null ? new StoredBlock(params.getGenesisBlock(), BigInteger.valueOf(0), 0) : storedblock;
         this.storedBlockMatchesRequest = storedBlockMatchesRequest;
     }
 
