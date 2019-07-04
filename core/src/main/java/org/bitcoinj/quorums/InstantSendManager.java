@@ -117,7 +117,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
             pendingInstantSendLocks.put(hash, new Pair((long)peer.hashCode(), isLock));
 
             if(runWithoutThread) {
-                processPendingInstantSendLocks();
+                try {
+                    processPendingInstantSendLocks();
+                } catch (BlockStoreException x) {
+                    throw new VerificationException(x.getMessage());
+                }
             }
         } finally {
             lock.unlock();
@@ -177,6 +181,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 }
             } catch (InterruptedException x) {
                 //let the thread stop
+            } catch (BlockStoreException x) {
+
             }
         }
     };
@@ -361,7 +367,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         return true;
     }
 
-    boolean processPendingInstantSendLocks()
+    boolean processPendingInstantSendLocks() throws BlockStoreException
     {
         LLMQParameters.LLMQType llmqType = context.getParams().getLlmqForInstantSend();
 

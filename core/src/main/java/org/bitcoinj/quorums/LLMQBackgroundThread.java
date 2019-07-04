@@ -1,6 +1,7 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.Context;
+import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,10 +47,14 @@ public class LLMQBackgroundThread extends Thread {
                 }
 
             }
+        } catch (BlockStoreException x ) {
+
         } catch (InterruptedException x) {
             //let the thread stop
+        } finally {
             context.signingManager.removeRecoveredSignatureListener(context.instantSendManager);
             context.signingManager.removeRecoveredSignatureListener(context.chainLockHandler);
+
         }
     }
 }

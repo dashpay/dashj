@@ -145,7 +145,7 @@ public class SigningManager {
         return db.getVoteForId(llmqType, id);
     }
 
-    Quorum selectQuorumForSigning(LLMQParameters.LLMQType llmqType, long signHeight, Sha256Hash selectionHash)
+    Quorum selectQuorumForSigning(LLMQParameters.LLMQType llmqType, long signHeight, Sha256Hash selectionHash) throws BlockStoreException
     {
         LLMQParameters llmqParams = context.getParams().getLlmqs().get(llmqType);
         int poolSize = (int)llmqParams.signingActiveQuorumCount;
@@ -156,11 +156,9 @@ public class SigningManager {
         if(startBlockHeight > blockChain.getBestChainHeight())
             return null;
 
-        try {
-            startBlock = blockChain.getBlockStore().get((int) startBlockHeight);
-        } catch (BlockStoreException x) {
-            throw new RuntimeException(x);
-        }
+
+        startBlock = blockChain.getBlockStore().get((int) startBlockHeight);
+
 
         ArrayList<Quorum> quorums = quorumManager.scanQuorums(llmqType, startBlock, poolSize);
         if (quorums.isEmpty()) {
@@ -394,7 +392,7 @@ public class SigningManager {
         }
     }
 
-    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig)
+    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig) throws BlockStoreException
     {
         LLMQParameters llmqParams = context.getParams().getLlmqs().get(context.getParams().getLlmqChainLocks());
 
