@@ -21,18 +21,14 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
-public class InsecureSignature {
-  private transient long swigCPtr;
-  protected transient boolean swigCMemOwn;
+public class InsecureSignature extends BLSObject {
 
   protected InsecureSignature(long cPtr, boolean cMemoryOwn) {
-    Preconditions.checkArgument(cPtr != 0);
-    swigCMemOwn = cMemoryOwn;
-    swigCPtr = cPtr;
+    super(cPtr, cMemoryOwn);
   }
 
   protected static long getCPtr(InsecureSignature obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
+    return (obj == null) ? 0 : obj.cPointer;
   }
 
   protected void finalize() {
@@ -40,13 +36,7 @@ public class InsecureSignature {
   }
 
   public synchronized void delete() {
-    if (swigCPtr != 0) {
-      if (swigCMemOwn) {
-        swigCMemOwn = false;
-        JNI.delete_InsecureSignature(swigCPtr);
-      }
-      swigCPtr = 0;
-    }
+    JNI.delete_InsecureSignature(cPointer);
   }
 
   public static InsecureSignature FromBytes(byte [] data) {
@@ -68,7 +58,7 @@ public class InsecureSignature {
     Preconditions.checkNotNull(pubKeys);
     Preconditions.checkArgument(hashes.size() == pubKeys.size(), "hashes and public keys  must be of the same size");
     Preconditions.checkArgument(hashes.size() > 0, "hashes and public keys must be at least 1");
-    return JNI.InsecureSignature_Verify(swigCPtr, this, MessageHashVector.getCPtr(hashes), PublicKeyVector.getCPtr(pubKeys), pubKeys);
+    return JNI.InsecureSignature_Verify(cPointer, this, MessageHashVector.getCPtr(hashes), PublicKeyVector.getCPtr(pubKeys), pubKeys);
   }
 
   public boolean Verify(byte [] hash, PublicKey pubKey) {
@@ -90,19 +80,24 @@ public class InsecureSignature {
   public InsecureSignature DivideBy(InsecureSignatureVector sigs) {
     Preconditions.checkNotNull(sigs);
     Preconditions.checkArgument(sigs.size() > 0);
-    return new InsecureSignature(JNI.InsecureSignature_DivideBy(swigCPtr, this, InsecureSignatureVector.getCPtr(sigs)), true);
+    return new InsecureSignature(JNI.InsecureSignature_DivideBy(cPointer, this, InsecureSignatureVector.getCPtr(sigs)), true);
   }
 
   public void Serialize(byte[] buffer) {
     Preconditions.checkNotNull(buffer);
     Preconditions.checkArgument(buffer.length >= SIGNATURE_SIZE);
-    JNI.InsecureSignature_Serialize__SWIG_0(swigCPtr, this, buffer);
+    JNI.InsecureSignature_Serialize__SWIG_0(cPointer, this, buffer);
   }
 
   public byte [] Serialize() {
     byte [] bytes = new byte[(int)SIGNATURE_SIZE];
     Serialize(bytes);
     return bytes;
+  }
+
+  @Override
+  public String toString() {
+    return "InsecureSignature(" + Utils.HEX.encode(Serialize()) + ")";
   }
 
   public final static long SIGNATURE_SIZE = JNI.InsecureSignature_SIGNATURE_SIZE_get();

@@ -25,11 +25,17 @@ public class BLS {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
+  public static final String DASHJ_VERSION = "0.16.1";
+
+
   static {
     boolean isLibraryLoaded;
     try
     {
       System.loadLibrary(JNI.LIBRARY_NAME);
+      Preconditions.checkState(GetVersionString().equals(DASHJ_VERSION),
+              "dashjbls:  C++ Source Version doesn't match Java Source version:" +
+              "C++: " + GetVersionString() + " Java: " + DASHJ_VERSION);
       isLibraryLoaded = true;
     } catch(UnsatisfiedLinkError x) {
       throw new RuntimeException(x.getMessage());
@@ -125,5 +131,6 @@ public class BLS {
     JNI.BLS_SetContextError(error);
   }
 
+  static String GetVersionString() { return JNI.BLS_GetVersionString(); }
 
 }

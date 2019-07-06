@@ -50,7 +50,7 @@ public class InsecureSignatureVector extends java.util.AbstractList<InsecureSign
     }
   }
 
-  InsecureSignatureVector(java.util.Collection<InsecureSignature> e) {
+  public InsecureSignatureVector(java.util.Collection<InsecureSignature> e) {
     this.reserve(e.size());
     for(InsecureSignature value: e) {
       this.push_back(value);

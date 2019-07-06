@@ -50,7 +50,7 @@ public class SignatureVector extends java.util.AbstractList<Signature> {
     }
   }
 
-  SignatureVector(java.util.Collection<Signature> e) {
+  public SignatureVector(java.util.Collection<Signature> e) {
     this.reserve(e.size());
     for(Signature value: e) {
       this.push_back(value);

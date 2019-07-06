@@ -20,18 +20,14 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
-public class ChainCode {
-  private transient long swigCPtr;
-  protected transient boolean swigCMemOwn;
+public class ChainCode extends BLSObject {
 
   protected ChainCode(long cPtr, boolean cMemoryOwn) {
-    Preconditions.checkArgument(cPtr != 0);
-    swigCMemOwn = cMemoryOwn;
-    swigCPtr = cPtr;
+    super(cPtr, cMemoryOwn);
   }
 
   protected static long getCPtr(ChainCode obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
+    return (obj == null) ? 0 : obj.cPointer;
   }
 
   protected void finalize() {
@@ -39,13 +35,7 @@ public class ChainCode {
   }
 
   public synchronized void delete() {
-    if (swigCPtr != 0) {
-      if (swigCMemOwn) {
-        swigCMemOwn = false;
-        JNI.delete_ChainCode(swigCPtr);
-      }
-      swigCPtr = 0;
-    }
+    JNI.delete_ChainCode(cPointer);
   }
 
   public static ChainCode FromBytes(byte[] bytes) {
@@ -61,11 +51,18 @@ public class ChainCode {
   public void Serialize(byte[] buffer) {
     Preconditions.checkNotNull(buffer);
     Preconditions.checkArgument(buffer.length >= CHAIN_CODE_SIZE);
-    JNI.ChainCode_Serialize__SWIG_0(swigCPtr, this, buffer);
+    JNI.ChainCode_Serialize__SWIG_0(cPointer, this, buffer);
   }
 
-  public SWIGTYPE_p_std__vectorT_unsigned_char_t Serialize() {
-    return new SWIGTYPE_p_std__vectorT_unsigned_char_t(JNI.ChainCode_Serialize__SWIG_1(swigCPtr, this), true);
+  public byte [] Serialize() {
+    byte [] bytes = new byte[(int)CHAIN_CODE_SIZE];
+    Serialize(bytes);
+    return bytes;
+  }
+
+  @Override
+  public String toString() {
+    return "ChainCode(" + Utils.HEX.encode(Serialize()) + ")";
   }
 
   public final static long CHAIN_CODE_SIZE = JNI.ChainCode_CHAIN_CODE_SIZE_get();

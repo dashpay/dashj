@@ -49,7 +49,7 @@ public class PrivateKeyVector extends java.util.AbstractList<PrivateKey> {
     }
   }
 
-  PrivateKeyVector(java.util.Collection<PrivateKey> e) {
+  public PrivateKeyVector(java.util.Collection<PrivateKey> e) {
     this.reserve(e.size());
     for(PrivateKey value: e) {
       this.push_back(value);

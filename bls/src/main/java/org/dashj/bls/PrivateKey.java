@@ -34,7 +34,8 @@ public class PrivateKey extends BLSObject {
   }
 
   public synchronized void delete() {
-        JNI.delete_PrivateKey(cPointer);
+
+    JNI.delete_PrivateKey(cPointer);
   }
 
   public static PrivateKey FromSeed(byte[] seed, long seedLen) {
@@ -87,6 +88,11 @@ public class PrivateKey extends BLSObject {
     byte [] bytes = new byte[(int)PRIVATE_KEY_SIZE];
     Serialize(bytes);
     return bytes;
+  }
+
+  @Override
+  public String toString() {
+    return "PrivateKey(" + Utils.HEX.encode(Serialize()) + ")";
   }
 
   public InsecureSignature SignInsecure(byte[] msg, long len) {

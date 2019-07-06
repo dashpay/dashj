@@ -107,6 +107,11 @@ public class Signature extends BLSObject {
   }
 
   @Override
+  public String toString() {
+    return "Signature(" + Utils.HEX.encode(Serialize()) + ")";
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if(obj == null || !(obj instanceof Signature))
       return false;

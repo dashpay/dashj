@@ -114,4 +114,9 @@ public class AggregationInfo {
     return JNI.AggregationInfo_Equals(cPointer, this, AggregationInfo.getCPtr(aggInfo), aggInfo);
   }
 
+  @Override
+  public String toString() {
+    return "AggregationInfo(PublicKeys: " + GetPubKeys().size() + ", MessageHashes: " + GetMessageHashes().size() + ")";
+  }
+
 }

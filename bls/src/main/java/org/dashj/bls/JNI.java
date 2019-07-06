@@ -34,6 +34,7 @@ public class JNI {
   public final static native long BLS_GetContext();
   public final static native long BLS_GetContextError();
   public final static native long BLS_SetContextError(long error);
+  public final static native String BLS_GetVersionString();
   public final static native long new_BLS();
   public final static native void delete_BLS(long jarg1);
   public final static native long ChainCode_CHAIN_CODE_SIZE_get();
