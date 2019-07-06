@@ -1,7 +1,5 @@
 package org.dashj.bls;
 
-import static org.junit.Assert.fail;
-
 /**
  * Created by hashengineering on 11/13/18.
  */

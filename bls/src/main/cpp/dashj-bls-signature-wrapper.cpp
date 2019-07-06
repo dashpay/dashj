@@ -684,10 +684,29 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1GetContextError(JNIEnv *jen
   return core_get()->code;
 }
 
-SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1SetContextError(JNIEnv *jenv, jclass jcls, jlong error) {
+SWIGEXPORT void JNICALL Java_org_dashj_bls_JNI_BLS_1SetContextError(JNIEnv *jenv, jclass jcls, jlong error) {
   (void)jenv;
   (void)jcls;
   core_get()->code = error;
+}
+
+std::string DASHJ_VERSION = "0.16.1";
+
+SWIGEXPORT jstring JNICALL Java_org_dashj_bls_JNI_BLS_1GetVersionString(JNIEnv *jenv, jclass jcls) {
+  (void)jenv;
+  (void)jcls;
+
+    jstring jresult = jenv->NewStringUTF(DASHJ_VERSION.c_str());
+
+      if (jresult == NULL) {
+          SWIG_JavaThrowException(jenv, SWIG_JavaOutOfMemoryError, "Can't create new byte array");
+          return NULL; //  out of memory error thrown
+      }
+
+      // move from the temp structure to the java structure
+     // jenv->SetByteArrayRegion(jresult, 0, DASHJ_VERSION.size(), (jbyte*)DASHJ_VERSION.c_str());
+
+    return jresult;
 }
 
 SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_new_1BLS(JNIEnv *jenv, jclass jcls) {
