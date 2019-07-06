@@ -52,10 +52,15 @@ public class AggregationInfo {
   }
 
   public static AggregationInfo FromMsgHash(PublicKey pk, byte[] messageHash) {
+    Preconditions.checkNotNull(pk);
+    Preconditions.checkNotNull(messageHash);
     return new AggregationInfo(JNI.AggregationInfo_FromMsgHash(PublicKey.getCPtr(pk), pk, messageHash), true);
   }
 
   public static AggregationInfo FromMsg(PublicKey pk, byte[] message, long len) {
+    Preconditions.checkNotNull(pk);
+    Preconditions.checkNotNull(message);
+    Preconditions.checkState(message.length >= len);
     return new AggregationInfo(JNI.AggregationInfo_FromMsg(PublicKey.getCPtr(pk), pk, message, len), true);
   }
 
@@ -68,6 +73,7 @@ public class AggregationInfo {
   }
 
   public static AggregationInfo MergeInfos(AggregationInfoVector infos) {
+    Preconditions.checkNotNull(infos);
     return new AggregationInfo(JNI.AggregationInfo_MergeInfos(AggregationInfoVector.getCPtr(infos)), true);
   }
 
