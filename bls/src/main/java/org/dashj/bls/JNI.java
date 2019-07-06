@@ -31,6 +31,10 @@ public class JNI {
   //public final static native void BLS_Clean();
   public final static native void BLS_HashPubKeys(long jarg1, long jarg2, long jarg3, MessageHashVector jarg3_, long jarg4);
   public final static native void BLS_CheckRelicErrors();
+  public final static native long BLS_GetContext();
+  public final static native long BLS_GetContextError();
+  public final static native long BLS_SetContextError(long error);
+  public final static native String BLS_GetVersionString();
   public final static native long new_BLS();
   public final static native void delete_BLS(long jarg1);
   public final static native long ChainCode_CHAIN_CODE_SIZE_get();
@@ -129,6 +133,7 @@ public class JNI {
   public final static native long AggregationInfo_GetPubKeys(long jarg1, AggregationInfo jarg1_);
   public final static native long AggregationInfo_GetMessageHashes(long jarg1, AggregationInfo jarg1_);
   public final static native boolean AggregationInfo_Empty(long jarg1, AggregationInfo jarg1_);
+  public final static native boolean AggregationInfo_Equals(long jarg1, AggregationInfo jarg1_, long jarg2, AggregationInfo jarg2_);
   public final static native long new_AggregationInfo__SWIG_1();
   public final static native void delete_AggregationInfo(long jarg1);
   public final static native long new_PublicKeyVec__SWIG_0();

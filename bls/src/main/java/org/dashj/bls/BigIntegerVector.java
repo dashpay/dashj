@@ -49,7 +49,7 @@ public class BigIntegerVector extends java.util.AbstractList<SWIGTYPE_p_bn_t> {
     }
   }
 
-  BigIntegerVector(java.util.Collection<SWIGTYPE_p_bn_t> e) {
+  public BigIntegerVector(java.util.Collection<SWIGTYPE_p_bn_t> e) {
     this.reserve(e.size());
     for(SWIGTYPE_p_bn_t value: e) {
       this.push_back(value);

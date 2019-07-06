@@ -21,6 +21,8 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Arrays;
+
 public class AggregationInfo {
   private transient long cPointer;
   protected transient boolean owner;
@@ -50,18 +52,28 @@ public class AggregationInfo {
   }
 
   public static AggregationInfo FromMsgHash(PublicKey pk, byte[] messageHash) {
+    Preconditions.checkNotNull(pk);
+    Preconditions.checkNotNull(messageHash);
     return new AggregationInfo(JNI.AggregationInfo_FromMsgHash(PublicKey.getCPtr(pk), pk, messageHash), true);
   }
 
   public static AggregationInfo FromMsg(PublicKey pk, byte[] message, long len) {
+    Preconditions.checkNotNull(pk);
+    Preconditions.checkNotNull(message);
+    Preconditions.checkState(message.length >= len);
     return new AggregationInfo(JNI.AggregationInfo_FromMsg(PublicKey.getCPtr(pk), pk, message, len), true);
   }
 
   public static AggregationInfo FromVectors(PublicKeyVector pubKeys, MessageHashVector messageHashes, BigIntegerVector exponents) {
+    Preconditions.checkNotNull(pubKeys);
+    Preconditions.checkNotNull(messageHashes);
+    Preconditions.checkNotNull(exponents);
+    Preconditions.checkArgument(pubKeys.size() == messageHashes.size(), "Invalid input, all std::vectors must have the same length (" + pubKeys.size() + " != " + messageHashes.size() + ")");
     return new AggregationInfo(JNI.AggregationInfo_FromVectors(PublicKeyVector.getCPtr(pubKeys), pubKeys, MessageHashVector.getCPtr(messageHashes), messageHashes, BigIntegerVector.getCPtr(exponents), exponents), true);
   }
 
   public static AggregationInfo MergeInfos(AggregationInfoVector infos) {
+    Preconditions.checkNotNull(infos);
     return new AggregationInfo(JNI.AggregationInfo_MergeInfos(AggregationInfoVector.getCPtr(infos)), true);
   }
 
@@ -70,6 +82,9 @@ public class AggregationInfo {
   }
 
   public void RemoveEntries(MessageHashVector messages, PublicKeyVector pubKeys) {
+    Preconditions.checkNotNull(messages);
+    Preconditions.checkNotNull(pubKeys);
+    Preconditions.checkArgument(messages.size() != pubKeys.size(), "Invalid entries");
     JNI.AggregationInfo_RemoveEntries(cPointer, this, MessageHashVector.getCPtr(messages), messages, PublicKeyVector.getCPtr(pubKeys), pubKeys);
   }
 
@@ -91,6 +106,23 @@ public class AggregationInfo {
 
   public AggregationInfo() {
     this(JNI.new_AggregationInfo__SWIG_1(), true);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof AggregationInfo))
+      return false;
+
+    AggregationInfo aggInfo = (AggregationInfo)obj;
+    MessageHashVector otherMessageHashes = aggInfo.GetMessageHashes();
+    PublicKeyVector otherPublicKeys = aggInfo.GetPubKeys();
+
+    return JNI.AggregationInfo_Equals(cPointer, this, AggregationInfo.getCPtr(aggInfo), aggInfo);
+  }
+
+  @Override
+  public String toString() {
+    return "AggregationInfo(PublicKeys: " + GetPubKeys().size() + ", MessageHashes: " + GetMessageHashes().size() + ")";
   }
 
 }

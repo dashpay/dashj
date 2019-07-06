@@ -21,18 +21,16 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
-public class ExtendedPublicKey {
-  private transient long swigCPtr;
-  protected transient boolean swigCMemOwn;
+import java.util.Arrays;
+
+public class ExtendedPublicKey extends BLSObject {
 
   protected ExtendedPublicKey(long cPtr, boolean cMemoryOwn) {
-    Preconditions.checkArgument(cPtr != 0);
-    swigCMemOwn = cMemoryOwn;
-    swigCPtr = cPtr;
+    super(cPtr, cMemoryOwn);
   }
 
   protected static long getCPtr(ExtendedPublicKey obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
+    return (obj == null) ? 0 : obj.cPointer;
   }
 
   protected void finalize() {
@@ -40,59 +38,74 @@ public class ExtendedPublicKey {
   }
 
   public synchronized void delete() {
-    if (swigCPtr != 0) {
-      if (swigCMemOwn) {
-        swigCMemOwn = false;
-        JNI.delete_ExtendedPublicKey(swigCPtr);
-      }
-      swigCPtr = 0;
-    }
+    JNI.delete_ExtendedPublicKey(cPointer);
   }
 
   public static ExtendedPublicKey FromBytes(byte[] serialized) {
     Preconditions.checkNotNull(serialized);
-    Preconditions.checkArgument(serialized.length == EXTENDED_PUBLIC_KEY_SIZE);
+    //Preconditions.checkArgument(serialized.length == EXTENDED_PUBLIC_KEY_SIZE);
     return new ExtendedPublicKey(JNI.ExtendedPublicKey_FromBytes(serialized), true);
   }
 
   public ExtendedPublicKey PublicChild(long i) {
-    return new ExtendedPublicKey(JNI.ExtendedPublicKey_PublicChild(swigCPtr, this, i), true);
+    boolean hardened = (i & 1 << 31) != 0;
+    Preconditions.checkArgument (!hardened, "Cannot derive hardened children from public key");
+    return new ExtendedPublicKey(JNI.ExtendedPublicKey_PublicChild(cPointer, this, i), true);
   }
 
   public long GetVersion() {
-    return JNI.ExtendedPublicKey_GetVersion(swigCPtr, this);
+    return JNI.ExtendedPublicKey_GetVersion(cPointer, this);
   }
 
   public short GetDepth() {
-    return JNI.ExtendedPublicKey_GetDepth(swigCPtr, this);
+    return JNI.ExtendedPublicKey_GetDepth(cPointer, this);
   }
 
   public long GetParentFingerprint() {
-    return JNI.ExtendedPublicKey_GetParentFingerprint(swigCPtr, this);
+    return JNI.ExtendedPublicKey_GetParentFingerprint(cPointer, this);
   }
 
   public long GetChildNumber() {
-    return JNI.ExtendedPublicKey_GetChildNumber(swigCPtr, this);
+    return JNI.ExtendedPublicKey_GetChildNumber(cPointer, this);
   }
 
   public ChainCode GetChainCode() {
-    return new ChainCode(JNI.ExtendedPublicKey_GetChainCode(swigCPtr, this), true);
+    return new ChainCode(JNI.ExtendedPublicKey_GetChainCode(cPointer, this), true);
   }
 
   public PublicKey GetPublicKey() {
-    return new PublicKey(JNI.ExtendedPublicKey_GetPublicKey(swigCPtr, this), true);
+    return new PublicKey(JNI.ExtendedPublicKey_GetPublicKey(cPointer, this), true);
   }
 
   public void Serialize(byte[] buffer) {
     Preconditions.checkNotNull(buffer);
     Preconditions.checkArgument(buffer.length >= EXTENDED_PUBLIC_KEY_SIZE);
-    JNI.ExtendedPublicKey_Serialize__SWIG_0(swigCPtr, this, buffer);
+    JNI.ExtendedPublicKey_Serialize__SWIG_0(cPointer, this, buffer);
   }
 
-  public SWIGTYPE_p_std__vectorT_unsigned_char_t Serialize() {
-    return new SWIGTYPE_p_std__vectorT_unsigned_char_t(JNI.ExtendedPublicKey_Serialize__SWIG_1(swigCPtr, this), true);
+  public byte [] Serialize() {
+    byte [] bytes = new byte[(int)EXTENDED_PUBLIC_KEY_SIZE];
+    Serialize(bytes);
+    return bytes;
+  }
+  
+  @Override
+  public String toString() {
+    return "ExtendedPublicKey(" + Utils.HEX.encode(Serialize()) + ")";
   }
 
   public final static long VERSION = JNI.ExtendedPublicKey_VERSION_get();
   public final static long EXTENDED_PUBLIC_KEY_SIZE = JNI.ExtendedPublicKey_EXTENDED_PUBLIC_KEY_SIZE_get();
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof ExtendedPublicKey))
+      return false;
+    ExtendedPublicKey epk = (ExtendedPublicKey) obj;
+    byte[] theseBytes = new byte[(int) EXTENDED_PUBLIC_KEY_SIZE];
+    Serialize(theseBytes);
+    byte[] bytes = new byte[(int) EXTENDED_PUBLIC_KEY_SIZE];
+    epk.Serialize(bytes);
+    return Arrays.equals(theseBytes, bytes);
+  }
 }

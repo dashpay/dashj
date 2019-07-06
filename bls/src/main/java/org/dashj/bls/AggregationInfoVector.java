@@ -50,7 +50,8 @@ public class AggregationInfoVector extends java.util.AbstractList<AggregationInf
     }
   }
 
-  AggregationInfoVector(java.util.Collection<AggregationInfo> e) {
+  public AggregationInfoVector(java.util.Collection<AggregationInfo> e) {
+    Preconditions.checkNotNull(e);
     this.reserve(e.size());
     for(AggregationInfo value: e) {
       this.push_back(value);

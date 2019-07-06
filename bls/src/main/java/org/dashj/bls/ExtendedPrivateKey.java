@@ -21,18 +21,16 @@ package org.dashj.bls;
 
 import com.google.common.base.Preconditions;
 
-public class ExtendedPrivateKey {
-  private transient long swigCPtr;
-  protected transient boolean swigCMemOwn;
+import java.util.Arrays;
+
+public class ExtendedPrivateKey extends BLSObject {
 
   protected ExtendedPrivateKey(long cPtr, boolean cMemoryOwn) {
-    Preconditions.checkArgument(cPtr != 0);
-    swigCMemOwn = cMemoryOwn;
-    swigCPtr = cPtr;
+    super(cPtr, cMemoryOwn);
   }
 
   protected static long getCPtr(ExtendedPrivateKey obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
+    return (obj == null) ? 0 : obj.cPointer;
   }
 
   protected void finalize() {
@@ -40,13 +38,7 @@ public class ExtendedPrivateKey {
   }
 
   public synchronized void delete() {
-    if (swigCPtr != 0) {
-      if (swigCMemOwn) {
-        swigCMemOwn = false;
-        JNI.delete_ExtendedPrivateKey(swigCPtr);
-      }
-      swigCPtr = 0;
-    }
+    JNI.delete_ExtendedPrivateKey(cPointer);
   }
 
   public static ExtendedPrivateKey FromSeed(byte[] seed, long seedLen) {
@@ -62,54 +54,73 @@ public class ExtendedPrivateKey {
   }
 
   public ExtendedPrivateKey PrivateChild(long i) {
-    return new ExtendedPrivateKey(JNI.ExtendedPrivateKey_PrivateChild(swigCPtr, this, i), true);
+    return new ExtendedPrivateKey(JNI.ExtendedPrivateKey_PrivateChild(cPointer, this, i), true);
   }
 
   public ExtendedPublicKey PublicChild(long i) {
-    return new ExtendedPublicKey(JNI.ExtendedPrivateKey_PublicChild(swigCPtr, this, i), true);
+    return new ExtendedPublicKey(JNI.ExtendedPrivateKey_PublicChild(cPointer, this, i), true);
   }
 
   public long GetVersion() {
-    return JNI.ExtendedPrivateKey_GetVersion(swigCPtr, this);
+    return JNI.ExtendedPrivateKey_GetVersion(cPointer, this);
   }
 
   public short GetDepth() {
-    return JNI.ExtendedPrivateKey_GetDepth(swigCPtr, this);
+    return JNI.ExtendedPrivateKey_GetDepth(cPointer, this);
   }
 
   public long GetParentFingerprint() {
-    return JNI.ExtendedPrivateKey_GetParentFingerprint(swigCPtr, this);
+    return JNI.ExtendedPrivateKey_GetParentFingerprint(cPointer, this);
   }
 
   public long GetChildNumber() {
-    return JNI.ExtendedPrivateKey_GetChildNumber(swigCPtr, this);
+    return JNI.ExtendedPrivateKey_GetChildNumber(cPointer, this);
   }
 
   public ChainCode GetChainCode() {
-    return new ChainCode(JNI.ExtendedPrivateKey_GetChainCode(swigCPtr, this), true);
+    return new ChainCode(JNI.ExtendedPrivateKey_GetChainCode(cPointer, this), true);
   }
 
   public PrivateKey GetPrivateKey() {
-    return new PrivateKey(JNI.ExtendedPrivateKey_GetPrivateKey(swigCPtr, this), true);
+    return new PrivateKey(JNI.ExtendedPrivateKey_GetPrivateKey(cPointer, this), true);
   }
 
   public PublicKey GetPublicKey() {
-    return new PublicKey(JNI.ExtendedPrivateKey_GetPublicKey(swigCPtr, this), true);
+    return new PublicKey(JNI.ExtendedPrivateKey_GetPublicKey(cPointer, this), true);
   }
 
   public ExtendedPublicKey GetExtendedPublicKey() {
-    return new ExtendedPublicKey(JNI.ExtendedPrivateKey_GetExtendedPublicKey(swigCPtr, this), true);
+    return new ExtendedPublicKey(JNI.ExtendedPrivateKey_GetExtendedPublicKey(cPointer, this), true);
   }
 
   public void Serialize(byte[] buffer) {
     Preconditions.checkNotNull(buffer);
     Preconditions.checkArgument(buffer.length >= EXTENDED_PRIVATE_KEY_SIZE);
-    JNI.ExtendedPrivateKey_Serialize__SWIG_0(swigCPtr, this, buffer);
+    JNI.ExtendedPrivateKey_Serialize__SWIG_0(cPointer, this, buffer);
   }
 
-  public SWIGTYPE_p_std__vectorT_unsigned_char_t Serialize() {
-    return new SWIGTYPE_p_std__vectorT_unsigned_char_t(JNI.ExtendedPrivateKey_Serialize__SWIG_1(swigCPtr, this), true);
+  public byte [] Serialize() {
+    byte [] bytes = new byte[(int)EXTENDED_PRIVATE_KEY_SIZE];
+    Serialize(bytes);
+    return bytes;
+  }
+
+  @Override
+  public String toString() {
+    return "ExtendedPrivateKey(" + Utils.HEX.encode(Serialize()) + ")";
   }
 
   public final static long EXTENDED_PRIVATE_KEY_SIZE = JNI.ExtendedPrivateKey_EXTENDED_PRIVATE_KEY_SIZE_get();
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof ExtendedPrivateKey))
+      return false;
+    ExtendedPrivateKey epk = (ExtendedPrivateKey) obj;
+    byte[] theseBytes = new byte[(int) EXTENDED_PRIVATE_KEY_SIZE];
+    Serialize(theseBytes);
+    byte[] bytes = new byte[(int) EXTENDED_PRIVATE_KEY_SIZE];
+    epk.Serialize(bytes);
+    return Arrays.equals(theseBytes, bytes);
+  }
 }

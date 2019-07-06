@@ -49,7 +49,7 @@ public class PublicKeyVector extends java.util.AbstractList<PublicKey> {
     }
   }
 
-  PublicKeyVector(java.util.Collection<PublicKey> e) {
+  public PublicKeyVector(java.util.Collection<PublicKey> e) {
     this.reserve(e.size());
     for(PublicKey value: e) {
       this.push_back(value);
