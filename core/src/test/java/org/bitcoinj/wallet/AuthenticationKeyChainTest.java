@@ -51,7 +51,7 @@ public class AuthenticationKeyChainTest {
     @Before
     public void startup() throws UnreadableWalletException {
         PARAMS = UnitTestParams.get();
-        context = Context.getOrCreate(PARAMS);
+        context = new Context(PARAMS);
 
         seed = new DeterministicSeed(seedPhrase, null, "", 0);
         DeterministicKeyChain bip32 = new DeterministicKeyChain(seed, DeterministicKeyChain.ACCOUNT_ZERO_PATH);
