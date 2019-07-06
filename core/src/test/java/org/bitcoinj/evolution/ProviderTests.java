@@ -56,7 +56,7 @@ public class ProviderTests {
     @Before
     public void startup() throws UnreadableWalletException {
         PARAMS = UnitTestParams.get();
-        context = Context.getOrCreate(PARAMS);
+        context = new Context(PARAMS);
         txdata = Utils.HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff0502fa050105ffffffff02f4c21a3d0500000023210397181e4cc48fcba0e597bfb029d4cfc4473ae5772a0ff32223977d4e03e07fa9acf4c21a3d050000001976a91425e50daf158a83dfaacd1b77175900aa95a67d4188ac00000000260100fa050000aaaec8d6a8535a01bd844817dea1faed66f6c397b1dcaec5fe8c5af025023c35");
 
         DeterministicSeed seed = new DeterministicSeed(seedPhrase, null, "", 0);
