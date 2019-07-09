@@ -136,9 +136,13 @@ public class SimplifiedQuorumList extends Message {
                     checkCommitment(entry, Context.get().blockChain.getChainHead(), Context.get().masternodeListManager);
                     isFirstQuorumCheck = false;
                 } else {
-                    //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
-                    if(!isFirstQuorumCheck && entry.llmqType != 2 && !entry.quorumHash.equals(invalidTestNetQuorumHash72000))
-                        throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
+                    int chainHeight = Context.get().blockChain.getBestChainHeight();
+                    //if quorum was created before DIP8 activation, then allow it to be added
+                    if(chainHeight >= params.getDIP0008BlockHeight()) {
+                        //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
+                        if (!isFirstQuorumCheck && entry.llmqType != 2 && !entry.quorumHash.equals(invalidTestNetQuorumHash72000))
+                            throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
+                    }
                 }
                 result.addCommitment(entry);
             }
