@@ -109,7 +109,7 @@ public class SimplifiedQuorumList extends Message {
         return "SimplifiedQuorumList(count: " + size() + ")";
     }
 
-    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff) throws MasternodeListDiffException{
+    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap) throws MasternodeListDiffException{
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
@@ -138,7 +138,7 @@ public class SimplifiedQuorumList extends Message {
                 } else {
                     int chainHeight = Context.get().blockChain.getBestChainHeight();
                     //if quorum was created before DIP8 activation, then allow it to be added
-                    if(chainHeight >= params.getDIP0008BlockHeight()) {
+                    if(chainHeight >= params.getDIP0008BlockHeight() || !isLoadingBootstrap) {
                         //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
                         if (!isFirstQuorumCheck && entry.llmqType != 2 && !entry.quorumHash.equals(invalidTestNetQuorumHash72000))
                             throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);

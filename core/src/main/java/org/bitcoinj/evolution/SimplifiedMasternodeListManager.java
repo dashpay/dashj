@@ -223,7 +223,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             newMNList.setBlock(block, block == null ? false : block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
             SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
-                newQuorumList = quorumList.applyDiff(mnlistdiff);
+                newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap);
                 newQuorumList.verify(mnlistdiff.coinBaseTx, newMNList);
             } else {
                 quorumList.syncWithMasternodeList(newMNList);
@@ -857,7 +857,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, buffer);
                     processMasternodeListDiff(mnlistdiff, true);
                     log.info("finished loading mnlist bootstrap file");
-                } catch (FileNotFoundException x) {
+                } catch (VerificationException | FileNotFoundException x) {
                     log.info("failed loading mnlist bootstrap file" + x.getMessage());
                 } catch (IOException x) {
                     log.info("failed loading mnlist bootstrap file" + x.getMessage());
