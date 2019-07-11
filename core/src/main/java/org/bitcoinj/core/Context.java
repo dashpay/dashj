@@ -308,8 +308,10 @@ public class Context {
                 //other functions
                 darkSendPool.startBackgroundProcessing();
 
-                if(!llmqBackgroundThread.isAlive())
+                if(!llmqBackgroundThread.isAlive()) {
+                    llmqBackgroundThread = new LLMQBackgroundThread(Context.this);
                     llmqBackgroundThread.start();
+                }
 
             }
         }).start();
