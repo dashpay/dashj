@@ -733,7 +733,7 @@ public class WalletTool {
             if (feePerKb != null)
                 req.feePerKb = feePerKb;
             if (allowUnconfirmed) {
-                wallet.allowSpendingUnconfirmedTransactions();
+                req.allowUnconfirmed();
             }
             if (password != null) {
                 req.aesKey = passwordToKey(true);
