@@ -37,8 +37,7 @@ public class DefaultCoinSelector implements CoinSelector {
         return instance;
     }
 
-    DefaultCoinSelector() {
-
+    protected DefaultCoinSelector() {
     }
 
     @Override
