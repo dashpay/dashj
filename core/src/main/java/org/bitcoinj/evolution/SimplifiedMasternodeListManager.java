@@ -102,6 +102,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         syncInterval = 8;
         loadedFromFile = false;
         requiresLoadingFromFile = true;
+        lastRequestMessage = new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH);
     }
 
     @Override
@@ -711,6 +712,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     protected void requestAfterMNListReset() throws BlockStoreException {
+        if(blockChain == null) //not initialized
+            return;
         int rewindBlockCount = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_LIST_PERIOD : MAX_CACHE_SIZE;
         int height = blockChain.getBestChainHeight() - rewindBlockCount;
         if (height < params.getDIP0008BlockHeight())
