@@ -158,6 +158,8 @@ public class SigningManager {
 
 
         startBlock = blockChain.getBlockStore().get((int) startBlockHeight);
+        if(startBlock == null)
+            return null;
 
 
         ArrayList<Quorum> quorums = quorumManager.scanQuorums(llmqType, startBlock, poolSize);
