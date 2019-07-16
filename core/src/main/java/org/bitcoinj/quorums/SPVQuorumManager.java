@@ -1,5 +1,6 @@
 package org.bitcoinj.quorums;
 
+import com.google.common.base.Preconditions;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
@@ -37,6 +38,7 @@ public class SPVQuorumManager extends QuorumManager {
     // this one is cs_main-free
     @Override
     public ArrayList<Quorum> scanQuorums(final LLMQParameters.LLMQType llmqType, StoredBlock start, final long maxCount) {
+        Preconditions.checkNotNull(start, "The start block must not be null");
         if(start != null && start.getHeight() > masternodeListManager.getQuorumListAtTip().getHeight())
             log.warn("quorum list is old, the quorums may not match");
         final ArrayList<Quorum> result = new ArrayList<Quorum>();
