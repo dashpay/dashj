@@ -67,8 +67,8 @@ public class AppDataDirectoryTest {
             AppDataDirectory.get("/");
         }
         if (Utils.isMac()) {
-            // NUL character is invalid on macOS via POSIX/NIO (colon is valid in POSIX)
-            AppDataDirectory.get("\0");
+            // The only illegal character for folder names in OSX is the colon
+            AppDataDirectory.get(":");
         }
         if (Utils.isLinux()) {
             // NUL character
