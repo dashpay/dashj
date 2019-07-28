@@ -95,6 +95,18 @@ public class SimplifiedMasternodesTest {
         assertEquals(expectedMerkleRoot, calculatedMerkleRoot);
     }
 
+    @Test
+    public void loadFromBootStrapFile() {
+        URL datafile = getClass().getResource("ML1088640.dat");
+
+        SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
+        SimplifiedMasternodeListManager.setBootStrapFilePath(datafile.getPath());
+
+        for (int i = 0; i < 10; ++i)
+            manager.resetMNList(true, true);
+
+    }
+
     @Ignore
     @Test
     public void loadFromFile() throws Exception {

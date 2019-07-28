@@ -29,6 +29,7 @@ public class SimplifiedQuorumList extends Message {
     private boolean isFirstQuorumCheck;
     HashMap<Pair<Integer, Sha256Hash>, Sha256Hash> minableCommitmentsByQuorum;
     LinkedHashMap<Sha256Hash, FinalCommitment> minableCommitments;
+    private CoinbaseTx coinbaseTxPayload;
 
     static final Sha256Hash invalidTestNetQuorumHash72000 = Sha256Hash.wrap("0000000007697fd69a799bfa26576a177e817bc0e45b9fcfbf48b362b05aeff2");
 
@@ -120,6 +121,7 @@ public class SimplifiedQuorumList extends Message {
             SimplifiedQuorumList result = new SimplifiedQuorumList(this);
             result.blockHash = diff.blockHash;
             result.height = cbtx.getHeight();
+            result.coinbaseTxPayload = cbtx;
 
             for (Pair<Integer, Sha256Hash> quorum : diff.getDeletedQuorums()) {
                 result.removeCommitment(quorum);
@@ -198,7 +200,8 @@ public class SimplifiedQuorumList extends Message {
     }
 
 
-    public boolean verify(Transaction coinbaseTx, SimplifiedMasternodeList mnList) throws VerificationException {
+    public boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff,
+                          SimplifiedQuorumList prevList, SimplifiedMasternodeList mnList) throws VerificationException {
         lock.lock();
 
         try {
@@ -207,6 +210,12 @@ public class SimplifiedQuorumList extends Message {
                 throw new VerificationException("transaction is not a coinbase transaction");
 
             CoinbaseTx cbtx = (CoinbaseTx) coinbaseTx.getExtraPayloadObject();
+
+            if(mnlistdiff.getNewQuorums().isEmpty() && mnlistdiff.getDeletedQuorums().isEmpty() &&
+                    prevList != null && prevList.coinbaseTxPayload != null) {
+                if(cbtx.getMerkleRootQuorums().equals(prevList.coinbaseTxPayload.getMerkleRootQuorums()))
+                    return true;
+            }
 
             ArrayList<Sha256Hash> commitmentHashes = new ArrayList<Sha256Hash>();
 

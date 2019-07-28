@@ -24,6 +24,8 @@ public class SimplifiedMasternodeList extends Message {
     HashMap<Sha256Hash, SimplifiedMasternodeListEntry> mnMap;
     HashMap<Sha256Hash, Pair<Sha256Hash, Integer>> mnUniquePropertyMap;
 
+    private CoinbaseTx coinbaseTxPayload;
+
     SimplifiedMasternodeList(NetworkParameters params) {
         super(params);
         blockHash = params.getGenesisBlock().getHash();
@@ -130,6 +132,7 @@ public class SimplifiedMasternodeList extends Message {
 
             result.blockHash = diff.blockHash;
             result.height = cbtx.getHeight();
+            result.coinbaseTxPayload = cbtx;
 
             for (Sha256Hash hash : diff.deletedMNs) {
                 result.removeMN(hash);
@@ -216,13 +219,19 @@ public class SimplifiedMasternodeList extends Message {
     }
 
 
-    boolean verify(Transaction coinbaseTx) throws VerificationException {
+    boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff, SimplifiedMasternodeList prevList) throws VerificationException {
         //check mnListMerkleRoot
 
         if(!(coinbaseTx.getExtraPayloadObject() instanceof CoinbaseTx))
             throw new VerificationException("transaction is not a coinbase transaction");
 
         CoinbaseTx cbtx = (CoinbaseTx)coinbaseTx.getExtraPayloadObject();
+
+        if(mnlistdiff.mnList.isEmpty() && mnlistdiff.deletedMNs.isEmpty() &&
+                prevList != null && prevList.coinbaseTxPayload != null) {
+            if (cbtx.merkleRootMasternodeList.equals(prevList.coinbaseTxPayload.merkleRootMasternodeList))
+                return true;
+        }
 
         lock.lock();
         try {
@@ -239,9 +248,7 @@ public class SimplifiedMasternodeList extends Message {
 
             ArrayList<Sha256Hash> smnlHashes = new ArrayList<Sha256Hash>(mnMap.size());
             for (Sha256Hash hash : proTxHashes) {
-                for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet())
-                    if (entry.getValue().proRegTxHash.equals(hash))
-                        smnlHashes.add(entry.getValue().getHash());
+                smnlHashes.add(mnMap.get(hash).getHash());
             }
 
             if (smnlHashes.size() == 0)

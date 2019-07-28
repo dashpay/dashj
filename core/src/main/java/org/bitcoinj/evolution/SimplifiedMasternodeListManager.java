@@ -220,12 +220,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
 
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
-            newMNList.verify(mnlistdiff.coinBaseTx);
+            newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
             newMNList.setBlock(block, block == null ? false : block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
             SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
                 newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap);
-                newQuorumList.verify(mnlistdiff.coinBaseTx, newMNList);
+                newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
             } else {
                 quorumList.syncWithMasternodeList(newMNList);
             }
