@@ -1,6 +1,7 @@
 package org.bitcoinj.evolution;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.ChainDownloadStartedEventListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
@@ -212,6 +213,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap) {
         StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
+        Stopwatch watch = Stopwatch.createStarted();
+        Stopwatch watchMNList = Stopwatch.createUnstarted();
+        Stopwatch watchQuorums = Stopwatch.createUnstarted();
         log.info("processing mnlistdiff between : " + mnList.getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
@@ -219,11 +223,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(!isLoadingBootStrap && block.getHeight() != newHeight)
                 throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
 
+            watchMNList.start();
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
             newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
             newMNList.setBlock(block, block == null ? false : block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
             SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
+                watchQuorums.start();
                 newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap);
                 newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
             } else {
@@ -290,6 +296,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             failedAttempts++;
             throw new ProtocolException(x);
         } finally {
+            watch.stop();
+            log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
             waitingForMNListDiff = false;
             requestNextMNListDiff();
             lock.unlock();
