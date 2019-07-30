@@ -103,7 +103,6 @@ public class Context {
         lastConstructed = this;
         // We may already have a context in our TLS slot. This can happen a lot during unit tests, so just ignore it.
         slot.set(this);
-        BLS.Init();
     }
 
     /**
@@ -263,6 +262,7 @@ public class Context {
         chainLockHandler = new ChainLocksHandler(this);
         llmqBackgroundThread = new LLMQBackgroundThread(this);
 
+        BLS.Init();
     }
 
     public void closeDash() {
