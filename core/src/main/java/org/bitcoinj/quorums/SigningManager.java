@@ -310,7 +310,8 @@ public class SigningManager {
 
         //cxxtimer::Timer verifyTimer(true);
         long start = Utils.currentTimeMillis();
-        batchVerifier.verify();
+        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
+            batchVerifier.verify();
         long end = Utils.currentTimeMillis();
         //verifyTimer.stop();
 
@@ -404,7 +405,9 @@ public class SigningManager {
         }
 
         Sha256Hash signHash = LLMQUtils.buildSignHash(llmqParams.type, quorum.commitment.quorumHash, id, msgHash);
-        return sig.verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
+        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
+            return sig.verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
+        else return true; //if we don't verify BLS_SIGNATUREs, then assume true
     }
 
     void cleanup()

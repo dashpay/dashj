@@ -164,17 +164,19 @@ public class ChainLocksHandler implements RecoveredSignatureListener {
 
         Sha256Hash requestId = clsig.getRequestId();
         Sha256Hash msgHash = clsig.blockHash;
-        try {
-            if (!quorumSigningManager.verifyRecoveredSig(context.getParams().getLlmqChainLocks(), clsig.height, requestId, msgHash, clsig.signature)) {
-                log.info("invalid CLSIG ({}), peer={}", clsig.toString(), from != null ? from : "null");
-                if (from != null) {
-                    //LOCK(cs_main);
-                    //Misbehaving(from, 10);
+        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.CHAINLOCK)) {
+            try {
+                if (!quorumSigningManager.verifyRecoveredSig(context.getParams().getLlmqChainLocks(), clsig.height, requestId, msgHash, clsig.signature)) {
+                    log.info("invalid CLSIG ({}), peer={}", clsig.toString(), from != null ? from : "null");
+                    if (from != null) {
+                        //LOCK(cs_main);
+                        //Misbehaving(from, 10);
+                    }
+                    return;
                 }
+            } catch (BlockStoreException x) {
                 return;
             }
-        } catch (BlockStoreException x) {
-            return;
         }
 
 

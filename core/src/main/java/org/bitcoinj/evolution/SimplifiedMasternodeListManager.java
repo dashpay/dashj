@@ -205,7 +205,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public void updatedBlockTip(StoredBlock tip) {
     }
 
+    protected boolean shouldProcessMNListDiff() {
+        return context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_DMN_LIST) ||
+                context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_QUORUM_LIST);
+    }
+
     public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff) {
+        if(!shouldProcessMNListDiff())
+            return;
+
         processMasternodeListDiff(mnlistdiff, false);
     }
 
@@ -225,13 +233,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
             watchMNList.start();
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
-            newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
+            if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST))
+                newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
             newMNList.setBlock(block, block == null ? false : block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
             SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
                 watchQuorums.start();
                 newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap);
-                newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
+                if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
+                    newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
             } else {
                 quorumList.syncWithMasternodeList(newMNList);
             }
@@ -432,6 +442,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     };
 
     void maybeGetMNListDiffFresh() {
+        if(!shouldProcessMNListDiff())
+            return;
+
         lock.lock();
         try {
             long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
@@ -502,6 +515,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     void requestNextMNListDiff() {
+        if(!shouldProcessMNListDiff())
+            return;
+
         lock.lock();
         try {
             if(waitingForMNListDiff)
@@ -588,24 +604,28 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
-        blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
-        blockChain.addReorganizeListener(reorganizeListener);
-        peerGroup.addConnectedEventListener(peerConnectedEventListener);
-        peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
-        peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
+        if(shouldProcessMNListDiff()) {
+            blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
+            blockChain.addReorganizeListener(reorganizeListener);
+            peerGroup.addConnectedEventListener(peerConnectedEventListener);
+            peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+            peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
+        }
     }
 
     @Override
     public void close() {
-        blockChain.removeNewBestBlockListener(newBestBlockListener);
-        blockChain.removeReorganizeListener(reorganizeListener);
-        peerGroup.removeConnectedEventListener(peerConnectedEventListener);
-        peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
-        peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
-        try {
-            save();
-        } catch (FileNotFoundException x) {
-            //do nothing
+        if(shouldProcessMNListDiff()) {
+            blockChain.removeNewBestBlockListener(newBestBlockListener);
+            blockChain.removeReorganizeListener(reorganizeListener);
+            peerGroup.removeConnectedEventListener(peerConnectedEventListener);
+            peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+            peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
+            try {
+                save();
+            } catch (FileNotFoundException x) {
+                //do nothing
+            }
         }
     }
 

@@ -15,9 +15,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static java.lang.Math.max;
-import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_DMN_LIST;
-import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE;
-import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST;
+import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.*;
 
 /**
  * Created by Eric on 2/21/2016.
@@ -35,18 +33,43 @@ public class MasternodeSync {
     public static final int MASTERNODE_SYNC_FINISHED        = 999;
 
     public enum SYNC_FLAGS {
-        SYNC_MASTERNODE_LIST,
+        SYNC_MASTERNODE_LIST, //obsolete
         SYNC_OWNED_MASTERNODES,
         SYNC_MNW,
         SYNC_GOVERNANCE,
         SYNC_PROPOSALS,
         SYNC_TRIGGERS,
         SYNC_GOVERNANCE_VOTES,
-        SYNC_DMN_LIST;
+        SYNC_DMN_LIST,
+        SYNC_QUORUM_LIST,
+        SYNC_CHAINLOCKS,
+        SYNC_INSTANTSENDLOCKS,
+        SYNC_SPORKS
+    }
+
+    public enum VERIFY_FLAGS {
+        BLS_SIGNATURES,
+        MNLISTDIFF_MNLIST,
+        MNLISTDIFF_QUORUM,
+        CHAINLOCK,
+        INSTANTSENDLOCK
     }
 
     public Set<SYNC_FLAGS> syncFlags;
+    public Set<VERIFY_FLAGS> verifyFlags;
     public static final EnumSet<SYNC_FLAGS> SYNC_ALL_OBJECTS = EnumSet.allOf(SYNC_FLAGS.class);
+    public static final EnumSet<VERIFY_FLAGS> VERIFY_ALL_OBJECTS = EnumSet.allOf(VERIFY_FLAGS.class);
+
+    public static final EnumSet<SYNC_FLAGS> SYNC_LITE_MODE = EnumSet.of(SYNC_DMN_LIST, SYNC_SPORKS);
+    public static final EnumSet<VERIFY_FLAGS> VERIFY_LITE_MODE = EnumSet.of(VERIFY_FLAGS.MNLISTDIFF_MNLIST);
+
+    public static final EnumSet<SYNC_FLAGS> SYNC_DEFAULT_SPV = EnumSet.of(SYNC_MASTERNODE_LIST,
+            SYNC_QUORUM_LIST, SYNC_CHAINLOCKS, SYNC_INSTANTSENDLOCKS, SYNC_SPORKS);
+    public static final EnumSet<VERIFY_FLAGS> VERIFY_DEFAULT_SPV = EnumSet.of(VERIFY_FLAGS.BLS_SIGNATURES,
+            VERIFY_FLAGS.MNLISTDIFF_MNLIST,
+            VERIFY_FLAGS.MNLISTDIFF_QUORUM,
+            VERIFY_FLAGS.CHAINLOCK,
+            VERIFY_FLAGS.INSTANTSENDLOCK);
 
     static final int MASTERNODE_SYNC_TICK_SECONDS    = 6;
     static final int MASTERNODE_SYNC_TIMEOUT_SECONDS = 30; // our blocks are 2.5 minutes so 30 seconds should be fine -- changed to 300 for test purposes (java)
@@ -101,18 +124,22 @@ public class MasternodeSync {
 
     }
 
-    public MasternodeSync(Context context)
-    {
+    public MasternodeSync(Context context) {
         this.context = context;
         this.mapSeenSyncBudget = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNB = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNW = new HashMap<Sha256Hash, Integer>();
         this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
-        if(context.isLiteMode())
-            this.syncFlags = EnumSet.of(SYNC_DMN_LIST);
-        else {
-            this.syncFlags = EnumSet.noneOf(SYNC_FLAGS.class);
+        if (context.isLiteMode() && context.allowInstantXinLiteMode()) {
+            this.syncFlags = SYNC_DEFAULT_SPV;
+            this.verifyFlags = VERIFY_DEFAULT_SPV;
+        } else if(context.isLiteMode()) {
+            this.syncFlags = SYNC_LITE_MODE;
+            this.verifyFlags = VERIFY_LITE_MODE;
             //TODO:add other flags here to get other information such as governance messsages, by default
+        } else {
+            this.syncFlags = SYNC_ALL_OBJECTS;
+            this.verifyFlags = VERIFY_ALL_OBJECTS;
         }
         reset();
     }
@@ -124,8 +151,25 @@ public class MasternodeSync {
         this.mapSeenSyncMNB = new HashMap<Sha256Hash, Integer>();
         this.mapSeenSyncMNW = new HashMap<Sha256Hash, Integer>();
         this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
-        this.syncFlags = syncFlags;
+        this.syncFlags = syncFlags == null ? EnumSet.noneOf(SYNC_FLAGS.class) : syncFlags;
+        this.verifyFlags = EnumSet.noneOf(VERIFY_FLAGS.class);
+        if(syncFlags.contains(SYNC_FLAGS.SYNC_DMN_LIST)) {
+            verifyFlags.add(VERIFY_FLAGS.MNLISTDIFF_MNLIST);
+            verifyFlags.add(VERIFY_FLAGS.BLS_SIGNATURES);
+        }
+        if(syncFlags.contains(SYNC_FLAGS.SYNC_QUORUM_LIST))
+            verifyFlags.add(VERIFY_FLAGS.MNLISTDIFF_QUORUM);
+        if(syncFlags.contains(SYNC_FLAGS.SYNC_CHAINLOCKS))
+            verifyFlags.add(VERIFY_FLAGS.CHAINLOCK);
+        if(syncFlags.contains(SYNC_FLAGS.SYNC_INSTANTSENDLOCKS))
+            verifyFlags.add(VERIFY_FLAGS.INSTANTSENDLOCK);
         reset();
+    }
+
+    public MasternodeSync(Context context, @Nullable EnumSet<SYNC_FLAGS> syncFlags, @Nullable EnumSet<VERIFY_FLAGS> verifyFlags)
+    {
+        this(context, syncFlags);
+        this.verifyFlags = verifyFlags == null ? EnumSet.noneOf(VERIFY_FLAGS.class) : verifyFlags;
     }
 
     void fail()
@@ -746,5 +790,13 @@ public class MasternodeSync {
             // We must be at the tip already, let's move to the next asset.
             switchToNextAsset();
         }
+    }
+
+    public boolean hasSyncFlag(SYNC_FLAGS flag) {
+        return syncFlags.contains(flag);
+    }
+
+    public boolean hasVerifyFlag(VERIFY_FLAGS flag) {
+        return verifyFlags.contains(flag);
     }
 }

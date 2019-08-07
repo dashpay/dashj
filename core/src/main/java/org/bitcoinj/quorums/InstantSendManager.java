@@ -399,6 +399,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
         for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> p : pend.entrySet()) {
             Sha256Hash hash = p.getKey();
+
+            if(!context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.INSTANTSENDLOCK)) {
+                //If we don't verify the instantsendlock as being signed by a quorum...
+                processInstantSendLock(p.getValue().getFirst(), hash, p.getValue().getSecond());
+                continue;
+            }
+
             long nodeId = p.getValue().getFirst();
             InstantSendLock islock = p.getValue().getSecond();
     
@@ -440,7 +447,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
             }
         }
 
-        batchVerifier.verify();
+        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
+            batchVerifier.verify();
 
         if (!batchVerifier.getBadSources().isEmpty()) {
             for (Long nodeId : batchVerifier.getBadSources()) {

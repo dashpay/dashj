@@ -192,9 +192,11 @@ public class FinalCommitment extends SpecialTxPayload {
                 return false;
             }
 
-            if (!quorumSignature.verifyInsecure(quorumPublicKey, commitmentHash)) {
-                log.error("invalid quorum signature");
-                return false;
+            if(Context.get().masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
+                if (!quorumSignature.verifyInsecure(quorumPublicKey, commitmentHash)) {
+                    log.error("invalid quorum signature");
+                    return false;
+                }
             }
         }
 
