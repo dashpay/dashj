@@ -626,14 +626,14 @@ public class Block extends Message {
             throw new VerificationException(String.format(Locale.US, "Block too far in future: %d vs %d", time, currentTime + ALLOWED_TIME_DRIFT));
     }
 
-    private void checkSigOps() throws VerificationException {
+    private void checkSigOps(int height) throws VerificationException {
         // Check there aren't too many signature verifications in the block. This is an anti-DoS measure, see the
         // comments for MAX_BLOCK_SIGOPS.
         int sigOps = 0;
         for (Transaction tx : transactions) {
             sigOps += tx.getSigOpCount();
         }
-        if (sigOps > MAX_BLOCK_SIGOPS)
+        if (sigOps > (height >= params.getDIP0001BlockHeight() ? MAX_BLOCK_SIGOPS_DIP00001 : MAX_BLOCK_SIGOPS))
             throw new VerificationException("Block had too many Signature Operations");
     }
 
@@ -772,7 +772,7 @@ public class Block extends Message {
             throw new VerificationException("Block larger than MAX_BLOCK_SIZE");
         checkTransactions(height, flags);
         checkMerkleRoot();
-        checkSigOps();
+        checkSigOps(height);
         for (Transaction transaction : transactions)
             transaction.verify();
         }
