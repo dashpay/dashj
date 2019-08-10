@@ -192,6 +192,8 @@ public class FinalCommitment extends SpecialTxPayload {
                 return false;
             }
 
+            Context.get().signingManager.logSignature("QUORUM", quorumPublicKey, commitmentHash, quorumSignature);
+
             if(Context.get().masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
                 if (!quorumSignature.verifyInsecure(quorumPublicKey, commitmentHash)) {
                     log.error("invalid quorum signature");

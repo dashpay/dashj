@@ -319,6 +319,9 @@ public class Context {
                         llmqBackgroundThread.start();
                     }
                 }
+
+                signingManager.initializeSignatureLog(directory);
+
             }
         }).start();
     }

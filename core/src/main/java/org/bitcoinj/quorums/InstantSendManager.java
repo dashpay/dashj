@@ -432,7 +432,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
             }
             Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.commitment.quorumHash, id, islock.txid);
             batchVerifier.pushMessage(nodeId, hash, signHash, islock.signature.getSignature(), quorum.commitment.quorumPublicKey);
-    
+
+            quorumSigningManager.logSignature("ISLOCK", quorum.commitment.quorumPublicKey, signHash, islock.signature.getSignature());
+
             // We can reconstruct the RecoveredSignature objects from the islock and pass it to the signing manager, which
             // avoids unnecessary double-verification of the signature. We however only do this when verification here
             // turns out to be good (which is checked further down)

@@ -2,6 +2,7 @@ package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSBatchVerifier;
+import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
 import org.bitcoinj.store.BlockStoreException;
@@ -11,7 +12,10 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -43,6 +47,9 @@ public class SigningManager {
 
     long lastCleanupTime;
 
+    File signatureLog;
+    public OutputStream signatureStream;
+
     public SigningManager(Context context, RecoveredSignaturesDatabase db) {
         this.context = context;
         this.db = db;
@@ -58,7 +65,12 @@ public class SigningManager {
     }
 
     public void close() {
-
+        try {
+            if (sigLogInitialized)
+                signatureStream.close();
+        } catch (IOException x) {
+            //do nothing
+        }
     }
 
     private transient CopyOnWriteArrayList<ListenerRegistration<RecoveredSignatureListener>> recoveredSigsListeners;
@@ -305,6 +317,8 @@ public class SigningManager {
                 Quorum quorum = quorums.get(new Pair(recSig.llmqType, recSig.quorumHash));
                 batchVerifier.pushMessage(nodeId, recSig.getHash(), LLMQUtils.buildSignHash(recSig), recSig.signature.getSignature(), quorum.commitment.quorumPublicKey);
                 verifyCount++;
+
+                logSignature("RECSIG", quorum.commitment.quorumPublicKey, LLMQUtils.buildSignHash(recSig), recSig.signature.getSignature());
             }
         }
 
@@ -405,6 +419,9 @@ public class SigningManager {
         }
 
         Sha256Hash signHash = LLMQUtils.buildSignHash(llmqParams.type, quorum.commitment.quorumHash, id, msgHash);
+
+        logSignature("RECSIG", quorum.commitment.quorumPublicKey, signHash, sig);
+
         if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
             return sig.verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
         else return true; //if we don't verify BLS_SIGNATUREs, then assume true
@@ -422,5 +439,46 @@ public class SigningManager {
         db.cleanupOldRecoveredSignatures(maxAge);
 
         lastCleanupTime = Utils.currentTimeMillis();
+    }
+
+    public void logSignature(String type, BLSPublicKey publicKey, Sha256Hash messageHash, BLSSignature signature) {
+        if(context.masternodeSync.hasFeatureFlag(MasternodeSync.FEATURE_FLAGS.LOG_SIGNATURES)) {
+            if(!sigLogInitialized)
+                initializeSignatureLog();
+            try {
+                String line = type + "|" + publicKey + "|" + messageHash + "|" + signature + "\n";
+                signatureStream.write(line.getBytes());
+                signatureStream.flush();
+            } catch (IOException x) {
+
+            }
+        }
+    }
+
+    private String directory = null;
+    private boolean sigLogInitialized = false;
+
+    public void initializeSignatureLog(String directory) {
+        this.directory = directory;
+        initializeSignatureLog();
+    }
+
+    public void initializeSignatureLog() {
+        if(!context.masternodeSync.hasFeatureFlag(MasternodeSync.FEATURE_FLAGS.LOG_SIGNATURES))
+            return;
+        try {
+            boolean exists = false;
+            signatureLog = new File(directory, "signature-log.txt");
+            if(!signatureLog.exists()) {
+                exists = true;
+            }
+            signatureStream = new FileOutputStream(signatureLog, true);
+            if(!exists) {
+                signatureStream.write("Type|PublicKey|Message|Signature\n".getBytes());
+            }
+            sigLogInitialized = true;
+        } catch (IOException x) {
+
+        }
     }
 }

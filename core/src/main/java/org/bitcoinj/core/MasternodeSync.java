@@ -55,13 +55,20 @@ public class MasternodeSync {
         INSTANTSENDLOCK
     }
 
+    public enum FEATURE_FLAGS {
+        LOG_SIGNATURES,
+    }
+
     public Set<SYNC_FLAGS> syncFlags;
     public Set<VERIFY_FLAGS> verifyFlags;
+    public Set<FEATURE_FLAGS> featureFlags;
     public static final EnumSet<SYNC_FLAGS> SYNC_ALL_OBJECTS = EnumSet.allOf(SYNC_FLAGS.class);
     public static final EnumSet<VERIFY_FLAGS> VERIFY_ALL_OBJECTS = EnumSet.allOf(VERIFY_FLAGS.class);
+    public static final EnumSet<FEATURE_FLAGS> ACTIVATE_ALL_FEATURES = EnumSet.allOf(FEATURE_FLAGS.class);
 
     public static final EnumSet<SYNC_FLAGS> SYNC_LITE_MODE = EnumSet.of(SYNC_DMN_LIST, SYNC_SPORKS);
     public static final EnumSet<VERIFY_FLAGS> VERIFY_LITE_MODE = EnumSet.of(VERIFY_FLAGS.MNLISTDIFF_MNLIST);
+    public static final EnumSet<FEATURE_FLAGS> FEATURES_LITE_MODE = EnumSet.noneOf(FEATURE_FLAGS.class);
 
     public static final EnumSet<SYNC_FLAGS> SYNC_DEFAULT_SPV = EnumSet.of(SYNC_MASTERNODE_LIST,
             SYNC_QUORUM_LIST, SYNC_CHAINLOCKS, SYNC_INSTANTSENDLOCKS, SYNC_SPORKS);
@@ -70,6 +77,8 @@ public class MasternodeSync {
             VERIFY_FLAGS.MNLISTDIFF_QUORUM,
             VERIFY_FLAGS.CHAINLOCK,
             VERIFY_FLAGS.INSTANTSENDLOCK);
+    public static final EnumSet<FEATURE_FLAGS> FEATURES_SPV = EnumSet.noneOf(FEATURE_FLAGS.class);
+
 
     static final int MASTERNODE_SYNC_TICK_SECONDS    = 6;
     static final int MASTERNODE_SYNC_TIMEOUT_SECONDS = 30; // our blocks are 2.5 minutes so 30 seconds should be fine -- changed to 300 for test purposes (java)
@@ -133,13 +142,16 @@ public class MasternodeSync {
         if (context.isLiteMode() && context.allowInstantXinLiteMode()) {
             this.syncFlags = SYNC_DEFAULT_SPV;
             this.verifyFlags = VERIFY_DEFAULT_SPV;
+            this.featureFlags = FEATURES_SPV;
         } else if(context.isLiteMode()) {
             this.syncFlags = SYNC_LITE_MODE;
             this.verifyFlags = VERIFY_LITE_MODE;
+            this.featureFlags = FEATURES_LITE_MODE;
             //TODO:add other flags here to get other information such as governance messsages, by default
         } else {
             this.syncFlags = SYNC_ALL_OBJECTS;
             this.verifyFlags = VERIFY_ALL_OBJECTS;
+            this.featureFlags = EnumSet.noneOf(FEATURE_FLAGS.class);
         }
         reset();
     }
@@ -799,4 +811,8 @@ public class MasternodeSync {
     public boolean hasVerifyFlag(VERIFY_FLAGS flag) {
         return verifyFlags.contains(flag);
     }
+
+    public boolean hasFeatureFlag(FEATURE_FLAGS flag) { return featureFlags.contains(flag); }
+
+    public void addFeatureFlag(FEATURE_FLAGS flag) { featureFlags.add(flag); }
 }
