@@ -58,7 +58,7 @@ public class ChainLocksHandler implements RecoveredSignatureListener {
 
     public void setBlockChain(AbstractBlockChain blockChain) {
         this.blockChain = blockChain;
-        this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
+        this.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, this.newBestBlockListener);
         this.quorumSigningManager = context.signingManager;
         this.quorumInstantSendManager = context.instantSendManager;
     }

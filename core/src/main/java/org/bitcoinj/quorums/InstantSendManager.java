@@ -62,7 +62,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
     public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.blockChain.addTransactionReceivedListener(this.transactionReceivedInBlockListener);
-        this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
+        this.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, this.newBestBlockListener);
         peerGroup.addOnTransactionBroadcastListener(this.transactionBroadcastListener);
         context.chainLockHandler.addChainLockListener(this.chainLockListener, Threading.SAME_THREAD);
     }
