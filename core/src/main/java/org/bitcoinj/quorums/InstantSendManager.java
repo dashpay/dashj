@@ -33,7 +33,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
     public boolean runWithoutThread;
     AbstractBlockChain blockChain;
 
-    HashMap<Sha256Hash, Transaction> mapTx;
     HashSet<InstantSendLock> invalidInstantSendLocks;
 
     // Incoming and not verified yet
@@ -44,14 +43,12 @@ public class InstantSendManager implements RecoveredSignatureListener {
         this.db = db;
         this.quorumSigningManager = context.signingManager;
         pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
-        mapTx = new HashMap<Sha256Hash, Transaction>();
         invalidInstantSendLocks = new HashSet<InstantSendLock>();
     }
 
     @Override
     public String toString() {
-        return String.format("InstantSendManager:  pendingInstantSendLocks %d, mapTx: %d, DB: %s", pendingInstantSendLocks.size(),
-                mapTx.size(), db);
+        return String.format("InstantSendManager:  pendingInstantSendLocks %d, DB: %s", pendingInstantSendLocks.size(), db);
     }
 
     public InstantSendManager(Context context, InstantSendDatabase db, boolean runWithoutThread) {
@@ -494,12 +491,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
     void processInstantSendLock(long from, Sha256Hash hash, InstantSendLock islock)
     {
         StoredBlock minedBlock = null;
-        Transaction tx = null;
 
-        tx = mapTx.get(islock.txid);
-
-        if(tx != null && tx.getConfidence() != null) {
-            TransactionConfidence confidence = tx.getConfidence();
+        TransactionConfidence confidence = context.getConfidenceTable().get(hash);
+        if(confidence != null) {
             if(confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)
             {
                 long height = confidence.getAppearedAtChainHeight();
@@ -553,14 +547,15 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
 
         removeMempoolConflictsForLock(hash, islock);
-        updateWalletTransaction(islock.txid, tx);
+        updateWalletTransaction(islock.txid, null);
     }
 
     void updateWalletTransaction(Sha256Hash txid, Transaction tx) {
-        if(tx != null) {
-            tx.getConfidence().setIXType(TransactionConfidence.IXType.IX_LOCKED);
-            tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
-        }
+        TransactionConfidence confidence = tx != null ? tx.getConfidence() : context.getConfidenceTable().get(txid);
+        if(confidence != null) {
+            confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED);
+            confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
+        } else log.info("Can't find {} in mempool", txid);
     }
 
     public void syncTransaction(Transaction tx, StoredBlock block, int posInBlock)
@@ -572,11 +567,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
         if (tx.isCoinBase() || tx.getInputs().isEmpty()) {
             // coinbase can't and TXs with no inputs be locked
             return;
-        }
-
-        if(!mapTx.containsKey(tx.getHash()) && posInBlock == -1)
-        {
-            mapTx.put(tx.getHash(), tx);
         }
 
         boolean isDisconnect = block != null && posInBlock == -1;
@@ -644,14 +634,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
 
         for (Map.Entry<Sha256Hash, InstantSendLock> p : removeISLocks.entrySet()) {
-            updateWalletTransaction(p.getValue().txid, mapTx.get(p.getValue().txid));
-            mapTx.remove(p.getValue().txid);
+            updateWalletTransaction(p.getValue().txid, null);
         }
 
-        //remove invalid signature related tx's
-        for(InstantSendLock islock : invalidInstantSendLocks) {
-            mapTx.remove(islock.txid);
-        }
         invalidInstantSendLocks.clear();
     }
     static final String INPUTLOCK_REQUESTID_PREFIX = "inlock";
