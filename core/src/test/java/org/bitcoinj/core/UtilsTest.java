@@ -36,6 +36,15 @@ public class UtilsTest {
     }
 
     @Test
+    public void testMaxOfMostFreq() throws Exception {
+        assertEquals(0, Utils.maxOfMostFreq());
+        assertEquals(0, Utils.maxOfMostFreq(0, 0, 1));
+        assertEquals(2, Utils.maxOfMostFreq(1, 1, 2, 2));
+        assertEquals(1, Utils.maxOfMostFreq(1, 1, 2, 2, 1));
+        assertEquals(-1, Utils.maxOfMostFreq(-1, -1, 2, 2, -1));
+    }
+
+    @Test
     public void compactEncoding() throws Exception {
         assertEquals(new BigInteger("1234560000", 16), Utils.decodeCompactBits(0x05123456L));
         assertEquals(new BigInteger("c0de000000", 16), Utils.decodeCompactBits(0x0600c0de));
@@ -232,6 +241,5 @@ public class UtilsTest {
     public void testRollMockClock() {
         Utils.setMockClock(25200);
         assertEquals(new Date("Thu Jan 01 07:00:08 GMT 1970"), Utils.rollMockClock(8));
-        Utils.resetMocking();
     }
 }
