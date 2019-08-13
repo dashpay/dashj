@@ -46,4 +46,9 @@ public class AuthenticationKeyChainFactory implements KeyChainFactory {
                                                       boolean isFollowingKey, boolean isMarried) throws UnreadableWalletException {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public DeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) {
+        throw new UnsupportedOperationException();
+    }
 }

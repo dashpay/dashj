@@ -161,13 +161,19 @@ public final class HDKeyDerivation {
         checkArgument(parent.hasPrivKey(), "Parent key must have private key bytes for this method.");
         byte[] parentPublicKey = parent.getPubKeyPoint().getEncoded(true);
         checkState(parentPublicKey.length == 33, "Parent pubkey must be 33 bytes, but is " + parentPublicKey.length);
-        ByteBuffer data = ByteBuffer.allocate(37);
+        boolean simple = childNumber instanceof ExtendedChildNumber == false;
+        ByteBuffer data = ByteBuffer.allocate(simple ? 37 : 37 - 4 + 1 + ((ExtendedChildNumber)childNumber).bi().toByteArray().length);
         if (childNumber.isHardened()) {
             data.put(parent.getPrivKeyBytes33());
         } else {
             data.put(parentPublicKey);
         }
-        data.putInt(childNumber.i());
+        if(childNumber instanceof ExtendedChildNumber) {
+            data.put((byte)(childNumber.isHardened() ? 1 : 0));
+            data.put(((ExtendedChildNumber)childNumber).bi().toByteArray());
+        } else {
+            data.putInt(childNumber.i());
+        }
         byte[] i = HDUtils.hmacSha512(parent.getChainCode(), data.array());
         checkState(i.length == 64, i.length);
         byte[] il = Arrays.copyOfRange(i, 0, 32);
@@ -191,7 +197,12 @@ public final class HDKeyDerivation {
         checkState(parentPublicKey.length == 33, "Parent pubkey must be 33 bytes, but is " + parentPublicKey.length);
         ByteBuffer data = ByteBuffer.allocate(37);
         data.put(parentPublicKey);
-        data.putInt(childNumber.i());
+        if(childNumber instanceof ExtendedChildNumber) {
+            data.put((byte)(childNumber.isHardened() ? 1 : 0));
+            data.put(((ExtendedChildNumber)childNumber).bi().toByteArray());
+        } else {
+            data.putInt(childNumber.i());
+        }
         byte[] i = HDUtils.hmacSha512(parent.getChainCode(), data.array());
         checkState(i.length == 64, i.length);
         byte[] il = Arrays.copyOfRange(i, 0, 32);

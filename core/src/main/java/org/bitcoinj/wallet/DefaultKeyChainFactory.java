@@ -55,4 +55,18 @@ public class DefaultKeyChainFactory implements KeyChainFactory {
             chain = new DeterministicKeyChain(accountKey, isFollowingKey);
         return chain;
     }
+
+    @Override
+    public DeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
+                                                            KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException
+    {
+        DeterministicKeyChain chain;
+        if (isMarried)
+            throw new UnsupportedOperationException("Married Friend Keychains are not allowed");
+        else if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && accountPath.get(1).equals(ChildNumber.FIVE_HARDENED) &&
+                accountPath.get(2).equals(ChildNumber.FIVE_HARDENED) && accountPath.get(2).equals(ChildNumber.ONE_HARDENED))
+            chain = new FriendKeyChain(seed, crypter, accountPath);
+        else return new DeterministicKeyChain(seed, crypter, accountPath);
+        return chain;
+    }
 }

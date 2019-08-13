@@ -152,6 +152,11 @@ public class DeterministicKeyChainTest {
             public DeterministicKeyChain makeWatchingKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicKey accountKey, boolean isFollowingKey, boolean isMarried) {
                 throw new UnsupportedOperationException();
             }
+
+            @Override
+            public DeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) {
+                throw new UnsupportedOperationException();
+            }
         };
 
         chain1 = DeterministicKeyChain.fromProtobuf(keys, null, factory).get(0);

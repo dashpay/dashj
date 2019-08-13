@@ -40,18 +40,27 @@ public class ChildNumber implements Comparable<ChildNumber> {
     public static final ChildNumber ZERO_HARDENED = new ChildNumber(0, true);
     public static final ChildNumber ONE_HARDENED = new ChildNumber(1, true);
     public static final ChildNumber FIVE_HARDENED = new ChildNumber(5, true);
+    public static final ChildNumber NINE_HARDENED = new ChildNumber(9, true);
 
     /** Integer i as per BIP 32 spec, including the MSB denoting derivation type (0 = public, 1 = private) **/
     private final int i;
+    private final boolean simple;
 
     public ChildNumber(int childNumber, boolean isHardened) {
         if (hasHardenedBit(childNumber))
             throw new IllegalArgumentException("Most significant bit is reserved and shouldn't be set: " + childNumber);
         i = isHardened ? (childNumber | HARDENED_BIT) : childNumber;
+        simple = true;
     }
 
     public ChildNumber(int i) {
         this.i = i;
+        simple = true;
+    }
+
+    public ChildNumber(boolean simple) {
+        this.i = -1;
+        this.simple = simple;
     }
 
     /** Returns the uint32 encoded form of the path element, including the most significant bit. */
@@ -74,6 +83,8 @@ public class ChildNumber implements Comparable<ChildNumber> {
     public int num() {
         return i & (~HARDENED_BIT);
     }
+
+    public boolean isSimple() { return simple; }
 
     @Override
     public String toString() {

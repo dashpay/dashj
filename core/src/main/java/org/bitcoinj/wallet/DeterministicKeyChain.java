@@ -801,8 +801,30 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             proto.setType(Protos.Key.Type.DETERMINISTIC_KEY);
             final Protos.DeterministicKey.Builder detKey = proto.getDeterministicKeyBuilder();
             detKey.setChainCode(ByteString.copyFrom(key.getChainCode()));
-            for (ChildNumber num : key.getPath())
-                detKey.addPath(num.i());
+            boolean hasExtendedChildren = false;
+            for (ChildNumber num : key.getPath()) {
+                if (num instanceof ExtendedChildNumber) {
+                    hasExtendedChildren = true;
+                    break;
+                }
+            }
+            if(!hasExtendedChildren) {
+                for (ChildNumber num : key.getPath())
+                    detKey.addPath(num.i());
+            } else for (ChildNumber num : key.getPath()) {
+                boolean simple = num instanceof ExtendedChildNumber == false;
+                Protos.ExtendedChildNumber.Builder builder = Protos.ExtendedChildNumber.newBuilder();
+                builder.setSimple(simple);
+                if(simple)
+                    builder.setI(num.i());
+                else {
+                    ExtendedChildNumber extendedChildNumber = (ExtendedChildNumber)num;
+                    builder.setHardened(extendedChildNumber.isHardened());
+                    builder.setSize(extendedChildNumber.bi().toByteArray().length);
+                    builder.setBi(ByteString.copyFrom(extendedChildNumber.bi().toByteArray()));
+                }
+                detKey.addExtendedPath(builder.build());
+            }
             if (key.equals(externalParentKey)) {
                 detKey.setIssuedSubkeys(issuedExternalKeys);
                 detKey.setLookaheadSize(lookaheadSize);
@@ -851,8 +873,9 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                 for (int i : key.getAccountPathList()) {
                     accountPath.add(new ChildNumber(i));
                 }
-                if (accountPath.isEmpty())
+                if (accountPath.isEmpty()) {
                     accountPath = ACCOUNT_ZERO_PATH;
+                }
                 if (chain != null) {
                     checkState(lookaheadSize >= 0);
                     chain.setLookaheadSize(lookaheadSize);
@@ -896,6 +919,18 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                 LinkedList<ChildNumber> path = newLinkedList();
                 for (int i : key.getDeterministicKey().getPathList())
                     path.add(new ChildNumber(i));
+                //load the extended list
+                boolean simple = true;
+                if(path.isEmpty()) {
+                    for (Protos.ExtendedChildNumber j : key.getDeterministicKey().getExtendedPathList()) {
+                        if(j.getSimple())
+                            path.add(new ChildNumber(j.getI()));
+                        else {
+                            path.add(new ExtendedChildNumber(j.getBi().toByteArray(), j.getHardened()));
+                            simple = false;
+                        }
+                    }
+                }
                 // Deserialize the public key and path.
                 LazyECPoint pubkey = new LazyECPoint(ECKey.CURVE.getCurve(), key.getPublicKey().toByteArray());
                 final ImmutableList<ChildNumber> immutablePath = ImmutableList.copyOf(path);
@@ -925,8 +960,12 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                         chain = factory.makeWatchingKeyChain(key, iter.peek(), accountKey, isFollowingKey, isMarried);
                         isWatchingAccountKey = true;
                     } else {
-                        chain = factory.makeKeyChain(key, iter.peek(), seed, crypter, isMarried,
-                                ImmutableList.<ChildNumber> builder().addAll(accountPath).build());
+                        if(simple)
+                            chain = factory.makeKeyChain(key, iter.peek(), seed, crypter, isMarried,
+                                    ImmutableList.<ChildNumber> builder().addAll(accountPath).build());
+                        else
+                            chain = factory.makeSpendingFriendKeyChain(key, iter.peek(), seed, crypter, isMarried,
+                                    ImmutableList.<ChildNumber> builder().addAll(accountPath).build());
                         chain.lookaheadSize = LAZY_CALCULATE_LOOKAHEAD;
                         // If the seed is encrypted, then the chain is incomplete at this point. However, we will load
                         // it up below as we parse in the keys. We just need to check at the end that we've loaded
