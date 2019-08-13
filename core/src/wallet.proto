@@ -441,9 +441,8 @@ message Wallet {
 
   repeated ExtendedKeyChain extKeyChains = 29;
 
-  repeated Key keysForFriends = 30;
-  repeated Key keysFromFriends = 31;
-
+  repeated Key keysForFriends = 30;  //spending, friends send us money
+  repeated Key keysFromFriends = 31; //watching, we send money to friends
   // Next tag: 18
 }
 

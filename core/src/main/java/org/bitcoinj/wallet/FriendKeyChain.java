@@ -25,6 +25,10 @@ public class FriendKeyChain extends DeterministicKeyChain {
     public static final ImmutableList<ChildNumber> FRIEND_ROOT_PATH_TESTNET = ImmutableList.of(ChildNumber.NINE_HARDENED,
             ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED);
 
+    public static final int PATH_INDEX_TO_ID = 5;
+    public static final int PATH_INDEX_FROM_ID = 6;
+
+
     public FriendKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> rootPath, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
         super(seed, ImmutableList.<ChildNumber>builder().addAll(rootPath).add(new ChildNumber(account, true)).add(new ExtendedChildNumber(myBlockchainUserId)).add(new ExtendedChildNumber(theirBlockchainUserId)).build());
         type = KeyChainType.RECEIVING_CHAIN;

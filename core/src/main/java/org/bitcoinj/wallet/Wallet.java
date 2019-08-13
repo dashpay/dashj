@@ -4800,6 +4800,10 @@ public class Wallet extends BaseTaggableObject
                 BloomFilter authFilter = authenticationGroup.getBloomFilter(size, falsePositiveRate, nTweak);
                 filter.merge(authFilter);
             }
+            if(receivingFromFriendsGroup != null) {
+                BloomFilter authFilter = receivingFromFriendsGroup.getBloomFilter(size, falsePositiveRate, nTweak);
+                filter.merge(authFilter);
+            }
             return filter;
         } finally {
             endBloomFilterCalculation();
@@ -5499,5 +5503,19 @@ public class Wallet extends BaseTaggableObject
 
     public boolean hasAuthenticationKeyChains() {
         return blockchainUserKeyChain != null || providerOwnerKeyChain != null || providerVoterKeyChain != null;
+    }
+
+    KeyChainGroup receivingFromFriendsGroup;
+    KeyChainGroup sendingToFriendsGroup;
+
+    public void addKeyChainForFriend(DeterministicSeed seed, KeyCrypter keyCrypter, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
+        boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
+
+        FriendKeyChain chain = new FriendKeyChain(seed, keyCrypter, isMainNet ? FriendKeyChain.FRIEND_ROOT_PATH : FriendKeyChain.FRIEND_ROOT_PATH_TESTNET,
+                account, myBlockchainUserId, theirBlockchainUserId);
+        if(receivingFromFriendsGroup == null) {
+            receivingFromFriendsGroup = new FriendKeyChainGroup(params);
+        }
+        receivingFromFriendsGroup.addAndActivateHDChain(chain);
     }
 }
