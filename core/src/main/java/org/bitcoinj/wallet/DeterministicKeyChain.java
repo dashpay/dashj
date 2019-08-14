@@ -789,9 +789,10 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             Protos.Key.Builder mnemonicEntry = BasicKeyChain.serializeEncryptableItem(seed);
             mnemonicEntry.setType(Protos.Key.Type.DETERMINISTIC_MNEMONIC);
             serializeSeedEncryptableItem(seed, mnemonicEntry);
-            for (ChildNumber childNumber : getAccountPath()) {
+            /*for (ChildNumber childNumber : getAccountPath()) {
                 mnemonicEntry.addAccountPath(childNumber.i());
-            }
+            }*/
+            setPathOrExtendedPath(accountPath, mnemonicEntry);
             entries.add(mnemonicEntry.build());
         }
         Map<ECKey, Protos.Key.Builder> keys = basicKeyChain.serializeToEditableProtobufs();
@@ -801,30 +802,9 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             proto.setType(Protos.Key.Type.DETERMINISTIC_KEY);
             final Protos.DeterministicKey.Builder detKey = proto.getDeterministicKeyBuilder();
             detKey.setChainCode(ByteString.copyFrom(key.getChainCode()));
-            boolean hasExtendedChildren = false;
-            for (ChildNumber num : key.getPath()) {
-                if (num instanceof ExtendedChildNumber) {
-                    hasExtendedChildren = true;
-                    break;
-                }
-            }
-            if(!hasExtendedChildren) {
-                for (ChildNumber num : key.getPath())
-                    detKey.addPath(num.i());
-            } else for (ChildNumber num : key.getPath()) {
-                boolean simple = num instanceof ExtendedChildNumber == false;
-                Protos.ExtendedChildNumber.Builder builder = Protos.ExtendedChildNumber.newBuilder();
-                builder.setSimple(simple);
-                if(simple)
-                    builder.setI(num.i());
-                else {
-                    ExtendedChildNumber extendedChildNumber = (ExtendedChildNumber)num;
-                    builder.setHardened(extendedChildNumber.isHardened());
-                    builder.setSize(extendedChildNumber.bi().toByteArray().length);
-                    builder.setBi(ByteString.copyFrom(extendedChildNumber.bi().toByteArray()));
-                }
-                detKey.addExtendedPath(builder.build());
-            }
+
+            setPathOrExtendedPath(key, detKey);
+
             if (key.equals(externalParentKey)) {
                 detKey.setIssuedSubkeys(issuedExternalKeys);
                 detKey.setLookaheadSize(lookaheadSize);
@@ -847,6 +827,66 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         return entries;
     }
 
+    private void setPathOrExtendedPath(DeterministicKey key, Protos.DeterministicKey.Builder detKey) {
+        ImmutableList<ChildNumber> path = key.getPath();
+        setPathOrExtendedPath(path, detKey);
+    }
+
+    private void setPathOrExtendedPath(ImmutableList<ChildNumber> path, Protos.DeterministicKey.Builder detKey) {
+        if(!pathHasExtendedChildren(path)) {
+            for (ChildNumber num : path)
+                detKey.addPath(num.i());
+        } else for (ChildNumber num : path) {
+            boolean simple = num instanceof ExtendedChildNumber == false;
+            Protos.ExtendedChildNumber.Builder builder = Protos.ExtendedChildNumber.newBuilder();
+            builder.setSimple(simple);
+            if(simple)
+                builder.setI(num.i());
+            else {
+                ExtendedChildNumber extendedChildNumber = (ExtendedChildNumber)num;
+                builder.setHardened(extendedChildNumber.isHardened());
+                builder.setSize(extendedChildNumber.bi().toByteArray().length);
+                builder.setBi(ByteString.copyFrom(extendedChildNumber.bi().toByteArray()));
+            }
+            detKey.addExtendedPath(builder.build());
+        }
+    }
+
+    private void setPathOrExtendedPath(ImmutableList<ChildNumber> path, Protos.Key.Builder detKey) {
+        if(!pathHasExtendedChildren(path)) {
+            for (ChildNumber num : path)
+                detKey.addAccountPath(num.i());
+        } else for (ChildNumber num : path) {
+            boolean simple = num instanceof ExtendedChildNumber == false;
+            Protos.ExtendedChildNumber.Builder builder = Protos.ExtendedChildNumber.newBuilder();
+            builder.setSimple(simple);
+            if(simple)
+                builder.setI(num.i());
+            else {
+                ExtendedChildNumber extendedChildNumber = (ExtendedChildNumber)num;
+                builder.setHardened(extendedChildNumber.isHardened());
+                builder.setSize(extendedChildNumber.bi().toByteArray().length);
+                builder.setBi(ByteString.copyFrom(extendedChildNumber.bi().toByteArray()));
+            }
+            detKey.addExtendedPath(builder.build());
+        }
+    }
+
+    protected boolean pathHasExtendedChildren(DeterministicKey key) {
+        return pathHasExtendedChildren(key.getPath());
+    }
+
+    protected boolean pathHasExtendedChildren(ImmutableList<ChildNumber> path) {
+        boolean hasExtendedChildren = false;
+        for (ChildNumber num : path) {
+            if (num instanceof ExtendedChildNumber) {
+                hasExtendedChildren = true;
+                break;
+            }
+        }
+        return hasExtendedChildren;
+    }
+
     static List<DeterministicKeyChain> fromProtobuf(List<Protos.Key> keys, @Nullable KeyCrypter crypter) throws UnreadableWalletException {
         return fromProtobuf(keys, crypter, new DefaultKeyChainFactory());
     }
@@ -864,6 +904,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         int sigsRequiredToSpend = 1;
 
         List<ChildNumber> accountPath = newArrayList();
+        boolean simple = true;
         PeekingIterator<Protos.Key> iter = Iterators.peekingIterator(keys.iterator());
         while (iter.hasNext()) {
             Protos.Key key = iter.next();
@@ -874,7 +915,16 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                     accountPath.add(new ChildNumber(i));
                 }
                 if (accountPath.isEmpty()) {
-                    accountPath = ACCOUNT_ZERO_PATH;
+                    for(Protos.ExtendedChildNumber j : key.getExtendedPathList()) {
+                        if(j.getSimple())
+                            accountPath.add(new ChildNumber(j.getI()));
+                        else {
+                            accountPath.add(new ExtendedChildNumber(j.getBi().toByteArray(), j.getHardened()));
+                            simple = false;
+                        }
+                    }
+                    if(accountPath.isEmpty())
+                        accountPath = ACCOUNT_ZERO_PATH;
                 }
                 if (chain != null) {
                     checkState(lookaheadSize >= 0);
@@ -920,7 +970,6 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                 for (int i : key.getDeterministicKey().getPathList())
                     path.add(new ChildNumber(i));
                 //load the extended list
-                boolean simple = true;
                 if(path.isEmpty()) {
                     for (Protos.ExtendedChildNumber j : key.getDeterministicKey().getExtendedPathList()) {
                         if(j.getSimple())

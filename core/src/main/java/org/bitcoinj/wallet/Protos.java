@@ -3593,6 +3593,30 @@ public final class Protos {
      * </pre>
      */
     int getAccountPath(int index);
+
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    java.util.List<org.bitcoinj.wallet.Protos.ExtendedChildNumber> 
+        getExtendedPathList();
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    org.bitcoinj.wallet.Protos.ExtendedChildNumber getExtendedPath(int index);
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    int getExtendedPathCount();
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    java.util.List<? extends org.bitcoinj.wallet.Protos.ExtendedChildNumberOrBuilder> 
+        getExtendedPathOrBuilderList();
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    org.bitcoinj.wallet.Protos.ExtendedChildNumberOrBuilder getExtendedPathOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code wallet.Key}
@@ -3752,6 +3776,14 @@ public final class Protos {
               input.popLimit(limit);
               break;
             }
+            case 90: {
+              if (!((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
+                extendedPath_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.ExtendedChildNumber>();
+                mutable_bitField0_ |= 0x00000400;
+              }
+              extendedPath_.add(input.readMessage(org.bitcoinj.wallet.Protos.ExtendedChildNumber.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -3762,6 +3794,9 @@ public final class Protos {
       } finally {
         if (((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
           accountPath_ = java.util.Collections.unmodifiableList(accountPath_);
+        }
+        if (((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
+          extendedPath_ = java.util.Collections.unmodifiableList(extendedPath_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -4232,6 +4267,41 @@ public final class Protos {
     }
     private int accountPathMemoizedSerializedSize = -1;
 
+    public static final int EXTENDEDPATH_FIELD_NUMBER = 11;
+    private java.util.List<org.bitcoinj.wallet.Protos.ExtendedChildNumber> extendedPath_;
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    public java.util.List<org.bitcoinj.wallet.Protos.ExtendedChildNumber> getExtendedPathList() {
+      return extendedPath_;
+    }
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    public java.util.List<? extends org.bitcoinj.wallet.Protos.ExtendedChildNumberOrBuilder> 
+        getExtendedPathOrBuilderList() {
+      return extendedPath_;
+    }
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    public int getExtendedPathCount() {
+      return extendedPath_.size();
+    }
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    public org.bitcoinj.wallet.Protos.ExtendedChildNumber getExtendedPath(int index) {
+      return extendedPath_.get(index);
+    }
+    /**
+     * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+     */
+    public org.bitcoinj.wallet.Protos.ExtendedChildNumberOrBuilder getExtendedPathOrBuilder(
+        int index) {
+      return extendedPath_.get(index);
+    }
+
     private void initFields() {
       type_ = org.bitcoinj.wallet.Protos.Key.Type.ORIGINAL;
       secretBytes_ = com.google.protobuf.ByteString.EMPTY;
@@ -4243,6 +4313,7 @@ public final class Protos {
       deterministicSeed_ = com.google.protobuf.ByteString.EMPTY;
       encryptedDeterministicSeed_ = org.bitcoinj.wallet.Protos.EncryptedData.getDefaultInstance();
       accountPath_ = java.util.Collections.emptyList();
+      extendedPath_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4268,6 +4339,12 @@ public final class Protos {
       }
       if (hasEncryptedDeterministicSeed()) {
         if (!getEncryptedDeterministicSeed().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getExtendedPathCount(); i++) {
+        if (!getExtendedPath(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -4312,6 +4389,9 @@ public final class Protos {
       }
       for (int i = 0; i < accountPath_.size(); i++) {
         output.writeUInt32NoTag(accountPath_.get(i));
+      }
+      for (int i = 0; i < extendedPath_.size(); i++) {
+        output.writeMessage(11, extendedPath_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -4371,6 +4451,10 @@ public final class Protos {
               .computeInt32SizeNoTag(dataSize);
         }
         accountPathMemoizedSerializedSize = dataSize;
+      }
+      for (int i = 0; i < extendedPath_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(11, extendedPath_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4493,6 +4577,7 @@ public final class Protos {
           getEncryptedDataFieldBuilder();
           getDeterministicKeyFieldBuilder();
           getEncryptedDeterministicSeedFieldBuilder();
+          getExtendedPathFieldBuilder();
         }
       }
       private static Builder create() {
@@ -4533,6 +4618,12 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000100);
         accountPath_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000200);
+        if (extendedPathBuilder_ == null) {
+          extendedPath_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000400);
+        } else {
+          extendedPathBuilder_.clear();
+        }
         return this;
       }
 
@@ -4614,6 +4705,15 @@ public final class Protos {
           bitField0_ = (bitField0_ & ~0x00000200);
         }
         result.accountPath_ = accountPath_;
+        if (extendedPathBuilder_ == null) {
+          if (((bitField0_ & 0x00000400) == 0x00000400)) {
+            extendedPath_ = java.util.Collections.unmodifiableList(extendedPath_);
+            bitField0_ = (bitField0_ & ~0x00000400);
+          }
+          result.extendedPath_ = extendedPath_;
+        } else {
+          result.extendedPath_ = extendedPathBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4669,6 +4769,32 @@ public final class Protos {
           }
           onChanged();
         }
+        if (extendedPathBuilder_ == null) {
+          if (!other.extendedPath_.isEmpty()) {
+            if (extendedPath_.isEmpty()) {
+              extendedPath_ = other.extendedPath_;
+              bitField0_ = (bitField0_ & ~0x00000400);
+            } else {
+              ensureExtendedPathIsMutable();
+              extendedPath_.addAll(other.extendedPath_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.extendedPath_.isEmpty()) {
+            if (extendedPathBuilder_.isEmpty()) {
+              extendedPathBuilder_.dispose();
+              extendedPathBuilder_ = null;
+              extendedPath_ = other.extendedPath_;
+              bitField0_ = (bitField0_ & ~0x00000400);
+              extendedPathBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getExtendedPathFieldBuilder() : null;
+            } else {
+              extendedPathBuilder_.addAllMessages(other.extendedPath_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -4692,6 +4818,12 @@ public final class Protos {
         }
         if (hasEncryptedDeterministicSeed()) {
           if (!getEncryptedDeterministicSeed().isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getExtendedPathCount(); i++) {
+          if (!getExtendedPath(i).isInitialized()) {
             
             return false;
           }
@@ -5582,6 +5714,246 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000200);
         onChanged();
         return this;
+      }
+
+      private java.util.List<org.bitcoinj.wallet.Protos.ExtendedChildNumber> extendedPath_ =
+        java.util.Collections.emptyList();
+      private void ensureExtendedPathIsMutable() {
+        if (!((bitField0_ & 0x00000400) == 0x00000400)) {
+          extendedPath_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.ExtendedChildNumber>(extendedPath_);
+          bitField0_ |= 0x00000400;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.bitcoinj.wallet.Protos.ExtendedChildNumber, org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder, org.bitcoinj.wallet.Protos.ExtendedChildNumberOrBuilder> extendedPathBuilder_;
+
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public java.util.List<org.bitcoinj.wallet.Protos.ExtendedChildNumber> getExtendedPathList() {
+        if (extendedPathBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(extendedPath_);
+        } else {
+          return extendedPathBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public int getExtendedPathCount() {
+        if (extendedPathBuilder_ == null) {
+          return extendedPath_.size();
+        } else {
+          return extendedPathBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedChildNumber getExtendedPath(int index) {
+        if (extendedPathBuilder_ == null) {
+          return extendedPath_.get(index);
+        } else {
+          return extendedPathBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public Builder setExtendedPath(
+          int index, org.bitcoinj.wallet.Protos.ExtendedChildNumber value) {
+        if (extendedPathBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureExtendedPathIsMutable();
+          extendedPath_.set(index, value);
+          onChanged();
+        } else {
+          extendedPathBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public Builder setExtendedPath(
+          int index, org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder builderForValue) {
+        if (extendedPathBuilder_ == null) {
+          ensureExtendedPathIsMutable();
+          extendedPath_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          extendedPathBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public Builder addExtendedPath(org.bitcoinj.wallet.Protos.ExtendedChildNumber value) {
+        if (extendedPathBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureExtendedPathIsMutable();
+          extendedPath_.add(value);
+          onChanged();
+        } else {
+          extendedPathBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public Builder addExtendedPath(
+          int index, org.bitcoinj.wallet.Protos.ExtendedChildNumber value) {
+        if (extendedPathBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureExtendedPathIsMutable();
+          extendedPath_.add(index, value);
+          onChanged();
+        } else {
+          extendedPathBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public Builder addExtendedPath(
+          org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder builderForValue) {
+        if (extendedPathBuilder_ == null) {
+          ensureExtendedPathIsMutable();
+          extendedPath_.add(builderForValue.build());
+          onChanged();
+        } else {
+          extendedPathBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public Builder addExtendedPath(
+          int index, org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder builderForValue) {
+        if (extendedPathBuilder_ == null) {
+          ensureExtendedPathIsMutable();
+          extendedPath_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          extendedPathBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public Builder addAllExtendedPath(
+          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.ExtendedChildNumber> values) {
+        if (extendedPathBuilder_ == null) {
+          ensureExtendedPathIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, extendedPath_);
+          onChanged();
+        } else {
+          extendedPathBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public Builder clearExtendedPath() {
+        if (extendedPathBuilder_ == null) {
+          extendedPath_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000400);
+          onChanged();
+        } else {
+          extendedPathBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public Builder removeExtendedPath(int index) {
+        if (extendedPathBuilder_ == null) {
+          ensureExtendedPathIsMutable();
+          extendedPath_.remove(index);
+          onChanged();
+        } else {
+          extendedPathBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder getExtendedPathBuilder(
+          int index) {
+        return getExtendedPathFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedChildNumberOrBuilder getExtendedPathOrBuilder(
+          int index) {
+        if (extendedPathBuilder_ == null) {
+          return extendedPath_.get(index);  } else {
+          return extendedPathBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public java.util.List<? extends org.bitcoinj.wallet.Protos.ExtendedChildNumberOrBuilder> 
+           getExtendedPathOrBuilderList() {
+        if (extendedPathBuilder_ != null) {
+          return extendedPathBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(extendedPath_);
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder addExtendedPathBuilder() {
+        return getExtendedPathFieldBuilder().addBuilder(
+            org.bitcoinj.wallet.Protos.ExtendedChildNumber.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder addExtendedPathBuilder(
+          int index) {
+        return getExtendedPathFieldBuilder().addBuilder(
+            index, org.bitcoinj.wallet.Protos.ExtendedChildNumber.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .wallet.ExtendedChildNumber extendedPath = 11;</code>
+       */
+      public java.util.List<org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder> 
+           getExtendedPathBuilderList() {
+        return getExtendedPathFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.bitcoinj.wallet.Protos.ExtendedChildNumber, org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder, org.bitcoinj.wallet.Protos.ExtendedChildNumberOrBuilder> 
+          getExtendedPathFieldBuilder() {
+        if (extendedPathBuilder_ == null) {
+          extendedPathBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.bitcoinj.wallet.Protos.ExtendedChildNumber, org.bitcoinj.wallet.Protos.ExtendedChildNumber.Builder, org.bitcoinj.wallet.Protos.ExtendedChildNumberOrBuilder>(
+                  extendedPath_,
+                  ((bitField0_ & 0x00000400) == 0x00000400),
+                  getParentForChildren(),
+                  isClean());
+          extendedPath_ = null;
+        }
+        return extendedPathBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:wallet.Key)
@@ -17336,48 +17708,88 @@ public final class Protos {
 
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     java.util.List<org.bitcoinj.wallet.Protos.Key> 
         getKeysForFriendsList();
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     org.bitcoinj.wallet.Protos.Key getKeysForFriends(int index);
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     int getKeysForFriendsCount();
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
         getKeysForFriendsOrBuilderList();
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     org.bitcoinj.wallet.Protos.KeyOrBuilder getKeysForFriendsOrBuilder(
         int index);
 
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     java.util.List<org.bitcoinj.wallet.Protos.Key> 
         getKeysFromFriendsList();
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     org.bitcoinj.wallet.Protos.Key getKeysFromFriends(int index);
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     int getKeysFromFriendsCount();
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
         getKeysFromFriendsOrBuilderList();
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     org.bitcoinj.wallet.Protos.KeyOrBuilder getKeysFromFriendsOrBuilder(
         int index);
@@ -18272,12 +18684,20 @@ public final class Protos {
     private java.util.List<org.bitcoinj.wallet.Protos.Key> keysForFriends_;
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeysForFriendsList() {
       return keysForFriends_;
     }
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     public java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
         getKeysForFriendsOrBuilderList() {
@@ -18285,18 +18705,30 @@ public final class Protos {
     }
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     public int getKeysForFriendsCount() {
       return keysForFriends_.size();
     }
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     public org.bitcoinj.wallet.Protos.Key getKeysForFriends(int index) {
       return keysForFriends_.get(index);
     }
     /**
      * <code>repeated .wallet.Key keysForFriends = 30;</code>
+     *
+     * <pre>
+     *spending, friends send us money
+     * </pre>
      */
     public org.bitcoinj.wallet.Protos.KeyOrBuilder getKeysForFriendsOrBuilder(
         int index) {
@@ -18307,12 +18739,20 @@ public final class Protos {
     private java.util.List<org.bitcoinj.wallet.Protos.Key> keysFromFriends_;
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeysFromFriendsList() {
       return keysFromFriends_;
     }
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     public java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
         getKeysFromFriendsOrBuilderList() {
@@ -18320,18 +18760,30 @@ public final class Protos {
     }
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     public int getKeysFromFriendsCount() {
       return keysFromFriends_.size();
     }
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     public org.bitcoinj.wallet.Protos.Key getKeysFromFriends(int index) {
       return keysFromFriends_.get(index);
     }
     /**
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+     *
+     * <pre>
+     *watching, we send money to friends
+     * </pre>
      */
     public org.bitcoinj.wallet.Protos.KeyOrBuilder getKeysFromFriendsOrBuilder(
         int index) {
@@ -21658,6 +22110,10 @@ public final class Protos {
 
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeysForFriendsList() {
         if (keysForFriendsBuilder_ == null) {
@@ -21668,6 +22124,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public int getKeysForFriendsCount() {
         if (keysForFriendsBuilder_ == null) {
@@ -21678,6 +22138,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.Key getKeysForFriends(int index) {
         if (keysForFriendsBuilder_ == null) {
@@ -21688,6 +22152,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public Builder setKeysForFriends(
           int index, org.bitcoinj.wallet.Protos.Key value) {
@@ -21705,6 +22173,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public Builder setKeysForFriends(
           int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
@@ -21719,6 +22191,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public Builder addKeysForFriends(org.bitcoinj.wallet.Protos.Key value) {
         if (keysForFriendsBuilder_ == null) {
@@ -21735,6 +22211,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public Builder addKeysForFriends(
           int index, org.bitcoinj.wallet.Protos.Key value) {
@@ -21752,6 +22232,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public Builder addKeysForFriends(
           org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
@@ -21766,6 +22250,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public Builder addKeysForFriends(
           int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
@@ -21780,6 +22268,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public Builder addAllKeysForFriends(
           java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.Key> values) {
@@ -21795,6 +22287,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public Builder clearKeysForFriends() {
         if (keysForFriendsBuilder_ == null) {
@@ -21808,6 +22304,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public Builder removeKeysForFriends(int index) {
         if (keysForFriendsBuilder_ == null) {
@@ -21821,6 +22321,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.Key.Builder getKeysForFriendsBuilder(
           int index) {
@@ -21828,6 +22332,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.KeyOrBuilder getKeysForFriendsOrBuilder(
           int index) {
@@ -21838,6 +22346,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
            getKeysForFriendsOrBuilderList() {
@@ -21849,6 +22361,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.Key.Builder addKeysForFriendsBuilder() {
         return getKeysForFriendsFieldBuilder().addBuilder(
@@ -21856,6 +22372,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.Key.Builder addKeysForFriendsBuilder(
           int index) {
@@ -21864,6 +22384,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysForFriends = 30;</code>
+       *
+       * <pre>
+       *spending, friends send us money
+       * </pre>
        */
       public java.util.List<org.bitcoinj.wallet.Protos.Key.Builder> 
            getKeysForFriendsBuilderList() {
@@ -21898,6 +22422,10 @@ public final class Protos {
 
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeysFromFriendsList() {
         if (keysFromFriendsBuilder_ == null) {
@@ -21908,6 +22436,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public int getKeysFromFriendsCount() {
         if (keysFromFriendsBuilder_ == null) {
@@ -21918,6 +22450,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.Key getKeysFromFriends(int index) {
         if (keysFromFriendsBuilder_ == null) {
@@ -21928,6 +22464,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public Builder setKeysFromFriends(
           int index, org.bitcoinj.wallet.Protos.Key value) {
@@ -21945,6 +22485,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public Builder setKeysFromFriends(
           int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
@@ -21959,6 +22503,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public Builder addKeysFromFriends(org.bitcoinj.wallet.Protos.Key value) {
         if (keysFromFriendsBuilder_ == null) {
@@ -21975,6 +22523,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public Builder addKeysFromFriends(
           int index, org.bitcoinj.wallet.Protos.Key value) {
@@ -21992,6 +22544,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public Builder addKeysFromFriends(
           org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
@@ -22006,6 +22562,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public Builder addKeysFromFriends(
           int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
@@ -22020,6 +22580,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public Builder addAllKeysFromFriends(
           java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.Key> values) {
@@ -22035,6 +22599,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public Builder clearKeysFromFriends() {
         if (keysFromFriendsBuilder_ == null) {
@@ -22048,6 +22616,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public Builder removeKeysFromFriends(int index) {
         if (keysFromFriendsBuilder_ == null) {
@@ -22061,6 +22633,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.Key.Builder getKeysFromFriendsBuilder(
           int index) {
@@ -22068,6 +22644,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.KeyOrBuilder getKeysFromFriendsOrBuilder(
           int index) {
@@ -22078,6 +22658,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
            getKeysFromFriendsOrBuilderList() {
@@ -22089,6 +22673,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.Key.Builder addKeysFromFriendsBuilder() {
         return getKeysFromFriendsFieldBuilder().addBuilder(
@@ -22096,6 +22684,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public org.bitcoinj.wallet.Protos.Key.Builder addKeysFromFriendsBuilder(
           int index) {
@@ -22104,6 +22696,10 @@ public final class Protos {
       }
       /**
        * <code>repeated .wallet.Key keysFromFriends = 31;</code>
+       *
+       * <pre>
+       *watching, we send money to friends
+       * </pre>
        */
       public java.util.List<org.bitcoinj.wallet.Protos.Key.Builder> 
            getKeysFromFriendsBuilderList() {
@@ -23016,7 +23612,7 @@ public final class Protos {
       "\003(\r\022\026\n\016issued_subkeys\030\003 \001(\r\022\026\n\016lookahead" +
       "_size\030\004 \001(\r\022\023\n\013isFollowing\030\005 \001(\010\022\036\n\023sigs",
       "RequiredToSpend\030\006 \001(\r:\0011\0221\n\014extendedPath" +
-      "\030\007 \003(\0132\033.wallet.ExtendedChildNumber\"\264\003\n\003" +
+      "\030\007 \003(\0132\033.wallet.ExtendedChildNumber\"\347\003\n\003" +
       "Key\022\036\n\004type\030\001 \002(\0162\020.wallet.Key.Type\022\024\n\014s" +
       "ecret_bytes\030\002 \001(\014\022-\n\016encrypted_data\030\006 \001(" +
       "\0132\025.wallet.EncryptedData\022\022\n\npublic_key\030\003" +
@@ -23025,87 +23621,88 @@ public final class Protos {
       "let.DeterministicKey\022\032\n\022deterministic_se" +
       "ed\030\010 \001(\014\022;\n\034encrypted_deterministic_seed" +
       "\030\t \001(\0132\025.wallet.EncryptedData\022\030\n\014account",
-      "_path\030\n \003(\rB\002\020\001\"a\n\004Type\022\014\n\010ORIGINAL\020\001\022\030\n" +
-      "\024ENCRYPTED_SCRYPT_AES\020\002\022\032\n\026DETERMINISTIC" +
-      "_MNEMONIC\020\003\022\025\n\021DETERMINISTIC_KEY\020\004\"5\n\006Sc" +
-      "ript\022\017\n\007program\030\001 \002(\014\022\032\n\022creation_timest" +
-      "amp\030\002 \002(\003\"\222\001\n\020TransactionInput\022\"\n\032transa" +
-      "ction_out_point_hash\030\001 \002(\014\022#\n\033transactio" +
-      "n_out_point_index\030\002 \002(\r\022\024\n\014script_bytes\030" +
-      "\003 \002(\014\022\020\n\010sequence\030\004 \001(\r\022\r\n\005value\030\005 \001(\003\"\177" +
-      "\n\021TransactionOutput\022\r\n\005value\030\001 \002(\003\022\024\n\014sc" +
-      "ript_bytes\030\002 \002(\014\022!\n\031spent_by_transaction",
-      "_hash\030\003 \001(\014\022\"\n\032spent_by_transaction_inde" +
-      "x\030\004 \001(\005\"\351\004\n\025TransactionConfidence\0220\n\004typ" +
-      "e\030\001 \001(\0162\".wallet.TransactionConfidence.T" +
-      "ype\022\032\n\022appeared_at_height\030\002 \001(\005\022\036\n\026overr" +
-      "iding_transaction\030\003 \001(\014\022\r\n\005depth\030\004 \001(\005\022)" +
-      "\n\014broadcast_by\030\006 \003(\0132\023.wallet.PeerAddres" +
-      "s\022\033\n\023last_broadcasted_at\030\010 \001(\003\0224\n\006source" +
-      "\030\007 \001(\0162$.wallet.TransactionConfidence.So" +
-      "urce\022=\n\006ixType\030\023 \001(\0162$.wallet.Transactio" +
-      "nConfidence.IXType:\007IX_NONE\022\021\n\tpeerCount",
-      "\030\024 \001(\005\022\026\n\016minConnections\030\025 \001(\005\022\020\n\010sentTi" +
-      "me\030\026 \001(\003\"`\n\004Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILDIN" +
-      "G\020\001\022\013\n\007PENDING\020\002\022\025\n\021NOT_IN_BEST_CHAIN\020\003\022" +
-      "\010\n\004DEAD\020\004\022\017\n\013IN_CONFLICT\020\005\"A\n\006Source\022\022\n\016" +
-      "SOURCE_UNKNOWN\020\000\022\022\n\016SOURCE_NETWORK\020\001\022\017\n\013" +
-      "SOURCE_SELF\020\002\"4\n\006IXType\022\013\n\007IX_NONE\020\000\022\016\n\n" +
-      "IX_REQUEST\020\001\022\r\n\tIX_LOCKED\020\002\"\332\005\n\013Transact" +
-      "ion\022\017\n\007version\030\001 \002(\005\022\014\n\004hash\030\002 \002(\014\022&\n\004po" +
-      "ol\030\003 \001(\0162\030.wallet.Transaction.Pool\022\021\n\tlo" +
-      "ck_time\030\004 \001(\r\022\022\n\nupdated_at\030\005 \001(\003\0223\n\021tra",
-      "nsaction_input\030\006 \003(\0132\030.wallet.Transactio" +
-      "nInput\0225\n\022transaction_output\030\007 \003(\0132\031.wal" +
-      "let.TransactionOutput\022\022\n\nblock_hash\030\010 \003(" +
-      "\014\022 \n\030block_relativity_offsets\030\013 \003(\005\0221\n\nc" +
-      "onfidence\030\t \001(\0132\035.wallet.TransactionConf" +
-      "idence\0225\n\007purpose\030\n \001(\0162\033.wallet.Transac" +
-      "tion.Purpose:\007UNKNOWN\022+\n\rexchange_rate\030\014" +
-      " \001(\0132\024.wallet.ExchangeRate\022\014\n\004memo\030\r \001(\t" +
-      "\022\025\n\rextra_payload\030\024 \001(\014\"Y\n\004Pool\022\013\n\007UNSPE" +
-      "NT\020\004\022\t\n\005SPENT\020\005\022\014\n\010INACTIVE\020\002\022\010\n\004DEAD\020\n\022",
-      "\013\n\007PENDING\020\020\022\024\n\020PENDING_INACTIVE\020\022\"\243\001\n\007P" +
-      "urpose\022\013\n\007UNKNOWN\020\000\022\020\n\014USER_PAYMENT\020\001\022\020\n" +
-      "\014KEY_ROTATION\020\002\022\034\n\030ASSURANCE_CONTRACT_CL" +
-      "AIM\020\003\022\035\n\031ASSURANCE_CONTRACT_PLEDGE\020\004\022\033\n\027" +
-      "ASSURANCE_CONTRACT_STUB\020\005\022\r\n\tRAISE_FEE\020\006" +
-      "\"N\n\020ScryptParameters\022\014\n\004salt\030\001 \002(\014\022\020\n\001n\030" +
-      "\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\0018\022\014\n\001p\030\004 \001(\005:\0011" +
-      "\"8\n\tExtension\022\n\n\002id\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\022" +
-      "\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022\013\n\003tag\030\001 \002(\t\022\014" +
-      "\n\004data\030\002 \002(\014\"5\n\021TransactionSigner\022\022\n\ncla",
-      "ss_name\030\001 \002(\t\022\014\n\004data\030\002 \001(\014\"\310\002\n\020Extended" +
-      "KeyChain\022;\n\004type\030\001 \002(\0162-.wallet.Extended" +
-      "KeyChain.ExtendedKeyChainType\0221\n\007keyType" +
-      "\030\002 \002(\0162 .wallet.ExtendedKeyChain.KeyType" +
-      "\022\030\n\003key\030\003 \003(\0132\013.wallet.Key\"\212\001\n\024ExtendedK" +
-      "eyChainType\022\023\n\017BLOCKCHAIN_USER\020\000\022\027\n\023MAST" +
-      "ERNODE_HOLDINGS\020\001\022\024\n\020MASTERNODE_OWNER\020\002\022" +
-      "\027\n\023MASTERNODE_OPERATOR\020\003\022\025\n\021MASTERNODE_V" +
-      "OTING\020\004\"\035\n\007KeyType\022\t\n\005ECDSA\020\000\022\007\n\003BLS\020\001\"\344" +
-      "\005\n\006Wallet\022\032\n\022network_identifier\030\001 \002(\t\022\034\n",
-      "\024last_seen_block_hash\030\002 \001(\014\022\036\n\026last_seen" +
-      "_block_height\030\014 \001(\r\022!\n\031last_seen_block_t" +
-      "ime_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013.wallet.Key" +
-      "\022(\n\013transaction\030\004 \003(\0132\023.wallet.Transacti" +
-      "on\022&\n\016watched_script\030\017 \003(\0132\016.wallet.Scri" +
-      "pt\022C\n\017encryption_type\030\005 \001(\0162\035.wallet.Wal" +
-      "let.EncryptionType:\013UNENCRYPTED\0227\n\025encry" +
-      "ption_parameters\030\006 \001(\0132\030.wallet.ScryptPa" +
-      "rameters\022\022\n\007version\030\007 \001(\005:\0011\022$\n\textensio" +
-      "n\030\n \003(\0132\021.wallet.Extension\022\023\n\013descriptio",
-      "n\030\013 \001(\t\022\031\n\021key_rotation_time\030\r \001(\004\022\031\n\004ta" +
-      "gs\030\020 \003(\0132\013.wallet.Tag\0226\n\023transaction_sig" +
-      "ners\030\021 \003(\0132\031.wallet.TransactionSigner\022.\n" +
-      "\014extKeyChains\030\035 \003(\0132\030.wallet.ExtendedKey" +
-      "Chain\022#\n\016keysForFriends\030\036 \003(\0132\013.wallet.K" +
-      "ey\022$\n\017keysFromFriends\030\037 \003(\0132\013.wallet.Key" +
-      "\";\n\016EncryptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024E" +
-      "NCRYPTED_SCRYPT_AES\020\002\"R\n\014ExchangeRate\022\022\n" +
-      "\ncoin_value\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n" +
-      "\022fiat_currency_code\030\003 \002(\tB\035\n\023org.bitcoin",
-      "j.walletB\006Protos"
+      "_path\030\n \003(\rB\002\020\001\0221\n\014extendedPath\030\013 \003(\0132\033." +
+      "wallet.ExtendedChildNumber\"a\n\004Type\022\014\n\010OR" +
+      "IGINAL\020\001\022\030\n\024ENCRYPTED_SCRYPT_AES\020\002\022\032\n\026DE" +
+      "TERMINISTIC_MNEMONIC\020\003\022\025\n\021DETERMINISTIC_" +
+      "KEY\020\004\"5\n\006Script\022\017\n\007program\030\001 \002(\014\022\032\n\022crea" +
+      "tion_timestamp\030\002 \002(\003\"\222\001\n\020TransactionInpu" +
+      "t\022\"\n\032transaction_out_point_hash\030\001 \002(\014\022#\n" +
+      "\033transaction_out_point_index\030\002 \002(\r\022\024\n\014sc" +
+      "ript_bytes\030\003 \002(\014\022\020\n\010sequence\030\004 \001(\r\022\r\n\005va" +
+      "lue\030\005 \001(\003\"\177\n\021TransactionOutput\022\r\n\005value\030",
+      "\001 \002(\003\022\024\n\014script_bytes\030\002 \002(\014\022!\n\031spent_by_" +
+      "transaction_hash\030\003 \001(\014\022\"\n\032spent_by_trans" +
+      "action_index\030\004 \001(\005\"\351\004\n\025TransactionConfid" +
+      "ence\0220\n\004type\030\001 \001(\0162\".wallet.TransactionC" +
+      "onfidence.Type\022\032\n\022appeared_at_height\030\002 \001" +
+      "(\005\022\036\n\026overriding_transaction\030\003 \001(\014\022\r\n\005de" +
+      "pth\030\004 \001(\005\022)\n\014broadcast_by\030\006 \003(\0132\023.wallet" +
+      ".PeerAddress\022\033\n\023last_broadcasted_at\030\010 \001(" +
+      "\003\0224\n\006source\030\007 \001(\0162$.wallet.TransactionCo" +
+      "nfidence.Source\022=\n\006ixType\030\023 \001(\0162$.wallet",
+      ".TransactionConfidence.IXType:\007IX_NONE\022\021" +
+      "\n\tpeerCount\030\024 \001(\005\022\026\n\016minConnections\030\025 \001(" +
+      "\005\022\020\n\010sentTime\030\026 \001(\003\"`\n\004Type\022\013\n\007UNKNOWN\020\000" +
+      "\022\014\n\010BUILDING\020\001\022\013\n\007PENDING\020\002\022\025\n\021NOT_IN_BE" +
+      "ST_CHAIN\020\003\022\010\n\004DEAD\020\004\022\017\n\013IN_CONFLICT\020\005\"A\n" +
+      "\006Source\022\022\n\016SOURCE_UNKNOWN\020\000\022\022\n\016SOURCE_NE" +
+      "TWORK\020\001\022\017\n\013SOURCE_SELF\020\002\"4\n\006IXType\022\013\n\007IX" +
+      "_NONE\020\000\022\016\n\nIX_REQUEST\020\001\022\r\n\tIX_LOCKED\020\002\"\332" +
+      "\005\n\013Transaction\022\017\n\007version\030\001 \002(\005\022\014\n\004hash\030" +
+      "\002 \002(\014\022&\n\004pool\030\003 \001(\0162\030.wallet.Transaction",
+      ".Pool\022\021\n\tlock_time\030\004 \001(\r\022\022\n\nupdated_at\030\005" +
+      " \001(\003\0223\n\021transaction_input\030\006 \003(\0132\030.wallet" +
+      ".TransactionInput\0225\n\022transaction_output\030" +
+      "\007 \003(\0132\031.wallet.TransactionOutput\022\022\n\nbloc" +
+      "k_hash\030\010 \003(\014\022 \n\030block_relativity_offsets" +
+      "\030\013 \003(\005\0221\n\nconfidence\030\t \001(\0132\035.wallet.Tran" +
+      "sactionConfidence\0225\n\007purpose\030\n \001(\0162\033.wal" +
+      "let.Transaction.Purpose:\007UNKNOWN\022+\n\rexch" +
+      "ange_rate\030\014 \001(\0132\024.wallet.ExchangeRate\022\014\n" +
+      "\004memo\030\r \001(\t\022\025\n\rextra_payload\030\024 \001(\014\"Y\n\004Po",
+      "ol\022\013\n\007UNSPENT\020\004\022\t\n\005SPENT\020\005\022\014\n\010INACTIVE\020\002" +
+      "\022\010\n\004DEAD\020\n\022\013\n\007PENDING\020\020\022\024\n\020PENDING_INACT" +
+      "IVE\020\022\"\243\001\n\007Purpose\022\013\n\007UNKNOWN\020\000\022\020\n\014USER_P" +
+      "AYMENT\020\001\022\020\n\014KEY_ROTATION\020\002\022\034\n\030ASSURANCE_" +
+      "CONTRACT_CLAIM\020\003\022\035\n\031ASSURANCE_CONTRACT_P" +
+      "LEDGE\020\004\022\033\n\027ASSURANCE_CONTRACT_STUB\020\005\022\r\n\t" +
+      "RAISE_FEE\020\006\"N\n\020ScryptParameters\022\014\n\004salt\030" +
+      "\001 \002(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\0018\022\014\n" +
+      "\001p\030\004 \001(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001 \002(\t\022\014\n\004" +
+      "data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022\013\n\003",
+      "tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"5\n\021TransactionSi" +
+      "gner\022\022\n\nclass_name\030\001 \002(\t\022\014\n\004data\030\002 \001(\014\"\310" +
+      "\002\n\020ExtendedKeyChain\022;\n\004type\030\001 \002(\0162-.wall" +
+      "et.ExtendedKeyChain.ExtendedKeyChainType" +
+      "\0221\n\007keyType\030\002 \002(\0162 .wallet.ExtendedKeyCh" +
+      "ain.KeyType\022\030\n\003key\030\003 \003(\0132\013.wallet.Key\"\212\001" +
+      "\n\024ExtendedKeyChainType\022\023\n\017BLOCKCHAIN_USE" +
+      "R\020\000\022\027\n\023MASTERNODE_HOLDINGS\020\001\022\024\n\020MASTERNO" +
+      "DE_OWNER\020\002\022\027\n\023MASTERNODE_OPERATOR\020\003\022\025\n\021M" +
+      "ASTERNODE_VOTING\020\004\"\035\n\007KeyType\022\t\n\005ECDSA\020\000",
+      "\022\007\n\003BLS\020\001\"\344\005\n\006Wallet\022\032\n\022network_identifi" +
+      "er\030\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022\036" +
+      "\n\026last_seen_block_height\030\014 \001(\r\022!\n\031last_s" +
+      "een_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013" +
+      ".wallet.Key\022(\n\013transaction\030\004 \003(\0132\023.walle" +
+      "t.Transaction\022&\n\016watched_script\030\017 \003(\0132\016." +
+      "wallet.Script\022C\n\017encryption_type\030\005 \001(\0162\035" +
+      ".wallet.Wallet.EncryptionType:\013UNENCRYPT" +
+      "ED\0227\n\025encryption_parameters\030\006 \001(\0132\030.wall" +
+      "et.ScryptParameters\022\022\n\007version\030\007 \001(\005:\0011\022",
+      "$\n\textension\030\n \003(\0132\021.wallet.Extension\022\023\n" +
+      "\013description\030\013 \001(\t\022\031\n\021key_rotation_time\030" +
+      "\r \001(\004\022\031\n\004tags\030\020 \003(\0132\013.wallet.Tag\0226\n\023tran" +
+      "saction_signers\030\021 \003(\0132\031.wallet.Transacti" +
+      "onSigner\022.\n\014extKeyChains\030\035 \003(\0132\030.wallet." +
+      "ExtendedKeyChain\022#\n\016keysForFriends\030\036 \003(\013" +
+      "2\013.wallet.Key\022$\n\017keysFromFriends\030\037 \003(\0132\013" +
+      ".wallet.Key\";\n\016EncryptionType\022\017\n\013UNENCRY" +
+      "PTED\020\001\022\030\n\024ENCRYPTED_SCRYPT_AES\020\002\"R\n\014Exch" +
+      "angeRate\022\022\n\ncoin_value\030\001 \002(\003\022\022\n\nfiat_val",
+      "ue\030\002 \002(\003\022\032\n\022fiat_currency_code\030\003 \002(\tB\035\n\023" +
+      "org.bitcoinj.walletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -23148,7 +23745,7 @@ public final class Protos {
     internal_static_wallet_Key_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_Key_descriptor,
-        new java.lang.String[] { "Type", "SecretBytes", "EncryptedData", "PublicKey", "Label", "CreationTimestamp", "DeterministicKey", "DeterministicSeed", "EncryptedDeterministicSeed", "AccountPath", });
+        new java.lang.String[] { "Type", "SecretBytes", "EncryptedData", "PublicKey", "Label", "CreationTimestamp", "DeterministicKey", "DeterministicSeed", "EncryptedDeterministicSeed", "AccountPath", "ExtendedPath", });
     internal_static_wallet_Script_descriptor =
       getDescriptor().getMessageTypes().get(5);
     internal_static_wallet_Script_fieldAccessorTable = new

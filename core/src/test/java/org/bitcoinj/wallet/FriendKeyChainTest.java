@@ -1,10 +1,7 @@
 package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.ExtendedChildNumber;
@@ -16,6 +13,7 @@ import org.junit.Test;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class FriendKeyChainTest {
 
@@ -94,45 +92,41 @@ public class FriendKeyChainTest {
         DeterministicKeyChain keyChain = new DeterministicKeyChain(seed, path);
         DeterministicKey watchingKey = keyChain.getWatchingKey();
         assertEquals("02909fb2c2cd18c8fb99277bc26ec606e381d27c2af6bd87e222304e3baf450bf7", Utils.HEX.encode(watchingKey.getPubKey()));
+    }
 
-        /*
-        NSData * seed = [[DSBIP39Mnemonic sharedInstance]
-        deriveKeyFromPhrase:seedPhrase withPassphrase:nil];
+    @Test
+    public void serializeTest() throws UnreadableWalletException {
+        final NetworkParameters PARAMS = UnitTestParams.get();
+
+        Context.propagate(new Context(PARAMS, 100, Coin.ZERO, false));
+        Wallet wallet = new Wallet(PARAMS);
+
+        Sha256Hash userAhash = Sha256Hash.wrap("c27eb14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
+        Sha256Hash userBhash = Sha256Hash.wrap("ee2052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
+        FriendKeyChain friend = new FriendKeyChain(new DeterministicSeed(ENTROPY, "", secs),
+                FriendKeyChain.FRIEND_ROOT_PATH, 0, userAhash, userBhash);
 
 
+        wallet.addAndActivateHDChain(bip44chain);
 
-        UInt512 I;
+        wallet.addKeyChainFromFriend(bip44chain.getSeed(), bip44chain.getKeyCrypter(),
+                0, userAhash, userBhash);
 
-        HMAC(&I, SHA512, sizeof(UInt512), BIP32_SEED_KEY, strlen(BIP32_SEED_KEY), seed.bytes, seed.length);
+        Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
 
-        UInt256 secret = *(UInt256 *)&I, chain2, chain = chain2 = *(UInt256 *)&I.u8[sizeof(UInt256)];
+        Wallet walletReloaded = new WalletProtobufSerializer().readWallet(PARAMS, null, protos);
 
-        DSECDSAKey * parentSecret = [DSECDSAKey keyWithSecret:secret compressed:YES];
+        assertTrue(walletReloaded.hasReceivingFriendKeyChains());
 
-        NSData * parentPublicKey = parentSecret.publicKeyData;
+        DeterministicKeyChain friendChain = walletReloaded.receivingFromFriendsGroup.getActiveKeyChain();
 
-        UInt256 derivation = ((UInt256){.u64 = {
-                5,
-                12,
-                15,
-                1337,
-        }});
+        DeterministicKey key = friendChain.getWatchingKey();
 
-        CKDpriv256(&secret, &chain, derivation,NO);
+        ImmutableList<ChildNumber> accountPath = ImmutableList.of(ChildNumber.NINE_HARDENED, ChildNumber.ONE_HARDENED,
+                ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED,
+                new ExtendedChildNumber(userAhash), new ExtendedChildNumber(userBhash));
 
-        NSData * publicKey = [DSECDSAKey keyWithSecret:secret compressed:YES].publicKeyData;
+        assertEquals(accountPath, key.getPath());
 
-        DSECPoint pubKey = *(const DSECPoint *)((const uint8_t *)parentPublicKey.bytes);
-
-        CKDpub256(&pubKey, &chain2, derivation,NO);
-
-        NSData * publicKey2 = [NSData dataWithBytes:&pubKey length:sizeof(pubKey)];
-
-        XCTAssertEqualObjects(uint256_hex(chain),uint256_hex(chain2),@"the bip32 chains must match");
-
-        XCTAssertEqualObjects(publicKey,publicKey2,@"the public keys must match");
-
-        XCTAssertEqualObjects(publicKey,@"02909fb2c2cd18c8fb99277bc26ec606e381d27c2af6bd87e222304e3baf450bf7".hexToData,@"the public must match the correct value");
-*/
     }
 }

@@ -5505,10 +5505,10 @@ public class Wallet extends BaseTaggableObject
         return blockchainUserKeyChain != null || providerOwnerKeyChain != null || providerVoterKeyChain != null;
     }
 
-    KeyChainGroup receivingFromFriendsGroup;
-    KeyChainGroup sendingToFriendsGroup;
+    FriendKeyChainGroup receivingFromFriendsGroup;
+    FriendKeyChainGroup sendingToFriendsGroup;
 
-    public void addKeyChainForFriend(DeterministicSeed seed, KeyCrypter keyCrypter, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
+    public void addKeyChainFromFriend(DeterministicSeed seed, KeyCrypter keyCrypter, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
         boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
 
         FriendKeyChain chain = new FriendKeyChain(seed, keyCrypter, isMainNet ? FriendKeyChain.FRIEND_ROOT_PATH : FriendKeyChain.FRIEND_ROOT_PATH_TESTNET,
@@ -5518,4 +5518,13 @@ public class Wallet extends BaseTaggableObject
         }
         receivingFromFriendsGroup.addAndActivateHDChain(chain);
     }
+
+    public boolean hasReceivingFriendKeyChains() {
+        return receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKeyChains();
+    }
+
+    protected void setReceivingFromFriendsGroup(FriendKeyChainGroup receivingFromFriendsGroup) {
+        this.receivingFromFriendsGroup = receivingFromFriendsGroup;
+    }
+
 }

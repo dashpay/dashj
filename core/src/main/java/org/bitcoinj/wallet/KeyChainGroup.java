@@ -101,7 +101,7 @@ public class KeyChainGroup implements KeyBag {
     }
 
     // Used for deserialization.
-    private KeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain, List<DeterministicKeyChain> chains,
+    protected KeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain, List<DeterministicKeyChain> chains,
                           @Nullable EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys, @Nullable KeyCrypter crypter) {
         this.params = params;
         this.basic = basicKeyChain == null ? new BasicKeyChain() : basicKeyChain;
@@ -751,7 +751,7 @@ public class KeyChainGroup implements KeyBag {
         return basic.numKeys() > 0 && chains.isEmpty();
     }
 
-    private static EnumMap<KeyChain.KeyPurpose, DeterministicKey> createCurrentKeysMap(List<DeterministicKeyChain> chains) {
+    protected static EnumMap<KeyChain.KeyPurpose, DeterministicKey> createCurrentKeysMap(List<DeterministicKeyChain> chains) {
         DeterministicKeyChain activeChain = chains.get(chains.size() - 1);
 
         EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys = new EnumMap<KeyChain.KeyPurpose, DeterministicKey>(KeyChain.KeyPurpose.class);
