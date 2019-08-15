@@ -109,7 +109,7 @@ public class FriendKeyChainTest {
 
         wallet.addAndActivateHDChain(bip44chain);
 
-        wallet.addKeyChainFromFriend(bip44chain.getSeed(), bip44chain.getKeyCrypter(),
+        wallet.addReceivingFromFriendKeyChain(bip44chain.getSeed(), bip44chain.getKeyCrypter(),
                 0, userAhash, userBhash);
 
         Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);

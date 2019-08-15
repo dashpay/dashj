@@ -64,12 +64,12 @@ public class KeyChainGroup implements KeyBag {
     private static final Logger log = LoggerFactory.getLogger(KeyChainGroup.class);
 
     private BasicKeyChain basic;
-    private NetworkParameters params;
+    protected NetworkParameters params;
     protected final LinkedList<DeterministicKeyChain> chains;
     // currentKeys is used for normal, non-multisig/married wallets. currentAddresses is used when we're handing out
     // P2SH addresses. They're mutually exclusive.
-    private final EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys;
-    private final EnumMap<KeyChain.KeyPurpose, Address> currentAddresses;
+    protected final EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys;
+    protected final EnumMap<KeyChain.KeyPurpose, Address> currentAddresses;
     @Nullable private KeyCrypter keyCrypter;
     private int lookaheadSize = -1;
     private int lookaheadThreshold = -1;
@@ -122,7 +122,7 @@ public class KeyChainGroup implements KeyBag {
     }
 
     // This keeps married redeem data in sync with the number of keys issued
-    private void maybeLookaheadScripts() {
+    protected void maybeLookaheadScripts() {
         for (DeterministicKeyChain chain : chains) {
             chain.maybeLookAheadScripts();
         }

@@ -29,6 +29,7 @@ import org.bitcoinj.core.Message;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.TransactionConfidence.*;
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.script.*;
 import org.bitcoinj.signers.*;
 import org.bitcoinj.utils.*;
@@ -1067,12 +1068,18 @@ public class Wallet extends BaseTaggableObject
                     if (script.isSentToRawPubKey()) {
                         byte[] pubkey = script.getPubKey();
                         keyChainGroup.markPubKeyAsUsed(pubkey);
+                        receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
+                        sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
                     } else if (script.isSentToAddress()) {
                         byte[] pubkeyHash = script.getPubKeyHash();
                         keyChainGroup.markPubKeyHashAsUsed(pubkeyHash);
+                        receivingFromFriendsGroup.markPubKeyAsUsed(pubkeyHash);
+                        sendingToFriendsGroup.markPubKeyAsUsed(pubkeyHash);
                     } else if (script.isPayToScriptHash()) {
                         Address a = Address.fromP2SHScript(tx.getParams(), script);
                         keyChainGroup.markP2SHAddressAsUsed(a);
+                        receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
+                        sendingToFriendsGroup.markP2SHAddressAsUsed(a);
                     }
                 } catch (ScriptException e) {
                     // Just means we didn't understand the output of this transaction: ignore it.
@@ -5508,7 +5515,7 @@ public class Wallet extends BaseTaggableObject
     FriendKeyChainGroup receivingFromFriendsGroup;
     FriendKeyChainGroup sendingToFriendsGroup;
 
-    public void addKeyChainFromFriend(DeterministicSeed seed, KeyCrypter keyCrypter, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
+    public void addReceivingFromFriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
         boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
 
         FriendKeyChain chain = new FriendKeyChain(seed, keyCrypter, isMainNet ? FriendKeyChain.FRIEND_ROOT_PATH : FriendKeyChain.FRIEND_ROOT_PATH_TESTNET,
@@ -5519,12 +5526,240 @@ public class Wallet extends BaseTaggableObject
         receivingFromFriendsGroup.addAndActivateHDChain(chain);
     }
 
+    public void addRecievingFromFriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, EvolutionContact contact) {
+        addReceivingFromFriendKeyChain(seed, keyCrypter, contact.getUserAccount(), contact.getEvolutionUserId(), contact.getFriendUserId());
+    }
+
+    public List<Transaction> getTransactionsReceivedFromFriend(EvolutionContact contact) {
+        FriendKeyChain chain = receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+
+        ArrayList<Transaction> txs = Lists.newArrayList();
+        for(WalletTransaction wtx : getWalletTransactions()) {
+            Transaction tx = wtx.getTransaction();
+            for(TransactionOutput output : tx.getOutputs()) {
+                for(ECKey key : chain.getKeys(false)) {
+                    if(output.getScriptPubKey().equals(ScriptBuilder.createOutputScript(key))) {
+                        txs.add(tx);
+                        break;
+                    }
+                }
+            }
+        }
+        return txs;
+    }
+
     public boolean hasReceivingFriendKeyChains() {
         return receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKeyChains();
     }
 
     protected void setReceivingFromFriendsGroup(FriendKeyChainGroup receivingFromFriendsGroup) {
         this.receivingFromFriendsGroup = receivingFromFriendsGroup;
+    }
+
+    // ***************************************************************************************************************
+
+    //region Key Management
+
+    /**
+     * Returns a key that hasn't been seen in a transaction yet, and which is suitable for displaying in a wallet
+     * user interface as "a convenient key to receive funds on" when the purpose parameter is
+     * {@link org.bitcoinj.wallet.KeyChain.KeyPurpose#RECEIVE_FUNDS}. The returned key is stable until
+     * it's actually seen in a pending or confirmed transaction, at which point this method will start returning
+     * a different key (for each purpose independently).
+     */
+    public DeterministicKey currentKey(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            if(type == FriendKeyChain.KeyChainType.RECEIVING_CHAIN)
+                return receivingFromFriendsGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+            else if(type == FriendKeyChain.KeyChainType.SENDING_CHAIN)
+                return sendingToFriendsGroup.currentKey(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+            else throw new IllegalArgumentException("invalid keychain type");
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * An alias for calling {@link #currentKey(org.bitcoinj.wallet.KeyChain.KeyPurpose)} with
+     * {@link org.bitcoinj.wallet.KeyChain.KeyPurpose#RECEIVE_FUNDS} as the parameter.
+     */
+    public DeterministicKey currentReceiveKey(EvolutionContact contact) {
+        return currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+    }
+
+    /**
+     * An alias for calling {@link #currentKey(org.bitcoinj.wallet.KeyChain.KeyPurpose)} with
+     * {@link org.bitcoinj.wallet.KeyChain.KeyPurpose#RECEIVE_FUNDS} as the parameter.
+     */
+    public DeterministicKey currentSendKey(EvolutionContact contact) {
+        return currentKey(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+    }
+
+    /**
+     * Returns address for a {@link #currentKey(org.bitcoinj.wallet.KeyChain.KeyPurpose)}
+     */
+    public Address currentAddress(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            return currentKey(contact, type).toAddress(params);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * An alias for calling {@link #currentAddress(org.bitcoinj.evolution.EvolutionContact, FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#RECEIVING_CHAIN} as the parameter.
+     */
+    public Address currentReceiveAddress(EvolutionContact contact) {
+        return currentAddress(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+    }
+
+    /**
+     * An alias for calling {@link #currentAddress(org.bitcoinj.evolution.EvolutionContact, FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#SENDING_CHAIN} as the parameter.
+     */
+    public Address currentSendAddress(EvolutionContact contact) {
+        return currentAddress(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+    }
+
+    /**
+     * Returns a key that has not been returned by this method before (fresh). You can think of this as being
+     * a newly created key, although the notion of "create" is not really valid for a
+     * {@link org.bitcoinj.wallet.DeterministicKeyChain}. The returned key is suitable for being put
+     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key out
+     * to someone who wishes to send money.
+     */
+    public DeterministicKey freshKey(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        return freshKeys(contact, type, 1).get(0);
+    }
+
+    /**
+     * Returns a key/s that has not been returned by this method before (fresh). You can think of this as being
+     * a newly created key/s, although the notion of "create" is not really valid for a
+     * {@link org.bitcoinj.wallet.DeterministicKeyChain}.
+     * The returned key is suitable for being put
+     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key/s out
+     * to someone who wishes to send money.
+     */
+    public List<DeterministicKey> freshKeys(EvolutionContact contact, FriendKeyChain.KeyChainType type, int numberOfKeys) {
+        List<DeterministicKey> keys;
+        keyChainGroupLock.lock();
+        try {
+            if(type == FriendKeyChain.KeyChainType.RECEIVING_CHAIN)
+                keys = receivingFromFriendsGroup.freshKeys(contact, type, numberOfKeys);
+            else if(type == FriendKeyChain.KeyChainType.SENDING_CHAIN)
+                keys = sendingToFriendsGroup.freshKeys(contact, type, numberOfKeys);
+            else keys = Lists.newArrayList();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
+        // and that's not quite so important, so we could coalesce for more performance.
+        saveNow();
+        return keys;
+    }
+
+    /**
+     * An alias for calling {@link #freshKey(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#RECEIVING_CHAIN} as the parameter.
+     */
+    public DeterministicKey freshReceiveKey(EvolutionContact contact) {
+        return freshKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+    }
+
+    /**
+     * An alias for calling {@link #freshKey(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#SENDING_CHAIN} as the parameter.
+     */
+    public DeterministicKey freshSendKey(EvolutionContact contact) {
+        return freshKey(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+    }
+
+    /**
+     * Returns address for a {@link #freshKey(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)}
+     */
+    public Address freshAddress(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        Address key;
+        keyChainGroupLock.lock();
+        try {
+            if(type == FriendKeyChain.KeyChainType.RECEIVING_CHAIN)
+                key = receivingFromFriendsGroup.freshAddress(contact, type);
+            else if(type == FriendKeyChain.KeyChainType.SENDING_CHAIN)
+                key = sendingToFriendsGroup.freshAddress(contact, type);
+            else throw new IllegalArgumentException("Invalid keychain type");
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        saveNow();
+        return key;
+    }
+
+    /**
+     * An alias for calling {@link #freshAddress(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#RECEIVING_CHAIN} as the parameter.
+     */
+    public Address freshReceiveAddress(EvolutionContact contact) {
+        return freshAddress(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+    }
+
+    /**
+     * An alias for calling {@link #freshAddress(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#SENDING_CHAIN} as the parameter.
+     */
+    public Address freshSendAddress(EvolutionContact contact) {
+        return freshAddress(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+    }
+
+    /**
+     * Returns only the keys that have been issued by {@link #freshReceiveKey(org.bitcoinj.evolution.EvolutionContact)}, {@link #freshReceiveAddress(org.bitcoinj.evolution.EvolutionContact)},
+     * {@link #currentReceiveKey(org.bitcoinj.evolution.EvolutionContact)} or {@link #currentReceiveAddress(org.bitcoinj.evolution.EvolutionContact)}.
+     */
+    public List<ECKey> getIssuedReceiveKeys(EvolutionContact contact) {
+        keyChainGroupLock.lock();
+        try {
+            return receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN).getIssuedReceiveKeys();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns only the keys that have been issued by {@link #freshSendKey(org.bitcoinj.evolution.EvolutionContact)}, {@link #freshSendAddress(org.bitcoinj.evolution.EvolutionContact)},
+     * {@link #currentSendKey(org.bitcoinj.evolution.EvolutionContact)} or {@link #currentSendAddress(org.bitcoinj.evolution.EvolutionContact)}.
+     */
+    public List<ECKey> getIssuedSendKeys(EvolutionContact contact) {
+        keyChainGroupLock.lock();
+        try {
+            return sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN).getIssuedReceiveKeys();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns only the addresses that have been issued by {@link #freshReceiveKey(org.bitcoinj.evolution.EvolutionContact)}, {@link #freshReceiveAddress(org.bitcoinj.evolution.EvolutionContact)},
+     * {@link #currentReceiveKey(org.bitcoinj.evolution.EvolutionContact)} or {@link #currentReceiveAddress(org.bitcoinj.evolution.EvolutionContact)}.
+     */
+    public List<Address> getIssuedReceiveAddresses(EvolutionContact contact) {
+        final List<ECKey> keys = getIssuedReceiveKeys(contact);
+        List<Address> addresses = new ArrayList<Address>(keys.size());
+        for (ECKey key : keys)
+            addresses.add(key.toAddress(getParams()));
+        return addresses;
+    }
+
+    /**
+     * Returns only the contact send addresses that have been issued by {@link #freshSendKey(org.bitcoinj.evolution.EvolutionContact)}, {@link #freshSendAddress(org.bitcoinj.evolution.EvolutionContact)},
+     *      * {@link #currentSendKey(org.bitcoinj.evolution.EvolutionContact)} or {@link #currentSendAddress(org.bitcoinj.evolution.EvolutionContact)}.
+     */
+    public List<Address> getIssuedSendAddresses(EvolutionContact contact) {
+        final List<ECKey> keys = getIssuedSendKeys(contact);
+        List<Address> addresses = new ArrayList<Address>(keys.size());
+        for (ECKey key : keys)
+            addresses.add(key.toAddress(getParams()));
+        return addresses;
     }
 
 }

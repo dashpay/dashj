@@ -25,6 +25,7 @@ public class FriendKeyChain extends DeterministicKeyChain {
     public static final ImmutableList<ChildNumber> FRIEND_ROOT_PATH_TESTNET = ImmutableList.of(ChildNumber.NINE_HARDENED,
             ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED);
 
+    public static final int PATH_INDEX_ACCOUNT = 4;
     public static final int PATH_INDEX_TO_ID = 5;
     public static final int PATH_INDEX_FROM_ID = 6;
 
@@ -94,15 +95,15 @@ public class FriendKeyChain extends DeterministicKeyChain {
             //basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<DeterministicKey>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
-                //ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
-                //DeterministicKey k = hierarchy.get(path, false, false);
-                DeterministicKey k = HDKeyDerivation.deriveChildKey(parentKey, new ChildNumber(index - numberOfKeys + i));
+                ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
+                DeterministicKey k = hierarchy.get(path, false, false);
+                //DeterministicKey k = HDKeyDerivation.deriveChildKey(parentKey, new ChildNumber(index - numberOfKeys + i));
                 // Just a last minute sanity check before we hand the key out to the app for usage. This isn't inspired
                 // by any real problem reports from bitcoinj users, but I've heard of cases via the grapevine of
                 // places that lost money due to bitflips causing addresses to not match keys. Of course in an
                 // environment with flaky RAM there's no real way to always win: bitflips could be introduced at any
                 // other layer. But as we're potentially retrieving from long term storage here, check anyway.
-                //checkForBitFlip(k);
+                checkForBitFlip(k);
                 keys.add(k);
             }
             return keys;

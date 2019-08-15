@@ -2,18 +2,22 @@ package org.bitcoinj.wallet;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.ExtendedChildNumber;
 import org.bitcoinj.crypto.KeyCrypter;
+import org.bitcoinj.evolution.EvolutionContact;
+import org.bitcoinj.script.Script;
 
 import javax.annotation.Nullable;
 import java.util.EnumMap;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.wallet.FriendKeyChain.*;
 
 public class FriendKeyChainGroup extends KeyChainGroup {
@@ -26,7 +30,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         super(params, basicKeyChain, chains, currentKeys, crypter);
     }
 
-    public FriendKeyChain getFriendKeyChain(Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId, FriendKeyChain.KeyChainType type ) {
+    public FriendKeyChain getFriendKeyChain(Sha256Hash myBlockchainUserId, int account, Sha256Hash theirBlockchainUserId, FriendKeyChain.KeyChainType type ) {
         Preconditions.checkNotNull(theirBlockchainUserId);
         Preconditions.checkArgument(!theirBlockchainUserId.equals(Sha256Hash.ZERO_HASH));
 
@@ -41,11 +45,20 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         }
         for(DeterministicKeyChain chain : chains) {
             ImmutableList<ChildNumber> accountPath = chain.getAccountPath();
-            if(accountPath.get(PATH_INDEX_TO_ID).equals(new ExtendedChildNumber(to)) &&
+            if(accountPath.get(PATH_INDEX_ACCOUNT).equals(new ChildNumber(account, true)) &&
+            accountPath.get(PATH_INDEX_TO_ID).equals(new ExtendedChildNumber(to)) &&
             accountPath.get(PATH_INDEX_FROM_ID).equals(new ExtendedChildNumber(from)))
                 return (FriendKeyChain)chain;
         }
         return null;
+    }
+
+    public FriendKeyChain getFriendKeyChain(Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId, FriendKeyChain.KeyChainType type ) {
+        return getFriendKeyChain(myBlockchainUserId, 0, theirBlockchainUserId, type);
+    }
+
+    public FriendKeyChain getFriendKeyChain(EvolutionContact contact, FriendKeyChain.KeyChainType type ) {
+        return getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), type);
     }
 
     @Override
@@ -70,6 +83,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         EnumMap<KeyPurpose, DeterministicKey> currentKeys = null;
         if (!chains.isEmpty())
             currentKeys = createCurrentKeysMap(chains);
+        //TODO:  search through the currentKeys and then also chains to match up issued key counts
         return new FriendKeyChainGroup(params, basicKeyChain, chains, currentKeys, null);
     }
 
@@ -87,6 +101,101 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys = null;
         if (!chains.isEmpty())
             currentKeys = createCurrentKeysMap(chains);
+        //TODO:  search through the currentKeys and then also chains to match up issued key counts
         return new FriendKeyChainGroup(params, basicKeyChain, chains, currentKeys, crypter);
+    }
+
+    /**
+     * Returns a key that hasn't been seen in a transaction yet, and which is suitable for displaying in a wallet
+     * user interface as "a convenient key to receive funds on" when the purpose parameter is
+     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS}. The returned key is stable until
+     * it's actually seen in a pending or confirmed transaction, at which point this method will start returning
+     * a different key (for each purpose independently).
+     * <p>This method is not supposed to be used for married keychains and will throw UnsupportedOperationException if
+     * the active chain is married.
+     * For married keychains use {@link #currentAddress(KeyChain.KeyPurpose)}
+     * to get a proper P2SH address</p>
+     */
+    public DeterministicKey currentKey(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        DeterministicKeyChain chain = getFriendKeyChain(contact, type);
+        if (chain.isMarried()) {
+            throw new UnsupportedOperationException("Key is not suitable to receive coins for married keychains." +
+                    " Use freshAddress to get P2SH address instead");
+        }
+        DeterministicKey current = currentKeys.get(KeyPurpose.RECEIVE_FUNDS);
+        if (current == null) {
+            current = freshKey(KeyPurpose.RECEIVE_FUNDS);
+            currentKeys.put(KeyPurpose.RECEIVE_FUNDS, current);
+        }
+        return current;
+    }
+
+    /**
+     * Returns address for a {@link #currentKey(org.bitcoinj.evolution.EvolutionContact, KeyChainType)}
+     */
+    public Address currentAddress(EvolutionContact contact, FriendKeyChain.KeyChainType type, KeyChain.KeyPurpose purpose) {
+        DeterministicKeyChain chain = getFriendKeyChain(contact, type);
+        if (chain.isMarried()) {
+            Address current = currentAddresses.get(purpose);
+            if (current == null) {
+                current = freshAddress(purpose);
+                currentAddresses.put(purpose, current);
+            }
+            return current;
+        } else {
+            return currentKey(purpose).toAddress(params);
+        }
+    }
+
+    /**
+     * Returns a key that has not been returned by this method before (fresh). You can think of this as being
+     * a newly created key, although the notion of "create" is not really valid for a
+     * {@link DeterministicKeyChain}. The returned key is suitable for being put
+     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key out
+     * to someone who wishes to send money.
+     * <p>This method is not supposed to be used for married keychains and will throw UnsupportedOperationException if
+     * the active chain is married.
+     * For married keychains use {@link #freshAddress(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)}
+     * to get a proper P2SH address</p>
+     */
+    public DeterministicKey freshKey(EvolutionContact contact, KeyChainType type) {
+        return freshKeys(contact, type, 1).get(0);
+    }
+
+    /**
+     * Returns a key/s that have not been returned by this method before (fresh). You can think of this as being
+     * newly created key/s, although the notion of "create" is not really valid for a
+     * {@link DeterministicKeyChain}. You should use this when the user is definitely going to hand this key out
+     * to someone who wishes to send money.
+     * <p>This method is not supposed to be used for married keychains and will throw UnsupportedOperationException if
+     * the active chain is married.
+     * For married keychains use {@link #freshAddress(KeyChain.KeyPurpose)}
+     * to get a proper P2SH address</p>
+     */
+
+    public List<DeterministicKey> freshKeys(EvolutionContact contact, KeyChainType type, int numberOfKeys) {
+        DeterministicKeyChain chain = getFriendKeyChain(contact, type);
+        if (chain.isMarried()) {
+            throw new UnsupportedOperationException("Key is not suitable to receive coins for married keychains." +
+                    " Use freshAddress to get P2SH address instead");
+        }
+        return chain.getKeys(KeyPurpose.RECEIVE_FUNDS, numberOfKeys);   // Always returns the next key along the key chain.
+    }
+
+    /**
+     * Returns address for a {@link #freshKey(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)}
+     */
+    public Address freshAddress(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        DeterministicKeyChain chain = getFriendKeyChain(contact, type);
+        if (chain.isMarried()) {
+            Script outputScript = chain.freshOutputScript(KeyPurpose.RECEIVE_FUNDS);
+            checkState(outputScript.isPayToScriptHash()); // Only handle P2SH for now
+            Address freshAddress = Address.fromP2SHScript(params, outputScript);
+            maybeLookaheadScripts();
+            currentAddresses.put(KeyPurpose.RECEIVE_FUNDS, freshAddress);
+            return freshAddress;
+        } else {
+            return freshKey(contact, type).toAddress(params);
+        }
     }
 }

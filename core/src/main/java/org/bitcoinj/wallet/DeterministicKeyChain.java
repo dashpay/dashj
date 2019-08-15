@@ -101,7 +101,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
 
     protected final ReentrantLock lock = Threading.lock("DeterministicKeyChain");
 
-    private DeterministicHierarchy hierarchy;
+    protected DeterministicHierarchy hierarchy;
     @Nullable private DeterministicKey rootKey;
     @Nullable private DeterministicSeed seed;
     @Nullable private ImmutableList<ChildNumber> accountPath;
@@ -563,7 +563,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         }
     }
 
-    private void checkForBitFlip(DeterministicKey k) {
+    protected void checkForBitFlip(DeterministicKey k) {
         DeterministicKey parent = checkNotNull(k.getParent());
         byte[] rederived = HDKeyDerivation.deriveChildKeyBytesFromPublic(parent, k.getChildNumber(), HDKeyDerivation.PublicDeriveMode.WITH_INVERSION).keyBytes;
         byte[] actual = k.getPubKey();
