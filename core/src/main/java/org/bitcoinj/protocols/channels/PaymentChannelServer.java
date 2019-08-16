@@ -533,12 +533,12 @@ public class PaymentChannelServer {
         ListenableFuture<KeyParameter> keyFuture = conn.getUserKey();
         ListenableFuture<Transaction> result;
         if (keyFuture != null) {
-            result = Futures.transform(conn.getUserKey(), new AsyncFunction<KeyParameter, Transaction>() {
+            result = Futures.transformAsync(conn.getUserKey(), new AsyncFunction<KeyParameter, Transaction>() {
                 @Override
                 public ListenableFuture<Transaction> apply(KeyParameter userKey) throws Exception {
                     return state.close(userKey);
                 }
-            });
+            }, MoreExecutors.directExecutor());
         } else {
             result = state.close();
         }
