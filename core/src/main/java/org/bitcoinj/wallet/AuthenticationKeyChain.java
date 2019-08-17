@@ -79,14 +79,6 @@ public class AuthenticationKeyChain extends DeterministicKeyChain {
         }
     }
 
-    private void checkForBitFlip(DeterministicKey k) {
-        DeterministicKey parent = checkNotNull(k.getParent());
-        byte[] rederived = HDKeyDerivation.deriveChildKeyBytesFromPublic(parent, k.getChildNumber(), HDKeyDerivation.PublicDeriveMode.WITH_INVERSION).keyBytes;
-        byte[] actual = k.getPubKey();
-        if (!Arrays.equals(rederived, actual))
-            throw new IllegalStateException(String.format(Locale.US, "Bit-flip check failed: %s vs %s", Arrays.toString(rederived), Arrays.toString(actual)));
-    }
-
     public DeterministicKey getKey(int index) {
         return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, false))).build(), true);
     }
