@@ -247,7 +247,7 @@ public class ActiveMasternode {
 
         log.info("CActiveMasternode::ManageStateInitial -- Checking inbound connection to '{}'", service.toString());
 
-        if(null == context.peerGroup.connectTo(new PeerAddress(service.getSocketAddress()), true, 1000)) {
+        if(null == context.peerGroup.connectTo(new PeerAddress(context.getParams(), service.getSocketAddress()), true, 1000)) {
             state = ACTIVE_MASTERNODE_NOT_CAPABLE;
             notCapableReason = "Could not connect to " + service.toString();
             log.info("CActiveMasternode::ManageStateInitial -- {}: {}", getStateString(), notCapableReason);
