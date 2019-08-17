@@ -1,8 +1,10 @@
 package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.evolution.EvolutionContact;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,16 @@ public class FriendKeyChain extends DeterministicKeyChain {
             ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED);
     public static final ImmutableList<ChildNumber> FRIEND_ROOT_PATH_TESTNET = ImmutableList.of(ChildNumber.NINE_HARDENED,
             ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED);
+
+    public static ImmutableList<ChildNumber> getRootPath(NetworkParameters params) {
+        return params.getId().equals(NetworkParameters.ID_MAINNET) ? FRIEND_ROOT_PATH : FRIEND_ROOT_PATH_TESTNET;
+    }
+
+    public static ImmutableList<ChildNumber> getContactPath(NetworkParameters params, EvolutionContact contact, KeyChainType type) {
+        Sha256Hash userA = type == KeyChainType.RECEIVING_CHAIN ? contact.getEvolutionUserId() : contact.getFriendUserId();
+        Sha256Hash userB = type == KeyChainType.RECEIVING_CHAIN ? contact.getFriendUserId() : contact.getEvolutionUserId();
+        return new ImmutableList.Builder().addAll(getRootPath(params)).add(contact.getUserAccount()).add(new ExtendedChildNumber(userA)).add(new ExtendedChildNumber(userB)).build();
+    }
 
     public static final int PATH_INDEX_ACCOUNT = 4;
     public static final int PATH_INDEX_TO_ID = 5;
@@ -48,6 +60,11 @@ public class FriendKeyChain extends DeterministicKeyChain {
     public FriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path) {
         super(seed, keyCrypter, path);
         type = KeyChainType.RECEIVING_CHAIN;
+    }
+
+    public FriendKeyChain(NetworkParameters params, String xpub, EvolutionContact contact) {
+        super(DeterministicKey.deserializeB58(xpub, params));
+        setAccountPath(getContactPath(params, contact, KeyChainType.SENDING_CHAIN));
     }
 
     public FriendKeyChain(DeterministicKey watchingKey) {
