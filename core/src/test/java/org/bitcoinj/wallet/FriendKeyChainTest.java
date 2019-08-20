@@ -5,15 +5,14 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.ExtendedChildNumber;
+import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.junit.Before;
 import org.junit.Test;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class FriendKeyChainTest {
 
@@ -103,9 +102,6 @@ public class FriendKeyChainTest {
 
         Sha256Hash userAhash = Sha256Hash.wrap("c27eb14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
         Sha256Hash userBhash = Sha256Hash.wrap("ee2052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
-        FriendKeyChain friend = new FriendKeyChain(new DeterministicSeed(ENTROPY, "", secs),
-                FriendKeyChain.FRIEND_ROOT_PATH, 0, userAhash, userBhash);
-
 
         wallet.addAndActivateHDChain(bip44chain);
 
@@ -127,6 +123,55 @@ public class FriendKeyChainTest {
                 new ExtendedChildNumber(userAhash), new ExtendedChildNumber(userBhash));
 
         assertEquals(accountPath, key.getPath());
+
+    }
+
+    @Test
+    public void testFriendSendKeyChain() {
+        final NetworkParameters PARAMS = UnitTestParams.get();
+        Sha256Hash userAhash = Sha256Hash.wrap("c27eb14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
+        Sha256Hash userBhash = Sha256Hash.wrap("ee2052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
+
+        EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash);
+
+        FriendKeyChain privateChain = new FriendKeyChain(bip44chain.getSeed(),
+                FriendKeyChain.FRIEND_ROOT_PATH_TESTNET, 0, userAhash, userBhash);
+        FriendKeyChainGroup privateGroup = new FriendKeyChainGroup(PARAMS);
+        privateGroup.addAndActivateHDChain(privateChain);
+        DeterministicKey privateKey = privateGroup.freshKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+
+        DeterministicKey privateChainWatchingKey = privateChain.getWatchingKey().dropPrivateBytes().dropParent();
+
+        FriendKeyChain publicChainFromKey = new FriendKeyChain(privateChainWatchingKey);
+        FriendKeyChainGroup publicGroupFromKey = new FriendKeyChainGroup(PARAMS);
+        publicGroupFromKey.addAndActivateHDChain(publicChainFromKey);
+        DeterministicKey publicKey = privateGroup.freshKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+
+        String tpub = "tpubDKqvGM7suJ1A9Ek8mm7gE9UZGxBCG9Zo8UKNYn26Y9yqzcLh7zqmeYL4KqU72m3CcCMwp1eoJreV4W7sdzTtnXz7CWkMFYh2biwWApkWxqi";
+
+
+        //Their contact info - we still need to figure out what is going one with the direction!!!!
+        EvolutionContact theirContact = new EvolutionContact(contact.getFriendUserId(), contact.getUserAccount(), contact.getEvolutionUserId());
+        FriendKeyChain publicChainFromB58 = new FriendKeyChain(PARAMS, tpub, contact);
+        FriendKeyChainGroup publicGroupFromB58 = new FriendKeyChainGroup(PARAMS);
+        publicChainFromB58.setLookaheadSize(5);
+        publicGroupFromB58.addAndActivateHDChain(publicChainFromB58);
+        DeterministicKey publicKeyFromB58 = publicGroupFromB58.freshKey(theirContact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+
+
+        DeterministicKey publicWatchingKeyFromKey = publicChainFromKey.getWatchingKey();
+        DeterministicKey publicWatchingKeyFromB58 = publicChainFromB58.getWatchingKey();
+
+        String publicWatchingKeyFromKeyB58 = publicWatchingKeyFromKey.serializePubB58(PARAMS);
+        String publicWatchingKeyFromB58B58 = publicWatchingKeyFromB58.serializePubB58(PARAMS);
+
+
+        assertEquals(privateChainWatchingKey, publicWatchingKeyFromKey);
+        assertEquals(privateChainWatchingKey, publicWatchingKeyFromB58);
+
+        assertArrayEquals(privateKey.getPubKey(), publicKeyFromB58.getPubKey());
+        assertArrayEquals(privateKey.getPubKey(), publicKey.getPubKey());
+        assertArrayEquals(privateKey.getPubKey(), publicKeyFromB58.getPubKey());
 
     }
 }

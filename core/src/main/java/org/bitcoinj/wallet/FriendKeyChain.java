@@ -32,9 +32,9 @@ public class FriendKeyChain extends DeterministicKeyChain {
     }
 
     public static ImmutableList<ChildNumber> getContactPath(NetworkParameters params, EvolutionContact contact, KeyChainType type) {
-        Sha256Hash userA = type == KeyChainType.RECEIVING_CHAIN ? contact.getEvolutionUserId() : contact.getFriendUserId();
-        Sha256Hash userB = type == KeyChainType.RECEIVING_CHAIN ? contact.getFriendUserId() : contact.getEvolutionUserId();
-        return new ImmutableList.Builder().addAll(getRootPath(params)).add(contact.getUserAccount()).add(new ExtendedChildNumber(userA)).add(new ExtendedChildNumber(userB)).build();
+        Sha256Hash userA = /*type == KeyChainType.RECEIVING_CHAIN ?*/ contact.getEvolutionUserId() /*: contact.getFriendUserId()*/;
+        Sha256Hash userB = /*type == KeyChainType.RECEIVING_CHAIN ? */contact.getFriendUserId() /*: contact.getEvolutionUserId()*/;
+        return new ImmutableList.Builder().addAll(getRootPath(params)).add(new ChildNumber(contact.getUserAccount(), true)).add(new ExtendedChildNumber(userA)).add(new ExtendedChildNumber(userB)).build();
     }
 
     public static final int PATH_INDEX_ACCOUNT = 4;
@@ -63,7 +63,7 @@ public class FriendKeyChain extends DeterministicKeyChain {
     }
 
     public FriendKeyChain(NetworkParameters params, String xpub, EvolutionContact contact) {
-        super(DeterministicKey.deserializeB58(xpub, params));
+        super(DeterministicKey.deserializeB58(xpub, getContactPath(params, contact, KeyChainType.SENDING_CHAIN), params));
         setAccountPath(getContactPath(params, contact, KeyChainType.SENDING_CHAIN));
     }
 
