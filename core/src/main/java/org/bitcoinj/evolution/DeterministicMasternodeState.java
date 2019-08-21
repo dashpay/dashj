@@ -3,6 +3,7 @@ package org.bitcoinj.evolution;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptException;
 
 import java.io.IOException;
 import java.io.OutputStream;
