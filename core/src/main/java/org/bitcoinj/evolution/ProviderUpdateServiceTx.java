@@ -6,6 +6,7 @@ import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptException;
 import org.json.JSONObject;
 
 import java.io.IOException;

@@ -23,6 +23,7 @@ import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceTriggerManager;
 import org.bitcoinj.governance.VoteConfidenceTable;
 import org.bitcoinj.quorums.*;
+import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.dashj.bls.BLS;
