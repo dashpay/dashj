@@ -84,6 +84,26 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         if (!chains.isEmpty())
             currentKeys = createCurrentKeysMap(chains);
         //TODO:  search through the currentKeys and then also chains to match up issued key counts
+        for(DeterministicKeyChain chain : chains) {
+            FriendKeyChain contactChain = (FriendKeyChain)chain;
+            ImmutableList<ChildNumber> accountPath = contactChain.getAccountPath();
+            int issuedKeysCount = 0;
+            for(Protos.Key key : keys) {
+                List<Protos.ExtendedChildNumber> path = key.getExtendedPathList();
+                if(accountPath.size() + 1 <= path.size()) {
+                    if(ExtendedChildNumber.equals(accountPath.get(0),path.get(0)) &&
+                            ExtendedChildNumber.equals(accountPath.get(1),path.get(1)) &&
+                            ExtendedChildNumber.equals(accountPath.get(2), path.get(2)) &&
+                            ExtendedChildNumber.equals(accountPath.get(3), path.get(3)) &&
+                            ExtendedChildNumber.equals(accountPath.get(4), path.get(4)) &&
+                            ExtendedChildNumber.equals(accountPath.get(5), path.get(5)) &&
+                            ExtendedChildNumber.equals(accountPath.get(6), path.get(6)))
+                        issuedKeysCount++;
+                }
+            }
+            if(issuedKeysCount > 0)
+                contactChain.setIssuedKeys(issuedKeysCount);
+        }
         return new FriendKeyChainGroup(params, basicKeyChain, chains, currentKeys, null);
     }
 
@@ -102,6 +122,26 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         if (!chains.isEmpty())
             currentKeys = createCurrentKeysMap(chains);
         //TODO:  search through the currentKeys and then also chains to match up issued key counts
+        for(DeterministicKeyChain chain : chains) {
+            FriendKeyChain contactChain = (FriendKeyChain)chain;
+            ImmutableList<ChildNumber> accountPath = contactChain.getAccountPath();
+            int issuedKeysCount = 0;
+            for(Protos.Key key : keys) {
+                List<Protos.ExtendedChildNumber> path = key.getExtendedPathList();
+                if(accountPath.size() + 1 <= path.size()) {
+                    if(ExtendedChildNumber.equals(accountPath.get(0),path.get(0)) &&
+                            ExtendedChildNumber.equals(accountPath.get(1),path.get(1)) &&
+                            ExtendedChildNumber.equals(accountPath.get(2), path.get(2)) &&
+                            ExtendedChildNumber.equals(accountPath.get(3), path.get(3)) &&
+                            ExtendedChildNumber.equals(accountPath.get(4), path.get(4)) &&
+                            ExtendedChildNumber.equals(accountPath.get(5), path.get(5)) &&
+                            ExtendedChildNumber.equals(accountPath.get(6), path.get(6)))
+                        issuedKeysCount++;
+                }
+            }
+            if(issuedKeysCount > 0)
+                contactChain.setIssuedKeys(issuedKeysCount);
+        }
         return new FriendKeyChainGroup(params, basicKeyChain, chains, currentKeys, crypter);
     }
 

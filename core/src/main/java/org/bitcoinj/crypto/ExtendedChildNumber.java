@@ -18,8 +18,10 @@ package org.bitcoinj.crypto;
 
 import com.google.common.primitives.Ints;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.wallet.Protos;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Locale;
 
 /**
@@ -128,6 +130,26 @@ public class ExtendedChildNumber extends ChildNumber {
         if (o == null || getClass() != o.getClass()) return false;
         ExtendedChildNumber n = (ExtendedChildNumber)o;
         return bi.equals(n.bi) && isHardened == n.isHardened;
+    }
+
+    public static boolean equals(ChildNumber childNumber, Protos.ExtendedChildNumber o) {
+        if (childNumber instanceof ExtendedChildNumber) {
+            ExtendedChildNumber extendedChildNumber = (ExtendedChildNumber)childNumber;
+            if(!o.getSimple()) {
+                if(o.hasHardened()) {
+                    if (o.getHardened() != extendedChildNumber.isHardened)
+                        return false;
+                } else {
+                    if(extendedChildNumber.isHardened)
+                        return false;
+                }
+                return Arrays.equals(o.getBi().toByteArray(), extendedChildNumber.bi.toByteArray());
+            }
+        } else if(childNumber instanceof ChildNumber) {
+            if(o.getSimple())
+                return childNumber.getI() == o.getI();
+        }
+        return false;
     }
 
     @Override

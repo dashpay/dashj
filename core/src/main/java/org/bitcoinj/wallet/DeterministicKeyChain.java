@@ -177,12 +177,12 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     // away the current block (and any future blocks in the same download batch) and restart chain sync once a new
     // filter has been calculated. This field isn't persisted to the wallet as it's only relevant within a network
     // session.
-    private int keyLookaheadEpoch;
+    protected int keyLookaheadEpoch;
 
     // We simplify by wrapping a basic key chain and that way we get some functionality like key lookup and event
     // listeners "for free". All keys in the key tree appear here, even if they aren't meant to be used for receiving
     // money.
-    private final BasicKeyChain basicKeyChain;
+    protected final BasicKeyChain basicKeyChain;
 
     // If set this chain is following another chain in a married KeyChainGroup
     private boolean isFollowing;
