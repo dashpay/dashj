@@ -5,29 +5,38 @@ import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.crypto.ExtendedChildNumber;
-import org.bitcoinj.crypto.KeyCrypter;
+import org.bitcoinj.crypto.*;
 import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.script.Script;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.wallet.FriendKeyChain.*;
 
 public class FriendKeyChainGroup extends KeyChainGroup {
+
+    private static final Logger log = LoggerFactory.getLogger(FriendKeyChainGroup.class);
+
+    HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentContactKeys;
+
     public FriendKeyChainGroup(NetworkParameters params) {
         super(params);
+        currentContactKeys = new HashMap<ImmutableList<ChildNumber>, DeterministicKey>();
     }
 
     protected FriendKeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain, List<DeterministicKeyChain> chains,
-                            @Nullable EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys, @Nullable KeyCrypter crypter) {
-        super(params, basicKeyChain, chains, currentKeys, crypter);
+                            @Nullable HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentKeys, @Nullable KeyCrypter crypter) {
+        super(params, basicKeyChain, chains, null, crypter);
+        currentContactKeys = currentKeys != null ? currentKeys :
+                new HashMap<ImmutableList<ChildNumber>, DeterministicKey>();
     }
 
     public FriendKeyChain getFriendKeyChain(Sha256Hash myBlockchainUserId, int account, Sha256Hash theirBlockchainUserId, FriendKeyChain.KeyChainType type ) {
@@ -80,19 +89,24 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         for(DeterministicKeyChain chain : chains) {
             Preconditions.checkState(chain instanceof FriendKeyChain);
         }
-        EnumMap<KeyPurpose, DeterministicKey> currentKeys = null;
+        HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentKeys = null;
+        determineIssuedKeys(keys, chains);
         if (!chains.isEmpty())
-            currentKeys = createCurrentKeysMap(chains);
+            currentKeys = createCurrentContactKeysMap(chains);
+        return new FriendKeyChainGroup(params, basicKeyChain, chains, currentKeys, null);
+    }
+
+    protected static void determineIssuedKeys(List<Protos.Key> keys, List<DeterministicKeyChain> chains) {
         //TODO:  search through the currentKeys and then also chains to match up issued key counts
-        for(DeterministicKeyChain chain : chains) {
-            FriendKeyChain contactChain = (FriendKeyChain)chain;
+        for (DeterministicKeyChain chain : chains) {
+            FriendKeyChain contactChain = (FriendKeyChain) chain;
             ImmutableList<ChildNumber> accountPath = contactChain.getAccountPath();
             int issuedKeysCount = 0;
-            for(Protos.Key key : keys) {
+            for (Protos.Key key : keys) {
                 List<Protos.ExtendedChildNumber> path = key.getExtendedPathList();
-                if(accountPath.size() + 1 <= path.size()) {
-                    if(ExtendedChildNumber.equals(accountPath.get(0),path.get(0)) &&
-                            ExtendedChildNumber.equals(accountPath.get(1),path.get(1)) &&
+                if (accountPath.size() + 1 <= path.size()) {
+                    if (ExtendedChildNumber.equals(accountPath.get(0), path.get(0)) &&
+                            ExtendedChildNumber.equals(accountPath.get(1), path.get(1)) &&
                             ExtendedChildNumber.equals(accountPath.get(2), path.get(2)) &&
                             ExtendedChildNumber.equals(accountPath.get(3), path.get(3)) &&
                             ExtendedChildNumber.equals(accountPath.get(4), path.get(4)) &&
@@ -101,10 +115,9 @@ public class FriendKeyChainGroup extends KeyChainGroup {
                         issuedKeysCount++;
                 }
             }
-            if(issuedKeysCount > 0)
+            if (issuedKeysCount > 0)
                 contactChain.setIssuedKeys(issuedKeysCount);
         }
-        return new FriendKeyChainGroup(params, basicKeyChain, chains, currentKeys, null);
     }
 
     static FriendKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, KeyChainType type) throws UnreadableWalletException {
@@ -118,30 +131,12 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         for(DeterministicKeyChain chain : chains) {
             Preconditions.checkState(chain instanceof FriendKeyChain);
         }
-        EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys = null;
+        HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentKeys = null;
+
+        determineIssuedKeys(keys, chains);
         if (!chains.isEmpty())
-            currentKeys = createCurrentKeysMap(chains);
-        //TODO:  search through the currentKeys and then also chains to match up issued key counts
-        for(DeterministicKeyChain chain : chains) {
-            FriendKeyChain contactChain = (FriendKeyChain)chain;
-            ImmutableList<ChildNumber> accountPath = contactChain.getAccountPath();
-            int issuedKeysCount = 0;
-            for(Protos.Key key : keys) {
-                List<Protos.ExtendedChildNumber> path = key.getExtendedPathList();
-                if(accountPath.size() + 1 <= path.size()) {
-                    if(ExtendedChildNumber.equals(accountPath.get(0),path.get(0)) &&
-                            ExtendedChildNumber.equals(accountPath.get(1),path.get(1)) &&
-                            ExtendedChildNumber.equals(accountPath.get(2), path.get(2)) &&
-                            ExtendedChildNumber.equals(accountPath.get(3), path.get(3)) &&
-                            ExtendedChildNumber.equals(accountPath.get(4), path.get(4)) &&
-                            ExtendedChildNumber.equals(accountPath.get(5), path.get(5)) &&
-                            ExtendedChildNumber.equals(accountPath.get(6), path.get(6)))
-                        issuedKeysCount++;
-                }
-            }
-            if(issuedKeysCount > 0)
-                contactChain.setIssuedKeys(issuedKeysCount);
-        }
+            currentKeys = createCurrentContactKeysMap(chains);
+
         return new FriendKeyChainGroup(params, basicKeyChain, chains, currentKeys, crypter);
     }
 
@@ -162,10 +157,11 @@ public class FriendKeyChainGroup extends KeyChainGroup {
             throw new UnsupportedOperationException("Key is not suitable to receive coins for married keychains." +
                     " Use freshAddress to get P2SH address instead");
         }
-        DeterministicKey current = currentKeys.get(KeyPurpose.RECEIVE_FUNDS);
+        ImmutableList<ChildNumber> accountPath = chain.getAccountPath();
+        DeterministicKey current = currentContactKeys.get(accountPath);
         if (current == null) {
-            current = freshKey(KeyPurpose.RECEIVE_FUNDS);
-            currentKeys.put(KeyPurpose.RECEIVE_FUNDS, current);
+            current = freshKey(contact, type);
+            currentContactKeys.put(accountPath, current);
         }
         return current;
     }
@@ -237,5 +233,42 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         } else {
             return freshKey(contact, type).toAddress(params);
         }
+    }
+
+    protected static HashMap<ImmutableList<ChildNumber>, DeterministicKey> createCurrentContactKeysMap(List<DeterministicKeyChain> chains) {
+
+        HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentKeys = new HashMap<ImmutableList<ChildNumber>, DeterministicKey>(chains.size());
+
+        for(DeterministicKeyChain chain : chains) {
+            FriendKeyChain contactChain = (FriendKeyChain)chain;
+            // assuming that only RECEIVE and CHANGE keys are being used at the moment, we will treat latest issued external key
+            // as current RECEIVE key and latest issued internal key as CHANGE key. This should be changed as soon as other
+            // kinds of KeyPurpose are introduced.
+            if (contactChain.getIssuedExternalKeys() > 0) {
+                DeterministicKey currentExternalKey = contactChain.getKeyByPath(
+                        HDUtils.append(
+                                contactChain.getAccountPath(),
+                                new ChildNumber(contactChain.getIssuedExternalKeys() - 1)));
+                currentKeys.put(chain.getAccountPath(), currentExternalKey);
+            }
+        }
+        return currentKeys;
+    }
+
+    /** If the given key is "current", advance the current key to a new one. */
+    protected void maybeMarkCurrentKeyAsUsed(DeterministicKey key) {
+        // It's OK for currentKeys to be empty here: it means we're a married wallet and the key may be a part of a
+        // rotating chain.
+        for (Map.Entry<ImmutableList<ChildNumber>, DeterministicKey> entry : currentContactKeys.entrySet()) {
+            if (entry.getValue() != null && entry.getValue().equals(key)) {
+                log.info("Marking key as used: {}", key);
+                currentContactKeys.put(entry.getKey(), freshKey(new EvolutionContact(entry.getKey(), getKeyChainType() == KeyChainType.RECEIVING_CHAIN), getKeyChainType()));
+                return;
+            }
+        }
+    }
+
+    protected KeyChainType getKeyChainType() {
+        return chains.size() > 0 ? ((FriendKeyChain)chains.get(0)).type : null;
     }
 }

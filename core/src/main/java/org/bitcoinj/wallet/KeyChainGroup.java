@@ -68,7 +68,7 @@ public class KeyChainGroup implements KeyBag {
     protected final LinkedList<DeterministicKeyChain> chains;
     // currentKeys is used for normal, non-multisig/married wallets. currentAddresses is used when we're handing out
     // P2SH addresses. They're mutually exclusive.
-    protected final EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys;
+    private final EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys;
     protected final EnumMap<KeyChain.KeyPurpose, Address> currentAddresses;
     @Nullable private KeyCrypter keyCrypter;
     private int lookaheadSize = -1;
@@ -411,7 +411,7 @@ public class KeyChainGroup implements KeyBag {
     }
 
     /** If the given key is "current", advance the current key to a new one. */
-    private void maybeMarkCurrentKeyAsUsed(DeterministicKey key) {
+    protected void maybeMarkCurrentKeyAsUsed(DeterministicKey key) {
         // It's OK for currentKeys to be empty here: it means we're a married wallet and the key may be a part of a
         // rotating chain.
         for (Map.Entry<KeyChain.KeyPurpose, DeterministicKey> entry : currentKeys.entrySet()) {

@@ -319,6 +319,8 @@ public class Wallet extends BaseTaggableObject
         signers = new ArrayList<TransactionSigner>();
         addTransactionSigner(new LocalTransactionSigner());
         createTransientState();
+        receivingFromFriendsGroup = new FriendKeyChainGroup(params);
+        sendingToFriendsGroup = new FriendKeyChainGroup(params);
     }
 
     private void createTransientState() {
