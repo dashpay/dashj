@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Matija Mazi.
+ * Copyright 2019 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.bitcoinj.crypto;
 
-import com.google.common.primitives.Ints;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.wallet.Protos;
 

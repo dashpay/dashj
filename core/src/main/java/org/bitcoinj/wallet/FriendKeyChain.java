@@ -1,5 +1,22 @@
+/*
+ * Copyright 2019 by Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.wallet;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.NetworkParameters;
@@ -38,8 +55,8 @@ public class FriendKeyChain extends DeterministicKeyChain {
     }
 
     public static ImmutableList<ChildNumber> getContactPath(NetworkParameters params, EvolutionContact contact, KeyChainType type) {
-        Sha256Hash userA = /*type == KeyChainType.RECEIVING_CHAIN ?*/ contact.getEvolutionUserId() /*: contact.getFriendUserId()*/;
-        Sha256Hash userB = /*type == KeyChainType.RECEIVING_CHAIN ? */contact.getFriendUserId() /*: contact.getEvolutionUserId()*/;
+        Sha256Hash userA = type == KeyChainType.RECEIVING_CHAIN ? contact.getEvolutionUserId() : contact.getFriendUserId();
+        Sha256Hash userB = type == KeyChainType.RECEIVING_CHAIN ? contact.getFriendUserId() : contact.getEvolutionUserId();
         return new ImmutableList.Builder().addAll(getRootPath(params)).add(new ChildNumber(contact.getUserAccount(), true)).add(new ExtendedChildNumber(userA)).add(new ExtendedChildNumber(userB)).build();
     }
 
@@ -68,9 +85,11 @@ public class FriendKeyChain extends DeterministicKeyChain {
         type = KeyChainType.RECEIVING_CHAIN;
     }
 
+    /** xpub must contain a depth to indicate that it is not a masterkey **/
     public FriendKeyChain(NetworkParameters params, String xpub, EvolutionContact contact) {
         super(DeterministicKey.deserializeB58(xpub, getContactPath(params, contact, KeyChainType.SENDING_CHAIN), params));
         setAccountPath(getContactPath(params, contact, KeyChainType.SENDING_CHAIN));
+        //TODO:  check to see that xpub has a depth, if not the path won't agree with getContactPath
     }
 
     public FriendKeyChain(DeterministicKey watchingKey) {
@@ -81,11 +100,13 @@ public class FriendKeyChain extends DeterministicKeyChain {
         super(watchingKey, isFollowing);
     }
 
+    /** {@inheritDoc} */
     @Override
     public DeterministicKey getKey(KeyPurpose purpose) {
         return getKeys(purpose, 1).get(0);
     }
 
+    /** {@inheritDoc} */
     @Override
     public List<DeterministicKey> getKeys(KeyPurpose purpose, int numberOfKeys) {
         checkArgument(numberOfKeys > 0);
@@ -139,16 +160,23 @@ public class FriendKeyChain extends DeterministicKeyChain {
         return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, false))).build(), true);
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getIssuedExternalKeys() {
         return currentIndex;
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getIssuedInternalKeys() {
         throw new UnsupportedOperationException("Contact key chains do not have internal keys");
     }
 
+    /**
+     * Getter for property 'currentIndex'.
+     *
+     * @return Value for property 'currentIndex'.
+     */
     public int getCurrentIndex() {
         return currentIndex;
     }
@@ -161,6 +189,7 @@ public class FriendKeyChain extends DeterministicKeyChain {
         return getKey(currentIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public DeterministicKey markKeyAsUsed(DeterministicKey k) {
         int numChildren = k.getChildNumber().i() + 1;
@@ -231,6 +260,11 @@ public class FriendKeyChain extends DeterministicKeyChain {
         return result;
     }
 
+    /**
+     * Setter for property 'issuedKeys'.
+     *
+     * @param issuedKeys Value to set for property 'issuedKeys'.
+     */
     public void setIssuedKeys(int issuedKeys) {
         this.issuedKeys = issuedKeys;
     }

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 by Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
@@ -12,6 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.bitcoinj.wallet.FriendKeyChain.KeyChainType.SENDING_CHAIN;
 import static org.junit.Assert.*;
 
 public class FriendKeyChainTest {
@@ -103,10 +120,14 @@ public class FriendKeyChainTest {
         Sha256Hash userAhash = Sha256Hash.wrap("c27eb14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
         Sha256Hash userBhash = Sha256Hash.wrap("ee2052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
 
+        EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash);
+
         wallet.addAndActivateHDChain(bip44chain);
 
         wallet.addReceivingFromFriendKeyChain(bip44chain.getSeed(), bip44chain.getKeyCrypter(),
                 0, userAhash, userBhash);
+
+        DeterministicKey currentKey = wallet.receivingFromFriendsGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
 
         Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
 
@@ -118,19 +139,23 @@ public class FriendKeyChainTest {
 
         DeterministicKey key = friendChain.getWatchingKey();
 
+        DeterministicKey currentKeyAfterDeserialization = walletReloaded.receivingFromFriendsGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+
         ImmutableList<ChildNumber> accountPath = ImmutableList.of(ChildNumber.NINE_HARDENED, ChildNumber.ONE_HARDENED,
                 ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED,
                 new ExtendedChildNumber(userAhash), new ExtendedChildNumber(userBhash));
 
         assertEquals(accountPath, key.getPath());
 
+        assertEquals(currentKey, currentKeyAfterDeserialization);
+
     }
 
     @Test
     public void testFriendSendKeyChain() {
         final NetworkParameters PARAMS = UnitTestParams.get();
-        Sha256Hash userAhash = Sha256Hash.wrap("c27eb14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
-        Sha256Hash userBhash = Sha256Hash.wrap("ee2052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
+        Sha256Hash userAhash = Sha256Hash.wrap("a11ce14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
+        Sha256Hash userBhash = Sha256Hash.wrap("b0b052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
 
         EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash);
 
@@ -147,16 +172,17 @@ public class FriendKeyChainTest {
         publicGroupFromKey.addAndActivateHDChain(publicChainFromKey);
         DeterministicKey publicKey = privateGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
 
-        String tpub = "tpubDKqvGM7suJ1A9Ek8mm7gE9UZGxBCG9Zo8UKNYn26Y9yqzcLh7zqmeYL4KqU72m3CcCMwp1eoJreV4W7sdzTtnXz7CWkMFYh2biwWApkWxqi";
+        String tpub = "tpubDLkp5kSwctd6bsLgG2pfbUpLSyjedfkBjy8HYtuczzPUwMCBkRW2Fe7TcEoVin5cLTr6YApGpy2MdKU7sfgLL7cMXTn16dLPdgKMqGg9tVE";
 
 
         //Their contact info - we still need to figure out what is going one with the direction!!!!
         EvolutionContact theirContact = new EvolutionContact(contact.getFriendUserId(), contact.getUserAccount(), contact.getEvolutionUserId());
-        FriendKeyChain publicChainFromB58 = new FriendKeyChain(PARAMS, tpub, contact);
+        FriendKeyChain publicChainFromB58 = new FriendKeyChain(PARAMS, tpub, theirContact);
         FriendKeyChainGroup publicGroupFromB58 = new FriendKeyChainGroup(PARAMS);
         publicChainFromB58.setLookaheadSize(5);
         publicGroupFromB58.addAndActivateHDChain(publicChainFromB58);
-        DeterministicKey publicKeyFromB58 = publicGroupFromB58.freshKey(theirContact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+        publicChainFromB58.maybeLookAhead();
+        DeterministicKey publicKeyFromB58 = publicGroupFromB58.freshKey(theirContact, SENDING_CHAIN);
 
 
         DeterministicKey publicWatchingKeyFromKey = publicChainFromKey.getWatchingKey();
