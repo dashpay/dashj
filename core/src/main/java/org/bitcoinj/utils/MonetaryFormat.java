@@ -60,10 +60,12 @@ public final class MonetaryFormat {
 
     public static final int MAX_DECIMALS = 8;
 
+    private final Locale locale;
     private final char negativeSign;
     private final char positiveSign;
     private final char zeroDigit;
     private final char decimalMark;
+    private final boolean showGroupingSeparator;
     private final int minDecimals;
     private final List<Integer> decimalGroups;
     private final int shift;
@@ -83,8 +85,9 @@ public final class MonetaryFormat {
         if (negativeSign == this.negativeSign)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, codePrefixed);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, codePrefixed);
     }
 
     /**
@@ -96,8 +99,9 @@ public final class MonetaryFormat {
         if (positiveSign == this.positiveSign)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, codePrefixed);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, codePrefixed);
     }
 
     /**
@@ -107,8 +111,9 @@ public final class MonetaryFormat {
         if (zeroDigit == this.zeroDigit)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, codePrefixed);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, codePrefixed);
     }
 
     /**
@@ -121,8 +126,9 @@ public final class MonetaryFormat {
         if (decimalMark == this.decimalMark)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, codePrefixed);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, codePrefixed);
     }
 
     /**
@@ -135,8 +141,9 @@ public final class MonetaryFormat {
         if (minDecimals == this.minDecimals)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, codePrefixed);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, codePrefixed);
     }
 
     /**
@@ -158,8 +165,9 @@ public final class MonetaryFormat {
         List<Integer> decimalGroups = new ArrayList<Integer>(groups.length);
         for (int group : groups)
             decimalGroups.add(group);
-        return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                shift, roundingMode, codes, codeSeparator, codePrefixed);
+        return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                codeSeparator, codePrefixed);
     }
 
     /**
@@ -184,8 +192,9 @@ public final class MonetaryFormat {
         List<Integer> decimalGroups = new ArrayList<Integer>(repetitions);
         for (int i = 0; i < repetitions; i++)
             decimalGroups.add(decimals);
-        return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                shift, roundingMode, codes, codeSeparator, codePrefixed);
+        return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                codeSeparator, codePrefixed);
     }
 
     /**
@@ -196,8 +205,9 @@ public final class MonetaryFormat {
         if (shift == this.shift)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, codePrefixed);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, codePrefixed);
     }
 
     /**
@@ -207,8 +217,9 @@ public final class MonetaryFormat {
         if (roundingMode == this.roundingMode)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, codePrefixed);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, codePrefixed);
     }
 
     /**
@@ -218,8 +229,9 @@ public final class MonetaryFormat {
         if (codes == null)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, null, codeSeparator, codePrefixed);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, null,
+                    codeSeparator, codePrefixed);
     }
 
     /**
@@ -237,8 +249,9 @@ public final class MonetaryFormat {
             : Arrays.copyOf(this.codes, this.codes.length);
 
         codes[codeShift] = code;
-        return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                shift, roundingMode, codes, codeSeparator, codePrefixed);
+        return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                codeSeparator, codePrefixed);
     }
 
     /**
@@ -250,8 +263,9 @@ public final class MonetaryFormat {
         if (codeSeparator == this.codeSeparator)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, codePrefixed);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, codePrefixed);
     }
 
     /**
@@ -261,8 +275,9 @@ public final class MonetaryFormat {
         if (codePrefixed)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, true);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, true);
     }
 
     /**
@@ -272,8 +287,9 @@ public final class MonetaryFormat {
         if (!codePrefixed)
             return this;
         else
-            return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                    shift, roundingMode, codes, codeSeparator, false);
+            return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                    showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                    codeSeparator, false);
     }
 
     /**
@@ -284,16 +300,25 @@ public final class MonetaryFormat {
         char negativeSign = dfs.getMinusSign();
         char zeroDigit = dfs.getZeroDigit();
         char decimalMark = dfs.getMonetaryDecimalSeparator();
-        return new MonetaryFormat(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups,
-                shift, roundingMode, codes, codeSeparator, codePrefixed);
+        return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                showGroupingSeparator, minDecimals, decimalGroups, shift, roundingMode, codes,
+                codeSeparator, codePrefixed);
+    }
+
+    public MonetaryFormat withGroupingSeparator() {
+        return new MonetaryFormat(locale, negativeSign, positiveSign, zeroDigit, decimalMark,
+                true, minDecimals, decimalGroups, shift, roundingMode, codes,
+                codeSeparator, codePrefixed);
     }
 
     public MonetaryFormat() {
         // defaults
+        this.locale = Locale.US;
         this.negativeSign = '-';
         this.positiveSign = 0; // none
         this.zeroDigit = '0';
         this.decimalMark = '.';
+        this.showGroupingSeparator = false;
         this.minDecimals = 2;
         this.decimalGroups = null;
         this.shift = 0;
@@ -306,13 +331,16 @@ public final class MonetaryFormat {
         this.codePrefixed = true;
     }
 
-    private MonetaryFormat(char negativeSign, char positiveSign, char zeroDigit, char decimalMark, int minDecimals,
-            List<Integer> decimalGroups, int shift, RoundingMode roundingMode, String[] codes,
-            char codeSeparator, boolean codePrefixed) {
+    private MonetaryFormat(Locale locale, char negativeSign, char positiveSign, char zeroDigit,
+                           char decimalMark, boolean showGroupingSeparator, int minDecimals,
+                           List<Integer> decimalGroups, int shift, RoundingMode roundingMode,
+                           String[] codes, char codeSeparator, boolean codePrefixed) {
+        this.locale = locale;
         this.negativeSign = negativeSign;
         this.positiveSign = positiveSign;
         this.zeroDigit = zeroDigit;
         this.decimalMark = decimalMark;
+        this.showGroupingSeparator = showGroupingSeparator;
         this.minDecimals = minDecimals;
         this.decimalGroups = decimalGroups;
         this.shift = shift;
@@ -363,7 +391,12 @@ public final class MonetaryFormat {
         }
         if (str.length() > 0)
             str.insert(0, decimalMark);
-        str.insert(0, numbers);
+        if (showGroupingSeparator) {
+            String numbersStr = String.format(locale, "%,d", numbers);
+            str.insert(0, numbersStr);
+        } else {
+            str.insert(0, numbers);
+        }
         if (monetary.getValue() < 0)
             str.insert(0, negativeSign);
         else if (positiveSign != 0)
@@ -411,6 +444,11 @@ public final class MonetaryFormat {
     }
 
     private long parseValue(String str, int smallestUnitExponent) {
+        if (showGroupingSeparator) {
+            DecimalFormatSymbols dfs = new DecimalFormatSymbols(locale);
+            char groupingSeparator = dfs.getGroupingSeparator();
+            str = str.replace(String.valueOf(groupingSeparator), "");
+        }
         checkState(DECIMALS_PADDING.length() >= smallestUnitExponent);
         if (str.isEmpty())
             throw new NumberFormatException("empty string");

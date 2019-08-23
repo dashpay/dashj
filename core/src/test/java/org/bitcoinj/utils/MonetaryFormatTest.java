@@ -247,6 +247,19 @@ public class MonetaryFormatTest {
     }
 
     @Test
+    public void withGroupingSeparator() {
+        final MonetaryFormat monetaryFormat = new MonetaryFormat()
+                .noCode().minDecimals(2).optionalDecimals().withGroupingSeparator();
+        assertEquals("123,456.78", monetaryFormat.format(Coin.valueOf(123456,78)).toString());
+        assertEquals("1,234.56", monetaryFormat.format(Coin.valueOf(1234,56)).toString());
+        assertEquals("1,234.00", monetaryFormat.format(Coin.valueOf(1234, 00)).toString());
+        assertEquals("1.234,00", monetaryFormat.withLocale(Locale.GERMANY)
+                .format(Coin.valueOf(1234, 00)).toString());
+        assertEquals("123.45", monetaryFormat.format(Coin.valueOf(123,45)).toString());
+        assertEquals("12.34", monetaryFormat.format(Coin.valueOf(12,34)).toString());
+    }
+
+    @Test
     public void withLocale() throws Exception {
         final Coin value = Coin.valueOf(-1234567890l);
         assertEquals("-12.34567890", NO_CODE.withLocale(Locale.US).format(value).toString());
@@ -259,6 +272,8 @@ public class MonetaryFormatTest {
         assertEquals(Coin.COIN, NO_CODE.parse("1"));
         assertEquals(Coin.COIN, NO_CODE.parse("1."));
         assertEquals(Coin.COIN, NO_CODE.parse("1.0"));
+        assertEquals(Coin.valueOf(1234,56),
+                NO_CODE.withGroupingSeparator().parse("1,234.56"));
         assertEquals(Coin.COIN, NO_CODE.decimalMark(',').parse("1,0"));
         assertEquals(Coin.COIN, NO_CODE.parse("01.0000000000"));
         assertEquals(Coin.COIN, NO_CODE.positiveSign('+').parse("+1.0"));
