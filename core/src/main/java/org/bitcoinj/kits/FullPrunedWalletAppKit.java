@@ -19,6 +19,7 @@
 package org.bitcoinj.kits;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -185,7 +186,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
      */
     public FullPrunedWalletAppKit setCheckpoints(InputStream checkpoints) {
         if (this.checkpoints != null)
-            Utils.closeUnchecked(this.checkpoints);
+            Closeables.closeQuietly(this.checkpoints);
         this.checkpoints = checkNotNull(checkpoints);
         return this;
     }
