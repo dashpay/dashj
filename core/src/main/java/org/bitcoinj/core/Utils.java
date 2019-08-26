@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import java.io.ByteArrayOutputStream;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.URL;
@@ -94,12 +95,10 @@ public class Utils {
         return dest;
     }
 
-    /** Write 4 bytes to the byte array (starting at the offset) as unsigned 32-bit integer in big endian format. */
-    public static void uint32ToByteArrayBE(long val, byte[] out, int offset) {
-        out[offset] = (byte) (0xFF & (val >> 24));
-        out[offset + 1] = (byte) (0xFF & (val >> 16));
-        out[offset + 2] = (byte) (0xFF & (val >> 8));
-        out[offset + 3] = (byte) (0xFF & val);
+    /** Write 2 bytes to the byte array (starting at the offset) as unsigned 16-bit integer in little endian format. */
+    public static void uint16ToByteArrayLE(int val, byte[] out, int offset) {
+        out[offset] = (byte) (0xFF & val);
+        out[offset + 1] = (byte) (0xFF & (val >> 8));
     }
 
     /** Write 4 bytes to the byte array (starting at the offset) as unsigned 32-bit integer in little endian format. */
@@ -108,6 +107,14 @@ public class Utils {
         out[offset + 1] = (byte) (0xFF & (val >> 8));
         out[offset + 2] = (byte) (0xFF & (val >> 16));
         out[offset + 3] = (byte) (0xFF & (val >> 24));
+    }
+
+    /** Write 4 bytes to the byte array (starting at the offset) as unsigned 32-bit integer in big endian format. */
+    public static void uint32ToByteArrayBE(long val, byte[] out, int offset) {
+        out[offset] = (byte) (0xFF & (val >> 24));
+        out[offset + 1] = (byte) (0xFF & (val >> 16));
+        out[offset + 2] = (byte) (0xFF & (val >> 8));
+        out[offset + 3] = (byte) (0xFF & val);
     }
 
     /** Write 8 bytes to the byte array (starting at the offset) as signed 64-bit integer in little endian format. */
@@ -128,6 +135,12 @@ public class Utils {
         stream.write((int) (0xFF & (val >> 8)));
     }
 
+    /** Write 2 bytes to the output stream as unsigned 16-bit integer in big endian format. */
+    public static void uint16ToByteStreamBE(int val, OutputStream stream) throws IOException {
+        stream.write((int) (0xFF & (val >> 8)));
+        stream.write((int) (0xFF & val));
+    }
+
     /** Write 4 bytes to the output stream as unsigned 32-bit integer in little endian format. */
     public static void uint32ToByteStreamLE(long val, OutputStream stream) throws IOException {
         stream.write((int) (0xFF & val));
@@ -135,7 +148,15 @@ public class Utils {
         stream.write((int) (0xFF & (val >> 16)));
         stream.write((int) (0xFF & (val >> 24)));
     }
-    
+
+    /** Write 4 bytes to the output stream as unsigned 32-bit integer in big endian format. */
+    public static void uint32ToByteStreamBE(long val, OutputStream stream) throws IOException {
+        stream.write((int) (0xFF & (val >> 24)));
+        stream.write((int) (0xFF & (val >> 16)));
+        stream.write((int) (0xFF & (val >> 8)));
+        stream.write((int) (0xFF & val));
+    }
+
     /** Write 8 bytes to the output stream as signed 64-bit integer in little endian format. */
     public static void int64ToByteStreamLE(long val, OutputStream stream) throws IOException {
         stream.write((int) (0xFF & val));
@@ -162,6 +183,12 @@ public class Utils {
         }
     }
 
+    /** Parse 2 bytes from the byte array (starting at the offset) as unsigned 16-bit integer in little endian format. */
+    public static int readUint16(byte[] bytes, int offset) {
+        return (bytes[offset] & 0xff) |
+                ((bytes[offset + 1] & 0xff) << 8);
+    }
+
     public static void stringToByteStream(String string, OutputStream stream) throws IOException {
         stream.write(new VarInt(string.length()).encode());
         stream.write(string.getBytes());
@@ -184,12 +211,6 @@ public class Utils {
      */
     public static boolean isLessThanOrEqualToUnsigned(long n1, long n2) {
         return UnsignedLongs.compare(n1, n2) <= 0;
-    }
-
-    /** Parse 2 bytes from the byte array (starting at the offset) as unsigned 32-bit integer in little endian format. */
-    public static int readUint16(byte[] bytes, int offset) {
-        return (bytes[offset] & 0xff) |
-                ((bytes[offset + 1] & 0xff) << 8);
     }
 
     /** Parse 4 bytes from the byte array (starting at the offset) as unsigned 32-bit integer in little endian format. */
@@ -224,6 +245,28 @@ public class Utils {
     public static int readUint16BE(byte[] bytes, int offset) {
         return ((bytes[offset] & 0xff) << 8) |
                 (bytes[offset + 1] & 0xff);
+    }
+
+    /** Parse 2 bytes from the stream as unsigned 16-bit integer in little endian format. */
+    public static int readUint16FromStream(InputStream is) {
+        try {
+            return (is.read() & 0xff) |
+                    ((is.read() & 0xff) << 8);
+        } catch (IOException x) {
+            throw new RuntimeException(x);
+        }
+    }
+
+    /** Parse 4 bytes from the stream as unsigned 32-bit integer in little endian format. */
+    public static long readUint32FromStream(InputStream is) {
+        try {
+            return (is.read() & 0xffl) |
+                    ((is.read() & 0xffl) << 8) |
+                    ((is.read() & 0xffl) << 16) |
+                    ((is.read() & 0xffl) << 24);
+        } catch (IOException x) {
+            throw new RuntimeException(x);
+        }
     }
 
     /**
