@@ -49,8 +49,13 @@ public class VersionTally {
      */
     private int versionsStored = 0;
 
+    private NetworkParameters params;
+
+    private boolean bip65activated;
+
     public VersionTally(final NetworkParameters params) {
         versionWindow = new long[params.getMajorityWindow()];
+        this.params = params;
     }
 
     /**
@@ -60,6 +65,8 @@ public class VersionTally {
      * @param version the block version to add.
      */
     public void add(final long version) {
+        if(bip65activated)
+            return;
         versionWindow[versionWriteHead++] = version;
         if (versionWriteHead == versionWindow.length) {
             versionWriteHead = 0;
@@ -75,6 +82,9 @@ public class VersionTally {
      * full.
      */
     public Integer getCountAtOrAbove(final long version) {
+        if(bip65activated)
+            return params.getMajorityWindow();
+
         if (versionsStored < versionWindow.length) {
             return null;
         }
@@ -98,6 +108,11 @@ public class VersionTally {
      */
     public void initialize(final BlockStore blockStore, final StoredBlock chainHead)
         throws BlockStoreException {
+
+        if(chainHead.getHeight() >= params.getBIP65Height() && params.getBIP65Height() > 0) {
+            bip65activated = true;
+            return;
+        }
         StoredBlock versionBlock = chainHead;
         final Stack<Long> versions = new Stack<Long>();
 
