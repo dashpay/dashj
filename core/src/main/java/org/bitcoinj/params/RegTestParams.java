@@ -66,6 +66,9 @@ public class RegTestParams extends TestNet2Params {
         llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_5_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_5_60;
+
+        BIP65Height = 1365;
+
     }
 
     @Override

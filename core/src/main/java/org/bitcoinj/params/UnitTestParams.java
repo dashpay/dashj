@@ -78,6 +78,9 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
+
+        BIP65Height = 2431; // 0000039cf01242c7f921dcb4806a5994bc003b48c1973ae0c89b67809c2bb2ab
+
     }
 
     private static UnitTestParams instance;

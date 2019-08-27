@@ -131,6 +131,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
+
+        BIP65Height = 1;
     }
 
     //support more than one DevNet

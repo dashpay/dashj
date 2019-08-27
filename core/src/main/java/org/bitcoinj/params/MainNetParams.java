@@ -436,6 +436,8 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_400_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
+
+        BIP65Height = 619382; // 00000000000076d8fcea02ec0963de4abfd01e771fec0863f960c2c64fe6f357
     }
 
     private static MainNetParams instance;

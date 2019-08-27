@@ -97,6 +97,9 @@ public abstract class NetworkParameters {
     protected int majorityRejectBlockOutdated;
     protected int majorityWindow;
 
+    /** Use to check for BIP65 upgrade */
+    protected int BIP65Height;
+
     /** Used to check for DIP0001 upgrade */
     protected int DIP0001Window;
     protected int DIP0001Upgrade;
@@ -747,5 +750,9 @@ public abstract class NetworkParameters {
 
     public int getDIP0008BlockHeight() {
         return DIP0008BlockHeight;
+    }
+
+    public int getBIP65Height() {
+        return BIP65Height;
     }
 }
