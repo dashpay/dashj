@@ -30,21 +30,14 @@ import java.nio.ByteBuffer;
 public abstract class MessageSerializer {
 
     /**
-     * The protocol version that should be used to deserialize messages
+     * Create a new serializer with a specific protocol version. Mainly used to disable SegWit when parsing transactions.
      */
-    protected int protocolVersion;
+    public abstract MessageSerializer withProtocolVersion(int protocolVersion);
 
-    public int getProtocolVersion() {
-        return protocolVersion;
-    }
-
-    public void setProtocolVersion(int protocolVersion) {
-        this.protocolVersion = protocolVersion;
-    }
-
-    protected MessageSerializer() {
-        protocolVersion = NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
-    }
+    /**
+     * Get the protocol version of this serializer.
+     */
+    public abstract int getProtocolVersion();
 
     /**
      * Reads a message from the given ByteBuffer and returns it.
