@@ -135,8 +135,8 @@ public class FriendKeyChain extends DeterministicKeyChain {
             //
             // It's safe to do this because when a network thread tries to calculate a Bloom filter, we'll go ahead
             // and calculate the full lookahead zone there, so network requests will always use the right amount.
-            //List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
-            //basicKeyChain.importKeys(lookahead);
+            List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
+            basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<DeterministicKey>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
                 ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
