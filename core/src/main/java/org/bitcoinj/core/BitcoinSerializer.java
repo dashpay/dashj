@@ -102,6 +102,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(QuorumSendRecoveredSignatures.class, "qsendrecsigs");
         names.put(InstantSendLock.class, "islock");
         names.put(ChainLockSignature.class, "clsig");
+        names.put(GetMasternodePaymentRequestSyncMessage.class, "mnget");
     }
 
     /**
