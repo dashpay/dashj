@@ -1,10 +1,10 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import static org.bitcoinj.core.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
+import static org.dashj.core.InstantSend.INSTANTSEND_TIMEOUT_SECONDS;
 
 /**
  * Created by Eric on 2/7/2017.

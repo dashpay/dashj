@@ -12,15 +12,15 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.examples;
+package org.dashj.examples;
 
-import org.bitcoinj.core.listeners.DownloadProgressTracker;
-import org.bitcoinj.core.*;
-import org.bitcoinj.net.discovery.DnsDiscovery;
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.store.SPVBlockStore;
-import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.listeners.DownloadProgressTracker;
+import org.dashj.core.*;
+import org.dashj.net.discovery.DnsDiscovery;
+import org.dashj.params.TestNet3Params;
+import org.dashj.store.SPVBlockStore;
+import org.dashj.wallet.DeterministicSeed;
+import org.dashj.wallet.Wallet;
 
 import java.io.File;
 

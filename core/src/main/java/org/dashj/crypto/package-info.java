@@ -19,4 +19,4 @@
  * on strong crypto. This is legal because Oracle got permission to ship strong AES to everyone years ago but hasn't
  * bothered to actually remove the logic barriers.
  */
-package org.bitcoinj.crypto;
+package org.dashj.crypto;

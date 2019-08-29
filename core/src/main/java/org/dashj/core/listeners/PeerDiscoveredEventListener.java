@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core.listeners;
+package org.dashj.core.listeners;
 
-import org.bitcoinj.core.Peer;
-import org.bitcoinj.core.PeerAddress;
+import org.dashj.core.Peer;
+import org.dashj.core.PeerAddress;
 import java.util.Set;
 
 /**

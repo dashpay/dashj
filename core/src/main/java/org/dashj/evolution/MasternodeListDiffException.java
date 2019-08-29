@@ -1,4 +1,4 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
 public class MasternodeListDiffException extends Exception {
     boolean requireReset;

@@ -1,4 +1,4 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,7 +7,7 @@ import org.spongycastle.util.encoders.Base64;
 import java.security.SignatureException;
 import java.util.Arrays;
 
-import static org.bitcoinj.core.Utils.HEX;
+import static org.dashj.core.Utils.HEX;
 
 /**
  * Created by HashEngineering on 6/25/2018.

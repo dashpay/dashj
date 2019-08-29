@@ -1,12 +1,12 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.core.listeners.NewBestBlockListener;
-import org.bitcoinj.quorums.listeners.ChainLockListener;
-import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.*;
+import org.dashj.core.listeners.NewBestBlockListener;
+import org.dashj.quorums.listeners.ChainLockListener;
+import org.dashj.quorums.listeners.RecoveredSignatureListener;
+import org.dashj.store.BlockStoreException;
+import org.dashj.utils.ListenerRegistration;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

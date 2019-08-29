@@ -1,10 +1,10 @@
 package org.darkcoinj;
 
 import com.google.common.base.Charsets;
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
+import org.dashj.core.*;
+import org.dashj.crypto.KeyCrypterException;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.util.encoders.Base64;

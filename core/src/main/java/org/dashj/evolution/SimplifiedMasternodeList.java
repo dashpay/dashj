@@ -1,8 +1,8 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.Pair;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.*;
+import org.dashj.utils.Pair;
+import org.dashj.utils.Threading;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.Sha256Hash.hashTwice;
+import static org.dashj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedMasternodeList extends Message {
 

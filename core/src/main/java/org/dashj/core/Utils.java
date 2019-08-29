@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -785,7 +785,7 @@ public class Utils {
         return -1;
     }
 
-    public static org.bitcoinj.utils.Pair<Integer, String> splitHostPort(String in) {
+    public static org.dashj.utils.Pair<Integer, String> splitHostPort(String in) {
 
         int port = 0;
         String host = "";
@@ -806,7 +806,7 @@ public class Utils {
         } else {
             host = in;
         }
-        return new org.bitcoinj.utils.Pair<Integer, String>(port, host);
+        return new org.dashj.utils.Pair<Integer, String>(port, host);
     }
 
     public static void booleanArrayListToStream(ArrayList<Boolean> vec, OutputStream stream) throws IOException

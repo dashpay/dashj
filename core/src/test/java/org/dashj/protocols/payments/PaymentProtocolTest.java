@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.payments;
+package org.dashj.protocols.payments;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.X509Utils;
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.protocols.payments.PaymentProtocol.Output;
-import org.bitcoinj.protocols.payments.PaymentProtocol.PkiVerificationData;
-import org.bitcoinj.protocols.payments.PaymentProtocolException.PkiVerificationException;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.testing.FakeTxBuilder;
-import org.bitcoin.protocols.payments.Protos;
-import org.bitcoin.protocols.payments.Protos.Payment;
-import org.bitcoin.protocols.payments.Protos.PaymentACK;
-import org.bitcoin.protocols.payments.Protos.PaymentRequest;
+import org.dashj.core.*;
+import org.dashj.crypto.X509Utils;
+import org.dashj.params.TestNet3Params;
+import org.dashj.params.UnitTestParams;
+import org.dashj.protocols.payments.PaymentProtocol.Output;
+import org.dashj.protocols.payments.PaymentProtocol.PkiVerificationData;
+import org.dashj.protocols.payments.PaymentProtocolException.PkiVerificationException;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.testing.FakeTxBuilder;
+import org.dash.protocols.payments.Protos;
+import org.dash.protocols.payments.Protos.Payment;
+import org.dash.protocols.payments.Protos.PaymentACK;
+import org.dash.protocols.payments.Protos.PaymentRequest;
 import org.junit.Before;
 import org.junit.Test;
 

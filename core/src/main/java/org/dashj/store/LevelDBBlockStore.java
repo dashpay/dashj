@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.store;
+package org.dashj.store;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.fusesource.leveldbjni.*;
 import org.iq80.leveldb.*;
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 /**
  * A variable-length encoded unsigned integer using Satoshi's encoding (a.k.a. "CompactSize").

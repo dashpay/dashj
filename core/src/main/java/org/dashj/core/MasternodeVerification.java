@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
+import static org.dashj.core.Utils.uint32ToByteStreamLE;
 
 @Deprecated
 public class MasternodeVerification extends Message implements Serializable{

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.jni;
+package org.dashj.jni;
 
-import org.bitcoinj.core.TransactionConfidence;
+import org.dashj.core.TransactionConfidence;
 
 /**
  * An event listener that relays events to a native C++ object. A pointer to that object is stored in

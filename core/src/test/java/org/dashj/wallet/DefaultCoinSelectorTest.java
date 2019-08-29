@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.params.*;
-import org.bitcoinj.testing.*;
+import org.dashj.core.*;
+import org.dashj.params.*;
+import org.dashj.testing.*;
 import org.junit.*;
 
 import java.net.*;
 import java.util.*;
 
 import static com.google.common.base.Preconditions.*;
-import static org.bitcoinj.core.Coin.*;
+import static org.dashj.core.Coin.*;
 import static org.junit.Assert.*;
 
 public class DefaultCoinSelectorTest extends TestWithWallet {

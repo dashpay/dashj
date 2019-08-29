@@ -1,7 +1,7 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.*;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
-import org.bitcoinj.core.BloomFilter;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.crypto.KeyCrypter;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
+import org.dashj.core.BloomFilter;
+import org.dashj.core.ECKey;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.Utils;
+import org.dashj.crypto.DeterministicKey;
+import org.dashj.crypto.KeyCrypter;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
 
 import java.security.SecureRandom;
 import java.util.LinkedHashMap;

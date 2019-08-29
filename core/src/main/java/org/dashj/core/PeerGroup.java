@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.annotations.*;
 import com.google.common.base.*;
@@ -24,21 +24,21 @@ import com.google.common.net.*;
 import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import net.jcip.annotations.*;
-import org.bitcoinj.core.listeners.*;
-import org.bitcoinj.crypto.*;
-import org.bitcoinj.governance.GovernanceVote;
-import org.bitcoinj.governance.GovernanceVoteBroadcast;
-import org.bitcoinj.governance.GovernanceVoteBroadcaster;
-import org.bitcoinj.governance.GovernanceVoteConfidence;
-import org.bitcoinj.net.*;
-import org.bitcoinj.net.discovery.*;
-import org.bitcoinj.script.*;
-import org.bitcoinj.utils.*;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.listeners.KeyChainEventListener;
-import org.bitcoinj.wallet.listeners.ScriptsChangeEventListener;
-import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.dashj.core.listeners.*;
+import org.dashj.crypto.*;
+import org.dashj.governance.GovernanceVote;
+import org.dashj.governance.GovernanceVoteBroadcast;
+import org.dashj.governance.GovernanceVoteBroadcaster;
+import org.dashj.governance.GovernanceVoteConfidence;
+import org.dashj.net.*;
+import org.dashj.net.discovery.*;
+import org.dashj.script.*;
+import org.dashj.utils.*;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.listeners.KeyChainEventListener;
+import org.dashj.wallet.listeners.ScriptsChangeEventListener;
+import org.dashj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.slf4j.*;
 
 import javax.annotation.*;
@@ -1353,7 +1353,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     /**
      * Returns the number of currently connected peers. To be informed when this count changes, register a 
-     * {@link org.bitcoinj.core.listeners.PeerConnectionEventListener} and use the onPeerConnected/onPeerDisconnected methods.
+     * {@link org.dashj.core.listeners.PeerConnectionEventListener} and use the onPeerConnected/onPeerDisconnected methods.
      */
     public int numConnectedPeers() {
         return peers.size();
@@ -1365,7 +1365,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * 
      * @param address destination IP and port.
      * @return The newly created Peer object or null if the peer could not be connected.
-     *         Use {@link org.bitcoinj.core.Peer#getConnectionOpenFuture()} if you
+     *         Use {@link org.dashj.core.Peer#getConnectionOpenFuture()} if you
      *         want a future which completes when the connection is open.
      */
     @Nullable
@@ -1923,7 +1923,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     /**
      * Returns a future that is triggered when the number of connected peers is equal to the given number of
-     * peers. By using this with {@link org.bitcoinj.core.PeerGroup#getMaxConnections()} you can wait until the
+     * peers. By using this with {@link org.dashj.core.PeerGroup#getMaxConnections()} you can wait until the
      * network is fully online. To block immediately, just call get() on the result. Just calls
      * {@link #waitForPeersOfVersion(int, long)} with zero as the protocol version.
      *
@@ -2029,7 +2029,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * enough, {@link PeerGroup#broadcastTransaction(Transaction)} will wait until the minimum number is reached so
      * propagation across the network can be observed. If no value has been set using
      * {@link PeerGroup#setMinBroadcastConnections(int)} a default of 80% of whatever
-     * {@link org.bitcoinj.core.PeerGroup#getMaxConnections()} returns is used.
+     * {@link org.dashj.core.PeerGroup#getMaxConnections()} returns is used.
      */
     public int getMinBroadcastConnections() {
         lock.lock();
@@ -2048,7 +2048,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     /**
-     * See {@link org.bitcoinj.core.PeerGroup#getMinBroadcastConnections()}.
+     * See {@link org.dashj.core.PeerGroup#getMinBroadcastConnections()}.
      */
     public void setMinBroadcastConnections(int value) {
         lock.lock();
@@ -2071,7 +2071,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /**
      * <p>Given a transaction, sends it un-announced to one peer and then waits for it to be received back from other
      * peers. Once all connected peers have announced the transaction, the future available via the
-     * {@link org.bitcoinj.core.TransactionBroadcast#future()} method will be completed. If anything goes
+     * {@link org.dashj.core.TransactionBroadcast#future()} method will be completed. If anything goes
      * wrong the exception will be thrown when get() is called, or you can receive it via a callback on the
      * {@link ListenableFuture}. This method returns immediately, so if you want it to block just call get() on the
      * result.</p>
@@ -2083,7 +2083,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * A good choice for proportion would be between 0.5 and 0.8 but if you want faster transmission during initial
      * bringup of the peer group you can lower it.</p>
      *
-     * <p>The returned {@link org.bitcoinj.core.TransactionBroadcast} object can be used to get progress feedback,
+     * <p>The returned {@link org.dashj.core.TransactionBroadcast} object can be used to get progress feedback,
      * which is calculated by watching the transaction propagate across the network and be announced by peers.</p>
      */
     public TransactionBroadcast broadcastTransaction(final Transaction tx, final int minConnections) {
@@ -2145,7 +2145,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /**
      * <p>Given a transaction, sends it un-announced to one peer and then waits for it to be received back from other
      * peers. Once all connected peers have announced the transaction, the future available via the
-     * {@link org.bitcoinj.core.TransactionBroadcast#future()} method will be completed. If anything goes
+     * {@link org.dashj.core.TransactionBroadcast#future()} method will be completed. If anything goes
      * wrong the exception will be thrown when get() is called, or you can receive it via a callback on the
      * {@link ListenableFuture}. This method returns immediately, so if you want it to block just call get() on the
      * result.</p>
@@ -2157,7 +2157,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * A good choice for proportion would be between 0.5 and 0.8 but if you want faster transmission during initial
      * bringup of the peer group you can lower it.</p>
      *
-     * <p>The returned {@link org.bitcoinj.core.TransactionBroadcast} object can be used to get progress feedback,
+     * <p>The returned {@link org.dashj.core.TransactionBroadcast} object can be used to get progress feedback,
      * which is calculated by watching the transaction propagate across the network and be announced by peers.</p>
      */
     public GovernanceVoteBroadcast broadcastGovernanceVote(final GovernanceVote vote, final int minConnections) {
@@ -2194,7 +2194,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     /**
      * Returns the period between pings for an individual peer. Setting this lower means more accurate and timely ping
-     * times are available via {@link org.bitcoinj.core.Peer#getLastPingTime()} but it increases load on the
+     * times are available via {@link org.dashj.core.Peer#getLastPingTime()} but it increases load on the
      * remote node. It defaults to {@link PeerGroup#DEFAULT_PING_INTERVAL_MSEC}.
      */
     public long getPingIntervalMsec() {
@@ -2208,10 +2208,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     /**
      * Sets the period between pings for an individual peer. Setting this lower means more accurate and timely ping
-     * times are available via {@link org.bitcoinj.core.Peer#getLastPingTime()} but it increases load on the
+     * times are available via {@link org.dashj.core.Peer#getLastPingTime()} but it increases load on the
      * remote node. It defaults to {@link PeerGroup#DEFAULT_PING_INTERVAL_MSEC}.
      * Setting the value to be <= 0 disables pinging entirely, although you can still request one yourself
-     * using {@link org.bitcoinj.core.Peer#ping()}.
+     * using {@link org.dashj.core.Peer#ping()}.
      */
     public void setPingIntervalMsec(long pingIntervalMsec) {
         lock.lock();

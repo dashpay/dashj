@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.RejectMessage;
-import org.bitcoinj.core.Transaction;
+import org.dashj.core.RejectMessage;
+import org.dashj.core.Transaction;
 
 /**
  * This exception is used by the TransactionBroadcast class to indicate that a broadcast

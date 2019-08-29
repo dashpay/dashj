@@ -1,4 +1,4 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
 /*
 ```- (void)testCreateBlockchainUserTransactionInputs {
@@ -58,15 +58,15 @@ package org.bitcoinj.evolution;
 }```
  */
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.script.ScriptBuilder;
+import org.dashj.core.*;
+import org.dashj.params.UnitTestParams;
+import org.dashj.script.ScriptBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.bitcoinj.script.ScriptOpCodes.OP_RETURN;
+import static org.dashj.script.ScriptOpCodes.OP_RETURN;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;

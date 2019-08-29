@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.protocols.channels;
+package org.dashj.protocols.channels;
 
-import org.bitcoinj.core.Coin;
+import org.dashj.core.Coin;
 import com.google.protobuf.ByteString;
 
 import javax.annotation.Nullable;

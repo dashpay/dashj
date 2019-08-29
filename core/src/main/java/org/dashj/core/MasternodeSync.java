@@ -1,8 +1,8 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.governance.GovernanceSyncMessage;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
+import org.dashj.governance.GovernanceSyncMessage;
+import org.dashj.utils.ListenerRegistration;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +15,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static java.lang.Math.max;
-import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.*;
+import static org.dashj.core.MasternodeSync.SYNC_FLAGS.*;
 
 /**
  * Created by Eric on 2/21/2016.

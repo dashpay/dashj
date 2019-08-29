@@ -1,14 +1,14 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.BLSBatchVerifier;
-import org.bitcoinj.crypto.BLSPublicKey;
-import org.bitcoinj.crypto.BLSSignature;
-import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Pair;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.*;
+import org.dashj.crypto.BLSBatchVerifier;
+import org.dashj.crypto.BLSPublicKey;
+import org.dashj.crypto.BLSSignature;
+import org.dashj.quorums.listeners.RecoveredSignatureListener;
+import org.dashj.store.BlockStoreException;
+import org.dashj.utils.ListenerRegistration;
+import org.dashj.utils.Pair;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

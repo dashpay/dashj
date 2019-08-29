@@ -12,10 +12,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.uri;
+package org.dashj.uri;
 
 /**
- * <p>Exception to provide the following to {@link org.bitcoinj.uri.BitcoinURI}:</p>
+ * <p>Exception to provide the following to {@link org.dashj.uri.BitcoinURI}:</p>
  * <ul>
  * <li>Provision of parsing error messages</li>
  * </ul>

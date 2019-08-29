@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.examples;
+package org.dashj.examples;
 
-import org.bitcoinj.core.FullPrunedBlockChain;
-import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.store.FullPrunedBlockStore;
-import org.bitcoinj.store.LevelDBFullPrunedBlockStore;
+import org.dashj.core.FullPrunedBlockChain;
+import org.dashj.core.PeerGroup;
+import org.dashj.params.MainNetParams;
+import org.dashj.store.FullPrunedBlockStore;
+import org.dashj.store.LevelDBFullPrunedBlockStore;
 
 import java.net.InetAddress;
 

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net;
+package org.dashj.net;
 
-import org.bitcoinj.core.Message;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.Message;
+import org.dashj.utils.Threading;
 import com.google.common.base.Throwables;
 import org.slf4j.LoggerFactory;
 

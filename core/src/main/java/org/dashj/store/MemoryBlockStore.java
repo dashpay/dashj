@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.store;
+package org.dashj.store;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Keeps {@link org.bitcoinj.core.StoredBlock}s in memory. Used primarily for unit testing.
+ * Keeps {@link org.dashj.core.StoredBlock}s in memory. Used primarily for unit testing.
  */
 public class MemoryBlockStore implements BlockStore {
     private LinkedHashMap<Sha256Hash, StoredBlock> blockMap = new LinkedHashMap<Sha256Hash, StoredBlock>() {

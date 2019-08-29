@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
-import static org.bitcoinj.core.Coin.SMALLEST_UNIT_EXPONENT;
+import static org.dashj.core.Coin.SMALLEST_UNIT_EXPONENT;
 import static com.google.common.base.Preconditions.checkArgument;
 import com.google.common.base.Objects;
 import java.math.BigInteger;
@@ -42,7 +42,7 @@ import java.util.List;
  * @see          java.text.Format
  * @see          java.text.NumberFormat
  * @see          java.text.DecimalFormat
- * @see          org.bitcoinj.core.Coin
+ * @see          org.dashj.core.Coin
  */
 
 public final class BtcFixedFormat extends BtcFormat {

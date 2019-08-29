@@ -1,9 +1,9 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.Message;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Sha256Hash;
+import org.dashj.core.Message;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.ProtocolException;
+import org.dashj.core.Sha256Hash;
 
 import java.io.IOException;
 import java.io.OutputStream;

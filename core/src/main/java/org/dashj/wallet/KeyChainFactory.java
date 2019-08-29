@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
 import com.google.common.collect.ImmutableList;
-import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.crypto.KeyCrypter;
+import org.dashj.crypto.ChildNumber;
+import org.dashj.crypto.DeterministicKey;
+import org.dashj.crypto.KeyCrypter;
 
 /**
  * Factory interface for creation keychains while de-serializing a wallet.

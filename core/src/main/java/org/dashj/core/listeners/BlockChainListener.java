@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core.listeners;
+package org.dashj.core.listeners;
 
 /**
  * Old interface for backwards compatibility. Implement the more specific interfaces instead.

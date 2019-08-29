@@ -1,4 +1,4 @@
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
 public class GovernanceException extends Exception {
     String strMessage;

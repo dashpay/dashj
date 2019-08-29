@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.examples;
+package org.dashj.examples;
 
 import java.net.InetAddress;
-import org.bitcoinj.core.FullPrunedBlockChain;
-import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.store.FullPrunedBlockStore;
-import org.bitcoinj.store.LevelDBFullPrunedBlockStore;
+import org.dashj.core.FullPrunedBlockChain;
+import org.dashj.core.PeerGroup;
+import org.dashj.params.MainNetParams;
+import org.dashj.store.FullPrunedBlockStore;
+import org.dashj.store.LevelDBFullPrunedBlockStore;
 
 public class LevelDB {
     public static void main(String[] args) throws Exception {

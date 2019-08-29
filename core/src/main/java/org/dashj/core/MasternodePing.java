@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.net.Dos;
-import org.bitcoinj.store.BlockStoreException;
+import org.dashj.crypto.KeyCrypterException;
+import org.dashj.net.Dos;
+import org.dashj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.util.encoders.Base64;
@@ -25,9 +25,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static org.bitcoinj.core.Masternode.MASTERNODE_EXPIRATION_SECONDS;
-import static org.bitcoinj.core.Masternode.MASTERNODE_NEW_START_REQUIRED_SECONDS;
-import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
+import static org.dashj.core.Masternode.MASTERNODE_EXPIRATION_SECONDS;
+import static org.dashj.core.Masternode.MASTERNODE_NEW_START_REQUIRED_SECONDS;
+import static org.dashj.core.Utils.int64ToByteStreamLE;
 
 @Deprecated
 public class MasternodePing extends Message implements Serializable {

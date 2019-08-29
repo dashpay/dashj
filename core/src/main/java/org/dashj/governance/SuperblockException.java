@@ -1,4 +1,4 @@
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
 /**
  * Created by Hash Engineering on 6/5/2018.

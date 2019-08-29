@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.wallet.KeyChainGroup;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.params.MainNetParams;
+import org.dashj.wallet.KeyChainGroup;
+import org.dashj.wallet.Wallet;
 import org.junit.Test;
 
 import java.util.Arrays;
 
-import static org.bitcoinj.core.Utils.HEX;
+import static org.dashj.core.Utils.HEX;
 import static org.junit.Assert.*;
 
 public class BloomFilterTest {

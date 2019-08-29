@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.kits;
+package org.dashj.kits;
 
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
-import org.bitcoinj.core.listeners.*;
-import org.bitcoinj.core.*;
-import org.bitcoinj.net.discovery.*;
-import org.bitcoinj.protocols.channels.*;
-import org.bitcoinj.store.*;
-import org.bitcoinj.wallet.*;
+import org.dashj.core.listeners.*;
+import org.dashj.core.*;
+import org.dashj.net.discovery.*;
+import org.dashj.protocols.channels.*;
+import org.dashj.store.*;
+import org.dashj.wallet.*;
 import org.slf4j.*;
 
 import javax.annotation.*;
@@ -153,7 +153,7 @@ public class WalletAppKit extends AbstractIdleService {
 
     /**
      * If you want to learn about the sync process, you can provide a listener here. For instance, a
-     * {@link org.bitcoinj.core.DownloadProgressTracker} is a good choice. This has no effect unless setBlockingStartup(false) has been called
+     * {@link org.dashj.core.DownloadProgressTracker} is a good choice. This has no effect unless setBlockingStartup(false) has been called
      * too, due to some missing implementation code.
      */
     public WalletAppKit setDownloadListener(DownloadProgressTracker listener) {

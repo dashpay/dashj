@@ -1,4 +1,4 @@
-package org.bitcoinj.store;
+package org.dashj.store;
 
 /**
  * Created by Hash Engineering on 6/21/2016.
@@ -10,7 +10,7 @@ package org.bitcoinj.store;
  */
 
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

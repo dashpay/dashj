@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
-import org.bitcoinj.core.CoinDefinition;
+import org.dashj.core.CoinDefinition;
 import com.google.common.util.concurrent.CycleDetectingLockFactory;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Uninterruptibles;
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

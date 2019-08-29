@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
-import static org.bitcoinj.core.Coin.CENT;
-import static org.bitcoinj.core.Coin.COIN;
-import static org.bitcoinj.core.Coin.SATOSHI;
-import static org.bitcoinj.core.Coin.ZERO;
+import static org.dashj.core.Coin.CENT;
+import static org.dashj.core.Coin.COIN;
+import static org.dashj.core.Coin.SATOSHI;
+import static org.dashj.core.Coin.ZERO;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Locale;
 
 import org.junit.Test;
 
-import org.bitcoinj.core.Coin;
+import org.dashj.core.Coin;
 
 public class MonetaryFormatTest {
 

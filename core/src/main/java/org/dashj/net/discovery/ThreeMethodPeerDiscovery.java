@@ -1,7 +1,7 @@
-package org.bitcoinj.net.discovery;
+package org.dashj.net.discovery;
 
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.dashj.core.NetworkParameters;
+import org.dashj.evolution.SimplifiedMasternodeListManager;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;

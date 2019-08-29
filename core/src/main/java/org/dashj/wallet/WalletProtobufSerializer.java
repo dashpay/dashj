@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.crypto.KeyCrypter;
-import org.bitcoinj.crypto.KeyCrypterScrypt;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.signers.LocalTransactionSigner;
-import org.bitcoinj.signers.TransactionSigner;
-import org.bitcoinj.utils.ExchangeRate;
-import org.bitcoinj.utils.Fiat;
-import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
+import org.dashj.core.*;
+import org.dashj.core.TransactionConfidence.ConfidenceType;
+import org.dashj.crypto.KeyCrypter;
+import org.dashj.crypto.KeyCrypterScrypt;
+import org.dashj.script.Script;
+import org.dashj.signers.LocalTransactionSigner;
+import org.dashj.signers.TransactionSigner;
+import org.dashj.utils.ExchangeRate;
+import org.dashj.utils.Fiat;
+import org.dashj.wallet.Protos.Wallet.EncryptionType;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
@@ -698,7 +698,7 @@ public class WalletProtobufSerializer {
     }
 
     private WalletTransaction connectTransactionOutputs(final NetworkParameters params,
-                                                        final org.bitcoinj.wallet.Protos.Transaction txProto) throws UnreadableWalletException {
+                                                        final org.dashj.wallet.Protos.Transaction txProto) throws UnreadableWalletException {
         Transaction tx = txMap.get(txProto.getHash());
         final WalletTransaction.Pool pool;
         switch (txProto.getPool()) {

@@ -12,10 +12,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.TransactionOutput;
+import org.dashj.core.Coin;
+import org.dashj.core.TransactionOutput;
 
 import java.util.List;
 

@@ -1,8 +1,8 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.evolution.SpecialTxPayload;
+import org.dashj.core.*;
+import org.dashj.evolution.SpecialTxPayload;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

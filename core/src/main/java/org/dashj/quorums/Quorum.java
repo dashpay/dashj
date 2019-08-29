@@ -1,4 +1,4 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
 public class Quorum {
 

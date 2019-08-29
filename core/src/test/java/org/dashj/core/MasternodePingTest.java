@@ -1,6 +1,6 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.params.MainNetParams;
+import org.dashj.params.MainNetParams;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net;
+package org.dashj.net;
 
 import com.google.common.util.concurrent.*;
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 import org.slf4j.*;
 
 import javax.annotation.*;

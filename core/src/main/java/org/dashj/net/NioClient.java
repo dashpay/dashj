@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net;
+package org.dashj.net;
 
 import com.google.common.base.*;
 import com.google.common.util.concurrent.*;

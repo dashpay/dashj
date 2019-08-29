@@ -1,7 +1,7 @@
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
 import com.google.common.collect.ImmutableList;
-import org.bitcoinj.crypto.*;
+import org.dashj.crypto.*;
 
 import java.util.ArrayList;
 import java.util.List;

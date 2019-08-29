@@ -1,10 +1,10 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.AbstractBlockChain;
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.AbstractBlockChain;
+import org.dashj.core.Context;
+import org.dashj.core.Sha256Hash;
+import org.dashj.core.StoredBlock;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

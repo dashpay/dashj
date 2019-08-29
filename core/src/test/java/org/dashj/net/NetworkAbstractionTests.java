@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net;
+package org.dashj.net;
 
-import org.bitcoinj.core.Utils;
+import org.dashj.core.Utils;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
-import org.bitcoin.paymentchannel.Protos;
-import org.bitcoin.paymentchannel.Protos.TwoWayChannelMessage;
+import org.dash.paymentchannel.Protos;
+import org.dash.paymentchannel.Protos.TwoWayChannelMessage;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

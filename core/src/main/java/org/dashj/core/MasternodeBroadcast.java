@@ -1,10 +1,10 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.net.Dos;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.utils.Pair;
+import org.dashj.net.Dos;
+import org.dashj.params.MainNetParams;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.utils.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.util.encoders.Base64;
@@ -14,10 +14,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
 
-import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_INVALID_AMOUNT;
-import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_SPV_ASSUME_VALID;
-import static org.bitcoinj.core.Masternode.CollateralStatus.COLLATERAL_UTXO_NOT_FOUND;
-import static org.bitcoinj.core.MasternodeInfo.State.MASTERNODE_EXPIRED;
+import static org.dashj.core.Masternode.CollateralStatus.COLLATERAL_INVALID_AMOUNT;
+import static org.dashj.core.Masternode.CollateralStatus.COLLATERAL_SPV_ASSUME_VALID;
+import static org.dashj.core.Masternode.CollateralStatus.COLLATERAL_UTXO_NOT_FOUND;
+import static org.dashj.core.MasternodeInfo.State.MASTERNODE_EXPIRED;
 
 /**
  * Created by Hash Engineering on 2/20/2015.

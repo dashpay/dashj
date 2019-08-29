@@ -1,10 +1,10 @@
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
-import org.bitcoinj.core.ChildMessage;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.ChildMessage;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.ProtocolException;
+import org.dashj.core.Utils;
+import org.dashj.utils.Threading;
 
 import java.io.IOException;
 import java.io.OutputStream;

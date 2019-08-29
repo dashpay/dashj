@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import com.google.common.base.Objects;
-import org.bitcoinj.net.discovery.HttpDiscovery;
-import org.bitcoinj.params.*;
-import org.bitcoinj.quorums.LLMQParameters;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.script.ScriptOpCodes;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dashj.net.discovery.HttpDiscovery;
+import org.dashj.params.*;
+import org.dashj.quorums.LLMQParameters;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.script.ScriptOpCodes;
+import org.dashj.store.BlockStore;
+import org.dashj.store.BlockStoreException;
+import org.dashj.utils.MonetaryFormat;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
@@ -35,8 +35,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.EnumSet;
 
-import static org.bitcoinj.core.Coin.*;
-import org.bitcoinj.utils.VersionTally;
+import static org.dashj.core.Coin.*;
+import org.dashj.utils.VersionTally;
 
 /**
  * <p>NetworkParameters contains the data needed for working with an instantiation of a Bitcoin chain.</p>
@@ -54,16 +54,16 @@ public abstract class NetworkParameters {
     public static final byte[] SATOSHI_KEY = Utils.HEX.decode(CoinDefinition.SATOSHI_KEY); //Hex.decode("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
 
     /** The string returned by getId() for the main, production network where people trade things. */
-    public static final String ID_MAINNET = CoinDefinition.ID_MAINNET; //"org.bitcoin.production";
+    public static final String ID_MAINNET = CoinDefinition.ID_MAINNET; //"org.dash.production";
     /** The string returned by getId() for the testnet. */
 
-    public static final String ID_TESTNET = CoinDefinition.ID_TESTNET; //"org.bitcoin.test";
+    public static final String ID_TESTNET = CoinDefinition.ID_TESTNET; //"org.dash.test";
     /** The string returned by getId() for the devnet. */
     public static final String ID_DEVNET = "org.dash.dev";
     /** Unit test network. */
     public static final String ID_UNITTESTNET = CoinDefinition.ID_UNITTESTNET; //"com.google.bitcoin.unittest";
     /** The string returned by getId() for regtest mode. */
-    public static final String ID_REGTEST = "org.bitcoin.regtest";
+    public static final String ID_REGTEST = "org.dash.regtest";
 
     /** The string used by the payment protocol to represent the main net. */
     public static final String PAYMENT_PROTOCOL_ID_MAINNET = "main";
@@ -389,7 +389,7 @@ public abstract class NetworkParameters {
         return addrSeeds;
     }
 
-    /** Returns discovery objects for seeds implementing the Cartographer protocol. See {@link org.bitcoinj.net.discovery.HttpDiscovery} for more info. */
+    /** Returns discovery objects for seeds implementing the Cartographer protocol. See {@link org.dashj.net.discovery.HttpDiscovery} for more info. */
     public HttpDiscovery.Details[] getHttpSeeds() {
         return httpSeeds;
     }
@@ -440,7 +440,7 @@ public abstract class NetworkParameters {
     }
 
     /**
-     * First byte of a base58 encoded address. See {@link org.bitcoinj.core.Address}. This is the same as acceptableAddressCodes[0] and
+     * First byte of a base58 encoded address. See {@link org.dashj.core.Address}. This is the same as acceptableAddressCodes[0] and
      * is the one used for "normal" addresses. Other types of address may be encountered with version codes found in
      * the acceptableAddressCodes array.
      */
@@ -455,7 +455,7 @@ public abstract class NetworkParameters {
         return p2shHeader;
     }
 
-    /** First byte of a base58 encoded dumped private key. See {@link org.bitcoinj.core.DumpedPrivateKey}. */
+    /** First byte of a base58 encoded dumped private key. See {@link org.dashj.core.DumpedPrivateKey}. */
     public int getDumpedPrivateKeyHeader() {
         return dumpedPrivateKeyHeader;
     }
@@ -496,7 +496,7 @@ public abstract class NetworkParameters {
     }
 
     /**
-     * The key used to sign {@link org.bitcoinj.core.AlertMessage}s. You can use {@link org.bitcoinj.core.ECKey#verify(byte[], byte[], byte[])} to verify
+     * The key used to sign {@link org.dashj.core.AlertMessage}s. You can use {@link org.dashj.core.ECKey#verify(byte[], byte[], byte[])} to verify
      * signatures using it.
      */
     public byte[] getAlertSigningKey() {

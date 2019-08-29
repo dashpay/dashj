@@ -1,7 +1,7 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.BLSPublicKey;
+import org.dashj.core.*;
+import org.dashj.crypto.BLSPublicKey;
 
 public abstract class Masternode extends ChildMessage {
 

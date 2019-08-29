@@ -1,12 +1,12 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.evolution.*;
-import org.bitcoinj.evolution.Masternode;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.Pair;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.*;
+import org.dashj.evolution.*;
+import org.dashj.evolution.Masternode;
+import org.dashj.store.BlockStore;
+import org.dashj.store.BlockStoreException;
+import org.dashj.utils.Pair;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +15,7 @@ import java.io.OutputStream;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.Sha256Hash.hashTwice;
+import static org.dashj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedQuorumList extends Message {
 

@@ -12,11 +12,11 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.params.RegTestParams;
+import org.dashj.core.Transaction;
+import org.dashj.core.TransactionConfidence;
+import org.dashj.params.RegTestParams;
 
 public class ZeroConfCoinSelector extends DefaultCoinSelector {
 

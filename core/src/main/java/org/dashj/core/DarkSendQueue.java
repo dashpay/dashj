@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import org.darkcoinj.DarkSend;
 import org.darkcoinj.DarkSendSigner;
@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
-import static org.bitcoinj.core.Utils.uint32ToByteStreamLE;
+import static org.dashj.core.Utils.int64ToByteStreamLE;
+import static org.dashj.core.Utils.uint32ToByteStreamLE;
 
 public class DarkSendQueue extends Message implements Serializable {
 

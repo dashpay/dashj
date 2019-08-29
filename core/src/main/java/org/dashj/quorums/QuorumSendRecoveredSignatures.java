@@ -1,7 +1,7 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.EmptyMessage;
-import org.bitcoinj.core.NetworkParameters;
+import org.dashj.core.EmptyMessage;
+import org.dashj.core.NetworkParameters;
 
 /**
  * Created by Hash Engineering on 4/12/2019.

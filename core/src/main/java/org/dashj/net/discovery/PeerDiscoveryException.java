@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net.discovery;
+package org.dashj.net.discovery;
 
 public class PeerDiscoveryException extends Exception {
     private static final long serialVersionUID = -2863411151549391392L;

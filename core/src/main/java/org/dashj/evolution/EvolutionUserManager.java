@@ -1,12 +1,12 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
-import org.bitcoinj.evolution.listeners.EvolutionUserRemovedEventListener;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.evolution.listeners.EvolutionUserAddedEventListener;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.*;
+import org.dashj.core.listeners.TransactionReceivedInBlockListener;
+import org.dashj.evolution.listeners.EvolutionUserRemovedEventListener;
+import org.dashj.store.BlockStoreException;
+import org.dashj.evolution.listeners.EvolutionUserAddedEventListener;
+import org.dashj.utils.ListenerRegistration;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +20,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.evolution.SubTxTransition.EVO_TS_MAX_FEE;
-import static org.bitcoinj.evolution.SubTxTransition.EVO_TS_MIN_FEE;
+import static org.dashj.evolution.SubTxTransition.EVO_TS_MAX_FEE;
+import static org.dashj.evolution.SubTxTransition.EVO_TS_MIN_FEE;
 
 public class EvolutionUserManager extends AbstractManager implements TransactionReceivedInBlockListener {
 

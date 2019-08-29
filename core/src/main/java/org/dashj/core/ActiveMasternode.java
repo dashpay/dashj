@@ -1,15 +1,15 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.Threading;
+import org.dashj.params.MainNetParams;
+import org.dashj.store.BlockStoreException;
+import org.dashj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.Masternode.MASTERNODE_SENTINEL_MAX_SECONDS;
-import static org.bitcoinj.core.MasternodePing.MASTERNODE_MIN_MNP_SECONDS;
+import static org.dashj.core.Masternode.MASTERNODE_SENTINEL_MAX_SECONDS;
+import static org.dashj.core.MasternodePing.MASTERNODE_MIN_MNP_SECONDS;
 
 /**
  * Created by Hash Engineering on 2/22/2016.

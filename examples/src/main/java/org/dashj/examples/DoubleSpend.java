@@ -12,19 +12,19 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.examples;
+package org.dashj.examples;
 
-import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
-import org.bitcoinj.core.*;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.listeners.PreMessageReceivedEventListener;
+import org.dashj.core.*;
+import org.dashj.kits.WalletAppKit;
+import org.dashj.params.RegTestParams;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.Wallet;
 
 import java.io.File;
 
-import static org.bitcoinj.core.Coin.*;
+import static org.dashj.core.Coin.*;
 
 /**
  * This is a little test app that waits for a coin on a local regtest node, then  generates two transactions that double

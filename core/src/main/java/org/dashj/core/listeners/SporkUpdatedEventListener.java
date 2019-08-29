@@ -1,6 +1,6 @@
-package org.bitcoinj.core.listeners;
+package org.dashj.core.listeners;
 
-import org.bitcoinj.core.SporkMessage;
+import org.dashj.core.SporkMessage;
 
 public interface SporkUpdatedEventListener {
     void onSporkUpdated(SporkMessage sporkMessage);

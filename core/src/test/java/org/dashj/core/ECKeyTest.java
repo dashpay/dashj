@@ -15,25 +15,25 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.core.ECKey.ECDSASignature;
-import org.bitcoinj.crypto.EncryptedData;
-import org.bitcoinj.crypto.KeyCrypter;
-import org.bitcoinj.crypto.KeyCrypterScrypt;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.utils.BriefLogFormatter;
+import org.dashj.core.ECKey.ECDSASignature;
+import org.dashj.crypto.EncryptedData;
+import org.dashj.crypto.KeyCrypter;
+import org.dashj.crypto.KeyCrypterScrypt;
+import org.dashj.crypto.TransactionSignature;
+import org.dashj.params.MainNetParams;
+import org.dashj.params.TestNet3Params;
+import org.dashj.params.UnitTestParams;
+import org.dashj.utils.BriefLogFormatter;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.Protos.ScryptParameters;
+import org.dashj.wallet.Protos;
+import org.dashj.wallet.Protos.ScryptParameters;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -49,8 +49,8 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 
-import static org.bitcoinj.core.Utils.HEX;
-import static org.bitcoinj.core.Utils.reverseBytes;
+import static org.dashj.core.Utils.HEX;
+import static org.dashj.core.Utils.reverseBytes;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.*;
 

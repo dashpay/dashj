@@ -1,4 +1,4 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 /**
  * Created by Eric on 2/27/2016.

@@ -1,9 +1,9 @@
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
+import org.dashj.core.Address;
+import org.dashj.core.Coin;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

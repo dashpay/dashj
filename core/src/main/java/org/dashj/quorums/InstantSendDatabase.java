@@ -1,7 +1,7 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.TransactionOutPoint;
+import org.dashj.core.Sha256Hash;
+import org.dashj.core.TransactionOutPoint;
 
 import java.util.HashMap;
 

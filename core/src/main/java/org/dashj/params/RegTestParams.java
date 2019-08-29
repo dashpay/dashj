@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.params;
+package org.dashj.params;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.quorums.LLMQParameters;
+import org.dashj.core.Block;
+import org.dashj.quorums.LLMQParameters;
 
 import java.math.BigInteger;
 import java.util.HashMap;

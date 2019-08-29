@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net;
+package org.dashj.net;
 
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.Utils;
+import org.dashj.utils.Threading;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.MessageLite;

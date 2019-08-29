@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.listeners;
+package org.dashj.wallet.listeners;
 
-import org.bitcoinj.core.ECKey;
+import org.dashj.core.ECKey;
 
 import java.util.List;
 

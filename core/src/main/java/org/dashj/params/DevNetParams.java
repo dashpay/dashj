@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.params;
+package org.dashj.params;
 
 import com.google.common.base.Stopwatch;
-import org.bitcoinj.core.*;
-import org.bitcoinj.quorums.LLMQParameters;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
+import org.dashj.core.*;
+import org.dashj.quorums.LLMQParameters;
+import org.dashj.store.BlockStore;
+import org.dashj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +30,7 @@ import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
-import static org.bitcoinj.core.Utils.HEX;
+import static org.dashj.core.Utils.HEX;
 
 /**
  * Parameters for a named devnet, a separate instance of Dash that has relaxed rules suitable for development

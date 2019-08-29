@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Utils;
+import org.dashj.core.Block;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.ProtocolException;
+import org.dashj.core.Utils;
 
 import java.io.File;
 import java.io.FileInputStream;

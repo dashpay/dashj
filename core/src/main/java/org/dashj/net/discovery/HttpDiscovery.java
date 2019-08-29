@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net.discovery;
+package org.dashj.net.discovery;
 
 import com.google.common.annotations.*;
 import com.google.protobuf.*;
 import com.squareup.okhttp.*;
-import org.bitcoin.crawler.*;
-import org.bitcoinj.core.*;
+import org.dash.crawler.*;
+import org.dashj.core.*;
 import org.slf4j.*;
 
 import javax.annotation.*;

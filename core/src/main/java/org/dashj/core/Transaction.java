@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.evolution.*;
-import org.bitcoinj.quorums.FinalCommitmentTxPayload;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.script.ScriptOpCodes;
-import org.bitcoinj.signers.TransactionSigner;
-import org.bitcoinj.utils.ExchangeRate;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletTransaction.Pool;
+import org.dashj.core.TransactionConfidence.ConfidenceType;
+import org.dashj.crypto.TransactionSignature;
+import org.dashj.evolution.*;
+import org.dashj.quorums.FinalCommitmentTxPayload;
+import org.dashj.script.Script;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.script.ScriptOpCodes;
+import org.dashj.signers.TransactionSigner;
+import org.dashj.utils.ExchangeRate;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.WalletTransaction.Pool;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +40,7 @@ import javax.annotation.Nullable;
 import java.io.*;
 import java.util.*;
 
-import static org.bitcoinj.core.Utils.*;
+import static org.dashj.core.Utils.*;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import java.math.BigInteger;
@@ -914,7 +914,7 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * Same as {@link #addSignedInput(TransactionOutPoint, org.bitcoinj.script.Script, ECKey, org.bitcoinj.core.Transaction.SigHash, boolean)}
+     * Same as {@link #addSignedInput(TransactionOutPoint, org.dashj.script.Script, ECKey, org.dashj.core.Transaction.SigHash, boolean)}
      * but defaults to {@link SigHash#ALL} and "false" for the anyoneCanPay flag. This is normally what you want.
      */
     public TransactionInput addSignedInput(TransactionOutPoint prevOut, Script scriptPubKey, ECKey sigKey) throws ScriptException {
@@ -988,7 +988,7 @@ public class Transaction extends ChildMessage {
 
     /**
      * Calculates a signature that is valid for being inserted into the input at the given position. This is simply
-     * a wrapper around calling {@link Transaction#hashForSignature(int, byte[], org.bitcoinj.core.Transaction.SigHash, boolean)}
+     * a wrapper around calling {@link Transaction#hashForSignature(int, byte[], org.dashj.core.Transaction.SigHash, boolean)}
      * followed by {@link ECKey#sign(Sha256Hash)} and then returning a new {@link TransactionSignature}. The key
      * must be usable for signing as-is: if the key is encrypted it must be decrypted first external to this method.
      *
@@ -1008,7 +1008,7 @@ public class Transaction extends ChildMessage {
 
     /**
      * Calculates a signature that is valid for being inserted into the input at the given position. This is simply
-     * a wrapper around calling {@link Transaction#hashForSignature(int, byte[], org.bitcoinj.core.Transaction.SigHash, boolean)}
+     * a wrapper around calling {@link Transaction#hashForSignature(int, byte[], org.dashj.core.Transaction.SigHash, boolean)}
      * followed by {@link ECKey#sign(Sha256Hash)} and then returning a new {@link TransactionSignature}.
      *
      * @param inputIndex Which input to calculate the signature for, as an index.
@@ -1297,7 +1297,7 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * Returns the confidence object for this transaction from the {@link org.bitcoinj.core.TxConfidenceTable}
+     * Returns the confidence object for this transaction from the {@link org.dashj.core.TxConfidenceTable}
      * referenced by the implicit {@link Context}.
      */
     public TransactionConfidence getConfidence() {
@@ -1305,7 +1305,7 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * Returns the confidence object for this transaction from the {@link org.bitcoinj.core.TxConfidenceTable}
+     * Returns the confidence object for this transaction from the {@link org.dashj.core.TxConfidenceTable}
      * referenced by the given {@link Context}.
      */
     public TransactionConfidence getConfidence(Context context) {
@@ -1313,7 +1313,7 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * Returns the confidence object for this transaction from the {@link org.bitcoinj.core.TxConfidenceTable}
+     * Returns the confidence object for this transaction from the {@link org.dashj.core.TxConfidenceTable}
      */
     public TransactionConfidence getConfidence(TxConfidenceTable table) {
         if (confidence == null)

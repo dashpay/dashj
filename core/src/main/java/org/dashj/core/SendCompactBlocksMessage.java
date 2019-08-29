@@ -1,4 +1,4 @@
-package org.bitcoinj.core;
+package org.dashj.core;
 
 /**
  * Created by Hash Engineering on 06/26/2018.

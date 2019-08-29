@@ -15,32 +15,32 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.store;
+package org.dashj.store;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.core.Transaction.Purpose;
-import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
-import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.testing.FakeTxBuilder;
-import org.bitcoinj.testing.FooWalletExtension;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.DeterministicKeyChain;
-import org.bitcoinj.wallet.KeyChain;
+import org.dashj.core.*;
+import org.dashj.core.Transaction.Purpose;
+import org.dashj.core.TransactionConfidence.ConfidenceType;
+import org.dashj.crypto.DeterministicKey;
+import org.dashj.params.MainNetParams;
+import org.dashj.params.UnitTestParams;
+import org.dashj.script.ScriptBuilder;
+import org.dashj.testing.FakeTxBuilder;
+import org.dashj.testing.FooWalletExtension;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.utils.Threading;
+import org.dashj.wallet.DeterministicKeyChain;
+import org.dashj.wallet.KeyChain;
 import com.google.protobuf.ByteString;
 
-import org.bitcoinj.wallet.MarriedKeyChain;
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.UnreadableWalletException;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletExtension;
-import org.bitcoinj.wallet.WalletProtobufSerializer;
-import org.bitcoinj.wallet.WalletTransaction;
-import org.bitcoinj.wallet.WalletTransaction.Pool;
-import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.dashj.wallet.MarriedKeyChain;
+import org.dashj.wallet.Protos;
+import org.dashj.wallet.UnreadableWalletException;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.WalletExtension;
+import org.dashj.wallet.WalletProtobufSerializer;
+import org.dashj.wallet.WalletTransaction;
+import org.dashj.wallet.WalletTransaction.Pool;
+import org.dashj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -54,8 +54,8 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 
-import static org.bitcoinj.core.Coin.*;
-import static org.bitcoinj.testing.FakeTxBuilder.createFakeTx;
+import static org.dashj.core.Coin.*;
+import static org.dashj.testing.FakeTxBuilder.createFakeTx;
 import static org.junit.Assert.*;
 import static com.google.common.base.Preconditions.checkNotNull;
 

@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net.discovery;
+package org.dashj.net.discovery;
 
 import com.google.common.collect.Lists;
 import com.squareup.okhttp.OkHttpClient;
 
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.VersionMessage;
-import org.bitcoinj.net.discovery.HttpDiscovery;
-import org.bitcoinj.net.discovery.DnsDiscovery.DnsSeedDiscovery;
-import org.bitcoinj.utils.*;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.VersionMessage;
+import org.dashj.net.discovery.HttpDiscovery;
+import org.dashj.net.discovery.DnsDiscovery.DnsSeedDiscovery;
+import org.dashj.utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

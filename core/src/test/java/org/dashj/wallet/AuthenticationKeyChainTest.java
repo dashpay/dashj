@@ -1,9 +1,9 @@
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.KeyId;
-import org.bitcoinj.crypto.*;
-import org.bitcoinj.params.UnitTestParams;
+import org.dashj.core.Context;
+import org.dashj.core.KeyId;
+import org.dashj.crypto.*;
+import org.dashj.params.UnitTestParams;
 import org.dashj.bls.ExtendedPrivateKey;
 import org.dashj.bls.JNI;
 import org.dashj.bls.PrivateKey;

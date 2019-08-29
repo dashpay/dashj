@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net.discovery;
+package org.dashj.net.discovery;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.*;
+import org.dashj.core.*;
+import org.dashj.utils.*;
 
 import java.net.*;
 import java.util.*;

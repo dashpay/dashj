@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -28,8 +28,8 @@ import java.io.ObjectOutputStream;
 import java.util.Arrays;
 
 import org.junit.Test;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.TestNet3Params;
+import org.dashj.params.MainNetParams;
+import org.dashj.params.TestNet3Params;
 
 public class DumpedPrivateKeyTest {
 

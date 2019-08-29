@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.DefaultRiskAnalysis;
-import org.bitcoinj.wallet.KeyBag;
-import org.bitcoinj.wallet.RedeemData;
+import org.dashj.script.Script;
+import org.dashj.wallet.DefaultRiskAnalysis;
+import org.dashj.wallet.KeyBag;
+import org.dashj.wallet.RedeemData;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
@@ -306,7 +306,7 @@ public class TransactionInput extends ChildMessage {
 
     /**
      * Alias for getOutpoint().getConnectedRedeemData(keyBag)
-     * @see TransactionOutPoint#getConnectedRedeemData(org.bitcoinj.wallet.KeyBag)
+     * @see TransactionOutPoint#getConnectedRedeemData(org.dashj.wallet.KeyBag)
      */
     @Nullable
     public RedeemData getConnectedRedeemData(KeyBag keyBag) throws ScriptException {

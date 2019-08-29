@@ -1,9 +1,9 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.UnsafeByteArrayOutputStream;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.params.UnitTestParams;
+import org.dashj.core.Sha256Hash;
+import org.dashj.core.UnsafeByteArrayOutputStream;
+import org.dashj.core.Utils;
+import org.dashj.params.UnitTestParams;
 import org.junit.Test;
 
 import java.io.IOException;

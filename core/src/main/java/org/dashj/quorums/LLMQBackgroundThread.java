@@ -1,7 +1,7 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.Context;
-import org.bitcoinj.store.BlockStoreException;
+import org.dashj.core.Context;
+import org.dashj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

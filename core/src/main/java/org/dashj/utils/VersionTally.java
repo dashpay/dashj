@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
 import java.util.Stack;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.StoredBlock;
+import org.dashj.store.BlockStore;
+import org.dashj.store.BlockStoreException;
 
 /**
  * Caching counter for the block versions within a moving window. This class
  * is NOT thread safe (as if two threads are trying to use it concurrently,
  * there's risk of getting versions out of sequence).
  *
- * @see org.bitcoinj.core.NetworkParameters#getMajorityWindow()
- * @see org.bitcoinj.core.NetworkParameters#getMajorityEnforceBlockUpgrade()
- * @see org.bitcoinj.core.NetworkParameters#getMajorityRejectBlockOutdated()
+ * @see org.dashj.core.NetworkParameters#getMajorityWindow()
+ * @see org.dashj.core.NetworkParameters#getMajorityEnforceBlockUpgrade()
+ * @see org.dashj.core.NetworkParameters#getMajorityRejectBlockOutdated()
  */
 public class VersionTally {
     /**

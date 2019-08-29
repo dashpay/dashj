@@ -1,6 +1,6 @@
-package org.bitcoinj.quorums.listeners;
+package org.dashj.quorums.listeners;
 
-import org.bitcoinj.quorums.RecoveredSignature;
+import org.dashj.quorums.RecoveredSignature;
 
 public interface RecoveredSignatureListener {
 

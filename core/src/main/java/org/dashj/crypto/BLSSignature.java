@@ -1,9 +1,9 @@
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
 import com.google.common.base.Preconditions;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Sha256Hash;
+import org.dashj.core.NetworkParameters;
+import org.dashj.core.ProtocolException;
+import org.dashj.core.Sha256Hash;
 import org.dashj.bls.*;
 
 import java.util.ArrayList;

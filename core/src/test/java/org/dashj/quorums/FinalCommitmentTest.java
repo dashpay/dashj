@@ -1,8 +1,8 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.BLSPublicKey;
-import org.bitcoinj.params.UnitTestParams;
+import org.dashj.core.*;
+import org.dashj.crypto.BLSPublicKey;
+import org.dashj.params.UnitTestParams;
 import org.junit.Before;
 import org.junit.Test;
 

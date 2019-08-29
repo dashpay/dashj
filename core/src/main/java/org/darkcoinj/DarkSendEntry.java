@@ -1,6 +1,6 @@
 package org.darkcoinj;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 import java.util.ArrayList;
 

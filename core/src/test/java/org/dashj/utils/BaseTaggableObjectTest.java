@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
 import com.google.protobuf.ByteString;
 import org.junit.Before;

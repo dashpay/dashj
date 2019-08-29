@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
 /**
  * Indicates that the pre-HD random wallet is encrypted, so you should try the upgrade again after getting the

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet;
+package org.dashj.wallet;
 
-import org.bitcoinj.core.Transaction;
+import org.dashj.core.Transaction;
 
 import java.util.List;
 

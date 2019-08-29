@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.testing;
+package org.dashj.testing;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.MemoryBlockStore;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.Wallet;
+import org.dashj.core.*;
+import org.dashj.params.UnitTestParams;
+import org.dashj.store.BlockStore;
+import org.dashj.store.MemoryBlockStore;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.wallet.Wallet;
 
 import javax.annotation.Nullable;
 
-import static org.bitcoinj.testing.FakeTxBuilder.createFakeBlock;
-import static org.bitcoinj.testing.FakeTxBuilder.createFakeTx;
+import static org.dashj.testing.FakeTxBuilder.createFakeBlock;
+import static org.dashj.testing.FakeTxBuilder.createFakeTx;
 
 // TODO: This needs to be somewhat rewritten - the "sendMoneyToWallet" methods aren't sending via the block chain object
 

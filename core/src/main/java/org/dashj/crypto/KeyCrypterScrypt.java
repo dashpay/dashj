@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Stopwatch;
 import com.google.protobuf.ByteString;
 import com.lambdaworks.crypto.SCrypt;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.Protos.ScryptParameters;
-import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
+import org.dashj.core.Utils;
+import org.dashj.wallet.Protos;
+import org.dashj.wallet.Protos.ScryptParameters;
+import org.dashj.wallet.Protos.Wallet.EncryptionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.BufferedBlockCipher;

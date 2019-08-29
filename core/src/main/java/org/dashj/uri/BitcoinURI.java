@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.uri;
+package org.dashj.uri;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.params.AbstractBitcoinNetParams;
+import org.dashj.core.*;
+import org.dashj.params.AbstractBitcoinNetParams;
 
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
@@ -77,8 +77,8 @@ public class BitcoinURI {
     public static final String FIELD_INSTANTSEND = "is";
 
     /**
-     * URI for Bitcoin network. Use {@link org.bitcoinj.params.AbstractBitcoinNetParams#BITCOIN_SCHEME} if you specifically
-     * need Bitcoin, or use {@link org.bitcoinj.core.NetworkParameters#getUriScheme} to get the scheme
+     * URI for Bitcoin network. Use {@link org.dashj.params.AbstractBitcoinNetParams#BITCOIN_SCHEME} if you specifically
+     * need Bitcoin, or use {@link org.dashj.core.NetworkParameters#getUriScheme} to get the scheme
      * from network parameters.
      */
     @Deprecated

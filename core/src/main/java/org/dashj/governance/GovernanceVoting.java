@@ -1,10 +1,10 @@
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.bitcoinj.governance.GovernanceVote.VoteOutcome.*;
-import static org.bitcoinj.governance.GovernanceVote.VoteSignal.*;
+import static org.dashj.governance.GovernanceVote.VoteOutcome.*;
+import static org.dashj.governance.GovernanceVote.VoteSignal.*;
 
 public class GovernanceVoting {
     private static final Logger log = LoggerFactory.getLogger(GovernanceVoting.class);

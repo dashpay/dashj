@@ -1,7 +1,7 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.VerificationException;
+import org.dashj.core.Sha256Hash;
+import org.dashj.core.VerificationException;
 
 public class SpecialTxException {
 

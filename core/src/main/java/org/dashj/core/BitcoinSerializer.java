@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
-import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
-import org.bitcoinj.governance.GovernanceObject;
-import org.bitcoinj.governance.GovernanceSyncMessage;
-import org.bitcoinj.governance.GovernanceVote;
-import org.bitcoinj.quorums.ChainLockSignature;
-import org.bitcoinj.quorums.InstantSendLock;
-import org.bitcoinj.quorums.QuorumSendRecoveredSignatures;
+import org.dashj.evolution.GetSimplifiedMasternodeListDiff;
+import org.dashj.evolution.SimplifiedMasternodeListDiff;
+import org.dashj.governance.GovernanceObject;
+import org.dashj.governance.GovernanceSyncMessage;
+import org.dashj.governance.GovernanceVote;
+import org.dashj.quorums.ChainLockSignature;
+import org.dashj.quorums.InstantSendLock;
+import org.dashj.quorums.QuorumSendRecoveredSignatures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +35,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.bitcoinj.core.Utils.*;
+import static org.dashj.core.Utils.*;
 
 /**
  * <p>Methods to serialize and de-serialize messages to the Bitcoin network format as defined in

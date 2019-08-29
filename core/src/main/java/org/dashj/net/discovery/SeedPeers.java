@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net.discovery;
+package org.dashj.net.discovery;
 
-import org.bitcoinj.core.NetworkParameters;
+import org.dashj.core.NetworkParameters;
 
 import javax.annotation.Nullable;
 import java.net.InetAddress;

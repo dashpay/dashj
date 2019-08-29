@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.governance;
+package org.dashj.governance;
 
-import org.bitcoinj.core.PeerAddress;
-import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.utils.Threading;
+import org.dashj.core.PeerAddress;
+import org.dashj.core.PeerGroup;
+import org.dashj.core.Sha256Hash;
+import org.dashj.utils.Threading;
 
 import javax.annotation.Nullable;
 import java.lang.ref.Reference;

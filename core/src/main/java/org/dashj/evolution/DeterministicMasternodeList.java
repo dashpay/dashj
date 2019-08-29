@@ -1,8 +1,8 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
 import com.google.common.base.Preconditions;
-import org.bitcoinj.core.*;
-import org.bitcoinj.utils.Pair;
+import org.dashj.core.*;
+import org.dashj.utils.Pair;
 
 import java.io.IOException;
 import java.io.OutputStream;

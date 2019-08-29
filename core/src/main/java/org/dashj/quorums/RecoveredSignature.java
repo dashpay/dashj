@@ -1,8 +1,8 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.BLSLazySignature;
-import org.bitcoinj.crypto.BLSSignature;
+import org.dashj.core.*;
+import org.dashj.crypto.BLSLazySignature;
+import org.dashj.crypto.BLSSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,12 +1,12 @@
-package org.bitcoinj.quorums;
+package org.dashj.quorums;
 
 
 import com.google.common.collect.Lists;
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.BLSPublicKey;
-import org.bitcoinj.crypto.BLSSignature;
-import org.bitcoinj.evolution.Masternode;
-import org.bitcoinj.evolution.SpecialTxPayload;
+import org.dashj.core.*;
+import org.dashj.crypto.BLSPublicKey;
+import org.dashj.crypto.BLSSignature;
+import org.dashj.evolution.Masternode;
+import org.dashj.evolution.SpecialTxPayload;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core.listeners;
+package org.dashj.core.listeners;
 
-import org.bitcoinj.core.*;
+import org.dashj.core.*;
 
 /**
  * <p>Implementors can listen to events like blocks being downloaded/transactions being broadcast/connect/disconnects,
@@ -32,7 +32,7 @@ public interface PreMessageReceivedEventListener {
      * callback is passed as "m" to the next, forming a chain.</p>
      *
      * <p>Note that this will never be called if registered with any executor other than
-     * {@link org.bitcoinj.utils.Threading#SAME_THREAD}</p>
+     * {@link org.dashj.utils.Threading#SAME_THREAD}</p>
      */
     Message onPreMessageReceived(Peer peer, Message m);
 }

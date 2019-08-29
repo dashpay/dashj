@@ -1,6 +1,6 @@
-package org.bitcoinj.quorums.listeners;
+package org.dashj.quorums.listeners;
 
-import org.bitcoinj.core.StoredBlock;
+import org.dashj.core.StoredBlock;
 
 /**
  * The interface ChainLock listener.

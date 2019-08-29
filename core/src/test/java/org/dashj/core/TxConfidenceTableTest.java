@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.params.*;
-import org.bitcoinj.testing.*;
-import org.bitcoinj.utils.*;
+import org.dashj.params.*;
+import org.dashj.testing.*;
+import org.dashj.utils.*;
 import org.junit.*;
 
 import java.net.*;
 
-import static org.bitcoinj.core.Coin.*;
+import static org.dashj.core.Coin.*;
 import static org.junit.Assert.*;
 
 public class TxConfidenceTableTest {

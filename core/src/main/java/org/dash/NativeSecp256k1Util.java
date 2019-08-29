@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoin;
+package org.dash;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

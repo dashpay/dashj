@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.net.discovery;
+package org.dashj.net.discovery;
 
-import org.bitcoinj.params.MainNetParams;
+import org.dashj.params.MainNetParams;
 import org.junit.Ignore;
 import org.junit.Test;
 

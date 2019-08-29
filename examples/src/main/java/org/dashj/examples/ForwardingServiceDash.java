@@ -15,32 +15,32 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.examples;
+package org.dashj.examples;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.evolution.*;
-import org.bitcoinj.governance.GovernanceManager;
-import org.bitcoinj.governance.GovernanceObject;
-import org.bitcoinj.governance.GovernanceVoteBroadcast;
-import org.bitcoinj.kits.EvolutionWalletAppKit;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.masternode.owner.MasternodeControl;
-import org.bitcoinj.params.DevNetParams;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.store.FlatDB;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.DeterministicKeyChain;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.dashj.core.*;
+import org.dashj.crypto.ChildNumber;
+import org.dashj.crypto.KeyCrypterException;
+import org.dashj.evolution.*;
+import org.dashj.governance.GovernanceManager;
+import org.dashj.governance.GovernanceObject;
+import org.dashj.governance.GovernanceVoteBroadcast;
+import org.dashj.kits.EvolutionWalletAppKit;
+import org.dashj.kits.WalletAppKit;
+import org.dashj.masternode.owner.MasternodeControl;
+import org.dashj.params.DevNetParams;
+import org.dashj.params.MainNetParams;
+import org.dashj.params.RegTestParams;
+import org.dashj.params.TestNet3Params;
+import org.dashj.store.FlatDB;
+import org.dashj.utils.BriefLogFormatter;
+import org.dashj.wallet.DeterministicKeyChain;
+import org.dashj.wallet.Wallet;
+import org.dashj.wallet.SendRequest;
+import org.dashj.wallet.listeners.WalletCoinsReceivedEventListener;
 
 import java.io.File;
 import java.util.ArrayList;

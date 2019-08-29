@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Monetary;
+import org.dashj.core.Coin;
+import org.dashj.core.Monetary;
 
 import java.math.RoundingMode;
 import java.text.DecimalFormatSymbols;
@@ -424,7 +424,7 @@ public final class MonetaryFormat {
     }
 
     /**
-     * Parse a human readable coin value to a {@link org.bitcoinj.core.Coin} instance.
+     * Parse a human readable coin value to a {@link org.dashj.core.Coin} instance.
      * 
      * @throws NumberFormatException
      *             if the string cannot be parsed for some reason
@@ -434,7 +434,7 @@ public final class MonetaryFormat {
     }
 
     /**
-     * Parse a human readable fiat value to a {@link org.bitcoinj.utils.Fiat} instance.
+     * Parse a human readable fiat value to a {@link org.dashj.utils.Fiat} instance.
      * 
      * @throws NumberFormatException
      *             if the string cannot be parsed for some reason

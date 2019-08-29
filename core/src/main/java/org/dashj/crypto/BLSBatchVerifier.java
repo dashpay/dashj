@@ -1,8 +1,8 @@
-package org.bitcoinj.crypto;
+package org.dashj.crypto;
 
 
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.utils.Pair;
+import org.dashj.core.Sha256Hash;
+import org.dashj.utils.Pair;
 
 import java.util.*;
 

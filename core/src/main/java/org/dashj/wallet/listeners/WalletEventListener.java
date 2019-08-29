@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.listeners;
+package org.dashj.wallet.listeners;
 
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
+import org.dashj.core.listeners.TransactionConfidenceEventListener;
 
 /**
  * <p>Common interface for wallet changes and transactions.</p>

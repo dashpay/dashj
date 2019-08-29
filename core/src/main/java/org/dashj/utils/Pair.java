@@ -1,4 +1,4 @@
-package org.bitcoinj.utils;
+package org.dashj.utils;
 
 import java.util.Comparator;
 

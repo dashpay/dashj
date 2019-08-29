@@ -1,14 +1,14 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.BLSSecretKey;
-import org.bitcoinj.params.MainNetParams;
+import org.dashj.core.*;
+import org.dashj.crypto.BLSSecretKey;
+import org.dashj.params.MainNetParams;
 import static org.junit.Assert.*;
 
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.FlatDB;
-import org.bitcoinj.store.MemoryBlockStore;
+import org.dashj.params.TestNet3Params;
+import org.dashj.store.BlockStoreException;
+import org.dashj.store.FlatDB;
+import org.dashj.store.MemoryBlockStore;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;

@@ -12,11 +12,11 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.core;
+package org.dashj.core;
 
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.FullPrunedBlockStore;
-import org.bitcoinj.store.MemoryFullPrunedBlockStore;
+import org.dashj.store.BlockStoreException;
+import org.dashj.store.FullPrunedBlockStore;
+import org.dashj.store.MemoryFullPrunedBlockStore;
 
 /**
  * A MemoryStore implementation of the FullPrunedBlockStoreTest

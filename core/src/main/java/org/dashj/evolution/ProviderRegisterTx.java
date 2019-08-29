@@ -1,9 +1,9 @@
-package org.bitcoinj.evolution;
+package org.dashj.evolution;
 
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.BLSPublicKey;
-import org.bitcoinj.script.Script;
+import org.dashj.core.*;
+import org.dashj.crypto.BLSPublicKey;
+import org.dashj.script.Script;
 import org.json.JSONObject;
 import org.spongycastle.util.encoders.Base64;
 
