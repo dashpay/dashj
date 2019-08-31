@@ -111,9 +111,8 @@ public class BLSSignature extends BLSAbstractObject {
         try {
             return signatureImpl.Verify(hash.getBytes(), pubKey.publicKeyImpl);
         } catch (Exception x) {
-            log.error("verification error" + x.getMessage());
-            throw new RuntimeException(x);
-            //\return false;
+            log.error("signature verification error: ", x);
+            return false;
         }
     }
 
@@ -140,6 +139,7 @@ public class BLSSignature extends BLSAbstractObject {
         try {
             return signatureImpl.Verify(hashes2, pubKeyVec);
         } catch (Exception x) {
+            log.error("signature verification error: ", x);
             return false;
         }
     }
