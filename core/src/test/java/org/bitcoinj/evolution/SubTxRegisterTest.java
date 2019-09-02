@@ -92,7 +92,7 @@ public class SubTxRegisterTest {
         String inputPrivateKey = "cQv3B1Ww5GkTDEAmA4KaZ7buGXsoUKTBmLLc79PVM5J6qLQc4wqj";
         ECKey privateKey = DumpedPrivateKey.fromBase58(PARAMS, inputPrivateKey).getKey();
 
-        assertEquals(inputAddress, privateKey.toAddress(PARAMS));
+        assertEquals(inputAddress, Address.fromKey(PARAMS, privateKey));
 
         Address payloadAddress = Address.fromBase58(PARAMS, "yeAUXizK9bD6iuxaArDsh7XGX3Q75ZgE3Y");
         byte[] pubkeyHash = Utils.reverseBytes(Utils.HEX.decode("467d271aff54f66134ad7513bb7992a48cecbfc3"));
