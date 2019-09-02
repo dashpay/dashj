@@ -72,7 +72,6 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         port = defaultPort;
         addressHeader = CoinDefinition.testnetAddressHeader;
         p2shHeader = CoinDefinition.testnetp2shHeader;
-        acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
         dumpedPrivateKeyHeader = 239;
         genesisBlock.setTime(1417713337L);
         genesisBlock.setDifficultyTarget(0x207fffff);
