@@ -146,7 +146,7 @@ public class ProviderTests {
 
         ECKey inputPrivateKey0 = wallet.findKeyFromPubHash(Address.fromBase58(PARAMS, inputAddress0).getHash160());
 
-        String checkInputAddress0 = inputPrivateKey0.toAddress(PARAMS).toString();
+        String checkInputAddress0 = Address.fromKey(PARAMS, inputPrivateKey0).toString();
         assertEquals("Private key does not match input address", checkInputAddress0,inputAddress0);
 
         ECKey collateralKey = wallet.findKeyFromPubHash(Address.fromBase58(PARAMS, collateralAddress).getHash160());
@@ -234,13 +234,13 @@ public class ProviderTests {
         ECKey inputPrivateKey1 = wallet.findKeyFromPubHash(Address.fromBase58(PARAMS, inputAddress1).getHash160());
         ECKey inputPrivateKey2 = wallet.findKeyFromPubHash(Address.fromBase58(PARAMS, inputAddress2).getHash160());
 
-        String checkInputAddress0 = inputPrivateKey0.toAddress(PARAMS).toString();
+        String checkInputAddress0 = Address.fromKey(PARAMS, inputPrivateKey0).toString();
         assertEquals("Private key does not match input address", checkInputAddress0,inputAddress0);
 
-        String checkInputAddress1 = inputPrivateKey1.toAddress(PARAMS).toString();
+        String checkInputAddress1 = Address.fromKey(PARAMS, inputPrivateKey1).toString();
         assertEquals("Private key does not match input address", checkInputAddress1,inputAddress1);
 
-        String checkInputAddress2 = inputPrivateKey2.toAddress(PARAMS).toString();
+        String checkInputAddress2 = Address.fromKey(PARAMS, inputPrivateKey2).toString();
         assertEquals("Private key does not match input address", checkInputAddress2,inputAddress2);
 
         Transaction providerRegistrationTransactionFromMessage = new Transaction(PARAMS, hexData);
@@ -310,7 +310,7 @@ public class ProviderTests {
         String outputAddress0 = "yMysmZV5ftuBzuvDMHWn3tMpWg7BJownRE";
         Sha256Hash providerTransactionHash = Sha256Hash.wrap("fd39755edfe1eb9c200433eecc0ef9641bea3b86ec8e5658111c4bb89d09723a");
 
-        String checkInputAddress0 = inputPrivateKey0.toAddress(PARAMS).toString();
+        String checkInputAddress0 = Address.fromKey(PARAMS, inputPrivateKey0).toString();
         assertEquals(checkInputAddress0,inputAddress0);
 
 

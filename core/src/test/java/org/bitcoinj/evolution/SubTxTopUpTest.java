@@ -72,7 +72,7 @@ public class SubTxTopUpTest {
         String inputPrivateKey = "cNYPkC4hGoE11ieBr2GgwyUct8zY1HLi5S5K2LLPMewtQGJsbu9H";
         ECKey privateKey = DumpedPrivateKey.fromBase58(PARAMS, inputPrivateKey).getKey();
 
-        assertEquals(inputAddress, privateKey.toAddress(PARAMS));
+        assertEquals(inputAddress, Address.fromKey(PARAMS, privateKey));
 
         Transaction tx = new Transaction(PARAMS, txdata);
         SubTxTopup subtx = (SubTxTopup) tx.getExtraPayloadObject();

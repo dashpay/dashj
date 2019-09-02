@@ -70,7 +70,7 @@ public class SubTxResetKeyTest {
 
         ECKey payloadKey = DumpedPrivateKey.fromBase58(PARAMS,"cVxAzue29NemggDqJyUwMsZ7KJsm4y9ntoW5UeCaTfQdruH2BKQR").getKey();
         Address payloadAddress = Address.fromBase58(PARAMS, "yfguWspuwx7ceKthnqqDc8CiZGZGRN7eFp");
-        assertEquals("Payload key does not match input address", payloadAddress, payloadKey.toAddress(PARAMS));
+        assertEquals("Payload key does not match input address", payloadAddress, Address.fromKey(PARAMS, payloadKey).toString());
 
         ECKey replacementPayloadKey = DumpedPrivateKey.fromBase58(PARAMS,"cPG7GuByFnYkGvkrZqw8chGNfJYmKYnXt6TBjHruaApC42CPwwTE").getKey();
         Address replacementPayloadAddress = Address.fromBase58(PARAMS, "yiqFNxn9kbWEKj7B87aEnoyChBL8rMFymt");
@@ -100,7 +100,7 @@ public class SubTxResetKeyTest {
 
         ECKey payloadKey = DumpedPrivateKey.fromBase58(PARAMS,"cVxAzue29NemggDqJyUwMsZ7KJsm4y9ntoW5UeCaTfQdruH2BKQR").getKey();
         Address payloadAddress = Address.fromBase58(PARAMS, "yfguWspuwx7ceKthnqqDc8CiZGZGRN7eFp");
-        assertEquals("Payload key does not match input address", payloadAddress, payloadKey.toAddress(PARAMS));
+        assertEquals("Payload key does not match input address", payloadAddress, Address.fromKey(PARAMS, payloadKey).toString());
 
         ECKey replacementPayloadKey = DumpedPrivateKey.fromBase58(PARAMS,"cPG7GuByFnYkGvkrZqw8chGNfJYmKYnXt6TBjHruaApC42CPwwTE").getKey();
         Address replacementPayloadAddress = Address.fromBase58(PARAMS, "yiqFNxn9kbWEKj7B87aEnoyChBL8rMFymt");
