@@ -223,11 +223,10 @@ public class Address extends VersionedChecksummedBytes {
      * Check if a given address version is valid given the NetworkParameters.
      */
     private static boolean isAcceptableVersion(NetworkParameters params, int version) {
-        for (int v : params.getAcceptableAddressCodes()) {
-            if (version == v) {
-                return true;
-            }
-        }
+        if (version == params.getAddressHeader())
+            return true;
+        if (version == params.getP2SHHeader())
+            return true;
         return false;
     }
 
