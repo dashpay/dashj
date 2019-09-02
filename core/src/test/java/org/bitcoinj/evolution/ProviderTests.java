@@ -7,6 +7,7 @@ import org.bitcoinj.crypto.*;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.wallet.*;
 import org.dashj.bls.ExtendedPrivateKey;
 import org.dashj.bls.JNI;
@@ -284,7 +285,7 @@ public class ProviderTests {
         Script message = providerRegistrationTransactionFromMessage.getInput(0).getScriptSig();
         Script data = providerRegistrationTransaction.getInput(0).getScriptSig();
 
-        assertArrayEquals(message.getPubKey(), data.getPubKey());
+        assertArrayEquals(ScriptPattern.extractKeyFromPayToPubKey(message), ScriptPattern.extractKeyFromPayToPubKey(data));
 
         message.correctlySpends(providerRegistrationTransactionFromMessage, 0, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), Script.ALL_VERIFY_FLAGS);
 

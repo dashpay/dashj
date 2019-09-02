@@ -132,8 +132,8 @@ public class ProviderRegisterTx extends SpecialTxPayload {
         }
         return String.format("ProRegTx(version=%d, collateralOutpoint=%s, address=%s, operatorReward=%f, ownerAddress=%s, pubKeyOperator=%s, votingAddress=%s, scriptPayout=%s)",
                 version, collateralOutpoint.toStringShort(), address, (double)operatorReward / 100,
-                new Address(params, params.getAddressHeader(), keyIDOwner.getBytes()), pubkeyOperator,
-                new Address(params, params.getAddressHeader(), keyIDVoting.getBytes()), payee);
+                Address.fromPubKeyHash(params, keyIDOwner.getBytes()), pubkeyOperator,
+                Address.fromPubKeyHash(params, keyIDVoting.getBytes()), payee);
 
     }
 
@@ -155,8 +155,8 @@ public class ProviderRegisterTx extends SpecialTxPayload {
         result.append("collateralHash", collateralOutpoint.getHash());
         result.append("collateralIndex", (int)collateralOutpoint.getIndex());
         result.append("service", address.toString());
-        result.append("ownerAddress", new Address(params, params.getAddressHeader(), keyIDOwner.getBytes()));
-        result.append("votingAddress", new Address(params, params.getAddressHeader(), keyIDVoting.getBytes()));
+        result.append("ownerAddress", Address.fromPubKeyHash(params, keyIDOwner.getBytes()));
+        result.append("votingAddress", Address.fromPubKeyHash(params, keyIDVoting.getBytes()));
 
         try {
             Address destination = scriptPayout.getToAddress(params);
@@ -187,8 +187,8 @@ public class ProviderRegisterTx extends SpecialTxPayload {
 
         s.append(strPayout + "|");
         s.append(String.format("%d", operatorReward) + "|");
-        s.append(new Address(params, params.getAddressHeader(), keyIDOwner.getBytes()).toString() + "|");
-        s.append(new Address(params, params.getAddressHeader(), keyIDVoting.getBytes()).toString() + "|");
+        s.append(Address.fromPubKeyHash(params, keyIDOwner.getBytes()).toString() + "|");
+        s.append(Address.fromPubKeyHash(params, keyIDVoting.getBytes()).toString() + "|");
 
         // ... and also the full hash of the payload as a protection against malleability and replays
         s.append(Utils.HEX.encode(getHash().getBytes()));
