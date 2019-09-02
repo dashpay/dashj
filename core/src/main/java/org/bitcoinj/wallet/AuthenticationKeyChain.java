@@ -11,7 +11,7 @@ import java.util.Locale;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class AuthenticationKeyChain extends DeterministicKeyChain {
+public class AuthenticationKeyChain extends ExternalKeyChain {
 
     public enum KeyChainType {
         BLOCKCHAIN_USER,
@@ -58,8 +58,8 @@ public class AuthenticationKeyChain extends DeterministicKeyChain {
             }
 
             //TODO: do we need to look ahead here, even for one key?  Does anything get saved?
-            //List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
-            //basicKeyChain.importKeys(lookahead);
+            List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
+            basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<DeterministicKey>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
                 ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));

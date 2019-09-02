@@ -32,7 +32,7 @@ import java.util.List;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
-public class FriendKeyChain extends DeterministicKeyChain {
+public class FriendKeyChain extends ExternalKeyChain {
 
     private static final Logger log = LoggerFactory.getLogger(FriendKeyChain.class);
 
@@ -41,8 +41,7 @@ public class FriendKeyChain extends DeterministicKeyChain {
         SENDING_CHAIN,
     }
     KeyChainType type;
-    int currentIndex;
-    int issuedKeys;
+
 
     // m / 9' / 5' / 5' / 1' - Friend Key Chain root path
     public static final ImmutableList<ChildNumber> FRIEND_ROOT_PATH = ImmutableList.of(ChildNumber.NINE_HARDENED,
@@ -160,18 +159,6 @@ public class FriendKeyChain extends DeterministicKeyChain {
         return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, false))).build(), true);
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public int getIssuedExternalKeys() {
-        return currentIndex;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public int getIssuedInternalKeys() {
-        throw new UnsupportedOperationException("Contact key chains do not have internal keys");
-    }
-
     /**
      * Getter for property 'currentIndex'.
      *
@@ -189,83 +176,4 @@ public class FriendKeyChain extends DeterministicKeyChain {
         return getKey(currentIndex);
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public DeterministicKey markKeyAsUsed(DeterministicKey k) {
-        int numChildren = k.getChildNumber().i() + 1;
-
-        if (k.getParent() == getKeyByPath(getAccountPath())) {
-            if (issuedKeys < numChildren) {
-                issuedKeys = numChildren;
-                maybeLookAhead();
-            }
-        }
-        return k;
-    }
-
-    /**
-     * Pre-generate enough keys to reach the lookahead size. You can call this if you need to explicitly invoke
-     * the lookahead procedure, but it's normally unnecessary as it will be done automatically when needed.
-     */
-    public void maybeLookAhead() {
-        lock.lock();
-        try {
-            List<DeterministicKey> keys = maybeLookAhead(getKeyByPath(getAccountPath()), issuedKeys);
-            if (keys.isEmpty())
-                return;
-            keyLookaheadEpoch++;
-            // Batch add all keys at once so there's only one event listener invocation, as this will be listened to
-            // by the wallet and used to rebuild/broadcast the Bloom filter. That's expensive so we don't want to do
-            // it more often than necessary.
-            basicKeyChain.importKeys(keys);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    private List<DeterministicKey> maybeLookAhead(DeterministicKey parent, int issued) {
-        checkState(lock.isHeldByCurrentThread());
-        return maybeLookAhead(parent, issued, getLookaheadSize(), getLookaheadThreshold());
-    }
-
-    /**
-     * Pre-generate enough keys to reach the lookahead size, but only if there are more than the lookaheadThreshold to
-     * be generated, so that the Bloom filter does not have to be regenerated that often.
-     *
-     * The returned mutable list of keys must be inserted into the basic key chain.
-     */
-    private List<DeterministicKey> maybeLookAhead(DeterministicKey parent, int issued, int lookaheadSize, int lookaheadThreshold) {
-        checkState(lock.isHeldByCurrentThread());
-        final int numChildren = hierarchy.getNumChildren(parent.getPath());
-        final int needed = issued + lookaheadSize + lookaheadThreshold - numChildren;
-
-        if (needed <= lookaheadThreshold)
-            return new ArrayList<DeterministicKey>();
-
-        log.info("{} keys needed for {} = {} issued + {} lookahead size + {} lookahead threshold - {} num children",
-                needed, parent.getPathAsString(), issued, lookaheadSize, lookaheadThreshold, numChildren);
-
-        List<DeterministicKey> result  = new ArrayList<DeterministicKey>(needed);
-        final Stopwatch watch = Stopwatch.createStarted();
-        int nextChild = numChildren;
-        for (int i = 0; i < needed; i++) {
-            DeterministicKey key = HDKeyDerivation.deriveThisOrNextChildKey(parent, nextChild);
-            key = key.dropPrivateBytes();
-            hierarchy.putKey(key);
-            result.add(key);
-            nextChild = key.getChildNumber().num() + 1;
-        }
-        watch.stop();
-        log.info("Took {}", watch);
-        return result;
-    }
-
-    /**
-     * Setter for property 'issuedKeys'.
-     *
-     * @param issuedKeys Value to set for property 'issuedKeys'.
-     */
-    public void setIssuedKeys(int issuedKeys) {
-        this.issuedKeys = issuedKeys;
-    }
 }
