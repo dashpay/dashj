@@ -285,7 +285,7 @@ public class ProviderTests {
         Script message = providerRegistrationTransactionFromMessage.getInput(0).getScriptSig();
         Script data = providerRegistrationTransaction.getInput(0).getScriptSig();
 
-        assertArrayEquals(ScriptPattern.extractKeyFromPayToPubKey(message), ScriptPattern.extractKeyFromPayToPubKey(data));
+        assertArrayEquals(ScriptPattern.extractRecipientPubKeyFromCltvPaymentChannel(message), ScriptPattern.extractRecipientPubKeyFromCltvPaymentChannel(data));
 
         message.correctlySpends(providerRegistrationTransactionFromMessage, 0, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), Script.ALL_VERIFY_FLAGS);
 
