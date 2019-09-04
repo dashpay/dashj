@@ -99,7 +99,7 @@ public class DeterministicKeyChainTest {
         ECKey key1 = chain1.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         ECKey key2 = chain1.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
 
-        final Address address = Address.fromBase58(UNITTEST, "n2nHHRHs7TiZScTuVhZUkzZfTfVgGYwy6X");
+        final Address address = Address.fromBase58(UNITTEST, "yhamqZwDhh9yABWRCsDipdTUiHy2vn5fka");
         assertEquals(address, Address.fromKey(UNITTEST, key1));
         assertEquals("yTcXHJdvgDoKhd7S68WYGARWpVfzMuaQ85", Address.fromKey(UNITTEST, key2).toString());
         assertEquals(key1, chain1.findKeyFromPubHash(address.getHash160()));
