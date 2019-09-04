@@ -25,9 +25,9 @@ import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.FlatDB;
-import org.bitcoinj.store.MasternodeDB;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 
 import com.google.common.util.concurrent.FutureCallback;
@@ -153,9 +153,9 @@ public class ForwardingService {
         try {
             Coin value = tx.getValueSentToMe(kit.wallet());
             System.out.println("Forwarding " + value.toFriendlyString());
-            // Now send the coins back! Send with a small fee attached to ensure rapid confirmation.
-            final Coin amountToSend = value.subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE);
-            final Wallet.SendResult sendResult = kit.wallet().sendCoins(kit.peerGroup(), forwardingAddress, amountToSend);
+            // Now send the coins back! Empty the wallet to send all the coins.
+            SendRequest req = SendRequest.emptyWallet(forwardingAddress);
+            final Wallet.SendResult sendResult = kit.wallet().sendCoins(kit.peerGroup(), req);
             checkNotNull(sendResult);  // We should never try to send more coins than we have!
             System.out.println("Sending ...");
             // Register a callback that is invoked when the transaction has propagated across the network.
