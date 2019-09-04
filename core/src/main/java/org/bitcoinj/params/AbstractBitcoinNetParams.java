@@ -30,6 +30,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 
+import static com.google.common.base.Preconditions.checkState;
+
 /**
  * Parameters for Bitcoin-like networks.
  */
@@ -57,7 +59,13 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
      * @return If this is a difficulty transition point
      */
     protected boolean isDifficultyTransitionPoint(StoredBlock storedPrev) {
-        return ((storedPrev.getHeight() + 1) % this.getInterval()) == 0;
+        int height = storedPrev.getHeight();
+        return isDifficultyTransitionPoint(height);
+    }
+
+    protected boolean isDifficultyTransitionPoint(int height) {
+        return height >= powKGWHeight || height >= powDGWHeight ? true :
+                ((height + 1) % this.getInterval()) == 0;
     }
 
     @Override
@@ -131,10 +139,12 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
             if (cursor == null) {
                 // This should never happen. If it does, it means we are following an incorrect or busted chain.
                 throw new VerificationException(
-                        "Difficulty transition point but we did not find a way back to the genesis block.");
+                        "Difficulty transition point but we did not find a way back to the last transition point. Not found: " + hash);
             }
             hash = cursor.getHeader().getPrevBlockHash();
         }
+        checkState(cursor != null && isDifficultyTransitionPoint(cursor.getHeight() - 1),
+                "Didn't arrive at a transition point.");
         watch.stop();
         if (watch.elapsed(TimeUnit.MILLISECONDS) > 50)
             log.info("Difficulty transition traversal took {}", watch);
