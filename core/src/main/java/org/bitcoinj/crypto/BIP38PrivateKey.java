@@ -35,7 +35,7 @@ import static com.google.common.base.Preconditions.checkState;
  * Implementation of <a href="https://github.com/bitcoin/bips/blob/master/bip-0038.mediawiki">BIP 38</a>
  * passphrase-protected private keys. Currently, only decryption is supported.
  */
-public class BIP38PrivateKey extends VersionedChecksummedBytes {
+public class BIP38PrivateKey extends PrefixedChecksummedBytes {
     public final boolean ecMultiply;
     public final boolean compressed;
     public final boolean hasLotAndSequence;

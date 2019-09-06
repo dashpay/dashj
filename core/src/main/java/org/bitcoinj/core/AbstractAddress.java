@@ -30,7 +30,7 @@ import org.bitcoinj.script.Script.ScriptType;
  * form.
  * </p>
  */
-public abstract class AbstractAddress extends VersionedChecksummedBytes {
+public abstract class AbstractAddress extends PrefixedChecksummedBytes {
     public AbstractAddress(NetworkParameters params, byte[] bytes) {
         super(params, bytes);
     }
