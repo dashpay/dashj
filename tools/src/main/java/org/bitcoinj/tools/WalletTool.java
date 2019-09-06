@@ -1465,7 +1465,7 @@ public class WalletTool {
         } else {
             try {
                 Address address = Address.fromBase58(wallet.getParams(), addr);
-                key = wallet.findKeyFromPubHash(address.getHash160());
+                key = wallet.findKeyFromPubHash(address.getHash());
             } catch (AddressFormatException e) {
                 System.err.println(addr + " does not parse as a "+CoinDefinition.coinName +" address of the right network parameters.");
                 return;

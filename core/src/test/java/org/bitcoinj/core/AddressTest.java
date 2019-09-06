@@ -70,10 +70,10 @@ public class AddressTest {
     @Test
     public void decoding() throws Exception {
         Address a = Address.fromBase58(TESTNET, "yjSeawEuRUJDpr9FMmGx1oFtPrEjQG3vkg");
-        assertEquals("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc", Utils.HEX.encode(a.getHash160()));
+        assertEquals("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc", Utils.HEX.encode(a.getHash()));
 
         Address b = Address.fromBase58(MAINNET, "XhSqUwiG6PGjRCXD5sksyvRNE1ZV8jkaVC");
-        assertEquals("4a22c3c4cbb31e4d03b15550636762bda0baf85a", Utils.HEX.encode(b.getHash160()));
+        assertEquals("4a22c3c4cbb31e4d03b15550636762bda0baf85a", Utils.HEX.encode(b.getHash()));
     }
     @Test
     public void errorPaths() {

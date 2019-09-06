@@ -285,7 +285,7 @@ public class SporkManager {
     boolean setSporkAddress(String strAddress) {
         try {
             Address address = Address.fromBase58(context.getParams(), strAddress);
-            sporkPubKeyId = address.getHash160();
+            sporkPubKeyId = address.getHash();
         } catch (AddressFormatException x) {
             log.error("Failed to parse spork address");
             return false;

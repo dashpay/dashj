@@ -97,7 +97,7 @@ public class SubTxRegisterTest {
         Address payloadAddress = Address.fromBase58(PARAMS, "yeAUXizK9bD6iuxaArDsh7XGX3Q75ZgE3Y");
         byte[] pubkeyHash = Utils.reverseBytes(Utils.HEX.decode("467d271aff54f66134ad7513bb7992a48cecbfc3"));
 
-        assertArrayEquals("Payload key does not match input address", payloadAddress.getHash160(), pubkeyHash);
+        assertArrayEquals("Payload key does not match input address", payloadAddress.getHash(), pubkeyHash);
 
         Transaction tx = new Transaction(PARAMS, txdata);
         SubTxRegister subtx = new SubTxRegister(PARAMS, tx);
