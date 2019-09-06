@@ -186,12 +186,13 @@ public class Address extends AbstractAddress {
         return Base58.encodeChecked(getVersion(), bytes);
     }
 
-    /** The (big endian) 20 byte hash that is the core of a Bitcoin address. */
+    /** The (big endian) 20 byte hash that is the core of a Dash address. */
+    @Deprecated
     public byte[] getHash160() {
         return getHash();
     }
 
-    /** The (big endian) 20 byte hash that is the core of a Bitcoin address. */
+    /** The (big endian) 20 byte hash that is the core of a Dash address. */
     @Override
     public byte[] getHash() {
         return bytes;

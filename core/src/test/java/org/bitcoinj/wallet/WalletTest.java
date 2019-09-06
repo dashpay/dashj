@@ -1766,7 +1766,7 @@ public class WalletTest extends TestWithWallet {
         createMarriedWallet(2, 2);
         Address address = wallet.currentReceiveAddress();
 
-        assertTrue(wallet.getBloomFilter(0.001).contains(address.getHash160()));
+        assertTrue(wallet.getBloomFilter(0.001).contains(address.getHash()));
 
         Transaction t1 = createFakeTx(UNITTEST, CENT, address);
         TransactionOutPoint outPoint = new TransactionOutPoint(UNITTEST, 0, t1);
@@ -2931,7 +2931,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(THREE_CENTS.subtract(tx.getFee()), tx.getValueSentToMe(wallet));
         // TX sends to one of our addresses (for now we ignore married wallets).
         final Address toAddress = tx.getOutput(0).getScriptPubKey().getToAddress(UNITTEST);
-        final ECKey rotatingToKey = wallet.findKeyFromPubHash(toAddress.getHash160());
+        final ECKey rotatingToKey = wallet.findKeyFromPubHash(toAddress.getHash());
         assertNotNull(rotatingToKey);
         assertFalse(wallet.isKeyRotating(rotatingToKey));
         assertEquals(3, tx.getInputs().size());
@@ -2971,7 +2971,7 @@ public class WalletTest extends TestWithWallet {
         // Make a normal spend and check it's all ok.
         wallet.sendCoins(broadcaster, OTHER_ADDRESS, wallet.getBalance());
         tx = broadcaster.waitForTransaction();
-        assertArrayEquals(OTHER_ADDRESS.getHash160(), tx.getOutput(0).getScriptPubKey().getPubKeyHash());
+        assertArrayEquals(OTHER_ADDRESS.getHash(), tx.getOutput(0).getScriptPubKey().getPubKeyHash());
     }
 
     private Wallet roundTrip(Wallet wallet) throws UnreadableWalletException {
@@ -3038,7 +3038,7 @@ public class WalletTest extends TestWithWallet {
         List<Transaction> txns = wallet.doMaintenance(null, false).get();
         assertEquals(1, txns.size());
         Address output = txns.get(0).getOutput(0).getAddressFromP2PKHScript(UNITTEST);
-        ECKey usedKey = wallet.findKeyFromPubHash(output.getHash160());
+        ECKey usedKey = wallet.findKeyFromPubHash(output.getHash());
         assertEquals(goodKey.getCreationTimeSeconds(), usedKey.getCreationTimeSeconds());
         assertEquals(goodKey.getCreationTimeSeconds(), wallet.freshReceiveKey().getCreationTimeSeconds());
         assertEquals("yX9Y1xr9B9Wx8UXfj7ztvF65YuXaAWeAwu", Address.fromKey(UNITTEST, usedKey).toString());
