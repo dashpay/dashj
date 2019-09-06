@@ -60,11 +60,11 @@ public class AddressTest {
         // Test a testnet address.
         Address a = Address.fromPubKeyHash(TESTNET, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
         assertEquals("yjSeawEuRUJDpr9FMmGx1oFtPrEjQG3vkg", a.toString());
-        assertFalse(a.isP2SHAddress());
+        assertEquals(Script.ScriptType.P2PKH, a.getOutputScriptType());
 
         Address b = Address.fromPubKeyHash(MAINNET, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
         assertEquals("XhSqUwiG6PGjRCXD5sksyvRNE1ZV8jkaVC", b.toString());
-        assertFalse(b.isP2SHAddress());
+        assertEquals(Script.ScriptType.P2PKH, b.getOutputScriptType());
     }
     
     @Test
@@ -149,10 +149,11 @@ public class AddressTest {
         // Test that we can construct P2SH addresses
         Address mainNetP2SHAddress = Address.fromBase58(MAINNET, "7WJnm5FSpJttSr72bWWqFFZrXwB8ZzsK7b"); //2ac4b0b501117cc8119c5797b519538d4942e90e
         assertEquals(mainNetP2SHAddress.getVersion(), MAINNET.p2shHeader);
-        assertTrue(mainNetP2SHAddress.isP2SHAddress());
+        assertEquals(Script.ScriptType.P2SH, mainNetP2SHAddress.getOutputScriptType());
+
         Address testNetP2SHAddress = Address.fromBase58(TESTNET, "8gfggfujFTJDtRMtrkWBKHX4Uz6uufXNC2"); //18a0e827269b5211eb51a4af1b2fa69333efa722
         assertEquals(testNetP2SHAddress.getVersion(), TESTNET.p2shHeader);
-        assertTrue(testNetP2SHAddress.isP2SHAddress());
+        assertEquals(Script.ScriptType.P2SH, testNetP2SHAddress.getOutputScriptType());
 
         // Test that we can determine what network a P2SH address belongs to
         NetworkParameters mainNetParams = Address.getParametersFromAddress("7WJnm5FSpJttSr72bWWqFFZrXwB8ZzsK7b");

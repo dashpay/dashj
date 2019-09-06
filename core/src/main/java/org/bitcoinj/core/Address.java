@@ -186,7 +186,7 @@ public class Address extends AbstractAddress {
         return Base58.encodeChecked(getVersion(), bytes);
     }
 
-    /** The (big endian) 20 byte hash that is the core of a Dash address. */
+    /** @deprecated Use {@link #getHash()}. */
     @Deprecated
     public byte[] getHash160() {
         return getHash();
@@ -209,10 +209,8 @@ public class Address extends AbstractAddress {
         return p2sh ? ScriptType.P2SH : ScriptType.P2PKH;
     }
 
-    /**
-     * Returns true if this address is a Pay-To-Script-Hash (P2SH) address.
-     * See also https://github.com/bitcoin/bips/blob/master/bip-0013.mediawiki: Address Format for pay-to-script-hash
-     */
+    /** @deprecated Use {@link #getOutputScriptType()} */
+    @Deprecated
     public boolean isP2SHAddress() {
         return p2sh;
     }
