@@ -132,7 +132,7 @@ public class TransactionOutput extends ChildMessage {
     @Deprecated
     public Address getAddressFromP2SH(NetworkParameters params) throws ScriptException {
         if (ScriptPattern.isPayToScriptHash(getScriptPubKey()))
-            return Address.fromP2SHHash(params, ScriptPattern.extractHashFromPayToScriptHash(getScriptPubKey()));
+            return Address.fromScriptHash(params, ScriptPattern.extractHashFromPayToScriptHash(getScriptPubKey()));
         return null;
     }
 

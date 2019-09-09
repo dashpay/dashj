@@ -69,7 +69,7 @@ public class KeyId extends ChildMessage {
     }
 
     Address getAddress(NetworkParameters params) {
-        return Address.fromP2SHHash(params, bytes);
+        return Address.fromScriptHash(params, bytes);
     }
 
     @Override
