@@ -87,7 +87,7 @@ public class SPVBlockStoreTest {
 
     @Test
     public void twoStores_sequentially_grow() throws Exception {
-        Address to = LegacyAddress.fromKey(UNITTEST, new ECKey());
+        Address to = Address.fromKey(UNITTEST, new ECKey());
         SPVBlockStore store = new SPVBlockStore(UNITTEST, blockStoreFile, 10, true);
         final StoredBlock block0 = store.getChainHead();
         final StoredBlock block1 = block0.build(block0.getHeader().createNextBlock(to).cloneAsHeader());

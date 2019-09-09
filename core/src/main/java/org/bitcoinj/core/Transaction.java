@@ -178,11 +178,6 @@ public class Transaction extends ChildMessage {
 
     public static final int MAX_INPUTS_FOR_AUTO_IX = 4;
 
-    /**
-     * Max initial size of inputs and outputs ArrayList.
-     */
-    public static final int MAX_INITIAL_INPUTS_OUTPUTS_SIZE = 20;
-
     // These are bitcoin serialized.
     private long version;
     private ArrayList<TransactionInput> inputs;
