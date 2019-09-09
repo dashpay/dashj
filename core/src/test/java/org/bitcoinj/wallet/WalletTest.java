@@ -154,7 +154,7 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void basicSpendingToP2SH() throws Exception {
-        Address destination = Address.fromP2SHHash(UNITTEST, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
+        Address destination = Address.fromScriptHash(UNITTEST, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
         basicSpendingCommon(wallet, myAddress, destination, null);
     }
 

@@ -53,7 +53,7 @@ public class Address extends AbstractAddress {
 
     /**
      * Private constructor. Use {@link #fromBase58(NetworkParameters, String)},
-     * {@link #fromPubKeyHash(NetworkParameters, byte[])}, {@link #fromP2SHHash(NetworkParameters, byte[])} or
+     * {@link #fromPubKeyHash(NetworkParameters, byte[])}, {@link #fromScriptHash(NetworkParameters, byte[])} or
      * {@link #fromKey(NetworkParameters, ECKey)}.
      * 
      * @param params
@@ -108,9 +108,16 @@ public class Address extends AbstractAddress {
      *            P2SH script hash
      * @return constructed address
      */
-    public static Address fromP2SHHash(NetworkParameters params, byte[] hash160) throws AddressFormatException {
+    public static Address fromScriptHash(NetworkParameters params, byte[] hash160) throws AddressFormatException {
         return new Address(params, true, hash160);
     }
+
+    /** @deprecated use {@link #fromScriptHash(NetworkParameters, byte[])} */
+    @Deprecated
+    public static Address fromP2SHHash(NetworkParameters params, byte[] hash160) {
+        return fromScriptHash(params, hash160);
+    }
+
 
     /**
      * Constructs a {@link Address} that represents the script hash extracted from the given scriptPubKey.
