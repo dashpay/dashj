@@ -7,7 +7,7 @@ import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.utils.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.Base64;
 
 
 import java.io.IOException;

@@ -14,7 +14,7 @@ import org.dashj.bls.JNI;
 import org.dashj.bls.PrivateKey;
 import org.junit.Before;
 import org.junit.Test;
-import org.spongycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.Base64;
 
 import java.io.IOException;
 import java.net.InetAddress;
