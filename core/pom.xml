@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.dashj</groupId>
         <artifactId>dashj-parent</artifactId>
-        <version>0.16.3</version>
+        <version>0.17-SNAPSHOT</version>
     </parent>
 
     <artifactId>dashj-core</artifactId>
@@ -348,7 +348,7 @@
         <dependency>
             <groupId>org.dashj</groupId>
             <artifactId>dashj-bls</artifactId>
-            <version>0.16.3</version>
+            <version>0.17-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
