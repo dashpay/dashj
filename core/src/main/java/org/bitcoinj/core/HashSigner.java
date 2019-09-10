@@ -2,7 +2,7 @@ package org.bitcoinj.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.Base64;
 
 import java.security.SignatureException;
 import java.util.Arrays;

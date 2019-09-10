@@ -20,7 +20,7 @@ import org.bitcoinj.net.Dos;
 import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.Base64;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;

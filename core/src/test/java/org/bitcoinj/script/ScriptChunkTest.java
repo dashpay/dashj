@@ -28,7 +28,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Random;
 
 import org.junit.Test;
-import org.spongycastle.util.Arrays;
+import org.bouncycastle.util.Arrays;
 
 public class ScriptChunkTest {
 

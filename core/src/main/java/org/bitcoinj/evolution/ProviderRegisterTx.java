@@ -6,7 +6,7 @@ import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptException;
 import org.json.JSONObject;
-import org.spongycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.Base64;
 
 import java.io.IOException;
 import java.io.OutputStream;
