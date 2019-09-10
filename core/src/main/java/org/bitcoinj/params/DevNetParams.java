@@ -97,9 +97,9 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         budgetPaymentsCycleBlocks = 50;
         budgetPaymentsWindowBlocks = 10;
 
-        majorityEnforceBlockUpgrade = TestNet2Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
-        majorityRejectBlockOutdated = TestNet2Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
-        majorityWindow = TestNet2Params.TESTNET_MAJORITY_WINDOW;
+        majorityEnforceBlockUpgrade = TestNet3Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
+        majorityRejectBlockOutdated = TestNet3Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
+        majorityWindow = TestNet3Params.TESTNET_MAJORITY_WINDOW;
 
         DIP0001Window = DEVNET_MAJORITY_DIP0001_WINDOW;
         DIP0001Upgrade = DEVNET_MAJORITY_DIP0001_THRESHOLD;
