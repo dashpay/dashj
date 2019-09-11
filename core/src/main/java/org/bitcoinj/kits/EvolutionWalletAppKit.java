@@ -5,6 +5,7 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
@@ -32,9 +33,9 @@ public class EvolutionWalletAppKit extends WalletAppKit {
     protected Wallet createWallet() {
         KeyChainGroup kcg;
         if (restoreFromSeed != null)
-            kcg = new KeyChainGroup(params, restoreFromSeed, EVOLUTION_ACCOUNT_PATH);
+            kcg = KeyChainGroup.builder(params).addChain(DeterministicKeyChain.builder().seed(restoreFromSeed).accountPath(EVOLUTION_ACCOUNT_PATH).build()).build();
         else {
-            kcg = new KeyChainGroup(params, new DeterministicSeed(new SecureRandom(), DEFAULT_SEED_ENTROPY_BITS,""), EVOLUTION_ACCOUNT_PATH);
+            kcg = KeyChainGroup.builder(params).addChain(DeterministicKeyChain.builder().random(new SecureRandom(), DEFAULT_SEED_ENTROPY_BITS).passphrase("").accountPath(EVOLUTION_ACCOUNT_PATH).build()).build();
         }
 
         if (walletFactory != null) {
