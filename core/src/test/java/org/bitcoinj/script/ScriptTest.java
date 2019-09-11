@@ -440,7 +440,7 @@ public class ScriptTest {
         // pay to pubkey
         ECKey toKey = new ECKey();
         Address toAddress = Address.fromKey(TESTNET, toKey);
-        assertEquals(toAddress, ScriptBuilder.createOutputScript(toKey).getToAddress(TESTNET, true));
+        assertEquals(toAddress, ScriptBuilder.createP2PKHOutputScript(toKey).getToAddress(TESTNET, true));
         // pay to pubkey hash
         assertEquals(toAddress, ScriptBuilder.createOutputScript(toAddress).getToAddress(TESTNET, true));
         // pay to script hash
