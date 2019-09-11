@@ -1299,7 +1299,7 @@ public class Transaction extends ChildMessage {
 
     public void setVersion(long version) {
         this.version = version;
-        hash = null;
+        cachedTxId = null;
     }
 
     public void setVersionAndType(int versionShort, int type) {
@@ -1330,7 +1330,7 @@ public class Transaction extends ChildMessage {
 
     public void setType(int type) {
         version = versionFromLegacyVersion(version) | type << 16;
-        hash = null;
+        cachedTxId = null;
     }
 
     public void setType(Type type) {
