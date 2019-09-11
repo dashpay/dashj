@@ -66,7 +66,7 @@ public class ProviderTests {
         bip32.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         DeterministicKeyChain active = DeterministicKeyChain.builder().seed(seed).accountPath(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET).build();
 
-        KeyChainGroup group = new KeyChainGroup(PARAMS);
+        KeyChainGroup group = KeyChainGroup.builder(PARAMS).build();
         group.addAndActivateHDChain(bip32);
         group.addAndActivateHDChain(active);
         wallet = new Wallet(PARAMS, group);

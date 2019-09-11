@@ -428,9 +428,9 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
     protected Wallet createWallet() {
         KeyChainGroup kcg;
         if (restoreFromSeed != null)
-            kcg = new KeyChainGroup(params, restoreFromSeed);
+            kcg = KeyChainGroup.builder(params).fromSeed(restoreFromSeed).build();
         else
-            kcg = new KeyChainGroup(params);
+            kcg = KeyChainGroup.builder(params).build();
         if (walletFactory != null) {
             return walletFactory.create(params, kcg);
         } else {
