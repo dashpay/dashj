@@ -854,7 +854,7 @@ public class MasternodeManager extends AbstractManager {
             Script payee2;
 
             for (Map.Entry<TransactionOutPoint, Masternode> mn : mapMasternodes.entrySet()) {
-                payee2 = ScriptBuilder.createOutputScript(mn.getValue().info.pubKeyCollateralAddress.getECKey());
+                payee2 = ScriptBuilder.createP2PKHOutputScript(mn.getValue().info.pubKeyCollateralAddress.getECKey());
 
                 if (payee2 == payee)
                     return mn.getValue();
