@@ -100,6 +100,24 @@ public class Address extends AbstractAddress {
     }
 
     /**
+     * Construct an {@link Address} that represents the public part of the given {@link ECKey}.
+     *
+     * @param params
+     *            network this address is valid for
+     * @param key
+     *            only the public part is used
+     * @param outputScriptType
+     *            script type the address should use
+     * @return constructed address
+     */
+    public static Address fromKey(final NetworkParameters params, final ECKey key, final ScriptType outputScriptType) {
+        if (outputScriptType == Script.ScriptType.P2PKH)
+            return Address.fromKey(params, key);
+        else
+            throw new IllegalArgumentException(outputScriptType.toString());
+    }
+
+    /**
      * Construct a {@link Address} that represents the given P2SH script hash.
      * 
      * @param params
