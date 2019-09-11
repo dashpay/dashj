@@ -61,18 +61,18 @@ public class ProviderTests {
         txdata = Utils.HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff0502fa050105ffffffff02f4c21a3d0500000023210397181e4cc48fcba0e597bfb029d4cfc4473ae5772a0ff32223977d4e03e07fa9acf4c21a3d050000001976a91425e50daf158a83dfaacd1b77175900aa95a67d4188ac00000000260100fa050000aaaec8d6a8535a01bd844817dea1faed66f6c397b1dcaec5fe8c5af025023c35");
 
         DeterministicSeed seed = new DeterministicSeed(seedPhrase, null, "", 0);
-        DeterministicKeyChain bip32 = new DeterministicKeyChain(seed, DeterministicKeyChain.ACCOUNT_ZERO_PATH);
+        DeterministicKeyChain bip32 = DeterministicKeyChain.builder().seed(seed).accountPath(DeterministicKeyChain.ACCOUNT_ZERO_PATH).build();
         bip32.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         bip32.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
-        DeterministicKeyChain active = new DeterministicKeyChain(seed, DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET);
+        DeterministicKeyChain active = DeterministicKeyChain.builder().seed(seed).accountPath(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET).build();
 
         KeyChainGroup group = new KeyChainGroup(PARAMS);
         group.addAndActivateHDChain(bip32);
         group.addAndActivateHDChain(active);
         wallet = new Wallet(PARAMS, group);
 
-        voting = new DeterministicKeyChain(seed, DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET);
-        owner = new DeterministicKeyChain(seed, DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET);
+        voting = DeterministicKeyChain.builder().seed(seed).accountPath(DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET).build();
+        owner = DeterministicKeyChain.builder().seed(seed).accountPath(DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET).build();
 
         ownerKeyMaster = owner.getWatchingKey();//(ChildNumber.ZERO);
         ownerKey = HDKeyDerivation.deriveChildKey(ownerKeyMaster, ChildNumber.ZERO);
