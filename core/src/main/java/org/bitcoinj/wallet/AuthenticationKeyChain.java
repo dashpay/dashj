@@ -22,7 +22,7 @@ public class AuthenticationKeyChain extends DeterministicKeyChain {
     int issuedKeys;
 
     public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
-        super(seed, path);
+        super(seed, null, path);
     }
 
     public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path) {

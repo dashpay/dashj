@@ -5390,7 +5390,7 @@ public class Wallet extends BaseTaggableObject
             keyChainGroupLock.lock();
 
             if(!hasKeyChain(path))
-                keyChainGroup.addAndActivateHDChain(new DeterministicKeyChain(getKeyChainSeed(), path));
+                keyChainGroup.addAndActivateHDChain(DeterministicKeyChain.builder().seed(getKeyChainSeed()).accountPath(path).build());
         }
         finally {
             keyChainGroupLock.unlock();
