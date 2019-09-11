@@ -34,8 +34,7 @@ public class EvolutionWalletAppKit extends WalletAppKit {
         if (restoreFromSeed != null)
             kcg = new KeyChainGroup(params, restoreFromSeed, EVOLUTION_ACCOUNT_PATH);
         else {
-            kcg = new KeyChainGroup(params, new DeterministicSeed(new SecureRandom(), DEFAULT_SEED_ENTROPY_BITS,
-                    "", Utils.currentTimeSeconds()), EVOLUTION_ACCOUNT_PATH);
+            kcg = new KeyChainGroup(params, new DeterministicSeed(new SecureRandom(), DEFAULT_SEED_ENTROPY_BITS,""), EVOLUTION_ACCOUNT_PATH);
         }
 
         if (walletFactory != null) {
