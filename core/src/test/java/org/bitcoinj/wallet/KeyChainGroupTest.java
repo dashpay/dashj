@@ -51,7 +51,7 @@ public class KeyChainGroupTest {
     public void setup() {
         BriefLogFormatter.init();
         Utils.setMockClock();
-        group = KeyChainGroup.builder(MAINNET).lookaheadSize(LOOKAHEAD_SIZE).fromRandom(Script.ScriptType.P2PKH)
+        group = KeyChainGroup.builder(MAINNET).lookaheadSize(LOOKAHEAD_SIZE).fromRandom()
                 .build();
         group.getActiveKeyChain();  // Force create a chain.
 
@@ -295,7 +295,7 @@ public class KeyChainGroupTest {
 
     @Test
     public void encryptionWhilstEmpty() throws Exception {
-        group = KeyChainGroup.builder(MAINNET).lookaheadSize(5).fromRandom(Script.ScriptType.P2PKH).build();
+        group = KeyChainGroup.builder(MAINNET).lookaheadSize(5).fromRandom().build();
         KeyCrypterScrypt scrypt = new KeyCrypterScrypt(2);
         final KeyParameter aesKey = scrypt.deriveKey("password");
         group.encrypt(scrypt, aesKey);
@@ -448,7 +448,7 @@ public class KeyChainGroupTest {
     @Test
     public void serializeWatching() throws Exception {
         group = KeyChainGroup.builder(MAINNET).lookaheadSize(LOOKAHEAD_SIZE).addChain(DeterministicKeyChain.builder()
-                .watch(watchingAccountKey).outputScriptType(Script.ScriptType.P2PKH).build()).build();
+                .watch(watchingAccountKey).build()).build();
         group.freshKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         group.freshKey(KeyChain.KeyPurpose.CHANGE);
         group.getBloomFilterElementCount();  // Force lookahead.
@@ -485,7 +485,7 @@ public class KeyChainGroupTest {
         ECKey key1 = group.freshKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         final DeterministicSeed seed = checkNotNull(group.getActiveKeyChain().getSeed());
         KeyChainGroup group2 = KeyChainGroup.builder(MAINNET).lookaheadSize(5)
-                .addChain(DeterministicKeyChain.builder().seed(seed).outputScriptType(Script.ScriptType.P2PKH).build())
+                .addChain(DeterministicKeyChain.builder().seed(seed).build())
                 .build();
         ECKey key2 = group2.freshKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         assertEquals(key1, key2);
