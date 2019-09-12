@@ -60,19 +60,23 @@ public class KeyChainGroup implements KeyBag {
      */
     public static class Builder {
         private final NetworkParameters params;
+        private final KeyChainGroupStructure structure;
         private final List<DeterministicKeyChain> chains = new LinkedList<DeterministicKeyChain>();
         private int lookaheadSize = -1, lookaheadThreshold = -1;
 
-        private Builder(NetworkParameters params) {
+        private Builder(NetworkParameters params, KeyChainGroupStructure structure) {
             this.params = params;
+            this.structure = structure;
         }
 
         /**
          * Add chain from a random source.
+         * @param outputScriptType type of addresses (aka output scripts) to generate for receiving
          */
-        public Builder fromRandom() {
+        public Builder fromRandom(Script.ScriptType outputScriptType) {
             this.chains.clear();
-            DeterministicKeyChain chain = DeterministicKeyChain.builder().random(new SecureRandom()).build();
+            DeterministicKeyChain chain = DeterministicKeyChain.builder().random(new SecureRandom())
+                    .outputScriptType(outputScriptType).accountPath(structure.accountPathFor(outputScriptType)).build();
             this.chains.add(chain);
             return this;
         }
@@ -80,10 +84,12 @@ public class KeyChainGroup implements KeyBag {
         /**
          * Add chain from a given seed.
          * @param seed deterministic seed to derive all keys from
+         * @param outputScriptType type of addresses (aka output scripts) to generate for receiving
          */
-        public Builder fromSeed(DeterministicSeed seed) {
+        public Builder fromSeed(DeterministicSeed seed, Script.ScriptType outputScriptType) {
             this.chains.clear();
-            DeterministicKeyChain chain = DeterministicKeyChain.builder().seed(seed).build();
+            DeterministicKeyChain chain = DeterministicKeyChain.builder().seed(seed).outputScriptType(outputScriptType)
+                    .accountPath(structure.accountPathFor(outputScriptType)).build();
             this.chains.add(chain);
             return this;
         }
@@ -156,7 +162,11 @@ public class KeyChainGroup implements KeyBag {
     }
 
     public static KeyChainGroup.Builder builder(NetworkParameters params) {
-        return new Builder(params);
+        return new Builder(params, KeyChainGroupStructure.DEFAULT);
+    }
+
+    public static KeyChainGroup.Builder builder(NetworkParameters params, KeyChainGroupStructure structure) {
+        return new Builder(params, structure);
     }
 
     private KeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain,
@@ -264,6 +274,7 @@ public class KeyChainGroup implements KeyBag {
      */
     public Address currentAddress(KeyChain.KeyPurpose purpose) {
         DeterministicKeyChain chain = getActiveKeyChain();
+        Script.ScriptType outputScriptType = chain.getOutputScriptType();
         if (chain.isMarried()) {
             Address current = currentAddresses.get(purpose);
             if (current == null) {
@@ -271,8 +282,10 @@ public class KeyChainGroup implements KeyBag {
                 currentAddresses.put(purpose, current);
             }
             return current;
+        } else if (outputScriptType == Script.ScriptType.P2PKH) {
+            return Address.fromKey(params, currentKey(purpose), outputScriptType);
         } else {
-            return Address.fromKey(params, currentKey(purpose));
+            throw new IllegalStateException(chain.getOutputScriptType().toString());
         }
     }
 
@@ -318,6 +331,7 @@ public class KeyChainGroup implements KeyBag {
      */
     public Address freshAddress(KeyChain.KeyPurpose purpose) {
         DeterministicKeyChain chain = getActiveKeyChain();
+        Script.ScriptType outputScriptType = chain.getOutputScriptType();
         if (chain.isMarried()) {
             Script outputScript = chain.freshOutputScript(purpose);
             checkState(ScriptPattern.isPayToScriptHash(outputScript)); // Only handle P2SH for now
@@ -326,8 +340,10 @@ public class KeyChainGroup implements KeyBag {
             maybeLookaheadScripts();
             currentAddresses.put(purpose, freshAddress);
             return freshAddress;
+        } else if (outputScriptType == Script.ScriptType.P2PKH) {
+            return Address.fromKey(params, freshKey(purpose), outputScriptType);
         } else {
-            return Address.fromKey(params, freshKey(purpose));
+            throw new IllegalStateException(chain.getOutputScriptType().toString());
         }
     }
 
@@ -438,14 +454,20 @@ public class KeyChainGroup implements KeyBag {
 
     @Nullable
     @Override
-    public ECKey findKeyFromPubKeyHash(byte[] pubKeyHash) {
+    public ECKey findKeyFromPubKeyHash(byte[] pubKeyHash, @Nullable Script.ScriptType scriptType) {
         ECKey result;
+        // BasicKeyChain can mix output script types.
         if ((result = basic.findKeyFromPubHash(pubKeyHash)) != null)
             return result;
-        if (chains != null)
-            for (DeterministicKeyChain chain : chains)
+        if (chains != null) {
+            for (DeterministicKeyChain chain : chains) {
+                // This check limits DeterministicKeyChain to specific output script usage.
+                if (scriptType != null && scriptType != chain.getOutputScriptType())
+                    continue;
                 if ((result = chain.findKeyFromPubHash(pubKeyHash)) != null)
                     return result;
+            }
+        }
         return null;
     }
 

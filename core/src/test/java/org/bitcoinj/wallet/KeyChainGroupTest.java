@@ -21,8 +21,10 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.Script.ScriptType;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 
 import com.google.common.collect.ImmutableList;
@@ -44,6 +46,7 @@ public class KeyChainGroupTest {
     private static final int LOOKAHEAD_SIZE = 5;
     private static final NetworkParameters MAINNET = MainNetParams.get();
     private static final String XPUB = "xpub68KFnj3bqUx1s7mHejLDBPywCAKdJEu1b49uniEEn2WSbHmZ7xbLqFTjJbtx1LUcAt1DwhoqWHmo2s5WMJp6wi38CiF2hYD49qVViKVvAoi";
+    private static final byte[] ENTROPY = Sha256Hash.hash("don't use a string seed like this in real life".getBytes());
     private KeyChainGroup group;
     private DeterministicKey watchingAccountKey;
 
@@ -51,7 +54,7 @@ public class KeyChainGroupTest {
     public void setup() {
         BriefLogFormatter.init();
         Utils.setMockClock();
-        group = KeyChainGroup.builder(MAINNET).lookaheadSize(LOOKAHEAD_SIZE).fromRandom()
+        group = KeyChainGroup.builder(MAINNET).lookaheadSize(LOOKAHEAD_SIZE).fromRandom(Script.ScriptType.P2PKH)
                 .build();
         group.getActiveKeyChain();  // Force create a chain.
 
@@ -154,16 +157,16 @@ public class KeyChainGroupTest {
         assertEquals(a, result);
         result = group.findKeyFromPubKey(b.getPubKey());
         assertEquals(b, result);
-        result = group.findKeyFromPubKeyHash(a.getPubKeyHash());
+        result = group.findKeyFromPubKeyHash(a.getPubKeyHash(), null);
         assertEquals(a, result);
-        result = group.findKeyFromPubKeyHash(b.getPubKeyHash());
+        result = group.findKeyFromPubKeyHash(b.getPubKeyHash(), null);
         assertEquals(b, result);
         result = group.findKeyFromPubKey(c.getPubKey());
         assertEquals(c, result);
-        result = group.findKeyFromPubKeyHash(c.getPubKeyHash());
+        result = group.findKeyFromPubKeyHash(c.getPubKeyHash(), null);
         assertEquals(c, result);
         assertNull(group.findKeyFromPubKey(d.getPubKey()));
-        assertNull(group.findKeyFromPubKeyHash(d.getPubKeyHash()));
+        assertNull(group.findKeyFromPubKeyHash(d.getPubKeyHash(), null));
     }
 
     @Test
@@ -295,7 +298,7 @@ public class KeyChainGroupTest {
 
     @Test
     public void encryptionWhilstEmpty() throws Exception {
-        group = KeyChainGroup.builder(MAINNET).lookaheadSize(5).fromRandom().build();
+        group = KeyChainGroup.builder(MAINNET).lookaheadSize(5).fromRandom(Script.ScriptType.P2PKH).build();
         KeyCrypterScrypt scrypt = new KeyCrypterScrypt(2);
         final KeyParameter aesKey = scrypt.deriveKey("password");
         group.encrypt(scrypt, aesKey);
@@ -586,7 +589,7 @@ public class KeyChainGroupTest {
 
     @Test
     public void isNotWatching() {
-        group = KeyChainGroup.builder(MAINNET).fromRandom().build();
+        group = KeyChainGroup.builder(MAINNET).fromRandom(Script.ScriptType.P2PKH).build();
         final ECKey key = ECKey.fromPrivate(BigInteger.TEN);
         group.importKeys(key);
         assertFalse(group.isWatching());
@@ -597,7 +600,7 @@ public class KeyChainGroupTest {
         group = KeyChainGroup.builder(MAINNET)
                 .addChain(DeterministicKeyChain.builder().watch(DeterministicKey.deserializeB58(
                         "xpub69bjfJ91ikC5ghsqsVDHNq2dRGaV2HHVx7Y9LXi27LN9BWWAXPTQr4u8U3wAtap8bLdHdkqPpAcZmhMS5SnrMQC4ccaoBccFhh315P4UYzo",
-                        MAINNET)).build())
+                        MAINNET)).outputScriptType(Script.ScriptType.P2PKH).build())
                 .build();
         final ECKey watchingKey = ECKey.fromPublicOnly(new ECKey().getPubKeyPoint());
         group.importKeys(watchingKey);
@@ -615,7 +618,7 @@ public class KeyChainGroupTest {
         group = KeyChainGroup.builder(MAINNET)
                 .addChain(DeterministicKeyChain.builder().watch(DeterministicKey.deserializeB58(
                         "xpub69bjfJ91ikC5ghsqsVDHNq2dRGaV2HHVx7Y9LXi27LN9BWWAXPTQr4u8U3wAtap8bLdHdkqPpAcZmhMS5SnrMQC4ccaoBccFhh315P4UYzo",
-                        MAINNET)).build())
+                        MAINNET)).outputScriptType(Script.ScriptType.P2PKH).build())
                 .build();
         final ECKey key = ECKey.fromPrivate(BigInteger.TEN);
         group.importKeys(key);

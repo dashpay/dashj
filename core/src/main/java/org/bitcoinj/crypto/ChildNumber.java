@@ -37,8 +37,8 @@ public class ChildNumber implements Comparable<ChildNumber> {
     public static final int HARDENED_BIT = 0x80000000;
 
     public static final ChildNumber ZERO = new ChildNumber(0);
-    public static final ChildNumber ONE = new ChildNumber(1);
     public static final ChildNumber ZERO_HARDENED = new ChildNumber(0, true);
+    public static final ChildNumber ONE = new ChildNumber(1);
     public static final ChildNumber ONE_HARDENED = new ChildNumber(1, true);
     public static final ChildNumber FIVE_HARDENED = new ChildNumber(5, true);
 

@@ -24,6 +24,8 @@ import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.Script.ScriptType;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.script.ScriptPattern;
@@ -119,6 +121,7 @@ public class WalletTool {
     private static OptionSpec<Date> dateFlag;
     private static OptionSpec<Long> unixtimeFlag;
     private static OptionSpec<String> seedFlag, watchFlag;
+    private static OptionSpec<Script.ScriptType> outputScriptTypeFlag;
     private static OptionSpec<String> xpubkeysFlag;
 
     private static NetworkParameters params;
@@ -230,6 +233,7 @@ public class WalletTool {
         OptionSpec<String> walletFileName = parser.accepts("wallet").withRequiredArg().defaultsTo("wallet");
         seedFlag = parser.accepts("seed").withRequiredArg();
         watchFlag = parser.accepts("watchkey").withRequiredArg();
+        outputScriptTypeFlag = parser.accepts("output-script-type").withRequiredArg().ofType(Script.ScriptType.class);
         OptionSpec<NetworkEnum> netFlag = parser.accepts("net").withRequiredArg().ofType(NetworkEnum.class).defaultsTo(NetworkEnum.MAIN);
         dateFlag = parser.accepts("date").withRequiredArg().ofType(Date.class)
                 .withValuesConvertedBy(DateConverter.datePattern("yyyy/MM/dd"));
@@ -1309,6 +1313,7 @@ public class WalletTool {
             return;
         }
         long creationTimeSecs = getCreationTimeSeconds();
+        ScriptType outputScriptType = options.valueOf(outputScriptTypeFlag);
         if (creationTimeSecs == 0)
             creationTimeSecs = MnemonicCode.BIP39_STANDARDISATION_TIME_SECS;
         if (options.has(seedFlag)) {
@@ -1333,11 +1338,11 @@ public class WalletTool {
                 // not reached - all subclasses handled above
                 throw new RuntimeException(e);
             }
-            wallet = Wallet.fromSeed(params, seed);
+            wallet = Wallet.fromSeed(params, seed, outputScriptType);
         } else if (options.has(watchFlag)) {
             wallet = Wallet.fromWatchingKeyB58(params, options.valueOf(watchFlag), creationTimeSecs);
         } else {
-            wallet = new Wallet(params);
+            wallet = Wallet.createDeterministic(params, outputScriptType);
         }
         if (password != null)
             wallet.encrypt(password);
@@ -1459,7 +1464,7 @@ public class WalletTool {
             key = wallet.findKeyFromPubKey(HEX.decode(pubKey));
         } else {
             try {
-                Address address = Address.fromBase58(wallet.getParams(), addr);
+                Address address = Address.fromString(wallet.getParams(), addr);
                 key = wallet.findKeyFromAddress(address);
             } catch (AddressFormatException e) {
                 System.err.println(addr + " does not parse as a "+CoinDefinition.coinName +" address of the right network parameters.");
@@ -1478,8 +1483,8 @@ public class WalletTool {
     }
 
     private static void currentReceiveAddr() {
-        ECKey key = wallet.currentReceiveKey();
-        System.out.println(Address.fromKey(params, key) + " " + key);
+        Address address = wallet.currentReceiveAddress();
+        System.out.println(address);
     }
 
     private static void dumpWallet() throws BlockStoreException {

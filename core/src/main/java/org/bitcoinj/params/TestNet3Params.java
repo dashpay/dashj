@@ -73,6 +73,9 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
                 "testnet-seed.dashdot.io"
         };
 
+        bip32HeaderP2PKHpub = 0x043587cf; // The 4 byte header that serializes in base58 to "tpub".
+        bip32HeaderP2PKHpriv = 0x04358394; // The 4 byte header that serializes in base58 to "tprv"
+
         checkpoints.put(    261, Sha256Hash.wrap("00000c26026d0815a7e2ce4fa270775f61403c040647ff2c3091f99e894a4618"));
         checkpoints.put(   1999, Sha256Hash.wrap("00000052e538d27fa53693efe6fb6892a0c1d26c0235f599171c48a3cce553b1"));
         checkpoints.put(   2999, Sha256Hash.wrap("0000024bc3f4f4cb30d29827c13d921ad77d2c6072e586c7f60d83c2722cdcc5"));
@@ -114,8 +117,8 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
                 0x19ebef91,
                 0xf9cb3eb2
         };
-        bip32HeaderPub = 0x043587cf;
-        bip32HeaderPriv = 0x04358394 ;
+        bip32HeaderP2PKHpub = 0x043587cf;
+        bip32HeaderP2PKHpriv = 0x04358394;
 
         strSporkAddress = "yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55";
         budgetPaymentsStartBlock = 4100;

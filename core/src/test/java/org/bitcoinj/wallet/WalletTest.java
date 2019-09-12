@@ -61,6 +61,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
 
+import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
 import org.junit.After;
 import org.junit.Before;
@@ -179,10 +180,11 @@ public class WalletTest extends TestWithWallet {
     }
 
     @Test
-    public void encryptDecryptWalletWithArbitraryPath() throws Exception {
+    public void encryptDecryptWalletWithArbitraryPathAndScriptType() throws Exception {
         final byte[] ENTROPY = Sha256Hash.hash("don't use a string seed like this in real life".getBytes());
         KeyChainGroup keyChainGroup = KeyChainGroup.builder(UNITTEST)
                 .addChain(DeterministicKeyChain.builder().seed(new DeterministicSeed(ENTROPY, "", 1389353062L))
+                        .outputScriptType(Script.ScriptType.P2PKH)
                         .accountPath(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH).build())
                 .build();
         Wallet encryptedWallet = new Wallet(UNITTEST, keyChainGroup);
@@ -1619,7 +1621,8 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void isWatching() {
         assertFalse(wallet.isWatching());
-        Wallet watchingWallet = Wallet.fromWatchingKey(UNITTEST, wallet.getWatchingKey().dropPrivateBytes().dropParent());
+        Wallet watchingWallet = Wallet.fromWatchingKey(UNITTEST,
+                wallet.getWatchingKey().dropPrivateBytes().dropParent(), Script.ScriptType.P2PKH);
         assertTrue(watchingWallet.isWatching());
         wallet.encrypt(PASSWORD1);
         assertFalse(wallet.isWatching());
@@ -1631,7 +1634,8 @@ public class WalletTest extends TestWithWallet {
         String serialized = watchKey.serializePubB58(UNITTEST);
 
         // Construct watching wallet.
-        Wallet watchingWallet = Wallet.fromWatchingKey(UNITTEST, DeterministicKey.deserializeB58(null, serialized, UNITTEST));
+        Wallet watchingWallet = Wallet.fromWatchingKey(UNITTEST,
+                DeterministicKey.deserializeB58(null, serialized, UNITTEST), Script.ScriptType.P2PKH);
         DeterministicKey key2 = watchingWallet.freshReceiveKey();
         assertEquals(myKey, key2);
 
@@ -2955,7 +2959,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(THREE_CENTS.subtract(tx.getFee()), tx.getValueSentToMe(wallet));
         // TX sends to one of our addresses (for now we ignore married wallets).
         final Address toAddress = tx.getOutput(0).getScriptPubKey().getToAddress(UNITTEST);
-        final ECKey rotatingToKey = wallet.findKeyFromPubKeyHash(toAddress.getHash());
+        final ECKey rotatingToKey = wallet.findKeyFromPubKeyHash(toAddress.getHash(), toAddress.getOutputScriptType());
         assertNotNull(rotatingToKey);
         assertFalse(wallet.isKeyRotating(rotatingToKey));
         assertEquals(3, tx.getInputs().size());
@@ -2971,7 +2975,8 @@ public class WalletTest extends TestWithWallet {
         sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, CENT, Address.fromKey(UNITTEST, key1));
         wallet.doMaintenance(null, true);
         tx = broadcaster.waitForTransactionAndSucceed();
-        assertNotNull(wallet.findKeyFromPubKeyHash(tx.getOutput(0).getScriptPubKey().getPubKeyHash()));
+        assertNotNull(wallet.findKeyFromPubKeyHash(tx.getOutput(0).getScriptPubKey().getPubKeyHash(),
+                toAddress.getOutputScriptType()));
         log.info("Unexpected thing: {}", tx);
         assertEquals(Coin.valueOf(10000), tx.getFee());
         assertEquals(1, tx.getInputs().size());
@@ -3056,7 +3061,7 @@ public class WalletTest extends TestWithWallet {
         List<Transaction> txns = wallet.doMaintenance(null, false).get();
         assertEquals(1, txns.size());
         Address output = txns.get(0).getOutput(0).getScriptPubKey().getToAddress(UNITTEST);
-        ECKey usedKey = wallet.findKeyFromPubKeyHash(output.getHash());
+        ECKey usedKey = wallet.findKeyFromPubKeyHash(output.getHash(), output.getOutputScriptType());
         assertEquals(goodKey.getCreationTimeSeconds(), usedKey.getCreationTimeSeconds());
         assertEquals(goodKey.getCreationTimeSeconds(), wallet.freshReceiveKey().getCreationTimeSeconds());
         assertEquals("yX9Y1xr9B9Wx8UXfj7ztvF65YuXaAWeAwu", Address.fromKey(UNITTEST, usedKey).toString());
@@ -3130,7 +3135,8 @@ public class WalletTest extends TestWithWallet {
         // Delete the sigs
         for (TransactionInput input : req.tx.getInputs())
             input.clearScriptBytes();
-        Wallet watching = Wallet.fromWatchingKey(UNITTEST, wallet.getWatchingKey().dropParent().dropPrivateBytes());
+        Wallet watching = Wallet.fromWatchingKey(UNITTEST, wallet.getWatchingKey().dropParent().dropPrivateBytes(),
+                Script.ScriptType.P2PKH);
         watching.completeTx(SendRequest.forTx(req.tx));
     }
 
@@ -3535,5 +3541,27 @@ public class WalletTest extends TestWithWallet {
         // this will fail if tx4 does not get disconnected from tx1
         wallet = roundTrip(wallet);
         assertTrue(wallet.isConsistent());
+    }
+
+    @Test
+    public void scriptTypeKeyChainRestrictions() {
+        // Set up chains: basic chain, P2PKH deterministric chain, P2WPKH deterministic chain.
+        DeterministicKeyChain p2pkhChain = DeterministicKeyChain.builder().random(new SecureRandom())
+                .outputScriptType(Script.ScriptType.P2PKH).build();
+        KeyChainGroup kcg = KeyChainGroup.builder(UNITTEST).addChain(p2pkhChain).build();
+        Wallet wallet = new Wallet(UNITTEST, kcg);
+
+        // Set up one key from each chain.
+        ECKey importedKey = new ECKey();
+        wallet.importKey(importedKey);
+        ECKey p2pkhKey = p2pkhChain.getKey(KeyPurpose.RECEIVE_FUNDS);
+
+        // Test imported key: it's not limited to script type.
+        assertTrue(wallet.isAddressMine(Address.fromKey(UNITTEST, importedKey)));
+        assertEquals(importedKey, wallet.findKeyFromAddress(Address.fromKey(UNITTEST, importedKey)));
+
+        // Test key from P2PKH chain: it's limited to P2PKH addresses
+        assertTrue(wallet.isAddressMine(Address.fromKey(UNITTEST, p2pkhKey)));
+        assertEquals(p2pkhKey, wallet.findKeyFromAddress(Address.fromKey(UNITTEST, p2pkhKey)));
     }
 }

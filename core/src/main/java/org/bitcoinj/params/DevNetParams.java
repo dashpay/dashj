@@ -89,8 +89,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         checkpoints.put(    1, devnetGenesisBlock.getHash());
 
         addrSeeds = null;
-        bip32HeaderPub = 0x043587cf;
-        bip32HeaderPriv = 0x04358394;
+        bip32HeaderP2PKHpub = 0x043587cf;
+        bip32HeaderP2PKHpriv = 0x04358394;
 
         strSporkAddress = sporkAddress;
         budgetPaymentsStartBlock = 4100;
