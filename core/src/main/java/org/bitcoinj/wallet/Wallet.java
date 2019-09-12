@@ -474,11 +474,6 @@ public class Wallet extends BaseTaggableObject
         this.context = checkNotNull(context);
         this.params = checkNotNull(context.getParams());
         this.keyChainGroup = checkNotNull(keyChainGroup);
-        // If this keyChainGroup was created fresh just now (new wallet), make HD so a backup can be made immediately
-        // without having to call current/freshReceiveKey. If there are already keys in the chain of any kind then
-        // we're probably being deserialized so leave things alone: the API user can upgrade later.
-        if (this.keyChainGroup.isSupportsDeterministicChains() && this.keyChainGroup.numKeys() == 0)
-            this.keyChainGroup.createAndActivateNewHDChain();
         watchedScripts = Sets.newHashSet();
         unspent = new HashMap<>();
         spent = new HashMap<>();
