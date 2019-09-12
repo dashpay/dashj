@@ -145,14 +145,14 @@ public class ProviderTests {
         String payoutAddress = "yTb47qEBpNmgXvYYsHEN4nh8yJwa5iC4Cs";
 
 
-        ECKey inputPrivateKey0 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress0).getHash());
+        ECKey inputPrivateKey0 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress0).getHash(), Script.ScriptType.P2PKH);
 
         String checkInputAddress0 = Address.fromKey(PARAMS, inputPrivateKey0).toString();
         assertEquals("Private key does not match input address", checkInputAddress0,inputAddress0);
 
-        ECKey collateralKey = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, collateralAddress).getHash());
-        ECKey collateralAccount = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, collateralAddress).getHash());
-        ECKey inputPrivateKey = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress0).getHash());
+        ECKey collateralKey = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, collateralAddress).getHash(), Script.ScriptType.P2PKH);
+        ECKey collateralAccount = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, collateralAddress).getHash(), Script.ScriptType.P2PKH);
+        ECKey inputPrivateKey = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress0).getHash(), Script.ScriptType.P2PKH);
 
         assertEquals("Payload hash calculation has issues", proRegTx.inputsHash.toString(), "7ba273b835b1017da314a3363760835ff5ac20278c160604cb8773750b997734");
 
@@ -231,9 +231,9 @@ public class ProviderTests {
         String outputAddress0 = "yRPMHZKviaWgqPaNP7XURemxtf7EyXNN1k";
         String outputAddress1 = "yWcZ7ePLX3yLkC3Aj9KaZvxRQkkZC6VPL8";
         String payoutAddress = "yRPMHZKviaWgqPaNP7XURemxtf7EyXNN1k";
-        ECKey inputPrivateKey0 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress0).getHash());
-        ECKey inputPrivateKey1 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress1).getHash());
-        ECKey inputPrivateKey2 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress2).getHash());
+        ECKey inputPrivateKey0 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress0).getHash(), Script.ScriptType.P2PKH);
+        ECKey inputPrivateKey1 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress1).getHash(), Script.ScriptType.P2PKH);
+        ECKey inputPrivateKey2 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress2).getHash(), Script.ScriptType.P2PKH);
 
         String checkInputAddress0 = Address.fromKey(PARAMS, inputPrivateKey0).toString();
         assertEquals("Private key does not match input address", checkInputAddress0,inputAddress0);
@@ -307,7 +307,7 @@ public class ProviderTests {
 
         TransactionInput input0 = new TransactionInput(PARAMS, null, new byte[0], new TransactionOutPoint(PARAMS,1, Sha256Hash.wrap("e1b3617df4664b30ec6f2f827e32e864222afb7648e3b6696632363e68e63f8f")));
         String inputAddress0 = "yhmDZGmiwjCPJrTFFiBFZJw31PhvJFJAwq";
-        ECKey inputPrivateKey0 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress0).getHash());
+        ECKey inputPrivateKey0 = wallet.findKeyFromPubKeyHash(Address.fromBase58(PARAMS, inputAddress0).getHash(), Script.ScriptType.P2PKH);
         String outputAddress0 = "yMysmZV5ftuBzuvDMHWn3tMpWg7BJownRE";
         Sha256Hash providerTransactionHash = Sha256Hash.wrap("fd39755edfe1eb9c200433eecc0ef9641bea3b86ec8e5658111c4bb89d09723a");
 

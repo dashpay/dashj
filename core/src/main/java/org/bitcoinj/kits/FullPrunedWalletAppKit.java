@@ -31,6 +31,7 @@ import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.protocols.channels.StoredPaymentChannelClientStates;
 import org.bitcoinj.protocols.channels.StoredPaymentChannelServerStates;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.store.*;
 import org.bitcoinj.wallet.*;
 import org.slf4j.Logger;
@@ -428,7 +429,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
     protected Wallet createWallet() {
         KeyChainGroup kcg;
         if (restoreFromSeed != null)
-            kcg = KeyChainGroup.builder(params).fromSeed(restoreFromSeed).build();
+            kcg = KeyChainGroup.builder(params).fromSeed(restoreFromSeed, Script.ScriptType.P2PKH).build();
         else
             kcg = KeyChainGroup.builder(params).build();
         if (walletFactory != null) {

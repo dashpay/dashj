@@ -1,5 +1,6 @@
 /*
  * Copyright 2014 Kosta Korenkov
+ * Copyright 2019 Andreas Schildbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +81,7 @@ public class MissingSigResolutionSigner implements TransactionSigner {
                         }
                     }
                 }
-            } else {
+            } else if (ScriptPattern.isPayToPubKey(scriptPubKey) || ScriptPattern.isPayToPubKeyHash(scriptPubKey)) {
                 if (inputScript.getChunks().get(0).equalsOpCode(0)) {
                     if (missingSigsMode == Wallet.MissingSigsMode.THROW) {
                         throw new ECKey.MissingPrivateKeyException();
@@ -88,8 +89,9 @@ public class MissingSigResolutionSigner implements TransactionSigner {
                         txIn.setScriptSig(scriptPubKey.getScriptSigWithSignature(inputScript, dummySig, 0));
                     }
                 }
+            } else {
+                throw new IllegalStateException("cannot handle: " + scriptPubKey);
             }
-            // TODO handle non-P2SH multisig
         }
         return true;
     }

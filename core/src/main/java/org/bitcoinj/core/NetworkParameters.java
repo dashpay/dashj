@@ -90,8 +90,10 @@ public abstract class NetworkParameters {
     protected int interval;
     protected int targetTimespan;
     protected byte[] alertSigningKey;
-    protected int bip32HeaderPub;
-    protected int bip32HeaderPriv;
+    protected int bip32HeaderP2PKHpub;
+    protected int bip32HeaderP2PKHpriv;
+    protected int bip32HeaderP2WPKHpub;
+    protected int bip32HeaderP2WPKHpriv;
 
     /** Used to check majorities for block version upgrade */
     protected int majorityEnforceBlockUpgrade;
@@ -434,7 +436,7 @@ public abstract class NetworkParameters {
     }
 
     /**
-     * First byte of a base58 encoded address. See {@link LegacyAddress}. This is the same as acceptableAddressCodes[0] and
+     * First byte of a base58 encoded address. See {@link Address}. This is the same as acceptableAddressCodes[0] and
      * is the one used for "normal" addresses. Other types of address may be encountered with version codes found in
      * the acceptableAddressCodes array.
      */
@@ -493,16 +495,25 @@ public abstract class NetworkParameters {
         return alertSigningKey;
     }
 
-    /** Returns the 4 byte header for BIP32 (HD) wallet - public key part. */
-    public int getBip32HeaderPub() {
-        return bip32HeaderPub;
+    /** Returns the 4 byte header for BIP32 wallet P2PKH - public key part. */
+    public int getBip32HeaderP2PKHpub() {
+        return bip32HeaderP2PKHpub;
     }
 
-    /** Returns the 4 byte header for BIP32 (HD) wallet - private key part. */
-    public int getBip32HeaderPriv() {
-        return bip32HeaderPriv;
+    /** Returns the 4 byte header for BIP32 wallet P2PKH - private key part. */
+    public int getBip32HeaderP2PKHpriv() {
+        return bip32HeaderP2PKHpriv;
     }
 
+    /** Returns the 4 byte header for BIP32 wallet P2WPKH - public key part. */
+    public int getBip32HeaderP2WPKHpub() {
+        return bip32HeaderP2WPKHpub;
+    }
+
+    /** Returns the 4 byte header for BIP32 wallet P2WPKH - private key part. */
+    public int getBip32HeaderP2WPKHpriv() {
+        return bip32HeaderP2WPKHpriv;
+    }
     /**
      * Returns the number of coins that will be produced in total, on this
      * network. Where not applicable, a very large number of coins is returned

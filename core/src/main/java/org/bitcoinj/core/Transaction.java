@@ -928,17 +928,20 @@ public class Transaction extends ChildMessage {
                                            SigHash sigHash, boolean anyoneCanPay) throws ScriptException {
         // Verify the API user didn't try to do operations out of order.
         checkState(!outputs.isEmpty(), "Attempting to sign tx without outputs.");
-        TransactionInput input = new TransactionInput(params, this, new byte[]{}, prevOut);
+        TransactionInput input = new TransactionInput(params, this, new byte[] {}, prevOut);
         addInput(input);
-        Sha256Hash hash = hashForSignature(inputs.size() - 1, scriptPubKey, sigHash, anyoneCanPay);
-        ECKey.ECDSASignature ecSig = sigKey.sign(hash);
-        TransactionSignature txSig = new TransactionSignature(ecSig, sigHash, anyoneCanPay);
-        if (ScriptPattern.isPayToPubKey(scriptPubKey))
-            input.setScriptSig(ScriptBuilder.createInputScript(txSig));
-        else if (ScriptPattern.isPayToPubKeyHash(scriptPubKey))
-            input.setScriptSig(ScriptBuilder.createInputScript(txSig, sigKey));
-        else
+        int inputIndex = inputs.size() - 1;
+        if (ScriptPattern.isPayToPubKey(scriptPubKey)) {
+            TransactionSignature signature = calculateSignature(inputIndex, sigKey, scriptPubKey, sigHash,
+                    anyoneCanPay);
+            input.setScriptSig(ScriptBuilder.createInputScript(signature));
+        } else if (ScriptPattern.isPayToPubKeyHash(scriptPubKey)) {
+            TransactionSignature signature = calculateSignature(inputIndex, sigKey, scriptPubKey, sigHash,
+                    anyoneCanPay);
+            input.setScriptSig(ScriptBuilder.createInputScript(signature, sigKey));
+        } else {
             throw new ScriptException(ScriptError.SCRIPT_ERR_UNKNOWN_ERROR, "Don't know how to sign for this kind of scriptPubKey: " + scriptPubKey);
+        }
         return input;
     }
 

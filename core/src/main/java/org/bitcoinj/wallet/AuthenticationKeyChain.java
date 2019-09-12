@@ -2,6 +2,7 @@ package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.script.Script;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,11 +23,11 @@ public class AuthenticationKeyChain extends DeterministicKeyChain {
     int issuedKeys;
 
     public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
-        super(seed, null, path);
+        super(seed, null, Script.ScriptType.P2PKH, path);
     }
 
     public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path) {
-        super(seed, keyCrypter, path);
+        super(seed, keyCrypter, Script.ScriptType.P2PKH, path);
     }
 
     @Override

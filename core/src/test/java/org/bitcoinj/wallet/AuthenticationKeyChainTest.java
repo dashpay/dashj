@@ -4,6 +4,7 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.params.UnitTestParams;
+import org.bitcoinj.script.Script;
 import org.dashj.bls.ExtendedPrivateKey;
 import org.dashj.bls.JNI;
 import org.dashj.bls.PrivateKey;
@@ -54,19 +55,19 @@ public class AuthenticationKeyChainTest {
         context = new Context(PARAMS);
 
         seed = new DeterministicSeed(seedPhrase, null, "", 0);
-        DeterministicKeyChain bip32 = new DeterministicKeyChain(seed, null, DeterministicKeyChain.ACCOUNT_ZERO_PATH);
+        DeterministicKeyChain bip32 = new DeterministicKeyChain(seed, null, Script.ScriptType.P2PKH, DeterministicKeyChain.ACCOUNT_ZERO_PATH);
         bip32.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         bip32.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
-        DeterministicKeyChain active = new DeterministicKeyChain(seed, null, DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET);
+        DeterministicKeyChain active = new DeterministicKeyChain(seed, null,Script.ScriptType.P2PKH,  DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET);
 
         KeyChainGroup group = KeyChainGroup.builder(PARAMS).build();
         group.addAndActivateHDChain(bip32);
         group.addAndActivateHDChain(active);
         wallet = new Wallet(PARAMS, group);
 
-        voting = new DeterministicKeyChain(seed, null, DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET);
-        owner = new DeterministicKeyChain(seed, null, DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET);
-        bu = new DeterministicKeyChain(seed, null, DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET);
+        voting = new DeterministicKeyChain(seed, null, Script.ScriptType.P2PKH, DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET);
+        owner = new DeterministicKeyChain(seed, null, Script.ScriptType.P2PKH, DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET);
+        bu = new DeterministicKeyChain(seed, null, Script.ScriptType.P2PKH, DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET);
 
         ownerKeyMaster = owner.getWatchingKey();//(ChildNumber.ZERO);
         ownerKey = HDKeyDerivation.deriveChildKey(ownerKeyMaster, ChildNumber.ZERO);
