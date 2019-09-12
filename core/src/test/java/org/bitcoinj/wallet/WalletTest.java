@@ -3137,6 +3137,8 @@ public class WalletTest extends TestWithWallet {
             input.clearScriptBytes();
         Wallet watching = Wallet.fromWatchingKey(UNITTEST, wallet.getWatchingKey().dropParent().dropPrivateBytes(),
                 Script.ScriptType.P2PKH);
+        watching.freshReceiveKey(); // for some reason the watching wallet doesn't look ahead
+        watching.freshReceiveKey(); // for some reason the watching wallet doesn't look ahead
         watching.completeTx(SendRequest.forTx(req.tx));
     }
 
@@ -3278,7 +3280,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void keyEvents() throws Exception {
         // Check that we can register an event listener, generate some keys and the callbacks are invoked properly.
-        wallet = new Wallet(UNITTEST, KeyChainGroup.builder(UNITTEST).build());
+        wallet = new Wallet(UNITTEST, KeyChainGroup.builder(UNITTEST).addChain(DeterministicKeyChain.builder().random(new SecureRandom()).build()).build());
         final List<ECKey> keys = Lists.newLinkedList();
         wallet.addKeyChainEventListener(Threading.SAME_THREAD, new KeyChainEventListener() {
             @Override

@@ -69,17 +69,6 @@ public class KeyChainGroupTest {
         assertEquals(Script.ScriptType.P2PKH, address.getOutputScriptType());
     }
 
-    @Test
-    public void createDeterministic_P2WPKH() {
-        KeyChainGroup kcg = KeyChainGroup.builder(MAINNET).fromRandom(Script.ScriptType.P2WPKH).build();
-        // check default
-        Address address = kcg.currentAddress(KeyPurpose.RECEIVE_FUNDS);
-        assertEquals(Script.ScriptType.P2WPKH, address.getOutputScriptType());
-        // check fallback (this will go away at some point)
-        address = kcg.freshAddress(KeyPurpose.RECEIVE_FUNDS, Script.ScriptType.P2PKH, 0);
-        assertEquals(Script.ScriptType.P2PKH, address.getOutputScriptType());
-    }
-
     private KeyChainGroup createMarriedKeyChainGroup() {
         DeterministicKeyChain chain = createMarriedKeyChain();
         KeyChainGroup group = KeyChainGroup.builder(MAINNET).lookaheadSize(LOOKAHEAD_SIZE).addChain(chain).build();
