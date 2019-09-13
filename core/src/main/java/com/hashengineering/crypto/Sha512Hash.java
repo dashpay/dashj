@@ -137,7 +137,7 @@ public class Sha512Hash implements Serializable, Comparable {
         for (int i = 0; i < 32; i++){
             result[i] = bytes[i];
         }
-        return new Sha256Hash(result);
+        return Sha256Hash.wrap(result);
     }
 
     /*public Sha512Hash bitwiseAnd(Sha512Hash x)
