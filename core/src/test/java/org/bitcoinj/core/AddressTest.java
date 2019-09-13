@@ -217,15 +217,6 @@ public class AddressTest {
     }
 
     @Test
-    public void comparisonEqualTo() throws Exception {
-        Address a = Address.fromBase58(MAINNET, "XoVhYqRxPWkCw8WjZfiHPYsoR7g4Ny3x7K");
-        Address b = a.clone();
-
-        int result = a.compareTo(b);
-        assertEquals(0, result);
-    }
-
-    @Test
     public void comparisonLessThan() throws Exception {
         Address a = Address.fromBase58(MAINNET, "XoVhYqRxPWkCw8WjZfiHPYsoR7g4Ny3x7K");
         Address b = Address.fromBase58(MAINNET, "XpDe4AXdEf9NtW5ZBeGmuzy2VShg3qZMFQ");
