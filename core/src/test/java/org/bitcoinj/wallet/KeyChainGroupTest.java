@@ -508,18 +508,18 @@ public class KeyChainGroupTest {
         DeterministicKeyChain chain1 = DeterministicKeyChain.builder().seed(seed)
                 .accountPath(DeterministicKeyChain.ACCOUNT_ZERO_PATH).outputScriptType(Script.ScriptType.P2PKH).build();
         group = KeyChainGroup.builder(MAINNET).addChain(chain1).build();
-        assertEquals("1M5T5k9yKtGWRtWYMjQtGx3K2sshrABzCT", group.currentAddress(KeyPurpose.RECEIVE_FUNDS).toString());
+        assertEquals("XvmHuzosHbV6aq78Dcj78Uj6sDTPstxrqU", group.currentAddress(KeyPurpose.RECEIVE_FUNDS).toString());
 
         final DeterministicKeyChain chain2 = DeterministicKeyChain.builder().seed(seed)
                 .accountPath(DeterministicKeyChain.ACCOUNT_ONE_PATH).outputScriptType(Script.ScriptType.P2PKH).build();
         group.addAndActivateHDChain(chain2);
-        assertEquals("1JLnjJEXcyByAaW6sqSxNvGiiSEWRhdvPb", group.currentAddress(KeyPurpose.RECEIVE_FUNDS).toString());
+        assertEquals("Xt2dZYtRagQZKX6gjimBESxWYmpCQWTgR3", group.currentAddress(KeyPurpose.RECEIVE_FUNDS).toString());
 
         final DeterministicKeyChain chain3 = DeterministicKeyChain.builder().seed(seed)
-                .accountPath(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH).outputScriptType(Script.ScriptType.P2WPKH)
+                .accountPath(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH).outputScriptType(Script.ScriptType.P2PKH)
                 .build();
         group.addAndActivateHDChain(chain3);
-        assertEquals("bc1q5fa84aghxd6uzk5g2ywkppmzlut5d77vg8cd20",
+        assertEquals("XmaJ4TMovJGiRDzH3ZV6qJF3oB4k1E38TZ",
                 group.currentAddress(KeyPurpose.RECEIVE_FUNDS).toString());
     }
 
