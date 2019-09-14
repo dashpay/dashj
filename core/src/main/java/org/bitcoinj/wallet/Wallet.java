@@ -4996,7 +4996,7 @@ public class Wallet extends BaseTaggableObject
     // Returns true if the output is one that won't be selected by a data element matching in the scriptSig.
     private boolean isTxOutputBloomFilterable(TransactionOutput out) {
         Script script = out.getScriptPubKey();
-        boolean isScriptTypeSupported = ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script);
+        boolean isScriptTypeSupported = ScriptPattern.isP2PK(script) || ScriptPattern.isP2SH(script);
         return (isScriptTypeSupported && myUnspents.contains(out)) || watchedScripts.contains(script);
     }
 
