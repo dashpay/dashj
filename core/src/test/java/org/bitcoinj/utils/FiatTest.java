@@ -103,8 +103,8 @@ public class FiatTest {
     @Test
     public void testValueFetching() {
         Fiat fiat = parseFiat("USD", "666");
-        assertEquals(6660000, fiat.longValue());
-        assertEquals("6660000", fiat.toString());
+        assertEquals(66600000000L, fiat.longValue());
+        assertEquals("66600000000", fiat.toString());
     }
 
     @Test
@@ -113,28 +113,28 @@ public class FiatTest {
         Fiat fiatB = parseFiat("USD", "2");
 
         Fiat sumResult = fiatA.add(fiatB);
-        assertEquals(6680000, sumResult.getValue());
+        assertEquals(66800000000L, sumResult.getValue());
         assertEquals("USD", sumResult.getCurrencyCode());
 
         Fiat subResult = fiatA.subtract(fiatB);
-        assertEquals(6640000, subResult.getValue());
+        assertEquals(66400000000L, subResult.getValue());
         assertEquals("USD", subResult.getCurrencyCode());
 
         Fiat divResult = fiatA.divide(2);
-        assertEquals(3330000, divResult.getValue());
+        assertEquals(33300000000L, divResult.getValue());
         assertEquals("USD", divResult.getCurrencyCode());
 
         long ldivResult = fiatA.divide(fiatB);
         assertEquals(333, ldivResult);
 
         Fiat mulResult = fiatA.multiply(2);
-        assertEquals(13320000, mulResult.getValue());
+        assertEquals(133200000000L, mulResult.getValue());
 
         Fiat[] fiats = fiatA.divideAndRemainder(3);
         assertEquals(2, fiats.length);
 
         Fiat fiat1 = fiats[0];
-        assertEquals(2220000, fiat1.getValue());
+        assertEquals(22200000000L, fiat1.getValue());
         assertEquals("USD", fiat1.getCurrencyCode());
 
         Fiat fiat2 = fiats[1];
