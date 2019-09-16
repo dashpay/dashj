@@ -34,6 +34,7 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.params.UnitTestParams;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.base.Stopwatch;
@@ -126,6 +127,7 @@ public class SPVBlockStoreTest {
     }
 
     @Test
+    @Ignore
     public void performanceTest() throws BlockStoreException {
         // On slow machines, this test could fail. Then either add @Ignore or adapt the threshold and please report to
         // us.
