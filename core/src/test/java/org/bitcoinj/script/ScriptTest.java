@@ -446,7 +446,7 @@ public class ScriptTest {
         // pay to script hash
         Script p2shScript = ScriptBuilder.createP2SHOutputScript(new byte[20]);
         Address scriptAddress = Address.fromScriptHash(TESTNET,
-                ScriptPattern.extractHashFromP2PKH(p2shScript));
+                ScriptPattern.extractHashFromP2SH(p2shScript));
         assertEquals(scriptAddress, p2shScript.getToAddress(TESTNET, true));
     }
 
