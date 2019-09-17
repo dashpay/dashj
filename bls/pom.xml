@@ -261,7 +261,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Coveralls is a online code coverage tool, you can track code coverage here: https://coveralls.io/r/bitcoinj/bitcoinj -->
+            <!-- Coveralls is a online code coverage tool, you can track code coverage here: https://coveralls.io/r/dashevo/dashj -->
             <plugin>
                 <groupId>org.eluder.coveralls</groupId>
                 <artifactId>coveralls-maven-plugin</artifactId>
