@@ -377,7 +377,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     PeerDisconnectedEventListener peerDisconnectedEventListener = new PeerDisconnectedEventListener() {
         @Override
         public void onPeerDisconnected(Peer peer, int peerCount) {
-            log.info("Peer disconnected: " + peer.toString());
+            log.info("Peer disconnected: " + peer.getAddress());
             if(downloadPeer == peer) {
                 downloadPeer = null;
                 chooseRandomDownloadPeer();
