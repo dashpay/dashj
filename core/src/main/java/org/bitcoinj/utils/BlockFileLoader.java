@@ -34,14 +34,14 @@ import java.util.Locale;
 import java.util.NoSuchElementException;
 
 /**
- * <p>This class reads block files stored in the Bitcoin Core format. This is simply a way to concatenate
+ * <p>This class reads block files stored in the Dash Core format. This is simply a way to concatenate
  * blocks together. Importing block data with this tool can be a lot faster than syncing over the network, if you
  * have the files available.</p>
  * 
  * <p>In order to comply with {@link Iterator}, this class swallows a lot of {@link IOException}s, which may result in a few
  * blocks being missed followed by a huge set of orphan blocks.</p>
  * 
- * <p>To blindly import all files which can be found in Bitcoin Core (version 0.8 or higher) datadir automatically,
+ * <p>To blindly import all files which can be found in Dash Core (version 0.8 or higher) datadir automatically,
  * try this code fragment:
  * {@code
  * BlockFileLoader loader = new BlockFileLoader(BlockFileLoader.getReferenceClientBlockFileList());
@@ -52,7 +52,7 @@ import java.util.NoSuchElementException;
  */
 public class BlockFileLoader implements Iterable<Block>, Iterator<Block> {
     /**
-     * Gets the list of files which contain blocks from Bitcoin Core.
+     * Gets the list of files which contain blocks from Dash Core.
      */
     public static List<File> getReferenceClientBlockFileList(File blocksDir) {
         checkArgument(blocksDir.isDirectory(), "%s is not a directory", blocksDir);

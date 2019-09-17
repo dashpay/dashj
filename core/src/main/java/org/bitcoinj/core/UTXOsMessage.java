@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * <p>Message representing a list of unspent transaction outputs ("utxos"), returned in response to sending a
  * {@link GetUTXOsMessage} ("getutxos"). Note that both this message and the query that generates it are not
- * supported by Bitcoin Core. An implementation is available in <a href="https://github.com/bitcoinxt/bitcoinxt">Bitcoin XT</a>,
+ * supported by Dash Core. An implementation is available in <a href="https://github.com/bitcoinxt/bitcoinxt">Bitcoin XT</a>,
  * a patch set on top of Core. Thus if you want to use it, you must find some XT peers to connect to. This can be done
  * using a {@link HttpDiscovery} class combined with an HTTP/Cartographer seed.</p>
  *

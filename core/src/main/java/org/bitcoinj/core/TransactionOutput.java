@@ -198,8 +198,8 @@ public class TransactionOutput extends ChildMessage {
     }
 
     /**
-     * <p>Gets the minimum value for a txout of this size to be considered non-dust by Bitcoin Core
-     * (and thus relayed). See: CTxOut::IsDust() in Bitcoin Core. The assumption is that any output that would
+     * <p>Gets the minimum value for a txout of this size to be considered non-dust by Dash Core
+     * (and thus relayed). See: CTxOut::IsDust() in Dash Core. The assumption is that any output that would
      * consume more than a third of its value in fees is not something the Bitcoin system wants to deal with right now,
      * so we call them "dust outputs" and they're made non standard. The choice of one third is somewhat arbitrary and
      * may change in future.</p>
@@ -207,12 +207,12 @@ public class TransactionOutput extends ChildMessage {
      * <p>You probably should use {@link TransactionOutput#getMinNonDustValue()} which uses
      * a safe fee-per-kb by default.</p>
      *
-     * @param feePerKb The fee required per kilobyte. Note that this is the same as Bitcoin Core's -minrelaytxfee * 3
+     * @param feePerKb The fee required per kilobyte. Note that this is the same as Dash Core's -minrelaytxfee * 3
      */
     public Coin getMinNonDustValue(Coin feePerKb) {
         // A typical output is 33 bytes (pubkey hash + opcodes) and requires an input of 148 bytes to spend so we add
         // that together to find out the total amount of data used to transfer this amount of value. Note that this
-        // formula is wrong for anything that's not a P2PKH output, unfortunately, we must follow Bitcoin Core's
+        // formula is wrong for anything that's not a P2PKH output, unfortunately, we must follow Dash Core's
         // wrongness in order to ensure we're considered standard. A better formula would either estimate the
         // size of data needed to satisfy all different script types, or just hard code 33 below.
         final long size = this.unsafeBitcoinSerialize().length + 148;

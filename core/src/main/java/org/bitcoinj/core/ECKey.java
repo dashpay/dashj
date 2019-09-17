@@ -72,7 +72,7 @@ import static com.google.common.base.Preconditions.*;
  * when you already have the public or private parts. If you create a key with only the public part, you can check
  * signatures but not create them.</p>
  *
- * <p>ECKey also provides access to Bitcoin Core compatible text message signing, as accessible via the UI or JSON-RPC.
+ * <p>ECKey also provides access to Dash Core compatible text message signing, as accessible via the UI or JSON-RPC.
  * This is slightly different to signing raw bytes - if you want to sign your own data and it won't be exposed as
  * text to people, you don't want to use this. If in doubt, ask on the mailing list.</p>
  *
@@ -418,7 +418,7 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
-     * Output this ECKey as an ASN.1 encoded private key, as understood by OpenSSL or used by Bitcoin Core
+     * Output this ECKey as an ASN.1 encoded private key, as understood by OpenSSL or used by Dash Core
      * in its wallet storage format.
      * @throws org.bitcoinj.core.ECKey.MissingPrivateKeyException if the private key is missing or encrypted.
      */
@@ -1129,7 +1129,7 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
-     * Exports the private key in the form used by Bitcoin Core's "dumpprivkey" and "importprivkey" commands. Use
+     * Exports the private key in the form used by Dash Core's "dumpprivkey" and "importprivkey" commands. Use
      * the {@link DumpedPrivateKey#toString()} method to get the string.
      *
      * @param params The network this key is intended for use on.

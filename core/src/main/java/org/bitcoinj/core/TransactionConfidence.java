@@ -410,7 +410,7 @@ public class TransactionConfidence {
 
     /**
      * <p>Depth in the chain is an approximation of how much time has elapsed since the transaction has been confirmed.
-     * On average there is supposed to be a new block every 10 minutes, but the actual rate may vary. Bitcoin Core
+     * On average there is supposed to be a new block every 10 minutes, but the actual rate may vary. Dash Core
      * considers a transaction impractical to reverse after 6 blocks, but as of EOY 2011 network
      * security is high enough that often only one block is considered enough even for high value transactions. For low
      * value transactions like songs, or other cheap items, no blocks at all may be necessary.</p>

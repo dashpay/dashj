@@ -49,7 +49,7 @@ import static com.google.common.collect.Lists.newArrayList;
  * specifies how many signatures required to spend transactions for this married keychain. This value should not exceed
  * total number of keys involved (one followed key plus number of following keys), otherwise IllegalArgumentException
  * will be thrown.</p>
- * <p>IMPORTANT: As of Bitcoin Core 0.9 all bare (non-P2SH) multisig transactions which require more than 3 public keys are non-standard
+ * <p>IMPORTANT: As of Dash Core 0.9 all bare (non-P2SH) multisig transactions which require more than 3 public keys are non-standard
  * and such spends won't be processed by peers with default settings, essentially making such transactions almost
  * nonspendable</p>
  * <p>This method will throw an IllegalStateException, if the keychain is already married or already has leaf keys
@@ -82,7 +82,7 @@ public class MarriedKeyChain extends DeterministicKeyChain {
 
         /**
          * <p>Threshold, or {@code (followingKeys.size() + 1) / 2 + 1)} (majority) if unspecified.</p>
-         * <p>IMPORTANT: As of Bitcoin Core 0.9 all multisig transactions which require more than 3 public keys are non-standard
+         * <p>IMPORTANT: As of Dash Core 0.9 all multisig transactions which require more than 3 public keys are non-standard
          * and such spends won't be processed by peers with default settings, essentially making such transactions almost
          * nonspendable</p>
          */

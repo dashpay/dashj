@@ -38,7 +38,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * </pre>
  * <p>
  * and the result is then encoded with some variant of base. This format is most commonly used for addresses and private
- * keys exported using Bitcoin Core's dumpprivkey command.
+ * keys exported using Dash Core's dumpprivkey command.
  * </p>
  */
 public abstract class PrefixedChecksummedBytes implements Serializable, Cloneable, Comparable<PrefixedChecksummedBytes> {
