@@ -2424,7 +2424,7 @@ public class Wallet extends BaseTaggableObject
             // There is a dead coinbase tx being received on the best chain. A coinbase tx is made dead when it moves
             // to a side chain but it can be switched back on a reorg and resurrected back to spent or unspent.
             // So take it out of the dead pool. Note that we don't resurrect dependent transactions here, even though
-            // we could. Bitcoin Core nodes on the network have deleted the dependent transactions from their mempools
+            // we could. Dash Core nodes on the network have deleted the dependent transactions from their mempools
             // entirely by this point. We could and maybe should rebroadcast them so the network remembers and tries
             // to confirm them again. But this is a deeply unusual edge case that due to the maturity rule should never
             // happen in practice, thus for simplicities sake we ignore it here.
@@ -4723,7 +4723,7 @@ public class Wallet extends BaseTaggableObject
                         //
                         // This could be recursive, although of course because we don't have the full transaction
                         // graph we can never reliably kill all transactions we might have that were rooted in
-                        // this coinbase tx. Some can just go pending forever, like the Bitcoin Core. However we
+                        // this coinbase tx. Some can just go pending forever, like the Dash Core. However we
                         // can do our best.
                         log.warn("Coinbase killed by re-org: {}", tx.getTxId());
                         killTxns(ImmutableSet.of(tx), null);

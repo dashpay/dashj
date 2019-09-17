@@ -76,7 +76,7 @@ public class VersionMessage extends Message {
     public PeerAddress fromAddr;
     /**
      * User-Agent as defined in <a href="https://github.com/bitcoin/bips/blob/master/bip-0014.mediawiki">BIP 14</a>.
-     * Bitcoin Core sets it to something like "/Satoshi:0.9.1/".
+     * Dash Core sets it to something like "/Satoshi:0.9.1/".
      */
     public String subVer;
     /**
@@ -109,7 +109,7 @@ public class VersionMessage extends Message {
         clientVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
         localServices = 0;
         time = System.currentTimeMillis() / 1000;
-        // Note that the Bitcoin Core doesn't do anything with these, and finding out your own external IP address
+        // Note that the Dash Core doesn't do anything with these, and finding out your own external IP address
         // is kind of tricky anyway, so we just put nonsense here for now.
         InetAddress localhost = InetAddresses.forString("127.0.0.1");
         receivingAddr = new PeerAddress(params, localhost, params.getPort(), clientVersion, BigInteger.ZERO);

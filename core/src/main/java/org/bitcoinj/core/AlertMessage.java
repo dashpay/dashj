@@ -175,7 +175,7 @@ public class AlertMessage extends Message {
     }
 
     /**
-     * The inclusive lower bound on software versions that are considered for the purposes of this alert. Bitcoin Core
+     * The inclusive lower bound on software versions that are considered for the purposes of this alert. Dash Core
      * compares this against a protocol version field, but as long as the subVer field is used to restrict it your
      * alerts could use any version numbers.
      * @return uint32
@@ -189,7 +189,7 @@ public class AlertMessage extends Message {
     }
 
     /**
-     * The inclusive upper bound on software versions considered for the purposes of this alert. Bitcoin Core
+     * The inclusive upper bound on software versions considered for the purposes of this alert. Dash Core
      * compares this against a protocol version field, but as long as the subVer field is used to restrict it your
      * alerts could use any version numbers.
      */
@@ -226,7 +226,7 @@ public class AlertMessage extends Message {
     }
 
     /**
-     * A string that is intended to display in the status bar of Bitcoin Core's GUI client. It contains the user-visible
+     * A string that is intended to display in the status bar of Dash Core's GUI client. It contains the user-visible
      * message. English only.
      */
     public String getStatusBar() {

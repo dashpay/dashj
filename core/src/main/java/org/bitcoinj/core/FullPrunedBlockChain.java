@@ -270,7 +270,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                                 throw new VerificationException("Tried to spend coinbase at depth " + (height - prevOut.getHeight()));
                             }
                         }
-                        // TODO: Check we're not spending the genesis transaction here. Bitcoin Core won't allow it.
+                        // TODO: Check we're not spending the genesis transaction here. Dash Core won't allow it.
                         valueIn = valueIn.add(prevOut.getValue());
                         if (verifyFlags.contains(VerifyFlag.P2SH)) {
                             if (ScriptPattern.isP2SH(prevOut.getScript()))

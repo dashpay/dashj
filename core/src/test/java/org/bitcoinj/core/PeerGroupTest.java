@@ -738,7 +738,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
 
     @Test
     public void preferLocalPeer() throws IOException {
-        // Because we are using the same port (8333 or 18333) that is used by Bitcoin Core
+        // Because we are using the same port (8333 or 18333) that is used by Dash Core
         // We have to consider 2 cases:
         // 1. Test are executed on the same machine that is running a full node
         // 2. Test are executed without any full node running locally

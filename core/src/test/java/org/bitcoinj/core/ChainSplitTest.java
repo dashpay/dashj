@@ -663,7 +663,7 @@ public class ChainSplitTest {
         assertTrue(wallet.poolContainsTxHash(WalletTransaction.Pool.UNSPENT, coinbase.getTxId()));
         assertTrue(!wallet.poolContainsTxHash(WalletTransaction.Pool.SPENT, coinbase.getTxId()));
         assertTrue(!wallet.poolContainsTxHash(WalletTransaction.Pool.DEAD, coinbase.getTxId()));
-        // However, fodder is still dead. Bitcoin Core doesn't keep killed transactions around in case they become
+        // However, fodder is still dead. Dash Core doesn't keep killed transactions around in case they become
         // valid again later. They are just deleted from the mempool for good.
 
         // ... make the side chain dominant again.
