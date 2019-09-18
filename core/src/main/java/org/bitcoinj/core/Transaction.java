@@ -157,20 +157,20 @@ public class Transaction extends ChildMessage {
     /**
      * If feePerKb is lower than this, Dash Core will treat it as if there were no fee.
      */
-    public static final Coin REFERENCE_DEFAULT_MIN_TX_FEE = Coin.valueOf(CoinDefinition.DEFAULT_MIN_TX_FEE); // 0.05 mBTC
+    public static final Coin REFERENCE_DEFAULT_MIN_TX_FEE = Coin.valueOf(1000); // 0.01 mDASH
 
     /**
      * If using this feePerKb, transactions will get confirmed within the next couple of blocks.
      * This should be adjusted from time to time. Last adjustment: February 2017.
      */
-    public static final Coin DEFAULT_TX_FEE = Coin.valueOf(CoinDefinition.DEFAULT_MIN_TX_FEE); // 0.5 mBTC
+    public static final Coin DEFAULT_TX_FEE = Coin.valueOf(1000); // 0.5 mBTC
 
     /**
      * Any standard (ie P2PKH) output smaller than this value (in satoshis) will most likely be rejected by the network.
      * This is calculated by assuming a standard output will be 34 bytes, and then using the formula used in
      * {@link TransactionOutput#getMinNonDustValue(Coin)}.
      */
-    public static final Coin MIN_NONDUST_OUTPUT = Coin.valueOf(CoinDefinition.DUST_LIMIT); // satoshis
+    public static final Coin MIN_NONDUST_OUTPUT = Coin.valueOf(546); // satoshis
     /**
      * Max initial size of inputs and outputs ArrayList.
      */
