@@ -20,7 +20,7 @@
 	    <Package name="org.bitcoin.protocols.payments"/>
     </Match>
 
-    <!-- bitcoinj is not designed to run in an environment with malicious code loaded into the VM -->
+    <!-- dashj is not designed to run in an environment with malicious code loaded into the VM -->
     <Match>
         <Bug category="MALICIOUS_CODE"/>
     </Match>
