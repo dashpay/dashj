@@ -56,7 +56,7 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         super.setUp(blockStore);
 
         remoteVersionMessage = new VersionMessage(UNITTEST, 1);
-        remoteVersionMessage.localServices = VersionMessage.NODE_NETWORK;
+        remoteVersionMessage.localServices = VersionMessage.NODE_NETWORK | VersionMessage.NODE_BLOOM;
         remoteVersionMessage.clientVersion = NotFoundMessage.MIN_PROTOCOL_VERSION;
         blockJobs = false;
         initPeerGroup();
