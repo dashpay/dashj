@@ -167,7 +167,7 @@ public class DefaultRiskAnalysis implements RiskAnalysis {
      * Checks the output to see if the script violates a standardness rule. Not complete.
      */
     public static RuleViolation isOutputStandard(TransactionOutput output) {
-        if (output.getValue().compareTo(output.getParams().isDIP0001ActiveAtTip() ? MIN_ANALYSIS_NONDUST_OUTPUT.div(10) : MIN_ANALYSIS_NONDUST_OUTPUT) < 0)
+        if (output.getValue().compareTo(MIN_ANALYSIS_NONDUST_OUTPUT) < 0)
             return RuleViolation.DUST;
         for (ScriptChunk chunk : output.getScriptPubKey().getChunks()) {
             if (chunk.isPushData() && !chunk.isShortestPossiblePushData())

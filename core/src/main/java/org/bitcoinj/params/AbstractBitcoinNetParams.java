@@ -339,7 +339,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
 
     @Override
     public Coin getMinNonDustOutput() {
-        return isDIP0001ActiveAtTip() ? Transaction.MIN_NONDUST_OUTPUT.div(10) : Transaction.MIN_NONDUST_OUTPUT;
+        return Transaction.MIN_NONDUST_OUTPUT;
     }
 
     @Override

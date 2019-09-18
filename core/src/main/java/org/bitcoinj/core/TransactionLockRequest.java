@@ -135,7 +135,7 @@ public class TransactionLockRequest extends Transaction {
     {
         if(!forceMinFee && InstantSend.canAutoLock() && isSimple())
             return Coin.ZERO;
-        Coin nMinFee = params.isDIP0001ActiveAtTip() ? MIN_FEE.div(10) : MIN_FEE;
+        Coin nMinFee = MIN_FEE;
         return Coin.valueOf(max(nMinFee.getValue(), getInputs().size() * nMinFee.getValue()));
     }
 
