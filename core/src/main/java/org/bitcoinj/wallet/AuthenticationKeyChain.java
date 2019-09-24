@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
@@ -58,18 +74,14 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
             }
 
             //TODO: do we need to look ahead here, even for one key?  Does anything get saved?
+            /** Optimization: see {@link DeterministicKeyChain.getKeys(org.bitcoinj.wallet.KeyChain.KeyPurpose, int)} */
+
             List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
             basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<DeterministicKey>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
                 ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
                 DeterministicKey k = hierarchy.get(path, false, false);
-                //DeterministicKey k = HDKeyDerivation.deriveChildKey(parentKey, new ChildNumber(index - numberOfKeys + i));
-                // Just a last minute sanity check before we hand the key out to the app for usage. This isn't inspired
-                // by any real problem reports from bitcoinj users, but I've heard of cases via the grapevine of
-                // places that lost money due to bitflips causing addresses to not match keys. Of course in an
-                // environment with flaky RAM there's no real way to always win: bitflips could be introduced at any
-                // other layer. But as we're potentially retrieving from long term storage here, check anyway.
                 checkForBitFlip(k);
                 keys.add(k);
             }

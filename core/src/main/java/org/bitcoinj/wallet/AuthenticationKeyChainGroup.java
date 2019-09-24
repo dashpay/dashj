@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 by Dash Core Group
+ * Copyright 2019 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

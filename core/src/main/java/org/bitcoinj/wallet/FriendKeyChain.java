@@ -123,29 +123,13 @@ public class FriendKeyChain extends ExternalKeyChain {
                 default:
                     throw new UnsupportedOperationException();
             }
-            // Optimization: potentially do a very quick key generation for just the number of keys we need if we
-            // didn't already create them, ignoring the configured lookahead size. This ensures we'll be able to
-            // retrieve the keys in the following loop, but if we're totally fresh and didn't get a chance to
-            // calculate the lookahead keys yet, this will not block waiting to calculate 100+ EC point multiplies.
-            // On slow/crappy Android phones looking ahead 100 keys can take ~5 seconds but the OS will kill us
-            // if we block for just one second on the UI thread. Because UI threads may need an address in order
-            // to render the screen, we need getKeys to be fast even if the wallet is totally brand new and lookahead
-            // didn't happen yet.
-            //
-            // It's safe to do this because when a network thread tries to calculate a Bloom filter, we'll go ahead
-            // and calculate the full lookahead zone there, so network requests will always use the right amount.
+            /** Optimization: see {@link DeterministicKeyChain.getKeys(org.bitcoinj.wallet.KeyChain.KeyPurpose, int)} */
             List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
             basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<DeterministicKey>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
                 ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
                 DeterministicKey k = hierarchy.get(path, false, false);
-                //DeterministicKey k = HDKeyDerivation.deriveChildKey(parentKey, new ChildNumber(index - numberOfKeys + i));
-                // Just a last minute sanity check before we hand the key out to the app for usage. This isn't inspired
-                // by any real problem reports from bitcoinj users, but I've heard of cases via the grapevine of
-                // places that lost money due to bitflips causing addresses to not match keys. Of course in an
-                // environment with flaky RAM there's no real way to always win: bitflips could be introduced at any
-                // other layer. But as we're potentially retrieving from long term storage here, check anyway.
                 checkForBitFlip(k);
                 keys.add(k);
             }
