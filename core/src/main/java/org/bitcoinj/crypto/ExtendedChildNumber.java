@@ -24,42 +24,21 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /**
- * <p>This is just a wrapper for an integer of any size (child number) as per BIP 32 with a boolean getter for the most significant bit
+ * <p>This is just a wrapper for a big integer of any size (child number)  BIP 32 with a boolean getter for the most significant bit
  * and a getter for the actual 0-based child number. A {@link java.util.List} of these forms a <i>path</i> through a
  * {@link DeterministicHierarchy}. This class is immutable.
  */
 public class ExtendedChildNumber extends ChildNumber {
     /**
-     * The bit that's set in the child number to indicate whether this key is "hardened". Given a hardened key, it is
+     * @isHardended is set in the extended child number to indicate whether this key is "hardened". Given a hardened key, it is
      * not possible to derive a child public key if you know only the hardened public key. With a non-hardened key this
      * is possible, so you can derive trees of public keys given only a public parent, but the downside is that it's
      * possible to leak private keys if you disclose a parent public key and a child private key (elliptic curve maths
      * allows you to work upwards).
      */
-    public static final BigInteger MAX_INT = BigInteger.valueOf(2 << 32 - 1);
     private final short size;
     private final boolean isHardened;
     private final BigInteger bi;
-
-    /*public static final ExtendedChildNumber ZERO = new ExtendedChildNumber(0);
-    public static final ExtendedChildNumber ONE = new ExtendedChildNumber(1);
-    public static final ExtendedChildNumber ZERO_HARDENED = new ExtendedChildNumber(0, true);
-    public static final ExtendedChildNumber ONE_HARDENED = new ExtendedChildNumber(1, true);
-    public static final ExtendedChildNumber FIVE_HARDENED = new ExtendedChildNumber(5, true);
-
-    public ExtendedChildNumber(int childNumber, boolean isHardened) {
-        super(childNumber, isHardened);
-        size = 4;
-        this.isHardened = isHardened;
-        this.bi = BigInteger.valueOf(childNumber);
-    }
-
-    public ExtendedChildNumber(int i) {
-        super(i);
-        this.bi = BigInteger.valueOf(i & ~HARDENED_BIT);
-        this.size = 4;
-        this.isHardened = (i & HARDENED_BIT) != 0;
-    }*/
 
     public ExtendedChildNumber(BigInteger i, boolean isHardened) {
         super(false);
@@ -118,8 +97,6 @@ public class ExtendedChildNumber extends ChildNumber {
 
     @Override
     public String toString() {
-        //if(bi.bi.compareTo(MAX_INT) < 0)
-        //    return String.format(Locale.US, "%d%s", bi, isHardened() ? "H" : "");
         return String.format(Locale.US, "(%s)%s", bi.toString(16), isHardened() ? "H" : "");
     }
 
