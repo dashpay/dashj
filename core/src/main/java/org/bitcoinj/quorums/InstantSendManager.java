@@ -373,6 +373,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
         lock.lock();
         
         try {
+            if(pendingInstantSendLocks.isEmpty())
+                return false;
             pend = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>(pendingInstantSendLocks);
             pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
         } finally {
