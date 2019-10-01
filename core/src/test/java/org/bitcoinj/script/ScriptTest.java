@@ -437,7 +437,7 @@ public class ScriptTest {
 
     @Test
     public void getToAddress() throws Exception {
-        // pay to pubkey
+        // P2PK
         ECKey toKey = new ECKey();
         Address toAddress = Address.fromKey(TESTNET, toKey);
         assertEquals(toAddress, ScriptBuilder.createP2PKHOutputScript(toKey).getToAddress(TESTNET, true));
