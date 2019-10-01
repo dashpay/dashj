@@ -619,7 +619,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
 
     @Test
     public void testBloomOnP2PK() throws Exception {
-        // Cover GitHub bug #879. When a relevant transaction with a P2PK output is found, the Bloom filter should be
+        // Cover bug 513. When a relevant transaction with a P2PK output is found, the Bloom filter should be
         // recalculated to include that transaction hash but not re-broadcast as the remote nodes should have followed
         // the same procedure. However a new node that's connected should get the fresh filter.
         peerGroup.start();
@@ -889,13 +889,13 @@ public class PeerGroupTest extends TestWithPeerGroup {
     public void testForceStop() throws Exception {
         peerGroup.start();
         connectPeer(1);
-        
+
         assertTrue(peerGroup.isRunning());
-        
+
         long startTime = System.currentTimeMillis();
         peerGroup.forceStop(10_000);
         long endTime = System.currentTimeMillis();
-        
+
         assertTrue("Force stop should take less than the wait time", endTime - startTime <= 10_000);
         assertFalse(peerGroup.isRunning());
     }
@@ -903,11 +903,11 @@ public class PeerGroupTest extends TestWithPeerGroup {
     @Test
     public void testForceStopWhenNotRunning() throws Exception {
         assertFalse(peerGroup.isRunning());
-        
+
         long startTime = System.currentTimeMillis();
         peerGroup.forceStop(50);
         long endTime = System.currentTimeMillis();
-        
+
         assertTrue("Force stop should still wait even when not running", endTime - startTime >= 50);
         assertFalse(peerGroup.isRunning());
     }

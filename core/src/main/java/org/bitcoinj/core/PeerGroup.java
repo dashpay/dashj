@@ -238,37 +238,30 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     private final WalletCoinsSentEventListener walletCoinsSentEventListener = new WalletCoinsSentEventListener() {
         @Override
         public void onCoinsSent(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
-            onCoinsReceivedOrSent(wallet, tx);
-        }
-    };
-
-    private void onCoinsReceivedOrSent(Wallet wallet, Transaction tx) {
-        // We received a relevant transaction. We MAY need to recalculate and resend the Bloom filter, but only
-        // if we have received a transaction that includes a relevant P2PK or P2WPKH output.
-        //
-        // The reason is that P2PK and P2WPKH outputs, when spent, will not repeat any data we can predict in their
-        // inputs. So a remote peer will update the Bloom filter for us when such an output is seen matching the
-        // existing filter, so that it includes the tx hash in which the P2PK/P2WPKH output was observed. Thus
-        // the spending transaction will always match (due to the outpoint structure).
-        //
-        // Unfortunately, whilst this is required for correct sync of the chain in blocks, there are two edge cases.
-        //
-        // (1) If a wallet receives a relevant, confirmed P2PK/P2WPKH output that was not broadcast across the network,
-        // for example in a coinbase transaction, then the node that's serving us the chain will update its filter
-        // but the rest will not. If another transaction then spends it, the other nodes won't match/relay it.
-        //
-        // (2) If we receive a P2PK/P2WPKH output broadcast across the network, all currently connected nodes will see
-        // it and update their filter themselves, but any newly connected nodes will receive the last filter we
-        // calculated, which would not include this transaction.
-        //
-        // For this reason we check if the transaction contained any relevant P2PKs or P2WPKHs and force a recalc
-        // and possibly retransmit if so. The recalculation process will end up including the tx hash into the
-        // filter. In case (1), we need to retransmit the filter to the connected peers. In case (2), we don't
-        // and shouldn't, we should just recalculate and cache the new filter for next time.
-        for (TransactionOutput output : tx.getOutputs()) {
-            Script scriptPubKey = output.getScriptPubKey();
-            if (ScriptPattern.isP2PK(scriptPubKey)) {
-                if (output.isMine(wallet)) {
+            // We received a relevant transaction. We MAY need to recalculate and resend the Bloom filter, but only
+            // if we have received a transaction that includes a relevant P2PK output.
+            //
+            // The reason is that P2PK outputs, when spent, will not repeat any data we can predict in their
+            // inputs. So a remote peer will update the Bloom filter for us when such an output is seen matching the
+            // existing filter, so that it includes the tx hash in which the P2PK output was observed. Thus
+            // the spending transaction will always match (due to the outpoint structure).
+            //
+            // Unfortunately, whilst this is required for correct sync of the chain in blocks, there are two edge cases.
+            //
+            // (1) If a wallet receives a relevant, confirmed P2PK output that was not broadcast across the network,
+            // for example in a coinbase transaction, then the node that's serving us the chain will update its filter
+            // but the rest will not. If another transaction then spends it, the other nodes won't match/relay it.
+            //
+            // (2) If we receive a P2PK output broadcast across the network, all currently connected nodes will see
+            // it and update their filter themselves, but any newly connected nodes will receive the last filter we
+            // calculated, which would not include this transaction.
+            //
+            // For this reason we check if the transaction contained any relevant P2PKs and force a recalc
+            // and possibly retransmit if so. The recalculation process will end up including the tx hash into the
+            // filter. In case (1), we need to retransmit the filter to the connected peers. In case (2), we don't
+            // and shouldn't, we should just recalculate and cache the new filter for next time.
+            for (TransactionOutput output : tx.getOutputs()) {
+                if (ScriptPattern.isP2PK(output.getScriptPubKey()) && output.isMine(wallet)) {
                     if (tx.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)
                         recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
                     else
@@ -277,7 +270,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 }
             }
         }
-    }
+    };
 
     // Exponential backoff for peers starts at 1 second and maxes at 10 minutes.
     private final ExponentialBackoff.Params peerBackoffParams = new ExponentialBackoff.Params(1000, 1.5f, 10 * 60 * 1000);
@@ -1306,11 +1299,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     public ListenableFuture stopAsync() {
         checkState(vRunning);
         vRunning = false;
-        
+
         // Log executor state and remaining jobs
-        log.info("stopAsync() called - executor shutdown: {}, terminated: {}", 
+        log.info("stopAsync() called - executor shutdown: {}, terminated: {}",
                 executor.isShutdown(), executor.isTerminated());
-        
+
         // The executor is wrapped by MoreExecutors.listeningDecorator, need to access the underlying executor
         if (executor instanceof ListeningScheduledExecutorService) {
             // Try to get the underlying ScheduledThreadPoolExecutor
@@ -1319,26 +1312,26 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 java.lang.reflect.Field delegateField = executor.getClass().getDeclaredField("delegate");
                 delegateField.setAccessible(true);
                 Object delegate = delegateField.get(executor);
-                
+
                 if (delegate instanceof ScheduledThreadPoolExecutor) {
                     ScheduledThreadPoolExecutor stpe = (ScheduledThreadPoolExecutor) delegate;
-                    log.info("Executor queue size: {}, active threads: {}", 
+                    log.info("Executor queue size: {}, active threads: {}",
                             stpe.getQueue().size(), stpe.getActiveCount());
-                    
+
                     // Log remaining jobs in queue
                     stpe.getQueue().forEach(job -> {
                         log.info("Remaining job: {} (class: {})", job.toString(), job.getClass().getSimpleName());
                     });
-                    
+
                     // Get call stacks of executor threads
                     ThreadGroup rootGroup = Thread.currentThread().getThreadGroup();
                     while (rootGroup.getParent() != null) {
                         rootGroup = rootGroup.getParent();
                     }
-                    
+
                     Thread[] threads = new Thread[rootGroup.activeCount()];
                     rootGroup.enumerate(threads);
-                    
+
                     for (Thread thread : threads) {
                         if (thread != null && thread.getName().contains("PeerGroup Thread")) {
                             log.info("Found PeerGroup thread: {} (state: {})", thread.getName(), thread.getState());
@@ -1354,7 +1347,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 log.info("Could not access underlying executor details: {}", e.getMessage());
             }
         }
-        
+
         log.info("About to submit shutdown task to executor");
         ListenableFuture future = executor.submit(new Runnable() {
             @Override
