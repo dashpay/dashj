@@ -892,6 +892,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     log.info("failed loading mnlist bootstrap file" + x.getMessage());
                 } catch (IOException x) {
                     log.info("failed loading mnlist bootstrap file" + x.getMessage());
+                } catch (IllegalStateException x) {
+                    log.info("failed loading mnlist bootstrap file" + x.getMessage());
+                } catch (NullPointerException x) {
+                    log.info("failed loading mnlist bootstrap file" + x.getMessage());
                 } finally {
                     isLoadingBootStrap = false;
                     try {
