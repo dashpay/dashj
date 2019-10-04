@@ -25,7 +25,7 @@ public class BLS {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
-  public static final String DASHJ_VERSION = "0.16.3";
+  public static final String DASHJ_VERSION = "0.16.4";
 
 
   static {
