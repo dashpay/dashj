@@ -34,7 +34,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public static final int LISTS_CACHE_SIZE = 576;
     public static final int SNAPSHOT_TIME_PERIOD = 60 * 60 * 26;
 
-    public static final int MAX_CACHE_SIZE = 10;
+    public int MAX_CACHE_SIZE = 8;
 
     public enum SaveOptions {
         SAVE_EVERY_BLOCK,
@@ -91,6 +91,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public SimplifiedMasternodeListManager(Context context) {
         super(context);
+        if (Runtime.getRuntime().totalMemory() <= Math.pow(1024, 3)) {
+            MAX_CACHE_SIZE = 1;
+        }
         tipBlockHash = params.getGenesisBlock().getHash();
         mnList = new SimplifiedMasternodeList(context.getParams());
         quorumList = new SimplifiedQuorumList(context.getParams());
