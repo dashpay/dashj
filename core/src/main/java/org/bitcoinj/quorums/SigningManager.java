@@ -271,11 +271,13 @@ public class SigningManager {
         }
     }
 
-    void processPendingReconstructedRecoveredSigs()
+    boolean processPendingReconstructedRecoveredSigs()
     {
         ArrayList<Pair<RecoveredSignature, Quorum>> listCopy;
         lock.lock();
         try {
+            if(pendingReconstructedRecoveredSigs.isEmpty())
+                return false;
             listCopy = new ArrayList<Pair<RecoveredSignature, Quorum>>(pendingReconstructedRecoveredSigs);
             pendingReconstructedRecoveredSigs = new ArrayList<Pair<RecoveredSignature, Quorum>>();
         } finally {
@@ -284,14 +286,16 @@ public class SigningManager {
         for (Pair<RecoveredSignature, Quorum> pair : listCopy) {
             processRecoveredSig(-1, pair.getFirst(), pair.getSecond());
         }
+        return true;
     }
 
     boolean processPendingRecoveredSigs()
     {
-        HashMap<Integer, ArrayList<RecoveredSignature>> recSigsByNode = new HashMap<Integer, ArrayList<RecoveredSignature>>();
-        HashMap<Pair<LLMQParameters.LLMQType, Sha256Hash>, Quorum> quorums = new HashMap<Pair<LLMQParameters.LLMQType, Sha256Hash>, Quorum>();
+        if(!processPendingReconstructedRecoveredSigs())
+            return false;
 
-        processPendingReconstructedRecoveredSigs();
+        HashMap<Integer, ArrayList<RecoveredSignature>> recSigsByNode = new HashMap<>();
+        HashMap<Pair<LLMQParameters.LLMQType, Sha256Hash>, Quorum> quorums = new HashMap<>();
 
         collectPendingRecoveredSigsToVerify(32, recSigsByNode, quorums);
         if (recSigsByNode.isEmpty()) {
