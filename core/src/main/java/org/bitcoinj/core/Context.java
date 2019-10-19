@@ -78,7 +78,6 @@ public class Context {
     public MasternodeSync masternodeSync;
     public ActiveMasternode activeMasternode;
     public DarkSendPool darkSendPool;
-    public InstantSend instantSend;
     public HashStore hashStore;
     public GovernanceManager governanceManager;
     public GovernanceTriggerManager triggerManager;
@@ -254,7 +253,6 @@ public class Context {
         masternodeSync = syncFlags != null ? new MasternodeSync(this, syncFlags, verifyFlags) : new MasternodeSync(this);
         activeMasternode = new ActiveMasternode(this);
         darkSendPool = new DarkSendPool(this);
-        instantSend = new InstantSend(this);
         masternodeManager = new MasternodeManager(this);
         initializedDash = true;
         governanceManager = new GovernanceManager(this);
@@ -285,7 +283,6 @@ public class Context {
         activeMasternode = null;
         darkSendPool.close();
         darkSendPool = null;
-        instantSend = null;
         masternodeManager = null;
         initializedDash = false;
         governanceManager = null;
@@ -335,7 +332,6 @@ public class Context {
         if(initializedDash) {
             sporkManager.close(peerGroup);
             masternodeSync.close();
-            instantSend.close();
             masternodeListManager.close();
             blockChain.removeTransactionReceivedListener(evoUserManager);
             instantSendManager.close(peerGroup);
@@ -358,7 +354,6 @@ public class Context {
             sporkManager.setBlockChain(chain, peerGroup);
             masternodeManager.setBlockChain(chain);
             masternodeSync.setBlockChain(chain);
-            instantSend.setBlockChain(chain);
             masternodeListManager.setBlockChain(chain, peerGroup);
             chain.addTransactionReceivedListener(evoUserManager);
             instantSendManager.setBlockChain(chain, peerGroup);
@@ -416,7 +411,6 @@ public class Context {
     {
         params.setDIPActiveAtTip(chainHead.getHeight() >= params.getDIP0001BlockHeight());
         if(initializedDash) {
-            instantSend.updatedChainHead(chainHead);
 
 
         masternodeManager.updatedBlockTip(chainHead);

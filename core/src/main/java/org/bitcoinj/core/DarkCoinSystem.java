@@ -10,7 +10,6 @@ import java.util.ArrayList;
  */
 @Deprecated
 public class DarkCoinSystem {
-    public InstantSend instantx;
     public DarkSend darkSend;
     public NetworkParameters params;
     PeerGroup peerGroup;
@@ -43,7 +42,6 @@ public class DarkCoinSystem {
         this.blockChain = blockChain;
         this.blockStore = blockStore;
 
-        //instantSend = new InstantSend(this);
         darkSend = new DarkSend();
     }
 }
