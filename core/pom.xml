@@ -226,6 +226,7 @@
                                         <urn>postgresql:postgresql:9.1-901.jdbc4:jar:null:compile:153f2f92a786f12fc111d0111f709012df87c808</urn>
                                         <!-- A check for the rules themselves -->
                                         <urn>uk.co.froot.maven.enforcer:digest-enforcer-rules:0.0.1:jar:null:runtime:16a9e04f3fe4bb143c42782d07d5faf65b32106f</urn>
+                                        <urn>de.sfuhrm:saphir-hash-core:3.0.5:jar:null:89eb3fa3a1e26abda37b2c960430e763a8d32600f95690f3d98f1e746a2d6529</urn>
                                     </urns>
                                 </digestRule>
                             </rules>
@@ -353,6 +354,11 @@
             <groupId>org.dashj</groupId>
             <artifactId>dashj-bls</artifactId>
             <version>0.17-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+        <groupId>de.sfuhrm</groupId>
+            <artifactId>saphir-hash-core</artifactId>
+            <version>3.0.5</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
