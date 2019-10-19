@@ -17,6 +17,7 @@
 
 package org.bitcoinj.crypto;
 
+import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
 import org.bouncycastle.crypto.BufferedBlockCipher;
@@ -94,9 +95,12 @@ public class BLSKeyExchangeCrypter implements KeyCrypter {
 
     public KeyParameter deriveKey(BLSSecretKey secretKey, BLSPublicKey blsPeerPublicKey) throws KeyCrypterException {
         try {
+            final Stopwatch watch = Stopwatch.createStarted();
             PublicKey pk = BLS.DHKeyExchange(secretKey.privateKey, blsPeerPublicKey.publicKeyImpl);
+            watch.stop();
             byte [] key = new byte [32];
             System.arraycopy(pk.Serialize(), 0, key, 0, 32);
+            log.info("Deriving key took {} for a BLS Key Exchange", watch);
             return new KeyParameter(key);
         } catch (Exception e) {
             throw new KeyCrypterException("Could not generate key from password and salt.", e);
