@@ -32,6 +32,10 @@ public class BLSSecretKey extends BLSAbstractObject
         super(secretKey.getBuffer(), BLS_CURVE_SECKEY_SIZE);
     }
 
+    public static BLSSecretKey fromSeed(byte [] seed) {
+        return new BLSSecretKey(PrivateKey.FromSeed(seed, seed.length));
+    }
+
     @Override
     boolean internalSetBuffer(byte[] buffer) {
         try {

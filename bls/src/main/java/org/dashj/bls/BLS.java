@@ -102,11 +102,11 @@ public class BLS {
   public static InsecureSignature RecoverSig(InsecureSignatureVector sigs, MessageHashVector ids) {
     return new InsecureSignature(JNI.BLS_RecoverSig(InsecureSignatureVector.getCPtr(sigs), MessageHashVector.getCPtr(ids)), true);
   }
+  */
 
   public static PublicKey DHKeyExchange(PrivateKey privKey, PublicKey pubKey) {
     return new PublicKey(JNI.BLS_DHKeyExchange(PrivateKey.getCPtr(privKey), PublicKey.getCPtr(pubKey)), true);
   }
-  */
 
   public static void CheckRelicErrors() {
     JNI.BLS_CheckRelicErrors();
