@@ -24,12 +24,10 @@ import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
-import org.bitcoin.protocols.payments.Protos.*;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Base58;
 import org.bitcoinj.core.AbstractBlockChain;
-import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Coin;
@@ -53,12 +51,10 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.TransactionLockRequest;
 import org.bitcoinj.core.UTXO;
 import org.bitcoinj.core.UTXOProvider;
 import org.bitcoinj.core.UTXOProviderException;
 import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.InstantSend;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.TransactionConfidence.*;
 import org.bitcoinj.crypto.*;
@@ -2733,12 +2729,6 @@ public class Wallet extends BaseTaggableObject
                 // Add to the pending pool and schedule confidence listener notifications.
                 log.info("->pending: {}", tx.getTxId());
                 tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
-                if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
-                    if (tx instanceof TransactionLockRequest ||
-                            (InstantSend.canAutoLock() && tx.isSimple())) //TODO:InstantX - may need to adjust the ones above too?
-                        tx.getConfidence().setIXType(IXType.IX_REQUEST);
-                    confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
-                }
                 addWalletTransaction(Pool.PENDING, tx);
             }
             if (log.isInfoEnabled())
@@ -2766,11 +2756,7 @@ public class Wallet extends BaseTaggableObject
             isConsistentOrThrow();
 
             //Dash Specific
-            if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
-                if (tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
-                    context.instantSend.processTxLockRequest(tx);
-                }
-            } else if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
+            if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
                 context.instantSendManager.syncTransaction(tx, null, -1);
 
             informConfidenceListenersIfNotReorganizing();
@@ -4376,8 +4362,6 @@ public class Wallet extends BaseTaggableObject
         Coin fee = feePerKb.multiply(size).divide(1000);
         if (ensureMinRequiredFee && fee.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
             fee = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
-        if(useInstantSend && context.instantSendManager.isOldInstantSendEnabled())
-            fee = TransactionLockRequest.MIN_FEE.multiply(tx.getInputs().size());
         TransactionOutput output = tx.getOutput(0);
         output.setValue(output.getValue().subtract(fee));
         return !output.isDust();
@@ -5240,9 +5224,6 @@ public class Wallet extends BaseTaggableObject
             Coin feePerKb = req.feePerKb;
             if (needAtLeastReferenceFee && feePerKb.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0) {
                 feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
-                if(req.useInstantSend && context.instantSendManager.isOldInstantSendEnabled())
-                    feePerKb = TransactionLockRequest.MIN_FEE.multiply(tx.getInputs().size());
-
             }
             Coin feeNeeded = feePerKb.multiply(size).divide(1000);
 
@@ -5341,13 +5322,9 @@ public class Wallet extends BaseTaggableObject
 
             }
             //Dash Specific
-            if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
-                if (tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
-                    //This transaction was stuck and we need to track it once again with InstantSend
-                    context.instantSend.processTxLockRequest(tx);
-            } else if (context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
+            if (context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
                 context.instantSendManager.syncTransaction(tx, null, -1);
-            }
+
             checkState(confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.IN_CONFLICT,
                     "Expected PENDING or IN_CONFLICT, was %s.", confidenceType);
             // Re-broadcast even if it's marked as already seen for two reasons

@@ -513,8 +513,6 @@ public class Peer extends PeerSocketHandler {
             processBlock((Block) m);
         } else if (m instanceof FilteredBlock) {
             startFilteredBlock((FilteredBlock) m);
-        } else if (m instanceof TransactionLockRequest) {
-            processTransaction((TransactionLockRequest)m);
         } else if (m instanceof Transaction) {
             processTransaction((Transaction) m);
         } else if (m instanceof GetDataMessage) {
@@ -542,10 +540,6 @@ public class Peer extends PeerSocketHandler {
         else if(m instanceof SporkMessage)
         {
             context.sporkManager.processSpork(this, (SporkMessage)m);
-        }
-        else if(m instanceof TransactionLockVote) {
-            if(context.instantSendManager.isOldInstantSendEnabled())
-                context.instantSend.processTransactionLockVoteMessage(this, (TransactionLockVote)m);
         }
         else if(m instanceof SyncStatusCount) {
             context.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
@@ -828,12 +822,6 @@ public class Peer extends PeerSocketHandler {
                 return;
             }
 
-            //Dash Specific
-            if(context != null && context.instantSend != null) {
-                if(context.instantSendManager.isOldInstantSendEnabled() && context.instantSend.processTxLockRequest(tx))
-                    context.instantSend.syncTransaction(tx, null);
-            }
-
             // It's a broadcast transaction. Tell all wallets about this tx so they can check if it's relevant or not.
             for (final Wallet wallet : wallets) {
                 try {
@@ -861,10 +849,6 @@ public class Peer extends PeerSocketHandler {
                                         log.info("{}: Dependency download complete!", getAddress());
                                         wallet.receivePending(tx, dependencies);
 
-                                        if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled() && tx instanceof TransactionLockRequest)
-                                        {
-                                            context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
-                                        }
                                         if(context.evoUserManager != null)
                                             context.evoUserManager.processSpecialTransaction(tx, null);
                                     } catch (VerificationException e) {
@@ -884,10 +868,6 @@ public class Peer extends PeerSocketHandler {
                         } else {
                             wallet.receivePending(tx, null);
 
-                            if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled() && tx instanceof TransactionLockRequest)
-                            {
-                                context.instantSend.acceptLockRequest((TransactionLockRequest)tx);
-                            }
                             if(context.evoUserManager != null)
                                 context.evoUserManager.processSpecialTransaction(tx, null);
                         }
@@ -1239,13 +1219,6 @@ public class Peer extends PeerSocketHandler {
     {
         switch (inv.type)
         {
-//            case MSG_DSTX:
-  //              return mapDarksendBroadcastTxes.count(inv.hash);
-            case TransactionLockRequest:
-                return context.instantSend.mapLockRequestAccepted.containsKey(inv.hash) ||
-                        context.instantSend.mapLockRequestRejected.containsKey(inv.hash);
-            case TransactionLockVote:
-                return  context.instantSend.mapTxLockVotes.containsKey(inv.hash);
             case Spork:
                 return context.sporkManager.mapSporks.containsKey(inv.hash);
             case MasternodePaymentVote:
@@ -1313,8 +1286,6 @@ public class Peer extends PeerSocketHandler {
         List<InventoryItem> goveranceObjects = new LinkedList<InventoryItem>();
         List<InventoryItem> instantSendLocks = new LinkedList<InventoryItem>();
         List<InventoryItem> chainLocks = new LinkedList<InventoryItem>();
-
-        //InstantSend instantSend = InstantSend.get(blockChain);
 
         for (InventoryItem item : items) {
             switch (item.type) {

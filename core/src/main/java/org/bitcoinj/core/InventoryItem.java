@@ -32,8 +32,8 @@ public class InventoryItem {
         FilteredBlock,
         // Dash message types
         // NOTE: declare non-implmented here, we must keep this enum consistent and backwards compatible
-        TransactionLockRequest, //Dash InstantSend
-        TransactionLockVote,         //Dash InstantSend
+        TransactionLockRequest, //Dash InstantSend - obsolete
+        TransactionLockVote,         //Dash InstantSend - obsolete
         Spork,
         MasternodePaymentVote,
         MasternodePaymentBlock, // reusing, was MasterNodeScanningError

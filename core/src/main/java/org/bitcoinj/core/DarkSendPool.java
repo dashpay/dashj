@@ -194,7 +194,6 @@ public class DarkSendPool {
                             context.masternodePayments.checkAndRemove();
                             if(processGovernance)
                                 context.governanceManager.checkAndRemove();
-                            context.instantSend.checkAndRemove();
                         }
                         //hashengineering added this
                         if(tick % 30 == 0) {
@@ -212,14 +211,6 @@ public class DarkSendPool {
                         if(tick % MASTERNODES_DUMP_SECONDS == 0) {
                             context.masternodeSync.queueOnSyncStatusChanged(MasternodeSync.MASTERNODE_SYNC_FINISHED, 1.0f);
                         }
-
-                        // check whether the outgoing simple transactions were auto locked
-                        // within the specific time frame
-                        if (tick % 2 == 0) {
-                            if(context.instantSendManager.isOldInstantSendEnabled())
-                                context.instantSend.notifyLockStatus();
-                        }
-
                     }
                 }
             }

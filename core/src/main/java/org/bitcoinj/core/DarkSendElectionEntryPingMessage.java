@@ -12,7 +12,7 @@ import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
  * Created by Eric on 2/10/2015.
  */
 public class DarkSendElectionEntryPingMessage extends Message {
-    private static final Logger log = LoggerFactory.getLogger(TransactionLockVote.class);
+    private static final Logger log = LoggerFactory.getLogger(DarkSendElectionEntryPingMessage.class);
 
     TransactionInput vin;
     byte [] vchSig;

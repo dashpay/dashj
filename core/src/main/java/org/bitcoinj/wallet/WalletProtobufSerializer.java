@@ -624,10 +624,7 @@ public class WalletProtobufSerializer {
     }
 
     private void readTransaction(Protos.Transaction txProto, NetworkParameters params) throws UnreadableWalletException {
-        boolean isIX = txProto.getConfidence().hasIxType() && txProto.getConfidence().getIxType() != Protos.TransactionConfidence.IXType.IX_NONE;
-        boolean newIX = Context.get().instantSendManager != null ?
-                Context.get().instantSendManager.isNewInstantSendEnabled() : false;
-        Transaction tx = !isIX || newIX ? new Transaction(params) : new TransactionLockRequest(params);
+        Transaction tx = new Transaction(params);
 
         tx.setVersion(txProto.getVersion());
 
