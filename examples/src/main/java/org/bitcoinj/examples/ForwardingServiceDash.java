@@ -354,9 +354,6 @@ public class ForwardingServiceDash {
                 }
             }, MoreExecutors.directExecutor());
 
-            //MasternodeDB.dumpMasternodes();
-            FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(kit.directory().getAbsolutePath(),"mncache.dat", "magicMasternodeCache");
-            mndb.dump(Context.get().masternodeManager);
         } catch (KeyCrypterException | InsufficientMoneyException e) {
             // We don't use encrypted wallets in this example - can never happen.
             throw new RuntimeException(e);

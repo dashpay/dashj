@@ -33,6 +33,11 @@ public class MessageSigner {
         return MessageSigner.verifyMessage(pubkey.getId(), vchSig, message, errorMessage);
     }
 
+    public static boolean verifyMessage(KeyId pubkeyId, MasternodeSignature vchSig, String message,
+                                        StringBuilder errorMessage) {
+        return verifyMessage(pubkeyId.getBytes(), vchSig, message, errorMessage);
+    }
+
     public static boolean verifyMessage(byte [] pubkeyId, MasternodeSignature vchSig, String message,
                                         StringBuilder errorMessage) {
         byte [] dataToHash = Utils.formatMessageForSigning(message);

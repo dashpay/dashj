@@ -45,9 +45,4 @@ public class MasternodePayments {
         }*/
         return false;
     }
-
-    public int getStorageLimit()
-    {
-        return Math.max((int)(context.masternodeManager.size() * nStorageCoeff), nMinBlocksToStore);
-    }
 }

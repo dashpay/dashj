@@ -207,23 +207,6 @@ public class MasternodeSync {
             log.info("mnsync--CMasternodeSync::BumpAssetLastTime -- "+ strFuncName);
     }
 
-    void addedMasternodeList(Sha256Hash hash) {
-        if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(hash)) {
-            Integer count = mapSeenSyncMNB.get(hash);
-            if(count != null) {
-                lastMasternodeList = Utils.currentTimeSeconds();
-                mapSeenSyncMNB.put(hash, mapSeenSyncMNB.get(hash)+1);
-            }
-            else {
-                mapSeenSyncMNB.put(hash, 1);
-                lastMasternodeList = Utils.currentTimeSeconds();
-            }
-        } else {
-            lastMasternodeList = Utils.currentTimeSeconds();
-            mapSeenSyncMNB.put(hash, 1);
-        }
-    }
-
     public boolean isFailed() { return RequestedMasternodeAssets == MASTERNODE_SYNC_FAILED; }
     public boolean isBlockchainSynced() { return RequestedMasternodeAssets > MASTERNODE_SYNC_WAITING; }
     public boolean isMasternodeListSynced() { return RequestedMasternodeAssets > MASTERNODE_SYNC_LIST; }
@@ -476,9 +459,8 @@ public class MasternodeSync {
                     if (RequestedMasternodeAttempt <= 2) {
                         pnode.sendMessage(new GetSporksMessage(context.getParams())); //get current network sporks
                     } else if (RequestedMasternodeAttempt < 4) {
-                        context.masternodeManager.dsegUpdate(pnode);
                     } else if (RequestedMasternodeAttempt < 6) {
-                        int nMnCount = context.masternodeManager.countEnabled();
+                        int nMnCount = context.masternodeListManager.getListAtChainTip().size();
                         pnode.sendMessage(new GetMasternodePaymentRequestSyncMessage(context.getParams(), nMnCount)); //sync payees
                         sendGovernanceSyncRequest(pnode);
                     } else {
@@ -548,8 +530,6 @@ public class MasternodeSync {
                         continue;
 
                     RequestedMasternodeAttempt++;
-
-                    context.masternodeManager.dsegUpdate(pnode);
 
                     return; //this will cause each peer to get one request each six seconds for the various assets we need
 

@@ -1,6 +1,7 @@
 package org.bitcoinj.masternode.owner;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.governance.GovernanceException;
 import org.bitcoinj.governance.GovernanceVote;
 import org.bitcoinj.governance.GovernanceVoteBroadcast;
@@ -126,7 +127,7 @@ public class MasternodeControl {
 
             TransactionOutPoint outpoint = new TransactionOutPoint(context.getParams(), nOutputIndex, nTxHash);
 
-            Masternode mn = context.masternodeManager.get(outpoint);
+            Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByCollateral(outpoint);
 
             if(mn == null) {
                 nFailed++;
@@ -224,7 +225,7 @@ public class MasternodeControl {
 
             TransactionOutPoint outpoint = new TransactionOutPoint(context.getParams(), nOutputIndex, nTxHash);
 
-            Masternode mn = context.masternodeManager.get(outpoint);
+            Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByCollateral(outpoint);
 
             if(mn == null) {
                 nFailed++;

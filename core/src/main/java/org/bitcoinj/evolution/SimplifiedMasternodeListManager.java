@@ -911,4 +911,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
         }).start();
     }
+
+    public ReentrantLock getLock() {
+        return lock;
+    }
 }

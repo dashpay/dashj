@@ -16,6 +16,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.evolution.MasternodeMetaDataManager;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import javax.annotation.Nullable;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
@@ -32,6 +33,7 @@ import org.dashj.bls.BLS;
 import org.bitcoinj.wallet.SendRequest;
 import org.slf4j.*;
 
+import java.io.File;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -73,10 +75,8 @@ public class Context {
     public PeerGroup peerGroup;
     public AbstractBlockChain blockChain;
     public SporkManager sporkManager;
-    public MasternodeManager masternodeManager;
     public MasternodePayments masternodePayments;
     public MasternodeSync masternodeSync;
-    public ActiveMasternode activeMasternode;
     public DarkSendPool darkSendPool;
     public HashStore hashStore;
     public GovernanceManager governanceManager;
@@ -93,6 +93,7 @@ public class Context {
     private RecoveredSignaturesDatabase recoveredSigsDB;
     public ChainLocksHandler chainLockHandler;
     private LLMQBackgroundThread llmqBackgroundThread;
+    public MasternodeMetaDataManager masternodeMetaDataManager;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -251,9 +252,7 @@ public class Context {
 
         masternodePayments = new MasternodePayments(this);
         masternodeSync = syncFlags != null ? new MasternodeSync(this, syncFlags, verifyFlags) : new MasternodeSync(this);
-        activeMasternode = new ActiveMasternode(this);
         darkSendPool = new DarkSendPool(this);
-        masternodeManager = new MasternodeManager(this);
         initializedDash = true;
         governanceManager = new GovernanceManager(this);
         triggerManager = new GovernanceTriggerManager(this);
@@ -269,6 +268,7 @@ public class Context {
         instantSendManager = new InstantSendManager(this, instantSendDB);
         chainLockHandler = new ChainLocksHandler(this);
         llmqBackgroundThread = new LLMQBackgroundThread(this);
+        masternodeMetaDataManager = new MasternodeMetaDataManager(this);
 
         BLS.Init();
     }
@@ -280,12 +280,12 @@ public class Context {
 
         masternodePayments = null;
         masternodeSync = null;
-        activeMasternode = null;
         darkSendPool.close();
         darkSendPool = null;
-        masternodeManager = null;
         initializedDash = false;
         governanceManager = null;
+        masternodeListManager = null;
+        evoUserManager = null;
     }
 
     public void initDashSync(final String directory)
@@ -294,13 +294,14 @@ public class Context {
             @Override
             public void run() {
                 Context.propagate(Context.this);
-                FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(directory, "mncache.dat", "magicMasternodeCache");
-
-                boolean success = mndb.load(masternodeManager);
+                //remove mncache.dat if it exists
+                File oldMnCacheFile = new File(directory, "mncache.dat");
+                if(oldMnCacheFile.exists())
+                    oldMnCacheFile.delete();
 
                 FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
 
-                success = gmdb.load(governanceManager);
+                boolean success = gmdb.load(governanceManager);
 
                 FlatDB<EvolutionUserManager> evdb = new FlatDB<EvolutionUserManager>(directory, "user.dat", "magicMasternodeCache");
 
@@ -352,7 +353,6 @@ public class Context {
         chain.addNewBestBlockListener(newBestBlockListener);
         if(initializedDash) {
             sporkManager.setBlockChain(chain, peerGroup);
-            masternodeManager.setBlockChain(chain);
             masternodeSync.setBlockChain(chain);
             masternodeListManager.setBlockChain(chain, peerGroup);
             chain.addTransactionReceivedListener(evoUserManager);
@@ -413,7 +413,6 @@ public class Context {
         if(initializedDash) {
 
 
-        masternodeManager.updatedBlockTip(chainHead);
         masternodeListManager.updatedBlockTip(chainHead);
 
         /*darkSendPool.UpdatedBlockTip(pindex);
