@@ -1251,16 +1251,6 @@ public class Peer extends PeerSocketHandler {
                     return true;
                 }*/
                 return false;
-            case MasternodeAnnounce:
-                if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(inv.hash)) {
-                    context.masternodeSync.addedMasternodeList(inv.hash);
-                    return true;
-                }
-                return false;
-            case MasternodePing:
-                return context.masternodeManager.mapSeenMasternodePing.containsKey(inv.hash);
-            case MasternodeVerify:
-                return context.masternodeManager.mapSeenMasternodeVerification.containsKey(inv.hash);
             case GovernanceObject:
                 return !context.governanceManager.confirmInventoryRequest(inv);
             case GovernanceObjectVote:

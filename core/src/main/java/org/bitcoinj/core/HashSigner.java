@@ -23,6 +23,11 @@ public class HashSigner {
     public static boolean verifyHash(Sha256Hash hash, PublicKey pubkey, MasternodeSignature vchSig, StringBuilder strErrorRet) {
         return verifyHash(hash, pubkey.getId(), vchSig, strErrorRet);
     }
+
+    public static boolean verifyHash(Sha256Hash hash, KeyId pubkeyId, MasternodeSignature vchSig, StringBuilder strErrorRet) {
+        return verifyHash(hash, pubkeyId.getBytes(), vchSig, strErrorRet);
+    }
+
     public static boolean verifyHash(Sha256Hash hash, byte [] pubkeyId, MasternodeSignature vchSig, StringBuilder strErrorRet) {
         ECKey pubkeyFromSig;
 

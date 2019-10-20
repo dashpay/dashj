@@ -16,6 +16,9 @@
 package org.bitcoinj.governance;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSSignature;
+import org.bitcoinj.evolution.Masternode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -337,7 +340,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         vchSig.bitcoinSerialize(stream);
     }
 
-    public boolean isValid(boolean fSignatureCheck) {
+    public boolean isValid(boolean useVotingKey) {
         if (nTime > Utils.currentTimeSeconds() + (60 * 60)) {
             log.info("gobject--CGovernanceVote::IsValid -- vote is too far ahead of current time - %s - nTime %lli - Max Time %lli\n", getHash().toString(), nTime, Utils.currentTimeSeconds() + (60 * 60));
             return false;
@@ -356,17 +359,17 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         }
 
         if(context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST)) {
-            MasternodeInfo infoMn = context.masternodeManager.getMasternodeInfo(masternodeOutpoint);
-            if (infoMn == null) {
+            Masternode dmn = context.masternodeListManager.getListAtChainTip().getMNByCollateral(masternodeOutpoint);
+            if (dmn == null) {
                 log.info("gobject--CGovernanceVote::IsValid -- Unknown Masternode - {}", masternodeOutpoint.toStringShort());
                 return false;
             }
 
-            if (!fSignatureCheck) {
-                return true;
+            if (useVotingKey) {
+                return checkSignature(dmn.getKeyIdVoting());
+            } else {
+                return checkSignature(dmn.getPubKeyOperator());
             }
-
-            return checkSignature(infoMn.pubKeyMasternode);
         }
 
         return true;
@@ -443,6 +446,45 @@ public class GovernanceVote extends ChildMessage implements Serializable {
             }
         }
 
+        return true;
+    }
+
+    public boolean checkSignature(KeyId pubKeyMasternode) {
+        StringBuilder strError = new StringBuilder();
+
+        if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+            Sha256Hash hash = getSignatureHash();
+
+            if (!HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
+                // could be a signature in old format
+                String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
+
+                if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+                    // nope, not in old format either
+                    log.info("gobject", "CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
+                    return false;
+                }
+            }
+        } else {
+            String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
+
+            if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+                log.info("gobject--CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public boolean checkSignature(BLSPublicKey pubKey)
+    {
+        Sha256Hash hash = getSignatureHash();
+        BLSSignature sig = new BLSSignature(vchSig.getBytes());
+        if (!sig.verifyInsecure(pubKey, hash)) {
+            log.info("GovernanceVote-CheckSignature -- VerifyInsecure() failed\n");
+            return false;
+        }
         return true;
     }
 

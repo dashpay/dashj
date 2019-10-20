@@ -405,10 +405,11 @@ public class GovernanceManager extends AbstractManager {
             if (fOk) {
                 mapVoteToObject.insert(nHashVote, govobj);
 
+                /* TODO:  Fix Governance Objects
                 if (govobj.getObjectType() == GOVERNANCE_OBJECT_WATCHDOG) {
                     context.masternodeManager.updateLastSentinelPingTime(vote.getMasternodeOutpoint());
                     log.info("gobject--CGovernanceObject::ProcessVote -- GOVERNANCE_OBJECT_WATCHDOG vote for {}", vote.getParentHash());
-                }
+                }*/
             }
             return fOk;
         } finally {
@@ -865,7 +866,7 @@ public class GovernanceManager extends AbstractManager {
     public void updateCachesAndClean() {
         log.info("gobject--CGovernanceManager::UpdateCachesAndClean");
 
-        ArrayList<Sha256Hash> vecDirtyHashes = context.masternodeManager.getAndClearDirtyGovernanceObjectHashes();
+        ArrayList<Sha256Hash> vecDirtyHashes = context.masternodeMetaDataManager.getAndClearDirtyGovernanceObjectHashes();
         
         lock.lock();
         try {
@@ -951,7 +952,7 @@ public class GovernanceManager extends AbstractManager {
 
                     if ((pObj.isSetCachedDelete() || pObj.isSetExpired()) && (nTimeSinceDeletion >= GOVERNANCE_DELETION_DELAY)) {
                         log.info("CGovernanceManager::UpdateCachesAndClean -- erase obj {}", entry.getValue());
-                        context.masternodeManager.removeGovernanceObject(pObj.getHash());
+                        context.masternodeMetaDataManager.removeGovernanceObject(pObj.getHash());
 
                         // Remove vote references
                         final LinkedList<CacheItem<Sha256Hash, GovernanceObject>> listItems = mapVoteToObject.getItemList();
@@ -1244,7 +1245,7 @@ public class GovernanceManager extends AbstractManager {
         int nMaxObjRequestsPerNode = 1;
         int nProjectedVotes = 2000;
         if (params.getId() != NetworkParameters.ID_MAINNET) {
-            nMaxObjRequestsPerNode = Math.max(1, (int)(nProjectedVotes / Math.max(1, context.masternodeManager.size())));
+            nMaxObjRequestsPerNode = Math.max(1, (int)(nProjectedVotes / Math.max(1, context.masternodeListManager.getListAtChainTip().size())));
         }
 
 

@@ -502,4 +502,12 @@ public class SimplifiedMasternodeList extends Message {
     public StoredBlock getStoredBlock() {
         return storedBlock;
     }
+
+    public Masternode getMNByCollateral(TransactionOutPoint outPoint) {
+        throw new UnsupportedOperationException("SimplifiedMasternodeEntries do not have an outpoint");
+    }
+
+    public int countEnabled() {
+        return size();
+    }
 }

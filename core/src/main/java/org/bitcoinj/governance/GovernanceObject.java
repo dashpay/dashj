@@ -17,6 +17,9 @@ package org.bitcoinj.governance;
 
 import com.google.common.collect.LinkedHashMultimap;
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSSignature;
+import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -375,10 +378,12 @@ public class GovernanceObject extends Message implements Serializable {
         if (fCheckCollateral) {
             if ((nObjectType == GOVERNANCE_OBJECT_TRIGGER) || (nObjectType == GOVERNANCE_OBJECT_WATCHDOG)) {
                 String strOutpoint = masternodeOutpoint.toStringShort();
-                MasternodeInfo infoMn = context.masternodeManager.getMasternodeInfo(masternodeOutpoint);
+                Masternode infoMn = context.masternodeListManager.getListAtChainTip().getMNByCollateral(masternodeOutpoint);
                 if (infoMn == null ) {
 
+                    /* TODO:  fix this
                     Pair<Masternode.CollateralStatus, Integer> status = Masternode.checkCollateral(masternodeOutpoint);
+
                     Masternode.CollateralStatus err = status.getFirst();
                     if (err == Masternode.CollateralStatus.COLLATERAL_OK) {
                         validity.fMissingMasternode =  true;
@@ -388,13 +393,14 @@ public class GovernanceObject extends Message implements Serializable {
                     } else if (err == Masternode.CollateralStatus.COLLATERAL_INVALID_AMOUNT) {
                         validity.strError = "Masternode UTXO should have 1000 DASH, missing masternode=" + strOutpoint + "\n";
                     }
+                    */
 
                     return false;
                 }
 
                 // Check that we have a valid MN signature
-                if (!checkSignature(infoMn.pubKeyMasternode)) {
-                    validity.strError = "Invalid masternode signature for: " + strOutpoint + ", pubkey id = " + infoMn.pubKeyMasternode.getId().toString();
+                if (!checkSignature(infoMn.getPubKeyOperator())) {
+                    validity.strError = "Invalid masternode signature for: " + strOutpoint + ", pubkey id = " + infoMn.getPubKeyOperator().toString();
                     return false;
                 }
 
@@ -422,6 +428,7 @@ public class GovernanceObject extends Message implements Serializable {
         return true;
     }
 
+    @Deprecated
     boolean checkSignature(PublicKey pubKeyMasternode)
     {
         StringBuilder strError = new StringBuilder();
@@ -446,6 +453,15 @@ public class GovernanceObject extends Message implements Serializable {
                 log.error("CGovernance::CheckSignature -- VerifyMessage() failed, error: {}", strError);
                 return false;
             }
+        }
+        return true;
+    }
+
+    boolean checkSignature(BLSPublicKey pubKey) {
+        BLSSignature sig = new BLSSignature(vchSig.getBytes());
+        if (!sig.verifyInsecure(pubKey, getSignatureHash())) {
+            log.error("GovernanceObject.CheckSignature -- VerifyInsecure() failed\n");
+            return false;
         }
         return true;
     }
@@ -571,10 +587,10 @@ public class GovernanceObject extends Message implements Serializable {
 
     public void updateSentinelVariables() {
         // CALCULATE MINIMUM SUPPORT LEVELS REQUIRED
-        if(context.masternodeManager.lock.isHeldByCurrentThread()) {
+        if(context.masternodeListManager.getLock().isHeldByCurrentThread()) {
 
         }
-        int nMnCount = context.masternodeManager.countEnabled();
+        int nMnCount = context.masternodeListManager.getListAtChainTip().countEnabled();
         if (nMnCount == 0) {
             return;
         }
@@ -664,12 +680,13 @@ public class GovernanceObject extends Message implements Serializable {
     }
 
     public boolean processVote(Peer pfrom, GovernanceVote vote, GovernanceException exception) {
-        if (context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST) &&!context.masternodeManager.has(vote.getMasternodeOutpoint())) {
+        if (context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST) &&
+                context.masternodeListManager.getListAtChainTip().getMNByCollateral(vote.getMasternodeOutpoint()) == null) {
             String message = "CGovernanceObject::ProcessVote -- Masternode index not found";
             exception.setException(message, GOVERNANCE_EXCEPTION_WARNING);
             if (mapOrphanVotes.put(vote.getMasternodeOutpoint(), new Pair<Integer, GovernanceVote>((int)(Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME), vote))) {
                 if (pfrom != null) {
-                    context.masternodeManager.askForMN(pfrom, vote.getMasternodeOutpoint());
+                    //TODO: context.masternodeManager.askForMN(pfrom, vote.getMasternodeOutpoint());
                 }
                 log.info("{}", message);
             } else {
@@ -733,7 +750,7 @@ public class GovernanceObject extends Message implements Serializable {
             context.governanceManager.addInvalidVote(vote);
             return false;
         }
-        if (!context.masternodeManager.addGovernanceVote(vote.getMasternodeOutpoint(), vote.getParentHash())) {
+        if (!context.masternodeMetaDataManager.addGovernanceVote(vote.getMasternodeOutpoint(), vote.getParentHash())) {
             String unableMessage = "CGovernanceObject::ProcessVote -- Unable to add governance vote" + ", MN outpoint = " + vote.getMasternodeOutpoint().toStringShort() + ", governance object hash = " + getHash().toString();
             log.info("gobject--{}", unableMessage);
             exception.setException(unableMessage, GOVERNANCE_EXCEPTION_PERMANENT_ERROR);
@@ -757,7 +774,7 @@ public class GovernanceObject extends Message implements Serializable {
         Iterator<Map.Entry<TransactionOutPoint, VoteRecord>> it = mapCurrentMNVotes.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<TransactionOutPoint, VoteRecord> entry = it.next();
-            if (!context.masternodeManager.has(entry.getKey())) {
+            if (context.masternodeListManager.getListAtChainTip().getMNByCollateral(entry.getKey()) == null) {
                 fileVotes.removeVotesFromMasternode(entry.getKey());
                 it.remove();
             }
