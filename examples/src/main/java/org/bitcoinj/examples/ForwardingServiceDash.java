@@ -198,50 +198,6 @@ public class ForwardingServiceDash {
         System.out.println("Send coins to: " + sendToAddress);
         System.out.println("Waiting for coins to arrive. Press Ctrl-C to quit.");
 
-        Context.get().masternodeSync.addEventListener(new MasternodeSyncListener() {
-            @Override
-            public void onSyncStatusChanged(int newStatus, double syncStatus) {
-                if(newStatus == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
-                    FlatDB<MasternodeManager> mndb = new FlatDB<>(kit.directory().getAbsolutePath(), "mncache.dat", "magicMasternodeCache");
-                    mndb.dump(Context.get().masternodeManager);
-
-                    if(control == null) {
-                        control = new MasternodeControl(Context.get(), "masternode.conf");
-                        control.load();
-                    }
-/*
-                    Address address = new Address(params, params.getAddressHeader(), new DumpedPrivateKey(params, "91hMFoqbdqJdmCfgSniMBsWP4Vy9HDbdujg5Y7vpqCMXafw49jt").getKey().getPubKeyHash());
-                    int version = address.getVersion();
-
-                    byte [] ip =  {13, (byte)229, 80, 108};
-                    try {
-                        Masternode mn = Context.get().masternodeManager.find(new MasternodeAddress(InetAddress.getByAddress("13.229.80.108", ip), 19999));
-                        if (mn == null) {
-
-                        }
-                    } catch (UnknownHostException x) {
-
-                    }
-*/
-
-                //} else if(newStatus == MasternodeSync.MASTERNODE_SYNC_GOVERNANCE) {
-
-                    FlatDB<GovernanceManager> gmdb = new FlatDB<>(kit.directory().getAbsolutePath(), "goverance.dat", "magicGovernanceCache");
-                    gmdb.dump(Context.get().governanceManager);
-                    ArrayList<GovernanceObject> list = Context.get().governanceManager.getAllNewerThan(Utils.currentTimeSeconds() - 2 * 30 * 24 * 60 * 60);
-                    //ArrayList<Pair<Integer, Masternode>> results = Context.get().masternodeManager.getMasternodeRanks(27143, 0);
-                    //System.out.println(results.toString());
-                    StringBuilder error = new StringBuilder();
-                    for (GovernanceObject governanceObject : list) {
-                        if(governanceObject.getObjectType() == 1) {
-                            GovernanceVoteBroadcast broadcast = control.voteAlias("test_mn", governanceObject.getHash().toString(), "funding", "yes", error);
-                        }
-                    }
-                }
-
-            }
-        });
-
         try {
             Thread.sleep(Long.MAX_VALUE);
         } catch (InterruptedException ignored) {}

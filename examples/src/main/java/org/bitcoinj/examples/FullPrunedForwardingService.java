@@ -123,19 +123,6 @@ public class FullPrunedForwardingService {
         System.out.println("Send coins to: " + sendToAddress);
         System.out.println("Waiting for coins to arrive. Press Ctrl-C to quit.");
 
-        Context.get().masternodeSync.addEventListener(new MasternodeSyncListener() {
-            @Override
-            public void onSyncStatusChanged(int newStatus, double syncStatus) {
-                if(newStatus == MasternodeSync.MASTERNODE_SYNC_FINISHED) {
-                    FlatDB<MasternodeManager> mndb = new FlatDB<MasternodeManager>(kit.directory().getAbsolutePath(), "mncache.dat", "magicMasternodeCache");
-                    mndb.dump(Context.get().masternodeManager);
-                    //ArrayList<Pair<Integer, Masternode>> results = Context.get().masternodeManager.getMasternodeRanks(27143, 0);
-                    //System.out.println(results.toString());
-                }
-
-            }
-        });
-
         try {
             Thread.sleep(Long.MAX_VALUE);
         } catch (InterruptedException ignored) {}
