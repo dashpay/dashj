@@ -14,6 +14,7 @@
 
 package org.bitcoinj.crypto;
 
+import org.bitcoinj.core.ECKey;
 import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.math.ec.ECFieldElement;
 import org.bouncycastle.math.ec.ECPoint;
@@ -92,7 +93,7 @@ public class LazyECPoint {
 
     public boolean isCompressed() {
         if (bits != null)
-            return bits[0] == 2 || bits[0] == 3;
+            return ECKey.isPubKeyCompressed(bits);
         else
             return get().isCompressed();
     }
