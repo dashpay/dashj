@@ -1270,8 +1270,6 @@ public class Peer extends PeerSocketHandler {
         // Separate out the blocks and transactions, we'll handle them differently
         List<InventoryItem> transactions = new LinkedList<>();
         List<InventoryItem> blocks = new LinkedList<>();
-        List<InventoryItem> oldTxLockRequests = new LinkedList<InventoryItem>();
-        List<InventoryItem> oldTxLockVotes = new LinkedList<InventoryItem>();
         List<InventoryItem> sporks = new LinkedList<InventoryItem>();
         List<InventoryItem> goveranceObjects = new LinkedList<InventoryItem>();
         List<InventoryItem> instantSendLocks = new LinkedList<InventoryItem>();
@@ -1280,16 +1278,11 @@ public class Peer extends PeerSocketHandler {
         for (InventoryItem item : items) {
             switch (item.type) {
                 case Transaction:
-                    transactions.add(item);
-                    break;
                 case TransactionLockRequest:
-                    oldTxLockRequests.add(item);
+                    transactions.add(item);
                     break;
                 case Block:
                     blocks.add(item);
-                    break;
-                case TransactionLockVote:
-                    oldTxLockVotes.add(item);
                     break;
                 case Spork:
                     sporks.add(item);
@@ -1302,9 +1295,6 @@ public class Peer extends PeerSocketHandler {
                 case BudgetProposal: break;
                 case BudgetFinalized: break;
                 case BudgetFinalizedVote: break;
-                case MasternodeQuorum: break;
-                case MasternodeAnnounce: break;
-                case MasternodePing: break;
                 case DarkSendTransaction:
                     break;
                 case GovernanceObject:
@@ -1322,7 +1312,6 @@ public class Peer extends PeerSocketHandler {
                     break;
                 default:
                     break;
-                    //throw new IllegalStateException("Not implemented: " + item.type);
             }
         }
 
@@ -1374,47 +1363,6 @@ public class Peer extends PeerSocketHandler {
 
                 // Register with the garbage collector that we care about the confidence data for a while.
                 pendingTxDownloads.add(conf);
-            }
-        }
-
-        it = oldTxLockRequests.iterator();
-        while (it.hasNext()) {
-            InventoryItem item = it.next();
-            // Only download the transaction if we are the first peer that saw it be advertised. Other peers will also
-            // see it be advertised in inv packets asynchronously, they co-ordinate via the memory pool. We could
-            // potentially download transactions faster by always asking every peer for a tx when advertised, as remote
-            // peers run at different speeds. However to conserve bandwidth on mobile devices we try to only download a
-            // transaction once. This means we can miss broadcasts if the peer disconnects between sending us an inv and
-            // sending us the transaction: currently we'll never try to re-fetch after a timeout.
-            //
-            // The line below can trigger confidence listeners.
-            TransactionConfidence conf = context.getConfidenceTable().seen(item.hash, this.getAddress());
-            if (conf.numBroadcastPeers() > 1) {
-                // Some other peer already announced this so don't download.
-                it.remove();
-            } else if (conf.getSource().equals(TransactionConfidence.Source.SELF)) {
-                // We created this transaction ourselves, so don't download.
-                it.remove();
-            } else {
-                log.debug("{}: getdata on tx {}", getAddress(), item.hash);
-                getdata.addItem(item);
-                if (pendingTxDownloads.size() > PENDING_TX_DOWNLOADS_LIMIT) {
-                    log.info("{}: Too many pending transactions, disconnecting", this);
-                    close();
-                    return;
-                }
-                // Register with the garbage collector that we care about the confidence data for a while.
-                pendingTxDownloads.add(conf);
-            }
-        }
-
-        if(context.instantSendManager != null && context.instantSendManager.isOldInstantSendEnabled()) {
-            it = oldTxLockVotes.iterator();
-            while (it.hasNext()) {
-                InventoryItem item = it.next();
-                {
-                    getdata.addItem(item);
-                }
             }
         }
 
