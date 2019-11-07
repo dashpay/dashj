@@ -34,7 +34,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public static final int LISTS_CACHE_SIZE = 576;
     public static final int SNAPSHOT_TIME_PERIOD = 60 * 60 * 26;
 
-    public int MAX_CACHE_SIZE = 8;
+    public static int MAX_CACHE_SIZE = 8;
+    public static int MIN_CACHE_SIZE = 1;
 
     public enum SaveOptions {
         SAVE_EVERY_BLOCK,
@@ -55,14 +56,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache = new LinkedHashMap<Sha256Hash, SimplifiedMasternodeList>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<Sha256Hash, SimplifiedMasternodeList> eldest) {
-            return size() > MAX_CACHE_SIZE;
+            return size() > (syncOptions == SyncOptions.SYNC_MINIMUM ? MIN_CACHE_SIZE : MAX_CACHE_SIZE);
         }
     };
 
     LinkedHashMap<Sha256Hash, SimplifiedQuorumList> quorumsCache = new LinkedHashMap<Sha256Hash, SimplifiedQuorumList>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<Sha256Hash, SimplifiedQuorumList> eldest) {
-            return size() > MAX_CACHE_SIZE;
+            return size() > (syncOptions == SyncOptions.SYNC_MINIMUM ? MIN_CACHE_SIZE : MAX_CACHE_SIZE);
         }
     };
 
@@ -91,9 +92,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public SimplifiedMasternodeListManager(Context context) {
         super(context);
-        if (Runtime.getRuntime().totalMemory() <= Math.pow(1024, 3)) {
-            MAX_CACHE_SIZE = 1;
-        }
         tipBlockHash = params.getGenesisBlock().getHash();
         mnList = new SimplifiedMasternodeList(context.getParams());
         quorumList = new SimplifiedQuorumList(context.getParams());
