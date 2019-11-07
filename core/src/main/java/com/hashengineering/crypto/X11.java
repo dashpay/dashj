@@ -1,20 +1,56 @@
+/*
+ * Copyright 2014 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.hashengineering.crypto;
 
-import org.bitcoinj.core.Sha256Hash;
+import com.google.common.base.Preconditions;
 
 import fr.cryptohash.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Created by Hash Engineering on 4/24/14 for the X11 algorithm
+ * @author HashEngineering
+ *
+ * Performs the X11 hashing algorithm
+ *
  */
 public class X11 {
 
     private static final Logger log = LoggerFactory.getLogger(X11.class);
     private static boolean native_library_loaded = false;
 
+    private static Digest [] algorithms;
+
     static {
+
+        algorithms = new Digest[]{
+                new BLAKE512(),
+                new BMW512(),
+                new Groestl512(),
+                new Skein512(),
+                new JH512(),
+                new Keccak512(),
+                new Luffa512(),
+                new CubeHash512(),
+                new SHAvite512(),
+                new SIMD512(),
+                new ECHO512()
+        };
+
+        Preconditions.checkState(algorithms.length == 11);
 
         try {
             log.info("Loading x11 native library...");
@@ -44,67 +80,30 @@ public class X11 {
     }
 
     public static byte[] x11Digest(byte[] input) {
-        //long start = System.currentTimeMillis();
         try {
-            return native_library_loaded ? x11_native(input) : x11(input);
-            /*long start = System.currentTimeMillis();
-            byte [] result = x11_native(input);
-            long end1 = System.currentTimeMillis();
-            byte [] result2 = x11(input);
-            long end2 = System.currentTimeMillis();
-            log.info("x11: native {} / java {}", end1-start, end2-end1);
-            return result;*/
+            return native_library_loaded ? x11_native(input) : x11(input, 0, input.length);
         } catch (Exception e) {
             return null;
-        }
-        finally {
-            //long time = System.currentTimeMillis()-start;
-            //log.info("X11 Hash time: {} ms per block", time);
         }
     }
 
     static native byte [] x11_native(byte [] input);
 
-
-    static byte [] x11(byte header[])
-    {
-        //Initialize
-        Sha512Hash[] hash = new Sha512Hash[11];
-
-        //Run the chain of algorithms
-        BLAKE512 blake512 = new BLAKE512();
-        hash[0] = new Sha512Hash(blake512.digest(header));
-
-        BMW512 bmw = new BMW512();
-        hash[1] = new Sha512Hash(bmw.digest(hash[0].getBytes()));
-
-        Groestl512 groestl = new Groestl512();
-        hash[2] = new Sha512Hash(groestl.digest(hash[1].getBytes()));
-
-        Skein512 skein = new Skein512();
-        hash[3] = new Sha512Hash(skein.digest(hash[2].getBytes()));
-
-        JH512 jh = new JH512();
-        hash[4] = new Sha512Hash(jh.digest(hash[3].getBytes()));
-
-        Keccak512 keccak = new Keccak512();
-        hash[5] = new Sha512Hash(keccak.digest(hash[4].getBytes()));
-
-        Luffa512 luffa = new Luffa512();
-        hash[6] = new Sha512Hash(luffa.digest(hash[5].getBytes()));
-
-        CubeHash512 cubehash = new CubeHash512();
-        hash[7] = new Sha512Hash(cubehash.digest(hash[6].getBytes()));
-
-        SHAvite512 shavite = new SHAvite512();
-        hash[8] = new Sha512Hash(shavite.digest(hash[7].getBytes()));
-
-        SIMD512 simd = new SIMD512();
-        hash[9] = new Sha512Hash(simd.digest(hash[8].getBytes()));
-
-        ECHO512 echo = new ECHO512();
-        hash[10] = new Sha512Hash(echo.digest(hash[9].getBytes()));
-
-        return hash[10].trim256().getBytes();
+    public static byte [] x11(byte header[], int offset, int length) {
+        Digest algorithm = algorithms[0];
+        algorithm.reset();
+        algorithm.update(header, offset, length);
+        byte [] hash512 = algorithm.digest();
+        int count = 1;
+        while (count < 11) {
+            algorithm = algorithms[count];
+            algorithm.reset();
+            algorithm.update(hash512);
+            hash512 = algorithm.digest();
+            count++;
+        }
+        byte [] hash = new byte [32];
+        System.arraycopy(hash512, 0, hash, 0, 32);
+        return hash;
     }
 }
