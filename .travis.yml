@@ -9,10 +9,10 @@ addons:
 jdk: oraclejdk8
 install: true # remove default
 script:
-  - mvn -q clean install -Pno-network
+  - mvn clean install -Pno-network
   - jdk_switcher use openjdk8
   - cd core
-  - mvn -q clean package -Pno-network
+  - mvn clean package -Pno-network
 
 after_success:
   - cd ../core

@@ -356,7 +356,7 @@
             <version>0.17-SNAPSHOT</version>
         </dependency>
         <dependency>
-        <groupId>de.sfuhrm</groupId>
+            <groupId>de.sfuhrm</groupId>
             <artifactId>saphir-hash-core</artifactId>
             <version>3.0.5</version>
         </dependency>
