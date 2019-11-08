@@ -1,6 +1,7 @@
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSPublicKey;
 
 import java.io.IOException;
@@ -12,7 +13,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     Sha256Hash confirmedHash;
     MasternodeAddress service;
     KeyId keyIdOperator;
-    BLSPublicKey pubKeyOperator;
+    BLSLazyPublicKey pubKeyOperator;
     KeyId keyIdVoting;
     boolean isValid;
     static int MESSAGE_SIZE = 151;
@@ -36,7 +37,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         service = other.service.duplicate();
         keyIdOperator = other.keyIdOperator.duplicate();
         keyIdVoting = other.keyIdVoting.duplicate();
-        pubKeyOperator = new BLSPublicKey(other.pubKeyOperator);
+        pubKeyOperator = new BLSLazyPublicKey(other.pubKeyOperator);
         updateConfirmedHashWithProRegTxHash();
         length = params.isSupportingEvolution() ? MESSAGE_SIZE : MESSAGE_SIZE_OLD;
     }
@@ -52,7 +53,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
             keyIdOperator = new KeyId(params, payload, cursor);
             cursor += keyIdOperator.getMessageSize();
         } else {
-            pubKeyOperator = new BLSPublicKey(params, payload, cursor);
+            pubKeyOperator = new BLSLazyPublicKey(params, payload, cursor);
             cursor += pubKeyOperator.getMessageSize();
         }
         keyIdVoting = new KeyId(params, payload, cursor);
@@ -120,7 +121,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     }
 
     public BLSPublicKey getPubKeyOperator() {
-        return pubKeyOperator;
+        return pubKeyOperator.getPublicKey();
     }
 
     public KeyId getKeyIdVoting() {
