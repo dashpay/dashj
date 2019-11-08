@@ -1,3 +1,19 @@
+/*
+ * Copyright 2014 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Created by Hash Engineering on 4/24/14 for the X11 algorithm
  */
@@ -6,53 +22,32 @@
 
 #include <jni.h>
 
-
-
-jbyteArray JNICALL hash11_native(JNIEnv *env, jclass cls, jbyteArray header)
+jbyteArray JNICALL x11_native(JNIEnv *env, jclass cls, jbyteArray input, jint offset, jint length)
 {
-    jint Plen = (env)->GetArrayLength(header);
-    jbyte *P = (env)->GetByteArrayElements(header, NULL);
-    //uint8_t *buf = malloc(sizeof(uint8_t) * dkLen);
-    jbyteArray DK = NULL;
+    jbyte *pInput = (env)->GetByteArrayElements(input, NULL);
+    jbyteArray byteArray = NULL;
 
-    if (P)
+    if (pInput)
 	{
-	
-	uint256 result = Hash9(P, P+Plen);
+	    jbyte result[HASH256_SIZE];
+	    HashX11((uint8_t *)pInput+offset, (uint8_t *)pInput+offset+length, (uint8_t *)result);
 
-    /*if (crypto_scrypt((uint8_t *) P, Plen, (uint8_t *) S, Slen, N, r, p, buf, dkLen)) {
-        jclass e = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
-        char *msg;
-        switch (errno) {
-            case EINVAL:
-                msg = "N must be a power of 2 greater than 1";
-                break;
-            case EFBIG:
-            case ENOMEM:
-                msg = "Insufficient memory available";
-                break;
-            default:
-                msg = "Memory allocation failed";
+        byteArray = (env)->NewByteArray(32);
+        if (byteArray)
+        {
+            (env)->SetByteArrayRegion(byteArray, 0, 32, (jbyte *) result);
         }
-        (*env)->ThrowNew(env, e, msg);
-        goto cleanup;
-    }*/
 
-    DK = (env)->NewByteArray(32);
-    if (DK)
-	{
-		(env)->SetByteArrayRegion(DK, 0, 32, (jbyte *) result.begin());
-	}
-	
-
-    if (P) (env)->ReleaseByteArrayElements(header, P, JNI_ABORT);
-    //if (buf) free(buf);
-	}
-    return DK;
+        (env)->ReleaseByteArrayElements(input, pInput, JNI_ABORT);
+	} else {
+        jclass e = env->FindClass("java/lang/NullPointerException");
+        env->ThrowNew(e, "input is null");
+    }
+    return byteArray;
 }
 
 static const JNINativeMethod methods[] = {
-    { "x11_native", "([B)[B", (void *) hash11_native }
+    { "x11_native", "([BII)[B", (void *) x11_native }
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
