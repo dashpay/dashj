@@ -1,7 +1,10 @@
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSLazyPublicKey;
+import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
+import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.params.MainNetParams;
 import static org.junit.Assert.*;
 
@@ -55,7 +58,7 @@ public class SimplifiedMasternodesTest {
             BLSSecretKey sk = new BLSSecretKey(skBuf);
 
 
-            smle.pubKeyOperator = sk.GetPublicKey();
+            smle.pubKeyOperator = new BLSLazyPublicKey(sk.GetPublicKey());
             smle.keyIdVoting = new KeyId(Utils.reverseBytes(Utils.HEX.decode(String.format("%040x", i))));
             smle.isValid = true;
 

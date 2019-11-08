@@ -15,10 +15,7 @@
  */
 package org.bitcoinj.crypto;
 
-import org.bitcoinj.core.ChildMessage;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,6 +46,14 @@ public class BLSLazyPublicKey extends ChildMessage {
         this.publicKey = publicKey.publicKey;
         this.isPublicKeyInitialized = publicKey.isPublicKeyInitialized;
     }
+
+    public BLSLazyPublicKey(BLSPublicKey publicKey) {
+        super(Context.get().getParams());
+        this.buffer = null;
+        this.publicKey = publicKey;
+        this.isPublicKeyInitialized = true;
+    }
+
 
     public BLSLazyPublicKey(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
