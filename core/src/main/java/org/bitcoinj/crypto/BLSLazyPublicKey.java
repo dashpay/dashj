@@ -54,7 +54,6 @@ public class BLSLazyPublicKey extends ChildMessage {
         this.isPublicKeyInitialized = true;
     }
 
-
     public BLSLazyPublicKey(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
     }
@@ -94,5 +93,9 @@ public class BLSLazyPublicKey extends ChildMessage {
     @Override
     public String toString() {
         return isPublicKeyInitialized ? publicKey.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
+    }
+
+    public boolean isPublicKeyInitialized() {
+        return isPublicKeyInitialized;
     }
 }
