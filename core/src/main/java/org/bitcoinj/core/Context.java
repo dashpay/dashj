@@ -313,6 +313,13 @@ public class Context {
                 masternodeListManager.setLoadedFromFile(true);
                 masternodeListManager.onFirstSaveComplete();
 
+                //
+                // Load chainlocks
+                //
+
+                FlatDB<ChainLocksHandler> clh = new FlatDB<ChainLocksHandler>(Context.this, directory, false);
+                success = clh.load(chainLockHandler);
+
                 //other functions
                 darkSendPool.startBackgroundProcessing();
 
