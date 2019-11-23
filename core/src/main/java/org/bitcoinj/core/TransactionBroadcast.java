@@ -95,6 +95,9 @@ public class TransactionBroadcast {
                 RejectMessage rejectMessage = (RejectMessage)m;
                 if (tx.getTxId().equals(rejectMessage.getRejectedObjectHash())) {
                     rejects.put(peer, rejectMessage);
+                    tx.getConfidence().markRejectedBy(peer.getAddress(), rejectMessage);
+                    tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.REJECT);
+
                     int size = rejects.size();
                     long threshold = Math.round(numWaitingFor / 2.0);
                     if (size > threshold) {

@@ -80,6 +80,14 @@ public class TransactionConfidence {
     private final Sha256Hash hash;
     // Lazily created listeners array.
     private CopyOnWriteArrayList<ListenerRegistration<Listener>> listeners;
+    // keep track of rejects
+    private Map<PeerAddress, RejectMessage> rejects = new LinkedHashMap<PeerAddress, RejectMessage>() {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<PeerAddress, RejectMessage> eldest) {
+            return size() > 6;
+        }
+    };
+
 
     // The depth of the transaction on the best chain in blocks. An unconfirmed block has depth 0.
     private int depth;
@@ -202,7 +210,13 @@ public class TransactionConfidence {
              * that the message was sent to the peer(s).  This was added to allow interfaces to effectively
              * communicate the status of the transaction when there is only 1 peer.
              */
-            SENT
+            SENT,
+
+            /**
+             * Occurs when a pending transaction (not in the chain) was announced as rejected by another connected peer
+             */
+            REJECT,
+
         }
         void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason);
     }
@@ -383,18 +397,36 @@ public class TransactionConfidence {
                         getAppearedAtChainHeight(), getDepthInBlocks()));
                 break;
         }
+
+        builder.append("\n");
         switch(getIXType())
         {
             case IX_LOCKED:
-                builder.append("  IX Locked.");
+                builder.append("  InstantSendLock: Verified");
                 break;
             case IX_REQUEST:
-                builder.append("  IX Requested");
+                builder.append("  InstantSendLock: Received, not verified");
+                break;
+            case IX_LOCK_FAILED:
+                builder.append("  InstantSendLock: Verification Failed");
+                break;
+            case IX_NONE:
+                builder.append("  InstantSendLock: Unknown status");
                 break;
         }
+        builder.append("\n");
 
         if (source != Source.UNKNOWN)
-            builder.append(" Source: ").append(source);
+            builder.append(" Source: \n");
+
+        if (hasRejections()) {
+            builder.append("\n Rejections:\n");
+            for (Map.Entry<PeerAddress, RejectMessage> entry : rejects.entrySet()) {
+                builder.append(String.format("    Rejected by %s: %s - %s - %s", entry.getKey(),
+                        entry.getValue().getReasonCode().toString(), entry.getValue().getRejectedMessage(), entry.getValue().getReasonString()));
+            }
+        }
+
         return builder.toString();
     }
 
@@ -549,7 +581,7 @@ public class TransactionConfidence {
         IX_NONE,
         IX_REQUEST,
         IX_LOCKED,
-        IX_LOCK_FAILED
+        IX_LOCK_FAILED,
     };
 
     IXType ixType = IXType.IX_NONE;
@@ -597,4 +629,48 @@ public class TransactionConfidence {
         this.sentAt = sentAt;
     }
 
+    /**
+     * Called by a {@link TransactionBroadcast} when a transaction is pending and rejected by a peer. The more peers
+     * reject the transaction, then the transaction may have dust, low fees or be double spent.
+     *
+     * @param address IP address of the peer, used as a proxy for identity.
+     * @return true if marked, false if this address was already seen
+     */
+    public boolean markRejectedBy(PeerAddress address, RejectMessage m) {
+        if(!rejects.containsKey(address)) {
+            rejects.put(address, m);
+            lastBroadcastedAt = Utils.now();
+            return true;
+        }
+        return false;
+    }
+
+    public RejectedTransactionException getRejectedTransactionException() {
+        synchronized (this) {
+            for (Map.Entry<PeerAddress, RejectMessage> entry : rejects.entrySet()) {
+                RejectMessage m = entry.getValue();
+                return new RejectedTransactionException(null, m);
+            }
+        }
+
+        return null;
+    }
+
+    public boolean hasRejections() {
+        return !rejects.isEmpty();
+    }
+
+    public HashMap<PeerAddress, RejectMessage> getRejections() {
+        return new HashMap<>(rejects);
+    }
+
+    /**
+     *
+     * @return true if the transaction confidence has an error state
+     */
+    public boolean hasErrors() {
+        return confidenceType == TransactionConfidence.ConfidenceType.DEAD ||
+                confidenceType == TransactionConfidence.ConfidenceType.IN_CONFLICT ||
+                    hasRejections() && confidenceType != TransactionConfidence.ConfidenceType.BUILDING;
+    }
 }

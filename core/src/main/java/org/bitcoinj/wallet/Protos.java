@@ -6886,6 +6886,1100 @@ public final class Protos {
     // @@protoc_insertion_point(class_scope:wallet.TransactionOutput)
   }
 
+  public interface RejectMessageOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:wallet.RejectMessage)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required .wallet.RejectMessage.RejectCode code = 1;</code>
+     */
+    boolean hasCode();
+    /**
+     * <code>required .wallet.RejectMessage.RejectCode code = 1;</code>
+     */
+    org.bitcoinj.wallet.Protos.RejectMessage.RejectCode getCode();
+
+    /**
+     * <code>required string message = 2;</code>
+     */
+    boolean hasMessage();
+    /**
+     * <code>required string message = 2;</code>
+     */
+    java.lang.String getMessage();
+    /**
+     * <code>required string message = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getMessageBytes();
+
+    /**
+     * <code>required string reason = 3;</code>
+     */
+    boolean hasReason();
+    /**
+     * <code>required string reason = 3;</code>
+     */
+    java.lang.String getReason();
+    /**
+     * <code>required string reason = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getReasonBytes();
+
+    /**
+     * <code>required .wallet.PeerAddress peer = 4;</code>
+     */
+    boolean hasPeer();
+    /**
+     * <code>required .wallet.PeerAddress peer = 4;</code>
+     */
+    org.bitcoinj.wallet.Protos.PeerAddress getPeer();
+    /**
+     * <code>required .wallet.PeerAddress peer = 4;</code>
+     */
+    org.bitcoinj.wallet.Protos.PeerAddressOrBuilder getPeerOrBuilder();
+  }
+  /**
+   * Protobuf type {@code wallet.RejectMessage}
+   */
+  public static final class RejectMessage extends
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:wallet.RejectMessage)
+      RejectMessageOrBuilder {
+    // Use RejectMessage.newBuilder() to construct.
+    private RejectMessage(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private RejectMessage(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final RejectMessage defaultInstance;
+    public static RejectMessage getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public RejectMessage getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private RejectMessage(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              int rawValue = input.readEnum();
+              org.bitcoinj.wallet.Protos.RejectMessage.RejectCode value = org.bitcoinj.wallet.Protos.RejectMessage.RejectCode.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                code_ = value;
+              }
+              break;
+            }
+            case 18: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000002;
+              message_ = bs;
+              break;
+            }
+            case 26: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000004;
+              reason_ = bs;
+              break;
+            }
+            case 34: {
+              org.bitcoinj.wallet.Protos.PeerAddress.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000008) == 0x00000008)) {
+                subBuilder = peer_.toBuilder();
+              }
+              peer_ = input.readMessage(org.bitcoinj.wallet.Protos.PeerAddress.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(peer_);
+                peer_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000008;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.bitcoinj.wallet.Protos.internal_static_wallet_RejectMessage_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.bitcoinj.wallet.Protos.internal_static_wallet_RejectMessage_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.bitcoinj.wallet.Protos.RejectMessage.class, org.bitcoinj.wallet.Protos.RejectMessage.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<RejectMessage> PARSER =
+        new com.google.protobuf.AbstractParser<RejectMessage>() {
+      public RejectMessage parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new RejectMessage(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<RejectMessage> getParserForType() {
+      return PARSER;
+    }
+
+    /**
+     * Protobuf enum {@code wallet.RejectMessage.RejectCode}
+     */
+    public enum RejectCode
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>MALFORMED = 1;</code>
+       */
+      MALFORMED(0, 1),
+      /**
+       * <code>INVALID = 16;</code>
+       */
+      INVALID(1, 16),
+      /**
+       * <code>OBSOLETE = 17;</code>
+       */
+      OBSOLETE(2, 17),
+      /**
+       * <code>DUPLICATE = 18;</code>
+       */
+      DUPLICATE(3, 18),
+      /**
+       * <code>NONSTANDARD = 64;</code>
+       */
+      NONSTANDARD(4, 64),
+      /**
+       * <code>DUST = 65;</code>
+       */
+      DUST(5, 65),
+      /**
+       * <code>INSUFFICIENTFEE = 66;</code>
+       */
+      INSUFFICIENTFEE(6, 66),
+      /**
+       * <code>CHECKPOINT = 67;</code>
+       */
+      CHECKPOINT(7, 67),
+      /**
+       * <code>OTHER = 255;</code>
+       */
+      OTHER(8, 255),
+      ;
+
+      /**
+       * <code>MALFORMED = 1;</code>
+       */
+      public static final int MALFORMED_VALUE = 1;
+      /**
+       * <code>INVALID = 16;</code>
+       */
+      public static final int INVALID_VALUE = 16;
+      /**
+       * <code>OBSOLETE = 17;</code>
+       */
+      public static final int OBSOLETE_VALUE = 17;
+      /**
+       * <code>DUPLICATE = 18;</code>
+       */
+      public static final int DUPLICATE_VALUE = 18;
+      /**
+       * <code>NONSTANDARD = 64;</code>
+       */
+      public static final int NONSTANDARD_VALUE = 64;
+      /**
+       * <code>DUST = 65;</code>
+       */
+      public static final int DUST_VALUE = 65;
+      /**
+       * <code>INSUFFICIENTFEE = 66;</code>
+       */
+      public static final int INSUFFICIENTFEE_VALUE = 66;
+      /**
+       * <code>CHECKPOINT = 67;</code>
+       */
+      public static final int CHECKPOINT_VALUE = 67;
+      /**
+       * <code>OTHER = 255;</code>
+       */
+      public static final int OTHER_VALUE = 255;
+
+
+      public final int getNumber() { return value; }
+
+      public static RejectCode valueOf(int value) {
+        switch (value) {
+          case 1: return MALFORMED;
+          case 16: return INVALID;
+          case 17: return OBSOLETE;
+          case 18: return DUPLICATE;
+          case 64: return NONSTANDARD;
+          case 65: return DUST;
+          case 66: return INSUFFICIENTFEE;
+          case 67: return CHECKPOINT;
+          case 255: return OTHER;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<RejectCode>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<RejectCode>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<RejectCode>() {
+              public RejectCode findValueByNumber(int number) {
+                return RejectCode.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.bitcoinj.wallet.Protos.RejectMessage.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final RejectCode[] VALUES = values();
+
+      public static RejectCode valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private RejectCode(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:wallet.RejectMessage.RejectCode)
+    }
+
+    private int bitField0_;
+    public static final int CODE_FIELD_NUMBER = 1;
+    private org.bitcoinj.wallet.Protos.RejectMessage.RejectCode code_;
+    /**
+     * <code>required .wallet.RejectMessage.RejectCode code = 1;</code>
+     */
+    public boolean hasCode() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .wallet.RejectMessage.RejectCode code = 1;</code>
+     */
+    public org.bitcoinj.wallet.Protos.RejectMessage.RejectCode getCode() {
+      return code_;
+    }
+
+    public static final int MESSAGE_FIELD_NUMBER = 2;
+    private java.lang.Object message_;
+    /**
+     * <code>required string message = 2;</code>
+     */
+    public boolean hasMessage() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required string message = 2;</code>
+     */
+    public java.lang.String getMessage() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          message_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string message = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getMessageBytes() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        message_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int REASON_FIELD_NUMBER = 3;
+    private java.lang.Object reason_;
+    /**
+     * <code>required string reason = 3;</code>
+     */
+    public boolean hasReason() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required string reason = 3;</code>
+     */
+    public java.lang.String getReason() {
+      java.lang.Object ref = reason_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          reason_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string reason = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getReasonBytes() {
+      java.lang.Object ref = reason_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        reason_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int PEER_FIELD_NUMBER = 4;
+    private org.bitcoinj.wallet.Protos.PeerAddress peer_;
+    /**
+     * <code>required .wallet.PeerAddress peer = 4;</code>
+     */
+    public boolean hasPeer() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required .wallet.PeerAddress peer = 4;</code>
+     */
+    public org.bitcoinj.wallet.Protos.PeerAddress getPeer() {
+      return peer_;
+    }
+    /**
+     * <code>required .wallet.PeerAddress peer = 4;</code>
+     */
+    public org.bitcoinj.wallet.Protos.PeerAddressOrBuilder getPeerOrBuilder() {
+      return peer_;
+    }
+
+    private void initFields() {
+      code_ = org.bitcoinj.wallet.Protos.RejectMessage.RejectCode.MALFORMED;
+      message_ = "";
+      reason_ = "";
+      peer_ = org.bitcoinj.wallet.Protos.PeerAddress.getDefaultInstance();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasCode()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasMessage()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasReason()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasPeer()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getPeer().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, code_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getMessageBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, getReasonBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeMessage(4, peer_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(1, code_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getMessageBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, getReasonBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, peer_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.bitcoinj.wallet.Protos.RejectMessage parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.bitcoinj.wallet.Protos.RejectMessage prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code wallet.RejectMessage}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:wallet.RejectMessage)
+        org.bitcoinj.wallet.Protos.RejectMessageOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.bitcoinj.wallet.Protos.internal_static_wallet_RejectMessage_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.bitcoinj.wallet.Protos.internal_static_wallet_RejectMessage_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.bitcoinj.wallet.Protos.RejectMessage.class, org.bitcoinj.wallet.Protos.RejectMessage.Builder.class);
+      }
+
+      // Construct using org.bitcoinj.wallet.Protos.RejectMessage.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getPeerFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        code_ = org.bitcoinj.wallet.Protos.RejectMessage.RejectCode.MALFORMED;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        message_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        reason_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        if (peerBuilder_ == null) {
+          peer_ = org.bitcoinj.wallet.Protos.PeerAddress.getDefaultInstance();
+        } else {
+          peerBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.bitcoinj.wallet.Protos.internal_static_wallet_RejectMessage_descriptor;
+      }
+
+      public org.bitcoinj.wallet.Protos.RejectMessage getDefaultInstanceForType() {
+        return org.bitcoinj.wallet.Protos.RejectMessage.getDefaultInstance();
+      }
+
+      public org.bitcoinj.wallet.Protos.RejectMessage build() {
+        org.bitcoinj.wallet.Protos.RejectMessage result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.bitcoinj.wallet.Protos.RejectMessage buildPartial() {
+        org.bitcoinj.wallet.Protos.RejectMessage result = new org.bitcoinj.wallet.Protos.RejectMessage(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.code_ = code_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.message_ = message_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.reason_ = reason_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        if (peerBuilder_ == null) {
+          result.peer_ = peer_;
+        } else {
+          result.peer_ = peerBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.bitcoinj.wallet.Protos.RejectMessage) {
+          return mergeFrom((org.bitcoinj.wallet.Protos.RejectMessage)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.bitcoinj.wallet.Protos.RejectMessage other) {
+        if (other == org.bitcoinj.wallet.Protos.RejectMessage.getDefaultInstance()) return this;
+        if (other.hasCode()) {
+          setCode(other.getCode());
+        }
+        if (other.hasMessage()) {
+          bitField0_ |= 0x00000002;
+          message_ = other.message_;
+          onChanged();
+        }
+        if (other.hasReason()) {
+          bitField0_ |= 0x00000004;
+          reason_ = other.reason_;
+          onChanged();
+        }
+        if (other.hasPeer()) {
+          mergePeer(other.getPeer());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasCode()) {
+          
+          return false;
+        }
+        if (!hasMessage()) {
+          
+          return false;
+        }
+        if (!hasReason()) {
+          
+          return false;
+        }
+        if (!hasPeer()) {
+          
+          return false;
+        }
+        if (!getPeer().isInitialized()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.bitcoinj.wallet.Protos.RejectMessage parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.bitcoinj.wallet.Protos.RejectMessage) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private org.bitcoinj.wallet.Protos.RejectMessage.RejectCode code_ = org.bitcoinj.wallet.Protos.RejectMessage.RejectCode.MALFORMED;
+      /**
+       * <code>required .wallet.RejectMessage.RejectCode code = 1;</code>
+       */
+      public boolean hasCode() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .wallet.RejectMessage.RejectCode code = 1;</code>
+       */
+      public org.bitcoinj.wallet.Protos.RejectMessage.RejectCode getCode() {
+        return code_;
+      }
+      /**
+       * <code>required .wallet.RejectMessage.RejectCode code = 1;</code>
+       */
+      public Builder setCode(org.bitcoinj.wallet.Protos.RejectMessage.RejectCode value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        code_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .wallet.RejectMessage.RejectCode code = 1;</code>
+       */
+      public Builder clearCode() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        code_ = org.bitcoinj.wallet.Protos.RejectMessage.RejectCode.MALFORMED;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object message_ = "";
+      /**
+       * <code>required string message = 2;</code>
+       */
+      public boolean hasMessage() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required string message = 2;</code>
+       */
+      public java.lang.String getMessage() {
+        java.lang.Object ref = message_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            message_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string message = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getMessageBytes() {
+        java.lang.Object ref = message_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          message_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string message = 2;</code>
+       */
+      public Builder setMessage(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        message_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string message = 2;</code>
+       */
+      public Builder clearMessage() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        message_ = getDefaultInstance().getMessage();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string message = 2;</code>
+       */
+      public Builder setMessageBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        message_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object reason_ = "";
+      /**
+       * <code>required string reason = 3;</code>
+       */
+      public boolean hasReason() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required string reason = 3;</code>
+       */
+      public java.lang.String getReason() {
+        java.lang.Object ref = reason_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            reason_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string reason = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getReasonBytes() {
+        java.lang.Object ref = reason_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          reason_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string reason = 3;</code>
+       */
+      public Builder setReason(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        reason_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string reason = 3;</code>
+       */
+      public Builder clearReason() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        reason_ = getDefaultInstance().getReason();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string reason = 3;</code>
+       */
+      public Builder setReasonBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        reason_ = value;
+        onChanged();
+        return this;
+      }
+
+      private org.bitcoinj.wallet.Protos.PeerAddress peer_ = org.bitcoinj.wallet.Protos.PeerAddress.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.bitcoinj.wallet.Protos.PeerAddress, org.bitcoinj.wallet.Protos.PeerAddress.Builder, org.bitcoinj.wallet.Protos.PeerAddressOrBuilder> peerBuilder_;
+      /**
+       * <code>required .wallet.PeerAddress peer = 4;</code>
+       */
+      public boolean hasPeer() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required .wallet.PeerAddress peer = 4;</code>
+       */
+      public org.bitcoinj.wallet.Protos.PeerAddress getPeer() {
+        if (peerBuilder_ == null) {
+          return peer_;
+        } else {
+          return peerBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .wallet.PeerAddress peer = 4;</code>
+       */
+      public Builder setPeer(org.bitcoinj.wallet.Protos.PeerAddress value) {
+        if (peerBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          peer_ = value;
+          onChanged();
+        } else {
+          peerBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>required .wallet.PeerAddress peer = 4;</code>
+       */
+      public Builder setPeer(
+          org.bitcoinj.wallet.Protos.PeerAddress.Builder builderForValue) {
+        if (peerBuilder_ == null) {
+          peer_ = builderForValue.build();
+          onChanged();
+        } else {
+          peerBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>required .wallet.PeerAddress peer = 4;</code>
+       */
+      public Builder mergePeer(org.bitcoinj.wallet.Protos.PeerAddress value) {
+        if (peerBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+              peer_ != org.bitcoinj.wallet.Protos.PeerAddress.getDefaultInstance()) {
+            peer_ =
+              org.bitcoinj.wallet.Protos.PeerAddress.newBuilder(peer_).mergeFrom(value).buildPartial();
+          } else {
+            peer_ = value;
+          }
+          onChanged();
+        } else {
+          peerBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>required .wallet.PeerAddress peer = 4;</code>
+       */
+      public Builder clearPeer() {
+        if (peerBuilder_ == null) {
+          peer_ = org.bitcoinj.wallet.Protos.PeerAddress.getDefaultInstance();
+          onChanged();
+        } else {
+          peerBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      /**
+       * <code>required .wallet.PeerAddress peer = 4;</code>
+       */
+      public org.bitcoinj.wallet.Protos.PeerAddress.Builder getPeerBuilder() {
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return getPeerFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .wallet.PeerAddress peer = 4;</code>
+       */
+      public org.bitcoinj.wallet.Protos.PeerAddressOrBuilder getPeerOrBuilder() {
+        if (peerBuilder_ != null) {
+          return peerBuilder_.getMessageOrBuilder();
+        } else {
+          return peer_;
+        }
+      }
+      /**
+       * <code>required .wallet.PeerAddress peer = 4;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.bitcoinj.wallet.Protos.PeerAddress, org.bitcoinj.wallet.Protos.PeerAddress.Builder, org.bitcoinj.wallet.Protos.PeerAddressOrBuilder> 
+          getPeerFieldBuilder() {
+        if (peerBuilder_ == null) {
+          peerBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.bitcoinj.wallet.Protos.PeerAddress, org.bitcoinj.wallet.Protos.PeerAddress.Builder, org.bitcoinj.wallet.Protos.PeerAddressOrBuilder>(
+                  getPeer(),
+                  getParentForChildren(),
+                  isClean());
+          peer_ = null;
+        }
+        return peerBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:wallet.RejectMessage)
+    }
+
+    static {
+      defaultInstance = new RejectMessage(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:wallet.RejectMessage)
+  }
+
   public interface TransactionConfidenceOrBuilder extends
       // @@protoc_insertion_point(interface_extends:wallet.TransactionConfidence)
       com.google.protobuf.MessageOrBuilder {
@@ -7049,6 +8143,30 @@ public final class Protos {
      * <code>optional int64 sentTime = 22;</code>
      */
     long getSentTime();
+
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    java.util.List<org.bitcoinj.wallet.Protos.RejectMessage> 
+        getRejectsList();
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    org.bitcoinj.wallet.Protos.RejectMessage getRejects(int index);
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    int getRejectsCount();
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    java.util.List<? extends org.bitcoinj.wallet.Protos.RejectMessageOrBuilder> 
+        getRejectsOrBuilderList();
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    org.bitcoinj.wallet.Protos.RejectMessageOrBuilder getRejectsOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code wallet.TransactionConfidence}
@@ -7185,6 +8303,14 @@ public final class Protos {
               sentTime_ = input.readInt64();
               break;
             }
+            case 258: {
+              if (!((mutable_bitField0_ & 0x00000800) == 0x00000800)) {
+                rejects_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.RejectMessage>();
+                mutable_bitField0_ |= 0x00000800;
+              }
+              rejects_.add(input.readMessage(org.bitcoinj.wallet.Protos.RejectMessage.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -7195,6 +8321,9 @@ public final class Protos {
       } finally {
         if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
           broadcastBy_ = java.util.Collections.unmodifiableList(broadcastBy_);
+        }
+        if (((mutable_bitField0_ & 0x00000800) == 0x00000800)) {
+          rejects_ = java.util.Collections.unmodifiableList(rejects_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -7529,6 +8658,10 @@ public final class Protos {
        * <code>IX_LOCKED = 2;</code>
        */
       IX_LOCKED(2, 2),
+      /**
+       * <code>IX_LOCK_FAILED = 3;</code>
+       */
+      IX_LOCK_FAILED(3, 3),
       ;
 
       /**
@@ -7543,6 +8676,10 @@ public final class Protos {
        * <code>IX_LOCKED = 2;</code>
        */
       public static final int IX_LOCKED_VALUE = 2;
+      /**
+       * <code>IX_LOCK_FAILED = 3;</code>
+       */
+      public static final int IX_LOCK_FAILED_VALUE = 3;
 
 
       public final int getNumber() { return value; }
@@ -7552,6 +8689,7 @@ public final class Protos {
           case 0: return IX_NONE;
           case 1: return IX_REQUEST;
           case 2: return IX_LOCKED;
+          case 3: return IX_LOCK_FAILED;
           default: return null;
         }
       }
@@ -7835,6 +8973,41 @@ public final class Protos {
       return sentTime_;
     }
 
+    public static final int REJECTS_FIELD_NUMBER = 32;
+    private java.util.List<org.bitcoinj.wallet.Protos.RejectMessage> rejects_;
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    public java.util.List<org.bitcoinj.wallet.Protos.RejectMessage> getRejectsList() {
+      return rejects_;
+    }
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    public java.util.List<? extends org.bitcoinj.wallet.Protos.RejectMessageOrBuilder> 
+        getRejectsOrBuilderList() {
+      return rejects_;
+    }
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    public int getRejectsCount() {
+      return rejects_.size();
+    }
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    public org.bitcoinj.wallet.Protos.RejectMessage getRejects(int index) {
+      return rejects_.get(index);
+    }
+    /**
+     * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+     */
+    public org.bitcoinj.wallet.Protos.RejectMessageOrBuilder getRejectsOrBuilder(
+        int index) {
+      return rejects_.get(index);
+    }
+
     private void initFields() {
       type_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Type.UNKNOWN;
       appearedAtHeight_ = 0;
@@ -7847,6 +9020,7 @@ public final class Protos {
       peerCount_ = 0;
       minConnections_ = 0;
       sentTime_ = 0L;
+      rejects_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -7856,6 +9030,12 @@ public final class Protos {
 
       for (int i = 0; i < getBroadcastByCount(); i++) {
         if (!getBroadcastBy(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getRejectsCount(); i++) {
+        if (!getRejects(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -7899,6 +9079,9 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
         output.writeInt64(22, sentTime_);
+      }
+      for (int i = 0; i < rejects_.size(); i++) {
+        output.writeMessage(32, rejects_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -7952,6 +9135,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(22, sentTime_);
+      }
+      for (int i = 0; i < rejects_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(32, rejects_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -8070,6 +9257,7 @@ public final class Protos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getBroadcastByFieldBuilder();
+          getRejectsFieldBuilder();
         }
       }
       private static Builder create() {
@@ -8104,6 +9292,12 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000200);
         sentTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000400);
+        if (rejectsBuilder_ == null) {
+          rejects_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000800);
+        } else {
+          rejectsBuilder_.clear();
+        }
         return this;
       }
 
@@ -8181,6 +9375,15 @@ public final class Protos {
           to_bitField0_ |= 0x00000200;
         }
         result.sentTime_ = sentTime_;
+        if (rejectsBuilder_ == null) {
+          if (((bitField0_ & 0x00000800) == 0x00000800)) {
+            rejects_ = java.util.Collections.unmodifiableList(rejects_);
+            bitField0_ = (bitField0_ & ~0x00000800);
+          }
+          result.rejects_ = rejects_;
+        } else {
+          result.rejects_ = rejectsBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8253,6 +9456,32 @@ public final class Protos {
         if (other.hasSentTime()) {
           setSentTime(other.getSentTime());
         }
+        if (rejectsBuilder_ == null) {
+          if (!other.rejects_.isEmpty()) {
+            if (rejects_.isEmpty()) {
+              rejects_ = other.rejects_;
+              bitField0_ = (bitField0_ & ~0x00000800);
+            } else {
+              ensureRejectsIsMutable();
+              rejects_.addAll(other.rejects_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.rejects_.isEmpty()) {
+            if (rejectsBuilder_.isEmpty()) {
+              rejectsBuilder_.dispose();
+              rejectsBuilder_ = null;
+              rejects_ = other.rejects_;
+              bitField0_ = (bitField0_ & ~0x00000800);
+              rejectsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getRejectsFieldBuilder() : null;
+            } else {
+              rejectsBuilder_.addAllMessages(other.rejects_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -8260,6 +9489,12 @@ public final class Protos {
       public final boolean isInitialized() {
         for (int i = 0; i < getBroadcastByCount(); i++) {
           if (!getBroadcastBy(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getRejectsCount(); i++) {
+          if (!getRejects(i).isInitialized()) {
             
             return false;
           }
@@ -8948,6 +10183,246 @@ public final class Protos {
         sentTime_ = 0L;
         onChanged();
         return this;
+      }
+
+      private java.util.List<org.bitcoinj.wallet.Protos.RejectMessage> rejects_ =
+        java.util.Collections.emptyList();
+      private void ensureRejectsIsMutable() {
+        if (!((bitField0_ & 0x00000800) == 0x00000800)) {
+          rejects_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.RejectMessage>(rejects_);
+          bitField0_ |= 0x00000800;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.bitcoinj.wallet.Protos.RejectMessage, org.bitcoinj.wallet.Protos.RejectMessage.Builder, org.bitcoinj.wallet.Protos.RejectMessageOrBuilder> rejectsBuilder_;
+
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public java.util.List<org.bitcoinj.wallet.Protos.RejectMessage> getRejectsList() {
+        if (rejectsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(rejects_);
+        } else {
+          return rejectsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public int getRejectsCount() {
+        if (rejectsBuilder_ == null) {
+          return rejects_.size();
+        } else {
+          return rejectsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public org.bitcoinj.wallet.Protos.RejectMessage getRejects(int index) {
+        if (rejectsBuilder_ == null) {
+          return rejects_.get(index);
+        } else {
+          return rejectsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public Builder setRejects(
+          int index, org.bitcoinj.wallet.Protos.RejectMessage value) {
+        if (rejectsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRejectsIsMutable();
+          rejects_.set(index, value);
+          onChanged();
+        } else {
+          rejectsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public Builder setRejects(
+          int index, org.bitcoinj.wallet.Protos.RejectMessage.Builder builderForValue) {
+        if (rejectsBuilder_ == null) {
+          ensureRejectsIsMutable();
+          rejects_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          rejectsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public Builder addRejects(org.bitcoinj.wallet.Protos.RejectMessage value) {
+        if (rejectsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRejectsIsMutable();
+          rejects_.add(value);
+          onChanged();
+        } else {
+          rejectsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public Builder addRejects(
+          int index, org.bitcoinj.wallet.Protos.RejectMessage value) {
+        if (rejectsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRejectsIsMutable();
+          rejects_.add(index, value);
+          onChanged();
+        } else {
+          rejectsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public Builder addRejects(
+          org.bitcoinj.wallet.Protos.RejectMessage.Builder builderForValue) {
+        if (rejectsBuilder_ == null) {
+          ensureRejectsIsMutable();
+          rejects_.add(builderForValue.build());
+          onChanged();
+        } else {
+          rejectsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public Builder addRejects(
+          int index, org.bitcoinj.wallet.Protos.RejectMessage.Builder builderForValue) {
+        if (rejectsBuilder_ == null) {
+          ensureRejectsIsMutable();
+          rejects_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          rejectsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public Builder addAllRejects(
+          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.RejectMessage> values) {
+        if (rejectsBuilder_ == null) {
+          ensureRejectsIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, rejects_);
+          onChanged();
+        } else {
+          rejectsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public Builder clearRejects() {
+        if (rejectsBuilder_ == null) {
+          rejects_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000800);
+          onChanged();
+        } else {
+          rejectsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public Builder removeRejects(int index) {
+        if (rejectsBuilder_ == null) {
+          ensureRejectsIsMutable();
+          rejects_.remove(index);
+          onChanged();
+        } else {
+          rejectsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public org.bitcoinj.wallet.Protos.RejectMessage.Builder getRejectsBuilder(
+          int index) {
+        return getRejectsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public org.bitcoinj.wallet.Protos.RejectMessageOrBuilder getRejectsOrBuilder(
+          int index) {
+        if (rejectsBuilder_ == null) {
+          return rejects_.get(index);  } else {
+          return rejectsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public java.util.List<? extends org.bitcoinj.wallet.Protos.RejectMessageOrBuilder> 
+           getRejectsOrBuilderList() {
+        if (rejectsBuilder_ != null) {
+          return rejectsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(rejects_);
+        }
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public org.bitcoinj.wallet.Protos.RejectMessage.Builder addRejectsBuilder() {
+        return getRejectsFieldBuilder().addBuilder(
+            org.bitcoinj.wallet.Protos.RejectMessage.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public org.bitcoinj.wallet.Protos.RejectMessage.Builder addRejectsBuilder(
+          int index) {
+        return getRejectsFieldBuilder().addBuilder(
+            index, org.bitcoinj.wallet.Protos.RejectMessage.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .wallet.RejectMessage rejects = 32;</code>
+       */
+      public java.util.List<org.bitcoinj.wallet.Protos.RejectMessage.Builder> 
+           getRejectsBuilderList() {
+        return getRejectsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.bitcoinj.wallet.Protos.RejectMessage, org.bitcoinj.wallet.Protos.RejectMessage.Builder, org.bitcoinj.wallet.Protos.RejectMessageOrBuilder> 
+          getRejectsFieldBuilder() {
+        if (rejectsBuilder_ == null) {
+          rejectsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.bitcoinj.wallet.Protos.RejectMessage, org.bitcoinj.wallet.Protos.RejectMessage.Builder, org.bitcoinj.wallet.Protos.RejectMessageOrBuilder>(
+                  rejects_,
+                  ((bitField0_ & 0x00000800) == 0x00000800),
+                  getParentForChildren(),
+                  isClean());
+          rejects_ = null;
+        }
+        return rejectsBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:wallet.TransactionConfidence)
@@ -18719,6 +20194,11 @@ public final class Protos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_wallet_TransactionOutput_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_wallet_RejectMessage_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_wallet_RejectMessage_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_wallet_TransactionConfidence_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -18791,63 +20271,71 @@ public final class Protos {
       "equence\030\004 \001(\r\022\r\n\005value\030\005 \001(\003\"\177\n\021Transact" +
       "ionOutput\022\r\n\005value\030\001 \002(\003\022\024\n\014script_bytes" +
       "\030\002 \002(\014\022!\n\031spent_by_transaction_hash\030\003 \001(" +
-      "\014\022\"\n\032spent_by_transaction_index\030\004 \001(\005\"\351\004",
-      "\n\025TransactionConfidence\0220\n\004type\030\001 \001(\0162\"." +
-      "wallet.TransactionConfidence.Type\022\032\n\022app" +
-      "eared_at_height\030\002 \001(\005\022\036\n\026overriding_tran" +
-      "saction\030\003 \001(\014\022\r\n\005depth\030\004 \001(\005\022)\n\014broadcas" +
-      "t_by\030\006 \003(\0132\023.wallet.PeerAddress\022\033\n\023last_" +
-      "broadcasted_at\030\010 \001(\003\0224\n\006source\030\007 \001(\0162$.w" +
-      "allet.TransactionConfidence.Source\022=\n\006ix" +
-      "Type\030\023 \001(\0162$.wallet.TransactionConfidenc" +
-      "e.IXType:\007IX_NONE\022\021\n\tpeerCount\030\024 \001(\005\022\026\n\016" +
-      "minConnections\030\025 \001(\005\022\020\n\010sentTime\030\026 \001(\003\"`",
-      "\n\004Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILDING\020\001\022\013\n\007PEN" +
-      "DING\020\002\022\025\n\021NOT_IN_BEST_CHAIN\020\003\022\010\n\004DEAD\020\004\022" +
-      "\017\n\013IN_CONFLICT\020\005\"A\n\006Source\022\022\n\016SOURCE_UNK" +
-      "NOWN\020\000\022\022\n\016SOURCE_NETWORK\020\001\022\017\n\013SOURCE_SEL" +
-      "F\020\002\"4\n\006IXType\022\013\n\007IX_NONE\020\000\022\016\n\nIX_REQUEST" +
-      "\020\001\022\r\n\tIX_LOCKED\020\002\"\332\005\n\013Transaction\022\017\n\007ver" +
-      "sion\030\001 \002(\005\022\014\n\004hash\030\002 \002(\014\022&\n\004pool\030\003 \001(\0162\030" +
-      ".wallet.Transaction.Pool\022\021\n\tlock_time\030\004 " +
-      "\001(\r\022\022\n\nupdated_at\030\005 \001(\003\0223\n\021transaction_i" +
-      "nput\030\006 \003(\0132\030.wallet.TransactionInput\0225\n\022",
-      "transaction_output\030\007 \003(\0132\031.wallet.Transa" +
-      "ctionOutput\022\022\n\nblock_hash\030\010 \003(\014\022 \n\030block" +
-      "_relativity_offsets\030\013 \003(\005\0221\n\nconfidence\030" +
-      "\t \001(\0132\035.wallet.TransactionConfidence\0225\n\007" +
-      "purpose\030\n \001(\0162\033.wallet.Transaction.Purpo" +
-      "se:\007UNKNOWN\022+\n\rexchange_rate\030\014 \001(\0132\024.wal" +
-      "let.ExchangeRate\022\014\n\004memo\030\r \001(\t\022\025\n\rextra_" +
-      "payload\030\024 \001(\014\"Y\n\004Pool\022\013\n\007UNSPENT\020\004\022\t\n\005SP" +
-      "ENT\020\005\022\014\n\010INACTIVE\020\002\022\010\n\004DEAD\020\n\022\013\n\007PENDING" +
-      "\020\020\022\024\n\020PENDING_INACTIVE\020\022\"\243\001\n\007Purpose\022\013\n\007",
-      "UNKNOWN\020\000\022\020\n\014USER_PAYMENT\020\001\022\020\n\014KEY_ROTAT" +
-      "ION\020\002\022\034\n\030ASSURANCE_CONTRACT_CLAIM\020\003\022\035\n\031A" +
-      "SSURANCE_CONTRACT_PLEDGE\020\004\022\033\n\027ASSURANCE_" +
-      "CONTRACT_STUB\020\005\022\r\n\tRAISE_FEE\020\006\"N\n\020Scrypt" +
-      "Parameters\022\014\n\004salt\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\005163" +
-      "84\022\014\n\001r\030\003 \001(\005:\0018\022\014\n\001p\030\004 \001(\005:\0011\"8\n\tExtens" +
-      "ion\022\n\n\002id\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\022\021\n\tmandato" +
-      "ry\030\003 \002(\010\" \n\003Tag\022\013\n\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002" +
-      "(\014\"\261\004\n\006Wallet\022\032\n\022network_identifier\030\001 \002(" +
-      "\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022\036\n\026last_",
-      "seen_block_height\030\014 \001(\r\022!\n\031last_seen_blo" +
-      "ck_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013.wallet" +
-      ".Key\022(\n\013transaction\030\004 \003(\0132\023.wallet.Trans" +
-      "action\022&\n\016watched_script\030\017 \003(\0132\016.wallet." +
-      "Script\022C\n\017encryption_type\030\005 \001(\0162\035.wallet" +
-      ".Wallet.EncryptionType:\013UNENCRYPTED\0227\n\025e" +
-      "ncryption_parameters\030\006 \001(\0132\030.wallet.Scry" +
-      "ptParameters\022\022\n\007version\030\007 \001(\005:\0011\022$\n\texte" +
-      "nsion\030\n \003(\0132\021.wallet.Extension\022\023\n\013descri" +
-      "ption\030\013 \001(\t\022\031\n\021key_rotation_time\030\r \001(\004\022\031",
-      "\n\004tags\030\020 \003(\0132\013.wallet.Tag\";\n\016EncryptionT" +
-      "ype\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYPTED_SCRYPT" +
-      "_AES\020\002\"R\n\014ExchangeRate\022\022\n\ncoin_value\030\001 \002" +
-      "(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n\022fiat_currency_" +
-      "code\030\003 \002(\tB\035\n\023org.bitcoinj.walletB\006Proto" +
-      "s"
+      "\014\022\"\n\032spent_by_transaction_index\030\004 \001(\005\"\227\002",
+      "\n\rRejectMessage\022.\n\004code\030\001 \002(\0162 .wallet.R" +
+      "ejectMessage.RejectCode\022\017\n\007message\030\002 \002(\t" +
+      "\022\016\n\006reason\030\003 \002(\t\022!\n\004peer\030\004 \002(\0132\023.wallet." +
+      "PeerAddress\"\221\001\n\nRejectCode\022\r\n\tMALFORMED\020" +
+      "\001\022\013\n\007INVALID\020\020\022\014\n\010OBSOLETE\020\021\022\r\n\tDUPLICAT" +
+      "E\020\022\022\017\n\013NONSTANDARD\020@\022\010\n\004DUST\020A\022\023\n\017INSUFF" +
+      "ICIENTFEE\020B\022\016\n\nCHECKPOINT\020C\022\n\n\005OTHER\020\377\001\"" +
+      "\245\005\n\025TransactionConfidence\0220\n\004type\030\001 \001(\0162" +
+      "\".wallet.TransactionConfidence.Type\022\032\n\022a" +
+      "ppeared_at_height\030\002 \001(\005\022\036\n\026overriding_tr",
+      "ansaction\030\003 \001(\014\022\r\n\005depth\030\004 \001(\005\022)\n\014broadc" +
+      "ast_by\030\006 \003(\0132\023.wallet.PeerAddress\022\033\n\023las" +
+      "t_broadcasted_at\030\010 \001(\003\0224\n\006source\030\007 \001(\0162$" +
+      ".wallet.TransactionConfidence.Source\022=\n\006" +
+      "ixType\030\023 \001(\0162$.wallet.TransactionConfide" +
+      "nce.IXType:\007IX_NONE\022\021\n\tpeerCount\030\024 \001(\005\022\026" +
+      "\n\016minConnections\030\025 \001(\005\022\020\n\010sentTime\030\026 \001(\003" +
+      "\022&\n\007rejects\030  \003(\0132\025.wallet.RejectMessage" +
+      "\"`\n\004Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILDING\020\001\022\013\n\007P" +
+      "ENDING\020\002\022\025\n\021NOT_IN_BEST_CHAIN\020\003\022\010\n\004DEAD\020",
+      "\004\022\017\n\013IN_CONFLICT\020\005\"A\n\006Source\022\022\n\016SOURCE_U" +
+      "NKNOWN\020\000\022\022\n\016SOURCE_NETWORK\020\001\022\017\n\013SOURCE_S" +
+      "ELF\020\002\"H\n\006IXType\022\013\n\007IX_NONE\020\000\022\016\n\nIX_REQUE" +
+      "ST\020\001\022\r\n\tIX_LOCKED\020\002\022\022\n\016IX_LOCK_FAILED\020\003\"" +
+      "\332\005\n\013Transaction\022\017\n\007version\030\001 \002(\005\022\014\n\004hash" +
+      "\030\002 \002(\014\022&\n\004pool\030\003 \001(\0162\030.wallet.Transactio" +
+      "n.Pool\022\021\n\tlock_time\030\004 \001(\r\022\022\n\nupdated_at\030" +
+      "\005 \001(\003\0223\n\021transaction_input\030\006 \003(\0132\030.walle" +
+      "t.TransactionInput\0225\n\022transaction_output" +
+      "\030\007 \003(\0132\031.wallet.TransactionOutput\022\022\n\nblo",
+      "ck_hash\030\010 \003(\014\022 \n\030block_relativity_offset" +
+      "s\030\013 \003(\005\0221\n\nconfidence\030\t \001(\0132\035.wallet.Tra" +
+      "nsactionConfidence\0225\n\007purpose\030\n \001(\0162\033.wa" +
+      "llet.Transaction.Purpose:\007UNKNOWN\022+\n\rexc" +
+      "hange_rate\030\014 \001(\0132\024.wallet.ExchangeRate\022\014" +
+      "\n\004memo\030\r \001(\t\022\025\n\rextra_payload\030\024 \001(\014\"Y\n\004P" +
+      "ool\022\013\n\007UNSPENT\020\004\022\t\n\005SPENT\020\005\022\014\n\010INACTIVE\020" +
+      "\002\022\010\n\004DEAD\020\n\022\013\n\007PENDING\020\020\022\024\n\020PENDING_INAC" +
+      "TIVE\020\022\"\243\001\n\007Purpose\022\013\n\007UNKNOWN\020\000\022\020\n\014USER_" +
+      "PAYMENT\020\001\022\020\n\014KEY_ROTATION\020\002\022\034\n\030ASSURANCE",
+      "_CONTRACT_CLAIM\020\003\022\035\n\031ASSURANCE_CONTRACT_" +
+      "PLEDGE\020\004\022\033\n\027ASSURANCE_CONTRACT_STUB\020\005\022\r\n" +
+      "\tRAISE_FEE\020\006\"N\n\020ScryptParameters\022\014\n\004salt" +
+      "\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\0018\022\014" +
+      "\n\001p\030\004 \001(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001 \002(\t\022\014\n" +
+      "\004data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022\013\n" +
+      "\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"\261\004\n\006Wallet\022\032\n\022n" +
+      "etwork_identifier\030\001 \002(\t\022\034\n\024last_seen_blo" +
+      "ck_hash\030\002 \001(\014\022\036\n\026last_seen_block_height\030" +
+      "\014 \001(\r\022!\n\031last_seen_block_time_secs\030\016 \001(\003",
+      "\022\030\n\003key\030\003 \003(\0132\013.wallet.Key\022(\n\013transactio" +
+      "n\030\004 \003(\0132\023.wallet.Transaction\022&\n\016watched_" +
+      "script\030\017 \003(\0132\016.wallet.Script\022C\n\017encrypti" +
+      "on_type\030\005 \001(\0162\035.wallet.Wallet.Encryption" +
+      "Type:\013UNENCRYPTED\0227\n\025encryption_paramete" +
+      "rs\030\006 \001(\0132\030.wallet.ScryptParameters\022\022\n\007ve" +
+      "rsion\030\007 \001(\005:\0011\022$\n\textension\030\n \003(\0132\021.wall" +
+      "et.Extension\022\023\n\013description\030\013 \001(\t\022\031\n\021key" +
+      "_rotation_time\030\r \001(\004\022\031\n\004tags\030\020 \003(\0132\013.wal" +
+      "let.Tag\";\n\016EncryptionType\022\017\n\013UNENCRYPTED",
+      "\020\001\022\030\n\024ENCRYPTED_SCRYPT_AES\020\002\"R\n\014Exchange" +
+      "Rate\022\022\n\ncoin_value\030\001 \002(\003\022\022\n\nfiat_value\030\002" +
+      " \002(\003\022\032\n\022fiat_currency_code\030\003 \002(\tB\035\n\023org." +
+      "bitcoinj.walletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -18903,44 +20391,50 @@ public final class Protos {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_TransactionOutput_descriptor,
         new java.lang.String[] { "Value", "ScriptBytes", "SpentByTransactionHash", "SpentByTransactionIndex", });
-    internal_static_wallet_TransactionConfidence_descriptor =
+    internal_static_wallet_RejectMessage_descriptor =
       getDescriptor().getMessageTypes().get(7);
+    internal_static_wallet_RejectMessage_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_wallet_RejectMessage_descriptor,
+        new java.lang.String[] { "Code", "Message", "Reason", "Peer", });
+    internal_static_wallet_TransactionConfidence_descriptor =
+      getDescriptor().getMessageTypes().get(8);
     internal_static_wallet_TransactionConfidence_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_TransactionConfidence_descriptor,
-        new java.lang.String[] { "Type", "AppearedAtHeight", "OverridingTransaction", "Depth", "BroadcastBy", "LastBroadcastedAt", "Source", "IxType", "PeerCount", "MinConnections", "SentTime", });
+        new java.lang.String[] { "Type", "AppearedAtHeight", "OverridingTransaction", "Depth", "BroadcastBy", "LastBroadcastedAt", "Source", "IxType", "PeerCount", "MinConnections", "SentTime", "Rejects", });
     internal_static_wallet_Transaction_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_wallet_Transaction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_Transaction_descriptor,
         new java.lang.String[] { "Version", "Hash", "Pool", "LockTime", "UpdatedAt", "TransactionInput", "TransactionOutput", "BlockHash", "BlockRelativityOffsets", "Confidence", "Purpose", "ExchangeRate", "Memo", "ExtraPayload", });
     internal_static_wallet_ScryptParameters_descriptor =
-      getDescriptor().getMessageTypes().get(9);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_wallet_ScryptParameters_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_ScryptParameters_descriptor,
         new java.lang.String[] { "Salt", "N", "R", "P", });
     internal_static_wallet_Extension_descriptor =
-      getDescriptor().getMessageTypes().get(10);
+      getDescriptor().getMessageTypes().get(11);
     internal_static_wallet_Extension_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_Extension_descriptor,
         new java.lang.String[] { "Id", "Data", "Mandatory", });
     internal_static_wallet_Tag_descriptor =
-      getDescriptor().getMessageTypes().get(11);
+      getDescriptor().getMessageTypes().get(12);
     internal_static_wallet_Tag_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_Tag_descriptor,
         new java.lang.String[] { "Tag", "Data", });
     internal_static_wallet_Wallet_descriptor =
-      getDescriptor().getMessageTypes().get(12);
+      getDescriptor().getMessageTypes().get(13);
     internal_static_wallet_Wallet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_Wallet_descriptor,
         new java.lang.String[] { "NetworkIdentifier", "LastSeenBlockHash", "LastSeenBlockHeight", "LastSeenBlockTimeSecs", "Key", "Transaction", "WatchedScript", "EncryptionType", "EncryptionParameters", "Version", "Extension", "Description", "KeyRotationTime", "Tags", });
     internal_static_wallet_ExchangeRate_descriptor =
-      getDescriptor().getMessageTypes().get(13);
+      getDescriptor().getMessageTypes().get(14);
     internal_static_wallet_ExchangeRate_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_ExchangeRate_descriptor,
