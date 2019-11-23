@@ -505,8 +505,7 @@ public class Wallet extends BaseTaggableObject
                     } finally {
                         lock.unlock();
                     }
-                } else if(reason == ChangeReason.IX_TYPE &&
-                        confidence.getIXType() == TransactionConfidence.IXType.IX_LOCKED) {
+                } else if(reason == ChangeReason.IX_TYPE || reason == ChangeReason.REJECT) {
                     lock.lock();
                     try {
                         Transaction tx = getTransaction(confidence.getTransactionHash());
