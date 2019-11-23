@@ -1,3 +1,18 @@
+/*
+ * Copyright 2019 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
@@ -10,21 +25,23 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
 
-public class ChainLocksHandler implements RecoveredSignatureListener {
+public class ChainLocksHandler extends AbstractManager implements RecoveredSignatureListener {
 
     static final long CLEANUP_INTERVAL = 1000 * 30;
     static final long CLEANUP_SEEN_TIMEOUT = 24 * 60 * 60 * 1000;
 
-    Context context;
     SigningManager quorumSigningManager;
     InstantSendManager quorumInstantSendManager;
 
@@ -41,16 +58,12 @@ public class ChainLocksHandler implements RecoveredSignatureListener {
     StoredBlock bestChainLockBlock;
     StoredBlock lastNotifyChainLockBlock;
 
-    long lastSignedHeight;
-    Sha256Hash lastSignedRequestId;
-    Sha256Hash lastSignedMsgHash;
-
     HashMap<Sha256Hash, Long> seenChainLocks;
     long lastCleanupTime;
 
 
     public ChainLocksHandler(Context context) {
-        this.context = context;
+        super(context);
         seenChainLocks = new HashMap<Sha256Hash, Long>();
         lastCleanupTime = 0;
         chainLockListeners = new CopyOnWriteArrayList<ListenerRegistration<ChainLockListener>>();
@@ -69,30 +82,7 @@ public class ChainLocksHandler implements RecoveredSignatureListener {
 
     @Override
     public void onNewRecoveredSignature(RecoveredSignature recoveredSig) {
-        ChainLockSignature clsig;
-        {
-            lock.lock();
-            try {
-                if (!isSporkActive) {
-                    return;
-                }
-
-                if (recoveredSig.id != lastSignedRequestId || recoveredSig.msgHash != lastSignedMsgHash) {
-                    // this is not what we signed, so lets not create a CLSIG for it
-                    return;
-                }
-                if (bestChainLock.height >= lastSignedHeight) {
-                    // already got the same or a better CLSIG through the CLSIG message
-                    return;
-                }
-
-                clsig = new ChainLockSignature(lastSignedHeight, lastSignedMsgHash, recoveredSig.signature.getSignature());
-            } finally {
-                lock.unlock();
-            }
-
-        }
-        processNewChainLock(null, clsig, clsig.getHash());
+        //do nothing.  In Dash Core, this handles signing CLSIG's
     }
 
     public void start()
@@ -111,6 +101,7 @@ public class ChainLocksHandler implements RecoveredSignatureListener {
         checkActiveState();
         enforceBestChainLock();
         cleanup();
+        unCache();
     }
 
     public boolean alreadyHave(InventoryItem inv)
@@ -174,6 +165,7 @@ public class ChainLocksHandler implements RecoveredSignatureListener {
                     }
                     return;
                 }
+                save();
             } catch (BlockStoreException x) {
                 return;
             }
@@ -584,7 +576,48 @@ public class ChainLocksHandler implements RecoveredSignatureListener {
         return lastSignedHeight;
     }
 
-    public Sha256Hash getLastSignedRequestId() {
-        return lastSignedRequestId;
+    @Override
+    public int calculateMessageSizeInBytes() {
+        return 0;
+    }
+
+    @Override
+    public void checkAndRemove() {
+
+    }
+
+    @Override
+    public void clear() {
+
+    }
+
+    @Override
+    public AbstractManager createEmpty() {
+        return new ChainLocksHandler(Context.get());
+    }
+
+    @Override
+    protected void parse() throws ProtocolException {
+        if(payload.length > 0) {
+            ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
+            buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
+            buffer.rewind();
+            bestChainLockBlock = StoredBlock.deserializeCompact(params, buffer);
+            bestChainLockHash = bestChainLockBlock.getHeader().getHash();
+        }
+    }
+
+    @Override
+    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        if(bestChainLock != null) {
+            ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
+            bestChainLockBlock.serializeCompact(buffer);
+            stream.write(buffer.array());
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "ChainLocksHandler(" + (bestChainLockHash != null ? bestChainLockHash : "no chain locked") + ")";
     }
 }
