@@ -413,13 +413,16 @@ public class SigningManager {
         }
     }
 
-    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig) throws BlockStoreException
+    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig) throws BlockStoreException, QuorumNotFoundException
     {
         LLMQParameters llmqParams = context.getParams().getLlmqs().get(context.getParams().getLlmqChainLocks());
 
         Quorum quorum = selectQuorumForSigning(llmqParams.type, signedAtHeight, id);
         if (quorum == null) {
-            return false;
+            boolean missingBlockAtTip = blockChain.getBestChainHeight() < signedAtHeight;
+            throw new QuorumNotFoundException(missingBlockAtTip ?
+                    QuorumNotFoundException.Reason.BLOCKCHAIN_NOT_SYNCED :
+                    QuorumNotFoundException.Reason.MISSING_QUORUM);
         }
 
         Sha256Hash signHash = LLMQUtils.buildSignHash(llmqParams.type, quorum.commitment.quorumHash, id, msgHash);
