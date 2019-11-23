@@ -591,8 +591,8 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         return bestChainLockHash;
     }
 
-    public long getLastSignedHeight() {
-        return lastSignedHeight;
+    public int getBestChainLockBlockHeight() {
+        return bestChainLockBlock != null ? bestChainLockBlock.getHeight() : -1;
     }
 
     @Override
