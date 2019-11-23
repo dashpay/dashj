@@ -61,12 +61,15 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     HashMap<Sha256Hash, Long> seenChainLocks;
     long lastCleanupTime;
 
+    ScheduledExecutorService scheduledExecutorService;
+    ScheduledFuture scheduledProcessChainLock;
 
     public ChainLocksHandler(Context context) {
         super(context);
         seenChainLocks = new HashMap<Sha256Hash, Long>();
         lastCleanupTime = 0;
         chainLockListeners = new CopyOnWriteArrayList<ListenerRegistration<ChainLockListener>>();
+        scheduledExecutorService = Executors.newScheduledThreadPool(1);
     }
 
     public void setBlockChain(AbstractBlockChain blockChain) {
@@ -168,6 +171,22 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                 save();
             } catch (BlockStoreException x) {
                 return;
+            } catch (QuorumNotFoundException x) {
+
+                if(scheduledProcessChainLock != null && !scheduledProcessChainLock.isDone())
+                    scheduledProcessChainLock.cancel(true);
+
+                log.info("ChainLock not verified due to missing quorum, try again in 1 second");
+                //schedule this to be checked again in 1 second
+                scheduledProcessChainLock = scheduledExecutorService.schedule(new Runnable() {
+                                                              public void run() {
+                                                                  processChainLock();
+                                                              }
+                                                          }, 1, TimeUnit.SECONDS);
+
+                return;
+            } catch (FileNotFoundException e) {
+                // do nothing
             }
         }
 
