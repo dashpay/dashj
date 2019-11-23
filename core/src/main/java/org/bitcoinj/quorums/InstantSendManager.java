@@ -33,7 +33,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
     public boolean runWithoutThread;
     AbstractBlockChain blockChain;
 
-    HashSet<InstantSendLock> invalidInstantSendLocks;
+    //Keep track of when the ISLOCK arrived
+    HashMap<InstantSendLock, Long> invalidInstantSendLocks;
 
     // Incoming and not verified yet
     HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pendingInstantSendLocks;
@@ -43,7 +44,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         this.db = db;
         this.quorumSigningManager = context.signingManager;
         pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
-        invalidInstantSendLocks = new HashSet<InstantSendLock>();
+        invalidInstantSendLocks = new HashMap<InstantSendLock, Long>();
     }
 
     @Override
@@ -94,6 +95,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
         if (!preVerifyInstantSendLock(peer.hashCode(), isLock)) {
              return;
+        }
+
+        context.getConfidenceTable().seen(isLock.txid, peer.getAddress());
+        TransactionConfidence confidence = context.getConfidenceTable().get(isLock.txid);
+        if(confidence != null) {
+            confidence.setIXType(TransactionConfidence.IXType.IX_REQUEST);
+            confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
         }
 
         Sha256Hash hash = isLock.getHash();
@@ -152,7 +160,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         try {
             boolean haslock = db.getInstantSendLockByHash(inv.hash) != null || pendingInstantSendLocks.containsKey(inv.hash);
             if(!invalidInstantSendLocks.isEmpty()) {
-                for(InstantSendLock islock : invalidInstantSendLocks) {
+                for(InstantSendLock islock : invalidInstantSendLocks.keySet()) {
                     if(inv.hash.equals(islock.getHash()))
                         return true;
                 }
@@ -377,6 +385,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 return false;
             pend = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>(pendingInstantSendLocks);
             pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
+
+            //try to process the invalidInstantSendLocks again
+            for(InstantSendLock isLock : invalidInstantSendLocks.keySet())
+                pendingInstantSendLocks.put(isLock.getHash(), new Pair(0, isLock));
+
         } finally {
             lock.unlock();
         }
@@ -466,7 +479,12 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (batchVerifier.getBadMessages().contains(hash)) {
                 log.info("-- txid={}, islock={}: invalid sig in islock, peer={}",
                         islock.txid.toString(), hash.toString(), nodeId);
-                invalidInstantSendLocks.add(islock);
+                invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
+                TransactionConfidence confidence = context.getConfidenceTable().get(islock.txid);
+                if(confidence != null) {
+                    confidence.setIXType(TransactionConfidence.IXType.IX_LOCK_FAILED);
+                    confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
+                }
                 continue;
             }
 
@@ -544,6 +562,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (minedBlock != null) {
                 db.writeInstantSendLockMined(hash, minedBlock.getHeight());
             }
+
+            //
+            // If an ISLOCK was originally invalid, but was later validated
+            // remove it here
+            //
+            if(invalidInstantSendLocks.containsKey(islock))
+                invalidInstantSendLocks.remove(islock);
         } finally {
             lock.unlock();
         }
@@ -557,7 +582,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
         if(confidence != null) {
             confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED);
             confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
-        } else log.info("Can't find {} in mempool", txid);
+        } else {
+            log.info("Can't find {} in mempool", txid);
+        }
     }
 
     public void syncTransaction(Transaction tx, StoredBlock block, int posInBlock)
@@ -639,7 +666,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
             updateWalletTransaction(p.getValue().txid, null);
         }
 
-        invalidInstantSendLocks.clear();
+        // Keep invalid ISLocks for 1 hour
+        for(Map.Entry<InstantSendLock, Long> entry : invalidInstantSendLocks.entrySet()) {
+            if(entry.getValue() < Utils.currentTimeSeconds() - context.getParams().getInstantSendKeepLock())
+                invalidInstantSendLocks.remove(entry.getKey());
+        }
     }
     static final String INPUTLOCK_REQUESTID_PREFIX = "inlock";
 
