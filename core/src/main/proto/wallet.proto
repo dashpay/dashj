@@ -177,6 +177,29 @@ message TransactionOutput {
 }
 
 /**
+ * A structure defining Reject Messages for transactions
+ *
+ */
+
+message RejectMessage {
+  enum RejectCode {
+    MALFORMED = 0x01;
+    INVALID = 0x10;
+    OBSOLETE = 0x11;
+    DUPLICATE = 0x12;
+    NONSTANDARD = 0x40;
+    DUST = 0x41;
+    INSUFFICIENTFEE = 0x42;
+    CHECKPOINT = 0x43;
+    OTHER = 0xff;
+  }
+  required RejectCode code = 1;
+  required string message = 2;
+  required string reason = 3;
+  required PeerAddress peer = 4;
+}
+
+/**
  * A description of the confidence we have that a transaction cannot be reversed in the future.
  *
  * Parsing should be lenient, since this could change for different applications yet we should
@@ -232,12 +255,15 @@ message TransactionConfidence {
     IX_NONE = 0;
     IX_REQUEST = 1;
     IX_LOCKED = 2;
+    IX_LOCK_FAILED = 3;
   }
 
   optional IXType ixType = 19 [default = IX_NONE];
   optional int32 peerCount = 20;
   optional int32 minConnections = 21;
   optional int64 sentTime = 22;
+
+  repeated RejectMessage rejects = 32;
 
   // Next tag: 9
 }

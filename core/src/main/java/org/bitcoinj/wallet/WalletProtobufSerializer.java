@@ -373,6 +373,7 @@ public class WalletProtobufSerializer {
             {
                 case IX_LOCKED: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_LOCKED); break;
                 case IX_REQUEST: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_REQUEST); break;
+                case IX_LOCK_FAILED: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_LOCK_FAILED); break;
                 case IX_NONE:
                 default: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_NONE); break;
             }
@@ -395,6 +396,51 @@ public class WalletProtobufSerializer {
         Date sentAt = confidence.getSentAt();
         if(sentAt != null)
             confidenceBuilder.setSentTime(sentAt.getTime());
+        if(confidence.hasRejections()) {
+            Protos.RejectMessage.Builder builder = Protos.RejectMessage.newBuilder();
+            for(Map.Entry<PeerAddress, RejectMessage> entry : confidence.getRejections().entrySet()) {
+                Protos.RejectMessage.RejectCode code;
+                RejectMessage reject = entry.getValue();
+                switch(entry.getValue().getReasonCode()) {
+                    case MALFORMED:
+                        code = Protos.RejectMessage.RejectCode.MALFORMED;
+                        break;
+                    case INVALID:
+                        code = Protos.RejectMessage.RejectCode.INVALID;
+                        break;
+                    case INSUFFICIENTFEE:
+                        code = Protos.RejectMessage.RejectCode.INSUFFICIENTFEE;
+                        break;
+                    case DUPLICATE:
+                        code = Protos.RejectMessage.RejectCode.DUPLICATE;
+                        break;
+                    case DUST:
+                        code = Protos.RejectMessage.RejectCode.DUST;
+                        break;
+                    case OBSOLETE:
+                        code = Protos.RejectMessage.RejectCode.OBSOLETE;
+                        break;
+                    case NONSTANDARD:
+                        code = Protos.RejectMessage.RejectCode.NONSTANDARD;
+                        break;
+                    case OTHER:
+                    default:
+                        code = Protos.RejectMessage.RejectCode.OTHER;
+                        break;
+                }
+                builder.setCode(code);
+                builder.setMessage(reject.getRejectedMessage());
+                builder.setReason(reject.getReasonString());
+                PeerAddress address = entry.getKey();
+                Protos.PeerAddress peerProto = Protos.PeerAddress.newBuilder()
+                        .setIpAddress(ByteString.copyFrom(address.getAddr().getAddress()))
+                        .setPort(address.getPort())
+                        .setServices(address.getServices().longValue())
+                        .build();
+                builder.setPeer(peerProto);
+                confidenceBuilder.addRejects(builder.build());
+            }
+        }
         txBuilder.setConfidence(confidenceBuilder);
     }
 
@@ -822,6 +868,7 @@ public class WalletProtobufSerializer {
         {
             case IX_LOCKED: confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED); break;
             case IX_REQUEST: confidence.setIXType(TransactionConfidence.IXType.IX_REQUEST); break;
+            case IX_LOCK_FAILED: confidence.setIXType(TransactionConfidence.IXType.IX_LOCK_FAILED); break;
             case IX_NONE:
             default:
                 confidence.setIXType(TransactionConfidence.IXType.IX_NONE); break;
@@ -831,6 +878,56 @@ public class WalletProtobufSerializer {
             confidence.setSentTime(new Date(confidenceProto.getSentTime()));
         if(confidenceProto.hasMinConnections()) {
             confidence.setPeerInfo(confidenceProto.getPeerCount(), confidenceProto.getMinConnections());
+        }
+        int rejectCount = confidenceProto.getRejectsCount();
+        for (int i = 0; i < rejectCount; ++i) {
+            Protos.RejectMessage rejectMessage = confidenceProto.getRejects(i);
+            RejectMessage.RejectCode code = RejectMessage.RejectCode.OTHER;
+            switch(rejectMessage.getCode()) {
+                case MALFORMED:
+                    code = RejectMessage.RejectCode.MALFORMED;
+                    break;
+                case INVALID:
+                    code = RejectMessage.RejectCode.INVALID;
+                    break;
+                case INSUFFICIENTFEE:
+                    code = RejectMessage.RejectCode.INSUFFICIENTFEE;
+                    break;
+                case DUST:
+                    code = RejectMessage.RejectCode.DUST;
+                    break;
+                case DUPLICATE:
+                    code = RejectMessage.RejectCode.DUPLICATE;
+                    break;
+                case OBSOLETE:
+                    code = RejectMessage.RejectCode.OBSOLETE;
+                    break;
+                case NONSTANDARD:
+                    code = RejectMessage.RejectCode.NONSTANDARD;
+                    break;
+                case CHECKPOINT:
+                    code = RejectMessage.RejectCode.CHECKPOINT;
+                    break;
+                case OTHER:
+                default:
+                    code = RejectMessage.RejectCode.OTHER;
+                    break;
+            }
+
+            RejectMessage rm = new RejectMessage(params, code, confidence.getTransactionHash(), rejectMessage.getMessage(), rejectMessage.getReason());
+            InetAddress ip;
+            Protos.PeerAddress peerAddress = rejectMessage.getPeer();
+            try {
+                ip = InetAddress.getByAddress(peerAddress.getIpAddress().toByteArray());
+            } catch (UnknownHostException e) {
+                throw new UnreadableWalletException("Peer IP address does not have the right length", e);
+            }
+            int port = peerAddress.getPort();
+            int protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
+            BigInteger services = BigInteger.valueOf(peerAddress.getServices());
+            PeerAddress address = new PeerAddress(params, ip, port, protocolVersion, services);
+
+            confidence.markRejectedBy(address, rm);
         }
     }
 
