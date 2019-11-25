@@ -41,6 +41,7 @@ import org.bitcoinj.utils.Pair;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -93,8 +94,12 @@ public class ForwardingService {
         }
 
         if(checkpoints != null) {
-            FileInputStream checkpointStream = new FileInputStream("./" + checkpoints);
-            kit.setCheckpoints(checkpointStream);
+            try {
+                FileInputStream checkpointStream = new FileInputStream("./" + checkpoints);
+                kit.setCheckpoints(checkpointStream);
+            } catch (FileNotFoundException x) {
+                //swallow
+            }
         }
 
         // Download the block chain and wait until it's done.
