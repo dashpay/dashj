@@ -428,6 +428,12 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
             system.coinJoinManager.doMaintenance();
             addBlock();
         } while (lastMasternode == null);
+
+        // processPendingDsaRequest() is called before doAutomaticDenominating() in doMaintenance(),
+        // so the pendingDsaRequest set during the last iteration hasn't been sent yet. Run one more
+        // maintenance pass to send the CoinJoinAccept to the masternode.
+        system.coinJoinManager.doMaintenance();
+
         assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
         Coin initialDenominatedBalance = Coin.valueOf(102101021);
         assertEquals(initialDenominatedBalance, mixingWallet.getBalanceInfo().getDenominatedTrusted());

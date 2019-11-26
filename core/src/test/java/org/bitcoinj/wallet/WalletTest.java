@@ -1687,14 +1687,11 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void watchingScriptsBloomFilter() throws Exception {
-        assertFalse(wallet.isRequiringUpdateAllBloomFilter());
-
         Address watchedAddress = Address.fromKey(UNITTEST, new ECKey());
         Transaction t1 = createFakeTx(UNITTEST, CENT, watchedAddress);
         TransactionOutPoint outPoint = new TransactionOutPoint(UNITTEST, 0, t1);
         wallet.addWatchedAddress(watchedAddress);
 
-        assertTrue(wallet.isRequiringUpdateAllBloomFilter());
         // Note that this has a 1e-12 chance of failing this unit test due to a false positive
         assertFalse(wallet.getBloomFilter(1e-12).contains(outPoint.unsafeBitcoinSerialize()));
 
@@ -1723,8 +1720,6 @@ public class WalletTest extends TestWithWallet {
         wallet.removeWatchedAddresses(addressesForRemoval);
         for (Address addr : addressesForRemoval)
             assertFalse(wallet.isAddressWatched(addr));
-
-        assertFalse(wallet.isRequiringUpdateAllBloomFilter());
     }
 
     @Test
@@ -1733,7 +1728,6 @@ public class WalletTest extends TestWithWallet {
         wallet.addWatchedAddress(watchedAddress);
         wallet.removeWatchedAddress(watchedAddress);
         assertFalse(wallet.isAddressWatched(watchedAddress));
-        assertFalse(wallet.isRequiringUpdateAllBloomFilter());
     }
 
     @Test
