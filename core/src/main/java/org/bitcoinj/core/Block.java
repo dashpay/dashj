@@ -124,7 +124,7 @@ public class Block extends Message {
         // Set up a few basic things. We are not complete after this though.
         version = setVersion;
         difficultyTarget = 0x1e0fffffL;
-        time = Utils.currentTimeMillis() / 1000;
+        time = Utils.currentTimeSeconds();
         prevBlockHash = Sha256Hash.ZERO_HASH;
 
         length = HEADER_SIZE;
@@ -941,7 +941,7 @@ public class Block extends Message {
         addCoinbaseTransaction(pubKeyTo, value, height, null, null);
     }
     /** Adds a coinbase transaction to the block. This exists for unit tests.
-     * 
+     *
      * @param height block height, if known, or -1 otherwise.
      */
     @VisibleForTesting

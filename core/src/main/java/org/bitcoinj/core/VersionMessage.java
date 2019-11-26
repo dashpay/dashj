@@ -121,7 +121,7 @@ public class VersionMessage extends Message {
         super(params);
         clientVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
         localServices = 0;
-        time = Utils.currentTimeMillis() / 1000;
+        time = Utils.currentTimeSeconds();
         // Note that the Dash Core doesn't do anything with these, and finding out your own external IP address
         // is kind of tricky anyway, so we just put nonsense here for now.
         InetAddress localhost = InetAddresses.forString("127.0.0.1");
