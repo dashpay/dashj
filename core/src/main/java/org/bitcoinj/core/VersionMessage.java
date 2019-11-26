@@ -40,7 +40,12 @@ import java.util.Locale;
  */
 public class VersionMessage extends Message {
 
-    /** A service bit that denotes whether the peer has a copy of the block chain or not. */
+    /** The version of this library release, as a string. */
+    public static final String BITCOINJ_VERSION = "0.18-SNAPSHOT";
+    /** The value that is prepended to the subVer field of this application. */
+    public static final String LIBRARY_SUBVER = "/DashJ:" + BITCOINJ_VERSION + "/";
+
+    /** A service bit that denotes whether the peer has a full copy of the block chain or not. */
     public static final int NODE_NETWORK = 1 << 0;
     /** A service bit that denotes whether the peer supports the getutxos message or not. */
     public static final int NODE_GETUTXOS = 1 << 1;
@@ -96,13 +101,6 @@ public class VersionMessage extends Message {
      */
     public boolean relayTxesBeforeFilter;
 
-    /** The version of this library release, as a string. */
-    public static final String BITCOINJ_VERSION = "0.18-SNAPSHOT";
-
-    /** The value that is prepended to the subVer field of this application. */
-    public static final String LIBRARY_SUBVER = "/DashJ:" + BITCOINJ_VERSION + "/";
-
-
     public VersionMessage(NetworkParameters params, byte[] payload) throws ProtocolException {
         super(params, payload, 0);
     }
@@ -115,7 +113,7 @@ public class VersionMessage extends Message {
         super(params);
         clientVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
         localServices = 0;
-        time = System.currentTimeMillis() / 1000;
+        time = Utils.currentTimeMillis() / 1000;
         // Note that the Dash Core doesn't do anything with these, and finding out your own external IP address
         // is kind of tricky anyway, so we just put nonsense here for now.
         InetAddress localhost = InetAddresses.forString("127.0.0.1");

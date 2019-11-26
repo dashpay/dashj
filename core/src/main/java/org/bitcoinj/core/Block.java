@@ -29,10 +29,9 @@ import java.io.*;
 import java.math.*;
 import java.util.*;
 
+import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.core.Coin.*;
 import static org.bitcoinj.core.Sha256Hash.*;
-
-//import com.sun.xml.internal.ws.api.config.management.policy.ManagedServiceAssertion;
 
 /**
  * <p>A block is a group of transactions, and is one of the fundamental data structures of the Bitcoin system.
@@ -123,7 +122,7 @@ public class Block extends Message {
         // Set up a few basic things. We are not complete after this though.
         version = setVersion;
         difficultyTarget = 0x1e0fffffL;
-        time = System.currentTimeMillis() / 1000;
+        time = Utils.currentTimeMillis() / 1000;
         prevBlockHash = Sha256Hash.ZERO_HASH;
 
         length = HEADER_SIZE;
