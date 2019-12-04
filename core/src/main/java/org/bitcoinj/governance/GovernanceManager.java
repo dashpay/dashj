@@ -1307,7 +1307,7 @@ public class GovernanceManager extends AbstractManager {
                 // they stay connected for a short period of time and it's possible that we won't get everything we should.
                 // Only use outbound connections - inbound connection could be a "masternode" connection
                 // initiated from another node, so skip it too.
-                if (pnode.isMasternode() || (DarkCoinSystem.fMasterNode)) {
+                if (pnode.isMasternode()) {
                     continue;
                 }
                 // only use up to date peers

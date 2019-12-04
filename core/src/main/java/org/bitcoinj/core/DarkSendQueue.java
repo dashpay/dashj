@@ -15,8 +15,6 @@
  */
 package org.bitcoinj.core;
 
-import org.darkcoinj.DarkSend;
-import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,8 +35,6 @@ public class DarkSendQueue extends Message implements Serializable {
     boolean ready;
     byte[] vchSig;
 
-    DarkCoinSystem system;
-
     DarkSendQueue(NetworkParameters params) {
         super(params);
         length = 0;
@@ -47,8 +43,6 @@ public class DarkSendQueue extends Message implements Serializable {
         time = 0;
         vchSig = null;
         ready = false;
-
-        this.system = null;
     }
 
     DarkSendQueue(NetworkParameters params, byte[] bytes)

@@ -3,7 +3,6 @@ package org.bitcoinj.core;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.Threading;
-import org.darkcoinj.DarkSendEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +30,6 @@ public class DarkSendPool {
 
     static final int MIN_PEER_PROTO_VERSION = 70054;
 
-    // masternode entries
-    ArrayList<DarkSendEntry> entries;
     // the finalized transaction ready for signing
     Transaction finalTransaction;
 
@@ -111,7 +108,6 @@ public class DarkSendPool {
         lastNewBlock = 0;
 
         vecSessionCollateral = new ArrayList<Transaction>();
-        entries = new ArrayList<DarkSendEntry>();
         finalTransaction = new Transaction(context.getParams());
 
         setNull();
@@ -135,7 +131,6 @@ public class DarkSendPool {
         state = POOL_STATUS_IDLE;
         sessionID = 0;
         sessionDenom = 0;
-        entries.clear();
         finalTransaction.clearInputs();
         finalTransaction.clearOutputs();
         lastTimeChanged = Utils.currentTimeMillis();
