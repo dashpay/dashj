@@ -262,7 +262,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if (command.equals("ix")) {
             return new Transaction(params, payloadBytes); // keep ix for backward compatibility
         } else if (command.equals("dsq")) {
-            return new DarkSendQueue(params);
+            return new DarkSendQueue(params, payloadBytes, 0);
         } else if (command.equals("spork")) {
             return new SporkMessage(params, payloadBytes, 0);
         } else if(command.equals("ssc")) {
