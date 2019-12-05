@@ -82,11 +82,8 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(UTXOsMessage.class, "utxos");
 
         //Dash specific messages
-        names.put(DarkSendElectionEntryPingMessage.class, "dseep");
-
         names.put(SporkMessage.class, "spork");
         names.put(GetSporksMessage.class, "getsporks");
-        names.put(DarkSendEntryGetMessage.class, "dseg");
         names.put(SyncStatusCount.class, "ssc");
         names.put(GovernanceSyncMessage.class, "govsync");
         names.put(GovernanceObject.class, "govobj");
@@ -257,8 +254,6 @@ public class BitcoinSerializer extends MessageSerializer {
             return new UTXOsMessage(params, payloadBytes);
         } else if (command.equals("getutxos")) {
             return new GetUTXOsMessage(params, payloadBytes);
-        } else if (command.equals("dseep")) {
-            return new DarkSendElectionEntryPingMessage(params, payloadBytes);
         } else if (command.equals("ix")) {
             return new Transaction(params, payloadBytes); // keep ix for backward compatibility
         } else if (command.equals("dsq")) {
