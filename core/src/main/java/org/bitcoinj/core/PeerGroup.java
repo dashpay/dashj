@@ -2869,8 +2869,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     private static class Pair implements Comparable<Pair> {
-        int item, count;
-        public Pair(int item, int count) { this.count = count; this.item = item; }
+        final int item;
+        int count = 0;
+        public Pair(int item) { this.item = item; }
         // note that in this implementation compareTo() is not consistent with equals()
         @Override public int compareTo(Pair o) { return -Integer.compare(count, o.count); }
     }
@@ -2881,24 +2882,25 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         // This would be much easier in a functional language (or in Java 8).
         items = Ordering.natural().reverse().sortedCopy(items);
         LinkedList<Pair> pairs = new LinkedList<>();
-        pairs.add(new Pair(items.get(0), 0));
+        pairs.add(new Pair(items.get(0)));
         for (int item : items) {
             Pair pair = pairs.getLast();
             if (pair.item != item)
-                pairs.add((pair = new Pair(item, 0)));
+                pairs.add((pair = new Pair(item)));
             pair.count++;
         }
-        // pairs now contains a uniqified list of the sorted inputs, with counts for how often that item appeared.
-        // Now sort by how frequently they occur, and pick the max of the most frequent.
+        // pairs now contains a uniquified list of the sorted inputs, with counts for how often that item appeared.
+        // Now sort by how frequently they occur, and pick the most frequent. If the first place is tied between two,
+        // don't pick any.
         Collections.sort(pairs);
-        int maxCount = pairs.getFirst().count;
-        int maxItem = pairs.getFirst().item;
-        for (Pair pair : pairs) {
-            if (pair.count != maxCount)
-                break;
-            maxItem = Math.max(maxItem, pair.item);
-        }
-        return maxItem;
+        final Pair firstPair = pairs.get(0);
+        if (pairs.size() == 1)
+            return firstPair.item;
+        final Pair secondPair = pairs.get(1);
+        if (firstPair.count > secondPair.count)
+            return firstPair.item;
+        checkState(firstPair.count == secondPair.count);
+        return 0;
     }
 
     /**
@@ -2918,36 +2920,40 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         // Make sure we don't select a peer if there is no consensus about block height.
         if (mostCommonChainHeight == 0)
             return null;
-
-        // Only select peers that announce the minimum protocol and services and that we think is fully synchronized.
-        List<Peer> candidates = new LinkedList<>();
-        int highestPriority = Integer.MIN_VALUE;
-        final int MINIMUM_VERSION = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM);
+        // Make sure we don't select a peer that is behind/synchronizing itself or announces an unrealistic height.
+        List<Peer> candidates = new ArrayList<>();
         for (Peer peer : peers) {
             final VersionMessage versionMessage = peer.getPeerVersionMessage();
-            if (versionMessage.clientVersion < MINIMUM_VERSION)
+            if (peer.getPeerVersionMessage().clientVersion < NetworkParameters.ProtocolVersion.MINIMUM.getBitcoinProtocolVersion())
                 continue;
-            if (!versionMessage.hasBlockChain())
+            if (!peer.getPeerVersionMessage().hasBlockChain())
                 continue;
             final long peerHeight = peer.getBestHeight();
             if (peerHeight < mostCommonChainHeight || peerHeight > mostCommonChainHeight + 1)
                 continue;
             candidates.add(peer);
-            highestPriority = Math.max(highestPriority, getPriority(peer.peerAddress));
         }
-        if (candidates.isEmpty())
+        // Of the candidates, find the peers that meet the minimum protocol version we want to target. We could select
+        // the highest version we've seen on the assumption that newer versions are always better but we don't want to
+        // zap peers if they upgrade early. If we can't find any peers that have our preferred protocol version or
+        // better then we'll settle for the highest we found instead.
+        int highestVersion = 0, preferredVersion = 0;
+        // If/when PREFERRED_VERSION is not equal to vMinRequiredProtocolVersion, reenable the last test in PeerGroupTest.downloadPeerSelection
+        final int PREFERRED_VERSION = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLOOM_FILTER);
+        for (Peer peer : candidates) {
+            highestVersion = Math.max(peer.getPeerVersionMessage().clientVersion, highestVersion);
+            preferredVersion = Math.min(highestVersion, PREFERRED_VERSION);
+        }
+        ArrayList<Peer> candidates2 = new ArrayList<>(candidates.size());
+        for (Peer peer : candidates) {
+            if (peer.getPeerVersionMessage().clientVersion >= preferredVersion) {
+                candidates2.add(peer);
+            }
+        }
+        if (candidates2.isEmpty())
             return null;
-
-        // If there is a difference in priority, consider only the highest.
-        for (Iterator<Peer> i = candidates.iterator(); i.hasNext(); ) {
-            Peer peer = i.next();
-            if (getPriority(peer.peerAddress) < highestPriority)
-                i.remove();
-        }
-
-        // Random poll.
-        int index = (int) (Math.random() * candidates.size());
-        return candidates.get(index);
+        int index = (int) (Math.random() * candidates2.size());
+        return candidates2.get(index);
     }
 
     /**
