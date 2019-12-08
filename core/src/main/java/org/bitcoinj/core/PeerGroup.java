@@ -1634,7 +1634,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             // TODO: The peer should calculate the fast catchup time from the added wallets here.
             for (Wallet wallet : wallets)
                 peer.addWallet(wallet);
-            if (downloadPeer == null) {
+            if (downloadPeer == null && newSize > maxConnections / 2) {
                 Peer newDownloadPeer = selectDownloadPeer(peers);
                 if (newDownloadPeer != null) {
                     setDownloadPeer(newDownloadPeer);
