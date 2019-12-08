@@ -2869,9 +2869,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     private static class Pair implements Comparable<Pair> {
-        final int item;
-        int count = 0;
-        public Pair(int item) { this.item = item; }
+        int item, count;
+        public Pair(int item, int count) { this.count = count; this.item = item; }
         // note that in this implementation compareTo() is not consistent with equals()
         @Override public int compareTo(Pair o) { return -Integer.compare(count, o.count); }
     }
@@ -2882,25 +2881,24 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         // This would be much easier in a functional language (or in Java 8).
         items = Ordering.natural().reverse().sortedCopy(items);
         LinkedList<Pair> pairs = new LinkedList<>();
-        pairs.add(new Pair(items.get(0)));
+        pairs.add(new Pair(items.get(0), 0));
         for (int item : items) {
             Pair pair = pairs.getLast();
             if (pair.item != item)
-                pairs.add((pair = new Pair(item)));
+                pairs.add((pair = new Pair(item, 0)));
             pair.count++;
         }
-        // pairs now contains a uniquified list of the sorted inputs, with counts for how often that item appeared.
-        // Now sort by how frequently they occur, and pick the most frequent. If the first place is tied between two,
-        // don't pick any.
+        // pairs now contains a uniqified list of the sorted inputs, with counts for how often that item appeared.
+        // Now sort by how frequently they occur, and pick the max of the most frequent.
         Collections.sort(pairs);
-        final Pair firstPair = pairs.get(0);
-        if (pairs.size() == 1)
-            return firstPair.item;
-        final Pair secondPair = pairs.get(1);
-        if (firstPair.count > secondPair.count)
-            return firstPair.item;
-        checkState(firstPair.count == secondPair.count);
-        return 0;
+        int maxCount = pairs.getFirst().count;
+        int maxItem = pairs.getFirst().item;
+        for (Pair pair : pairs) {
+            if (pair.count != maxCount)
+                break;
+            maxItem = Math.max(maxItem, pair.item);
+        }
+        return maxItem;
     }
 
     /**
