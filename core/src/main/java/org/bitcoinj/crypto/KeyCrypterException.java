@@ -61,6 +61,4 @@ public class KeyCrypterException extends RuntimeException {
             super(message, throwable);
         }
     }
-
-
 }
