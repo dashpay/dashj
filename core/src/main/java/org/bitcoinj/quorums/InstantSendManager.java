@@ -100,6 +100,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
         context.getConfidenceTable().seen(isLock.txid, peer.getAddress());
         TransactionConfidence confidence = context.getConfidenceTable().get(isLock.txid);
         if(confidence != null) {
+            if (confidence.getIXType() != TransactionConfidence.IXType.IX_NONE) {
+                return;
+            }
             confidence.setIXType(TransactionConfidence.IXType.IX_REQUEST);
             confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
         }
@@ -159,6 +162,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
         lock.lock();
         try {
             boolean haslock = db.getInstantSendLockByHash(inv.hash) != null || pendingInstantSendLocks.containsKey(inv.hash);
+            TransactionConfidence confidence = context.getConfidenceTable().get(inv.hash);
+            if(confidence != null) {
+                if(confidence.getIXType() != TransactionConfidence.IXType.IX_NONE)
+                    return true;
+            }
             if(!invalidInstantSendLocks.isEmpty()) {
                 for(InstantSendLock islock : invalidInstantSendLocks.keySet()) {
                     if(inv.hash.equals(islock.getHash()))
@@ -482,6 +490,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 TransactionConfidence confidence = context.getConfidenceTable().get(islock.txid);
                 if(confidence != null) {
+                    log.info("InstantSend:  set to IX_LOCK_FAILED for {}", islock.txid);
                     confidence.setIXType(TransactionConfidence.IXType.IX_LOCK_FAILED);
                     confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
                 }
