@@ -510,6 +510,7 @@ public class Wallet extends BaseTaggableObject
                     try {
                         Transaction tx = getTransaction(confidence.getTransactionHash());
                         queueOnTransactionConfidenceChanged(tx);
+                        maybeQueueOnWalletChanged();
                         //save the wallet when an InstantSend transaction is locked
                         saveLater();
                     } finally {
