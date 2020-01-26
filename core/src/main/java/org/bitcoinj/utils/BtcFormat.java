@@ -503,7 +503,7 @@ public abstract class BtcFormat extends Format {
     /** The conventional international currency code for bitcoins: "BTC" */
     private static final String COIN_CODE = "DASH";
     /** The default currency symbols for bitcoins */
-    private static final String COIN_SYMBOL = "Đ"; //U+0110, formerly "฿"
+    private static final String COIN_SYMBOL = "\u0189"; //U+0110, formerly "฿" -- D with a -
     /** An alternative currency symbol to use in locales where the default symbol is used for the national currency. */
     protected static final String COIN_SYMBOL_ALT = "Ḏ"; //U+1E0E, formerly "Ƀ"
 
