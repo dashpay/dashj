@@ -228,6 +228,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     // in broadcastTransaction.
     private final Set<TransactionBroadcast> runningBroadcasts;
     private final Set<GovernanceVoteBroadcast> runningVoteBroadcasts;
+    private final ConcurrentHashMap<Sha256Hash, Integer> pendingTxSendCounts = new ConcurrentHashMap<>();
 
     private class PeerListener implements GetDataEventListener, BlocksDownloadedEventListener {
 
@@ -2094,6 +2095,14 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             tx.getConfidence().setSource(TransactionConfidence.Source.SELF);
         }
         tx.getConfidence().setPeerInfo(getConnectedPeers().size(), minConnections);
+
+        // keep track of how many times a transaction is sent
+        int sendCount = 0;
+        if(pendingTxSendCounts.contains(tx.getHash())) {
+            sendCount = pendingTxSendCounts.get(tx.getHash());
+        }
+        pendingTxSendCounts.put(tx.getHash(), sendCount++);
+
         final TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
         broadcast.setMinConnections(minConnections);
         // Send the TX to the wallet once we have a successful broadcast.
@@ -2124,6 +2133,50 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 runningBroadcasts.remove(broadcast);
             }
         }, MoreExecutors.directExecutor());
+
+        // Handle the case of 0.14.0.x nodes disconnecting dashj when sending transactions
+        // This will resend the transaction one if it was only sent to 1 peer
+        // This will resend the transaction up to 9 times if any one peer was disconnected while sending
+        Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
+            final int MAX_ATTEMPTS = 9;
+            Context context = Context.get();
+            @Override
+            public void onSuccess(Transaction transaction) {
+                log.info("Successfully sent tx {}", tx.getHash());
+                Context.propagate(context);
+
+                if(transaction.getConfidence().numBroadcastPeers() == 0) {
+                    // TODO: this tx was sent to a single peer, should we send it again to make sure or see if there are more connections?
+                    int sentCount = pendingTxSendCounts.get(tx.getHash());
+
+                    if(sentCount <= 2) {
+                        log.info("resending tx {} since it was only sent to 1 peer", tx.getHash());
+                        broadcastTransaction(tx);
+                    } else pendingTxSendCounts.put(tx.getHash(), sentCount + MAX_ATTEMPTS);
+                }
+                pendingTxSendCounts.remove(tx.getHash());
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                Context.propagate(context);
+                int sentCount = pendingTxSendCounts.get(tx.getHash());
+                if(throwable instanceof PeerException) {
+                    log.info("Failed to send tx {} due to disconnects", tx.getHash());
+
+                    if(sentCount <= MAX_ATTEMPTS) {
+                        log.info("resending tx {} due to disconnects", tx.getHash());
+                        broadcastTransaction(tx);
+                    } else {
+                        pendingTxSendCounts.remove(tx.getHash());
+                    }
+                } else {
+                    log.info("Failed to send tx {} due to rejections from peers", tx.getHash());
+                    pendingTxSendCounts.remove(tx.getHash());
+                }
+            }
+        }, MoreExecutors.directExecutor());
+
         // Keep a reference to the TransactionBroadcast object. This is important because otherwise, the entire tree
         // of objects we just created would become garbage if the user doesn't hold on to the returned future, and
         // eventually be collected. This in turn could result in the transaction not being committed to the wallet
