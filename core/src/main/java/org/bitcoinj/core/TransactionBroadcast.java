@@ -19,6 +19,7 @@ package org.bitcoinj.core;
 import com.google.common.annotations.*;
 import com.google.common.base.*;
 import com.google.common.util.concurrent.*;
+import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.*;
@@ -45,6 +46,9 @@ public class TransactionBroadcast {
     private final Transaction tx;
     private int minConnections;
     private int numWaitingFor;
+    /** stores a boolean value for the disconnect status of a peer during sending **/
+    private HashMap<PeerAddress, Boolean> sentToPeers = new HashMap<>();
+    private int numToBroadcastTo;
 
     /** Used for shuffling the peers before broadcast: unit tests can replace this to make themselves deterministic. */
     @VisibleForTesting
@@ -101,6 +105,7 @@ public class TransactionBroadcast {
                         log.warn("Threshold for considering broadcast rejected has been reached ({}/{})", size, threshold);
                         future.setException(new RejectedTransactionException(tx, rejectMessage));
                         peerGroup.removePreMessageReceivedEventListener(this);
+                        peerGroup.removeDisconnectedEventListener(disconnectedListener);
                     }
                 }
             }
@@ -110,6 +115,7 @@ public class TransactionBroadcast {
 
     public ListenableFuture<Transaction> broadcast() {
         peerGroup.addPreMessageReceivedEventListener(Threading.SAME_THREAD, rejectionListener);
+        peerGroup.addDisconnectedEventListener(Threading.SAME_THREAD, disconnectedListener);
         log.info("Waiting for {} peers required for broadcast, we have {} ...", minConnections, peerGroup.getConnectedPeers().size());
         peerGroup.waitForPeers(minConnections).addListener(new EnoughAvailablePeers(), Threading.SAME_THREAD);
         return future;
@@ -148,7 +154,7 @@ public class TransactionBroadcast {
             // our version message, as SPV nodes cannot relay it doesn't give away any additional information
             // to skip the inv here - we wouldn't send invs anyway.
             int numConnected = peers.size();
-            int numToBroadcastTo = (int) Math.max(1, Math.round(Math.ceil(peers.size() / 2.0)));
+            numToBroadcastTo = (int) Math.max(1, Math.round(Math.ceil(peers.size() / 2.0)));
             numWaitingFor = (int) Math.ceil((peers.size() - numToBroadcastTo) / 2.0);
             Collections.shuffle(peers, random);
             peers = peers.subList(0, numToBroadcastTo);
@@ -156,6 +162,7 @@ public class TransactionBroadcast {
             log.info("Sending to {} peers, will wait for {}, sending to: {}", numToBroadcastTo, numWaitingFor, Joiner.on(",").join(peers));
             for (Peer peer : peers) {
                 try {
+                    sentToPeers.put(peer.getAddress(), false);
                     peer.sendMessage(tx);
                     // We don't record the peer as having seen the tx in the memory pool because we want to track only
                     // how many peers announced to us.
@@ -174,6 +181,7 @@ public class TransactionBroadcast {
             // any peer discovery source and the user just calls connectTo() once.
             if (minConnections == 1) {
                 peerGroup.removePreMessageReceivedEventListener(rejectionListener);
+                peerGroup.removeDisconnectedEventListener(disconnectedListener);
                 future.set(tx);
             }
         }
@@ -210,6 +218,7 @@ public class TransactionBroadcast {
                 // point to avoid triggering inversions when the Future completes.
                 log.info("broadcastTransaction: {} complete", tx.getHash());
                 peerGroup.removePreMessageReceivedEventListener(rejectionListener);
+                peerGroup.removeDisconnectedEventListener(disconnectedListener);
                 conf.removeEventListener(this);
                 future.set(tx);  // RE-ENTRANCY POINT
             }
@@ -295,4 +304,30 @@ public class TransactionBroadcast {
         if (shouldInvoke)
             invokeProgressCallback(num, mined);
     }
+
+    private int getDisconnectedPeers() {
+        int count = 0;
+        for (Map.Entry<PeerAddress, Boolean> entry : sentToPeers.entrySet()) {
+            count += entry.getValue() ? 1 : 0;
+        }
+        return count;
+    }
+
+    private PeerDisconnectedEventListener disconnectedListener = new PeerDisconnectedEventListener() {
+        @Override
+        public void onPeerDisconnected(Peer peer, int peerCount) {
+            //log.info(peer + " was disconnected while sending a tx {}", tx.getHash());
+            if(sentToPeers.containsKey(peer.getAddress())) {
+                sentToPeers.put(peer.getAddress(), true);
+                log.info(peer + " was disconnected while sending a transaction to it.  tx: {}", tx.getHash());
+                int numDisconnectedPeers = getDisconnectedPeers();
+                if(numDisconnectedPeers >= Math.round(numToBroadcastTo / 2.0)) {
+                    log.info(peer + " was disconnected, setting exception on this transaction broadcast");
+                    future.setException(new PeerException(peer + " was disconnected"));
+                    peerGroup.removePreMessageReceivedEventListener(rejectionListener);
+                    peerGroup.removeDisconnectedEventListener(this);
+                }
+            }
+        }
+    };
 }
