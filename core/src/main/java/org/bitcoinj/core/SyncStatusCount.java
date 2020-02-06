@@ -2,7 +2,6 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
-import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
