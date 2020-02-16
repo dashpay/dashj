@@ -18,6 +18,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.TestNet3Params;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -253,6 +254,12 @@ public class BitcoinSerializerTest {
         };
         ByteArrayOutputStream bos = new ByteArrayOutputStream(ADDRESS_MESSAGE_BYTES.length);
         serializer.serialize(unknownMessage, bos);
+    }
+
+    @Test
+    public void testEquals() {
+        assertTrue(MAINNET.getDefaultSerializer().equals(MAINNET.getDefaultSerializer()));
+        assertFalse(MAINNET.getDefaultSerializer().equals(TestNet3Params.get().getDefaultSerializer()));
     }
 
     @Test
