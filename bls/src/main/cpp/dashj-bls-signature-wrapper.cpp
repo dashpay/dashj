@@ -634,13 +634,12 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1RecoverSig(JNIEnv *jenv, jc
   *(InsecureSignature **)&jresult = new InsecureSignature((const InsecureSignature &)result);
   return jresult;
 }
-
+#endif
 
 SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1DHKeyExchange(JNIEnv *jenv, jclass jcls, jlong jarg1, jlong jarg2) {
   jlong jresult = 0 ;
   PrivateKey *arg1 = 0 ;
   PublicKey *arg2 = 0 ;
-  PublicKey result;
 
   (void)jenv;
   (void)jcls;
@@ -654,11 +653,10 @@ SWIGEXPORT jlong JNICALL Java_org_dashj_bls_JNI_BLS_1DHKeyExchange(JNIEnv *jenv,
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PublicKey const & reference is null");
     return 0;
   }
-  result = bls::BLS::DHKeyExchange((PrivateKey const &)*arg1,(PublicKey const &)*arg2);
+  PublicKey result = bls::BLS::DHKeyExchange((PrivateKey const &)*arg1,(PublicKey const &)*arg2);
   *(PublicKey **)&jresult = new PublicKey((const PublicKey &)result);
   return jresult;
 }
-#endif
 
 SWIGEXPORT void JNICALL Java_org_dashj_bls_JNI_BLS_1CheckRelicErrors(JNIEnv *jenv, jclass jcls) {
   (void)jenv;

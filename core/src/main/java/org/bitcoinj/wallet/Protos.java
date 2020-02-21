@@ -16353,6 +16353,14 @@ public final class Protos {
        * </pre>
        */
       ENCRYPTED_SCRYPT_AES(1, 2),
+      /**
+       * <code>ENCRYPTED_BLS_KEYEXCHANGE_AES = 3;</code>
+       *
+       * <pre>
+       * Not used for wallet
+       * </pre>
+       */
+      ENCRYPTED_BLS_KEYEXCHANGE_AES(2, 3),
       ;
 
       /**
@@ -16371,6 +16379,14 @@ public final class Protos {
        * </pre>
        */
       public static final int ENCRYPTED_SCRYPT_AES_VALUE = 2;
+      /**
+       * <code>ENCRYPTED_BLS_KEYEXCHANGE_AES = 3;</code>
+       *
+       * <pre>
+       * Not used for wallet
+       * </pre>
+       */
+      public static final int ENCRYPTED_BLS_KEYEXCHANGE_AES_VALUE = 3;
 
 
       public final int getNumber() { return value; }
@@ -16379,6 +16395,7 @@ public final class Protos {
         switch (value) {
           case 1: return UNENCRYPTED;
           case 2: return ENCRYPTED_SCRYPT_AES;
+          case 3: return ENCRYPTED_BLS_KEYEXCHANGE_AES;
           default: return null;
         }
       }
@@ -20318,7 +20335,7 @@ public final class Protos {
       "\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\0018\022\014" +
       "\n\001p\030\004 \001(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001 \002(\t\022\014\n" +
       "\004data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022\013\n" +
-      "\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"\261\004\n\006Wallet\022\032\n\022n" +
+      "\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"\324\004\n\006Wallet\022\032\n\022n" +
       "etwork_identifier\030\001 \002(\t\022\034\n\024last_seen_blo" +
       "ck_hash\030\002 \001(\014\022\036\n\026last_seen_block_height\030" +
       "\014 \001(\r\022!\n\031last_seen_block_time_secs\030\016 \001(\003",
@@ -20331,11 +20348,12 @@ public final class Protos {
       "rsion\030\007 \001(\005:\0011\022$\n\textension\030\n \003(\0132\021.wall" +
       "et.Extension\022\023\n\013description\030\013 \001(\t\022\031\n\021key" +
       "_rotation_time\030\r \001(\004\022\031\n\004tags\030\020 \003(\0132\013.wal" +
-      "let.Tag\";\n\016EncryptionType\022\017\n\013UNENCRYPTED",
-      "\020\001\022\030\n\024ENCRYPTED_SCRYPT_AES\020\002\"R\n\014Exchange" +
-      "Rate\022\022\n\ncoin_value\030\001 \002(\003\022\022\n\nfiat_value\030\002" +
-      " \002(\003\022\032\n\022fiat_currency_code\030\003 \002(\tB\035\n\023org." +
-      "bitcoinj.walletB\006Protos"
+      "let.Tag\"^\n\016EncryptionType\022\017\n\013UNENCRYPTED",
+      "\020\001\022\030\n\024ENCRYPTED_SCRYPT_AES\020\002\022!\n\035ENCRYPTE" +
+      "D_BLS_KEYEXCHANGE_AES\020\003\"R\n\014ExchangeRate\022" +
+      "\022\n\ncoin_value\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022" +
+      "\032\n\022fiat_currency_code\030\003 \002(\tB\035\n\023org.bitco" +
+      "inj.walletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
