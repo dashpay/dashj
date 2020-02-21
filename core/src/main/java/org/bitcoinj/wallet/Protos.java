@@ -15830,6 +15830,1743 @@ public final class Protos {
     // @@protoc_insertion_point(class_scope:wallet.Tag)
   }
 
+  public interface TransactionSignerOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:wallet.TransactionSigner)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required string class_name = 1;</code>
+     *
+     * <pre>
+     * fully qualified class name of TransactionSigner implementation
+     * </pre>
+     */
+    boolean hasClassName();
+    /**
+     * <code>required string class_name = 1;</code>
+     *
+     * <pre>
+     * fully qualified class name of TransactionSigner implementation
+     * </pre>
+     */
+    java.lang.String getClassName();
+    /**
+     * <code>required string class_name = 1;</code>
+     *
+     * <pre>
+     * fully qualified class name of TransactionSigner implementation
+     * </pre>
+     */
+    com.google.protobuf.ByteString
+        getClassNameBytes();
+
+    /**
+     * <code>optional bytes data = 2;</code>
+     *
+     * <pre>
+     * arbitrary data required for signer to function
+     * </pre>
+     */
+    boolean hasData();
+    /**
+     * <code>optional bytes data = 2;</code>
+     *
+     * <pre>
+     * arbitrary data required for signer to function
+     * </pre>
+     */
+    com.google.protobuf.ByteString getData();
+  }
+  /**
+   * Protobuf type {@code wallet.TransactionSigner}
+   *
+   * <pre>
+   **
+   * Data required to reconstruct TransactionSigner.
+   * </pre>
+   */
+  public static final class TransactionSigner extends
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:wallet.TransactionSigner)
+      TransactionSignerOrBuilder {
+    // Use TransactionSigner.newBuilder() to construct.
+    private TransactionSigner(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private TransactionSigner(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final TransactionSigner defaultInstance;
+    public static TransactionSigner getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public TransactionSigner getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private TransactionSigner(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              className_ = bs;
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              data_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.bitcoinj.wallet.Protos.internal_static_wallet_TransactionSigner_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.bitcoinj.wallet.Protos.internal_static_wallet_TransactionSigner_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.bitcoinj.wallet.Protos.TransactionSigner.class, org.bitcoinj.wallet.Protos.TransactionSigner.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<TransactionSigner> PARSER =
+        new com.google.protobuf.AbstractParser<TransactionSigner>() {
+      public TransactionSigner parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new TransactionSigner(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<TransactionSigner> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    public static final int CLASS_NAME_FIELD_NUMBER = 1;
+    private java.lang.Object className_;
+    /**
+     * <code>required string class_name = 1;</code>
+     *
+     * <pre>
+     * fully qualified class name of TransactionSigner implementation
+     * </pre>
+     */
+    public boolean hasClassName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string class_name = 1;</code>
+     *
+     * <pre>
+     * fully qualified class name of TransactionSigner implementation
+     * </pre>
+     */
+    public java.lang.String getClassName() {
+      java.lang.Object ref = className_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          className_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string class_name = 1;</code>
+     *
+     * <pre>
+     * fully qualified class name of TransactionSigner implementation
+     * </pre>
+     */
+    public com.google.protobuf.ByteString
+        getClassNameBytes() {
+      java.lang.Object ref = className_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        className_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int DATA_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString data_;
+    /**
+     * <code>optional bytes data = 2;</code>
+     *
+     * <pre>
+     * arbitrary data required for signer to function
+     * </pre>
+     */
+    public boolean hasData() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional bytes data = 2;</code>
+     *
+     * <pre>
+     * arbitrary data required for signer to function
+     * </pre>
+     */
+    public com.google.protobuf.ByteString getData() {
+      return data_;
+    }
+
+    private void initFields() {
+      className_ = "";
+      data_ = com.google.protobuf.ByteString.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasClassName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, data_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, data_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.bitcoinj.wallet.Protos.TransactionSigner parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.bitcoinj.wallet.Protos.TransactionSigner prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code wallet.TransactionSigner}
+     *
+     * <pre>
+     **
+     * Data required to reconstruct TransactionSigner.
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:wallet.TransactionSigner)
+        org.bitcoinj.wallet.Protos.TransactionSignerOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.bitcoinj.wallet.Protos.internal_static_wallet_TransactionSigner_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.bitcoinj.wallet.Protos.internal_static_wallet_TransactionSigner_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.bitcoinj.wallet.Protos.TransactionSigner.class, org.bitcoinj.wallet.Protos.TransactionSigner.Builder.class);
+      }
+
+      // Construct using org.bitcoinj.wallet.Protos.TransactionSigner.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        className_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        data_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.bitcoinj.wallet.Protos.internal_static_wallet_TransactionSigner_descriptor;
+      }
+
+      public org.bitcoinj.wallet.Protos.TransactionSigner getDefaultInstanceForType() {
+        return org.bitcoinj.wallet.Protos.TransactionSigner.getDefaultInstance();
+      }
+
+      public org.bitcoinj.wallet.Protos.TransactionSigner build() {
+        org.bitcoinj.wallet.Protos.TransactionSigner result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.bitcoinj.wallet.Protos.TransactionSigner buildPartial() {
+        org.bitcoinj.wallet.Protos.TransactionSigner result = new org.bitcoinj.wallet.Protos.TransactionSigner(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.className_ = className_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.data_ = data_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.bitcoinj.wallet.Protos.TransactionSigner) {
+          return mergeFrom((org.bitcoinj.wallet.Protos.TransactionSigner)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.bitcoinj.wallet.Protos.TransactionSigner other) {
+        if (other == org.bitcoinj.wallet.Protos.TransactionSigner.getDefaultInstance()) return this;
+        if (other.hasClassName()) {
+          bitField0_ |= 0x00000001;
+          className_ = other.className_;
+          onChanged();
+        }
+        if (other.hasData()) {
+          setData(other.getData());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasClassName()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.bitcoinj.wallet.Protos.TransactionSigner parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.bitcoinj.wallet.Protos.TransactionSigner) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object className_ = "";
+      /**
+       * <code>required string class_name = 1;</code>
+       *
+       * <pre>
+       * fully qualified class name of TransactionSigner implementation
+       * </pre>
+       */
+      public boolean hasClassName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string class_name = 1;</code>
+       *
+       * <pre>
+       * fully qualified class name of TransactionSigner implementation
+       * </pre>
+       */
+      public java.lang.String getClassName() {
+        java.lang.Object ref = className_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            className_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string class_name = 1;</code>
+       *
+       * <pre>
+       * fully qualified class name of TransactionSigner implementation
+       * </pre>
+       */
+      public com.google.protobuf.ByteString
+          getClassNameBytes() {
+        java.lang.Object ref = className_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          className_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string class_name = 1;</code>
+       *
+       * <pre>
+       * fully qualified class name of TransactionSigner implementation
+       * </pre>
+       */
+      public Builder setClassName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        className_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string class_name = 1;</code>
+       *
+       * <pre>
+       * fully qualified class name of TransactionSigner implementation
+       * </pre>
+       */
+      public Builder clearClassName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        className_ = getDefaultInstance().getClassName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string class_name = 1;</code>
+       *
+       * <pre>
+       * fully qualified class name of TransactionSigner implementation
+       * </pre>
+       */
+      public Builder setClassNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        className_ = value;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString data_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes data = 2;</code>
+       *
+       * <pre>
+       * arbitrary data required for signer to function
+       * </pre>
+       */
+      public boolean hasData() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bytes data = 2;</code>
+       *
+       * <pre>
+       * arbitrary data required for signer to function
+       * </pre>
+       */
+      public com.google.protobuf.ByteString getData() {
+        return data_;
+      }
+      /**
+       * <code>optional bytes data = 2;</code>
+       *
+       * <pre>
+       * arbitrary data required for signer to function
+       * </pre>
+       */
+      public Builder setData(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        data_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes data = 2;</code>
+       *
+       * <pre>
+       * arbitrary data required for signer to function
+       * </pre>
+       */
+      public Builder clearData() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        data_ = getDefaultInstance().getData();
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:wallet.TransactionSigner)
+    }
+
+    static {
+      defaultInstance = new TransactionSigner(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:wallet.TransactionSigner)
+  }
+
+  public interface ExtendedKeyChainOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:wallet.ExtendedKeyChain)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType type = 1;</code>
+     */
+    boolean hasType();
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType type = 1;</code>
+     */
+    org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType getType();
+
+    /**
+     * <code>required .wallet.ExtendedKeyChain.KeyType keyType = 2;</code>
+     */
+    boolean hasKeyType();
+    /**
+     * <code>required .wallet.ExtendedKeyChain.KeyType keyType = 2;</code>
+     */
+    org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType getKeyType();
+
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    java.util.List<org.bitcoinj.wallet.Protos.Key> 
+        getKeyList();
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    org.bitcoinj.wallet.Protos.Key getKey(int index);
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    int getKeyCount();
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
+        getKeyOrBuilderList();
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    org.bitcoinj.wallet.Protos.KeyOrBuilder getKeyOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code wallet.ExtendedKeyChain}
+   *
+   * <pre>
+   **
+   * A wallet can contain other keychains that are not for spending, but for signing special transactions
+   * </pre>
+   */
+  public static final class ExtendedKeyChain extends
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:wallet.ExtendedKeyChain)
+      ExtendedKeyChainOrBuilder {
+    // Use ExtendedKeyChain.newBuilder() to construct.
+    private ExtendedKeyChain(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ExtendedKeyChain(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ExtendedKeyChain defaultInstance;
+    public static ExtendedKeyChain getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ExtendedKeyChain getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ExtendedKeyChain(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              int rawValue = input.readEnum();
+              org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType value = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                type_ = value;
+              }
+              break;
+            }
+            case 16: {
+              int rawValue = input.readEnum();
+              org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType value = org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(2, rawValue);
+              } else {
+                bitField0_ |= 0x00000002;
+                keyType_ = value;
+              }
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                key_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.Key>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              key_.add(input.readMessage(org.bitcoinj.wallet.Protos.Key.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          key_ = java.util.Collections.unmodifiableList(key_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.bitcoinj.wallet.Protos.internal_static_wallet_ExtendedKeyChain_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.bitcoinj.wallet.Protos.internal_static_wallet_ExtendedKeyChain_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.bitcoinj.wallet.Protos.ExtendedKeyChain.class, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ExtendedKeyChain> PARSER =
+        new com.google.protobuf.AbstractParser<ExtendedKeyChain>() {
+      public ExtendedKeyChain parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ExtendedKeyChain(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ExtendedKeyChain> getParserForType() {
+      return PARSER;
+    }
+
+    /**
+     * Protobuf enum {@code wallet.ExtendedKeyChain.ExtendedKeyChainType}
+     */
+    public enum ExtendedKeyChainType
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>BLOCKCHAIN_USER = 0;</code>
+       */
+      BLOCKCHAIN_USER(0, 0),
+      /**
+       * <code>MASTERNODE_HOLDINGS = 1;</code>
+       */
+      MASTERNODE_HOLDINGS(1, 1),
+      /**
+       * <code>MASTERNODE_OWNER = 2;</code>
+       */
+      MASTERNODE_OWNER(2, 2),
+      /**
+       * <code>MASTERNODE_OPERATOR = 3;</code>
+       */
+      MASTERNODE_OPERATOR(3, 3),
+      /**
+       * <code>MASTERNODE_VOTING = 4;</code>
+       */
+      MASTERNODE_VOTING(4, 4),
+      ;
+
+      /**
+       * <code>BLOCKCHAIN_USER = 0;</code>
+       */
+      public static final int BLOCKCHAIN_USER_VALUE = 0;
+      /**
+       * <code>MASTERNODE_HOLDINGS = 1;</code>
+       */
+      public static final int MASTERNODE_HOLDINGS_VALUE = 1;
+      /**
+       * <code>MASTERNODE_OWNER = 2;</code>
+       */
+      public static final int MASTERNODE_OWNER_VALUE = 2;
+      /**
+       * <code>MASTERNODE_OPERATOR = 3;</code>
+       */
+      public static final int MASTERNODE_OPERATOR_VALUE = 3;
+      /**
+       * <code>MASTERNODE_VOTING = 4;</code>
+       */
+      public static final int MASTERNODE_VOTING_VALUE = 4;
+
+
+      public final int getNumber() { return value; }
+
+      public static ExtendedKeyChainType valueOf(int value) {
+        switch (value) {
+          case 0: return BLOCKCHAIN_USER;
+          case 1: return MASTERNODE_HOLDINGS;
+          case 2: return MASTERNODE_OWNER;
+          case 3: return MASTERNODE_OPERATOR;
+          case 4: return MASTERNODE_VOTING;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<ExtendedKeyChainType>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<ExtendedKeyChainType>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<ExtendedKeyChainType>() {
+              public ExtendedKeyChainType findValueByNumber(int number) {
+                return ExtendedKeyChainType.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.bitcoinj.wallet.Protos.ExtendedKeyChain.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final ExtendedKeyChainType[] VALUES = values();
+
+      public static ExtendedKeyChainType valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private ExtendedKeyChainType(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:wallet.ExtendedKeyChain.ExtendedKeyChainType)
+    }
+
+    /**
+     * Protobuf enum {@code wallet.ExtendedKeyChain.KeyType}
+     */
+    public enum KeyType
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>ECDSA = 0;</code>
+       */
+      ECDSA(0, 0),
+      /**
+       * <code>BLS = 1;</code>
+       */
+      BLS(1, 1),
+      ;
+
+      /**
+       * <code>ECDSA = 0;</code>
+       */
+      public static final int ECDSA_VALUE = 0;
+      /**
+       * <code>BLS = 1;</code>
+       */
+      public static final int BLS_VALUE = 1;
+
+
+      public final int getNumber() { return value; }
+
+      public static KeyType valueOf(int value) {
+        switch (value) {
+          case 0: return ECDSA;
+          case 1: return BLS;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<KeyType>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<KeyType>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<KeyType>() {
+              public KeyType findValueByNumber(int number) {
+                return KeyType.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.bitcoinj.wallet.Protos.ExtendedKeyChain.getDescriptor().getEnumTypes().get(1);
+      }
+
+      private static final KeyType[] VALUES = values();
+
+      public static KeyType valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private KeyType(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:wallet.ExtendedKeyChain.KeyType)
+    }
+
+    private int bitField0_;
+    public static final int TYPE_FIELD_NUMBER = 1;
+    private org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType type_;
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType type = 1;</code>
+     */
+    public boolean hasType() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType type = 1;</code>
+     */
+    public org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType getType() {
+      return type_;
+    }
+
+    public static final int KEYTYPE_FIELD_NUMBER = 2;
+    private org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType keyType_;
+    /**
+     * <code>required .wallet.ExtendedKeyChain.KeyType keyType = 2;</code>
+     */
+    public boolean hasKeyType() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required .wallet.ExtendedKeyChain.KeyType keyType = 2;</code>
+     */
+    public org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType getKeyType() {
+      return keyType_;
+    }
+
+    public static final int KEY_FIELD_NUMBER = 3;
+    private java.util.List<org.bitcoinj.wallet.Protos.Key> key_;
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeyList() {
+      return key_;
+    }
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    public java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
+        getKeyOrBuilderList() {
+      return key_;
+    }
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    public int getKeyCount() {
+      return key_.size();
+    }
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    public org.bitcoinj.wallet.Protos.Key getKey(int index) {
+      return key_.get(index);
+    }
+    /**
+     * <code>repeated .wallet.Key key = 3;</code>
+     */
+    public org.bitcoinj.wallet.Protos.KeyOrBuilder getKeyOrBuilder(
+        int index) {
+      return key_.get(index);
+    }
+
+    private void initFields() {
+      type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_USER;
+      keyType_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType.ECDSA;
+      key_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasKeyType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      for (int i = 0; i < getKeyCount(); i++) {
+        if (!getKey(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, type_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeEnum(2, keyType_.getNumber());
+      }
+      for (int i = 0; i < key_.size(); i++) {
+        output.writeMessage(3, key_.get(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(1, type_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(2, keyType_.getNumber());
+      }
+      for (int i = 0; i < key_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, key_.get(i));
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.bitcoinj.wallet.Protos.ExtendedKeyChain parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.bitcoinj.wallet.Protos.ExtendedKeyChain prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code wallet.ExtendedKeyChain}
+     *
+     * <pre>
+     **
+     * A wallet can contain other keychains that are not for spending, but for signing special transactions
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:wallet.ExtendedKeyChain)
+        org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.bitcoinj.wallet.Protos.internal_static_wallet_ExtendedKeyChain_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.bitcoinj.wallet.Protos.internal_static_wallet_ExtendedKeyChain_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.bitcoinj.wallet.Protos.ExtendedKeyChain.class, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder.class);
+      }
+
+      // Construct using org.bitcoinj.wallet.Protos.ExtendedKeyChain.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getKeyFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_USER;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        keyType_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType.ECDSA;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        if (keyBuilder_ == null) {
+          key_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+        } else {
+          keyBuilder_.clear();
+        }
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.bitcoinj.wallet.Protos.internal_static_wallet_ExtendedKeyChain_descriptor;
+      }
+
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain getDefaultInstanceForType() {
+        return org.bitcoinj.wallet.Protos.ExtendedKeyChain.getDefaultInstance();
+      }
+
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain build() {
+        org.bitcoinj.wallet.Protos.ExtendedKeyChain result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain buildPartial() {
+        org.bitcoinj.wallet.Protos.ExtendedKeyChain result = new org.bitcoinj.wallet.Protos.ExtendedKeyChain(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.type_ = type_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.keyType_ = keyType_;
+        if (keyBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004)) {
+            key_ = java.util.Collections.unmodifiableList(key_);
+            bitField0_ = (bitField0_ & ~0x00000004);
+          }
+          result.key_ = key_;
+        } else {
+          result.key_ = keyBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.bitcoinj.wallet.Protos.ExtendedKeyChain) {
+          return mergeFrom((org.bitcoinj.wallet.Protos.ExtendedKeyChain)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.bitcoinj.wallet.Protos.ExtendedKeyChain other) {
+        if (other == org.bitcoinj.wallet.Protos.ExtendedKeyChain.getDefaultInstance()) return this;
+        if (other.hasType()) {
+          setType(other.getType());
+        }
+        if (other.hasKeyType()) {
+          setKeyType(other.getKeyType());
+        }
+        if (keyBuilder_ == null) {
+          if (!other.key_.isEmpty()) {
+            if (key_.isEmpty()) {
+              key_ = other.key_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+            } else {
+              ensureKeyIsMutable();
+              key_.addAll(other.key_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.key_.isEmpty()) {
+            if (keyBuilder_.isEmpty()) {
+              keyBuilder_.dispose();
+              keyBuilder_ = null;
+              key_ = other.key_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+              keyBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getKeyFieldBuilder() : null;
+            } else {
+              keyBuilder_.addAllMessages(other.key_);
+            }
+          }
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasType()) {
+          
+          return false;
+        }
+        if (!hasKeyType()) {
+          
+          return false;
+        }
+        for (int i = 0; i < getKeyCount(); i++) {
+          if (!getKey(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.bitcoinj.wallet.Protos.ExtendedKeyChain parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.bitcoinj.wallet.Protos.ExtendedKeyChain) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_USER;
+      /**
+       * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType type = 1;</code>
+       */
+      public boolean hasType() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType type = 1;</code>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType getType() {
+        return type_;
+      }
+      /**
+       * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType type = 1;</code>
+       */
+      public Builder setType(org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        type_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType type = 1;</code>
+       */
+      public Builder clearType() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_USER;
+        onChanged();
+        return this;
+      }
+
+      private org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType keyType_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType.ECDSA;
+      /**
+       * <code>required .wallet.ExtendedKeyChain.KeyType keyType = 2;</code>
+       */
+      public boolean hasKeyType() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required .wallet.ExtendedKeyChain.KeyType keyType = 2;</code>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType getKeyType() {
+        return keyType_;
+      }
+      /**
+       * <code>required .wallet.ExtendedKeyChain.KeyType keyType = 2;</code>
+       */
+      public Builder setKeyType(org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
+        keyType_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .wallet.ExtendedKeyChain.KeyType keyType = 2;</code>
+       */
+      public Builder clearKeyType() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        keyType_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType.ECDSA;
+        onChanged();
+        return this;
+      }
+
+      private java.util.List<org.bitcoinj.wallet.Protos.Key> key_ =
+        java.util.Collections.emptyList();
+      private void ensureKeyIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          key_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.Key>(key_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.bitcoinj.wallet.Protos.Key, org.bitcoinj.wallet.Protos.Key.Builder, org.bitcoinj.wallet.Protos.KeyOrBuilder> keyBuilder_;
+
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeyList() {
+        if (keyBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(key_);
+        } else {
+          return keyBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public int getKeyCount() {
+        if (keyBuilder_ == null) {
+          return key_.size();
+        } else {
+          return keyBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public org.bitcoinj.wallet.Protos.Key getKey(int index) {
+        if (keyBuilder_ == null) {
+          return key_.get(index);
+        } else {
+          return keyBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public Builder setKey(
+          int index, org.bitcoinj.wallet.Protos.Key value) {
+        if (keyBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureKeyIsMutable();
+          key_.set(index, value);
+          onChanged();
+        } else {
+          keyBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public Builder setKey(
+          int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
+        if (keyBuilder_ == null) {
+          ensureKeyIsMutable();
+          key_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          keyBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public Builder addKey(org.bitcoinj.wallet.Protos.Key value) {
+        if (keyBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureKeyIsMutable();
+          key_.add(value);
+          onChanged();
+        } else {
+          keyBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public Builder addKey(
+          int index, org.bitcoinj.wallet.Protos.Key value) {
+        if (keyBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureKeyIsMutable();
+          key_.add(index, value);
+          onChanged();
+        } else {
+          keyBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public Builder addKey(
+          org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
+        if (keyBuilder_ == null) {
+          ensureKeyIsMutable();
+          key_.add(builderForValue.build());
+          onChanged();
+        } else {
+          keyBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public Builder addKey(
+          int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
+        if (keyBuilder_ == null) {
+          ensureKeyIsMutable();
+          key_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          keyBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public Builder addAllKey(
+          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.Key> values) {
+        if (keyBuilder_ == null) {
+          ensureKeyIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, key_);
+          onChanged();
+        } else {
+          keyBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public Builder clearKey() {
+        if (keyBuilder_ == null) {
+          key_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+          onChanged();
+        } else {
+          keyBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public Builder removeKey(int index) {
+        if (keyBuilder_ == null) {
+          ensureKeyIsMutable();
+          key_.remove(index);
+          onChanged();
+        } else {
+          keyBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public org.bitcoinj.wallet.Protos.Key.Builder getKeyBuilder(
+          int index) {
+        return getKeyFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public org.bitcoinj.wallet.Protos.KeyOrBuilder getKeyOrBuilder(
+          int index) {
+        if (keyBuilder_ == null) {
+          return key_.get(index);  } else {
+          return keyBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
+           getKeyOrBuilderList() {
+        if (keyBuilder_ != null) {
+          return keyBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(key_);
+        }
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public org.bitcoinj.wallet.Protos.Key.Builder addKeyBuilder() {
+        return getKeyFieldBuilder().addBuilder(
+            org.bitcoinj.wallet.Protos.Key.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public org.bitcoinj.wallet.Protos.Key.Builder addKeyBuilder(
+          int index) {
+        return getKeyFieldBuilder().addBuilder(
+            index, org.bitcoinj.wallet.Protos.Key.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .wallet.Key key = 3;</code>
+       */
+      public java.util.List<org.bitcoinj.wallet.Protos.Key.Builder> 
+           getKeyBuilderList() {
+        return getKeyFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.bitcoinj.wallet.Protos.Key, org.bitcoinj.wallet.Protos.Key.Builder, org.bitcoinj.wallet.Protos.KeyOrBuilder> 
+          getKeyFieldBuilder() {
+        if (keyBuilder_ == null) {
+          keyBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.bitcoinj.wallet.Protos.Key, org.bitcoinj.wallet.Protos.Key.Builder, org.bitcoinj.wallet.Protos.KeyOrBuilder>(
+                  key_,
+                  ((bitField0_ & 0x00000004) == 0x00000004),
+                  getParentForChildren(),
+                  isClean());
+          key_ = null;
+        }
+        return keyBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:wallet.ExtendedKeyChain)
+    }
+
+    static {
+      defaultInstance = new ExtendedKeyChain(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:wallet.ExtendedKeyChain)
+  }
+
   public interface WalletOrBuilder extends
       // @@protoc_insertion_point(interface_extends:wallet.Wallet)
       com.google.protobuf.MessageOrBuilder {
@@ -16112,6 +17849,50 @@ public final class Protos {
      */
     org.bitcoinj.wallet.Protos.TagOrBuilder getTagsOrBuilder(
         int index);
+
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> 
+        getExtKeyChainsList();
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    org.bitcoinj.wallet.Protos.ExtendedKeyChain getExtKeyChains(int index);
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    int getExtKeyChainsCount();
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    java.util.List<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder> 
+        getExtKeyChainsOrBuilderList();
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder getExtKeyChainsOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code wallet.Wallet}
@@ -16270,6 +18051,14 @@ public final class Protos {
               tags_.add(input.readMessage(org.bitcoinj.wallet.Protos.Tag.PARSER, extensionRegistry));
               break;
             }
+            case 146: {
+              if (!((mutable_bitField0_ & 0x00004000) == 0x00004000)) {
+                extKeyChains_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.ExtendedKeyChain>();
+                mutable_bitField0_ |= 0x00004000;
+              }
+              extKeyChains_.add(input.readMessage(org.bitcoinj.wallet.Protos.ExtendedKeyChain.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -16292,6 +18081,9 @@ public final class Protos {
         }
         if (((mutable_bitField0_ & 0x00002000) == 0x00002000)) {
           tags_ = java.util.Collections.unmodifiableList(tags_);
+        }
+        if (((mutable_bitField0_ & 0x00004000) == 0x00004000)) {
+          extKeyChains_ = java.util.Collections.unmodifiableList(extKeyChains_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -16882,6 +18674,61 @@ public final class Protos {
       return tags_.get(index);
     }
 
+    public static final int EXTKEYCHAINS_FIELD_NUMBER = 18;
+    private java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> extKeyChains_;
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    public java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> getExtKeyChainsList() {
+      return extKeyChains_;
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    public java.util.List<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder> 
+        getExtKeyChainsOrBuilderList() {
+      return extKeyChains_;
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    public int getExtKeyChainsCount() {
+      return extKeyChains_.size();
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    public org.bitcoinj.wallet.Protos.ExtendedKeyChain getExtKeyChains(int index) {
+      return extKeyChains_.get(index);
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+     *
+     * <pre>
+     * Next tag: 18
+     * </pre>
+     */
+    public org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder getExtKeyChainsOrBuilder(
+        int index) {
+      return extKeyChains_.get(index);
+    }
+
     private void initFields() {
       networkIdentifier_ = "";
       lastSeenBlockHash_ = com.google.protobuf.ByteString.EMPTY;
@@ -16897,6 +18744,7 @@ public final class Protos {
       description_ = "";
       keyRotationTime_ = 0L;
       tags_ = java.util.Collections.emptyList();
+      extKeyChains_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -16940,6 +18788,12 @@ public final class Protos {
       }
       for (int i = 0; i < getTagsCount(); i++) {
         if (!getTags(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getExtKeyChainsCount(); i++) {
+        if (!getExtKeyChains(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -16992,6 +18846,9 @@ public final class Protos {
       }
       for (int i = 0; i < tags_.size(); i++) {
         output.writeMessage(16, tags_.get(i));
+      }
+      for (int i = 0; i < extKeyChains_.size(); i++) {
+        output.writeMessage(18, extKeyChains_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -17057,6 +18914,10 @@ public final class Protos {
       for (int i = 0; i < tags_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(16, tags_.get(i));
+      }
+      for (int i = 0; i < extKeyChains_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(18, extKeyChains_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -17177,6 +19038,7 @@ public final class Protos {
           getEncryptionParametersFieldBuilder();
           getExtensionFieldBuilder();
           getTagsFieldBuilder();
+          getExtKeyChainsFieldBuilder();
         }
       }
       private static Builder create() {
@@ -17236,6 +19098,12 @@ public final class Protos {
           bitField0_ = (bitField0_ & ~0x00002000);
         } else {
           tagsBuilder_.clear();
+        }
+        if (extKeyChainsBuilder_ == null) {
+          extKeyChains_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00004000);
+        } else {
+          extKeyChainsBuilder_.clear();
         }
         return this;
       }
@@ -17349,6 +19217,15 @@ public final class Protos {
           result.tags_ = tags_;
         } else {
           result.tags_ = tagsBuilder_.build();
+        }
+        if (extKeyChainsBuilder_ == null) {
+          if (((bitField0_ & 0x00004000) == 0x00004000)) {
+            extKeyChains_ = java.util.Collections.unmodifiableList(extKeyChains_);
+            bitField0_ = (bitField0_ & ~0x00004000);
+          }
+          result.extKeyChains_ = extKeyChains_;
+        } else {
+          result.extKeyChains_ = extKeyChainsBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -17527,6 +19404,32 @@ public final class Protos {
             }
           }
         }
+        if (extKeyChainsBuilder_ == null) {
+          if (!other.extKeyChains_.isEmpty()) {
+            if (extKeyChains_.isEmpty()) {
+              extKeyChains_ = other.extKeyChains_;
+              bitField0_ = (bitField0_ & ~0x00004000);
+            } else {
+              ensureExtKeyChainsIsMutable();
+              extKeyChains_.addAll(other.extKeyChains_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.extKeyChains_.isEmpty()) {
+            if (extKeyChainsBuilder_.isEmpty()) {
+              extKeyChainsBuilder_.dispose();
+              extKeyChainsBuilder_ = null;
+              extKeyChains_ = other.extKeyChains_;
+              bitField0_ = (bitField0_ & ~0x00004000);
+              extKeyChainsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getExtKeyChainsFieldBuilder() : null;
+            } else {
+              extKeyChainsBuilder_.addAllMessages(other.extKeyChains_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -17568,6 +19471,12 @@ public final class Protos {
         }
         for (int i = 0; i < getTagsCount(); i++) {
           if (!getTags(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getExtKeyChainsCount(); i++) {
+          if (!getExtKeyChains(i).isInitialized()) {
             
             return false;
           }
@@ -19388,6 +21297,318 @@ public final class Protos {
         return tagsBuilder_;
       }
 
+      private java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> extKeyChains_ =
+        java.util.Collections.emptyList();
+      private void ensureExtKeyChainsIsMutable() {
+        if (!((bitField0_ & 0x00004000) == 0x00004000)) {
+          extKeyChains_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.ExtendedKeyChain>(extKeyChains_);
+          bitField0_ |= 0x00004000;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.bitcoinj.wallet.Protos.ExtendedKeyChain, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder, org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder> extKeyChainsBuilder_;
+
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> getExtKeyChainsList() {
+        if (extKeyChainsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(extKeyChains_);
+        } else {
+          return extKeyChainsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public int getExtKeyChainsCount() {
+        if (extKeyChainsBuilder_ == null) {
+          return extKeyChains_.size();
+        } else {
+          return extKeyChainsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain getExtKeyChains(int index) {
+        if (extKeyChainsBuilder_ == null) {
+          return extKeyChains_.get(index);
+        } else {
+          return extKeyChainsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public Builder setExtKeyChains(
+          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
+        if (extKeyChainsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureExtKeyChainsIsMutable();
+          extKeyChains_.set(index, value);
+          onChanged();
+        } else {
+          extKeyChainsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public Builder setExtKeyChains(
+          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
+        if (extKeyChainsBuilder_ == null) {
+          ensureExtKeyChainsIsMutable();
+          extKeyChains_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          extKeyChainsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public Builder addExtKeyChains(org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
+        if (extKeyChainsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureExtKeyChainsIsMutable();
+          extKeyChains_.add(value);
+          onChanged();
+        } else {
+          extKeyChainsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public Builder addExtKeyChains(
+          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
+        if (extKeyChainsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureExtKeyChainsIsMutable();
+          extKeyChains_.add(index, value);
+          onChanged();
+        } else {
+          extKeyChainsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public Builder addExtKeyChains(
+          org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
+        if (extKeyChainsBuilder_ == null) {
+          ensureExtKeyChainsIsMutable();
+          extKeyChains_.add(builderForValue.build());
+          onChanged();
+        } else {
+          extKeyChainsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public Builder addExtKeyChains(
+          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
+        if (extKeyChainsBuilder_ == null) {
+          ensureExtKeyChainsIsMutable();
+          extKeyChains_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          extKeyChainsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public Builder addAllExtKeyChains(
+          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChain> values) {
+        if (extKeyChainsBuilder_ == null) {
+          ensureExtKeyChainsIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, extKeyChains_);
+          onChanged();
+        } else {
+          extKeyChainsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public Builder clearExtKeyChains() {
+        if (extKeyChainsBuilder_ == null) {
+          extKeyChains_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00004000);
+          onChanged();
+        } else {
+          extKeyChainsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public Builder removeExtKeyChains(int index) {
+        if (extKeyChainsBuilder_ == null) {
+          ensureExtKeyChainsIsMutable();
+          extKeyChains_.remove(index);
+          onChanged();
+        } else {
+          extKeyChainsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder getExtKeyChainsBuilder(
+          int index) {
+        return getExtKeyChainsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder getExtKeyChainsOrBuilder(
+          int index) {
+        if (extKeyChainsBuilder_ == null) {
+          return extKeyChains_.get(index);  } else {
+          return extKeyChainsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public java.util.List<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder> 
+           getExtKeyChainsOrBuilderList() {
+        if (extKeyChainsBuilder_ != null) {
+          return extKeyChainsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(extKeyChains_);
+        }
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder addExtKeyChainsBuilder() {
+        return getExtKeyChainsFieldBuilder().addBuilder(
+            org.bitcoinj.wallet.Protos.ExtendedKeyChain.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder addExtKeyChainsBuilder(
+          int index) {
+        return getExtKeyChainsFieldBuilder().addBuilder(
+            index, org.bitcoinj.wallet.Protos.ExtendedKeyChain.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 18;</code>
+       *
+       * <pre>
+       * Next tag: 18
+       * </pre>
+       */
+      public java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder> 
+           getExtKeyChainsBuilderList() {
+        return getExtKeyChainsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.bitcoinj.wallet.Protos.ExtendedKeyChain, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder, org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder> 
+          getExtKeyChainsFieldBuilder() {
+        if (extKeyChainsBuilder_ == null) {
+          extKeyChainsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.bitcoinj.wallet.Protos.ExtendedKeyChain, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder, org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder>(
+                  extKeyChains_,
+                  ((bitField0_ & 0x00004000) == 0x00004000),
+                  getParentForChildren(),
+                  isClean());
+          extKeyChains_ = null;
+        }
+        return extKeyChainsBuilder_;
+      }
+
       // @@protoc_insertion_point(builder_scope:wallet.Wallet)
     }
 
@@ -20241,6 +22462,16 @@ public final class Protos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_wallet_Tag_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_wallet_TransactionSigner_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_wallet_TransactionSigner_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_wallet_ExtendedKeyChain_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_wallet_ExtendedKeyChain_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_wallet_Wallet_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -20335,25 +22566,36 @@ public final class Protos {
       "\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\0018\022\014" +
       "\n\001p\030\004 \001(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001 \002(\t\022\014\n" +
       "\004data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022\013\n" +
-      "\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"\324\004\n\006Wallet\022\032\n\022n" +
-      "etwork_identifier\030\001 \002(\t\022\034\n\024last_seen_blo" +
-      "ck_hash\030\002 \001(\014\022\036\n\026last_seen_block_height\030" +
-      "\014 \001(\r\022!\n\031last_seen_block_time_secs\030\016 \001(\003",
-      "\022\030\n\003key\030\003 \003(\0132\013.wallet.Key\022(\n\013transactio" +
-      "n\030\004 \003(\0132\023.wallet.Transaction\022&\n\016watched_" +
-      "script\030\017 \003(\0132\016.wallet.Script\022C\n\017encrypti" +
-      "on_type\030\005 \001(\0162\035.wallet.Wallet.Encryption" +
-      "Type:\013UNENCRYPTED\0227\n\025encryption_paramete" +
-      "rs\030\006 \001(\0132\030.wallet.ScryptParameters\022\022\n\007ve" +
-      "rsion\030\007 \001(\005:\0011\022$\n\textension\030\n \003(\0132\021.wall" +
-      "et.Extension\022\023\n\013description\030\013 \001(\t\022\031\n\021key" +
-      "_rotation_time\030\r \001(\004\022\031\n\004tags\030\020 \003(\0132\013.wal" +
-      "let.Tag\"^\n\016EncryptionType\022\017\n\013UNENCRYPTED",
-      "\020\001\022\030\n\024ENCRYPTED_SCRYPT_AES\020\002\022!\n\035ENCRYPTE" +
-      "D_BLS_KEYEXCHANGE_AES\020\003\"R\n\014ExchangeRate\022" +
-      "\022\n\ncoin_value\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022" +
-      "\032\n\022fiat_currency_code\030\003 \002(\tB\035\n\023org.bitco" +
-      "inj.walletB\006Protos"
+      "\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"5\n\021TransactionS" +
+      "igner\022\022\n\nclass_name\030\001 \002(\t\022\014\n\004data\030\002 \001(\014\"" +
+      "\310\002\n\020ExtendedKeyChain\022;\n\004type\030\001 \002(\0162-.wal" +
+      "let.ExtendedKeyChain.ExtendedKeyChainTyp",
+      "e\0221\n\007keyType\030\002 \002(\0162 .wallet.ExtendedKeyC" +
+      "hain.KeyType\022\030\n\003key\030\003 \003(\0132\013.wallet.Key\"\212" +
+      "\001\n\024ExtendedKeyChainType\022\023\n\017BLOCKCHAIN_US" +
+      "ER\020\000\022\027\n\023MASTERNODE_HOLDINGS\020\001\022\024\n\020MASTERN" +
+      "ODE_OWNER\020\002\022\027\n\023MASTERNODE_OPERATOR\020\003\022\025\n\021" +
+      "MASTERNODE_VOTING\020\004\"\035\n\007KeyType\022\t\n\005ECDSA\020" +
+      "\000\022\007\n\003BLS\020\001\"\204\005\n\006Wallet\022\032\n\022network_identif" +
+      "ier\030\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022" +
+      "\036\n\026last_seen_block_height\030\014 \001(\r\022!\n\031last_" +
+      "seen_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132",
+      "\013.wallet.Key\022(\n\013transaction\030\004 \003(\0132\023.wall" +
+      "et.Transaction\022&\n\016watched_script\030\017 \003(\0132\016" +
+      ".wallet.Script\022C\n\017encryption_type\030\005 \001(\0162" +
+      "\035.wallet.Wallet.EncryptionType:\013UNENCRYP" +
+      "TED\0227\n\025encryption_parameters\030\006 \001(\0132\030.wal" +
+      "let.ScryptParameters\022\022\n\007version\030\007 \001(\005:\0011" +
+      "\022$\n\textension\030\n \003(\0132\021.wallet.Extension\022\023" +
+      "\n\013description\030\013 \001(\t\022\031\n\021key_rotation_time" +
+      "\030\r \001(\004\022\031\n\004tags\030\020 \003(\0132\013.wallet.Tag\022.\n\014ext" +
+      "KeyChains\030\022 \003(\0132\030.wallet.ExtendedKeyChai",
+      "n\"^\n\016EncryptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024" +
+      "ENCRYPTED_SCRYPT_AES\020\002\022!\n\035ENCRYPTED_BLS_" +
+      "KEYEXCHANGE_AES\020\003\"R\n\014ExchangeRate\022\022\n\ncoi" +
+      "n_value\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n\022fia" +
+      "t_currency_code\030\003 \002(\tB\035\n\023org.bitcoinj.wa" +
+      "lletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -20445,14 +22687,26 @@ public final class Protos {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_Tag_descriptor,
         new java.lang.String[] { "Tag", "Data", });
-    internal_static_wallet_Wallet_descriptor =
+    internal_static_wallet_TransactionSigner_descriptor =
       getDescriptor().getMessageTypes().get(13);
+    internal_static_wallet_TransactionSigner_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_wallet_TransactionSigner_descriptor,
+        new java.lang.String[] { "ClassName", "Data", });
+    internal_static_wallet_ExtendedKeyChain_descriptor =
+      getDescriptor().getMessageTypes().get(14);
+    internal_static_wallet_ExtendedKeyChain_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_wallet_ExtendedKeyChain_descriptor,
+        new java.lang.String[] { "Type", "KeyType", "Key", });
+    internal_static_wallet_Wallet_descriptor =
+      getDescriptor().getMessageTypes().get(15);
     internal_static_wallet_Wallet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_Wallet_descriptor,
-        new java.lang.String[] { "NetworkIdentifier", "LastSeenBlockHash", "LastSeenBlockHeight", "LastSeenBlockTimeSecs", "Key", "Transaction", "WatchedScript", "EncryptionType", "EncryptionParameters", "Version", "Extension", "Description", "KeyRotationTime", "Tags", });
+        new java.lang.String[] { "NetworkIdentifier", "LastSeenBlockHash", "LastSeenBlockHeight", "LastSeenBlockTimeSecs", "Key", "Transaction", "WatchedScript", "EncryptionType", "EncryptionParameters", "Version", "Extension", "Description", "KeyRotationTime", "Tags", "ExtKeyChains", });
     internal_static_wallet_ExchangeRate_descriptor =
-      getDescriptor().getMessageTypes().get(14);
+      getDescriptor().getMessageTypes().get(16);
     internal_static_wallet_ExchangeRate_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_wallet_ExchangeRate_descriptor,
