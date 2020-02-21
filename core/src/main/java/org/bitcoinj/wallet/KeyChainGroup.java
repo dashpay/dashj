@@ -173,13 +173,13 @@ public class KeyChainGroup implements KeyBag {
     private static final Logger log = LoggerFactory.getLogger(KeyChainGroup.class);
 
     private BasicKeyChain basic;
-    private final NetworkParameters params;
+    protected final NetworkParameters params;
     // Keychains for deterministically derived keys. If this is null, no chains should be created automatically.
     protected final @Nullable LinkedList<DeterministicKeyChain> chains;
     // currentKeys is used for normal, non-multisig/married wallets. currentAddresses is used when we're handing out
     // P2SH addresses. They're mutually exclusive.
     private final EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys;
-    private final EnumMap<KeyChain.KeyPurpose, Address> currentAddresses;
+    protected final EnumMap<KeyChain.KeyPurpose, Address> currentAddresses;
     @Nullable private KeyCrypter keyCrypter;
     private int lookaheadSize = -1;
     private int lookaheadThreshold = -1;
@@ -197,7 +197,7 @@ public class KeyChainGroup implements KeyBag {
         return new Builder(params, structure);
     }
 
-    private KeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain,
+    protected KeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain,
             @Nullable List<DeterministicKeyChain> chains, int lookaheadSize, int lookaheadThreshold,
             @Nullable EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys, @Nullable KeyCrypter crypter) {
         this.params = params;
@@ -242,7 +242,7 @@ public class KeyChainGroup implements KeyBag {
     }
 
     // This keeps married redeem data in sync with the number of keys issued
-    private void maybeLookaheadScripts() {
+    protected void maybeLookaheadScripts() {
         for (DeterministicKeyChain chain : chains) {
             chain.maybeLookAheadScripts();
         }
@@ -567,7 +567,7 @@ public class KeyChainGroup implements KeyBag {
     }
 
     /** If the given key is "current", advance the current key to a new one. */
-    private void maybeMarkCurrentKeyAsUsed(DeterministicKey key) {
+    protected void maybeMarkCurrentKeyAsUsed(DeterministicKey key) {
         // It's OK for currentKeys to be empty here: it means we're a married wallet and the key may be a part of a
         // rotating chain.
         for (Map.Entry<KeyChain.KeyPurpose, DeterministicKey> entry : currentKeys.entrySet()) {
@@ -943,7 +943,7 @@ public class KeyChainGroup implements KeyBag {
         return false;
     }
 
-    private static EnumMap<KeyChain.KeyPurpose, DeterministicKey> createCurrentKeysMap(List<DeterministicKeyChain> chains) {
+    protected static EnumMap<KeyChain.KeyPurpose, DeterministicKey> createCurrentKeysMap(List<DeterministicKeyChain> chains) {
         DeterministicKeyChain activeChain = chains.get(chains.size() - 1);
 
         EnumMap<KeyChain.KeyPurpose, DeterministicKey> currentKeys = new EnumMap<>(KeyChain.KeyPurpose.class);

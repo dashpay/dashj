@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 devrandom
+ * Copyright 2019 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,16 @@ import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
+import org.bitcoinj.script.Script;
 
 /**
  * Default factory for creating authentication keychains while de-serializing.
  */
 public class AuthenticationKeyChainFactory implements KeyChainFactory {
-    @Override
-    public DeterministicKeyChain makeKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed, KeyCrypter crypter, boolean isMarried) {
-        throw new UnsupportedOperationException();
-    }
 
     @Override
     public DeterministicKeyChain makeKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
-                                              KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) {
+                                              KeyCrypter crypter, boolean isMarried, Script.ScriptType scriptType, ImmutableList<ChildNumber> accountPath) {
         AuthenticationKeyChain chain;
         if (isMarried)
             throw new UnsupportedOperationException();
@@ -43,7 +40,16 @@ public class AuthenticationKeyChainFactory implements KeyChainFactory {
 
     @Override
     public DeterministicKeyChain makeWatchingKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicKey accountKey,
-                                                      boolean isFollowingKey, boolean isMarried) throws UnreadableWalletException {
+                                                      boolean isFollowingKey, boolean isMarried, Script.ScriptType scriptType) throws UnreadableWalletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public DeterministicKeyChain makeSpendingKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicKey accountKey, boolean isMarried, Script.ScriptType outputScriptType) throws UnreadableWalletException {
+        throw new UnsupportedOperationException();
+    }
+
+    public DeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) {
         throw new UnsupportedOperationException();
     }
 }

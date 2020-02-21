@@ -253,6 +253,18 @@ public class WalletProtobufSerializer {
         }
         walletBuilder.addAllExtKeyChains(extendedKeyChains);
 
+        //Add FriendKeyChains:  Receiving
+        if(wallet.receivingFromFriendsGroup != null && wallet.receivingFromFriendsGroup.hasKeyChains()) {
+            List<Protos.Key> keys = wallet.receivingFromFriendsGroup.serializeToProtobuf();
+            walletBuilder.addAllKeysForFriends(keys);
+        }
+
+        //Add FriendKeyChains:  Sending
+        if(wallet.sendingToFriendsGroup != null && wallet.sendingToFriendsGroup.hasKeyChains()) {
+            List<Protos.Key> keys = wallet.sendingToFriendsGroup.serializeToProtobuf();
+            walletBuilder.addAllKeysFromFriends(keys);
+        }
+
         return walletBuilder.build();
     }
 
@@ -678,6 +690,34 @@ public class WalletProtobufSerializer {
                 }
 
             }
+        }
+
+        //read the keys for friends (they send, we spend)
+
+        if(walletProto.getKeysForFriendsCount() > 0) {
+            KeyCrypter keyCrypter = null;
+            FriendKeyChainGroup friendKeyChainGroup = null;
+            if (walletProto.hasEncryptionParameters()) {
+                Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
+                keyCrypter = new KeyCrypterScrypt(encryptionParameters);
+                friendKeyChainGroup = FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysForFriendsList(), keyCrypter, keyChainFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+            } else {
+                friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysForFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+            }
+            wallet.setReceivingFromFriendsGroup(friendKeyChainGroup);
+        }
+
+        if(walletProto.getKeysFromFriendsCount() > 0) {
+            KeyCrypter keyCrypter = null;
+            FriendKeyChainGroup friendKeyChainGroup = null;
+            if (walletProto.hasEncryptionParameters()) {
+                Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
+                keyCrypter = new KeyCrypterScrypt(encryptionParameters);
+                friendKeyChainGroup = FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysFromFriendsList(), keyCrypter, keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+            } else {
+                friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysFromFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+            }
+            wallet.setReceivingFromFriendsGroup(friendKeyChainGroup);
         }
 
         // Make sure the object can be re-used to read another wallet without corruption.
