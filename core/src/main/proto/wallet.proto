@@ -41,6 +41,14 @@ message EncryptedData {
   required bytes encrypted_private_key = 2;       // The encrypted private key
 }
 
+message ExtendedChildNumber {
+    required bool simple = 1 [default = true];
+    optional uint32 i = 2;
+    optional uint32 size = 3;
+    optional bool hardened = 4;
+    optional bytes bi = 5;
+}
+
 /**
  * Data attached to a Key message that defines the data needed by the BIP32 deterministic key hierarchy algorithm.
  */
@@ -72,6 +80,8 @@ message DeterministicKey {
   // Number of signatures required to spend. This field is needed only for married keychains to reconstruct KeyChain
   // and represents the N value from N-of-M CHECKMULTISIG script. For regular single keychains it will always be 1.
   optional uint32 sigsRequiredToSpend = 6 [default = 1];
+
+  repeated ExtendedChildNumber extendedPath = 7;
 }
 
 /**
@@ -144,6 +154,8 @@ message Key {
   }
   // Type of addresses (aka output scripts) to generate for receiving.
   optional OutputScriptType output_script_type = 11;
+
+  repeated ExtendedChildNumber extendedPath = 20;
 }
 
 message Script {
@@ -464,7 +476,10 @@ message Wallet {
 
   // (field number 17 was used by transaction_signers)
 
-  repeated ExtendedKeyChain extKeyChains = 18;
+  repeated ExtendedKeyChain extKeyChains = 29;
+
+  repeated Key keysForFriends = 30;  //spending, friends send us money
+  repeated Key keysFromFriends = 31; //watching, we send money to friends
   // Next tag: 18
 }
 
