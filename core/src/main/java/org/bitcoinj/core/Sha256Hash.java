@@ -274,4 +274,11 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
         }
         return 0;
     }
+
+    /**
+     * returns the Base58 representation
+     */
+    public String toStringBase58() {
+        return Base58.encode(bytes);
+    }
 }
