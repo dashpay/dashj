@@ -12,6 +12,7 @@ public class KeyId extends ChildMessage {
 
     byte [] bytes;
 
+    public static final KeyId KEYID_ZERO = new KeyId(new byte[20]);
 
     public KeyId(NetworkParameters params, byte[] payload, int offset) throws ProtocolException {
         super(params, payload, offset);
