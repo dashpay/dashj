@@ -83,6 +83,7 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
 
         BIP65Height = 2431; // 0000039cf01242c7f921dcb4806a5994bc003b48c1973ae0c89b67809c2bb2ab
 
+        coinType = 1;
     }
 
     private static UnitTestParams instance;

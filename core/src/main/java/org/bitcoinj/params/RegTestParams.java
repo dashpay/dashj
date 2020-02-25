@@ -98,6 +98,7 @@ public class RegTestParams extends AbstractBitcoinNetParams {
 
         BIP65Height = 1365;
 
+        coinType = 1;
     }
 
     @Override
