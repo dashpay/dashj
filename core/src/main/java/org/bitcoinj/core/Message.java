@@ -18,6 +18,7 @@
 package org.bitcoinj.core;
 
 import com.google.common.collect.Lists;
+import org.bouncycastle.util.encoders.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -408,5 +409,19 @@ public abstract class Message {
             }
         }
         return vec;
+    }
+
+    /**
+     * returns the Base64 representation of this message
+     */
+    public String toStringBase64() {
+        return Base64.toBase64String(bitcoinSerialize());
+    }
+
+    /**
+     * returns the HEX representation of this message
+     */
+    public String toStringHex() {
+        return Utils.HEX.encode(bitcoinSerialize());
     }
 }
