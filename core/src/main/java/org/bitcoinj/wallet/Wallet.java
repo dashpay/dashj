@@ -3487,12 +3487,17 @@ public class Wallet extends BaseTaggableObject
                 builder.append("Key rotation time:      ").append(Utils.dateTimeFormat(keyRotationTime)).append('\n');
             builder.append(keyChainGroup.toString(includeLookahead, includePrivateKeys, aesKey));
 
+            if(authenticationGroup != null) {
+                builder.append("\nAuthentication\n");
+                builder.append(authenticationGroup.toString(includeLookahead, includePrivateKeys, aesKey));
+            }
+
             if(receivingFromFriendsGroup != null) {
-                builder.append("\nContacts (receiving)");
+                builder.append("\nContacts (receiving)\n");
                 builder.append(receivingFromFriendsGroup.toString(includeLookahead, includePrivateKeys, aesKey));
             }
             if(sendingToFriendsGroup != null) {
-                builder.append("\nContacts (sending)");
+                builder.append("\nContacts (sending)\n");
                 builder.append(sendingToFriendsGroup.toString(includeLookahead, includePrivateKeys, aesKey));
             }
             if (!watchedScripts.isEmpty()) {

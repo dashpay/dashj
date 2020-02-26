@@ -17,9 +17,11 @@
 package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.*;
-import org.bitcoinj.script.Script;
+import org.bouncycastle.crypto.params.KeyParameter;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -120,5 +122,11 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
 
     public DeterministicKey currentAuthenticationKey() {
         return getKey(currentIndex);
+    }
+    
+    @Override
+    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, NetworkParameters params) {
+        return "Authentication Key Chain: " + (type != null ? type.toString() : "unknown") + "\n" +
+            super.toString(includeLookahead, includePrivateKeys, aesKey, params);
     }
 }
