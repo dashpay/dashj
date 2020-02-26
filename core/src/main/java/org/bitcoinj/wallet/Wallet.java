@@ -5667,7 +5667,12 @@ public class Wallet extends BaseTaggableObject
         return blockchainUserKeyChain;
     }
 
-    public void setAuthenticationKeyChain(AuthenticationKeyChain chain, AuthenticationKeyChain.KeyChainType type) {
+    //package level access
+    void setAuthenticationKeyChain(AuthenticationKeyChain chain, AuthenticationKeyChain.KeyChainType type) {
+        chain.setType(type);
+        if(authenticationGroup == null)
+            authenticationGroup =  AuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
+
         switch(type) {
             case MASTERNODE_VOTING:
                 providerVoterKeyChain = chain;
