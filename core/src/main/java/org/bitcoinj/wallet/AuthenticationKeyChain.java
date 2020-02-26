@@ -16,6 +16,7 @@
 
 package org.bitcoinj.wallet;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.*;
@@ -23,12 +24,9 @@ import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class AuthenticationKeyChain extends ExternalKeyChain {
 
@@ -87,10 +85,6 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
             }
 
             //TODO: do we need to look ahead here, even for one key?  Does anything get saved?
-            //List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
-            //basicKeyChain.importKeys(lookahead);
-
-            //TODO: do we need to look ahead here, even for one key?  Does anything get saved?
             /** Optimization: see {@link DeterministicKeyChain.getKeys(org.bitcoinj.wallet.KeyChain.KeyPurpose, int)} */
 
             List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
@@ -123,7 +117,12 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
     public DeterministicKey currentAuthenticationKey() {
         return getKey(currentIndex);
     }
-    
+
+    public DeterministicKey getKeyByPubKeyHash(byte [] hash160) {
+        Preconditions.checkState(hash160.length == 20);
+        return (DeterministicKey)basicKeyChain.findKeyFromPubHash(hash160);
+    }
+
     @Override
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, NetworkParameters params) {
         return "Authentication Key Chain: " + (type != null ? type.toString() : "unknown") + "\n" +
