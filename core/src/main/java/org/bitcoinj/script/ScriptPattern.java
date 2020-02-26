@@ -168,6 +168,26 @@ public class ScriptPattern {
     }
 
     /**
+     * Returns whether this script matches the format used for credit burn outputs:
+     * {@code OP_RETURN [20] [creditBurnKeyId]}
+     */
+    public static boolean isCreditBurn(Script script) {
+        List<ScriptChunk> chunks = script.chunks;
+        if (chunks.size() != 2)
+            return false;
+        ScriptChunk chunk0 = chunks.get(0);
+        if (chunk0.opcode != OP_RETURN)
+            return false;
+        ScriptChunk chunk1 = chunks.get(1);
+        byte[] chunk1data = chunk1.data;
+        if (chunk1data == null)
+            return false;
+        if (chunk1data.length != 20)
+            return false;
+        return true;
+    }
+
+    /**
      * Returns whether this script matches the format used for LOCKTIMEVERIFY transactions.
      */
     public static boolean isSentToCltvPaymentChannel(Script script) {
@@ -219,5 +239,9 @@ public class ScriptPattern {
     public static boolean isOpReturn(Script script) {
         List<ScriptChunk> chunks = script.chunks;
         return chunks.size() > 0 && chunks.get(0).equalsOpCode(ScriptOpCodes.OP_RETURN);
+    }
+
+    public static byte[] extractCreditBurnKeyId(Script script) {
+        return script.chunks.get(1).data;
     }
 }
