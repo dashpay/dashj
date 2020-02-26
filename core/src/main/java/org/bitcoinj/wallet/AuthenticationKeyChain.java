@@ -31,7 +31,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class AuthenticationKeyChain extends ExternalKeyChain {
 
     public enum KeyChainType {
-        BLOCKCHAIN_USER,
+        BLOCKCHAIN_IDENTITY,
+        BLOCKCHAIN_IDENTITY_FUNDING,
         MASTERNODE_HOLDINGS,
         MASTERNODE_OWNER,
         MASTERNODE_OPERATOR,
