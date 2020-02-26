@@ -842,9 +842,14 @@ public class Transaction extends ChildMessage {
                 s.append('\n');
                 s.append(indent).append("        ");
                 ScriptType scriptType = scriptPubKey.getScriptType();
-                if (scriptType != null)
-                    s.append(scriptType).append(" addr:").append(scriptPubKey.getToAddress(params));
-                else
+                if (scriptType != null) {
+                    if (scriptType != ScriptType.CREDITBURN)
+                        s.append(scriptType).append(" addr:").append(scriptPubKey.getToAddress(params));
+                    else if (ScriptPattern.isCreditBurn(scriptPubKey)) {
+                        byte [] hash160 = ScriptPattern.extractCreditBurnKeyId(scriptPubKey);
+                        s.append(scriptType).append(" addr:").append(Address.fromPubKeyHash(params, hash160));
+                    }
+                } else
                     s.append("unknown script type");
                 if (!out.isAvailableForSpending()) {
                     s.append("  spent");
