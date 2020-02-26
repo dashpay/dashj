@@ -18130,9 +18130,9 @@ public final class Protos {
     public enum ExtendedKeyChainType
         implements com.google.protobuf.ProtocolMessageEnum {
       /**
-       * <code>BLOCKCHAIN_USER = 0;</code>
+       * <code>BLOCKCHAIN_IDENTITY = 0;</code>
        */
-      BLOCKCHAIN_USER(0, 0),
+      BLOCKCHAIN_IDENTITY(0, 0),
       /**
        * <code>MASTERNODE_HOLDINGS = 1;</code>
        */
@@ -18149,12 +18149,16 @@ public final class Protos {
        * <code>MASTERNODE_VOTING = 4;</code>
        */
       MASTERNODE_VOTING(4, 4),
+      /**
+       * <code>BLOCKCHAIN_IDENTITY_FUNDING = 5;</code>
+       */
+      BLOCKCHAIN_IDENTITY_FUNDING(5, 5),
       ;
 
       /**
-       * <code>BLOCKCHAIN_USER = 0;</code>
+       * <code>BLOCKCHAIN_IDENTITY = 0;</code>
        */
-      public static final int BLOCKCHAIN_USER_VALUE = 0;
+      public static final int BLOCKCHAIN_IDENTITY_VALUE = 0;
       /**
        * <code>MASTERNODE_HOLDINGS = 1;</code>
        */
@@ -18171,17 +18175,22 @@ public final class Protos {
        * <code>MASTERNODE_VOTING = 4;</code>
        */
       public static final int MASTERNODE_VOTING_VALUE = 4;
+      /**
+       * <code>BLOCKCHAIN_IDENTITY_FUNDING = 5;</code>
+       */
+      public static final int BLOCKCHAIN_IDENTITY_FUNDING_VALUE = 5;
 
 
       public final int getNumber() { return value; }
 
       public static ExtendedKeyChainType valueOf(int value) {
         switch (value) {
-          case 0: return BLOCKCHAIN_USER;
+          case 0: return BLOCKCHAIN_IDENTITY;
           case 1: return MASTERNODE_HOLDINGS;
           case 2: return MASTERNODE_OWNER;
           case 3: return MASTERNODE_OPERATOR;
           case 4: return MASTERNODE_VOTING;
+          case 5: return BLOCKCHAIN_IDENTITY_FUNDING;
           default: return null;
         }
       }
@@ -18382,7 +18391,7 @@ public final class Protos {
     }
 
     private void initFields() {
-      type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_USER;
+      type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY;
       keyType_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType.ECDSA;
       key_ = java.util.Collections.emptyList();
     }
@@ -18566,7 +18575,7 @@ public final class Protos {
 
       public Builder clear() {
         super.clear();
-        type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_USER;
+        type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY;
         bitField0_ = (bitField0_ & ~0x00000001);
         keyType_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.KeyType.ECDSA;
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -18710,7 +18719,7 @@ public final class Protos {
       }
       private int bitField0_;
 
-      private org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_USER;
+      private org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY;
       /**
        * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType type = 1;</code>
        */
@@ -18740,7 +18749,7 @@ public final class Protos {
        */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_USER;
+        type_ = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY;
         onChanged();
         return this;
       }
@@ -24898,36 +24907,37 @@ public final class Protos {
       "\014\n\004data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022" +
       "\013\n\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"5\n\021Transactio" +
       "nSigner\022\022\n\nclass_name\030\001 \002(\t\022\014\n\004data\030\002 \001(" +
-      "\014\"\310\002\n\020ExtendedKeyChain\022;\n\004type\030\001 \002(\0162-.w" +
+      "\014\"\355\002\n\020ExtendedKeyChain\022;\n\004type\030\001 \002(\0162-.w" +
       "allet.ExtendedKeyChain.ExtendedKeyChainT" +
       "ype\0221\n\007keyType\030\002 \002(\0162 .wallet.ExtendedKe" +
       "yChain.KeyType\022\030\n\003key\030\003 \003(\0132\013.wallet.Key" +
-      "\"\212\001\n\024ExtendedKeyChainType\022\023\n\017BLOCKCHAIN_" +
-      "USER\020\000\022\027\n\023MASTERNODE_HOLDINGS\020\001\022\024\n\020MASTE" +
-      "RNODE_OWNER\020\002\022\027\n\023MASTERNODE_OPERATOR\020\003\022\025",
-      "\n\021MASTERNODE_VOTING\020\004\"\035\n\007KeyType\022\t\n\005ECDS" +
-      "A\020\000\022\007\n\003BLS\020\001\"\317\005\n\006Wallet\022\032\n\022network_ident" +
-      "ifier\030\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001(" +
-      "\014\022\036\n\026last_seen_block_height\030\014 \001(\r\022!\n\031las" +
-      "t_seen_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(" +
-      "\0132\013.wallet.Key\022(\n\013transaction\030\004 \003(\0132\023.wa" +
-      "llet.Transaction\022&\n\016watched_script\030\017 \003(\013" +
-      "2\016.wallet.Script\022C\n\017encryption_type\030\005 \001(" +
-      "\0162\035.wallet.Wallet.EncryptionType:\013UNENCR" +
-      "YPTED\0227\n\025encryption_parameters\030\006 \001(\0132\030.w",
-      "allet.ScryptParameters\022\022\n\007version\030\007 \001(\005:" +
-      "\0011\022$\n\textension\030\n \003(\0132\021.wallet.Extension" +
-      "\022\023\n\013description\030\013 \001(\t\022\031\n\021key_rotation_ti" +
-      "me\030\r \001(\004\022\031\n\004tags\030\020 \003(\0132\013.wallet.Tag\022.\n\014e" +
-      "xtKeyChains\030\035 \003(\0132\030.wallet.ExtendedKeyCh" +
-      "ain\022#\n\016keysForFriends\030\036 \003(\0132\013.wallet.Key" +
-      "\022$\n\017keysFromFriends\030\037 \003(\0132\013.wallet.Key\"^" +
-      "\n\016EncryptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENC" +
-      "RYPTED_SCRYPT_AES\020\002\022!\n\035ENCRYPTED_BLS_KEY" +
-      "EXCHANGE_AES\020\003\"R\n\014ExchangeRate\022\022\n\ncoin_v",
-      "alue\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n\022fiat_c" +
-      "urrency_code\030\003 \002(\tB\035\n\023org.bitcoinj.walle" +
-      "tB\006Protos"
+      "\"\257\001\n\024ExtendedKeyChainType\022\027\n\023BLOCKCHAIN_" +
+      "IDENTITY\020\000\022\027\n\023MASTERNODE_HOLDINGS\020\001\022\024\n\020M" +
+      "ASTERNODE_OWNER\020\002\022\027\n\023MASTERNODE_OPERATOR",
+      "\020\003\022\025\n\021MASTERNODE_VOTING\020\004\022\037\n\033BLOCKCHAIN_" +
+      "IDENTITY_FUNDING\020\005\"\035\n\007KeyType\022\t\n\005ECDSA\020\000" +
+      "\022\007\n\003BLS\020\001\"\317\005\n\006Wallet\022\032\n\022network_identifi" +
+      "er\030\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022\036" +
+      "\n\026last_seen_block_height\030\014 \001(\r\022!\n\031last_s" +
+      "een_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013" +
+      ".wallet.Key\022(\n\013transaction\030\004 \003(\0132\023.walle" +
+      "t.Transaction\022&\n\016watched_script\030\017 \003(\0132\016." +
+      "wallet.Script\022C\n\017encryption_type\030\005 \001(\0162\035" +
+      ".wallet.Wallet.EncryptionType:\013UNENCRYPT",
+      "ED\0227\n\025encryption_parameters\030\006 \001(\0132\030.wall" +
+      "et.ScryptParameters\022\022\n\007version\030\007 \001(\005:\0011\022" +
+      "$\n\textension\030\n \003(\0132\021.wallet.Extension\022\023\n" +
+      "\013description\030\013 \001(\t\022\031\n\021key_rotation_time\030" +
+      "\r \001(\004\022\031\n\004tags\030\020 \003(\0132\013.wallet.Tag\022.\n\014extK" +
+      "eyChains\030\035 \003(\0132\030.wallet.ExtendedKeyChain" +
+      "\022#\n\016keysForFriends\030\036 \003(\0132\013.wallet.Key\022$\n" +
+      "\017keysFromFriends\030\037 \003(\0132\013.wallet.Key\"^\n\016E" +
+      "ncryptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYP" +
+      "TED_SCRYPT_AES\020\002\022!\n\035ENCRYPTED_BLS_KEYEXC",
+      "HANGE_AES\020\003\"R\n\014ExchangeRate\022\022\n\ncoin_valu" +
+      "e\030\001 \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n\022fiat_curr" +
+      "ency_code\030\003 \002(\tB\035\n\023org.bitcoinj.walletB\006" +
+      "Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
