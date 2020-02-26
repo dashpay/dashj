@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.governance.GovernanceObject;
@@ -96,6 +97,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(ChainLockSignature.class, "clsig");
         names.put(SendHeadersMessage.class, "sendheaders");
         names.put(GetMasternodePaymentRequestSyncMessage.class, "mnget");
+        names.put(CreditFundingTransaction.class, "tx");
     }
 
     /**

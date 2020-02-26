@@ -24,6 +24,7 @@ import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
+import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Base58;
@@ -40,6 +41,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerFilterProvider;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
@@ -5710,7 +5712,29 @@ public class Wallet extends BaseTaggableObject
         return authenticationGroup != null && !authenticationGroup.chains.isEmpty();
     }
 
+    /**
+     * @return list of credit funding transactions found in the wallet.
+     */
 
+    public List<CreditFundingTransaction> getCreditFundingTransactions() {
+        AuthenticationKeyChain chain = getBlockchainIdentityFundingKeyChain();
+
+        ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
+        for(WalletTransaction wtx : getWalletTransactions()) {
+            Transaction tx = wtx.getTransaction();
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
+
+                // set some internal data for the transaction
+                DeterministicKey publicKey = chain.getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+                if(publicKey != null)
+                    cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
+                else log.error("Cannot find " + new KeyId(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
+                txs.add(cftx);
+            }
+        }
+        return txs;
+    }
 
     // ***************************************************************************************************************
 

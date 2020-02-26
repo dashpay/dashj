@@ -32,6 +32,7 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptChunk;
@@ -203,6 +204,15 @@ public class SendRequest {
         req.tx = new Transaction(parameters);
         req.tx.addOutput(Coin.ZERO, destination);
         req.emptyWallet = true;
+        return req;
+    }
+
+    /**
+     * <p>Creates a new credit funding transaction for a public key with a funding amount.</p>
+     */
+    public static SendRequest creditFundingTransaction(NetworkParameters params, ECKey publicKey, Coin credits) {
+        SendRequest req = new SendRequest();
+        req.tx = new CreditFundingTransaction(params, publicKey, credits);
         return req;
     }
 
