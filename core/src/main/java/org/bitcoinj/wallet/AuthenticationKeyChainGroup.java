@@ -28,7 +28,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.security.SecureRandom;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -46,11 +48,107 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
         currentAuthenticationKeys = new HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey>();
     }*/
 
+    public static class Builder {
+        private final NetworkParameters params;
+        private final KeyChainGroupStructure structure;
+        private final List<DeterministicKeyChain> chains = new LinkedList<>();
+        private int lookaheadSize = -1, lookaheadThreshold = -1;
+
+        private Builder(NetworkParameters params, KeyChainGroupStructure structure) {
+            this.params = params;
+            this.structure = structure;
+        }
+
+        /**
+         * <p>Add chain from a random source.</p>
+         * <p>In the case of P2PKH, just a P2PKH chain is created and activated which is then the default chain for fresh
+         * addresses. It can be upgraded to P2WPKH later.</p>
+         * <p>In the case of P2WPKH, both a P2PKH and a P2WPKH chain are created and activated, the latter being the default
+         * chain. This behaviour will likely be changed with bitcoinj 0.16 such that only a P2WPKH chain is created and
+         * activated.</p>
+         * @param outputScriptType type of addresses (aka output scripts) to generate for receiving
+         */
+        public AuthenticationKeyChainGroup.Builder fromRandom(Script.ScriptType outputScriptType) {
+            DeterministicSeed seed = new DeterministicSeed(new SecureRandom(),
+                    DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS, "");
+            fromSeed(seed, outputScriptType);
+            return this;
+        }
+
+        /**
+         * <p>Add chain from a given seed.</p>
+         * <p>In the case of P2PKH, just a P2PKH chain is created and activated which is then the default chain for fresh
+         * addresses. It can be upgraded to P2WPKH later.</p>
+         * <p>In the case of P2WPKH, both a P2PKH and a P2WPKH chain are created and activated, the latter being the default
+         * chain. This behaviour will likely be changed with bitcoinj 0.16 such that only a P2WPKH chain is created and
+         * activated.</p>
+         * @param seed deterministic seed to derive all keys from
+         * @param outputScriptType type of addresses (aka output scripts) to generate for receiving
+         */
+        public AuthenticationKeyChainGroup.Builder fromSeed(DeterministicSeed seed, Script.ScriptType outputScriptType) {
+            if (outputScriptType == Script.ScriptType.P2PKH) {
+                DeterministicKeyChain chain = DeterministicKeyChain.builder().seed(seed)
+                        .outputScriptType(Script.ScriptType.P2PKH)
+                        .accountPath(structure.accountPathFor(Script.ScriptType.P2PKH)).build();
+                this.chains.clear();
+                this.chains.add(chain);
+            } else {
+                throw new IllegalArgumentException(outputScriptType.toString());
+            }
+            return this;
+        }
+
+        /**
+         * Add a single chain.
+         * @param chain to add
+         */
+        public AuthenticationKeyChainGroup.Builder addChain(DeterministicKeyChain chain) {
+            this.chains.add(chain);
+            return this;
+        }
+
+        /**
+         * Add multiple chains.
+         * @param chains to add
+         */
+        public AuthenticationKeyChainGroup.Builder chains(List<DeterministicKeyChain> chains) {
+            this.chains.clear();
+            this.chains.addAll(chains);
+            return this;
+        }
+
+        /**
+         * Set a custom lookahead size for all deterministic chains
+         * @param lookaheadSize lookahead size
+         */
+        public AuthenticationKeyChainGroup.Builder lookaheadSize(int lookaheadSize) {
+            this.lookaheadSize = lookaheadSize;
+            return this;
+        }
+
+        /**
+         * Set a custom lookahead threshold for all deterministic chains
+         * @param lookaheadThreshold lookahead threshold
+         */
+        public AuthenticationKeyChainGroup.Builder lookaheadThreshold(int lookaheadThreshold) {
+            this.lookaheadThreshold = lookaheadThreshold;
+            return this;
+        }
+
+        public AuthenticationKeyChainGroup build() {
+            return new AuthenticationKeyChainGroup(params, null, chains, lookaheadSize, lookaheadThreshold, null, null);
+        }
+    }
+
     protected AuthenticationKeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain, List<DeterministicKeyChain> chains, int lookAheadSize, int lookAheadThreshold,
                                           @Nullable HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentKeys, @Nullable KeyCrypter crypter) {
         super(params, basicKeyChain, chains, lookAheadSize, lookAheadThreshold,null, crypter);
         currentAuthenticationKeys = currentKeys != null ? currentKeys :
                 new HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey>();
+    }
+
+    public static AuthenticationKeyChainGroup.Builder authenticationBuilder(NetworkParameters params) {
+        return new Builder(params, KeyChainGroupStructure.DEFAULT);
     }
 
     public AuthenticationKeyChain getKeyChain(AuthenticationKeyChain.KeyChainType type) {
