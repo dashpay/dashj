@@ -230,11 +230,18 @@ public class WalletProtobufSerializer {
 
         List<Protos.ExtendedKeyChain> extendedKeyChains = Lists.newArrayList();
         //authentication keys
-        if(wallet.getBlockchainUserKeyChain() != null) {
+        if(wallet.getBlockchainIdentityKeyChain() != null) {
             Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
             extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
-            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_USER);
-            extendedKeyChainBuilder.addAllKey(wallet.getBlockchainUserKeyChain().serializeToProtobuf());
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY);
+            extendedKeyChainBuilder.addAllKey(wallet.getBlockchainIdentityKeyChain().serializeToProtobuf());
+            extendedKeyChains.add(extendedKeyChainBuilder.build());
+        }
+        if(wallet.getBlockchainIdentityFundingKeyChain() != null) {
+            Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
+            extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
+            extendedKeyChainBuilder.addAllKey(wallet.getBlockchainIdentityFundingKeyChain().serializeToProtobuf());
             extendedKeyChains.add(extendedKeyChainBuilder.build());
         }
         if(wallet.getProviderOwnerKeyChain() != null) {
@@ -663,8 +670,11 @@ public class WalletProtobufSerializer {
                 Protos.ExtendedKeyChain extendedKeyChain = walletProto.getExtKeyChains(i);
                 AuthenticationKeyChain.KeyChainType type;
                 switch(extendedKeyChain.getType()) {
-                    case BLOCKCHAIN_USER:
-                        type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_USER;
+                    case BLOCKCHAIN_IDENTITY:
+                        type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY;
+                        break;
+                    case BLOCKCHAIN_IDENTITY_FUNDING:
+                        type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING;
                         break;
                     case MASTERNODE_OWNER:
                         type = AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER;
@@ -683,12 +693,11 @@ public class WalletProtobufSerializer {
                 }
                 if(extendedKeyChain.getKeyType() == Protos.ExtendedKeyChain.KeyType.ECDSA) {
                     if (extendedKeyChain.getKeyCount() > 0) {
-                        List<DeterministicKeyChain> chains = DeterministicKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory);
+                        List<DeterministicKeyChain> chains = AuthenticationKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory);
                         if (!chains.isEmpty())
                             wallet.setAuthenticationKeyChain((AuthenticationKeyChain)chains.get(0), type);
                     }
                 }
-
             }
         }
 

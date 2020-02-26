@@ -187,6 +187,7 @@ public class Wallet extends BaseTaggableObject
 
     protected final Context context;
     protected final NetworkParameters params;
+    protected final DerivationPathFactory derivationPathFactory;
 
     @Nullable private Sha256Hash lastBlockSeenHash;
     private int lastBlockSeenHeight;
@@ -483,6 +484,7 @@ public class Wallet extends BaseTaggableObject
         signers = new ArrayList<>();
         addTransactionSigner(new LocalTransactionSigner());
         createTransientState();
+        derivationPathFactory = new DerivationPathFactory(params);
         receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
         sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
     }
@@ -5646,18 +5648,20 @@ public class Wallet extends BaseTaggableObject
 
     AuthenticationKeyChain providerOwnerKeyChain;
     AuthenticationKeyChain providerVoterKeyChain;
-    AuthenticationKeyChain blockchainUserKeyChain;
-    KeyChainGroup authenticationGroup;
+    AuthenticationKeyChain blockchainIdentityFundingKeyChain;
+    AuthenticationKeyChain blockchainIdentityKeyChain;
+    AuthenticationKeyChainGroup authenticationGroup;
 
     public void initializeAuthenticationKeyChains(DeterministicSeed seed, KeyCrypter keyCrypter) {
-        boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
-        providerOwnerKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.PROVIDER_OWNER_PATH : DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET);
-        providerVoterKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.PROVIDER_VOTING_PATH : DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET);
-        blockchainUserKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.BLOCKCHAIN_USER_PATH : DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET);
-        authenticationGroup = KeyChainGroup.builder(getParams()).build();
+        providerOwnerKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.masternodeOwnerDerivationPath());
+        providerVoterKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.masternodeVotingDerivationPath());
+        blockchainIdentityFundingKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath());
+        blockchainIdentityKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.blockchainIdentityDerivationPath());
+        authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
         authenticationGroup.addAndActivateHDChain(providerOwnerKeyChain);
         authenticationGroup.addAndActivateHDChain(providerVoterKeyChain);
-        authenticationGroup.addAndActivateHDChain(blockchainUserKeyChain);
+        authenticationGroup.addAndActivateHDChain(blockchainIdentityFundingKeyChain);
+        authenticationGroup.addAndActivateHDChain(blockchainIdentityKeyChain);
     }
 
     public AuthenticationKeyChain getProviderOwnerKeyChain() {
@@ -5668,8 +5672,12 @@ public class Wallet extends BaseTaggableObject
         return providerVoterKeyChain;
     }
 
-    public AuthenticationKeyChain getBlockchainUserKeyChain() {
-        return blockchainUserKeyChain;
+    public AuthenticationKeyChain getBlockchainIdentityKeyChain() {
+        return blockchainIdentityKeyChain;
+    }
+
+    public AuthenticationKeyChain getBlockchainIdentityFundingKeyChain() {
+        return blockchainIdentityFundingKeyChain;
     }
 
     //package level access
@@ -5681,19 +5689,147 @@ public class Wallet extends BaseTaggableObject
         switch(type) {
             case MASTERNODE_VOTING:
                 providerVoterKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
                 break;
             case MASTERNODE_OWNER:
                 providerOwnerKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
                 break;
-            case BLOCKCHAIN_USER:
-                blockchainUserKeyChain = chain;
+            case BLOCKCHAIN_IDENTITY:
+                blockchainIdentityKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
+            case BLOCKCHAIN_IDENTITY_FUNDING:
+                blockchainIdentityFundingKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
                 break;
         }
     }
 
     public boolean hasAuthenticationKeyChains() {
-        return blockchainUserKeyChain != null || providerOwnerKeyChain != null || providerVoterKeyChain != null;
+        return authenticationGroup != null && !authenticationGroup.chains.isEmpty();
     }
+
+
+
+    // ***************************************************************************************************************
+
+    //region Authentication Key Management
+
+    /**
+     * Returns a key that hasn't been seen in a transaction yet, and which is suitable for displaying in a wallet
+     * user interface as "a convenient key to receive funds on" when the purpose parameter is
+     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS}. The returned key is stable until
+     * it's actually seen in a pending or confirmed transaction, at which point this method will start returning
+     * a different key (for each purpose independently).
+     */
+    public DeterministicKey currentAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            return authenticationGroup.currentKey(type);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns address for a {@link #currentKey(KeyChain.KeyPurpose)}
+     */
+    public Address currentAuthenticationAddress(AuthenticationKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            return authenticationGroup.currentAddress(type);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns a key that has not been returned by this method before (fresh). You can think of this as being
+     * a newly created key, although the notion of "create" is not really valid for a
+     * {@link DeterministicKeyChain}. When the parameter is
+     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS} the returned key is suitable for being put
+     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key out
+     * to someone who wishes to send money.
+     */
+    public DeterministicKey freshAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
+        return freshAuthenticationKeys(type, 1).get(0);
+    }
+
+    /**
+     * Returns a key/s that has not been returned by this method before (fresh). You can think of this as being
+     * a newly created key/s, although the notion of "create" is not really valid for a
+     * {@link DeterministicKeyChain}. When the parameter is
+     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS} the returned key is suitable for being put
+     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key/s out
+     * to someone who wishes to send money.
+     */
+    public List<DeterministicKey> freshAuthenticationKeys(AuthenticationKeyChain.KeyChainType type, int numberOfKeys) {
+        List<DeterministicKey> keys;
+        keyChainGroupLock.lock();
+        try {
+            keys = authenticationGroup.freshKeys(type, numberOfKeys);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
+        // and that's not quite so important, so we could coalesce for more performance.
+        saveNow();
+        return keys;
+    }
+
+    /**
+     * Returns address for a {@link #freshKey(KeyChain.KeyPurpose)}
+     */
+    public Address freshAuthenticationAddress(AuthenticationKeyChain.KeyChainType type) {
+        Address key;
+        keyChainGroupLock.lock();
+        try {
+            key = authenticationGroup.freshAddress(type);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        saveNow();
+        return key;
+    }
+
+    /**
+     * Returns only the keys that have been issued by {@link #freshReceiveKey()}, {@link #freshReceiveAddress()},
+     * {@link #currentReceiveKey()} or {@link #currentReceiveAddress()}.
+     */
+    public List<ECKey> getIssuedAuthenticationKeys(AuthenticationKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            List<ECKey> keys = new LinkedList<>();
+            long keyRotationTimeSecs = vKeyRotationTimestamp;
+            for (final DeterministicKeyChain chain : authenticationGroup.getActiveKeyChains(keyRotationTimeSecs))
+                keys.addAll(chain.getIssuedReceiveKeys());
+            return keys;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns only the addresses that have been issued by {@link #freshReceiveKey()}, {@link #freshReceiveAddress()},
+     * {@link #currentReceiveKey()} or {@link #currentReceiveAddress()}.
+     */
+    public List<Address> getIssuedAuthenticationAddresses(AuthenticationKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            List<Address> addresses = new ArrayList<>();
+            long keyRotationTimeSecs = vKeyRotationTimestamp;
+            for (final DeterministicKeyChain chain : keyChainGroup.getActiveKeyChains(keyRotationTimeSecs)) {
+                Script.ScriptType outputScriptType = chain.getOutputScriptType();
+                for (ECKey key : chain.getIssuedReceiveKeys())
+                    addresses.add(Address.fromKey(getParams(), key, outputScriptType));
+            }
+            return addresses;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
 
     FriendKeyChainGroup receivingFromFriendsGroup;
     FriendKeyChainGroup sendingToFriendsGroup;
