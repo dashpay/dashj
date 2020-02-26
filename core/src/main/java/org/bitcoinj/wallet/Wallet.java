@@ -5877,7 +5877,7 @@ public class Wallet extends BaseTaggableObject
 
     // ***************************************************************************************************************
 
-    //region Key Management
+    //region Friend Key Management
 
     /**
      * Returns a key that hasn't been seen in a transaction yet, and which is suitable for displaying in a wallet
