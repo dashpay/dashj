@@ -52,6 +52,15 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         setLookaheadSize(5);
     }
 
+    /**
+     * Sets the KeyChainType of this AuthenticationKeyChain.  Used by Wallet when loading from a protobuf
+     * @param type
+     */
+    /* package */
+    void setType(KeyChainType type) {
+        this.type = type;
+    }
+
     @Override
     public DeterministicKey getKey(KeyPurpose purpose) {
         return getKeys(purpose, 1).get(0);
