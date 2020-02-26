@@ -20,9 +20,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.crypto.*;
-import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,11 +40,6 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
     private static final Logger log = LoggerFactory.getLogger(AuthenticationKeyChainGroup.class);
 
     HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentAuthenticationKeys;
-
-    /*public AuthenticationKeyChainGroup(NetworkParameters params) {
-        super(params);
-        currentAuthenticationKeys = new HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey>();
-    }*/
 
     public static class Builder {
         private final NetworkParameters params;
