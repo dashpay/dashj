@@ -17,27 +17,34 @@
 
 package org.bitcoinj.examples;
 
-import org.bitcoinj.core.*;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.InsufficientMoneyException;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.params.*;
-import org.bitcoinj.store.FlatDB;
+import org.bitcoinj.params.DevNetParams;
+import org.bitcoinj.params.EvoNetParams;
+import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.PalinkaDevNetParams;
+import org.bitcoinj.params.RegTestParams;
+import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.MoreExecutors;
-import org.bitcoinj.utils.Pair;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -46,7 +53,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * ForwardingService demonstrates basic usage of the library. It sits on the network and when it receives coins, simply
  * sends them onwards to an address given on the command line.
  */
-public class ForwardingService {
+public class ForwardingServiceEvo {
     private static Address forwardingAddress;
     private static WalletAppKit kit;
 
@@ -135,11 +142,25 @@ public class ForwardingService {
                 // to be double spent, no harm done. Wallet.allowSpendingUnconfirmedTransactions() would have to
                 // be called in onSetupCompleted() above. But we don't do that here to demonstrate the more common
                 // case of waiting for a block.
-                Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>() {
+                Futures.addCallback(tx.getConfidence().getDepthFuture(2), new FutureCallback<TransactionConfidence>() {
                     @Override
                     public void onSuccess(TransactionConfidence result) {
                         System.out.println("Confirmation received.");
                         forwardCoins(tx);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        // This kind of future can't fail, just rethrow in case something weird happens.
+                        throw new RuntimeException(t);
+                    }
+                }, MoreExecutors.directExecutor());
+
+                Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>() {
+                    @Override
+                    public void onSuccess(TransactionConfidence result) {
+                        System.out.println("Confirmation received.");
+                        blockchainIdentity(tx);
                     }
 
                     @Override
@@ -154,6 +175,12 @@ public class ForwardingService {
         Address sendToAddress = Address.fromKey(params, kit.wallet().currentReceiveKey());
         System.out.println("Send coins to: " + sendToAddress);
         System.out.println("Waiting for coins to arrive. Press Ctrl-C to quit.");
+
+        System.out.println(kit.wallet()/*.getBlockchainIdentityKeyChain()*/);
+        List<CreditFundingTransaction> list = kit.wallet().getCreditFundingTransactions();
+        for(CreditFundingTransaction tx : list) {
+            System.out.println(tx);
+        }
 
         try {
             Thread.sleep(Long.MAX_VALUE);
@@ -183,4 +210,33 @@ public class ForwardingService {
             throw new RuntimeException(e);
         }
     }
+
+    private static void blockchainIdentity(Transaction tx) {
+        try {
+            // Now send the coins onwards.
+
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx))
+                return;
+
+            AuthenticationKeyChain blockchainIdentityFunding = kit.wallet().getBlockchainIdentityFundingKeyChain();
+            ECKey publicKey = blockchainIdentityFunding.freshAuthenticationKey();
+            Coin fundingAmount = Coin.valueOf(40000);
+            SendRequest sendRequest = SendRequest.creditFundingTransaction(kit.params(), publicKey, fundingAmount);
+            Wallet.SendResult sendResult = kit.wallet().sendCoins(sendRequest);
+            System.out.println("Sending Credit Funding Transaction...");
+            sendResult.broadcastComplete.addListener(new Runnable() {
+                @Override
+                public void run() {
+                    // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
+                    System.out.println("Blockchain Identity Funding Transaction hash is " + sendResult.tx.getTxId());
+                    System.out.println(sendResult.tx.toString());
+                }
+            }, MoreExecutors.directExecutor());
+
+        } catch (KeyCrypterException | InsufficientMoneyException e) {
+            // We don't use encrypted wallets in this example - can never happen.
+            throw new RuntimeException(e);
+        }
+    }
+
 }
