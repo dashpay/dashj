@@ -173,7 +173,7 @@ public class CoinJoinMonitor {
         kit = new WalletAppKit(params, new File("."), filePrefix) {
 
             @Override
-            protected PeerGroup createPeerGroup() throws TimeoutException {
+            protected PeerGroup createPeerGroup() {
                 PeerGroup peerGroup = super.createPeerGroup();
                 peerGroup.setBloomFilteringEnabled(false);
                 peerGroup.setMaxConnections(6); // for small devnets

@@ -123,7 +123,6 @@ public class ExamplePaymentChannelClient {
         // We now have active network connections and a fully synced wallet.
         // Add a new key which will be used for the multisig contract.
         appKit.wallet().importKey(myKey);
-        appKit.wallet().allowSpendingUnconfirmedTransactions();
 
         System.out.println(appKit.wallet());
 
