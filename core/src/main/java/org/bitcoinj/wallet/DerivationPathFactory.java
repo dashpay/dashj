@@ -10,7 +10,7 @@ public class DerivationPathFactory {
     private final ChildNumber coinType;
     private static final ChildNumber FEATURE_PURPOSE = ChildNumber.NINE_HARDENED;
 
-    DerivationPathFactory(NetworkParameters params) {
+    public DerivationPathFactory(NetworkParameters params) {
         this.params = params;
         this.coinType = new ChildNumber(params.getCoinType(), true);
     }
@@ -84,8 +84,8 @@ public class DerivationPathFactory {
     }
 
     // Do we need this?
-    static DerivationPathFactory instance;
-    public DerivationPathFactory get(NetworkParameters params) {
+    private static DerivationPathFactory instance;
+    public static DerivationPathFactory get(NetworkParameters params) {
         if(instance == null) {
             instance = new DerivationPathFactory(params);
         }
