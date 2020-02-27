@@ -16,7 +16,13 @@
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.params.UnitTestParams;
+import org.bitcoinj.wallet.AuthenticationKeyChain;
+import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
+import org.bitcoinj.wallet.DerivationPathFactory;
+import org.bitcoinj.wallet.DeterministicSeed;
+import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bouncycastle.util.encoders.Base64;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,5 +76,111 @@ public class CreditFundingTransactionTest {
         ECKey publicKey = ECKey.fromPublicOnly(Base64.decode("AsPvyyh6pkxss/Fespa7HCJIY8IA6ElAf6VKuqVcnPze"));
         cftx = new CreditFundingTransaction(PARAMS, publicKey, Coin.valueOf(10000));
         cftx.toString(); //make sure it doesn't crash
+    }
+
+
+    /*
+    from dashj:
+    -----------
+    -0.00040224 DASH total value (sends 0.01 DASH and receives 0.00959776 DASH)
+      a8abd4337d4906041324f1c9f713342112c0d24655fd295a57fe3563ac969896
+      updated: 2020-02-26T02:13:00Z
+      type TRANSACTION_NORMAL(0)
+      purpose: USER_PAYMENT
+         in   PUSHDATA(71)[304402207db8b157eeb8988556a03e817fd44f24e56c2c9341c5a0e512a89607481b8cb002204e7c3831e1b522e0ef740cf31926fa0e4e6cdd6496cde5005ff29f6b4499205801] PUSHDATA(33)[023bd027cf07a4eab516e22db16c7d77bb615bcd25a57bee6ee69dfaef23a61dac]  0.01 DASH
+              P2PKH addr:yWJ58NBiirQjuWQPe9aCK1XwMYbya9kRCm  outpoint:2a93fefe869367a479496484421934ed81d0e9544b42a12d579fcab9f672e7fd:0
+         out  RETURN PUSHDATA(20)[d0949bd75de50fbba5081d932fea0a0ee7407fa5]  0.0004 DASH
+              CREDITBURN addr:yfLKRcydTC8naznVHGVwAExyewAsayLcst
+         out  DUP HASH160 PUSHDATA(20)[29f4856f82e55313c8e7bf791ac868924ec9c59b] EQUALVERIFY CHECKSIG  0.00959776 DASH
+              P2PKH addr:yQ9HUhd7DvVwUAXqRKWsJmgnVsVmjAq8V7
+         fee  0.00001009 DASH/kB, 0.00000224 DASH for 222 bytes
+
+
+    From the Evonet blockchain:
+    ---------------------------
+    getrawtransaction a8abd4337d4906041324f1c9f713342112c0d24655fd295a57fe3563ac969896 true
+    {
+      "hex": "0100000001fde772f6b9ca9f572da1424b54e9d081ed34194284644979a4679386fefe932a000000006a47304402207db8b157eeb8988556a03e817fd44f24e56c2c9341c5a0e512a89607481b8cb002204e7c3831e1b522e0ef740cf31926fa0e4e6cdd6496cde5005ff29f6b449920580121023bd027cf07a4eab516e22db16c7d77bb615bcd25a57bee6ee69dfaef23a61dacffffffff02409c000000000000166a14d0949bd75de50fbba5081d932fea0a0ee7407fa520a50e00000000001976a91429f4856f82e55313c8e7bf791ac868924ec9c59b88ac00000000",
+      "txid": "a8abd4337d4906041324f1c9f713342112c0d24655fd295a57fe3563ac969896",
+      "size": 222,
+      "version": 1,
+      "type": 0,
+      "locktime": 0,
+      "vin": [
+        {
+          "txid": "2a93fefe869367a479496484421934ed81d0e9544b42a12d579fcab9f672e7fd",
+          "vout": 0,
+          "scriptSig": {
+            "asm": "304402207db8b157eeb8988556a03e817fd44f24e56c2c9341c5a0e512a89607481b8cb002204e7c3831e1b522e0ef740cf31926fa0e4e6cdd6496cde5005ff29f6b44992058[ALL] 023bd027cf07a4eab516e22db16c7d77bb615bcd25a57bee6ee69dfaef23a61dac",
+            "hex": "47304402207db8b157eeb8988556a03e817fd44f24e56c2c9341c5a0e512a89607481b8cb002204e7c3831e1b522e0ef740cf31926fa0e4e6cdd6496cde5005ff29f6b449920580121023bd027cf07a4eab516e22db16c7d77bb615bcd25a57bee6ee69dfaef23a61dac"
+          },
+          "sequence": 4294967295
+        }
+      ],
+      "vout": [
+        {
+          "value": 0.00040000,
+          "valueSat": 40000,
+          "n": 0,
+          "scriptPubKey": {
+            "asm": "OP_RETURN d0949bd75de50fbba5081d932fea0a0ee7407fa5",
+            "hex": "6a14d0949bd75de50fbba5081d932fea0a0ee7407fa5",
+            "type": "nulldata"
+          }
+        },
+        {
+          "value": 0.00959776,
+          "valueSat": 959776,
+          "n": 1,
+          "scriptPubKey": {
+            "asm": "OP_DUP OP_HASH160 29f4856f82e55313c8e7bf791ac868924ec9c59b OP_EQUALVERIFY OP_CHECKSIG",
+            "hex": "76a91429f4856f82e55313c8e7bf791ac868924ec9c59b88ac",
+            "reqSigs": 1,
+            "type": "pubkeyhash",
+            "addresses": [
+              "yQ9HUhd7DvVwUAXqRKWsJmgnVsVmjAq8V7"
+            ]
+          }
+        }
+      ],
+      "blockhash": "00000118003b266ede27cf361c3a1528f84133c42e94ab8899eba9e1398797d8",
+      "height": 42714,
+      "confirmations": 16,
+      "time": 1582759932,
+      "blocktime": 1582759932,
+      "instantlock": true,
+      "instantlock_internal": false,
+      "chainlock": true
+    }
+
+     */
+
+    @Test
+    public void creditFundingFromWalletTest() throws UnreadableWalletException {
+        // recovery phrase from a wallet that was used to generate a credit funding transaction
+        String mnemonic = "spirit machine panther pigeon maple enough velvet deny mail federal letter barely";
+        DerivationPathFactory factory = new DerivationPathFactory(PARAMS);
+
+        // Create the keychain for blockchain identity funding
+        AuthenticationKeyChain blockchainIdentityFundingChain = AuthenticationKeyChain.authenticationBuilder()
+                .accountPath(factory.blockchainIdentityRegistrationFundingDerivationPath())
+                .seed(new DeterministicSeed(mnemonic, null, "", Utils.currentTimeSeconds()))
+                .type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING)
+                .build();
+
+        // create the authentication key chain group and add the blockchain identity funding key chain
+        AuthenticationKeyChainGroup group = AuthenticationKeyChainGroup.authenticationBuilder(PARAMS)
+                .addChain(blockchainIdentityFundingChain)
+                .build();
+
+        // Get the first key from the blockchain identity funding keychain
+        DeterministicKey firstKey = group.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
+
+        /* tx data for a8abd4337d4906041324f1c9f713342112c0d24655fd295a57fe3563ac969896 */
+        byte [] txData = Utils.HEX.decode("0100000001fde772f6b9ca9f572da1424b54e9d081ed34194284644979a4679386fefe932a000000006a47304402207db8b157eeb8988556a03e817fd44f24e56c2c9341c5a0e512a89607481b8cb002204e7c3831e1b522e0ef740cf31926fa0e4e6cdd6496cde5005ff29f6b449920580121023bd027cf07a4eab516e22db16c7d77bb615bcd25a57bee6ee69dfaef23a61dacffffffff02409c000000000000166a14d0949bd75de50fbba5081d932fea0a0ee7407fa520a50e00000000001976a91429f4856f82e55313c8e7bf791ac868924ec9c59b88ac00000000");
+        CreditFundingTransaction cftx = new CreditFundingTransaction(PARAMS, txData);
+
+        // compare the credit burn public key id to the public key hash of the first key
+        assertArrayEquals(cftx.getCreditBurnPublicKeyId().getBytes(), firstKey.getPubKeyHash());
     }
 }
