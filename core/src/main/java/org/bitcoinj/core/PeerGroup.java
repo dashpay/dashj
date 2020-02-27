@@ -1539,7 +1539,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     /**
-     * <p>Start downloading the blockchain from the first available peer.</p>
+     * <p>Start downloading the blockchain.</p>
      *
      * <p>If no peers are currently connected, the download will be started once a peer starts.  If the peer dies,
      * the download will resume with another peer.</p>
@@ -1558,12 +1558,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 }
             }
             this.downloadListener = listener;
-            // TODO: be more nuanced about which peer to download from.  We can also try
-            // downloading from multiple peers and handle the case when a new peer comes along
-            // with a longer chain after we thought we were done.
-            if (!peers.isEmpty()) {
-                startBlockChainDownloadFromPeer(peers.iterator().next()); // Will add the new download listener
-            }
         } finally {
             lock.unlock();
         }
@@ -2168,7 +2162,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     }
 
-    private void startBlockChainDownloadFromPeer(Peer peer) {
+    @VisibleForTesting
+    void startBlockChainDownloadFromPeer(Peer peer) {
         lock.lock();
         try {
             setDownloadPeer(peer);
