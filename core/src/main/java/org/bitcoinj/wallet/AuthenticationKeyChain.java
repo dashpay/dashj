@@ -23,10 +23,13 @@ import org.bitcoinj.crypto.*;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 public class AuthenticationKeyChain extends ExternalKeyChain {
 
@@ -43,6 +46,121 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
     int currentIndex;
     int issuedKeys;
 
+    public static class Builder<T extends Builder<T>> {
+        protected SecureRandom random;
+        protected int bits = DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS;
+        protected String passphrase;
+        protected long creationTimeSecs = 0;
+        protected byte[] entropy;
+        protected DeterministicSeed seed;
+        protected boolean isFollowing = false;
+        protected DeterministicKey spendingKey = null;
+        protected ImmutableList<ChildNumber> accountPath = null;
+        protected KeyChainType type = null;
+
+        protected Builder() {
+        }
+
+        @SuppressWarnings("unchecked")
+        protected T self() {
+            return (T)this;
+        }
+
+        /**
+         * Creates a deterministic key chain starting from the given seed. All keys yielded by this chain will be the same
+         * if the starting seed is the same.
+         */
+        public T seed(DeterministicSeed seed) {
+            this.seed = seed;
+            return self();
+        }
+
+        /**
+         * Generates a new key chain with entropy selected randomly from the given {@link SecureRandom}
+         * object and of the requested size in bits.  The derived seed is further protected with a user selected passphrase
+         * (see BIP 39).
+         * @param random the random number generator - use new SecureRandom().
+         * @param bits The number of bits of entropy to use when generating entropy.  Either 128 (default), 192 or 256.
+         */
+        public T random(SecureRandom random, int bits) {
+            this.random = random;
+            this.bits = bits;
+            return self();
+        }
+
+        /**
+         * Generates a new key chain with 128 bits of entropy selected randomly from the given {@link SecureRandom}
+         * object.  The derived seed is further protected with a user selected passphrase
+         * (see BIP 39).
+         * @param random the random number generator - use new SecureRandom().
+         */
+        public T random(SecureRandom random) {
+            this.random = random;
+            return self();
+        }
+
+        /**
+         * Creates a key chain that can spend from the given account key.
+         */
+        public T spend(DeterministicKey accountKey) {
+            checkState(accountPath == null, "either spend or accountPath");
+            this.spendingKey = accountKey;
+            this.isFollowing = false;
+            return self();
+        }
+
+        /** The passphrase to use with the generated mnemonic, or null if you would like to use the default empty string. Currently must be the empty string. */
+        public T passphrase(String passphrase) {
+            // FIXME support non-empty passphrase
+            this.passphrase = passphrase;
+            return self();
+        }
+
+        /**
+         * Use an account path other than the default {@link DeterministicKeyChain#ACCOUNT_ZERO_PATH}.
+         */
+        public T accountPath(ImmutableList<ChildNumber> accountPath) {
+            this.accountPath = checkNotNull(accountPath);
+            return self();
+        }
+
+        public T type(KeyChainType type) {
+            this.type = type;
+            return self();
+        }
+
+        public AuthenticationKeyChain build() {
+            checkState(passphrase == null || seed == null, "Passphrase must not be specified with seed");
+
+            if (accountPath == null)
+                accountPath = ACCOUNT_ZERO_PATH;
+            if (type == null)
+                type = KeyChainType.INVALID_KEY_CHAIN;
+
+            AuthenticationKeyChain chain = null;
+
+            if (random != null)
+                // Default passphrase to "" if not specified
+                return new AuthenticationKeyChain(new DeterministicSeed(random, bits, getPassphrase()), null,
+                        accountPath, type);
+            else if (entropy != null)
+                return new AuthenticationKeyChain(new DeterministicSeed(entropy, getPassphrase(), creationTimeSecs),
+                        null, accountPath, type);
+            else if (seed != null)
+                return new AuthenticationKeyChain(seed, null, accountPath, type);
+            else if (spendingKey != null)
+                return new AuthenticationKeyChain(spendingKey, type);
+            else
+                throw new IllegalStateException();
+        }
+
+        protected String getPassphrase() {
+            return passphrase != null ? passphrase : DEFAULT_PASSPHRASE_FOR_MNEMONIC;
+        }
+    }
+
+
+
     public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
         super(seed, null, path);
         setLookaheadSize(5);
@@ -51,6 +169,29 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
     public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path) {
         super(seed, keyCrypter, path);
         setLookaheadSize(5);
+    }
+
+    public AuthenticationKeyChain(DeterministicKey key) {
+        super(key, false);
+    }
+
+    public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyChainType type) {
+        this(seed, path);
+        this.type = type;
+    }
+
+    public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyChainType type) {
+        this(seed, keyCrypter, path);
+        this.type = type;
+    }
+
+    public AuthenticationKeyChain(DeterministicKey key, KeyChainType type) {
+        this(key);
+        this.type = type;
+    }
+
+    public static Builder<?> authenticationBuilder() {
+        return new Builder();
     }
 
     /**
