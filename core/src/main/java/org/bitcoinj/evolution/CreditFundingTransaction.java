@@ -27,6 +27,12 @@ import java.io.IOException;
 
 import static org.bitcoinj.script.ScriptOpCodes.OP_RETURN;
 
+/**
+ * This class extends Transaction and is used to create a funding
+ * transaction for an identity.  It also can store other information
+ * that is not stored in the blockchain transaction which includes
+ * the public or private key's associated with this transaction.
+ */
 public class CreditFundingTransaction extends Transaction {
 
     TransactionOutput lockedOutput;
@@ -42,10 +48,22 @@ public class CreditFundingTransaction extends Transaction {
         super(params);
     }
 
+    /**
+     * Create a credit funding transaction from an existing transaction.
+     * This should only be called if {@link CreditFundingTransaction#isCreditFundingTransaction(Transaction)}
+     * returns true.
+     * @param tx this transaction should be a credit funding transaction
+     */
     public CreditFundingTransaction(Transaction tx) {
         super(tx.getParams(), tx.bitcoinSerialize(), 0);
     }
 
+    /**
+     * Creates a credit funding transaction.
+     * @param params
+     * @param creditBurnKey The key from which the hash160 will be placed in the OP_RETURN output
+     * @param fundingAmount The amount of dash that will be locked in the OP_RETURN output
+     */
     public CreditFundingTransaction(NetworkParameters params, ECKey creditBurnKey, Coin fundingAmount) {
         super(params);
         this.fundingAmount = fundingAmount;
@@ -60,10 +78,18 @@ public class CreditFundingTransaction extends Transaction {
         addOutput(lockedOutput);
     }
 
+    /**
+     * Creates a credit funding transaction by reading payload.
+     * Length of a transaction is fixed.
+     */
+
     public CreditFundingTransaction(NetworkParameters params, byte [] payload) {
         super(params, payload, 0);
     }
 
+    /**
+     * Deserialize and initialize some fields from the credit burn output
+     */
     @Override
     protected void parse() throws ProtocolException {
         super.parse();
@@ -80,6 +106,10 @@ public class CreditFundingTransaction extends Transaction {
         creditBurnPublicKeyId = KeyId.KEYID_ZERO;
     }
 
+    /**
+     * Initializes lockedOutput, lockedOutpoint, fundingAmount and the hash160
+     * credit burn key
+     */
     private void parseTransaction() {
         getLockedOutput();
         getLockedOutpoint();
@@ -88,6 +118,9 @@ public class CreditFundingTransaction extends Transaction {
         creditBurnIdentityIdentifier = getCreditBurnIdentityIdentifier();
     }
 
+    /**
+     * Sets lockedOutput and returns output that has the OP_RETURN script
+     */
     public TransactionOutput getLockedOutput() {
         if(lockedOutput != null)
             return lockedOutput;
@@ -105,6 +138,9 @@ public class CreditFundingTransaction extends Transaction {
         return null;
     }
 
+    /**
+     * Sets lockedOutpoint and returns outpoint that has the OP_RETURN script
+     */
     public TransactionOutPoint getLockedOutpoint() {
         if(lockedOutpoint != null)
             return lockedOutpoint;
@@ -126,6 +162,9 @@ public class CreditFundingTransaction extends Transaction {
         return fundingAmount;
     }
 
+    /**
+     * Returns the credit burn identifier, which is the sha256(sha256(outpoint))
+     */
     public Sha256Hash getCreditBurnIdentityIdentifier() {
         if(creditBurnIdentityIdentifier == null || creditBurnIdentityIdentifier.equals(Sha256Hash.ZERO_HASH)) {
             try {
@@ -161,6 +200,10 @@ public class CreditFundingTransaction extends Transaction {
         this.usedDerivationPathIndex = usedDerivationPathIndex;
     }
 
+    /**
+     * Determines if a transaction has one or more credit burn outputs
+     * and therefore is a is credit funding transaction
+     */
     public static boolean isCreditFundingTransaction(Transaction tx) {
         for(TransactionOutput output : tx.getOutputs()) {
             Script script = output.getScriptPubKey();
