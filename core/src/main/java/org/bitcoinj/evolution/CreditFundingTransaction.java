@@ -127,12 +127,9 @@ public class CreditFundingTransaction extends Transaction {
 
         for(TransactionOutput output : getOutputs()) {
             Script script = output.getScriptPubKey();
-            if(ScriptPattern.isOpReturn(script)) {
-                ScriptChunk scriptId = script.getChunks().get(1);
-                if(scriptId.data.length == 20) {
-                    lockedOutput = output;
-                    return output;
-                }
+            if(ScriptPattern.isCreditBurn(script)) {
+                lockedOutput = output;
+                return output;
             }
         }
         return null;
@@ -147,11 +144,10 @@ public class CreditFundingTransaction extends Transaction {
 
         for(int i = 0; i < getOutputs().size(); ++i) {
             Script script = getOutput(i).getScriptPubKey();
-            if(ScriptPattern.isOpReturn(script)) {
-                ScriptChunk scriptId = script.getChunks().get(1);
-                if(scriptId.data.length == 20) {
-                    lockedOutpoint = new TransactionOutPoint(params, i, Sha256Hash.wrap(getTxId().getReversedBytes()));
-                }
+            if(ScriptPattern.isCreditBurn(script)) {
+                //TODO:  This doesn't look correct, but matches dashsync-iOS.  Why is the txid reversed?
+                //having a reversed txid will not allow it to be searched or matched.
+                lockedOutpoint = new TransactionOutPoint(params, i, Sha256Hash.wrap(getTxId().getReversedBytes()));
             }
         }
 
@@ -207,11 +203,8 @@ public class CreditFundingTransaction extends Transaction {
     public static boolean isCreditFundingTransaction(Transaction tx) {
         for(TransactionOutput output : tx.getOutputs()) {
             Script script = output.getScriptPubKey();
-            if(ScriptPattern.isOpReturn(script)) {
-                ScriptChunk scriptId = script.getChunks().get(1);
-                if(scriptId.data.length == 20) {
-                    return true;
-                }
+            if(ScriptPattern.isCreditBurn(script)) {
+                return true;
             }
         }
         return false;
