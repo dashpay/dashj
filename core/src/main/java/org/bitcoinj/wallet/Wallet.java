@@ -42,6 +42,7 @@ import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerFilterProvider;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
@@ -207,7 +208,8 @@ public class Wallet extends BaseTaggableObject
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<TransactionConfidenceEventListener>> transactionConfidenceListeners
         = new CopyOnWriteArrayList<>();
-
+    private final CopyOnWriteArrayList<ListenerRegistration<CreditFundingTransactionEventListener>> creditFundingListeners
+            = new CopyOnWriteArrayList<>();
     // A listener that relays confidence changes from the transaction confidence object to the wallet event listener,
     // as a convenience to API users so they don't have to register on every transaction themselves.
     private TransactionConfidence.Listener txConfidenceListener;
@@ -2293,6 +2295,10 @@ public class Wallet extends BaseTaggableObject
         }
 
         informConfidenceListenersIfNotReorganizing();
+        if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+            CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
+            queueOnCreditFundingEvent(cftx, block, blockType);
+        }
         isConsistentOrThrow();
         // Optimization for the case where a block has tons of relevant transactions.
         saveLater();
@@ -2768,6 +2774,11 @@ public class Wallet extends BaseTaggableObject
             if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
                 context.instantSendManager.syncTransaction(tx, null, -1);
 
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
+                queueOnCreditFundingEvent(cftx, null, BlockChain.NewBlockType.BEST_CHAIN);
+            }
+
             informConfidenceListenersIfNotReorganizing();
             saveNow();
         } finally {
@@ -2977,6 +2988,31 @@ public class Wallet extends BaseTaggableObject
         return ListenerRegistration.removeFromList(listener, transactionConfidenceListeners);
     }
 
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addCreditFundingEventListener(TransactionConfidenceEventListener listener) {
+        addTransactionConfidenceEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addCreditFundingEventListener(Executor executor, CreditFundingTransactionEventListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        creditFundingListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeCreditFundingEventListener(CreditFundingTransactionEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, creditFundingListeners);
+    }
+
     private void queueOnTransactionConfidenceChanged(final Transaction tx) {
         checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<TransactionConfidenceEventListener> registration : transactionConfidenceListeners) {
@@ -3052,6 +3088,19 @@ public class Wallet extends BaseTaggableObject
                 @Override
                 public void run() {
                     registration.listener.onScriptsChanged(Wallet.this, scripts, isAddingScripts);
+                }
+            });
+        }
+    }
+
+    protected void queueOnCreditFundingEvent(final CreditFundingTransaction tx, StoredBlock block,
+                                             BlockChain.NewBlockType blockType) {
+        checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<CreditFundingTransactionEventListener> registration : creditFundingListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onTransactionReceived(tx, block, blockType);
                 }
             });
         }
@@ -5712,30 +5761,46 @@ public class Wallet extends BaseTaggableObject
         return authenticationGroup != null && !authenticationGroup.chains.isEmpty();
     }
 
+    HashMap<Sha256Hash, CreditFundingTransaction> mapCreditFundingTxs = new HashMap<>();
+
     /**
      * @return list of credit funding transactions found in the wallet.
      */
 
     public List<CreditFundingTransaction> getCreditFundingTransactions() {
-        AuthenticationKeyChain chain = getBlockchainIdentityFundingKeyChain();
-
+        mapCreditFundingTxs.clear();
         ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
         for(WalletTransaction wtx : getWalletTransactions()) {
             Transaction tx = wtx.getTransaction();
             if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
-                CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
-
-                // set some internal data for the transaction
-                DeterministicKey publicKey = chain.getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
-                if(publicKey != null)
-                    cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
-                else log.error("Cannot find " + new KeyId(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
+                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
                 txs.add(cftx);
+                mapCreditFundingTxs.put(cftx.getTxId(), cftx);
             }
         }
         return txs;
     }
 
+    /**
+     * Get a CreditFundingTransaction object for a specific transaction
+     */
+    public CreditFundingTransaction getCreditFundingTransaction(Transaction tx) {
+        if(mapCreditFundingTxs.containsKey(tx.getTxId()))
+            return mapCreditFundingTxs.get(tx.getTxId());
+
+        AuthenticationKeyChain chain = getBlockchainIdentityFundingKeyChain();
+
+        CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
+
+        // set some internal data for the transaction
+        DeterministicKey publicKey = chain.getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+        if(publicKey != null)
+            cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
+        else log.error("Cannot find " + new KeyId(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
+
+        mapCreditFundingTxs.put(cftx.getTxId(), cftx);
+        return cftx;
+    }
     // ***************************************************************************************************************
 
     //region Authentication Key Management
