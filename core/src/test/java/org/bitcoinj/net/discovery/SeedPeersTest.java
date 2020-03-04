@@ -24,6 +24,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -52,8 +53,8 @@ public class SeedPeersTest {
     @Test
     public void getPeers_length() throws Exception{
         SeedPeers seedPeers = new SeedPeers(MAINNET);
-        InetSocketAddress[] addresses = seedPeers.getPeers(0, 0, TimeUnit.SECONDS);
-        assertThat(addresses.length, equalTo(MAINNET.getAddrSeeds().length));
+        List<InetSocketAddress> addresses = seedPeers.getPeers(0, 0, TimeUnit.SECONDS);
+        assertThat(addresses.size(), equalTo(MAINNET.getAddrSeeds().length));
     }
 
     @Test

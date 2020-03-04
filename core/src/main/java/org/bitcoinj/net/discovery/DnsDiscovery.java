@@ -88,33 +88,18 @@ public class DnsDiscovery extends MultiplexingDiscovery {
         }
 
         @Override
-        public InetSocketAddress[] getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
-            InetAddress[] response = null;
-            if (services != 0) {
-                String hostnameWithServices = "x" + Long.toHexString(services) + "." + hostname;
-                log.info("Requesting {} peers from {}", VersionMessage.toStringServices(services),
-                        hostnameWithServices);
-                try {
-                    response = InetAddress.getAllByName(hostnameWithServices);
-                    log.info("Got {} peers from {}", response.length, hostnameWithServices);
-                } catch (UnknownHostException e) {
-                    log.info("Seed {} doesn't appear to support service bit filtering: {}", hostname, e.getMessage());
-                }
+        public List<InetSocketAddress> getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+            if (services != 0)
+                throw new PeerDiscoveryException("DNS seeds cannot filter by services: " + services);
+            try {
+                InetAddress[] response = InetAddress.getAllByName(hostname);
+                List<InetSocketAddress> result = new ArrayList<>(response.length);
+                for (InetAddress r : response)
+                    result.add(new InetSocketAddress(r, params.getPort()));
+                return result;
+            } catch (UnknownHostException e) {
+                throw new PeerDiscoveryException(e);
             }
-            if (response == null || response.length == 0) {
-                log.info("Requesting all peers from {}", hostname);
-                try {
-                    response = InetAddress.getAllByName(hostname);
-                    log.info("Got {} peers from {}", response.length, hostname);
-                } catch (UnknownHostException e) {
-                    throw new PeerDiscoveryException(e);
-                }
-            }
-
-            InetSocketAddress[] result = new InetSocketAddress[response.length];
-            for (int i = 0; i < response.length; i++)
-                result[i] = new InetSocketAddress(response[i], params.getPort());
-            return result;
         }
 
         @Override

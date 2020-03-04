@@ -1174,7 +1174,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         final Stopwatch watch = Stopwatch.createStarted();
         final List<PeerAddress> addressList = new LinkedList<>();
         for (PeerDiscovery peerDiscovery : peerDiscoverers /* COW */) {
-            InetSocketAddress[] addresses;
+            List<InetSocketAddress> addresses;
             try {
                 addresses = peerDiscovery.getPeers(requiredServices, peerDiscoveryTimeoutMillis, TimeUnit.MILLISECONDS);
             } catch (PeerDiscoveryException e) {
