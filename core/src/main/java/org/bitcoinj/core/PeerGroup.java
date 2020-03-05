@@ -436,9 +436,13 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             public int compare(PeerAddress a, PeerAddress b) {
                 checkState(lock.isHeldByCurrentThread());
                 int result = backoffMap.get(a).compareTo(backoffMap.get(b));
+                if (result != 0)
+                    return result;
+                result = Integer.compare(getPriority(a), getPriority(b));
+                if (result != 0)
+                    return result;
                 // Sort by port if otherwise equals - for testing
-                if (result == 0)
-                    result = Integer.compare(a.getPort(), b.getPort());
+                result = Integer.compare(a.getPort(), b.getPort());
                 return result;
             }
         });
@@ -2920,11 +2924,14 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         // Make sure we don't select a peer if there is no consensus about block height.
         if (mostCommonChainHeight == 0)
             return null;
-        // Make sure we don't select a peer that is behind/synchronizing itself or announces an unrealistic height.
-        List<Peer> candidates = new ArrayList<>();
+
+        // Only select peers that announce the minimum protocol and services and that we think is fully synchronized.
+        List<Peer> candidates = new LinkedList<>();
+        int highestPriority = Integer.MIN_VALUE;
+        final int MINIMUM_VERSION = NetworkParameters.ProtocolVersion.MINIMUM.getBitcoinProtocolVersion();
         for (Peer peer : peers) {
             final VersionMessage versionMessage = peer.getPeerVersionMessage();
-            if (peer.getPeerVersionMessage().clientVersion < NetworkParameters.ProtocolVersion.MINIMUM.getBitcoinProtocolVersion())
+            if (peer.getPeerVersionMessage().clientVersion < MINIMUM_VERSION)
                 continue;
             if (!peer.getPeerVersionMessage().hasBlockChain())
                 continue;
@@ -2932,6 +2939,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             if (peerHeight < mostCommonChainHeight || peerHeight > mostCommonChainHeight + 1)
                 continue;
             candidates.add(peer);
+            highestPriority = Math.max(highestPriority, getPriority(peer.peerAddress));
         }
         // Of the candidates, find the peers that meet the minimum protocol version we want to target. We could select
         // the highest version we've seen on the assumption that newer versions are always better but we don't want to
@@ -2952,8 +2960,17 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
         if (candidates2.isEmpty())
             return null;
-        int index = (int) (Math.random() * candidates2.size());
-        return candidates2.get(index);
+
+        // If there is a difference in priority, consider only the highest.
+        for (Iterator<Peer> i = candidates.iterator(); i.hasNext(); ) {
+            Peer peer = i.next();
+            if (getPriority(peer.peerAddress) < highestPriority)
+                i.remove();
+        }
+
+        // Random poll.
+        int index = (int) (Math.random() * candidates.size());
+        return candidates.get(index);
     }
 
     /**
