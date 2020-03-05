@@ -233,7 +233,7 @@ public class Peer extends PeerSocketHandler {
      */
     public Peer(NetworkParameters params, VersionMessage ver, PeerAddress remoteAddress,
                 @Nullable AbstractBlockChain chain) {
-        this(params, ver, remoteAddress, chain, 0, Integer.MAX_VALUE);
+        this(params, ver, remoteAddress, chain, null, 0, Integer.MAX_VALUE);
     }
 
     /**
@@ -277,8 +277,8 @@ public class Peer extends PeerSocketHandler {
     }
 
     public Peer(NetworkParameters params, VersionMessage ver, PeerAddress remoteAddress,
-                @Nullable AbstractBlockChain chain, int downloadTxDependencyDepth) {
-        this(params, ver, remoteAddress, chain, null, downloadTxDependencyDepth);
+                @Nullable AbstractBlockChain chain, int requiredServices, int downloadTxDependencyDepth) {
+        this(params, ver, remoteAddress, chain, null, requiredServices, downloadTxDependencyDepth);
     }
 
     /**

@@ -114,6 +114,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     // Addresses to try to connect to, excluding active peers.
     @GuardedBy("lock") private final PriorityQueue<PeerAddress> inactives;
     @GuardedBy("lock") private final Map<PeerAddress, ExponentialBackoff> backoffMap;
+    @GuardedBy("lock") private final Map<PeerAddress, Integer> priorityMap;
 
     // Currently active peers. This is an ordered list rather than a set to make unit tests predictable.
     private final CopyOnWriteArrayList<Peer> peers;
@@ -391,13 +392,18 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             public int compare(PeerAddress a, PeerAddress b) {
                 checkState(lock.isHeldByCurrentThread());
                 int result = backoffMap.get(a).compareTo(backoffMap.get(b));
+                if (result != 0)
+                    return result;
+                result = Ints.compare(getPriority(a), getPriority(b));
+                if (result != 0)
+                    return result;
                 // Sort by port if otherwise equals - for testing
-                if (result == 0)
-                    result = Ints.compare(a.getPort(), b.getPort());
+                result = Ints.compare(a.getPort(), b.getPort());
                 return result;
             }
         });
         backoffMap = new HashMap<>();
+        priorityMap = new ConcurrentHashMap<>();
         peers = new CopyOnWriteArrayList<>();
         pendingPeers = new CopyOnWriteArrayList<>();
         channels = connectionManager;
@@ -1000,10 +1006,21 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * @param peerAddress IP/port to use.
      */
     public void addAddress(PeerAddress peerAddress) {
+        addAddress(peerAddress, 0);
+    }
+
+    /**
+     * Add an address to the list of potential peers to connect to. It won't necessarily be used unless there's a need
+     * to build new connections to reach the max connection count.
+     *
+     * @param peerAddress IP/port to use.
+     * @param priority for connecting and being picked as a download peer
+     */
+    public void addAddress(PeerAddress peerAddress, int priority) {
         int newMax;
         lock.lock();
         try {
-            if (addInactive(peerAddress)) {
+            if (addInactive(peerAddress, priority)) {
                 newMax = getMaxConnections() + 1;
                 setMaxConnections(newMax);
             }
@@ -1014,18 +1031,25 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     // Adds peerAddress to backoffMap map and inactives queue.
     // Returns true if it was added, false if it was already there.
-    private boolean addInactive(PeerAddress peerAddress) {
+    private boolean addInactive(PeerAddress peerAddress, int priority) {
         lock.lock();
         try {
             // Deduplicate
             if (backoffMap.containsKey(peerAddress))
                 return false;
             backoffMap.put(peerAddress, new ExponentialBackoff(peerBackoffParams));
+            if (priority != 0)
+                priorityMap.put(peerAddress, priority);
             inactives.offer(peerAddress);
             return true;
         } finally {
             lock.unlock();
         }
+    }
+
+    private int getPriority(PeerAddress peerAddress) {
+        Integer priority = priorityMap.get(peerAddress);
+        return priority != null ? priority : 0;
     }
 
     /**
@@ -1044,9 +1068,14 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     }
 
-    /** Convenience method for addAddress(new PeerAddress(address, params.port)); */
+    /** Convenience method for {@link #addAddress(PeerAddress)}. */
     public void addAddress(InetAddress address) {
         addAddress(new PeerAddress(params, address, params.getPort()));
+    }
+
+    /** Convenience method for {@link #addAddress(PeerAddress, int)}. */
+    public void addAddress(InetAddress address, int priority) {
+        addAddress(new PeerAddress(params, address, params.getPort()), priority);
     }
 
     /**
@@ -1085,7 +1114,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
         if (!addressList.isEmpty()) {
             for (PeerAddress address : addressList) {
-                addInactive(address);
+                addInactive(address, 0);
             }
             final ImmutableSet<PeerAddress> peersDiscoveredSet = ImmutableSet.copyOf(addressList);
             for (final ListenerRegistration<PeerDiscoveredEventListener> registration : peerDiscoveredEventListeners /* COW */) {
@@ -2682,6 +2711,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
         // Only select peers that announce the minimum protocol and services and that we think is fully synchronized.
         List<Peer> candidates = new LinkedList<>();
+        int highestPriority = Integer.MIN_VALUE;
         final int MINIMUM_VERSION = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM);
         for (Peer peer : peers) {
             final VersionMessage versionMessage = peer.getPeerVersionMessage();
@@ -2693,9 +2723,17 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             if (peerHeight < mostCommonChainHeight || peerHeight > mostCommonChainHeight + 1)
                 continue;
             candidates.add(peer);
+            highestPriority = Math.max(highestPriority, getPriority(peer.peerAddress));
         }
         if (candidates.isEmpty())
             return null;
+
+        // If there is a difference in priority, consider only the highest.
+        for (Iterator<Peer> i = candidates.iterator(); i.hasNext(); ) {
+            Peer peer = i.next();
+            if (getPriority(peer.peerAddress) < highestPriority)
+                i.remove();
+        }
 
         // Random poll.
         int index = (int) (Math.random() * candidates.size());
