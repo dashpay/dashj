@@ -2398,8 +2398,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     /**
      * Calls {@link PeerGroup#broadcastTransaction(Transaction, int, boolean)} with getMinBroadcastConnections() as
-     * the number of connections to wait for before commencing broadcast. Also, broadcast peers will be dropped after
-     * the transaction has been sent.
+     * the number of connections to wait for before commencing broadcast. Also, if the transaction has no broadcast
+     * confirmations yet the peers will be dropped after the transaction has been sent.
      */
     @Override
     public TransactionBroadcast broadcastTransaction(final Transaction tx) {
@@ -2413,6 +2413,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * wrong the exception will be thrown when get() is called, or you can receive it via a callback on the
      * {@link ListenableFuture}. This method returns immediately, so if you want it to block just call get() on the
      * result.</p>
+     *
+     * <p>Optionally, peers will be dropped after they have been used for broadcasting the transaction and they have
+     * no broadcast confirmations yet.</p>
      *
      * <p>Note that if the PeerGroup is limited to only one connection (discovery is not activated) then the future
      * will complete as soon as the transaction was successfully written to that peer.</p>
@@ -2443,7 +2446,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
         final TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
         broadcast.setMinConnections(minConnections);
-        broadcast.setDropPeersAfterBroadcast(dropPeersAfterBroadcast);
+        broadcast.setDropPeersAfterBroadcast(dropPeersAfterBroadcast && tx.getConfidence().numBroadcastPeers() == 0);
         // Send the TX to the wallet once we have a successful broadcast.
         Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
             @Override
