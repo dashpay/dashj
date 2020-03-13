@@ -801,8 +801,7 @@ public class Transaction extends ChildMessage {
             s.append(indent).append("purpose: ").append(purpose).append('\n');
         if (isCoinBase()) {
             s.append(indent).append("coinbase\n");
-        }
-        if (!inputs.isEmpty()) {
+        } else if (!inputs.isEmpty()) {
             int i = 0;
             for (TransactionInput in : inputs) {
                 s.append(indent).append("   ");
