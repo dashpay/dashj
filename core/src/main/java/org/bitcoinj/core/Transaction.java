@@ -774,25 +774,7 @@ public class Transaction extends ChildMessage {
         if (purpose != null)
             s.append(indent).append("purpose: ").append(purpose).append('\n');
         if (isCoinBase()) {
-            String script;
-            String script2;
-            try {
-                script = inputs.get(0).getScriptSig().toString();
-                script2 = outputs.get(0).getScriptPubKey().toString();
-            } catch (ScriptException e) {
-                script = "???";
-                script2 = "???";
-            }
-            s.append(indent).append("   == COINBASE TXN (scriptSig ").append(script).append(")  (scriptPubKey ").append(script2)
-                    .append(")\n");
-            return s.toString();
-        }
-        if (!requiresInputs()) {
-            // no ins, no outs
-            if (getVersionShort() == 3 && type.isSpecial())
-                s.append(indent).append("payload ").append(getExtraPayloadObject()).append('\n');
-
-            return s.toString();
+            s.append(indent).append("coinbase\n");
         }
         if (!inputs.isEmpty()) {
             int i = 0;
