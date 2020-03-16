@@ -106,11 +106,6 @@ public class Transaction extends ChildMessage {
         TRANSACTION_PROVIDER_UPDATE_REVOKE(4),
         TRANSACTION_COINBASE(5),
         TRANSACTION_QUORUM_COMMITMENT(6),
-        TRANSACTION_SUBTX_REGISTER(8),
-        TRANSACTION_SUBTX_TOPUP(9),
-        TRANSACTION_SUBTX_RESETKEY(10),
-        TRANSACTION_SUBTX_CLOSEACCOUNT(11),
-        TRANSACTION_SUBTX_TRANSITION(12),
         TRANSACTION_UNKNOWN(1024);
 
         int value;
@@ -1678,18 +1673,6 @@ public class Transaction extends ChildMessage {
             case TRANSACTION_QUORUM_COMMITMENT:
                 extraPayloadObject = new FinalCommitmentTxPayload(params, this);
                 break;
-            case TRANSACTION_SUBTX_REGISTER:
-                extraPayloadObject = new SubTxRegister(params, this);
-                break;
-            case TRANSACTION_SUBTX_RESETKEY:
-                extraPayloadObject = new SubTxResetKey(params, this);
-                break;
-            case TRANSACTION_SUBTX_TOPUP:
-                extraPayloadObject = new SubTxTopup(params, this);
-                break;
-            case TRANSACTION_SUBTX_CLOSEACCOUNT:
-            case TRANSACTION_SUBTX_TRANSITION:
-                break;
         }
     }
 
@@ -1709,7 +1692,6 @@ public class Transaction extends ChildMessage {
     public boolean requiresInputs() {
         switch (getType()) {
             case TRANSACTION_QUORUM_COMMITMENT:
-            case TRANSACTION_SUBTX_RESETKEY:
                 return false;
             default:
                 return true;

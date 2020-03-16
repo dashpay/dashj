@@ -2689,10 +2689,6 @@ public class Wallet extends BaseTaggableObject
                 return false;
             log.info("commitTx of {}", tx.getTxId());
 
-            if(context.evoUserManager != null) { //Check for unit tests
-                context.evoUserManager.processSpecialTransaction(tx, null);
-            }
-
             log.info("commitTx of {}", tx.getHashAsString());
             Coin balance = getBalance();
             tx.setUpdateTime(Utils.now());
@@ -4201,8 +4197,8 @@ public class Wallet extends BaseTaggableObject
             checkArgument(!req.completed, "Given SendRequest has already been completed.");
             // Calculate the amount of value we need to import.
             Coin value = Coin.ZERO;
-            boolean requiresInputs = req.tx.getType() != Transaction.Type.TRANSACTION_SUBTX_RESETKEY;
-            boolean requiresNoFee = req.tx.getType() == Transaction.Type.TRANSACTION_SUBTX_RESETKEY;
+            boolean requiresInputs = req.tx.getType() != Transaction.Type.TRANSACTION_QUORUM_COMMITMENT;
+            boolean requiresNoFee = req.tx.getType() == Transaction.Type.TRANSACTION_QUORUM_COMMITMENT;
             for (TransactionOutput output : req.tx.getOutputs()) {
                 value = value.add(output.getValue());
             }
@@ -4878,9 +4874,8 @@ public class Wallet extends BaseTaggableObject
 
         for (Transaction tx : all) {
             if(tx.getVersionShort() == 3 && tx.getType() != Transaction.Type.TRANSACTION_NORMAL) {
-                if(tx.getType() == Transaction.Type.TRANSACTION_PROVIDER_REGISTER ||
-                    tx.getType() == Transaction.Type.TRANSACTION_SUBTX_REGISTER) {
-                    bloomSpecialTxHashes.add(tx.getHash());
+                if(tx.getType() == Transaction.Type.TRANSACTION_PROVIDER_REGISTER) {
+                    bloomSpecialTxHashes.add(tx.getTxId());
                 }
             }
         }
