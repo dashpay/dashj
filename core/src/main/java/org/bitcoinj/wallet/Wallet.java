@@ -4255,8 +4255,8 @@ public class Wallet extends BaseTaggableObject
             checkArgument(!req.completed, "Given SendRequest has already been completed.");
             // Calculate the amount of value we need to import.
             Coin value = Coin.ZERO;
-            boolean requiresInputs = true;
-            boolean requiresNoFee = false;
+            boolean requiresInputs = req.tx.getType() != Transaction.Type.TRANSACTION_QUORUM_COMMITMENT;
+            boolean requiresNoFee = req.tx.getType() == Transaction.Type.TRANSACTION_QUORUM_COMMITMENT;
             for (TransactionOutput output : req.tx.getOutputs()) {
                 value = value.add(output.getValue());
             }
