@@ -72,6 +72,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("palinka")) {
             params = PalinkaDevNetParams.get();
             filePrefix = "forwarding-service-palinka";
+        } else if (args.length > 1 && args[1].equals("mobile")) {
+            params = MobileDevNetParams.get();
+            filePrefix = "forwarding-service-mobile";
         } else if (args.length > 1 && args[1].equals("evonet")) {
             params = EvoNetParams.get();
             filePrefix = "forwarding-service-evonet";
