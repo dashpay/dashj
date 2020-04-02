@@ -2069,10 +2069,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
         // keep track of how many times a transaction is sent
         int sendCount = 0;
-        if(pendingTxSendCounts.contains(tx.getHash())) {
+        if(pendingTxSendCounts.containsKey(tx.getHash())) {
             sendCount = pendingTxSendCounts.get(tx.getHash());
         }
-        pendingTxSendCounts.put(tx.getHash(), sendCount++);
+        pendingTxSendCounts.put(tx.getHash(), ++sendCount);
 
         final TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
         broadcast.setMinConnections(minConnections);
