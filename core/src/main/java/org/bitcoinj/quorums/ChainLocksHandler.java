@@ -628,7 +628,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        if(bestChainLock != null) {
+        if(bestChainLockBlock != null) {
             ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
             bestChainLockBlock.serializeCompact(buffer);
             stream.write(buffer.array());
