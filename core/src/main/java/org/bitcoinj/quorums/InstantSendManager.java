@@ -396,7 +396,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
             //try to process the invalidInstantSendLocks again
             for(InstantSendLock isLock : invalidInstantSendLocks.keySet())
-                pendingInstantSendLocks.put(isLock.getHash(), new Pair(0, isLock));
+                pendingInstantSendLocks.put(isLock.getHash(), new Pair(Long.valueOf(0L), isLock));
 
         } finally {
             lock.unlock();
@@ -426,7 +426,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 continue;
             }
 
-            long nodeId = p.getValue().getFirst();
+            long nodeId = p.getValue().getFirst().longValue();
             InstantSendLock islock = p.getValue().getSecond();
     
             if (batchVerifier.getBadSources().contains(nodeId)) {
