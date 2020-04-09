@@ -63,7 +63,7 @@ public class DerivationPathFactoryTest {
         assertEquals(PROVIDER_VOTING_PATH, factory.masternodeVotingDerivationPath());
         assertEquals(PROVIDER_OPERATOR_PATH, factory.masternodeOperatorDerivationPath());
 
-        assertEquals(BLOCKCHAIN_IDENTITY_PATH, factory.blockchainIdentityDerivationPath());
+        assertEquals(BLOCKCHAIN_IDENTITY_PATH, factory.blockchainIdentityECDSADerivationPath());
         assertEquals(BLOCKCHAIN_IDENTITY_FUNDING_PATH, factory.blockchainIdentityRegistrationFundingDerivationPath());
     }
 
@@ -80,7 +80,7 @@ public class DerivationPathFactoryTest {
         assertEquals(PROVIDER_VOTING_PATH_TESTNET, factory.masternodeVotingDerivationPath());
         assertEquals(PROVIDER_OPERATOR_PATH_TESTNET, factory.masternodeOperatorDerivationPath());
 
-        assertEquals(BLOCKCHAIN_IDENTITY_PATH_TESTNET, factory.blockchainIdentityDerivationPath());
+        assertEquals(BLOCKCHAIN_IDENTITY_PATH_TESTNET, factory.blockchainIdentityECDSADerivationPath());
         assertEquals(BLOCKCHAIN_IDENTITY_FUNDING_PATH_TESTNET, factory.blockchainIdentityRegistrationFundingDerivationPath());
     }
 }

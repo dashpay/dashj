@@ -23,13 +23,23 @@ public class DerivationPathFactory {
                 .build();
     }
 
-    public ImmutableList<ChildNumber> blockchainIdentityDerivationPath() {
+    public ImmutableList<ChildNumber> blockchainIdentityECDSADerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
                 .add(ChildNumber.FIVE_HARDENED)
                 .add(ChildNumber.ZERO_HARDENED)
                 .add(ChildNumber.ZERO_HARDENED)
+                .build();
+    }
+
+    public ImmutableList<ChildNumber> blockchainIdentityBLSDerivationPath() {
+        return ImmutableList.<ChildNumber>builder()
+                .add(FEATURE_PURPOSE)
+                .add(coinType)
+                .add(ChildNumber.FIVE_HARDENED)
+                .add(ChildNumber.ZERO_HARDENED)
+                .add(ChildNumber.ONE_HARDENED)
                 .build();
     }
 

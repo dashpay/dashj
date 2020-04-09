@@ -5707,7 +5707,7 @@ public class Wallet extends BaseTaggableObject
         providerOwnerKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.masternodeOwnerDerivationPath());
         providerVoterKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.masternodeVotingDerivationPath());
         blockchainIdentityFundingKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath());
-        blockchainIdentityKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.blockchainIdentityDerivationPath());
+        blockchainIdentityKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.blockchainIdentityECDSADerivationPath());
         authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
         authenticationGroup.addAndActivateHDChain(providerOwnerKeyChain);
         authenticationGroup.addAndActivateHDChain(providerVoterKeyChain);
