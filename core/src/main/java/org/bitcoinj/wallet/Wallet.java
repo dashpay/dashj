@@ -5703,16 +5703,26 @@ public class Wallet extends BaseTaggableObject
     AuthenticationKeyChain blockchainIdentityKeyChain;
     AuthenticationKeyChainGroup authenticationGroup;
 
-    public void initializeAuthenticationKeyChains(DeterministicSeed seed, KeyCrypter keyCrypter) {
-        providerOwnerKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.masternodeOwnerDerivationPath());
-        providerVoterKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.masternodeVotingDerivationPath());
-        blockchainIdentityFundingKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath());
-        blockchainIdentityKeyChain = new AuthenticationKeyChain(seed, keyCrypter, derivationPathFactory.blockchainIdentityECDSADerivationPath());
-        authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
-        authenticationGroup.addAndActivateHDChain(providerOwnerKeyChain);
-        authenticationGroup.addAndActivateHDChain(providerVoterKeyChain);
-        authenticationGroup.addAndActivateHDChain(blockchainIdentityFundingKeyChain);
-        authenticationGroup.addAndActivateHDChain(blockchainIdentityKeyChain);
+    public void initializeAuthenticationKeyChains(DeterministicSeed seed, @Nullable KeyParameter keyParameter) {
+        providerOwnerKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeOwnerDerivationPath()).build();
+        providerVoterKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeVotingDerivationPath()).build();
+        blockchainIdentityFundingKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath()).build();
+        blockchainIdentityKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityECDSADerivationPath()).build();
+
+        //encrypt all of the key chains if necessary
+        if(keyParameter != null && getKeyCrypter() != null) {
+            providerOwnerKeyChain = providerVoterKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+            providerVoterKeyChain = providerVoterKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+            blockchainIdentityKeyChain = blockchainIdentityKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+            blockchainIdentityFundingKeyChain = blockchainIdentityFundingKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+        }
+
+        authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams())
+                .addChain(providerOwnerKeyChain)
+                .addChain(providerVoterKeyChain)
+                .addChain(blockchainIdentityFundingKeyChain)
+                .addChain(blockchainIdentityKeyChain)
+                .build();
     }
 
     public AuthenticationKeyChain getProviderOwnerKeyChain() {

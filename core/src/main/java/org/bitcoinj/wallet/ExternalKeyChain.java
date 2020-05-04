@@ -23,6 +23,7 @@ import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.HDKeyDerivation;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.script.Script;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +54,10 @@ public class ExternalKeyChain extends DeterministicKeyChain {
 
     public ExternalKeyChain(DeterministicKey key, boolean isFollowing) {
         super(key, isFollowing, true, Script.ScriptType.P2PKH);
+    }
+
+    protected ExternalKeyChain(KeyCrypter crypter, KeyParameter aesKey, ExternalKeyChain chain) {
+        super(crypter, aesKey, chain);
     }
 
     /** {@inheritDoc} */

@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.script.Script;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
@@ -190,6 +191,16 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         this.type = type;
     }
 
+    /**
+     * For use in encryption when {@link #toEncrypted(KeyCrypter, KeyParameter)} is called, so that
+     * subclasses can override that method and create an instance of the right class.
+     *
+     * See also {@link #makeKeyChainFromSeed(DeterministicSeed, ImmutableList, Script.ScriptType)}
+     */
+    protected AuthenticationKeyChain(KeyCrypter crypter, KeyParameter aesKey, AuthenticationKeyChain chain) {
+        super(crypter, aesKey, chain);
+    }
+
     public static Builder<?> authenticationBuilder() {
         return new Builder();
     }
@@ -268,5 +279,10 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, NetworkParameters params) {
         return "Authentication Key Chain: " + (type != null ? type.toString() : "unknown") + "\n" +
             super.toString(includeLookahead, includePrivateKeys, aesKey, params);
+    }
+
+    @Override
+    public AuthenticationKeyChain toEncrypted(KeyCrypter keyCrypter, KeyParameter aesKey) {
+        return new AuthenticationKeyChain(keyCrypter, aesKey, this);
     }
 }
