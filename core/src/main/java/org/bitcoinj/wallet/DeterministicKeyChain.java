@@ -803,6 +803,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             if (entries.isEmpty() && isFollowing()) {
                 detKey.setIsFollowing(true);
             }
+            proto.setDeterministicKey(detKey);
             if (key.getParent() != null) {
                 // HD keys inherit the timestamp of their parent if they have one, so no need to serialize it.
                 proto.clearCreationTimestamp();
