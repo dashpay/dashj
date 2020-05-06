@@ -6,11 +6,11 @@ package org.bitcoinj.protocols.channels;
 public final class ClientState {
   private ClientState() {}
   public static void registerAllExtensions(
-      com.google.protobuf.ExtensionRegistry registry) {
+      com.google.protobuf.ExtensionRegistryLite registry) {
   }
   public interface StoredClientPaymentChannelsOrBuilder extends
       // @@protoc_insertion_point(interface_extends:paymentchannels.StoredClientPaymentChannels)
-      com.google.protobuf.MessageOrBuilder {
+      com.google.protobuf.MessageLiteOrBuilder {
 
     /**
      * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
@@ -25,128 +25,28 @@ public final class ClientState {
      * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
      */
     int getChannelsCount();
-    /**
-     * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
-     */
-    java.util.List<? extends org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannelOrBuilder> 
-        getChannelsOrBuilderList();
-    /**
-     * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
-     */
-    org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannelOrBuilder getChannelsOrBuilder(
-        int index);
   }
   /**
-   * Protobuf type {@code paymentchannels.StoredClientPaymentChannels}
-   *
    * <pre>
    * A set of StoredPaymentChannel's
    * </pre>
+   *
+   * Protobuf type {@code paymentchannels.StoredClientPaymentChannels}
    */
-  public static final class StoredClientPaymentChannels extends
-      com.google.protobuf.GeneratedMessage implements
+  public  static final class StoredClientPaymentChannels extends
+      com.google.protobuf.GeneratedMessageLite<
+          StoredClientPaymentChannels, StoredClientPaymentChannels.Builder> implements
       // @@protoc_insertion_point(message_implements:paymentchannels.StoredClientPaymentChannels)
       StoredClientPaymentChannelsOrBuilder {
-    // Use StoredClientPaymentChannels.newBuilder() to construct.
-    private StoredClientPaymentChannels(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
+    private StoredClientPaymentChannels() {
+      channels_ = emptyProtobufList();
     }
-    private StoredClientPaymentChannels(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final StoredClientPaymentChannels defaultInstance;
-    public static StoredClientPaymentChannels getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public StoredClientPaymentChannels getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private StoredClientPaymentChannels(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-                channels_ = new java.util.ArrayList<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel>();
-                mutable_bitField0_ |= 0x00000001;
-              }
-              channels_.add(input.readMessage(org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.PARSER, extensionRegistry));
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-          channels_ = java.util.Collections.unmodifiableList(channels_);
-        }
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannels_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannels_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels.class, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<StoredClientPaymentChannels> PARSER =
-        new com.google.protobuf.AbstractParser<StoredClientPaymentChannels>() {
-      public StoredClientPaymentChannels parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new StoredClientPaymentChannels(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<StoredClientPaymentChannels> getParserForType() {
-      return PARSER;
-    }
-
     public static final int CHANNELS_FIELD_NUMBER = 1;
-    private java.util.List<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel> channels_;
+    private com.google.protobuf.Internal.ProtobufList<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel> channels_;
     /**
      * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
      */
+    @java.lang.Override
     public java.util.List<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel> getChannelsList() {
       return channels_;
     }
@@ -160,12 +60,14 @@ public final class ClientState {
     /**
      * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
      */
+    @java.lang.Override
     public int getChannelsCount() {
       return channels_.size();
     }
     /**
      * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
      */
+    @java.lang.Override
     public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel getChannels(int index) {
       return channels_.get(index);
     }
@@ -176,340 +78,189 @@ public final class ClientState {
         int index) {
       return channels_.get(index);
     }
-
-    private void initFields() {
-      channels_ = java.util.Collections.emptyList();
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
-
-      for (int i = 0; i < getChannelsCount(); i++) {
-        if (!getChannels(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
-      memoizedIsInitialized = 1;
-      return true;
+    private void ensureChannelsIsMutable() {
+      if (!channels_.isModifiable()) {
+        channels_ =
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(channels_);
+       }
     }
 
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      for (int i = 0; i < channels_.size(); i++) {
-        output.writeMessage(1, channels_.get(i));
-      }
-      getUnknownFields().writeTo(output);
+    /**
+     * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
+     */
+    private void setChannels(
+        int index, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel value) {
+      value.getClass();
+  ensureChannelsIsMutable();
+      channels_.set(index, value);
     }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      for (int i = 0; i < channels_.size(); i++) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, channels_.get(i));
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
+    /**
+     * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
+     */
+    private void addChannels(org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel value) {
+      value.getClass();
+  ensureChannelsIsMutable();
+      channels_.add(value);
     }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
+    /**
+     * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
+     */
+    private void addChannels(
+        int index, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel value) {
+      value.getClass();
+  ensureChannelsIsMutable();
+      channels_.add(index, value);
+    }
+    /**
+     * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
+     */
+    private void addAllChannels(
+        java.lang.Iterable<? extends org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel> values) {
+      ensureChannelsIsMutable();
+      com.google.protobuf.AbstractMessageLite.addAll(
+          values, channels_);
+    }
+    /**
+     * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
+     */
+    private void clearChannels() {
+      channels_ = emptyProtobufList();
+    }
+    /**
+     * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
+     */
+    private void removeChannels(int index) {
+      ensureChannelsIsMutable();
+      channels_.remove(index);
     }
 
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
 
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
     public static Builder newBuilder(org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels prototype) {
-      return newBuilder().mergeFrom(prototype);
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
     }
-    public Builder toBuilder() { return newBuilder(this); }
 
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
     /**
-     * Protobuf type {@code paymentchannels.StoredClientPaymentChannels}
-     *
      * <pre>
      * A set of StoredPaymentChannel's
      * </pre>
+     *
+     * Protobuf type {@code paymentchannels.StoredClientPaymentChannels}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels, Builder> implements
         // @@protoc_insertion_point(builder_implements:paymentchannels.StoredClientPaymentChannels)
         org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannelsOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannels_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannels_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels.class, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels.Builder.class);
-      }
-
       // Construct using org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+        super(DEFAULT_INSTANCE);
       }
 
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getChannelsFieldBuilder();
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-
-      public Builder clear() {
-        super.clear();
-        if (channelsBuilder_ == null) {
-          channels_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
-        } else {
-          channelsBuilder_.clear();
-        }
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannels_descriptor;
-      }
-
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels getDefaultInstanceForType() {
-        return org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels.getDefaultInstance();
-      }
-
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels build() {
-        org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels buildPartial() {
-        org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels result = new org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels(this);
-        int from_bitField0_ = bitField0_;
-        if (channelsBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001)) {
-            channels_ = java.util.Collections.unmodifiableList(channels_);
-            bitField0_ = (bitField0_ & ~0x00000001);
-          }
-          result.channels_ = channels_;
-        } else {
-          result.channels_ = channelsBuilder_.build();
-        }
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels) {
-          return mergeFrom((org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels other) {
-        if (other == org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels.getDefaultInstance()) return this;
-        if (channelsBuilder_ == null) {
-          if (!other.channels_.isEmpty()) {
-            if (channels_.isEmpty()) {
-              channels_ = other.channels_;
-              bitField0_ = (bitField0_ & ~0x00000001);
-            } else {
-              ensureChannelsIsMutable();
-              channels_.addAll(other.channels_);
-            }
-            onChanged();
-          }
-        } else {
-          if (!other.channels_.isEmpty()) {
-            if (channelsBuilder_.isEmpty()) {
-              channelsBuilder_.dispose();
-              channelsBuilder_ = null;
-              channels_ = other.channels_;
-              bitField0_ = (bitField0_ & ~0x00000001);
-              channelsBuilder_ = 
-                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getChannelsFieldBuilder() : null;
-            } else {
-              channelsBuilder_.addAllMessages(other.channels_);
-            }
-          }
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        for (int i = 0; i < getChannelsCount(); i++) {
-          if (!getChannels(i).isInitialized()) {
-            
-            return false;
-          }
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      private java.util.List<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel> channels_ =
-        java.util.Collections.emptyList();
-      private void ensureChannelsIsMutable() {
-        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          channels_ = new java.util.ArrayList<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel>(channels_);
-          bitField0_ |= 0x00000001;
-         }
-      }
-
-      private com.google.protobuf.RepeatedFieldBuilder<
-          org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannelOrBuilder> channelsBuilder_;
 
       /**
        * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
        */
+      @java.lang.Override
       public java.util.List<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel> getChannelsList() {
-        if (channelsBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(channels_);
-        } else {
-          return channelsBuilder_.getMessageList();
-        }
+        return java.util.Collections.unmodifiableList(
+            instance.getChannelsList());
       }
       /**
        * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
        */
+      @java.lang.Override
       public int getChannelsCount() {
-        if (channelsBuilder_ == null) {
-          return channels_.size();
-        } else {
-          return channelsBuilder_.getCount();
-        }
-      }
-      /**
+        return instance.getChannelsCount();
+      }/**
        * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
        */
+      @java.lang.Override
       public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel getChannels(int index) {
-        if (channelsBuilder_ == null) {
-          return channels_.get(index);
-        } else {
-          return channelsBuilder_.getMessage(index);
-        }
+        return instance.getChannels(index);
       }
       /**
        * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
        */
       public Builder setChannels(
           int index, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel value) {
-        if (channelsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureChannelsIsMutable();
-          channels_.set(index, value);
-          onChanged();
-        } else {
-          channelsBuilder_.setMessage(index, value);
-        }
+        copyOnWrite();
+        instance.setChannels(index, value);
         return this;
       }
       /**
@@ -517,29 +268,17 @@ public final class ClientState {
        */
       public Builder setChannels(
           int index, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder builderForValue) {
-        if (channelsBuilder_ == null) {
-          ensureChannelsIsMutable();
-          channels_.set(index, builderForValue.build());
-          onChanged();
-        } else {
-          channelsBuilder_.setMessage(index, builderForValue.build());
-        }
+        copyOnWrite();
+        instance.setChannels(index,
+            builderForValue.build());
         return this;
       }
       /**
        * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
        */
       public Builder addChannels(org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel value) {
-        if (channelsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureChannelsIsMutable();
-          channels_.add(value);
-          onChanged();
-        } else {
-          channelsBuilder_.addMessage(value);
-        }
+        copyOnWrite();
+        instance.addChannels(value);
         return this;
       }
       /**
@@ -547,16 +286,8 @@ public final class ClientState {
        */
       public Builder addChannels(
           int index, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel value) {
-        if (channelsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureChannelsIsMutable();
-          channels_.add(index, value);
-          onChanged();
-        } else {
-          channelsBuilder_.addMessage(index, value);
-        }
+        copyOnWrite();
+        instance.addChannels(index, value);
         return this;
       }
       /**
@@ -564,13 +295,8 @@ public final class ClientState {
        */
       public Builder addChannels(
           org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder builderForValue) {
-        if (channelsBuilder_ == null) {
-          ensureChannelsIsMutable();
-          channels_.add(builderForValue.build());
-          onChanged();
-        } else {
-          channelsBuilder_.addMessage(builderForValue.build());
-        }
+        copyOnWrite();
+        instance.addChannels(builderForValue.build());
         return this;
       }
       /**
@@ -578,13 +304,9 @@ public final class ClientState {
        */
       public Builder addChannels(
           int index, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder builderForValue) {
-        if (channelsBuilder_ == null) {
-          ensureChannelsIsMutable();
-          channels_.add(index, builderForValue.build());
-          onChanged();
-        } else {
-          channelsBuilder_.addMessage(index, builderForValue.build());
-        }
+        copyOnWrite();
+        instance.addChannels(index,
+            builderForValue.build());
         return this;
       }
       /**
@@ -592,1614 +314,1441 @@ public final class ClientState {
        */
       public Builder addAllChannels(
           java.lang.Iterable<? extends org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel> values) {
-        if (channelsBuilder_ == null) {
-          ensureChannelsIsMutable();
-          com.google.protobuf.AbstractMessageLite.Builder.addAll(
-              values, channels_);
-          onChanged();
-        } else {
-          channelsBuilder_.addAllMessages(values);
-        }
+        copyOnWrite();
+        instance.addAllChannels(values);
         return this;
       }
       /**
        * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
        */
       public Builder clearChannels() {
-        if (channelsBuilder_ == null) {
-          channels_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
-          onChanged();
-        } else {
-          channelsBuilder_.clear();
-        }
+        copyOnWrite();
+        instance.clearChannels();
         return this;
       }
       /**
        * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
        */
       public Builder removeChannels(int index) {
-        if (channelsBuilder_ == null) {
-          ensureChannelsIsMutable();
-          channels_.remove(index);
-          onChanged();
-        } else {
-          channelsBuilder_.remove(index);
-        }
+        copyOnWrite();
+        instance.removeChannels(index);
         return this;
-      }
-      /**
-       * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
-       */
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder getChannelsBuilder(
-          int index) {
-        return getChannelsFieldBuilder().getBuilder(index);
-      }
-      /**
-       * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
-       */
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannelOrBuilder getChannelsOrBuilder(
-          int index) {
-        if (channelsBuilder_ == null) {
-          return channels_.get(index);  } else {
-          return channelsBuilder_.getMessageOrBuilder(index);
-        }
-      }
-      /**
-       * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
-       */
-      public java.util.List<? extends org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannelOrBuilder> 
-           getChannelsOrBuilderList() {
-        if (channelsBuilder_ != null) {
-          return channelsBuilder_.getMessageOrBuilderList();
-        } else {
-          return java.util.Collections.unmodifiableList(channels_);
-        }
-      }
-      /**
-       * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
-       */
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder addChannelsBuilder() {
-        return getChannelsFieldBuilder().addBuilder(
-            org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.getDefaultInstance());
-      }
-      /**
-       * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
-       */
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder addChannelsBuilder(
-          int index) {
-        return getChannelsFieldBuilder().addBuilder(
-            index, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.getDefaultInstance());
-      }
-      /**
-       * <code>repeated .paymentchannels.StoredClientPaymentChannel channels = 1;</code>
-       */
-      public java.util.List<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder> 
-           getChannelsBuilderList() {
-        return getChannelsFieldBuilder().getBuilderList();
-      }
-      private com.google.protobuf.RepeatedFieldBuilder<
-          org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannelOrBuilder> 
-          getChannelsFieldBuilder() {
-        if (channelsBuilder_ == null) {
-          channelsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannelOrBuilder>(
-                  channels_,
-                  ((bitField0_ & 0x00000001) == 0x00000001),
-                  getParentForChildren(),
-                  isClean());
-          channels_ = null;
-        }
-        return channelsBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:paymentchannels.StoredClientPaymentChannels)
     }
-
-    static {
-      defaultInstance = new StoredClientPaymentChannels(true);
-      defaultInstance.initFields();
+    private byte memoizedIsInitialized = 2;
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+        com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+        java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+            java.lang.Object[] objects = new java.lang.Object[] {
+              "channels_",
+              org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.class,
+            };
+            java.lang.String info =
+                "\u0001\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0001\u0001\u0001\u041b";
+            return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels> parser = PARSER;
+          if (parser == null) {
+            synchronized (org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                    new DefaultInstanceBasedParser<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels>(
+                        DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+      }
+      case GET_MEMOIZED_IS_INITIALIZED: {
+        return memoizedIsInitialized;
+      }
+      case SET_MEMOIZED_IS_INITIALIZED: {
+        memoizedIsInitialized = (byte) (arg0 == null ? 0 : 1);
+        return null;
+      }
+      }
+      throw new UnsupportedOperationException();
     }
 
+
     // @@protoc_insertion_point(class_scope:paymentchannels.StoredClientPaymentChannels)
+    private static final org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels DEFAULT_INSTANCE;
+    static {
+      StoredClientPaymentChannels defaultInstance = new StoredClientPaymentChannels();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+        StoredClientPaymentChannels.class, defaultInstance);
+    }
+
+    public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannels getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<StoredClientPaymentChannels> PARSER;
+
+    public static com.google.protobuf.Parser<StoredClientPaymentChannels> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
   }
 
   public interface StoredClientPaymentChannelOrBuilder extends
       // @@protoc_insertion_point(interface_extends:paymentchannels.StoredClientPaymentChannel)
-      com.google.protobuf.MessageOrBuilder {
+      com.google.protobuf.MessageLiteOrBuilder {
 
     /**
      * <code>required bytes id = 1;</code>
+     * @return Whether the id field is set.
      */
     boolean hasId();
     /**
      * <code>required bytes id = 1;</code>
+     * @return The id.
      */
     com.google.protobuf.ByteString getId();
 
     /**
      * <code>required bytes contractTransaction = 2;</code>
+     * @return Whether the contractTransaction field is set.
      */
     boolean hasContractTransaction();
     /**
      * <code>required bytes contractTransaction = 2;</code>
+     * @return The contractTransaction.
      */
     com.google.protobuf.ByteString getContractTransaction();
 
     /**
      * <code>required bytes refundTransaction = 3;</code>
+     * @return Whether the refundTransaction field is set.
      */
     boolean hasRefundTransaction();
     /**
      * <code>required bytes refundTransaction = 3;</code>
+     * @return The refundTransaction.
      */
     com.google.protobuf.ByteString getRefundTransaction();
 
     /**
      * <code>required bytes myPublicKey = 8;</code>
+     * @return Whether the myPublicKey field is set.
      */
     boolean hasMyPublicKey();
     /**
      * <code>required bytes myPublicKey = 8;</code>
+     * @return The myPublicKey.
      */
     com.google.protobuf.ByteString getMyPublicKey();
 
     /**
-     * <code>required bytes myKey = 4;</code>
-     *
      * <pre>
      * Deprecated, key is already stored in the wallet, and found using myPublicKey;
      * </pre>
+     *
+     * <code>required bytes myKey = 4;</code>
+     * @return Whether the myKey field is set.
      */
     boolean hasMyKey();
     /**
-     * <code>required bytes myKey = 4;</code>
-     *
      * <pre>
      * Deprecated, key is already stored in the wallet, and found using myPublicKey;
      * </pre>
+     *
+     * <code>required bytes myKey = 4;</code>
+     * @return The myKey.
      */
     com.google.protobuf.ByteString getMyKey();
 
     /**
      * <code>required uint64 valueToMe = 5;</code>
+     * @return Whether the valueToMe field is set.
      */
     boolean hasValueToMe();
     /**
      * <code>required uint64 valueToMe = 5;</code>
+     * @return The valueToMe.
      */
     long getValueToMe();
 
     /**
-     * <code>required uint64 refundFees = 6;</code>
-     *
      * <pre>
      * Fees required to refund the transaction.
      * </pre>
+     *
+     * <code>required uint64 refundFees = 6;</code>
+     * @return Whether the refundFees field is set.
      */
     boolean hasRefundFees();
     /**
-     * <code>required uint64 refundFees = 6;</code>
-     *
      * <pre>
      * Fees required to refund the transaction.
      * </pre>
+     *
+     * <code>required uint64 refundFees = 6;</code>
+     * @return The refundFees.
      */
     long getRefundFees();
 
     /**
-     * <code>optional bytes closeTransactionHash = 7;</code>
-     *
      * <pre>
      * When set, the hash of the transaction that was presented by the server for closure of the channel.
      * It spends the contractTransaction and is expected to be broadcast to the network by the server.
      * It's supposed to be in the wallet already.
      * </pre>
+     *
+     * <code>optional bytes closeTransactionHash = 7;</code>
+     * @return Whether the closeTransactionHash field is set.
      */
     boolean hasCloseTransactionHash();
     /**
-     * <code>optional bytes closeTransactionHash = 7;</code>
-     *
      * <pre>
      * When set, the hash of the transaction that was presented by the server for closure of the channel.
      * It spends the contractTransaction and is expected to be broadcast to the network by the server.
      * It's supposed to be in the wallet already.
      * </pre>
+     *
+     * <code>optional bytes closeTransactionHash = 7;</code>
+     * @return The closeTransactionHash.
      */
     com.google.protobuf.ByteString getCloseTransactionHash();
 
     /**
      * <code>optional uint32 majorVersion = 9 [default = 1];</code>
+     * @return Whether the majorVersion field is set.
      */
     boolean hasMajorVersion();
     /**
      * <code>optional uint32 majorVersion = 9 [default = 1];</code>
+     * @return The majorVersion.
      */
     int getMajorVersion();
 
     /**
-     * <code>optional uint64 expiryTime = 10;</code>
-     *
      * <pre>
      * The expiry time of the CLTV lock. Only used in protocol v2.
      * </pre>
+     *
+     * <code>optional uint64 expiryTime = 10;</code>
+     * @return Whether the expiryTime field is set.
      */
     boolean hasExpiryTime();
     /**
-     * <code>optional uint64 expiryTime = 10;</code>
-     *
      * <pre>
      * The expiry time of the CLTV lock. Only used in protocol v2.
      * </pre>
+     *
+     * <code>optional uint64 expiryTime = 10;</code>
+     * @return The expiryTime.
      */
     long getExpiryTime();
 
     /**
-     * <code>optional bytes serverKey = 11;</code>
-     *
      * <pre>
      * The server's public key. Only used in protocol v2.
      * </pre>
+     *
+     * <code>optional bytes serverKey = 11;</code>
+     * @return Whether the serverKey field is set.
      */
     boolean hasServerKey();
     /**
-     * <code>optional bytes serverKey = 11;</code>
-     *
      * <pre>
      * The server's public key. Only used in protocol v2.
      * </pre>
+     *
+     * <code>optional bytes serverKey = 11;</code>
+     * @return The serverKey.
      */
     com.google.protobuf.ByteString getServerKey();
   }
   /**
-   * Protobuf type {@code paymentchannels.StoredClientPaymentChannel}
-   *
    * <pre>
    * A client-side payment channel in serialized form, which can be reloaded later if the client restarts and wants to
    * reopen an existing channel
    * </pre>
+   *
+   * Protobuf type {@code paymentchannels.StoredClientPaymentChannel}
    */
-  public static final class StoredClientPaymentChannel extends
-      com.google.protobuf.GeneratedMessage implements
+  public  static final class StoredClientPaymentChannel extends
+      com.google.protobuf.GeneratedMessageLite<
+          StoredClientPaymentChannel, StoredClientPaymentChannel.Builder> implements
       // @@protoc_insertion_point(message_implements:paymentchannels.StoredClientPaymentChannel)
       StoredClientPaymentChannelOrBuilder {
-    // Use StoredClientPaymentChannel.newBuilder() to construct.
-    private StoredClientPaymentChannel(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
+    private StoredClientPaymentChannel() {
+      id_ = com.google.protobuf.ByteString.EMPTY;
+      contractTransaction_ = com.google.protobuf.ByteString.EMPTY;
+      refundTransaction_ = com.google.protobuf.ByteString.EMPTY;
+      myPublicKey_ = com.google.protobuf.ByteString.EMPTY;
+      myKey_ = com.google.protobuf.ByteString.EMPTY;
+      closeTransactionHash_ = com.google.protobuf.ByteString.EMPTY;
+      majorVersion_ = 1;
+      serverKey_ = com.google.protobuf.ByteString.EMPTY;
     }
-    private StoredClientPaymentChannel(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final StoredClientPaymentChannel defaultInstance;
-    public static StoredClientPaymentChannel getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public StoredClientPaymentChannel getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private StoredClientPaymentChannel(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              id_ = input.readBytes();
-              break;
-            }
-            case 18: {
-              bitField0_ |= 0x00000002;
-              contractTransaction_ = input.readBytes();
-              break;
-            }
-            case 26: {
-              bitField0_ |= 0x00000004;
-              refundTransaction_ = input.readBytes();
-              break;
-            }
-            case 34: {
-              bitField0_ |= 0x00000010;
-              myKey_ = input.readBytes();
-              break;
-            }
-            case 40: {
-              bitField0_ |= 0x00000020;
-              valueToMe_ = input.readUInt64();
-              break;
-            }
-            case 48: {
-              bitField0_ |= 0x00000040;
-              refundFees_ = input.readUInt64();
-              break;
-            }
-            case 58: {
-              bitField0_ |= 0x00000080;
-              closeTransactionHash_ = input.readBytes();
-              break;
-            }
-            case 66: {
-              bitField0_ |= 0x00000008;
-              myPublicKey_ = input.readBytes();
-              break;
-            }
-            case 72: {
-              bitField0_ |= 0x00000100;
-              majorVersion_ = input.readUInt32();
-              break;
-            }
-            case 80: {
-              bitField0_ |= 0x00000200;
-              expiryTime_ = input.readUInt64();
-              break;
-            }
-            case 90: {
-              bitField0_ |= 0x00000400;
-              serverKey_ = input.readBytes();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannel_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannel_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.class, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<StoredClientPaymentChannel> PARSER =
-        new com.google.protobuf.AbstractParser<StoredClientPaymentChannel>() {
-      public StoredClientPaymentChannel parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new StoredClientPaymentChannel(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<StoredClientPaymentChannel> getParserForType() {
-      return PARSER;
-    }
-
     private int bitField0_;
     public static final int ID_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString id_;
     /**
      * <code>required bytes id = 1;</code>
+     * @return Whether the id field is set.
      */
+    @java.lang.Override
     public boolean hasId() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <code>required bytes id = 1;</code>
+     * @return The id.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getId() {
+      return id_;
+    }
+    /**
+     * <code>required bytes id = 1;</code>
+     * @param value The id to set.
+     */
+    private void setId(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000001;
+      id_ = value;
     }
     /**
      * <code>required bytes id = 1;</code>
      */
-    public com.google.protobuf.ByteString getId() {
-      return id_;
+    private void clearId() {
+      bitField0_ = (bitField0_ & ~0x00000001);
+      id_ = getDefaultInstance().getId();
     }
 
     public static final int CONTRACTTRANSACTION_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString contractTransaction_;
     /**
      * <code>required bytes contractTransaction = 2;</code>
+     * @return Whether the contractTransaction field is set.
      */
+    @java.lang.Override
     public boolean hasContractTransaction() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <code>required bytes contractTransaction = 2;</code>
+     * @return The contractTransaction.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getContractTransaction() {
+      return contractTransaction_;
+    }
+    /**
+     * <code>required bytes contractTransaction = 2;</code>
+     * @param value The contractTransaction to set.
+     */
+    private void setContractTransaction(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000002;
+      contractTransaction_ = value;
     }
     /**
      * <code>required bytes contractTransaction = 2;</code>
      */
-    public com.google.protobuf.ByteString getContractTransaction() {
-      return contractTransaction_;
+    private void clearContractTransaction() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      contractTransaction_ = getDefaultInstance().getContractTransaction();
     }
 
     public static final int REFUNDTRANSACTION_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString refundTransaction_;
     /**
      * <code>required bytes refundTransaction = 3;</code>
+     * @return Whether the refundTransaction field is set.
      */
+    @java.lang.Override
     public boolean hasRefundTransaction() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /**
+     * <code>required bytes refundTransaction = 3;</code>
+     * @return The refundTransaction.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getRefundTransaction() {
+      return refundTransaction_;
+    }
+    /**
+     * <code>required bytes refundTransaction = 3;</code>
+     * @param value The refundTransaction to set.
+     */
+    private void setRefundTransaction(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000004;
+      refundTransaction_ = value;
     }
     /**
      * <code>required bytes refundTransaction = 3;</code>
      */
-    public com.google.protobuf.ByteString getRefundTransaction() {
-      return refundTransaction_;
+    private void clearRefundTransaction() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      refundTransaction_ = getDefaultInstance().getRefundTransaction();
     }
 
     public static final int MYPUBLICKEY_FIELD_NUMBER = 8;
     private com.google.protobuf.ByteString myPublicKey_;
     /**
      * <code>required bytes myPublicKey = 8;</code>
+     * @return Whether the myPublicKey field is set.
      */
+    @java.lang.Override
     public boolean hasMyPublicKey() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000008) != 0);
+    }
+    /**
+     * <code>required bytes myPublicKey = 8;</code>
+     * @return The myPublicKey.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getMyPublicKey() {
+      return myPublicKey_;
+    }
+    /**
+     * <code>required bytes myPublicKey = 8;</code>
+     * @param value The myPublicKey to set.
+     */
+    private void setMyPublicKey(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000008;
+      myPublicKey_ = value;
     }
     /**
      * <code>required bytes myPublicKey = 8;</code>
      */
-    public com.google.protobuf.ByteString getMyPublicKey() {
-      return myPublicKey_;
+    private void clearMyPublicKey() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      myPublicKey_ = getDefaultInstance().getMyPublicKey();
     }
 
     public static final int MYKEY_FIELD_NUMBER = 4;
     private com.google.protobuf.ByteString myKey_;
     /**
-     * <code>required bytes myKey = 4;</code>
-     *
      * <pre>
      * Deprecated, key is already stored in the wallet, and found using myPublicKey;
      * </pre>
+     *
+     * <code>required bytes myKey = 4;</code>
+     * @return Whether the myKey field is set.
      */
+    @java.lang.Override
     public boolean hasMyKey() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return ((bitField0_ & 0x00000010) != 0);
     }
     /**
-     * <code>required bytes myKey = 4;</code>
-     *
      * <pre>
      * Deprecated, key is already stored in the wallet, and found using myPublicKey;
      * </pre>
+     *
+     * <code>required bytes myKey = 4;</code>
+     * @return The myKey.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getMyKey() {
       return myKey_;
+    }
+    /**
+     * <pre>
+     * Deprecated, key is already stored in the wallet, and found using myPublicKey;
+     * </pre>
+     *
+     * <code>required bytes myKey = 4;</code>
+     * @param value The myKey to set.
+     */
+    private void setMyKey(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000010;
+      myKey_ = value;
+    }
+    /**
+     * <pre>
+     * Deprecated, key is already stored in the wallet, and found using myPublicKey;
+     * </pre>
+     *
+     * <code>required bytes myKey = 4;</code>
+     */
+    private void clearMyKey() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      myKey_ = getDefaultInstance().getMyKey();
     }
 
     public static final int VALUETOME_FIELD_NUMBER = 5;
     private long valueToMe_;
     /**
      * <code>required uint64 valueToMe = 5;</code>
+     * @return Whether the valueToMe field is set.
      */
+    @java.lang.Override
     public boolean hasValueToMe() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return ((bitField0_ & 0x00000020) != 0);
+    }
+    /**
+     * <code>required uint64 valueToMe = 5;</code>
+     * @return The valueToMe.
+     */
+    @java.lang.Override
+    public long getValueToMe() {
+      return valueToMe_;
+    }
+    /**
+     * <code>required uint64 valueToMe = 5;</code>
+     * @param value The valueToMe to set.
+     */
+    private void setValueToMe(long value) {
+      bitField0_ |= 0x00000020;
+      valueToMe_ = value;
     }
     /**
      * <code>required uint64 valueToMe = 5;</code>
      */
-    public long getValueToMe() {
-      return valueToMe_;
+    private void clearValueToMe() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      valueToMe_ = 0L;
     }
 
     public static final int REFUNDFEES_FIELD_NUMBER = 6;
     private long refundFees_;
     /**
-     * <code>required uint64 refundFees = 6;</code>
-     *
      * <pre>
      * Fees required to refund the transaction.
      * </pre>
+     *
+     * <code>required uint64 refundFees = 6;</code>
+     * @return Whether the refundFees field is set.
      */
+    @java.lang.Override
     public boolean hasRefundFees() {
-      return ((bitField0_ & 0x00000040) == 0x00000040);
+      return ((bitField0_ & 0x00000040) != 0);
     }
     /**
-     * <code>required uint64 refundFees = 6;</code>
-     *
      * <pre>
      * Fees required to refund the transaction.
      * </pre>
+     *
+     * <code>required uint64 refundFees = 6;</code>
+     * @return The refundFees.
      */
+    @java.lang.Override
     public long getRefundFees() {
       return refundFees_;
+    }
+    /**
+     * <pre>
+     * Fees required to refund the transaction.
+     * </pre>
+     *
+     * <code>required uint64 refundFees = 6;</code>
+     * @param value The refundFees to set.
+     */
+    private void setRefundFees(long value) {
+      bitField0_ |= 0x00000040;
+      refundFees_ = value;
+    }
+    /**
+     * <pre>
+     * Fees required to refund the transaction.
+     * </pre>
+     *
+     * <code>required uint64 refundFees = 6;</code>
+     */
+    private void clearRefundFees() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      refundFees_ = 0L;
     }
 
     public static final int CLOSETRANSACTIONHASH_FIELD_NUMBER = 7;
     private com.google.protobuf.ByteString closeTransactionHash_;
     /**
-     * <code>optional bytes closeTransactionHash = 7;</code>
-     *
      * <pre>
      * When set, the hash of the transaction that was presented by the server for closure of the channel.
      * It spends the contractTransaction and is expected to be broadcast to the network by the server.
      * It's supposed to be in the wallet already.
      * </pre>
+     *
+     * <code>optional bytes closeTransactionHash = 7;</code>
+     * @return Whether the closeTransactionHash field is set.
      */
+    @java.lang.Override
     public boolean hasCloseTransactionHash() {
-      return ((bitField0_ & 0x00000080) == 0x00000080);
+      return ((bitField0_ & 0x00000080) != 0);
     }
     /**
-     * <code>optional bytes closeTransactionHash = 7;</code>
-     *
      * <pre>
      * When set, the hash of the transaction that was presented by the server for closure of the channel.
      * It spends the contractTransaction and is expected to be broadcast to the network by the server.
      * It's supposed to be in the wallet already.
      * </pre>
+     *
+     * <code>optional bytes closeTransactionHash = 7;</code>
+     * @return The closeTransactionHash.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getCloseTransactionHash() {
       return closeTransactionHash_;
+    }
+    /**
+     * <pre>
+     * When set, the hash of the transaction that was presented by the server for closure of the channel.
+     * It spends the contractTransaction and is expected to be broadcast to the network by the server.
+     * It's supposed to be in the wallet already.
+     * </pre>
+     *
+     * <code>optional bytes closeTransactionHash = 7;</code>
+     * @param value The closeTransactionHash to set.
+     */
+    private void setCloseTransactionHash(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000080;
+      closeTransactionHash_ = value;
+    }
+    /**
+     * <pre>
+     * When set, the hash of the transaction that was presented by the server for closure of the channel.
+     * It spends the contractTransaction and is expected to be broadcast to the network by the server.
+     * It's supposed to be in the wallet already.
+     * </pre>
+     *
+     * <code>optional bytes closeTransactionHash = 7;</code>
+     */
+    private void clearCloseTransactionHash() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      closeTransactionHash_ = getDefaultInstance().getCloseTransactionHash();
     }
 
     public static final int MAJORVERSION_FIELD_NUMBER = 9;
     private int majorVersion_;
     /**
      * <code>optional uint32 majorVersion = 9 [default = 1];</code>
+     * @return Whether the majorVersion field is set.
      */
+    @java.lang.Override
     public boolean hasMajorVersion() {
-      return ((bitField0_ & 0x00000100) == 0x00000100);
+      return ((bitField0_ & 0x00000100) != 0);
+    }
+    /**
+     * <code>optional uint32 majorVersion = 9 [default = 1];</code>
+     * @return The majorVersion.
+     */
+    @java.lang.Override
+    public int getMajorVersion() {
+      return majorVersion_;
+    }
+    /**
+     * <code>optional uint32 majorVersion = 9 [default = 1];</code>
+     * @param value The majorVersion to set.
+     */
+    private void setMajorVersion(int value) {
+      bitField0_ |= 0x00000100;
+      majorVersion_ = value;
     }
     /**
      * <code>optional uint32 majorVersion = 9 [default = 1];</code>
      */
-    public int getMajorVersion() {
-      return majorVersion_;
+    private void clearMajorVersion() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      majorVersion_ = 1;
     }
 
     public static final int EXPIRYTIME_FIELD_NUMBER = 10;
     private long expiryTime_;
     /**
-     * <code>optional uint64 expiryTime = 10;</code>
-     *
      * <pre>
      * The expiry time of the CLTV lock. Only used in protocol v2.
      * </pre>
+     *
+     * <code>optional uint64 expiryTime = 10;</code>
+     * @return Whether the expiryTime field is set.
      */
+    @java.lang.Override
     public boolean hasExpiryTime() {
-      return ((bitField0_ & 0x00000200) == 0x00000200);
+      return ((bitField0_ & 0x00000200) != 0);
     }
     /**
-     * <code>optional uint64 expiryTime = 10;</code>
-     *
      * <pre>
      * The expiry time of the CLTV lock. Only used in protocol v2.
      * </pre>
+     *
+     * <code>optional uint64 expiryTime = 10;</code>
+     * @return The expiryTime.
      */
+    @java.lang.Override
     public long getExpiryTime() {
       return expiryTime_;
+    }
+    /**
+     * <pre>
+     * The expiry time of the CLTV lock. Only used in protocol v2.
+     * </pre>
+     *
+     * <code>optional uint64 expiryTime = 10;</code>
+     * @param value The expiryTime to set.
+     */
+    private void setExpiryTime(long value) {
+      bitField0_ |= 0x00000200;
+      expiryTime_ = value;
+    }
+    /**
+     * <pre>
+     * The expiry time of the CLTV lock. Only used in protocol v2.
+     * </pre>
+     *
+     * <code>optional uint64 expiryTime = 10;</code>
+     */
+    private void clearExpiryTime() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      expiryTime_ = 0L;
     }
 
     public static final int SERVERKEY_FIELD_NUMBER = 11;
     private com.google.protobuf.ByteString serverKey_;
     /**
-     * <code>optional bytes serverKey = 11;</code>
-     *
      * <pre>
      * The server's public key. Only used in protocol v2.
      * </pre>
+     *
+     * <code>optional bytes serverKey = 11;</code>
+     * @return Whether the serverKey field is set.
      */
+    @java.lang.Override
     public boolean hasServerKey() {
-      return ((bitField0_ & 0x00000400) == 0x00000400);
+      return ((bitField0_ & 0x00000400) != 0);
     }
     /**
-     * <code>optional bytes serverKey = 11;</code>
-     *
      * <pre>
      * The server's public key. Only used in protocol v2.
      * </pre>
+     *
+     * <code>optional bytes serverKey = 11;</code>
+     * @return The serverKey.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getServerKey() {
       return serverKey_;
     }
-
-    private void initFields() {
-      id_ = com.google.protobuf.ByteString.EMPTY;
-      contractTransaction_ = com.google.protobuf.ByteString.EMPTY;
-      refundTransaction_ = com.google.protobuf.ByteString.EMPTY;
-      myPublicKey_ = com.google.protobuf.ByteString.EMPTY;
-      myKey_ = com.google.protobuf.ByteString.EMPTY;
-      valueToMe_ = 0L;
-      refundFees_ = 0L;
-      closeTransactionHash_ = com.google.protobuf.ByteString.EMPTY;
-      majorVersion_ = 1;
-      expiryTime_ = 0L;
-      serverKey_ = com.google.protobuf.ByteString.EMPTY;
+    /**
+     * <pre>
+     * The server's public key. Only used in protocol v2.
+     * </pre>
+     *
+     * <code>optional bytes serverKey = 11;</code>
+     * @param value The serverKey to set.
+     */
+    private void setServerKey(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000400;
+      serverKey_ = value;
     }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
-
-      if (!hasId()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasContractTransaction()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasRefundTransaction()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMyPublicKey()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMyKey()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasValueToMe()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasRefundFees()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(1, id_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBytes(2, contractTransaction_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeBytes(3, refundTransaction_);
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeBytes(4, myKey_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeUInt64(5, valueToMe_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeUInt64(6, refundFees_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        output.writeBytes(7, closeTransactionHash_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeBytes(8, myPublicKey_);
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeUInt32(9, majorVersion_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        output.writeUInt64(10, expiryTime_);
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        output.writeBytes(11, serverKey_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, id_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, contractTransaction_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, refundTransaction_);
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(4, myKey_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(5, valueToMe_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(6, refundFees_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(7, closeTransactionHash_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(8, myPublicKey_);
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(9, majorVersion_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(10, expiryTime_);
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(11, serverKey_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
+    /**
+     * <pre>
+     * The server's public key. Only used in protocol v2.
+     * </pre>
+     *
+     * <code>optional bytes serverKey = 11;</code>
+     */
+    private void clearServerKey() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      serverKey_ = getDefaultInstance().getServerKey();
     }
 
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
 
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
     public static Builder newBuilder(org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel prototype) {
-      return newBuilder().mergeFrom(prototype);
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
     }
-    public Builder toBuilder() { return newBuilder(this); }
 
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
     /**
-     * Protobuf type {@code paymentchannels.StoredClientPaymentChannel}
-     *
      * <pre>
      * A client-side payment channel in serialized form, which can be reloaded later if the client restarts and wants to
      * reopen an existing channel
      * </pre>
+     *
+     * Protobuf type {@code paymentchannels.StoredClientPaymentChannel}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel, Builder> implements
         // @@protoc_insertion_point(builder_implements:paymentchannels.StoredClientPaymentChannel)
         org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannelOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannel_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannel_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.class, org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.Builder.class);
-      }
-
       // Construct using org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+        super(DEFAULT_INSTANCE);
       }
 
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
 
-      public Builder clear() {
-        super.clear();
-        id_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        contractTransaction_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        refundTransaction_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000004);
-        myPublicKey_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000008);
-        myKey_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000010);
-        valueToMe_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000020);
-        refundFees_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000040);
-        closeTransactionHash_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000080);
-        majorVersion_ = 1;
-        bitField0_ = (bitField0_ & ~0x00000100);
-        expiryTime_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000200);
-        serverKey_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000400);
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.bitcoinj.protocols.channels.ClientState.internal_static_paymentchannels_StoredClientPaymentChannel_descriptor;
-      }
-
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel getDefaultInstanceForType() {
-        return org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.getDefaultInstance();
-      }
-
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel build() {
-        org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel buildPartial() {
-        org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel result = new org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.id_ = id_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.contractTransaction_ = contractTransaction_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.refundTransaction_ = refundTransaction_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
-        }
-        result.myPublicKey_ = myPublicKey_;
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
-          to_bitField0_ |= 0x00000010;
-        }
-        result.myKey_ = myKey_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000020;
-        }
-        result.valueToMe_ = valueToMe_;
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
-          to_bitField0_ |= 0x00000040;
-        }
-        result.refundFees_ = refundFees_;
-        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
-          to_bitField0_ |= 0x00000080;
-        }
-        result.closeTransactionHash_ = closeTransactionHash_;
-        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
-          to_bitField0_ |= 0x00000100;
-        }
-        result.majorVersion_ = majorVersion_;
-        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
-          to_bitField0_ |= 0x00000200;
-        }
-        result.expiryTime_ = expiryTime_;
-        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
-          to_bitField0_ |= 0x00000400;
-        }
-        result.serverKey_ = serverKey_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel) {
-          return mergeFrom((org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel other) {
-        if (other == org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.getDefaultInstance()) return this;
-        if (other.hasId()) {
-          setId(other.getId());
-        }
-        if (other.hasContractTransaction()) {
-          setContractTransaction(other.getContractTransaction());
-        }
-        if (other.hasRefundTransaction()) {
-          setRefundTransaction(other.getRefundTransaction());
-        }
-        if (other.hasMyPublicKey()) {
-          setMyPublicKey(other.getMyPublicKey());
-        }
-        if (other.hasMyKey()) {
-          setMyKey(other.getMyKey());
-        }
-        if (other.hasValueToMe()) {
-          setValueToMe(other.getValueToMe());
-        }
-        if (other.hasRefundFees()) {
-          setRefundFees(other.getRefundFees());
-        }
-        if (other.hasCloseTransactionHash()) {
-          setCloseTransactionHash(other.getCloseTransactionHash());
-        }
-        if (other.hasMajorVersion()) {
-          setMajorVersion(other.getMajorVersion());
-        }
-        if (other.hasExpiryTime()) {
-          setExpiryTime(other.getExpiryTime());
-        }
-        if (other.hasServerKey()) {
-          setServerKey(other.getServerKey());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        if (!hasId()) {
-          
-          return false;
-        }
-        if (!hasContractTransaction()) {
-          
-          return false;
-        }
-        if (!hasRefundTransaction()) {
-          
-          return false;
-        }
-        if (!hasMyPublicKey()) {
-          
-          return false;
-        }
-        if (!hasMyKey()) {
-          
-          return false;
-        }
-        if (!hasValueToMe()) {
-          
-          return false;
-        }
-        if (!hasRefundFees()) {
-          
-          return false;
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      private com.google.protobuf.ByteString id_ = com.google.protobuf.ByteString.EMPTY;
       /**
        * <code>required bytes id = 1;</code>
+       * @return Whether the id field is set.
        */
+      @java.lang.Override
       public boolean hasId() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return instance.hasId();
       }
       /**
        * <code>required bytes id = 1;</code>
+       * @return The id.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getId() {
-        return id_;
+        return instance.getId();
       }
       /**
        * <code>required bytes id = 1;</code>
+       * @param value The id to set.
+       * @return This builder for chaining.
        */
       public Builder setId(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-        id_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setId(value);
         return this;
       }
       /**
        * <code>required bytes id = 1;</code>
+       * @return This builder for chaining.
        */
       public Builder clearId() {
-        bitField0_ = (bitField0_ & ~0x00000001);
-        id_ = getDefaultInstance().getId();
-        onChanged();
+        copyOnWrite();
+        instance.clearId();
         return this;
       }
 
-      private com.google.protobuf.ByteString contractTransaction_ = com.google.protobuf.ByteString.EMPTY;
       /**
        * <code>required bytes contractTransaction = 2;</code>
+       * @return Whether the contractTransaction field is set.
        */
+      @java.lang.Override
       public boolean hasContractTransaction() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return instance.hasContractTransaction();
       }
       /**
        * <code>required bytes contractTransaction = 2;</code>
+       * @return The contractTransaction.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getContractTransaction() {
-        return contractTransaction_;
+        return instance.getContractTransaction();
       }
       /**
        * <code>required bytes contractTransaction = 2;</code>
+       * @param value The contractTransaction to set.
+       * @return This builder for chaining.
        */
       public Builder setContractTransaction(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
-        contractTransaction_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setContractTransaction(value);
         return this;
       }
       /**
        * <code>required bytes contractTransaction = 2;</code>
+       * @return This builder for chaining.
        */
       public Builder clearContractTransaction() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        contractTransaction_ = getDefaultInstance().getContractTransaction();
-        onChanged();
+        copyOnWrite();
+        instance.clearContractTransaction();
         return this;
       }
 
-      private com.google.protobuf.ByteString refundTransaction_ = com.google.protobuf.ByteString.EMPTY;
       /**
        * <code>required bytes refundTransaction = 3;</code>
+       * @return Whether the refundTransaction field is set.
        */
+      @java.lang.Override
       public boolean hasRefundTransaction() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return instance.hasRefundTransaction();
       }
       /**
        * <code>required bytes refundTransaction = 3;</code>
+       * @return The refundTransaction.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getRefundTransaction() {
-        return refundTransaction_;
+        return instance.getRefundTransaction();
       }
       /**
        * <code>required bytes refundTransaction = 3;</code>
+       * @param value The refundTransaction to set.
+       * @return This builder for chaining.
        */
       public Builder setRefundTransaction(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
-        refundTransaction_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setRefundTransaction(value);
         return this;
       }
       /**
        * <code>required bytes refundTransaction = 3;</code>
+       * @return This builder for chaining.
        */
       public Builder clearRefundTransaction() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        refundTransaction_ = getDefaultInstance().getRefundTransaction();
-        onChanged();
+        copyOnWrite();
+        instance.clearRefundTransaction();
         return this;
       }
 
-      private com.google.protobuf.ByteString myPublicKey_ = com.google.protobuf.ByteString.EMPTY;
       /**
        * <code>required bytes myPublicKey = 8;</code>
+       * @return Whether the myPublicKey field is set.
        */
+      @java.lang.Override
       public boolean hasMyPublicKey() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return instance.hasMyPublicKey();
       }
       /**
        * <code>required bytes myPublicKey = 8;</code>
+       * @return The myPublicKey.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getMyPublicKey() {
-        return myPublicKey_;
+        return instance.getMyPublicKey();
       }
       /**
        * <code>required bytes myPublicKey = 8;</code>
+       * @param value The myPublicKey to set.
+       * @return This builder for chaining.
        */
       public Builder setMyPublicKey(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
-        myPublicKey_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setMyPublicKey(value);
         return this;
       }
       /**
        * <code>required bytes myPublicKey = 8;</code>
+       * @return This builder for chaining.
        */
       public Builder clearMyPublicKey() {
-        bitField0_ = (bitField0_ & ~0x00000008);
-        myPublicKey_ = getDefaultInstance().getMyPublicKey();
-        onChanged();
+        copyOnWrite();
+        instance.clearMyPublicKey();
         return this;
       }
 
-      private com.google.protobuf.ByteString myKey_ = com.google.protobuf.ByteString.EMPTY;
       /**
-       * <code>required bytes myKey = 4;</code>
-       *
        * <pre>
        * Deprecated, key is already stored in the wallet, and found using myPublicKey;
        * </pre>
+       *
+       * <code>required bytes myKey = 4;</code>
+       * @return Whether the myKey field is set.
        */
+      @java.lang.Override
       public boolean hasMyKey() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return instance.hasMyKey();
       }
       /**
-       * <code>required bytes myKey = 4;</code>
-       *
        * <pre>
        * Deprecated, key is already stored in the wallet, and found using myPublicKey;
        * </pre>
+       *
+       * <code>required bytes myKey = 4;</code>
+       * @return The myKey.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getMyKey() {
-        return myKey_;
+        return instance.getMyKey();
       }
       /**
-       * <code>required bytes myKey = 4;</code>
-       *
        * <pre>
        * Deprecated, key is already stored in the wallet, and found using myPublicKey;
        * </pre>
+       *
+       * <code>required bytes myKey = 4;</code>
+       * @param value The myKey to set.
+       * @return This builder for chaining.
        */
       public Builder setMyKey(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000010;
-        myKey_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setMyKey(value);
         return this;
       }
       /**
-       * <code>required bytes myKey = 4;</code>
-       *
        * <pre>
        * Deprecated, key is already stored in the wallet, and found using myPublicKey;
        * </pre>
+       *
+       * <code>required bytes myKey = 4;</code>
+       * @return This builder for chaining.
        */
       public Builder clearMyKey() {
-        bitField0_ = (bitField0_ & ~0x00000010);
-        myKey_ = getDefaultInstance().getMyKey();
-        onChanged();
+        copyOnWrite();
+        instance.clearMyKey();
         return this;
       }
 
-      private long valueToMe_ ;
       /**
        * <code>required uint64 valueToMe = 5;</code>
+       * @return Whether the valueToMe field is set.
        */
+      @java.lang.Override
       public boolean hasValueToMe() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return instance.hasValueToMe();
       }
       /**
        * <code>required uint64 valueToMe = 5;</code>
+       * @return The valueToMe.
        */
+      @java.lang.Override
       public long getValueToMe() {
-        return valueToMe_;
+        return instance.getValueToMe();
       }
       /**
        * <code>required uint64 valueToMe = 5;</code>
+       * @param value The valueToMe to set.
+       * @return This builder for chaining.
        */
       public Builder setValueToMe(long value) {
-        bitField0_ |= 0x00000020;
-        valueToMe_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setValueToMe(value);
         return this;
       }
       /**
        * <code>required uint64 valueToMe = 5;</code>
+       * @return This builder for chaining.
        */
       public Builder clearValueToMe() {
-        bitField0_ = (bitField0_ & ~0x00000020);
-        valueToMe_ = 0L;
-        onChanged();
+        copyOnWrite();
+        instance.clearValueToMe();
         return this;
       }
 
-      private long refundFees_ ;
       /**
-       * <code>required uint64 refundFees = 6;</code>
-       *
        * <pre>
        * Fees required to refund the transaction.
        * </pre>
+       *
+       * <code>required uint64 refundFees = 6;</code>
+       * @return Whether the refundFees field is set.
        */
+      @java.lang.Override
       public boolean hasRefundFees() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
+        return instance.hasRefundFees();
       }
       /**
-       * <code>required uint64 refundFees = 6;</code>
-       *
        * <pre>
        * Fees required to refund the transaction.
        * </pre>
+       *
+       * <code>required uint64 refundFees = 6;</code>
+       * @return The refundFees.
        */
+      @java.lang.Override
       public long getRefundFees() {
-        return refundFees_;
+        return instance.getRefundFees();
       }
       /**
-       * <code>required uint64 refundFees = 6;</code>
-       *
        * <pre>
        * Fees required to refund the transaction.
        * </pre>
+       *
+       * <code>required uint64 refundFees = 6;</code>
+       * @param value The refundFees to set.
+       * @return This builder for chaining.
        */
       public Builder setRefundFees(long value) {
-        bitField0_ |= 0x00000040;
-        refundFees_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setRefundFees(value);
         return this;
       }
       /**
-       * <code>required uint64 refundFees = 6;</code>
-       *
        * <pre>
        * Fees required to refund the transaction.
        * </pre>
+       *
+       * <code>required uint64 refundFees = 6;</code>
+       * @return This builder for chaining.
        */
       public Builder clearRefundFees() {
-        bitField0_ = (bitField0_ & ~0x00000040);
-        refundFees_ = 0L;
-        onChanged();
+        copyOnWrite();
+        instance.clearRefundFees();
         return this;
       }
 
-      private com.google.protobuf.ByteString closeTransactionHash_ = com.google.protobuf.ByteString.EMPTY;
       /**
-       * <code>optional bytes closeTransactionHash = 7;</code>
-       *
        * <pre>
        * When set, the hash of the transaction that was presented by the server for closure of the channel.
        * It spends the contractTransaction and is expected to be broadcast to the network by the server.
        * It's supposed to be in the wallet already.
        * </pre>
+       *
+       * <code>optional bytes closeTransactionHash = 7;</code>
+       * @return Whether the closeTransactionHash field is set.
        */
+      @java.lang.Override
       public boolean hasCloseTransactionHash() {
-        return ((bitField0_ & 0x00000080) == 0x00000080);
+        return instance.hasCloseTransactionHash();
       }
       /**
-       * <code>optional bytes closeTransactionHash = 7;</code>
-       *
        * <pre>
        * When set, the hash of the transaction that was presented by the server for closure of the channel.
        * It spends the contractTransaction and is expected to be broadcast to the network by the server.
        * It's supposed to be in the wallet already.
        * </pre>
+       *
+       * <code>optional bytes closeTransactionHash = 7;</code>
+       * @return The closeTransactionHash.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getCloseTransactionHash() {
-        return closeTransactionHash_;
+        return instance.getCloseTransactionHash();
       }
       /**
-       * <code>optional bytes closeTransactionHash = 7;</code>
-       *
        * <pre>
        * When set, the hash of the transaction that was presented by the server for closure of the channel.
        * It spends the contractTransaction and is expected to be broadcast to the network by the server.
        * It's supposed to be in the wallet already.
        * </pre>
+       *
+       * <code>optional bytes closeTransactionHash = 7;</code>
+       * @param value The closeTransactionHash to set.
+       * @return This builder for chaining.
        */
       public Builder setCloseTransactionHash(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000080;
-        closeTransactionHash_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setCloseTransactionHash(value);
         return this;
       }
       /**
-       * <code>optional bytes closeTransactionHash = 7;</code>
-       *
        * <pre>
        * When set, the hash of the transaction that was presented by the server for closure of the channel.
        * It spends the contractTransaction and is expected to be broadcast to the network by the server.
        * It's supposed to be in the wallet already.
        * </pre>
+       *
+       * <code>optional bytes closeTransactionHash = 7;</code>
+       * @return This builder for chaining.
        */
       public Builder clearCloseTransactionHash() {
-        bitField0_ = (bitField0_ & ~0x00000080);
-        closeTransactionHash_ = getDefaultInstance().getCloseTransactionHash();
-        onChanged();
+        copyOnWrite();
+        instance.clearCloseTransactionHash();
         return this;
       }
 
-      private int majorVersion_ = 1;
       /**
        * <code>optional uint32 majorVersion = 9 [default = 1];</code>
+       * @return Whether the majorVersion field is set.
        */
+      @java.lang.Override
       public boolean hasMajorVersion() {
-        return ((bitField0_ & 0x00000100) == 0x00000100);
+        return instance.hasMajorVersion();
       }
       /**
        * <code>optional uint32 majorVersion = 9 [default = 1];</code>
+       * @return The majorVersion.
        */
+      @java.lang.Override
       public int getMajorVersion() {
-        return majorVersion_;
+        return instance.getMajorVersion();
       }
       /**
        * <code>optional uint32 majorVersion = 9 [default = 1];</code>
+       * @param value The majorVersion to set.
+       * @return This builder for chaining.
        */
       public Builder setMajorVersion(int value) {
-        bitField0_ |= 0x00000100;
-        majorVersion_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setMajorVersion(value);
         return this;
       }
       /**
        * <code>optional uint32 majorVersion = 9 [default = 1];</code>
+       * @return This builder for chaining.
        */
       public Builder clearMajorVersion() {
-        bitField0_ = (bitField0_ & ~0x00000100);
-        majorVersion_ = 1;
-        onChanged();
+        copyOnWrite();
+        instance.clearMajorVersion();
         return this;
       }
 
-      private long expiryTime_ ;
       /**
-       * <code>optional uint64 expiryTime = 10;</code>
-       *
        * <pre>
        * The expiry time of the CLTV lock. Only used in protocol v2.
        * </pre>
+       *
+       * <code>optional uint64 expiryTime = 10;</code>
+       * @return Whether the expiryTime field is set.
        */
+      @java.lang.Override
       public boolean hasExpiryTime() {
-        return ((bitField0_ & 0x00000200) == 0x00000200);
+        return instance.hasExpiryTime();
       }
       /**
-       * <code>optional uint64 expiryTime = 10;</code>
-       *
        * <pre>
        * The expiry time of the CLTV lock. Only used in protocol v2.
        * </pre>
+       *
+       * <code>optional uint64 expiryTime = 10;</code>
+       * @return The expiryTime.
        */
+      @java.lang.Override
       public long getExpiryTime() {
-        return expiryTime_;
+        return instance.getExpiryTime();
       }
       /**
-       * <code>optional uint64 expiryTime = 10;</code>
-       *
        * <pre>
        * The expiry time of the CLTV lock. Only used in protocol v2.
        * </pre>
+       *
+       * <code>optional uint64 expiryTime = 10;</code>
+       * @param value The expiryTime to set.
+       * @return This builder for chaining.
        */
       public Builder setExpiryTime(long value) {
-        bitField0_ |= 0x00000200;
-        expiryTime_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setExpiryTime(value);
         return this;
       }
       /**
-       * <code>optional uint64 expiryTime = 10;</code>
-       *
        * <pre>
        * The expiry time of the CLTV lock. Only used in protocol v2.
        * </pre>
+       *
+       * <code>optional uint64 expiryTime = 10;</code>
+       * @return This builder for chaining.
        */
       public Builder clearExpiryTime() {
-        bitField0_ = (bitField0_ & ~0x00000200);
-        expiryTime_ = 0L;
-        onChanged();
+        copyOnWrite();
+        instance.clearExpiryTime();
         return this;
       }
 
-      private com.google.protobuf.ByteString serverKey_ = com.google.protobuf.ByteString.EMPTY;
       /**
-       * <code>optional bytes serverKey = 11;</code>
-       *
        * <pre>
        * The server's public key. Only used in protocol v2.
        * </pre>
+       *
+       * <code>optional bytes serverKey = 11;</code>
+       * @return Whether the serverKey field is set.
        */
+      @java.lang.Override
       public boolean hasServerKey() {
-        return ((bitField0_ & 0x00000400) == 0x00000400);
+        return instance.hasServerKey();
       }
       /**
-       * <code>optional bytes serverKey = 11;</code>
-       *
        * <pre>
        * The server's public key. Only used in protocol v2.
        * </pre>
+       *
+       * <code>optional bytes serverKey = 11;</code>
+       * @return The serverKey.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getServerKey() {
-        return serverKey_;
+        return instance.getServerKey();
       }
       /**
-       * <code>optional bytes serverKey = 11;</code>
-       *
        * <pre>
        * The server's public key. Only used in protocol v2.
        * </pre>
+       *
+       * <code>optional bytes serverKey = 11;</code>
+       * @param value The serverKey to set.
+       * @return This builder for chaining.
        */
       public Builder setServerKey(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000400;
-        serverKey_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setServerKey(value);
         return this;
       }
       /**
-       * <code>optional bytes serverKey = 11;</code>
-       *
        * <pre>
        * The server's public key. Only used in protocol v2.
        * </pre>
+       *
+       * <code>optional bytes serverKey = 11;</code>
+       * @return This builder for chaining.
        */
       public Builder clearServerKey() {
-        bitField0_ = (bitField0_ & ~0x00000400);
-        serverKey_ = getDefaultInstance().getServerKey();
-        onChanged();
+        copyOnWrite();
+        instance.clearServerKey();
         return this;
       }
 
       // @@protoc_insertion_point(builder_scope:paymentchannels.StoredClientPaymentChannel)
     }
-
-    static {
-      defaultInstance = new StoredClientPaymentChannel(true);
-      defaultInstance.initFields();
+    private byte memoizedIsInitialized = 2;
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+        com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+        java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+            java.lang.Object[] objects = new java.lang.Object[] {
+              "bitField0_",
+              "id_",
+              "contractTransaction_",
+              "refundTransaction_",
+              "myKey_",
+              "valueToMe_",
+              "refundFees_",
+              "closeTransactionHash_",
+              "myPublicKey_",
+              "majorVersion_",
+              "expiryTime_",
+              "serverKey_",
+            };
+            java.lang.String info =
+                "\u0001\u000b\u0000\u0001\u0001\u000b\u000b\u0000\u0000\u0007\u0001\u050a\u0000\u0002" +
+                "\u050a\u0001\u0003\u050a\u0002\u0004\u050a\u0004\u0005\u0503\u0005\u0006\u0503\u0006" +
+                "\u0007\n\u0007\b\u050a\u0003\t\u000b\b\n\u0003\t\u000b\n\n";
+            return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel> parser = PARSER;
+          if (parser == null) {
+            synchronized (org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                    new DefaultInstanceBasedParser<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel>(
+                        DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+      }
+      case GET_MEMOIZED_IS_INITIALIZED: {
+        return memoizedIsInitialized;
+      }
+      case SET_MEMOIZED_IS_INITIALIZED: {
+        memoizedIsInitialized = (byte) (arg0 == null ? 0 : 1);
+        return null;
+      }
+      }
+      throw new UnsupportedOperationException();
     }
 
+
     // @@protoc_insertion_point(class_scope:paymentchannels.StoredClientPaymentChannel)
+    private static final org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel DEFAULT_INSTANCE;
+    static {
+      StoredClientPaymentChannel defaultInstance = new StoredClientPaymentChannel();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+        StoredClientPaymentChannel.class, defaultInstance);
+    }
+
+    public static org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<StoredClientPaymentChannel> PARSER;
+
+    public static com.google.protobuf.Parser<StoredClientPaymentChannel> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
   }
 
-  private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_paymentchannels_StoredClientPaymentChannels_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_paymentchannels_StoredClientPaymentChannels_fieldAccessorTable;
-  private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_paymentchannels_StoredClientPaymentChannel_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_paymentchannels_StoredClientPaymentChannel_fieldAccessorTable;
 
-  public static com.google.protobuf.Descriptors.FileDescriptor
-      getDescriptor() {
-    return descriptor;
-  }
-  private static com.google.protobuf.Descriptors.FileDescriptor
-      descriptor;
   static {
-    java.lang.String[] descriptorData = {
-      "\n storedclientpaymentchannel.proto\022\017paym" +
-      "entchannels\"\\\n\033StoredClientPaymentChanne" +
-      "ls\022=\n\010channels\030\001 \003(\0132+.paymentchannels.S" +
-      "toredClientPaymentChannel\"\211\002\n\032StoredClie" +
-      "ntPaymentChannel\022\n\n\002id\030\001 \002(\014\022\033\n\023contract" +
-      "Transaction\030\002 \002(\014\022\031\n\021refundTransaction\030\003" +
-      " \002(\014\022\023\n\013myPublicKey\030\010 \002(\014\022\r\n\005myKey\030\004 \002(\014" +
-      "\022\021\n\tvalueToMe\030\005 \002(\004\022\022\n\nrefundFees\030\006 \002(\004\022" +
-      "\034\n\024closeTransactionHash\030\007 \001(\014\022\027\n\014majorVe" +
-      "rsion\030\t \001(\r:\0011\022\022\n\nexpiryTime\030\n \001(\004\022\021\n\tse",
-      "rverKey\030\013 \001(\014B.\n\037org.bitcoinj.protocols." +
-      "channelsB\013ClientState"
-    };
-    com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
-        new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
-          public com.google.protobuf.ExtensionRegistry assignDescriptors(
-              com.google.protobuf.Descriptors.FileDescriptor root) {
-            descriptor = root;
-            return null;
-          }
-        };
-    com.google.protobuf.Descriptors.FileDescriptor
-      .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[] {
-        }, assigner);
-    internal_static_paymentchannels_StoredClientPaymentChannels_descriptor =
-      getDescriptor().getMessageTypes().get(0);
-    internal_static_paymentchannels_StoredClientPaymentChannels_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-        internal_static_paymentchannels_StoredClientPaymentChannels_descriptor,
-        new java.lang.String[] { "Channels", });
-    internal_static_paymentchannels_StoredClientPaymentChannel_descriptor =
-      getDescriptor().getMessageTypes().get(1);
-    internal_static_paymentchannels_StoredClientPaymentChannel_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-        internal_static_paymentchannels_StoredClientPaymentChannel_descriptor,
-        new java.lang.String[] { "Id", "ContractTransaction", "RefundTransaction", "MyPublicKey", "MyKey", "ValueToMe", "RefundFees", "CloseTransactionHash", "MajorVersion", "ExpiryTime", "ServerKey", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

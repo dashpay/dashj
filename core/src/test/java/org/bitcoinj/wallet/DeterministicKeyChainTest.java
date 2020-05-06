@@ -665,6 +665,12 @@ public class DeterministicKeyChainTest {
             sb.append(key.toString());
             sb.append("\n");
         }
+        int hashTag = sb.indexOf("# org");
+        while(hashTag != -1) {
+            int endOfLine = sb.indexOf("\n", hashTag);
+            sb.replace(hashTag, endOfLine+1, "\n");
+            hashTag = sb.indexOf("# org");
+        }
         return sb.toString().trim();
     }
 

@@ -76,7 +76,7 @@
                                         </path>
                                         <pathconvert pathsep=" " property="proto.files" refid="proto.path"/>
                                         <exec executable="protoc" failonerror="true">
-                                            <arg value="--java_out=${project.basedir}/src/main/java"/>
+                                            <arg value="--java_out=lite:${project.basedir}/src/main/java"/>
                                             <arg value="-I${project.basedir}/src/main/proto"/>
                                             <arg line="${proto.files}"/>
                                         </exec>
@@ -401,8 +401,8 @@
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>3.6.1</version>
+            <artifactId>protobuf-javalite</artifactId>
+            <version>3.11.4</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
