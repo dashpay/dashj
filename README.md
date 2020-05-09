@@ -5,9 +5,9 @@
 [![License](https://img.shields.io/github/license/dashevo/dashj)](https://github.com/dashevo/dashj/blob/master/COPYING)
 [![Github Build Status](https://github.com/dashpay/dashj/workflows/Java%20CI/badge.svg)](https://github.com/dashpay/dashj/actions)
 
-| Branch | Tests                                                                                                                                         | Coverage | Linting |
-|--------|-----------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
-| master | [![Tests](https://github.com/dashevo/dashj/workflows/Java%20CI/badge.svg?branch=master)](https://github.com/dashevo/dashj/actions) | N/A      | N/A     |
+| Branch | Tests                                                                                                                              | Coverage | Linting |
+|--------|------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
+| master | [![Tests](https://github.com/dashpay/dashj/workflows/Java%20CI/badge.svg?branch=master)](https://github.com/dashpay/dashj/actions) | N/A      | N/A     |
 
 ### Welcome to dashj
 
