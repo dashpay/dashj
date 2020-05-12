@@ -71,9 +71,8 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
         return isDifficultyTransitionPoint(height);
     }
 
-    protected boolean isDifficultyTransitionPoint(int height) {
-        return height >= powKGWHeight || height >= powDGWHeight ? true :
-                ((height + 1) % this.getInterval()) == 0;
+    protected boolean isDifficultyTransitionPoint(final int previousHeight) {
+        return previousHeight >= powKGWHeight || previousHeight >= powDGWHeight || ((previousHeight + 1) % this.getInterval()) == 0;
     }
 
     @Override
