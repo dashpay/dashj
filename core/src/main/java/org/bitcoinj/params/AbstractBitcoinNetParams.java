@@ -58,6 +58,8 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
 
     public AbstractBitcoinNetParams() {
         super();
+        interval = INTERVAL;
+        subsidyDecreaseBlockCount = 210000;
     }
 
     /** Dash doesn't have halving, but this is when there are changes in the max rewards */

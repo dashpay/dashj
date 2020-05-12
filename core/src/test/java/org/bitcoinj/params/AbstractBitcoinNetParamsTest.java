@@ -34,6 +34,13 @@ public class AbstractBitcoinNetParamsTest {
     };
 
     @Test
+    public void isDifficultyTransitionPoint() {
+        assertFalse(BITCOIN_PARAMS.isDifficultyTransitionPoint(2014));
+        assertTrue(BITCOIN_PARAMS.isDifficultyTransitionPoint(2015));
+        assertFalse(BITCOIN_PARAMS.isDifficultyTransitionPoint(2016));
+    }
+
+    @Test
     public void isRewardHalvingPoint() {
         assertTrue(DASH_PARAMS.isRewardHalvingPoint(210239));
 

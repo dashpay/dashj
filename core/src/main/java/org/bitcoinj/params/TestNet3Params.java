@@ -37,9 +37,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
     public TestNet3Params() {
         super();
         id = ID_TESTNET;
-
         packetMagic = 0xcee2caffL;
-        interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
 
         // 00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
@@ -52,7 +50,6 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         genesisBlock.setDifficultyTarget(0x1e0ffff0L);
         genesisBlock.setNonce(3861367235L);
         spendableCoinbaseDepth = 100;
-        subsidyDecreaseBlockCount = 210240;
         String genesisHash = genesisBlock.getHashAsString();
 
         checkState(genesisHash.equals("00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c"));
