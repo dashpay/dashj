@@ -78,7 +78,7 @@ public abstract class NetworkParameters {
 
     // TODO: Seed nodes should be here as well.
 
-    protected Block genesisBlock;
+    protected final Block genesisBlock;
     protected Block devnetGenesisBlock;
     protected String devNetName;
     protected BigInteger maxTarget;
