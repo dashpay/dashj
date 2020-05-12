@@ -707,7 +707,7 @@ public class Utils {
     }
     static public String sanitizeString(String str) { return sanitizeString(str, 0); }
 
-    static double convertBitsToDouble(long nBits){
+    public static double convertBitsToDouble(long nBits){
         long nShift = (nBits >> 24) & 0xff;
 
         double dDiff =

@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import com.google.common.annotations.*;
 import com.google.common.base.*;
 import com.google.common.collect.*;
+import org.bitcoinj.params.AbstractBitcoinNetParams;
 import com.hashengineering.crypto.X11;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.CoinbaseTx;
@@ -211,68 +212,10 @@ public class Block extends Message {
         this.transactions.addAll(transactions);
     }
 
-
-    /**
-     * <p>A utility method that calculates how much new Bitcoin would be created by the block at the given height.
-     * The inflation of Bitcoin is predictable and drops roughly every 4 years (210,000 blocks). At the dawn of
-     * the system it was 50 coins per block, in late 2012 it went to 25 coins per block, and so on. The size of
-     * a coinbase transaction is inflation plus fees.</p>
-     *
-     * <p>The half-life is controlled by {@link NetworkParameters#getSubsidyDecreaseBlockCount()}.
-     * </p>
-     */
-
+    /** @deprecated Use {@link AbstractBitcoinNetParams#getBlockInflation(int, long, boolean)} */
+    @Deprecated
     public Coin getBlockInflation(int height, long nPrevBits, boolean fSuperblockPartOnly) {
-        return getBlockInflation(params, height, nPrevBits, fSuperblockPartOnly);
-    }
-
-    public static Coin getBlockInflation(NetworkParameters params, int height, long nPrevBits, boolean fSuperblockPartOnly) {
-        double dDiff;
-        long nSubsidyBase;
-        int nPrevHeight = height - 1;
-
-
-
-        if (nPrevHeight <= 4500 && params.getId().equals(NetworkParameters.ID_MAINNET)) {
-        /* a bug which caused diff to not be correctly calculated */
-            dDiff = (double)0x0000ffff / (double)(nPrevBits & 0x00ffffff);
-        } else {
-            dDiff = Utils.convertBitsToDouble(nPrevBits);
-        }
-
-        if (nPrevHeight < 5465) {
-            // Early ages...
-            // 1111/((x+1)^2)
-            nSubsidyBase = (long)(1111.0 / (Math.pow((dDiff+1.0),2.0)));
-            if(nSubsidyBase > 500) nSubsidyBase = 500;
-            else if(nSubsidyBase < 1) nSubsidyBase = 1;
-        } else if (nPrevHeight < 17000 || (dDiff <= 75 && nPrevHeight < 24000)) {
-            // CPU mining era
-            // 11111/(((x+51)/6)^2)
-            nSubsidyBase = (long)(11111.0 / (Math.pow((dDiff+51.0)/6.0,2.0)));
-            if(nSubsidyBase > 500) nSubsidyBase = 500;
-            else if(nSubsidyBase < 25) nSubsidyBase = 25;
-        } else {
-            // GPU/ASIC mining era
-            // 2222222/(((x+2600)/9)^2)
-            nSubsidyBase = (long)(2222222.0 / (Math.pow((dDiff+2600.0)/9.0,2.0)));
-            if(nSubsidyBase > 25) nSubsidyBase = 25;
-            else if(nSubsidyBase < 5) nSubsidyBase = 5;
-        }
-
-        // LogPrintf("height %u diff %4.2f reward %d\n", nPrevHeight, dDiff, nSubsidyBase);
-        Coin nSubsidy = Coin.valueOf(nSubsidyBase * 100000000);
-
-        // yearly decline of production by ~7.1% per year, projected ~18M coins max by year 2050+.
-        for (int i = params.getSubsidyDecreaseBlockCount(); i <= nPrevHeight; i += params.getSubsidyDecreaseBlockCount()) {
-            nSubsidy = nSubsidy.subtract(nSubsidy.div(14));
-        }
-
-        // Hard fork to reduce the block reward by 10 extra percent (allowing budget/superblocks)
-        int treasuryPart = params.isV20Active(nPrevHeight) ? 20 : 10; // parts per 100, 20 is 20%
-        Coin nSuperblockPart = (nPrevHeight > params.getBudgetPaymentsStartBlock()) ? nSubsidy.multiply(treasuryPart).div(100) : Coin.ZERO;
-
-        return fSuperblockPartOnly ? nSuperblockPart : nSubsidy.minus(nSuperblockPart);
+        return ((AbstractBitcoinNetParams) params).getBlockInflation(height, nPrevBits, fSuperblockPartOnly);
     }
 
     /**

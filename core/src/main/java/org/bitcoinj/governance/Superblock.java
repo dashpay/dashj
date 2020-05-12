@@ -1,5 +1,6 @@
 package org.bitcoinj.governance;
 import org.bitcoinj.core.*;
+import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.utils.BtcFormat;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -125,7 +126,7 @@ public class Superblock extends GovernanceObject {
         // min subsidy for high diff networks and vice versa
         int nBits = !params.getId().equals(NetworkParameters.ID_MAINNET) ? (int)Utils.encodeCompactBits(params.getMaxTarget()) : 1;
         // some part of all blocks issued during the cycle goes to superblock, see GetBlockSubsidy
-        Coin nSuperblockPartOfSubsidy = Block.getBlockInflation(params, nBlockHeight - 1, nBits, true);
+        Coin nSuperblockPartOfSubsidy = ((AbstractBitcoinNetParams)params).getBlockInflation(nBlockHeight - 1, nBits, true);
         Coin nPaymentsLimit = nSuperblockPartOfSubsidy.multiply(params.getSuperblockCycle());
         log.info("gobject--CSuperblock::GetPaymentsLimit -- Valid superblock height {}, payments max {}", nBlockHeight, nPaymentsLimit);
 

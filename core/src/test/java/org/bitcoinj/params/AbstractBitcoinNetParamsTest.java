@@ -16,8 +16,10 @@
 
 package org.bitcoinj.params;
 
+import org.bitcoinj.core.Coin;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -48,5 +50,12 @@ public class AbstractBitcoinNetParamsTest {
         assertFalse(DASH_PARAMS.isRewardHalvingPoint(630720));
 
         assertTrue(DASH_PARAMS.isRewardHalvingPoint(840959));
+    }
+
+    @Test
+    public void getBlockInflation() {
+        assertEquals(Coin.valueOf(2250000000L), DASH_PARAMS.getBlockInflation(210240 - 1, 0x1e0fffffL, false));
+        assertEquals(Coin.valueOf(2250000000L), DASH_PARAMS.getBlockInflation(210240, 0x1e0fffffL, false));
+        assertEquals(Coin.valueOf(2089285715L), DASH_PARAMS.getBlockInflation(210240 + 1, 0x1e0fffffL, false));
     }
 }
