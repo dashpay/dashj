@@ -166,7 +166,7 @@ public class Wallet extends BaseTaggableObject
 
     // All the TransactionOutput objects that we could spend (ignoring whether we have the private key or not).
     // Used to speed up various calculations.
-    protected final HashSet<TransactionOutput> myUnspents = Sets.newHashSet();
+    protected final HashSet<TransactionOutput> myUnspents = new HashSet<>();
 
     // Index mapping outpoints to transaction hashes that spend them.
     // Used to make findDoubleSpendsAgainst() O(I) instead of O(W × I).
@@ -481,7 +481,7 @@ public class Wallet extends BaseTaggableObject
         this.context = checkNotNull(context);
         this.params = checkNotNull(context.getParams());
         this.keyChainGroup = checkNotNull(keyChainGroup);
-        watchedScripts = Sets.newHashSet();
+        watchedScripts = new HashSet<>();
         unspent = new HashMap<>();
         spent = new HashMap<>();
         pending = new HashMap<>();
@@ -2497,7 +2497,8 @@ public class Wallet extends BaseTaggableObject
                 // When a tx is received from the best chain, if other txns that spend this tx are IN_CONFLICT,
                 // change its confidence to PENDING (Unless they are also spending other txns IN_CONFLICT).
                 // Consider dependency chains.
-                Set<Transaction> currentTxDependencies = Sets.newHashSet(tx);
+                Set<Transaction> currentTxDependencies = new HashSet<>();
+                currentTxDependencies.add(tx);
                 addTransactionsDependingOn(currentTxDependencies, getTransactions(true));
                 currentTxDependencies.remove(tx);
                 List<Transaction> currentTxDependenciesSorted = sortTxnsByDependency(currentTxDependencies);
