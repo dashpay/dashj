@@ -16,6 +16,7 @@
 
 package org.bitcoinj.crypto;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Utils;
@@ -58,40 +59,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * <p>2) Using the AES Key generated above, you then can encrypt and decrypt any bytes using
  * the AES symmetric cipher.</p>
  */
-public class KeyCrypterECDH implements KeyCrypter {
+public class KeyCrypterECDH extends KeyCrypterAESCBC {
 
-    private static final Logger log = LoggerFactory.getLogger(KeyCrypterScrypt.class);
-
-    /**
-     * Key length in bytes.
-     */
-    public static final int KEY_LENGTH = 32; // = 256 bits.
-
-    /**
-     * The size of an AES block in bytes.
-     * This is also the length of the initialisation vector.
-     */
-    public static final int BLOCK_LENGTH = 16;  // = 128 bits.
-
-    /**
-     * The length of the salt used.
-     */
-    public static final int SALT_LENGTH = 16;
-
-    static {
-        // Init proper random number generator, as some old Android installations have bugs that make it unsecure.
-        if (Utils.isAndroidRuntime())
-            new LinuxSecureRandom();
-
-        secureRandom = new SecureRandom();
-    }
-
-    private static final SecureRandom secureRandom;
+    private static final Logger log = LoggerFactory.getLogger(KeyCrypterECDH.class);
 
     /**
      * Generate AES key.
      *
-     * This is a very slow operation compared to encrypt/ decrypt so it is normally worth caching the result.
      *
      * @param password    The password to use in key generation
      * @return            The KeyParameter containing the created AES key
@@ -99,11 +73,12 @@ public class KeyCrypterECDH implements KeyCrypter {
      */
     @Override
     public KeyParameter deriveKey(CharSequence password) throws KeyCrypterException {
-        throw new UnsupportedOperationException("use deriveKey(BLSSecretKey, BLSPublicKey) instead");
+        throw new UnsupportedOperationException("use deriveKey(ECKey, ECKey) instead");
     }
 
     public KeyParameter deriveKey(ECKey secretKey, ECKey peerPublicKey) throws KeyCrypterException {
         try {
+            Preconditions.checkArgument(secretKey.hasPrivKey(), "secretKey must have private key bytes");
             final Stopwatch watch = Stopwatch.createStarted();
 
             ECPublicKeyParameters pubKey =
@@ -119,85 +94,8 @@ public class KeyCrypterECDH implements KeyCrypter {
             log.info("Deriving key took {} for a ECDH Key Exchange", watch);
             return new KeyParameter(password);
         } catch (Exception e) {
-            throw new KeyCrypterException("Could not generate key from password and salt.", e);
+            throw new KeyCrypterException("Could not generate key from EC private and public keys.", e);
         }
-    }
-    /**
-     * Password based encryption using AES - CBC 256 bits.
-     */
-    @Override
-    public EncryptedData encrypt(byte[] plainBytes, KeyParameter aesKey) throws KeyCrypterException {
-        checkNotNull(plainBytes);
-        checkNotNull(aesKey);
-
-        try {
-            // Generate iv - each encryption call has a different iv.
-            byte[] iv = new byte[BLOCK_LENGTH];
-            secureRandom.nextBytes(iv);
-
-            ParametersWithIV keyWithIv = new ParametersWithIV(aesKey, iv);
-
-            // Encrypt using AES.
-            BufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new AESEngine()));
-            cipher.init(true, keyWithIv);
-            byte[] encryptedBytes = new byte[cipher.getOutputSize(plainBytes.length)];
-            final int length1 = cipher.processBytes(plainBytes, 0, plainBytes.length, encryptedBytes, 0);
-            final int length2 = cipher.doFinal(encryptedBytes, length1);
-
-            return new EncryptedData(iv, Arrays.copyOf(encryptedBytes, length1 + length2));
-        } catch (Exception e) {
-            throw new KeyCrypterException("Could not encrypt bytes.", e);
-        }
-    }
-
-    /**
-     * Decrypt bytes previously encrypted with this class.
-     *
-     * @param dataToDecrypt    The data to decrypt
-     * @param aesKey           The AES key to use for decryption
-     * @return                 The decrypted bytes
-     * @throws KeyCrypterException if bytes could not be decrypted
-     */
-    @Override
-    public byte[] decrypt(EncryptedData dataToDecrypt, KeyParameter aesKey) throws KeyCrypterException {
-        checkNotNull(dataToDecrypt);
-        checkNotNull(aesKey);
-
-        try {
-            ParametersWithIV keyWithIv = new ParametersWithIV(new KeyParameter(aesKey.getKey()), dataToDecrypt.initialisationVector);
-
-            // Decrypt the message.
-            BufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new AESEngine()));
-            cipher.init(false, keyWithIv);
-
-            byte[] cipherBytes = dataToDecrypt.encryptedBytes;
-            byte[] decryptedBytes = new byte[cipher.getOutputSize(cipherBytes.length)];
-            final int length1 = cipher.processBytes(cipherBytes, 0, cipherBytes.length, decryptedBytes, 0);
-            final int length2 = cipher.doFinal(decryptedBytes, length1);
-
-            return Arrays.copyOf(decryptedBytes, length1 + length2);
-        } catch (InvalidCipherTextException e) {
-            throw new KeyCrypterException.InvalidCipherText("Could not decrypt bytes", e);
-        } catch (RuntimeException e) {
-            throw new KeyCrypterException("Could not decrypt bytes", e);
-        }
-    }
-
-    /**
-     * Convert a CharSequence (which are UTF16) into a byte array.
-     *
-     * Note: a String.getBytes() is not used to avoid creating a String of the password in the JVM.
-     */
-    private static byte[] convertToByteArray(CharSequence charSequence) {
-        checkNotNull(charSequence);
-
-        byte[] byteArray = new byte[charSequence.length() << 1];
-        for(int i = 0; i < charSequence.length(); i++) {
-            int bytePosition = i << 1;
-            byteArray[bytePosition] = (byte) ((charSequence.charAt(i)&0xFF00)>>8);
-            byteArray[bytePosition + 1] = (byte) (charSequence.charAt(i)&0x00FF);
-        }
-        return byteArray;
     }
 
     /**
