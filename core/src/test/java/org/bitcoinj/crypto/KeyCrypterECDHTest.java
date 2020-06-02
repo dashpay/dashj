@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 public class KeyCrypterECDHTest {
 
@@ -71,6 +72,22 @@ public class KeyCrypterECDHTest {
         assertNotNull(decryptedData);
 
         assertEquals("they should be the same string", new String(decryptedData), secret );
+    }
+
+    @Test
+    public void deriveECDHwithPublicKeysTest() {
+        ECKey alicePublicKey = ECKey.fromPublicOnly(aliceKey.getPubKey());
+        ECKey bobPublicKey = ECKey.fromPublicOnly(bobKey.getPubKey());
+
+        try {
+            KeyCrypterECDH bobKeyExchangeCrypter = new KeyCrypterECDH();
+            bobKeyExchangeCrypter.deriveKey(bobPublicKey, alicePublicKey);
+            fail();
+        } catch (KeyCrypterException x) {
+            // swallow, this is the correct exception
+        } catch (Exception x) {
+            fail();
+        }
     }
 
 }

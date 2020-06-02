@@ -1,6 +1,5 @@
 /*
- * Copyright 2013 Jim Burton.
- * Copyright 2014 Andreas Schildbach
+ * Copyright 2019 Dash Core Group
  *
  * Licensed under the MIT license (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +16,9 @@
 
 package org.bitcoinj.crypto;
 
-import com.google.protobuf.ByteString;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.Protos.ScryptParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Random;
-import java.util.UUID;
 
 import static org.junit.Assert.*;
 
