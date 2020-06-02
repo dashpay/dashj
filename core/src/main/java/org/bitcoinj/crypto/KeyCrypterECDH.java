@@ -206,11 +206,11 @@ public class KeyCrypterECDH implements KeyCrypter {
      */
     @Override
     public EncryptionType getUnderstoodEncryptionType() {
-        return EncryptionType.ENCRYPTED_BLS_KEYEXCHANGE_AES;
+        return EncryptionType.ENCRYPTED_ECDH_KEYEXCHANGE_AES;
     }
 
     @Override
     public String toString() {
-        return "AES-" + KEY_LENGTH * 8 + "-CBC, BLS DHExchangeKey)";
+        return "AES-" + KEY_LENGTH * 8 + "-CBC, ECDH ExchangeKey)";
     }
 }
