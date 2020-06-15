@@ -5946,6 +5946,7 @@ public class Wallet extends BaseTaggableObject
             receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
         }
         receivingFromFriendsGroup.addAndActivateHDChain(chain);
+        saveNow();
     }
 
     public void addSendingToFriendKeyChain(String xpub, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
@@ -5960,6 +5961,7 @@ public class Wallet extends BaseTaggableObject
             sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
         }
         sendingToFriendsGroup.addAndActivateHDChain(chain);
+        saveNow();
     }
 
     public void addRecievingFromFriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, EvolutionContact contact) {
