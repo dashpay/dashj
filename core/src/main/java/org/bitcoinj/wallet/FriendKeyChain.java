@@ -37,7 +37,7 @@ public class FriendKeyChain extends ExternalKeyChain {
 
     private static final Logger log = LoggerFactory.getLogger(FriendKeyChain.class);
 
-    enum KeyChainType {
+    public enum KeyChainType {
         RECEIVING_CHAIN,
         SENDING_CHAIN,
     }
@@ -160,4 +160,7 @@ public class FriendKeyChain extends ExternalKeyChain {
         return getKey(currentIndex);
     }
 
+    public KeyChainType getType() {
+        return type;
+    }
 }

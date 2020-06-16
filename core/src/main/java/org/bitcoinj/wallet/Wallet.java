@@ -5938,10 +5938,30 @@ public class Wallet extends BaseTaggableObject
 
         FriendKeyChain chain = new FriendKeyChain(seed, keyCrypter, isMainNet ? FriendKeyChain.FRIEND_ROOT_PATH : FriendKeyChain.FRIEND_ROOT_PATH_TESTNET,
                 account, myBlockchainUserId, theirBlockchainUserId);
+        addReceivingFromFriendKeyChain(chain);
+    }
+
+    public void addReceivingFromFriendKeyChain(FriendKeyChain chain) {
         if(receivingFromFriendsGroup == null) {
             receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
         }
         receivingFromFriendsGroup.addAndActivateHDChain(chain);
+        saveNow();
+    }
+
+    public void addSendingToFriendKeyChain(String xpub, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
+        boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
+
+        FriendKeyChain chain = new FriendKeyChain(getParams(), xpub, new EvolutionContact(myBlockchainUserId, theirBlockchainUserId));
+        addSendingToFriendKeyChain(chain);
+    }
+
+    public void addSendingToFriendKeyChain(FriendKeyChain chain) {
+        if(sendingToFriendsGroup == null) {
+            sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+        }
+        sendingToFriendsGroup.addAndActivateHDChain(chain);
+        saveNow();
     }
 
     public void addRecievingFromFriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, EvolutionContact contact) {
