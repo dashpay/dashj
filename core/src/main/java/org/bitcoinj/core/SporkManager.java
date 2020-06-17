@@ -1,3 +1,18 @@
+/*
+ * Copyright 2016 Hash Engineering Solutions
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.bitcoinj.core;
 
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
@@ -17,6 +32,8 @@ import java.util.concurrent.Executor;
 
 /**
  * Created by Hash Engineering on 2/20/2016.
+ *
+ * Handles SporkMessages and their verification
  */
 public class SporkManager {
     private static final Logger log = LoggerFactory.getLogger(SporkManager.class);
@@ -43,9 +60,9 @@ public class SporkManager {
     static final int SPORK_START = SPORK_2_INSTANTSEND_ENABLED;
     static final int SPORK_END   = SPORK_22_PS_MORE_PARTICIPANTS;
 
-    private static HashMap<Integer, Long> mapSporkDefaults;
+    private static final HashMap<Integer, Long> mapSporkDefaults;
     static {
-        mapSporkDefaults = new HashMap<Integer, Long>();
+        mapSporkDefaults = new HashMap<>();
         mapSporkDefaults.put(SPORK_2_INSTANTSEND_ENABLED, 0L);
         mapSporkDefaults.put(SPORK_3_INSTANTSEND_BLOCK_FILTERING, 0L);
         mapSporkDefaults.put(SPORK_6_NEW_SIGS, 4070908800L); // obsolete, but still used in Governance code
@@ -57,23 +74,21 @@ public class SporkManager {
         mapSporkDefaults.put(SPORK_22_PS_MORE_PARTICIPANTS, 4070908800L); // OFF
     }
 
-    MasternodeSignature sig;
-    ECKey sporkPrivKey;
     byte [] sporkPubKeyId;
 
-    HashMap<Sha256Hash, SporkMessage> mapSporks;
-    HashMap<Integer, SporkMessage> mapSporksActive;
+    private HashMap<Sha256Hash, SporkMessage> mapSporks;
+    private HashMap<Integer, SporkMessage> mapSporksActive;
 
-    AbstractBlockChain blockChain;
-    Context context;
+    private AbstractBlockChain blockChain;
+    private Context context;
 
-    SporkManager(Context context)
+    public SporkManager(Context context)
     {
         this.context = context;
-        mapSporks = new HashMap<Sha256Hash, SporkMessage>();
-        mapSporksActive = new HashMap<Integer, SporkMessage>();
+        mapSporks = new HashMap<>();
+        mapSporksActive = new HashMap<>();
         setSporkAddress(context.getParams().getSporkAddress());
-        eventListeners = new CopyOnWriteArrayList<ListenerRegistration<SporkUpdatedEventListener>>();
+        eventListeners = new CopyOnWriteArrayList<>();
     }
 
     void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup) {
@@ -88,71 +103,54 @@ public class SporkManager {
     }
 
     void processSpork(Peer from, SporkMessage spork) {
-        if (context.isLiteMode() && !context.allowInstantXinLiteMode()) return; //disable all darksend/masternode related functionality
+        if (context.isLiteMode() && !context.allowInstantXinLiteMode()) {
+            return; //disable all darksend/masternode related functionality
+        }
 
-            Sha256Hash hash = spork.getHash();
-            if (mapSporksActive.containsKey(spork.nSporkID)) {
-                if (mapSporksActive.get(spork.nSporkID).nTimeSigned >= spork.nTimeSigned) {
-                    log.info("spork - seen "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" block " + blockChain.getBestChainHeight() + "hash: " + hash.toString());
-                    return;
-                } else {
-                    log.info("received updated spork "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" block " +blockChain.getBestChainHeight() +
-                            "hash: " + hash.toString());
-                }
-            }
-
-            log.info("spork - new ID "+spork.nSporkID+" "+ String.format("%1$35s",getSporkNameByID(spork.nSporkID)) +" Time "+spork.nTimeSigned+" bestHeight " + blockChain.getBestChainHeight() +
-                    "hash: " + hash.toString());
-
-            if (!spork.checkSignature(sporkPubKeyId)) {
-                log.info("spork - invalid signature");
+        Sha256Hash hash = spork.getHash();
+        if (mapSporksActive.containsKey(spork.getSporkId())) {
+            if (mapSporksActive.get(spork.getSporkId()).getTimeSigned() >= spork.getTimeSigned()) {
+                log.info("spork - seen " + String.format("%1$35s", getSporkNameById(spork.getSporkId())) +" block " + blockChain.getBestChainHeight() + " hash: " + hash.toString());
                 return;
-            }
-
-            mapSporks.put(hash, spork);
-            mapSporksActive.put(spork.nSporkID, spork);
-            queueOnUpdate(spork);
-            relay(spork);
-
-            //does a task if needed
-            executeSpork(spork.nSporkID, spork.nValue);
-    }
-
-    public void processSporkForUnitTesting(int spork) {
-        SporkMessage sporkMessage = new SporkMessage(context.getParams());
-        sporkMessage.nSporkID = spork;
-        mapSporks.put(Sha256Hash.ZERO_HASH, sporkMessage);
-        mapSporksActive.put(sporkMessage.nSporkID, sporkMessage);
-    }
-    /*
-    void processGetSporks(GetSporksMessage m)
-    {
-        if (strCommand == "getsporks")
-        {
-            std::map<int, CSporkMessage>::iterator it = mapSporksActive.begin();
-
-            while(it != mapSporksActive.end()) {
-                pfrom->PushMessage("spork", it->second);
-                it++;
+            } else {
+                log.info("received updated spork "+ String.format("%1$35s", getSporkNameById(spork.getSporkId())) +" block " +blockChain.getBestChainHeight() +
+                        " hash: " + hash.toString());
             }
         }
 
-    }*/
+        log.info("spork - new ID " + spork.getSporkId() + " " + String.format("%1$35s", getSporkNameById(spork.getSporkId())) +" Time "+spork.getTimeSigned()+" bestHeight " + blockChain.getBestChainHeight() +
+                " hash: " + hash.toString());
 
+        if (!spork.checkSignature(sporkPubKeyId)) {
+            log.info("spork - invalid signature");
+            return;
+        }
 
+        mapSporks.put(hash, spork);
+        mapSporksActive.put(spork.getSporkId(), spork);
+        queueOnUpdate(spork);
 
+        //does a task if needed
+        executeSpork(spork.getSporkId(), spork.getValue());
+    }
+
+    public void processSporkForUnitTesting(int spork) {
+        SporkMessage sporkMessage = new SporkMessage(context.getParams(), spork, 0, 0);
+        mapSporks.put(Sha256Hash.ZERO_HASH, sporkMessage);
+        mapSporksActive.put(spork, sporkMessage);
+    }
 
     // grab the spork, otherwise say it's off
-    public boolean isSporkActive(int nSporkID)
+    public boolean isSporkActive(int sporkId)
     {
-        long r = -1;
+        long r;
 
-        if(mapSporksActive.containsKey(nSporkID)){
-            r = mapSporksActive.get(nSporkID).nValue;
-        } else if (mapSporkDefaults.containsKey(nSporkID)) {
-            r = mapSporkDefaults.get(nSporkID);
+        if(mapSporksActive.containsKey(sporkId)){
+            r = mapSporksActive.get(sporkId).getValue();
+        } else if (mapSporkDefaults.containsKey(sporkId)) {
+            r = mapSporkDefaults.get(sporkId);
         } else {
-            log.warn("isSporkActive:  Unknown Spork ID {}", nSporkID);
+            log.warn("isSporkActive:  Unknown Spork ID {}", sporkId);
             r = 4070908800L; // 2099-1-1 i.e. off by default
         }
 
@@ -160,77 +158,25 @@ public class SporkManager {
     }
 
     // grab the value of the spork on the network, or the default
-    public long getSporkValue(int nSporkID)
+    public long getSporkValue(int sporkId)
     {
-        if (mapSporksActive.containsKey(nSporkID))
-            return mapSporksActive.get(nSporkID).nValue;
+        if (mapSporksActive.containsKey(sporkId))
+            return mapSporksActive.get(sporkId).getValue();
 
-        if (mapSporkDefaults.containsKey(nSporkID)) {
-            return mapSporkDefaults.get(nSporkID);
+        if (mapSporkDefaults.containsKey(sporkId)) {
+            return mapSporkDefaults.get(sporkId);
         }
 
-        log.info("getSporkValue:  Unknown Spork ID {}", nSporkID);
+        log.info("getSporkValue:  Unknown Spork ID {}", sporkId);
         return -1;
     }
 
-    public void executeSpork(int nSporkID, long nValue)
+    public void executeSpork(int sporkId, long value)
     {
 
     }
 
-    boolean updateSpork(int nSporkID, long nValue)
-    {
-        SporkMessage msg = new SporkMessage(context.getParams());
-        msg.nSporkID = nSporkID;
-        msg.nValue = nValue;
-        msg.nTimeSigned = Utils.currentTimeSeconds();
-        if(msg.sign(sporkPrivKey)){
-            relay(msg);
-            mapSporks.put(msg.getHash(), msg);
-            mapSporksActive.put(nSporkID, msg);
-            return true;
-        }
-
-        return false;
-    }
-
-    void relay(SporkMessage msg)
-    {
-        //InventoryItem inv = new InventoryItem(InventoryItem.Type.Spork, msg.getHash());
-        //RelayInv(inv);
-        //TODO:  Not needed in SPV
-    }
-
-    public boolean setPrivKey(String strPrivKey) {
-        StringBuilder errorMessage  = new StringBuilder();
-        ECKey key = MessageSigner.getKeysFromSecret(strPrivKey, errorMessage);
-        ECKey pubkey = ECKey.fromPublicOnly(key.getPubKey());
-
-        if (key == null) {
-            log.error("setPrivKey -- Failed to parse private key");
-            return false;
-        }
-
-        if (!pubkey.getPubKeyHash().equals(sporkPubKeyId)) {
-            log.error("setPrivKey -- New private key does not belong to spork address\n");
-            return false;
-        }
-
-        SporkMessage spork = new SporkMessage(context.getParams());
-        if (spork.sign(key)) {
-            // Test signing successful, proceed
-            log.info("setPrivKey -- Successfully initialized as spork signer");
-
-            sporkPrivKey = key;
-            return true;
-        } else {
-            log.error("setPrivKey -- Test signing failed");
-            return false;
-        }
-    }
-
-
-    public int getSporkIDByName(String strName)
+    public int getSporkIdByName(String strName)
     {
         if (strName.equals("SPORK_2_INSTANTSEND_ENABLED"))               return SPORK_2_INSTANTSEND_ENABLED;
         if (strName.equals("SPORK_3_INSTANTSEND_BLOCK_FILTERING"))       return SPORK_3_INSTANTSEND_BLOCK_FILTERING;
@@ -246,13 +192,11 @@ public class SporkManager {
         if (strName.equals("SPORK_18_QUORUM_DEBUG_ENABLED"))             return SPORK_18_QUORUM_DEBUG_ENABLED;
         if (strName.equals("SPORK_19_CHAINLOCKS_ENABLED"))               return SPORK_19_CHAINLOCKS_ENABLED;
         if (strName.equals("SPORK_20_INSTANTSEND_LLMQ_BASED"))           return SPORK_20_INSTANTSEND_LLMQ_BASED;
-        if (strName.equals("SPORK_21_QUORUM_ALL_CONNECTED"))             return SPORK_21_QUORUM_ALL_CONNECTED;
-        if (strName.equals("SPORK_22_PS_MORE_PARTICIPANTS"))             return SPORK_22_PS_MORE_PARTICIPANTS;
 
         return -1;
     }
 
-    public String getSporkNameByID(int id)
+    public String getSporkNameById(int id)
     {
         switch (id) {
             case SPORK_2_INSTANTSEND_ENABLED:               return "SPORK_2_INSTANTSEND_ENABLED";
@@ -277,25 +221,25 @@ public class SporkManager {
         }
     }
 
-    boolean setSporkAddress(String strAddress) {
+    void setSporkAddress(String strAddress) {
         try {
             Address address = Address.fromBase58(context.getParams(), strAddress);
             sporkPubKeyId = address.getHash();
         } catch (AddressFormatException x) {
             log.error("Failed to parse spork address");
-            return false;
         }
-        return true;
     }
 
-    public PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
+    /**
+     * When connecting to a peer, request their sporks
+     */
+    public final PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
-            // SPORK : ALWAYS ASK FOR SPORKS AS WE SYNC (we skip this mode now)
             if (!peer.hasFulfilledRequest("spork-sync")) {
                 peer.fulfilledRequest("spork-sync");
-
-                peer.sendMessage(new GetSporksMessage(context.getParams())); //get current network sporks
+                //get current network sporks
+                peer.sendMessage(new GetSporksMessage(context.getParams()));
             }
         }
     };
@@ -316,7 +260,7 @@ public class SporkManager {
      */
     public void addEventListener(SporkUpdatedEventListener listener, Executor executor) {
         // This is thread safe, so we don't need to take the lock.
-        eventListeners.add(new ListenerRegistration<SporkUpdatedEventListener>(listener, executor));
+        eventListeners.add(new ListenerRegistration<>(listener, executor));
     }
 
     /**
@@ -324,7 +268,6 @@ public class SporkManager {
      * was never added.
      */
     public boolean removeEventListener(SporkUpdatedEventListener listener) {
-        //keychain.removeEventListener(listener);
         return ListenerRegistration.removeFromList(listener, eventListeners);
     }
 
@@ -345,10 +288,14 @@ public class SporkManager {
     }
 
     public List<SporkMessage> getSporks() {
-        List<SporkMessage> sporkList = new ArrayList<SporkMessage>(mapSporks.size());
+        List<SporkMessage> sporkList = new ArrayList<>(mapSporks.size());
         for (Map.Entry<Sha256Hash, SporkMessage> entry : mapSporks.entrySet()) {
             sporkList.add(entry.getValue());
         }
         return sporkList;
+    }
+
+    public boolean hasSpork(Sha256Hash hashSpork) {
+        return mapSporks.containsKey(hashSpork);
     }
 }
