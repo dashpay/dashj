@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015 Hash Engineering Solutions
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.bitcoinj.core;
 
 import org.slf4j.Logger;
@@ -10,89 +25,61 @@ import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
 
 /**
  * Created by Hash Engineering on 2/8/2015.
+ *
  */
 public class SporkMessage extends Message{
 
     private static final Logger log = LoggerFactory.getLogger(SporkMessage.class);
 
-    MasternodeSignature sig;
-    int nSporkID;
-    long nValue;
-    long nTimeSigned;
+    private MasternodeSignature sig;
+    private int sporkId;
+    private long value;
+    private long timeSigned;
 
-    static int HASH_SIZE = 20;
+    private static final int MESSAGE_SIZE_WITHOUT_SIG = 20;
 
-
-    public SporkMessage(NetworkParameters params) { super(params);}
-
-    public SporkMessage(NetworkParameters params, byte [] payload, int cursor)
+    public SporkMessage(NetworkParameters params, byte[] payload, int cursor)
     {
         super(params, payload, cursor);
     }
 
-    protected static int calcLength(byte[] buf, int offset) {
-        VarInt varint;
-
-        int cursor = offset;
-
-        //vin
-        cursor += 36;
-        varint = new VarInt(buf, cursor);
-        long scriptLen = varint.value;
-        // 4 = length of sequence field (unint32)
-        cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
-
-        //MasternodeAddress address;
-        cursor += MasternodeAddress.MESSAGE_SIZE;
-        //PublicKey pubkey;
-        cursor += PublicKey.calcLength(buf, cursor);
-
-        //PublicKey pubkey2;
-        cursor += PublicKey.calcLength(buf, cursor);
-
-        // byte [] sig;
-        cursor += MasternodeSignature.calcLength(buf, cursor);
-
-        cursor += 4 + 8 + 8;
-        cursor += MasternodeSignature.calcLength(buf, cursor);
-
-        return cursor - offset;
+    public SporkMessage(NetworkParameters params, int sporkId, long value, long timeSigned) {
+        super(params);
+        this.sporkId = sporkId;
+        this.value = value;
+        this.timeSigned = timeSigned;
     }
 
     @Override
     protected void parse() throws ProtocolException {
-
-
-        nSporkID = (int)readUint32();
-
-        nValue = readInt64();
-
-        nTimeSigned = readInt64();
-
+        sporkId = (int)readUint32();
+        value = readInt64();
+        timeSigned = readInt64();
         sig = new MasternodeSignature(params, payload, cursor);
         cursor += sig.getMessageSize();
 
         length = cursor - offset;
-
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-
-        Utils.uint32ToByteStreamLE(nSporkID, stream);
-        Utils.int64ToByteStreamLE(nValue, stream);
-        Utils.int64ToByteStreamLE(nTimeSigned, stream);
+        Utils.uint32ToByteStreamLE(sporkId, stream);
+        Utils.int64ToByteStreamLE(value, stream);
+        Utils.int64ToByteStreamLE(timeSigned, stream);
         sig.bitcoinSerialize(stream);
     }
 
+    /**
+     * @return the hash of this message without the signature
+     */
     @Override
     public Sha256Hash getHash()
     {
         try {
-            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HASH_SIZE);
-            Utils.uint32ToByteStreamLE(nSporkID, bos);
-            Utils.int64ToByteStreamLE(nValue, bos);
-            Utils.int64ToByteStreamLE(nTimeSigned, bos);
+            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(MESSAGE_SIZE_WITHOUT_SIG);
+            Utils.uint32ToByteStreamLE(sporkId, bos);
+            Utils.int64ToByteStreamLE(value, bos);
+            Utils.int64ToByteStreamLE(timeSigned, bos);
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException e) {
             throw new RuntimeException(e); // Cannot happen.
@@ -112,16 +99,16 @@ public class SporkMessage extends Message{
             if(!HashSigner.verifyHash(Sha256Hash.wrapReversed(hash.getBytes()), publicKeyId, sig, errorMessage)) {
                 // Note: unlike for many other messages when SPORK_6_NEW_SIGS is ON sporks with sigs in old format
                 // and newer timestamps should not be accepted, so if we failed here - that's it
-                log.error("CSporkMessage::CheckSignature -- VerifyHash() failed, error: {}", errorMessage);
+                log.error("checkSignature -- verifyHash() failed, error: {}", errorMessage);
                 return false;
             }
         } else {
-            String strMessage = "" + nSporkID + nValue + nTimeSigned;
+            String strMessage = "" + sporkId + value + timeSigned;
 
             if (!MessageSigner.verifyMessage(publicKeyId, sig, strMessage, errorMessage)) {
                 Sha256Hash hash = getSignatureHash();
                 if (!HashSigner.verifyHash(Sha256Hash.wrapReversed(hash.getBytes()), publicKeyId, sig, errorMessage)) {
-                    log.error("CSporkMessage::CheckSignature -- VerifyHash() failed, error: {}", errorMessage);
+                    log.error("checkSignature -- verifyHash() failed, error: {}", errorMessage);
                     return false;
                 }
             }
@@ -129,55 +116,16 @@ public class SporkMessage extends Message{
         return true;
     }
 
-    public boolean sign(ECKey key) {
-        /*if (!key.IsValid()) {
-            LogPrintf("CSporkMessage::Sign -- signing key is not valid\n");
-            return false;
-        }*/
-
-        PublicKey pubKey = new PublicKey(key.getPubKey());
-        StringBuilder strError = new StringBuilder();
-
-        if (Context.get().sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
-            Sha256Hash hash = getSignatureHash();
-
-            sig = HashSigner.signHash(hash, key);
-            if (sig == null) {
-                log.error("CSporkMessage::Sign -- SignHash() failed");
-                return false;
-            }
-
-            if (!HashSigner.verifyHash(hash, pubKey, sig, strError)) {
-                log.error("CSporkMessage::Sign -- VerifyHash() failed, error: %s\n", strError);
-                return false;
-            }
-        } else {
-            String strMessage = "" + nSporkID + nValue + nTimeSigned;
-
-            if (null == (sig = MessageSigner.signMessage(strMessage, key))) {
-                log.error("CSporkMessage::Sign -- SignMessage() failed\n");
-                return false;
-            }
-
-            if (!MessageSigner.verifyMessage(pubKey, sig, strMessage, strError)) {
-                log.error("CSporkMessage::Sign -- VerifyMessage() failed, error: %s\n", strError);
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    public int getSporkID() {
-        return nSporkID;
+    public int getSporkId() {
+        return sporkId;
     }
 
     public long getValue() {
-        return nValue;
+        return value;
     }
 
     public long getTimeSigned() {
-        return nTimeSigned;
+        return timeSigned;
     }
 
     public MasternodeSignature getSignature() {
