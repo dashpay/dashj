@@ -21,6 +21,7 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.ExtendedChildNumber;
+import org.bitcoinj.crypto.HDKeyDerivation;
 import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.utils.BriefLogFormatter;
@@ -197,8 +198,33 @@ public class FriendKeyChainTest {
         assertEquals(privateChainWatchingKey, publicWatchingKeyFromB58);
 
         assertArrayEquals(privateKey.getPubKey(), publicKeyFromB58.getPubKey());
-        //assertArrayEquals(privateKey.getPubKey(), publicKey.getPubKey());
         assertArrayEquals(privateKey.getPubKey(), publicKeyFromB58.getPubKey());
 
+    }
+
+    @Test
+    public void contactPubTest() {
+        final NetworkParameters PARAMS = UnitTestParams.get();
+        Sha256Hash userAhash = Sha256Hash.wrap("a11ce14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
+        Sha256Hash userBhash = Sha256Hash.wrap("b0b052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
+
+        EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash);
+        String tpub = "tpubDLkp5kSwctd6bsLgG2pfbUpLSyjedfkBjy8HYtuczzPUwMCBkRW2Fe7TcEoVin5cLTr6YApGpy2MdKU7sfgLL7cMXTn16dLPdgKMqGg9tVE";
+
+        EvolutionContact theirContact = new EvolutionContact(contact.getFriendUserId(), contact.getUserAccount(), contact.getEvolutionUserId());
+        DeterministicKeyChain publicChainFromB58 = new FriendKeyChain(PARAMS, tpub, theirContact);
+
+        DeterministicKey contactKey = publicChainFromB58.getWatchingKey();
+        byte [] contactPub = contactKey.serializeContactPub();
+        DeterministicKey contactPubKey = DeterministicKey.deserializeContactPub(PARAMS, contactPub);
+
+        // compare the parts that should match.  xpub and tpub strings will not match
+        // due to different depth and child numbers
+        assertEquals(contactKey.getFingerprint(), contactPubKey.getFingerprint());
+        assertArrayEquals(contactKey.getChainCode(), contactPubKey.getChainCode());
+        assertArrayEquals(contactKey.getPubKey(), contactPubKey.getPubKey());
+        DeterministicKey contactKeyFirstKey = HDKeyDerivation.deriveChildKey(contactKey, new ChildNumber(0, false));
+        DeterministicKey contactPubKeyFirstKey = HDKeyDerivation.deriveChildKey(contactPubKey, new ChildNumber(0, false));
+        assertArrayEquals(contactKeyFirstKey.getPubKey(), contactPubKeyFirstKey.getPubKey());
     }
 }

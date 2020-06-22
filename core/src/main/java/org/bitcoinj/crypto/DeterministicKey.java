@@ -510,6 +510,32 @@ public class DeterministicKey extends ECKey {
         return serializePrivB58(params, Script.ScriptType.P2PKH);
     }
 
+    /** serializes a HD Key according to the dashpay encryptedPublicKey specification **/
+    public byte[] serializeContactPub() {
+        ByteBuffer ser = ByteBuffer.allocate(69);
+        // header (xpub) not included
+        // depth not included
+        ser.putInt(getParentFingerprint());
+        // child number not included
+        ser.put(getChainCode());
+        ser.put(getPubKey());
+        checkState(ser.position() == 69);
+        return ser.array();
+    }
+
+    public static DeterministicKey deserializeContactPub(NetworkParameters params, byte [] contactPub) {
+        checkArgument(contactPub.length == 69);
+        ByteBuffer serXPub = ByteBuffer.allocate(78);
+        serXPub.putInt(params.getBip32HeaderP2PKHpub()); // header
+        serXPub.put((byte) 0x00); // use depth 0 (master)
+        serXPub.putInt((int)Utils.readUint32(contactPub, 0)); // fingerprint
+        serXPub.putInt(0); // use child number 0
+        serXPub.put(Arrays.copyOfRange(contactPub, 4, 36)); // chain code
+        serXPub.put(Arrays.copyOfRange(contactPub, 36, contactPub.length)); //public key
+        checkState(serXPub.position() == 78);
+        return deserialize(params, serXPub.array(), null);
+    }
+
     static String toBase58(byte[] ser) {
         return Base58.encode(addChecksum(ser));
     }
