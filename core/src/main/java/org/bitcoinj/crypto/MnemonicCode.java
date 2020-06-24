@@ -158,7 +158,8 @@ public class MnemonicCode {
         int wordindex = 0;
         for (String word : words) {
             // Find the words index in the wordlist.
-            int ndx = Collections.binarySearch(this.wordList, word);
+            // Binary search would not work for wordlists containing words with diacritics and sorted with linguistic sort (eg Spanish)
+            int ndx = this.wordList.indexOf(word);
             if (ndx < 0)
                 throw new MnemonicException.MnemonicWordException(word);
 
