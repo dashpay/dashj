@@ -723,7 +723,7 @@ public class ChannelConnectionTest extends TestWithWallet {
         Protos.TwoWayChannelMessage.Builder initiateMsg = Protos.TwoWayChannelMessage.newBuilder(pair.serverRecorder.checkNextMsg(MessageType.INITIATE));
         ByteString brokenKey = initiateMsg.getInitiate().getMultisigKey();
         brokenKey = ByteString.copyFrom(Arrays.copyOf(brokenKey.toByteArray(), brokenKey.size() + 1));
-        initiateMsg.getInitiate().toBuilder().setMultisigKey(brokenKey);
+        initiateMsg.getInitiateBuilder().setMultisigKey(brokenKey);
         client.receiveMessage(initiateMsg.build());
         pair.clientRecorder.checkNextMsg(MessageType.ERROR);
         assertEquals(CloseReason.REMOTE_SENT_INVALID_MESSAGE, pair.clientRecorder.q.take());
