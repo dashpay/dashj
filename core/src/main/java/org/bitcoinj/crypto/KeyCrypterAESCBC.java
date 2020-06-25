@@ -16,24 +16,14 @@
 
 package org.bitcoinj.crypto;
 
-import com.google.common.base.Stopwatch;
-import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Utils;
-import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
 import org.bouncycastle.crypto.BufferedBlockCipher;
 import org.bouncycastle.crypto.InvalidCipherTextException;
-import org.bouncycastle.crypto.agreement.ECDHBasicAgreement;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.modes.CBCBlockCipher;
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
-import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
-import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -87,6 +77,29 @@ public abstract class KeyCrypterAESCBC implements KeyCrypter {
             byte[] iv = new byte[BLOCK_LENGTH];
             secureRandom.nextBytes(iv);
 
+            ParametersWithIV keyWithIv = new ParametersWithIV(aesKey, iv);
+
+            // Encrypt using AES.
+            BufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new AESEngine()));
+            cipher.init(true, keyWithIv);
+            byte[] encryptedBytes = new byte[cipher.getOutputSize(plainBytes.length)];
+            final int length1 = cipher.processBytes(plainBytes, 0, plainBytes.length, encryptedBytes, 0);
+            final int length2 = cipher.doFinal(encryptedBytes, length1);
+
+            return new EncryptedData(iv, Arrays.copyOf(encryptedBytes, length1 + length2));
+        } catch (Exception e) {
+            throw new KeyCrypterException("Could not encrypt bytes.", e);
+        }
+    }
+
+    /**
+     * Password based encryption using AES - CBC 256 bits.  Allows a particular non-random IV for tests
+     */
+    EncryptedData encrypt(byte[] plainBytes, byte [] iv, KeyParameter aesKey) throws KeyCrypterException {
+        checkNotNull(plainBytes);
+        checkNotNull(aesKey);
+
+        try {
             ParametersWithIV keyWithIv = new ParametersWithIV(aesKey, iv);
 
             // Encrypt using AES.
