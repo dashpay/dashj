@@ -19,37 +19,18 @@ package org.bitcoinj.crypto;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.Utils;
 import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
-import org.bouncycastle.crypto.BufferedBlockCipher;
-import org.bouncycastle.crypto.CipherParameters;
-import org.bouncycastle.crypto.InvalidCipherTextException;
-import org.bouncycastle.crypto.agreement.DHAgreement;
-import org.bouncycastle.crypto.agreement.ECDHBasicAgreement;
-import org.bouncycastle.crypto.engines.AESEngine;
-import org.bouncycastle.crypto.modes.CBCBlockCipher;
-import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
-import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.crypto.params.ParametersWithIV;
-import org.bouncycastle.jce.ECNamedCurveTable;
-import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
-import org.dashj.bls.BLS;
-import org.dashj.bls.PublicKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
-import java.security.SecureRandom;
-import java.util.Arrays;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * <p>This class encrypts and decrypts byte arrays and strings using a ECDH Key Exchange as the
- * key derivation function and AES for the encryption.</p>
+ * key derivation function and AES for the encryption.  This uses the same method as secp256k1_ecdh</p>
  *
  * <p>You can use this class to:</p>
  *
@@ -76,17 +57,26 @@ public class KeyCrypterECDH extends KeyCrypterAESCBC {
         throw new UnsupportedOperationException("use deriveKey(ECKey, ECKey) instead");
     }
 
-    public KeyParameter deriveKey(ECKey secretKey, ECKey peerPublicKey) throws KeyCrypterException {
+    public KeyParameter deriveKey(ECKey secretKey, ECKey publicKey) throws KeyCrypterException {
+        Preconditions.checkArgument(secretKey.hasPrivKey(), "secretKey must have private key bytes");
+        return deriveKey(secretKey.getPrivKeyBytes(), publicKey.getPubKey());
+    }
+
+    /** this method by passes some key verification methods in ECKey
+     * This to be used in tests only (not public)
+     * */
+    KeyParameter deriveKey(byte [] secretKey, byte [] publicKey) throws KeyCrypterException {
+        Preconditions.checkNotNull(secretKey, "secretKey must have not be null");
+        Preconditions.checkNotNull(publicKey, "publicKey must have not be null");
         try {
-            Preconditions.checkArgument(secretKey.hasPrivKey(), "secretKey must have private key bytes");
             final Stopwatch watch = Stopwatch.createStarted();
 
             ECPublicKeyParameters pubKey =
-                    new ECPublicKeyParameters(ECKey.CURVE_PARAMS.getCurve().decodePoint(peerPublicKey.getPubKey()), ECKey.CURVE);
+                    new ECPublicKeyParameters(ECKey.CURVE_PARAMS.getCurve().decodePoint(publicKey), ECKey.CURVE);
             ECPrivateKeyParameters prvkey =
-                    new ECPrivateKeyParameters(new BigInteger(1, secretKey.getPrivKeyBytes()), ECKey.CURVE);
+                    new ECPrivateKeyParameters(new BigInteger(1, secretKey), ECKey.CURVE);
 
-            ECDHBasicAgreement agreement = new ECDHBasicAgreement();
+            Secp256k1ECDHAgreement agreement = new Secp256k1ECDHAgreement();
             agreement.init(prvkey);
             byte[] password = agreement.calculateAgreement(pubKey).toByteArray();
             watch.stop();
@@ -109,6 +99,6 @@ public class KeyCrypterECDH extends KeyCrypterAESCBC {
 
     @Override
     public String toString() {
-        return "AES-" + KEY_LENGTH * 8 + "-CBC, ECDH ExchangeKey)";
+        return "AES-" + KEY_LENGTH * 8 + "-CBC, ECDH ExchangeKey";
     }
 }
