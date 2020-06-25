@@ -17,7 +17,10 @@
 
 package org.bitcoinj.crypto;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.collect.Lists;
@@ -26,6 +29,7 @@ import org.junit.Test;
 
 import static org.bitcoinj.core.Utils.HEX;
 import static org.bitcoinj.core.Utils.WHITESPACE_SPLITTER;
+import static org.junit.Assert.*;
 
 /**
  * Test the various guard clauses of {@link MnemonicCode}.
@@ -82,4 +86,40 @@ public class MnemonicCodeTest {
         List<String> code = WHITESPACE_SPLITTER.splitToList("legal winner thank year wave sausage worth useful legal winner thank yellow");
         MnemonicCode.toSeed(code, null);
     }
-}
+
+    @Test
+    public void testDiacriticsInsensitiveMnemonics() throws Exception {
+        String bip39spanishWordlist = "mnemonic/wordlist/spanish.txt";
+        String bip39spanishSha256 = "a556a26c6a5bb36db0fb7d8bf579cb7465fcaeec03957c0dda61b569962d9da5";
+        InputStream stream = MnemonicCode.class.getResourceAsStream(bip39spanishWordlist);
+        if (stream == null)
+            throw new FileNotFoundException(bip39spanishWordlist);
+        MnemonicCode mnemonicCode = new MnemonicCode(stream, bip39spanishSha256);
+        assertEquals(0, mnemonicCode.search(mnemonicCode.getWordList(), "ábaco"));
+        assertEquals(0, mnemonicCode.search(mnemonicCode.getWordList(), "abaco"));
+        assertEquals(19, mnemonicCode.search(mnemonicCode.getWordList(), "ácido"));
+        assertEquals(19, mnemonicCode.search(mnemonicCode.getWordList(), "acido"));
+        assertEquals(935, mnemonicCode.search(mnemonicCode.getWordList(), "jabalí"));
+        assertEquals(935, mnemonicCode.search(mnemonicCode.getWordList(), "jabali"));
+        assertEquals(1691, mnemonicCode.search(mnemonicCode.getWordList(), "satán"));
+        assertEquals(1691, mnemonicCode.search(mnemonicCode.getWordList(), "satan"));
+        assertEquals(428, mnemonicCode.search(mnemonicCode.getWordList(), "cojín"));
+        assertEquals(428, mnemonicCode.search(mnemonicCode.getWordList(), "cojin"));
+        assertEquals(1323, mnemonicCode.search(mnemonicCode.getWordList(), "órgano"));
+        assertEquals(1323, mnemonicCode.search(mnemonicCode.getWordList(), "organo"));
+        assertEquals(1340, mnemonicCode.search(mnemonicCode.getWordList(), "óvulo"));
+        assertEquals(1340, mnemonicCode.search(mnemonicCode.getWordList(), "ovulo"));
+
+        List<String> spanishSeed1 = Arrays.asList("llama", "vaca", "huir", "satán", "trompa", "cojín", "rienda", "alteza", "lomo", "forma", "tela", "hongo");
+        List<String> spanishSeed1NoDiacritics = Arrays.asList("llama", "vaca", "huir", "satan", "trompa", "cojin", "rienda", "alteza", "lomo", "forma", "tela", "hongo");
+        byte[] spanishSeed1Entropy = { -127, -66, -127, -68, -23, -66, -10, 107, 50, 112, 81, -125, -85, -109, -113, 54};
+        assertArrayEquals(spanishSeed1Entropy, mnemonicCode.toEntropy(spanishSeed1));
+        assertArrayEquals(spanishSeed1Entropy, mnemonicCode.toEntropy(spanishSeed1NoDiacritics));
+
+        List<String> spanishSeed2 = Arrays.asList("captar", "onza", "órgano", "término", "pilar", "fiar", "dental", "buey", "urna", "guiso", "imponer", "libertad");
+        List<String> spanishSeed2NoDiacritics = Arrays.asList("captar", "onza", "organo", "termino", "pilar", "fiar", "dental", "buey", "urna", "guiso", "imponer", "libertad");
+        byte[] spanishSeed2Entropy = { 42, -108, 110, -107, -14, -69, 56, -80, 16, 65, 32, -13, 77, 25, -57, -65};
+        assertArrayEquals(spanishSeed2Entropy, mnemonicCode.toEntropy(spanishSeed2));
+        assertArrayEquals(spanishSeed2Entropy, mnemonicCode.toEntropy(spanishSeed2NoDiacritics));
+    }
+ }
