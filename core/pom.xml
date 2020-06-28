@@ -186,7 +186,7 @@
                                         <urn>cglib:cglib-nodep:2.2:jar:null:test:59afed7ab65e7ec6585d5bc60556c3cbd203532b</urn>
                                         <urn>com.fasterxml.jackson.core:jackson-annotations:2.5.0:jar:null:test:a2a55a3375bc1cef830ca426d68d2ea22961190e</urn>
                                         <urn>com.fasterxml.jackson.core:jackson-core:2.5.1:jar:null:test:e2a00ad1d7e540ec395e9296a34da484c8888d4d</urn>
-                                        <urn>com.fasterxml.jackson.core:jackson-databind:2.9.10.1:jar:null:test:cadb5d93d16151946468cd1a2e96f41bc7d4e198</urn>
+                                        <urn>com.fasterxml.jackson.core:jackson-databind:2.9.10.5:jar:null:test:676c202a516e7d759624aa826904c12fde4de123</urn>
                                         <urn>com.google.code.findbugs:jsr305:2.0.1:jar:null:compile:516c03b21d50a644d538de0f0369c620989cd8f0</urn>
                                         <urn>com.google.guava:guava:27.1-android:jar:null:compile:a80ef47421d6607e749f8b7282dd7dee61adfea7</urn>
                                         <urn>org.checkerframework:checker-compat-qual:2.0.0:jar:null:compile:fc89b03860d11d6213d0154a62bcd1c2f69b9efa</urn>
@@ -386,7 +386,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.9.10.1</version>
+            <version>2.9.10.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
