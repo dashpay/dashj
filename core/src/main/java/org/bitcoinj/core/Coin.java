@@ -124,7 +124,7 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
 
     /**
      * Parses an amount expressed in the way humans are used to.
-     * 
+     *
      * @param str string in a format understood by {@link BigDecimal#BigDecimal(String)}, for example "0", "1", "0.10",
      *      * "1.23E3", "1234.5E-5".
      * @return {@code Coin} object containing value in satoshis
@@ -147,7 +147,7 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
 
     /**
      * Parses an amount expressed in the way humans are used to. The amount is cut to satoshi precision.
-     * 
+     *
      * @param str string in a format understood by {@link BigDecimal#BigDecimal(String)}, for example "0", "1", "0.10",
      *      * "1.23E3", "1234.5E-5".
      * @return {@code Coin} object containing value in satoshis
