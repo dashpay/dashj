@@ -90,6 +90,12 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
         this.value = satoshis;
     }
 
+    /**
+     * Create a {@code Coin} from a long integer number of satoshis.
+     *
+     * @param satoshis number of satoshis
+     * @return {@code Coin} object containing value in satoshis
+     */
     public static Coin valueOf(final long satoshis) {
         return new Coin(satoshis);
     }
@@ -108,7 +114,7 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
     }
 
     /**
-     * Convert an amount expressed in the way humans are used to into satoshis.
+     * Create a {@code Coin} from an amount expressed in "the way humans are used to".
      *
      * @param coins Number of Dash
      * @param cents Number of Dash cents (0.01 bitcoin)
@@ -123,8 +129,48 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
     }
 
     /**
-     * Parses an amount expressed in the way humans are used to.
+     * Convert a decimal amount of BTC into satoshis.
      *
+     * @param coins number of coins
+     * @return number of satoshis
+     */
+    public static long btcToSatoshi(BigDecimal coins) {
+        return coins.movePointRight(SMALLEST_UNIT_EXPONENT).longValueExact();
+    }
+
+    /**
+     * Convert an amount in satoshis to an amount in BTC.
+     *
+     * @param satoshis number of satoshis
+     * @return number of bitcoins (in BTC)
+     */
+    public static BigDecimal satoshiToBtc(long satoshis) {
+        return new BigDecimal(satoshis).movePointLeft(SMALLEST_UNIT_EXPONENT);
+    }
+
+    /**
+     * Create a {@code Coin} from a decimal amount of BTC.
+     *
+     * @param coins number of coins (in BTC)
+     * @return {@code Coin} object containing value in satoshis
+     */
+    public static Coin ofBtc(BigDecimal coins) {
+        return Coin.valueOf(btcToSatoshi(coins));
+    }
+
+    /**
+     * Create a {@code Coin} from a long integer number of satoshis.
+     *
+     * @param satoshis number of satoshis
+     * @return {@code Coin} object containing value in satoshis
+     */
+    public static Coin ofSat(long satoshis) {
+        return Coin.valueOf(satoshis);
+    }
+
+    /**
+     * Create a {@code Coin} by parsing a {@code String} amount expressed in "the way humans are used to".
+     * 
      * @param str string in a format understood by {@link BigDecimal#BigDecimal(String)}, for example "0", "1", "0.10",
      *      * "1.23E3", "1234.5E-5".
      * @return {@code Coin} object containing value in satoshis
@@ -133,7 +179,7 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
      */
     public static Coin parseCoin(final String str) {
         try {
-            long satoshis = new BigDecimal(str).movePointRight(SMALLEST_UNIT_EXPONENT).longValueExact();
+            long satoshis = btcToSatoshi(new BigDecimal(str));
             return Coin.valueOf(satoshis);
         } catch (ArithmeticException e) {
             try {
@@ -146,8 +192,9 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
     }
 
     /**
-     * Parses an amount expressed in the way humans are used to. The amount is cut to satoshi precision.
-     *
+     * Create a {@code Coin} by parsing a {@code String} amount expressed in "the way humans are used to".
+     * The amount is cut to satoshi precision.
+     * 
      * @param str string in a format understood by {@link BigDecimal#BigDecimal(String)}, for example "0", "1", "0.10",
      *      * "1.23E3", "1234.5E-5".
      * @return {@code Coin} object containing value in satoshis
@@ -298,6 +345,24 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
      */
     public long longValue() {
         return this.value;
+    }
+
+    /**
+     * Convert to number of satoshis
+     *
+     * @return decimal number of satoshis
+     */
+    public long toSat() {
+        return this.value;
+    }
+
+    /**
+     * Convert to number of bitcoin (in BTC)
+     *
+     * @return decimal number of bitcoin (in BTC)
+     */
+    public BigDecimal toBtc() {
+        return satoshiToBtc(this.value);
     }
 
     private static final MonetaryFormat FRIENDLY_FORMAT = MonetaryFormat.BTC.minDecimals(2).repeatOptionalDecimals(1, 6).postfixCode();
