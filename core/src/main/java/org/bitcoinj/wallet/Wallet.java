@@ -5704,10 +5704,10 @@ public class Wallet extends BaseTaggableObject
     AuthenticationKeyChainGroup authenticationGroup;
 
     public void initializeAuthenticationKeyChains(DeterministicSeed seed, @Nullable KeyParameter keyParameter) {
-        providerOwnerKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeOwnerDerivationPath()).build();
-        providerVoterKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeVotingDerivationPath()).build();
-        blockchainIdentityFundingKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath()).build();
-        blockchainIdentityKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityECDSADerivationPath()).build();
+        providerOwnerKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeOwnerDerivationPath()).type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER).build();
+        providerVoterKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeVotingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING).build();
+        blockchainIdentityFundingKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING).build();
+        blockchainIdentityKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityECDSADerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY).build();
 
         //encrypt all of the key chains if necessary
         if(keyParameter != null && getKeyCrypter() != null) {
