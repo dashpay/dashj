@@ -20,14 +20,25 @@ public class PalinkaDevNetParams extends DevNetParams {
 
     private static String DEVNET_NAME = "palinka";
 
-    private static String [] NODE_LIST = new String [] {
-            "54.191.208.72", "34.211.149.102", "54.245.143.72",
-            "54.201.16.143", "52.27.224.45", "52.38.244.67"
+    private static String [] MASTERNODES = new String [] {
+            "54.188.88.39",
+            "52.26.143.147",
+            "54.200.90.174",
+            "54.202.16.138",
+            "34.219.140.22",
+            "54.214.219.223",
+            "18.236.222.182",
+            "34.221.194.153",
+            "54.218.125.120",
+            "34.209.161.52",
+            "54.188.128.22",
+            "52.40.76.97",
+            "18.236.119.178"
     };
 
     public PalinkaDevNetParams() {
         super(DEVNET_NAME, "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001,
-               NODE_LIST, true, 70215);
+                MASTERNODES, true, 70215);
     }
 
     private static PalinkaDevNetParams instance;
@@ -38,5 +49,10 @@ public class PalinkaDevNetParams extends DevNetParams {
             add(instance);
         }
         return instance;
+    }
+
+    @Override
+    public String[] getDefaultMasternodeList() {
+        return MASTERNODES;
     }
 }
