@@ -54,4 +54,9 @@ public class MobileDevNetParams extends DevNetParams {
         }
         return instance;
     }
+
+    @Override
+    public String[] getDefaultMasternodeList() {
+        return MASTERNODES;
+    }
 }

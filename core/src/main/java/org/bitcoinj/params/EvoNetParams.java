@@ -56,4 +56,9 @@ public class EvoNetParams extends DevNetParams {
         }
         return instance;
     }
+
+    @Override
+    public String[] getDefaultMasternodeList() {
+        return MASTERNODES;
+    }
 }
