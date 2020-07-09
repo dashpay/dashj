@@ -119,6 +119,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
 
         instantSendConfirmationsRequired = 2;
         instantSendKeepLock = 6;
+        deterministicMasternodesEnabledHeight = 2;
+        deterministicMasternodesEnabled = true;
 
         this.protocolVersion = protocolVersion;
 
