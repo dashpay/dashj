@@ -21,24 +21,24 @@ public class PalinkaDevNetParams extends DevNetParams {
     private static String DEVNET_NAME = "palinka";
 
     private static String [] MASTERNODES = new String [] {
-            "54.188.88.39",
-            "52.26.143.147",
-            "54.200.90.174",
-            "54.202.16.138",
-            "34.219.140.22",
-            "54.214.219.223",
-            "18.236.222.182",
-            "34.221.194.153",
-            "54.218.125.120",
-            "34.209.161.52",
-            "54.188.128.22",
-            "52.40.76.97",
-            "18.236.119.178"
+            "54.185.9.132",
+            "34.220.76.153",
+            "34.211.165.130",
+            "34.214.88.41",
+            "34.220.156.27",
+            "54.186.245.72",
+            "54.189.90.213",
+            "54.203.174.145",
+            "54.202.150.208",
+            "54.190.154.88",
+            "54.244.216.56",
+            "54.245.150.240"
     };
 
     public PalinkaDevNetParams() {
         super(DEVNET_NAME, "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001,
                 MASTERNODES, true, 70215);
+        dnsSeeds = new String[] { "seed-1.palinka.networks.dash.org" };
     }
 
     private static PalinkaDevNetParams instance;
