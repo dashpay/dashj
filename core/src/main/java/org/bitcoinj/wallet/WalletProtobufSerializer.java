@@ -684,7 +684,7 @@ public class WalletProtobufSerializer {
                         type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING;
                         break;
                     case BLOCKCHAIN_IDENTITY_TOPUP:
-                        type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING;
+                        type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP;
                         break;
                     case MASTERNODE_OWNER:
                         type = AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER;
