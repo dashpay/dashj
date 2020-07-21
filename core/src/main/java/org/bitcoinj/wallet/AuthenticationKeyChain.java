@@ -41,6 +41,7 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         MASTERNODE_OWNER,
         MASTERNODE_OPERATOR,
         MASTERNODE_VOTING,
+        BLOCKCHAIN_IDENTITY_TOPUP,
         INVALID_KEY_CHAIN
     }
     KeyChainType type;

@@ -20404,6 +20404,10 @@ public final class Protos {
        * <code>BLOCKCHAIN_IDENTITY_FUNDING = 5;</code>
        */
       BLOCKCHAIN_IDENTITY_FUNDING(5),
+      /**
+       * <code>BLOCKCHAIN_IDENTITY_TOPUP = 6;</code>
+       */
+      BLOCKCHAIN_IDENTITY_TOPUP(6),
       ;
 
       /**
@@ -20430,6 +20434,10 @@ public final class Protos {
        * <code>BLOCKCHAIN_IDENTITY_FUNDING = 5;</code>
        */
       public static final int BLOCKCHAIN_IDENTITY_FUNDING_VALUE = 5;
+      /**
+       * <code>BLOCKCHAIN_IDENTITY_TOPUP = 6;</code>
+       */
+      public static final int BLOCKCHAIN_IDENTITY_TOPUP_VALUE = 6;
 
 
       public final int getNumber() {
@@ -20452,6 +20460,7 @@ public final class Protos {
           case 3: return MASTERNODE_OPERATOR;
           case 4: return MASTERNODE_VOTING;
           case 5: return BLOCKCHAIN_IDENTITY_FUNDING;
+          case 6: return BLOCKCHAIN_IDENTITY_TOPUP;
           default: return null;
         }
       }
@@ -27697,38 +27706,38 @@ public final class Protos {
       "\014\n\004data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\" \n\003Tag\022" +
       "\013\n\003tag\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\"5\n\021Transactio" +
       "nSigner\022\022\n\nclass_name\030\001 \002(\t\022\014\n\004data\030\002 \001(" +
-      "\014\"\355\002\n\020ExtendedKeyChain\022;\n\004type\030\001 \002(\0162-.w" +
+      "\014\"\214\003\n\020ExtendedKeyChain\022;\n\004type\030\001 \002(\0162-.w" +
       "allet.ExtendedKeyChain.ExtendedKeyChainT" +
       "ype\0221\n\007keyType\030\002 \002(\0162 .wallet.ExtendedKe" +
       "yChain.KeyType\022\030\n\003key\030\003 \003(\0132\013.wallet.Key" +
-      "\"\257\001\n\024ExtendedKeyChainType\022\027\n\023BLOCKCHAIN_" +
+      "\"\316\001\n\024ExtendedKeyChainType\022\027\n\023BLOCKCHAIN_" +
       "IDENTITY\020\000\022\027\n\023MASTERNODE_HOLDINGS\020\001\022\024\n\020M" +
       "ASTERNODE_OWNER\020\002\022\027\n\023MASTERNODE_OPERATOR" +
       "\020\003\022\025\n\021MASTERNODE_VOTING\020\004\022\037\n\033BLOCKCHAIN_" +
-      "IDENTITY_FUNDING\020\005\"\035\n\007KeyType\022\t\n\005ECDSA\020\000" +
-      "\022\007\n\003BLS\020\001\"\364\005\n\006Wallet\022\032\n\022network_identifi" +
-      "er\030\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022\036" +
-      "\n\026last_seen_block_height\030\014 \001(\r\022!\n\031last_s" +
-      "een_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013" +
-      ".wallet.Key\022(\n\013transaction\030\004 \003(\0132\023.walle" +
-      "t.Transaction\022&\n\016watched_script\030\017 \003(\0132\016." +
-      "wallet.Script\022C\n\017encryption_type\030\005 \001(\0162\035" +
-      ".wallet.Wallet.EncryptionType:\013UNENCRYPT" +
-      "ED\0227\n\025encryption_parameters\030\006 \001(\0132\030.wall" +
-      "et.ScryptParameters\022\022\n\007version\030\007 \001(\005:\0011\022" +
-      "$\n\textension\030\n \003(\0132\021.wallet.Extension\022\023\n" +
-      "\013description\030\013 \001(\t\022\031\n\021key_rotation_time\030" +
-      "\r \001(\004\022\031\n\004tags\030\020 \003(\0132\013.wallet.Tag\022.\n\014extK" +
-      "eyChains\030\035 \003(\0132\030.wallet.ExtendedKeyChain" +
-      "\022#\n\016keysForFriends\030\036 \003(\0132\013.wallet.Key\022$\n" +
-      "\017keysFromFriends\030\037 \003(\0132\013.wallet.Key\"\202\001\n\016" +
-      "EncryptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRY" +
-      "PTED_SCRYPT_AES\020\002\022!\n\035ENCRYPTED_BLS_KEYEX" +
-      "CHANGE_AES\020\003\022\"\n\036ENCRYPTED_ECDH_KEYEXCHAN" +
-      "GE_AES\020\004\"R\n\014ExchangeRate\022\022\n\ncoin_value\030\001" +
-      " \002(\003\022\022\n\nfiat_value\030\002 \002(\003\022\032\n\022fiat_currenc" +
-      "y_code\030\003 \002(\tB\035\n\023org.bitcoinj.walletB\006Pro" +
-      "tos"
+      "IDENTITY_FUNDING\020\005\022\035\n\031BLOCKCHAIN_IDENTIT" +
+      "Y_TOPUP\020\006\"\035\n\007KeyType\022\t\n\005ECDSA\020\000\022\007\n\003BLS\020\001" +
+      "\"\364\005\n\006Wallet\022\032\n\022network_identifier\030\001 \002(\t\022" +
+      "\034\n\024last_seen_block_hash\030\002 \001(\014\022\036\n\026last_se" +
+      "en_block_height\030\014 \001(\r\022!\n\031last_seen_block" +
+      "_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013.wallet.K" +
+      "ey\022(\n\013transaction\030\004 \003(\0132\023.wallet.Transac" +
+      "tion\022&\n\016watched_script\030\017 \003(\0132\016.wallet.Sc" +
+      "ript\022C\n\017encryption_type\030\005 \001(\0162\035.wallet.W" +
+      "allet.EncryptionType:\013UNENCRYPTED\0227\n\025enc" +
+      "ryption_parameters\030\006 \001(\0132\030.wallet.Scrypt" +
+      "Parameters\022\022\n\007version\030\007 \001(\005:\0011\022$\n\textens" +
+      "ion\030\n \003(\0132\021.wallet.Extension\022\023\n\013descript" +
+      "ion\030\013 \001(\t\022\031\n\021key_rotation_time\030\r \001(\004\022\031\n\004" +
+      "tags\030\020 \003(\0132\013.wallet.Tag\022.\n\014extKeyChains\030" +
+      "\035 \003(\0132\030.wallet.ExtendedKeyChain\022#\n\016keysF" +
+      "orFriends\030\036 \003(\0132\013.wallet.Key\022$\n\017keysFrom" +
+      "Friends\030\037 \003(\0132\013.wallet.Key\"\202\001\n\016Encryptio" +
+      "nType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYPTED_SCRY" +
+      "PT_AES\020\002\022!\n\035ENCRYPTED_BLS_KEYEXCHANGE_AE" +
+      "S\020\003\022\"\n\036ENCRYPTED_ECDH_KEYEXCHANGE_AES\020\004\"" +
+      "R\n\014ExchangeRate\022\022\n\ncoin_value\030\001 \002(\003\022\022\n\nf" +
+      "iat_value\030\002 \002(\003\022\032\n\022fiat_currency_code\030\003 " +
+      "\002(\tB\035\n\023org.bitcoinj.walletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {

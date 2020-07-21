@@ -411,6 +411,7 @@ message ExtendedKeyChain {
     MASTERNODE_OPERATOR = 3;
     MASTERNODE_VOTING = 4;
     BLOCKCHAIN_IDENTITY_FUNDING = 5;
+    BLOCKCHAIN_IDENTITY_TOPUP = 6;
   }
   enum KeyType {
     ECDSA = 0;

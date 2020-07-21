@@ -5700,6 +5700,7 @@ public class Wallet extends BaseTaggableObject
     AuthenticationKeyChain providerOwnerKeyChain;
     AuthenticationKeyChain providerVoterKeyChain;
     AuthenticationKeyChain blockchainIdentityFundingKeyChain;
+    AuthenticationKeyChain blockchainIdentityTopupKeyChain;
     AuthenticationKeyChain blockchainIdentityKeyChain;
     AuthenticationKeyChainGroup authenticationGroup;
 
@@ -5707,6 +5708,7 @@ public class Wallet extends BaseTaggableObject
         providerOwnerKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeOwnerDerivationPath()).type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER).build();
         providerVoterKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeVotingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING).build();
         blockchainIdentityFundingKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING).build();
+        blockchainIdentityTopupKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityTopupFundingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP).build();
         blockchainIdentityKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityECDSADerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY).build();
 
         //encrypt all of the key chains if necessary
@@ -5715,11 +5717,13 @@ public class Wallet extends BaseTaggableObject
             providerVoterKeyChain = providerVoterKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
             blockchainIdentityKeyChain = blockchainIdentityKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
             blockchainIdentityFundingKeyChain = blockchainIdentityFundingKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+            blockchainIdentityTopupKeyChain = blockchainIdentityTopupKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
         }
 
         authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams())
                 .addChain(providerOwnerKeyChain)
                 .addChain(providerVoterKeyChain)
+                .addChain(blockchainIdentityFundingKeyChain)
                 .addChain(blockchainIdentityFundingKeyChain)
                 .addChain(blockchainIdentityKeyChain)
                 .build();
@@ -5739,6 +5743,10 @@ public class Wallet extends BaseTaggableObject
 
     public AuthenticationKeyChain getBlockchainIdentityFundingKeyChain() {
         return blockchainIdentityFundingKeyChain;
+    }
+
+    public AuthenticationKeyChain getBlockchainIdentityTopupKeyChain() {
+        return blockchainIdentityTopupKeyChain;
     }
 
     //package level access
@@ -5762,6 +5770,10 @@ public class Wallet extends BaseTaggableObject
                 break;
             case BLOCKCHAIN_IDENTITY_FUNDING:
                 blockchainIdentityFundingKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
+            case BLOCKCHAIN_IDENTITY_TOPUP:
+                blockchainIdentityTopupKeyChain = chain;
                 authenticationGroup.addAndActivateHDChain(chain);
                 break;
         }

@@ -244,6 +244,13 @@ public class WalletProtobufSerializer {
             extendedKeyChainBuilder.addAllKey(wallet.getBlockchainIdentityFundingKeyChain().serializeToProtobuf());
             extendedKeyChains.add(extendedKeyChainBuilder.build());
         }
+        if(wallet.getBlockchainIdentityTopupKeyChain() != null) {
+            Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
+            extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
+            extendedKeyChainBuilder.addAllKey(wallet.getBlockchainIdentityTopupKeyChain().serializeToProtobuf());
+            extendedKeyChains.add(extendedKeyChainBuilder.build());
+        }
         if(wallet.getProviderOwnerKeyChain() != null) {
             Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
             extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
@@ -674,6 +681,9 @@ public class WalletProtobufSerializer {
                         type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY;
                         break;
                     case BLOCKCHAIN_IDENTITY_FUNDING:
+                        type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING;
+                        break;
+                    case BLOCKCHAIN_IDENTITY_TOPUP:
                         type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING;
                         break;
                     case MASTERNODE_OWNER:
