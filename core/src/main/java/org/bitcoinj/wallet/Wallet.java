@@ -1295,6 +1295,10 @@ public class Wallet extends BaseTaggableObject
                         keyChainGroup.markP2SHAddressAsUsed(a);
                         receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
                         sendingToFriendsGroup.markP2SHAddressAsUsed(a);
+                    } else if (ScriptPattern.isCreditBurn(script)) {
+                        byte [] h = ScriptPattern.extractCreditBurnKeyId(script);
+                        if (authenticationGroup != null)
+                            authenticationGroup.markPubKeyHashAsUsed(h);
                     }
                 } catch (ScriptException e) {
                     // Just means we didn't understand the output of this transaction: ignore it.
