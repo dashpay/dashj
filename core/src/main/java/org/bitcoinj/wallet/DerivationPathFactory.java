@@ -15,6 +15,10 @@ public class DerivationPathFactory {
         this.coinType = new ChildNumber(params.getCoinType(), true);
     }
 
+    /** blockchain identity registration funding derivation path
+     * m/9'/5'/12' (mainnet)
+     * m/9'/1'/12' (testnet, devnets)
+     */
     public ImmutableList<ChildNumber> blockchainIdentityRegistrationFundingDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
@@ -23,6 +27,22 @@ public class DerivationPathFactory {
                 .build();
     }
 
+    /** blockchain identity topup funding derivation path
+     * m/9'/5'/12' (mainnet)
+     * m/9'/1'/12' (testnet, devnets)
+     */
+    public ImmutableList<ChildNumber> blockchainIdentityTopupFundingDerivationPath() {
+        return ImmutableList.<ChildNumber>builder()
+                .add(FEATURE_PURPOSE)
+                .add(coinType)
+                .add(new ChildNumber(13, true))
+                .build();
+    }
+
+    /** blockchain identity keys derivation path (EC Keys)
+     * m/9'/5'/5'/0'/0' (mainnet)
+     * m/9'/1'/5'/0'/0' (testnet, devnets)
+     */
     public ImmutableList<ChildNumber> blockchainIdentityECDSADerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
@@ -33,6 +53,10 @@ public class DerivationPathFactory {
                 .build();
     }
 
+    /** blockchain identity keys derivation path (BLS Keys)
+     * m/9'/5'/5'/0'/1' (mainnet)
+     * m/9'/1'/5'/0'/1' (testnet, devnets)
+     */
     public ImmutableList<ChildNumber> blockchainIdentityBLSDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
@@ -52,6 +76,10 @@ public class DerivationPathFactory {
                 .build();
     }
 
+    /** provider voting keys derivation path
+     * m/9'/5'/3'/1' (mainnet)
+     * m/9'/1'/3'/1' (testnet, devnets)
+     */
     public ImmutableList<ChildNumber> masternodeVotingDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
@@ -61,6 +89,10 @@ public class DerivationPathFactory {
                 .build();
     }
 
+    /** provider owner keys derivation path
+     * m/9'/5'/3'/2' (mainnet)
+     * m/9'/1'/3'/2' (testnet, devnets)
+     */
     public ImmutableList<ChildNumber> masternodeOwnerDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
@@ -70,6 +102,10 @@ public class DerivationPathFactory {
                 .build();
     }
 
+    /** provider operator keys derivation path
+     * m/9'/5'/3'/3' (mainnet)
+     * m/9'/1'/3'/3' (testnet, devnets)
+     */
     public ImmutableList<ChildNumber> masternodeOperatorDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
@@ -79,6 +115,10 @@ public class DerivationPathFactory {
                 .build();
     }
 
+    /** Default wallet derivation path
+     * m/44'/5'/@account' (mainnet)
+     * m/44'/1'/@account' (testnet, devnets)
+     */
     public ImmutableList<ChildNumber> bip44DerivationPath(int account) {
         return ImmutableList.<ChildNumber>builder()
                 .add(new ChildNumber(44, true))
@@ -87,6 +127,9 @@ public class DerivationPathFactory {
                 .build();
     }
 
+    /** Legacy wallet derivation path
+     * m/@account' (mainnet, testnet, devnets)
+     */
     public ImmutableList<ChildNumber> bip32DerivationPath(int account) {
         return ImmutableList.<ChildNumber>builder()
                 .add(new ChildNumber(account, true))
