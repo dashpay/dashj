@@ -1,4 +1,21 @@
+/*
+ * Copyright 2018 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.bitcoinj.core;
+
+import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -10,7 +27,7 @@ import java.util.Arrays;
 public class KeyId extends ChildMessage {
     public static final int MESSAGE_SIZE = 20;
 
-    byte [] bytes;
+    private byte [] bytes;
 
 
     public KeyId(NetworkParameters params, byte[] payload, int offset) throws ProtocolException {
@@ -19,13 +36,10 @@ public class KeyId extends ChildMessage {
 
     public KeyId(byte [] key)
     {
-        assert(key.length == 20);
+        super();
+        Preconditions.checkArgument(key.length == 20);
         bytes = new byte[key.length];
         System.arraycopy(key, 0, bytes, 0, key.length);
-    }
-
-    protected static int calcLength(byte[] buf, int offset) {
-        return MESSAGE_SIZE;
     }
 
     public int calculateMessageSizeInBytes()
@@ -38,6 +52,7 @@ public class KeyId extends ChildMessage {
         bytes = readBytes(MESSAGE_SIZE);
         length = cursor - offset;
     }
+
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
@@ -46,26 +61,17 @@ public class KeyId extends ChildMessage {
 
     public String toString()
     {
-        return "key id: " + Utils.HEX.encode(bytes);
+        return "KeyId(" + Utils.HEX.encode(bytes) +")";
     }
 
     public byte [] getBytes() { return bytes; }
 
     public boolean equals(Object o)
     {
-       KeyId key = (KeyId)o;
-        if(key.bytes.length == this.bytes.length)
-        {
-            if(Arrays.equals(key.bytes, this.bytes) == true)
-                return true;
-        }
-        return false;
-    }
-
-    public KeyId duplicate()
-    {
-        KeyId copy = new KeyId(getBytes());
-        return copy;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        KeyId keyId = (KeyId)o;
+        return Arrays.equals(keyId.bytes, this.bytes);
     }
 
     Address getAddress(NetworkParameters params) {

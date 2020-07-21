@@ -38,9 +38,9 @@ public class DeterministicMasternodeState extends ChildMessage {
         PoSeRevivedHeight = other.PoSeRevivedHeight;
         PoSeBanHeight = other.PoSeBanHeight;
         revocationReason = other.revocationReason;
-        keyIDOwner = other.keyIDOwner.duplicate();
+        keyIDOwner = other.keyIDOwner;
         pubKeyOperator = other.pubKeyOperator;
-        keyIDVoting = other.keyIDVoting.duplicate();
+        keyIDVoting = other.keyIDVoting;
         address = other.address.duplicate();
         scriptPayout = new Script(other.scriptPayout.getProgram());
         scriptOperatorPayout = new Script(other.scriptOperatorPayout.getProgram());

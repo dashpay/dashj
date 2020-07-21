@@ -35,8 +35,8 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         proRegTxHash = other.proRegTxHash;
         confirmedHash = other.confirmedHash;
         service = other.service.duplicate();
-        keyIdOperator = other.keyIdOperator.duplicate();
-        keyIdVoting = other.keyIdVoting.duplicate();
+        keyIdOperator = other.keyIdOperator;
+        keyIdVoting = other.keyIdVoting;
         pubKeyOperator = new BLSLazyPublicKey(other.pubKeyOperator);
         updateConfirmedHashWithProRegTxHash();
         length = params.isSupportingEvolution() ? MESSAGE_SIZE : MESSAGE_SIZE_OLD;
