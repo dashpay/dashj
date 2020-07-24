@@ -5967,11 +5967,16 @@ public class Wallet extends BaseTaggableObject
     }
 
     public void addReceivingFromFriendKeyChain(FriendKeyChain chain) {
-        if(receivingFromFriendsGroup == null) {
-            receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+        keyChainGroupLock.lock();
+        try {
+            if(receivingFromFriendsGroup == null) {
+                receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+            }
+            receivingFromFriendsGroup.addAndActivateHDChain(chain);
+            saveNow();
+        } finally {
+            keyChainGroupLock.unlock();
         }
-        receivingFromFriendsGroup.addAndActivateHDChain(chain);
-        saveNow();
     }
 
     public void addSendingToFriendKeyChain(String xpub, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
@@ -5982,11 +5987,16 @@ public class Wallet extends BaseTaggableObject
     }
 
     public void addSendingToFriendKeyChain(FriendKeyChain chain) {
-        if(sendingToFriendsGroup == null) {
-            sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+        keyChainGroupLock.lock();
+        try {
+            if(sendingToFriendsGroup == null) {
+                sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+            }
+            sendingToFriendsGroup.addAndActivateHDChain(chain);
+            saveNow();
+        } finally {
+            keyChainGroupLock.unlock();
         }
-        sendingToFriendsGroup.addAndActivateHDChain(chain);
-        saveNow();
     }
 
     public void addRecievingFromFriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, EvolutionContact contact) {
