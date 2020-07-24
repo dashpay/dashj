@@ -527,7 +527,7 @@ public class DeterministicKey extends ECKey {
         checkArgument(contactPub.length == 69);
         ByteBuffer serXPub = ByteBuffer.allocate(78);
         serXPub.putInt(params.getBip32HeaderP2PKHpub()); // header
-        serXPub.put((byte) 0x00); // use depth 0 (master)
+        serXPub.put((byte) 7); // use depth 0 (master)
         serXPub.putInt((int)Utils.readUint32(contactPub, 0)); // fingerprint
         serXPub.putInt(0); // use child number 0
         serXPub.put(Arrays.copyOfRange(contactPub, 4, 36)); // chain code
