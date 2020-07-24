@@ -24,6 +24,7 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.script.Script;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,14 +90,27 @@ public class FriendKeyChain extends ExternalKeyChain {
     public FriendKeyChain(NetworkParameters params, String xpub, EvolutionContact contact) {
         super(DeterministicKey.deserializeB58(xpub, getContactPath(params, contact, KeyChainType.SENDING_CHAIN), params),
                 getContactPath(params, contact, KeyChainType.SENDING_CHAIN));
+        type = KeyChainType.SENDING_CHAIN;
     }
 
     public FriendKeyChain(DeterministicKey watchingKey) {
         super(watchingKey, false);
+        type = KeyChainType.SENDING_CHAIN;
     }
 
     public FriendKeyChain(DeterministicKey watchingKey, boolean isFollowing) {
         super(watchingKey, isFollowing);
+    }
+
+    /**
+     * For use in encryption when {@link #toEncrypted(KeyCrypter, KeyParameter)} is called, so that
+     * subclasses can override that method and create an instance of the right class.
+     *
+     * See also {@link #makeKeyChainFromSeed(DeterministicSeed, ImmutableList, Script.ScriptType)}
+     */
+    protected FriendKeyChain(KeyCrypter crypter, KeyParameter aesKey, FriendKeyChain chain) {
+        super(crypter, aesKey, chain);
+        type = chain.type;
     }
 
     /** {@inheritDoc} */
@@ -162,5 +176,10 @@ public class FriendKeyChain extends ExternalKeyChain {
 
     public KeyChainType getType() {
         return type;
+    }
+
+    @Override
+    public FriendKeyChain toEncrypted(KeyCrypter keyCrypter, KeyParameter aesKey) {
+        return new FriendKeyChain(keyCrypter, aesKey, this);
     }
 }

@@ -52,4 +52,9 @@ public class AuthenticationKeyChainFactory implements KeyChainFactory {
     public DeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public DeterministicKeyChain makeWatchingFriendKeyChain(DeterministicKey accountKey, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException {
+        throw new UnsupportedOperationException();
+    }
 }

@@ -1167,7 +1167,10 @@ public class Wallet extends BaseTaggableObject
     public ECKey findKeyFromPubKeyHash(byte[] pubKeyHash, @Nullable Script.ScriptType scriptType) {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
+            ECKey key = keyChainGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
+            if (key == null && receivingFromFriendsGroup != null)
+                key = receivingFromFriendsGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
+            return key;
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1177,7 +1180,7 @@ public class Wallet extends BaseTaggableObject
     public boolean hasKey(ECKey key) {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.hasKey(key);
+            return keyChainGroup.hasKey(key) || (receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKey(key));
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1238,7 +1241,11 @@ public class Wallet extends BaseTaggableObject
     public ECKey findKeyFromPubKey(byte[] pubKey) {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.findKeyFromPubKey(pubKey);
+            ECKey key = keyChainGroup.findKeyFromPubKey(pubKey);
+            if (key == null && receivingFromFriendsGroup != null) {
+                key = receivingFromFriendsGroup.findKeyFromPubKey(pubKey);
+            }
+            return key;
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -5986,22 +5993,49 @@ public class Wallet extends BaseTaggableObject
         addReceivingFromFriendKeyChain(seed, keyCrypter, contact.getUserAccount(), contact.getEvolutionUserId(), contact.getFriendUserId());
     }
 
-    public List<Transaction> getTransactionsReceivedFromFriend(EvolutionContact contact) {
-        FriendKeyChain chain = receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+    public List<Transaction> getTransactionsWithFriend(EvolutionContact contact) {
+        FriendKeyChain fromChain = receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+        FriendKeyChain toChain = sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), FriendKeyChain.KeyChainType.SENDING_CHAIN);
 
         ArrayList<Transaction> txs = Lists.newArrayList();
         for(WalletTransaction wtx : getWalletTransactions()) {
             Transaction tx = wtx.getTransaction();
             for(TransactionOutput output : tx.getOutputs()) {
-                for(ECKey key : chain.getKeys(false, false)) {
-                    if(output.getScriptPubKey().equals(ScriptBuilder.createOutputScript(Address.fromKey(params, key)))) {
+                if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                    byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                    if(fromChain.findKeyFromPubHash(hash160) != null || toChain.findKeyFromPubHash(hash160) != null) {
                         txs.add(tx);
-                        break;
                     }
                 }
             }
         }
         return txs;
+    }
+
+    public EvolutionContact getFriendFromTransaction(Transaction tx) {
+        for(TransactionOutput output : tx.getOutputs()) {
+            if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                EvolutionContact contact = sendingToFriendsGroup.getFriendFromPublicKeyHash(hash160);
+                if (contact != null) {
+                    return contact;
+                } else {
+                    contact = receivingFromFriendsGroup.getFriendFromPublicKeyHash(hash160);
+                    if (contact != null) {
+                        return contact;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean hasReceivingKeyChain(EvolutionContact contact) {
+        return receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) != null;
+    }
+
+    public boolean hasSendingKeyChain(EvolutionContact contact) {
+        return sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN) != null;
     }
 
     public boolean hasReceivingFriendKeyChains() {
@@ -6010,6 +6044,10 @@ public class Wallet extends BaseTaggableObject
 
     protected void setReceivingFromFriendsGroup(FriendKeyChainGroup receivingFromFriendsGroup) {
         this.receivingFromFriendsGroup = receivingFromFriendsGroup;
+    }
+
+    protected void setSendingToFriendsGroup(FriendKeyChainGroup sendingToFriendsGroup) {
+        this.sendingToFriendsGroup = sendingToFriendsGroup;
     }
 
     // ***************************************************************************************************************

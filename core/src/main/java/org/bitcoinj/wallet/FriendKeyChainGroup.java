@@ -19,6 +19,7 @@ package org.bitcoinj.wallet;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.crypto.*;
@@ -391,5 +392,16 @@ public class FriendKeyChainGroup extends KeyChainGroup {
 
     protected KeyChainType getKeyChainType() {
         return chains.size() > 0 ? ((FriendKeyChain)chains.get(0)).type : null;
+    }
+
+    public EvolutionContact getFriendFromPublicKeyHash(byte [] pubKeyHash) {
+        ECKey key = findKeyFromPubKeyHash(pubKeyHash, Script.ScriptType.P2PKH);
+        if (key != null && key instanceof DeterministicKey) {
+            ImmutableList<ChildNumber> path = ((DeterministicKey)key).getPath();
+            Sha256Hash from = Sha256Hash.wrap(((ExtendedChildNumber)path.get(PATH_INDEX_FROM_ID)).bi().toByteArray());
+            Sha256Hash to = Sha256Hash.wrap(((ExtendedChildNumber)path.get(PATH_INDEX_TO_ID)).bi().toByteArray());
+            return new EvolutionContact(from, to);
+        }
+        return null;
     }
 }
