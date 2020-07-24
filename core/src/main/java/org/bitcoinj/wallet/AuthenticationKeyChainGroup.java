@@ -170,7 +170,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
         BasicKeyChain basicKeyChain = BasicKeyChain.fromProtobufUnencrypted(keys);
         List<DeterministicKeyChain> chains = DeterministicKeyChain.fromProtobuf(keys, null, factory);
         for(DeterministicKeyChain chain : chains) {
-            Preconditions.checkState(chain instanceof FriendKeyChain);
+            Preconditions.checkState(chain instanceof AuthenticationKeyChain);
         }
         HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentKeys = null;
         determineIssuedKeys(keys, chains);
@@ -210,7 +210,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
         BasicKeyChain basicKeyChain = BasicKeyChain.fromProtobufEncrypted(keys, crypter);
         List<DeterministicKeyChain> chains = DeterministicKeyChain.fromProtobuf(keys, crypter, factory);
         for(DeterministicKeyChain chain : chains) {
-            Preconditions.checkState(chain instanceof FriendKeyChain);
+            Preconditions.checkState(chain instanceof AuthenticationKeyChain);
         }
         HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentKeys = null;
 

@@ -736,7 +736,7 @@ public class WalletProtobufSerializer {
             } else {
                 friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysFromFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
             }
-            wallet.setReceivingFromFriendsGroup(friendKeyChainGroup);
+            wallet.setSendingToFriendsGroup(friendKeyChainGroup);
         }
 
         // Make sure the object can be re-used to read another wallet without corruption.

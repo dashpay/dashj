@@ -1024,11 +1024,15 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                     } else if (seed == null) {
                         DeterministicKey accountKey = new DeterministicKey(immutablePath, chainCode, pubkey, null, null);
                         accountKey.setCreationTimeSeconds(key.getCreationTimestamp() / 1000);
-                        chain = factory.makeWatchingKeyChain(key, iter.peek(), accountKey, isFollowingKey, isMarried,
-                                outputScriptType);
+                        if (simple) {
+                            chain = factory.makeWatchingKeyChain(key, iter.peek(), accountKey, isFollowingKey, isMarried,
+                                    outputScriptType);
+                        } else {
+                            chain = factory.makeWatchingFriendKeyChain(accountKey, immutablePath);
+                        }
                         isWatchingAccountKey = true;
                     } else {
-                        if(simple)
+                        if (simple)
                             chain = factory.makeKeyChain(key, iter.peek(), seed, crypter, isMarried,
                                     outputScriptType, ImmutableList.<ChildNumber> builder().addAll(accountPath).build());
                         else
