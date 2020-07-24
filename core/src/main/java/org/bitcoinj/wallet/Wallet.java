@@ -4971,6 +4971,8 @@ public class Wallet extends BaseTaggableObject
             size += bloomSpecialTxHashes.size();
             size += bloomSpecialTxScripts.size();
             size += bloomSpecialTxOutpoints.size();
+            if (receivingFromFriendsGroup != null)
+                size += receivingFromFriendsGroup.getBloomFilterElementCount();
             return size;
         } finally {
             endBloomFilterCalculation();
@@ -5060,8 +5062,8 @@ public class Wallet extends BaseTaggableObject
                 filter.merge(authFilter);
             }
             if(receivingFromFriendsGroup != null) {
-                BloomFilter authFilter = receivingFromFriendsGroup.getBloomFilter(size, falsePositiveRate, nTweak);
-                filter.merge(authFilter);
+                BloomFilter friendFilter = receivingFromFriendsGroup.getBloomFilter(size, falsePositiveRate, nTweak);
+                filter.merge(friendFilter);
             }
             return filter;
         } finally {
