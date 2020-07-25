@@ -6008,12 +6008,17 @@ public class Wallet extends BaseTaggableObject
         FriendKeyChain toChain = sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), FriendKeyChain.KeyChainType.SENDING_CHAIN);
 
         ArrayList<Transaction> txs = Lists.newArrayList();
+        if (fromChain == null && toChain == null) {
+            return txs;
+        }
+
         for(WalletTransaction wtx : getWalletTransactions()) {
             Transaction tx = wtx.getTransaction();
             for(TransactionOutput output : tx.getOutputs()) {
                 if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
                     byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
-                    if(fromChain.findKeyFromPubHash(hash160) != null || toChain.findKeyFromPubHash(hash160) != null) {
+                    if((fromChain != null && fromChain.findKeyFromPubHash(hash160) != null) ||
+                            (toChain != null && toChain.findKeyFromPubHash(hash160) != null)) {
                         txs.add(tx);
                     }
                 }
