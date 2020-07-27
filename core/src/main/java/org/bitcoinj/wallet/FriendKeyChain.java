@@ -91,10 +91,11 @@ public class FriendKeyChain extends ExternalKeyChain {
         super(DeterministicKey.deserializeB58(xpub, getContactPath(params, contact, KeyChainType.SENDING_CHAIN), params),
                 getContactPath(params, contact, KeyChainType.SENDING_CHAIN));
         type = KeyChainType.SENDING_CHAIN;
+        this.isFollowing = true;
     }
 
     public FriendKeyChain(DeterministicKey watchingKey) {
-        super(watchingKey, false);
+        super(watchingKey, true);
         type = KeyChainType.SENDING_CHAIN;
     }
 

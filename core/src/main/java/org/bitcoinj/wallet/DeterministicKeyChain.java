@@ -191,7 +191,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     protected final BasicKeyChain basicKeyChain;
 
     // If set this chain is following another chain in a married KeyChainGroup
-    private boolean isFollowing;
+    protected boolean isFollowing;
 
     // holds a number of signatures required to spend. It's the N from N-of-M CHECKMULTISIG script for P2SH transactions
     // and always 1 for other transaction types
