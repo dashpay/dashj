@@ -131,7 +131,7 @@ public class FriendKeyChainTest {
         wallet.addReceivingFromFriendKeyChain(bip44chain.getSeed(), bip44chain.getKeyCrypter(),
                 0, userAhash, userBhash);
 
-        DeterministicKey currentKey = wallet.receivingFromFriendsGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+        DeterministicKey currentKey = wallet.receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN).getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
 
         Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
 
@@ -143,7 +143,7 @@ public class FriendKeyChainTest {
 
         DeterministicKey key = friendChain.getWatchingKey();
 
-        DeterministicKey currentKeyAfterDeserialization = walletReloaded.receivingFromFriendsGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+        DeterministicKey currentKeyAfterDeserialization = walletReloaded.receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN).getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
 
         ImmutableList<ChildNumber> accountPath = ImmutableList.of(ChildNumber.NINE_HARDENED, ChildNumber.ONE_HARDENED,
                 ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED,
