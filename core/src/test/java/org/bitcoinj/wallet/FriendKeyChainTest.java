@@ -24,11 +24,13 @@ import org.bitcoinj.crypto.ExtendedChildNumber;
 import org.bitcoinj.crypto.HDKeyDerivation;
 import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.params.UnitTestParams;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.junit.Before;
 import org.junit.Test;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.bitcoinj.wallet.FriendKeyChain.KeyChainType.RECEIVING_CHAIN;
 import static org.bitcoinj.wallet.FriendKeyChain.KeyChainType.SENDING_CHAIN;
 import static org.junit.Assert.*;
 
@@ -149,7 +151,8 @@ public class FriendKeyChainTest {
 
         assertEquals(accountPath, key.getPath());
 
-        assertEquals(currentKey, currentKeyAfterDeserialization);
+        assertEquals(wallet.receivingFromFriendsGroup.freshKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN), currentKeyAfterDeserialization);
+        assertEquals(currentKey, walletReloaded.receivingFromFriendsGroup.findKeyFromPubKeyHash(currentKey.getPubKeyHash(), Script.ScriptType.P2PKH));
 
     }
 

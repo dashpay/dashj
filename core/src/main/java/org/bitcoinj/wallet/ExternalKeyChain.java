@@ -36,10 +36,6 @@ public class ExternalKeyChain extends DeterministicKeyChain {
 
     private static final Logger log = LoggerFactory.getLogger(ExternalKeyChain.class);
 
-
-    protected int currentIndex;
-    protected int issuedKeys;
-
     public ExternalKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
         super(seed, null, Script.ScriptType.P2PKH, path);
     }
@@ -62,12 +58,6 @@ public class ExternalKeyChain extends DeterministicKeyChain {
 
     /** {@inheritDoc} */
     @Override
-    public int getIssuedExternalKeys() {
-        return currentIndex;
-    }
-
-    /** {@inheritDoc} */
-    @Override
     public int getIssuedInternalKeys() {
         throw new UnsupportedOperationException("external key chains do not have internal keys");
     }
@@ -78,8 +68,8 @@ public class ExternalKeyChain extends DeterministicKeyChain {
         int numChildren = k.getChildNumber().i() + 1;
 
         if (k.getParent() == getKeyByPath(getAccountPath())) {
-            if (issuedKeys < numChildren) {
-                issuedKeys = numChildren;
+            if (issuedExternalKeys < numChildren) {
+                issuedExternalKeys = numChildren;
                 maybeLookAhead();
             }
         }
@@ -93,7 +83,7 @@ public class ExternalKeyChain extends DeterministicKeyChain {
     public void maybeLookAhead() {
         lock.lock();
         try {
-            List<DeterministicKey> keys = maybeLookAhead(getKeyByPath(getAccountPath()), issuedKeys);
+            List<DeterministicKey> keys = maybeLookAhead(getKeyByPath(getAccountPath()), issuedExternalKeys);
             if (keys.isEmpty())
                 return;
             keyLookaheadEpoch++;
@@ -142,14 +132,4 @@ public class ExternalKeyChain extends DeterministicKeyChain {
         log.info("Took {}", watch);
         return result;
     }
-
-    /**
-     * Setter for property 'issuedKeys'.
-     *
-     * @param issuedKeys Value to set for property 'issuedKeys'.
-     */
-    public void setIssuedKeys(int issuedKeys) {
-        this.issuedKeys = issuedKeys;
-    }
-
 }

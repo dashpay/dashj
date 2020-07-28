@@ -177,7 +177,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     private DeterministicKey externalParentKey, internalParentKey;
     // How many keys on each path have actually been used. This may be fewer than the number that have been deserialized
     // or held in memory, because of the lookahead zone.
-    private int issuedExternalKeys, issuedInternalKeys;
+    protected int issuedExternalKeys, issuedInternalKeys;
     // A counter that is incremented each time a key in the lookahead threshold zone is marked as used and lookahead
     // is triggered. The Wallet/KCG reads these counters and combines them so it can tell the Peer whether to throw
     // away the current block (and any future blocks in the same download batch) and restart chain sync once a new

@@ -131,8 +131,8 @@ public class FriendKeyChain extends ExternalKeyChain {
             switch (purpose) {
                 case RECEIVE_FUNDS:
                 case REFUND:
-                    issuedKeys += numberOfKeys;
-                    index = issuedKeys;
+                    issuedExternalKeys += numberOfKeys;
+                    index = issuedExternalKeys;
                     parentKey = getKeyByPath(getAccountPath());
                     break;
                 default:
@@ -156,23 +156,6 @@ public class FriendKeyChain extends ExternalKeyChain {
 
     public DeterministicKey getKey(int index) {
         return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, false))).build(), true);
-    }
-
-    /**
-     * Getter for property 'currentIndex'.
-     *
-     * @return Value for property 'currentIndex'.
-     */
-    public int getCurrentIndex() {
-        return currentIndex;
-    }
-
-    public DeterministicKey freshReceivingKey() {
-        return getKey(KeyPurpose.RECEIVE_FUNDS);
-    }
-
-    public DeterministicKey currentReceivingKey() {
-        return getKey(currentIndex);
     }
 
     public KeyChainType getType() {

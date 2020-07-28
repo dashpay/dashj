@@ -173,7 +173,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
             Preconditions.checkState(chain instanceof AuthenticationKeyChain);
         }
         HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentKeys = null;
-        determineIssuedKeys(keys, chains);
+
         int lookaheadSize = -1, lookaheadThreshold = -1;
         if (!chains.isEmpty()) {
             DeterministicKeyChain activeChain = chains.get(chains.size() - 1);
@@ -182,23 +182,6 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
             currentKeys = createCurrentAuthenticationKeysMap(chains);
         }
         return new AuthenticationKeyChainGroup(params, basicKeyChain, chains, lookaheadSize, lookaheadThreshold, currentKeys, null);
-    }
-
-    protected static void determineIssuedKeys(List<Protos.Key> keys, List<DeterministicKeyChain> chains) {
-        //TODO:  search through the currentKeys and then also chains to match up issued key counts
-        for (DeterministicKeyChain chain : chains) {
-            AuthenticationKeyChain contactChain = (AuthenticationKeyChain) chain;
-            ImmutableList<ChildNumber> accountPath = contactChain.getAccountPath();
-            int issuedKeysCount = 0;
-            for (Protos.Key key : keys) {
-                List<Protos.ExtendedChildNumber> path = key.getExtendedPathList();
-                if (accountPath.size() + 1 <= path.size()) {
-                        issuedKeysCount++;
-                }
-            }
-            if (issuedKeysCount > 0)
-                contactChain.setIssuedKeys(issuedKeysCount);
-        }
     }
 
     static AuthenticationKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, AuthenticationKeyChain.KeyChainType type) throws UnreadableWalletException {
@@ -213,8 +196,6 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
             Preconditions.checkState(chain instanceof AuthenticationKeyChain);
         }
         HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentKeys = null;
-
-        determineIssuedKeys(keys, chains);
 
         int lookaheadSize = -1, lookaheadThreshold = -1;
         if (!chains.isEmpty()) {
