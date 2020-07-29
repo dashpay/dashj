@@ -28,8 +28,8 @@ public class DerivationPathFactory {
     }
 
     /** blockchain identity topup funding derivation path
-     * m/9'/5'/12' (mainnet)
-     * m/9'/1'/12' (testnet, devnets)
+     * m/9'/5'/13' (mainnet)
+     * m/9'/1'/13' (testnet, devnets)
      */
     public ImmutableList<ChildNumber> blockchainIdentityTopupFundingDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
