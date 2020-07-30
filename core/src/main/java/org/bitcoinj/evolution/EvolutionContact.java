@@ -28,9 +28,9 @@ public class EvolutionContact {
 
     public EvolutionContact(ImmutableList<ChildNumber> accountPath, boolean owner) {
         this.evolutionUserId = Sha256Hash.wrap(((ExtendedChildNumber)accountPath.get(owner ?
-                FriendKeyChain.PATH_INDEX_TO_ID : FriendKeyChain.PATH_INDEX_FROM_ID)).bi().toByteArray());
+                FriendKeyChain.PATH_INDEX_TO_ID : FriendKeyChain.PATH_INDEX_FROM_ID)).bi());
         this.friendUserId = Sha256Hash.wrap(((ExtendedChildNumber)accountPath.get(!owner ?
-                FriendKeyChain.PATH_INDEX_TO_ID : FriendKeyChain.PATH_INDEX_FROM_ID)).bi().toByteArray());
+                FriendKeyChain.PATH_INDEX_TO_ID : FriendKeyChain.PATH_INDEX_FROM_ID)).bi());
         this.userAccount = accountPath.get(FriendKeyChain.PATH_INDEX_ACCOUNT).num();
     }
 

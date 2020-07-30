@@ -70,6 +70,18 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
     }
 
     /**
+     * Creates a new instance that wraps the given hash value (represented as a hex string).
+     *
+     * @param bigInteger a hash value represented as a BigInteger that is 32 bytes or 33 with a leading 0x00
+     * @return a new instance
+     * @throws IllegalArgumentException if the given string is not a valid
+     *         hex string, or if it does not represent exactly 32 bytes
+     */
+    public static Sha256Hash wrap(BigInteger bigInteger) {
+        return wrap(trimByteArray(bigInteger.toByteArray()));
+    }
+
+    /**
      * Creates a new instance that wraps the given hash value, but with byte order reversed.
      *
      * @param rawHashBytes the raw hash bytes to wrap
@@ -280,5 +292,16 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      */
     public String toStringBase58() {
         return Base58.encode(bytes);
+    }
+
+    static byte[] trimByteArray(byte [] bytes) {
+        if (bytes.length == 32)
+            return bytes;
+        else if(bytes.length == 33 && bytes[0] == 0x00) {
+            byte [] newValue = new byte[32];
+            System.arraycopy(bytes, 1, newValue, 0, 32);
+            return newValue;
+        }
+        throw new IllegalArgumentException("bytes does not have length 32 or 33 ");
     }
 }

@@ -372,21 +372,10 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         ECKey key = findKeyFromPubKeyHash(pubKeyHash, Script.ScriptType.P2PKH);
         if (key instanceof DeterministicKey) {
             ImmutableList<ChildNumber> path = ((DeterministicKey)key).getPath();
-            Sha256Hash from = Sha256Hash.wrap(trimByteArray(((ExtendedChildNumber)path.get(PATH_INDEX_FROM_ID)).bi().toByteArray()));
-            Sha256Hash to = Sha256Hash.wrap(trimByteArray(((ExtendedChildNumber)path.get(PATH_INDEX_TO_ID)).bi().toByteArray()));
+            Sha256Hash from = Sha256Hash.wrap(((ExtendedChildNumber)path.get(PATH_INDEX_FROM_ID)).bi());
+            Sha256Hash to = Sha256Hash.wrap(((ExtendedChildNumber)path.get(PATH_INDEX_TO_ID)).bi());
             return new EvolutionContact(from, to);
         }
         return null;
-    }
-
-    static byte[] trimByteArray(byte [] bytes) {
-        if (bytes.length == 32)
-            return bytes;
-        else if(bytes.length == 33 && bytes[0] == 0x00) {
-            byte [] newValue = new byte[32];
-            System.arraycopy(bytes, 1, newValue, 0, 32);
-            return newValue;
-        }
-        throw new IllegalArgumentException("bytes does not have length 32 or 33 ");
     }
 }
