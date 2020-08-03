@@ -18,26 +18,30 @@ package org.bitcoinj.params;
 
 public class MobileDevNetParams extends DevNetParams {
 
-    private static String DEVNET_NAME = "mobile";
+    private static String DEVNET_NAME = "mobile-2";
 
-    public static String [] DNS_SEEDERS = new String [] {
-            "seed.mobile.networks.dash.org",
+    public static String[] DNS_SEEDERS = new String[]{
+            "seed-1.mobile.networks.dash.org",
+            "seed-2.mobile.networks.dash.org",
+            "seed-3.mobile.networks.dash.org",
+            "seed-4.mobile.networks.dash.org",
+            "seed-5.mobile.networks.dash.org"
     };
 
-    public static String [] MASTERNODES = new String [] {
-            "34.222.170.127",
-            "54.184.198.68",
-            "34.216.139.17",
-            "54.218.124.42",
-            "52.26.228.25",
-            "34.213.26.85",
-            "34.219.38.82",
-            "34.217.61.209",
-            "54.184.183.120",
-            "54.202.130.163",
-            "54.214.177.132",
-            "54.212.91.206",
-            "34.219.148.253",
+    public static String[] MASTERNODES = new String[]{
+            "34.217.130.113",
+            "34.212.127.218",
+            "34.217.109.240",
+            "35.165.117.23",
+            "54.185.186.244",
+            "34.222.113.168",
+            "54.218.48.42",
+            "34.222.214.130",
+            "34.212.55.24",
+            "34.212.175.168",
+            "34.222.50.176",
+            "34.217.210.86",
+            "54.190.107.64"
     };
 
     public MobileDevNetParams() {
@@ -48,7 +52,7 @@ public class MobileDevNetParams extends DevNetParams {
     private static MobileDevNetParams instance;
 
     public static MobileDevNetParams get() {
-        if(instance == null) {
+        if (instance == null) {
             instance = new MobileDevNetParams();
             add(instance);
         }
