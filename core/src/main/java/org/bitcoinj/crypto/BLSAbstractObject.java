@@ -93,13 +93,6 @@ public abstract class BLSAbstractObject extends ChildMessage {
         updateHash();
     }
 
-
-    /*@Override
-    protected void parse() throws ProtocolException {
-        byte [] buffer = readBytes(serializedSize);
-        set
-    }*/
-
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         stream.write(getBuffer(serializedSize));
@@ -129,8 +122,14 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     @Override
     public boolean equals(Object obj) {
+        if (this == obj) return true;
         if(!(obj instanceof BLSAbstractObject))
             return false;
         return Arrays.equals(((BLSAbstractObject) obj).getBuffer(), getBuffer());
+    }
+
+    @Override
+    public int hashCode() {
+        return getHash().hashCode();
     }
 }
