@@ -241,7 +241,7 @@ public class BLSBatchVerifier<SourceId, MessageId>
 
             messageIts.removeElementAt(messageIts.size()-1);
             if (messageIts.isEmpty()) {
-                byMessageHash.remove(it);
+                byMessageHash.remove(it.getKey());
             }
         }
 
