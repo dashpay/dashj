@@ -70,8 +70,6 @@ public class X11 {
                 new SIMD512(),
                 new ECHO512()
         };
-
-        Preconditions.checkState(algorithms.length == 11);
     }
 
     public static byte[] x11Digest(byte[] input, int offset, int length)
