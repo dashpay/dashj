@@ -108,7 +108,7 @@ public class Transaction extends ChildMessage {
         TRANSACTION_QUORUM_COMMITMENT(6),
         TRANSACTION_UNKNOWN(1024);
 
-        int value;
+        final int value;
 
         Type(int value) {
             this.value = value;
@@ -117,10 +117,13 @@ public class Transaction extends ChildMessage {
 
         private static java.util.HashMap<Integer, Type> mappings;
         private static java.util.HashMap<Integer, Type> getMappings() {
-            if (mappings == null) {
+            java.util.HashMap<Integer, Type> mappingsResult = mappings;
+            if (mappingsResult == null) {
                 synchronized (Type.class) {
-                    if (mappings == null) {
-                        mappings = new java.util.HashMap<Integer, Type>();
+                    mappingsResult = mappings;
+                    if (mappingsResult == null) {
+                        mappingsResult = new java.util.HashMap<>();
+                        mappings = mappingsResult;
                     }
                 }
             }
@@ -137,7 +140,7 @@ public class Transaction extends ChildMessage {
         }
 
         public boolean isSpecial() {
-            return this != TRANSACTION_UNKNOWN || this != TRANSACTION_NORMAL;
+            return this != TRANSACTION_UNKNOWN && this != TRANSACTION_NORMAL;
         }
     }
 
@@ -608,7 +611,7 @@ public class Transaction extends ChildMessage {
             varint = new VarInt(buf, cursor);
             scriptLen = varint.value;
             // 4 = length of sequence field (unint32)
-            cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
+            cursor += (int)scriptLen + 4 + varint.getOriginalSizeInBytes();
         }
 
         varint = new VarInt(buf, cursor);
@@ -620,7 +623,7 @@ public class Transaction extends ChildMessage {
             cursor += 8;
             varint = new VarInt(buf, cursor);
             scriptLen = varint.value;
-            cursor += scriptLen + varint.getOriginalSizeInBytes();
+            cursor += (int)scriptLen + varint.getOriginalSizeInBytes();
         }
         // 4 = length of lock_time field (uint32)
         return cursor - offset + 4;
@@ -662,8 +665,8 @@ public class Transaction extends ChildMessage {
             TransactionInput input = new TransactionInput(params, this, payload, cursor, serializer);
             inputs.add(input);
             long scriptLen = readVarInt(TransactionOutPoint.MESSAGE_LENGTH);
-            optimalEncodingMessageSize += TransactionOutPoint.MESSAGE_LENGTH + VarInt.sizeOf(scriptLen) + scriptLen + 4;
-            cursor += scriptLen + 4;
+            optimalEncodingMessageSize += TransactionOutPoint.MESSAGE_LENGTH + VarInt.sizeOf(scriptLen) + (int)scriptLen + 4;
+            cursor += (int)scriptLen + 4;
         }
     }
 
@@ -675,8 +678,8 @@ public class Transaction extends ChildMessage {
             TransactionOutput output = new TransactionOutput(params, this, payload, cursor, serializer);
             outputs.add(output);
             long scriptLen = readVarInt(8);
-            optimalEncodingMessageSize += 8 + VarInt.sizeOf(scriptLen) + scriptLen;
-            cursor += scriptLen;
+            optimalEncodingMessageSize += 8 + VarInt.sizeOf(scriptLen) + (int)scriptLen;
+            cursor += (int)scriptLen;
         }
     }
 
