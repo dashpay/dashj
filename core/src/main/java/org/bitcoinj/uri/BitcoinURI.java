@@ -74,7 +74,7 @@ public class BitcoinURI {
     public static final String FIELD_AMOUNT = "amount";
     public static final String FIELD_ADDRESS = "address";
     public static final String FIELD_PAYMENT_REQUEST_URL = "r";
-    public static final String FIELD_INSTANTSEND = "is";
+    public static final String FIELD_USER = "user";
 
     /**
      * URI for Bitcoin network. Use {@link AbstractBitcoinNetParams#BITCOIN_SCHEME} if you specifically
@@ -279,12 +279,12 @@ public class BitcoinURI {
     public String getMessage() {
         return (String) parameterMap.get(FIELD_MESSAGE);
     }
+
     /**
-     * @return The message from the URI.
+     * @return The user from the URI.
      */
-    public boolean getRequestInstantSend() {
-        String value = (String)parameterMap.get(FIELD_INSTANTSEND);
-        return value != null ? value.equals("1") : false;
+    public String getUser() {
+        return (String)parameterMap.get(FIELD_USER);
     }
 
     /**
@@ -365,6 +365,25 @@ public class BitcoinURI {
     public static String convertToBitcoinURI(NetworkParameters params,
                                              String address, @Nullable Coin amount,
                                              @Nullable String label, @Nullable String message) {
+        return convertToBitcoinURI(params, address, amount, label, message, null);
+    }
+
+    /**
+     * Simple Bitcoin URI builder using known good fields.
+     *
+     * @param params The network parameters that determine which network the URI
+     * is for.
+     * @param address The Bitcoin address
+     * @param amount The amount
+     * @param label A label
+     * @param message A message
+     * @param user A user
+     * @return A String containing the Bitcoin URI
+     */
+    public static String convertToBitcoinURI(NetworkParameters params,
+                                             String address, @Nullable Coin amount,
+                                             @Nullable String label, @Nullable String message,
+                                             @Nullable String user) {
         checkNotNull(params);
         checkNotNull(address);
         if (amount != null && amount.signum() < 0) {
@@ -401,7 +420,16 @@ public class BitcoinURI {
             }
             builder.append(FIELD_MESSAGE).append("=").append(encodeURLString(message));
         }
-        
+
+        if (user != null && !"".equals(user)) {
+            if (questionMarkHasBeenOutput) {
+                builder.append(AMPERSAND_SEPARATOR);
+            } else {
+                builder.append(QUESTION_MARK_SEPARATOR);
+            }
+            builder.append(FIELD_USER).append("=").append(encodeURLString(user));
+        }
+
         return builder.toString();
     }
 
