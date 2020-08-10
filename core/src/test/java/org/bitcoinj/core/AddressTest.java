@@ -247,6 +247,16 @@ public class AddressTest {
     }
 
     @Test
+    public void comparisonNotEquals() {
+        // These addresses only differ by version byte
+        Address a = Address.fromBase58(MAINNET, "XpDe4AXdEf9NtW5ZBeGmuzy2VShg3qZMFQ");
+        Address b = Address.fromBase58(MAINNET, "7fwSyeeLdqLopViMiUHepUdpjBF5Te92F1");
+
+        int result = a.compareTo(b);
+        assertTrue(result != 0);
+    }
+
+    @Test
     public void comparisonBytesVsString() throws Exception {
         // TODO: To properly test this we need a much larger data set
         Address a = Address.fromBase58(MAINNET, "XoVhYqRxPWkCw8WjZfiHPYsoR7g4Ny3x7K");

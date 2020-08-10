@@ -30,7 +30,7 @@ import org.bitcoinj.script.Script.ScriptType;
  * form.
  * </p>
  */
-public abstract class AbstractAddress extends PrefixedChecksummedBytes {
+public abstract class AbstractAddress extends PrefixedChecksummedBytes implements Comparable<AbstractAddress> {
     public AbstractAddress(NetworkParameters params, byte[] bytes) {
         super(params, bytes);
     }
@@ -72,4 +72,32 @@ public abstract class AbstractAddress extends PrefixedChecksummedBytes {
      * @return type of output script
      */
     public abstract ScriptType getOutputScriptType();
+
+
+    /**
+     * Comparison field order for addresses is:
+     * <ol>
+     *     <li>{@link NetworkParameters#getId()}</li>
+     *     <li>Version byte</li>
+     *     <li>remaining {@code bytes}</li>
+     * </ol>
+     * <p>
+     * Implementations may use {@code compareAddressPartial} for tests 1 and 2.
+     *
+     * @param o other {@code Address} object
+     * @return comparison result
+     */
+    @Override
+    abstract public int compareTo(AbstractAddress o);
+
+    /**
+     * Comparator for the first two comparison fields in {@code Address} comparisons, see {@link AbstractAddress#compareTo(AbstractAddress)}.
+     * Used by {@link Address#compareTo(AbstractAddress).
+     *
+     * @param o other {@code Address} object
+     * @return comparison result
+     */
+    protected int compareAddressPartial(AbstractAddress o) {
+        return this.params.getId().compareTo(o.params.getId());
+    }
 }

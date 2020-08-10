@@ -1,7 +1,5 @@
 /*
- * Copyright 2011 Google Inc.
- * Copyright 2014 Giannis Dzegoutanis
- * Copyright 2015 Andreas Schildbach
+ * Copyright by the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +22,7 @@ import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
+import com.google.common.primitives.UnsignedBytes;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.params.Networks;
 import org.bitcoinj.script.Script;
@@ -56,7 +55,7 @@ public class Address extends AbstractAddress {
      * Private constructor. Use {@link #fromBase58(NetworkParameters, String)},
      * {@link #fromPubKeyHash(NetworkParameters, byte[])}, {@link #fromScriptHash(NetworkParameters, byte[])} or
      * {@link #fromKey(NetworkParameters, IKey)}.
-     * 
+     *
      * @param params
      *            network this address is valid for
      * @param p2sh
@@ -99,7 +98,7 @@ public class Address extends AbstractAddress {
     /**
      * Construct a {@link Address} that represents the given pubkey hash. The resulting address will be a P2PKH type of
      * address.
-     * 
+     *
      * @param params
      *            network this address is valid for
      * @param hash160
@@ -113,7 +112,7 @@ public class Address extends AbstractAddress {
     /**
      * Construct a {@link Address} that represents the public part of the given {@link ECKey}. Note that an address is
      * derived from a hash of the public key and is not the public key itself.
-     * 
+     *
      * @param params
      *            network this address is valid for
      * @param key
@@ -144,7 +143,7 @@ public class Address extends AbstractAddress {
 
     /**
      * Construct a {@link Address} that represents the given P2SH script hash.
-     * 
+     *
      * @param params
      *            network this address is valid for
      * @param hash160
@@ -192,7 +191,7 @@ public class Address extends AbstractAddress {
 
     /**
      * Get the version header of an address. This is the first byte of a base58 encoded address.
-     * 
+     *
      * @return version header as one byte
      */
     public int getVersion() {
@@ -201,7 +200,7 @@ public class Address extends AbstractAddress {
 
     /**
      * Returns the base58-encoded textual form, including version and checksum bytes.
-     * 
+     *
      * @return textual form
      */
     public String toBase58() {
@@ -229,7 +228,7 @@ public class Address extends AbstractAddress {
      * Given an address, examines the version byte and attempts to find a matching NetworkParameters. If you aren't sure
      * which network the address is intended for (eg, it was provided by a user), you can use this to decide if it is
      * compatible with the current wallet.
-     * 
+     *
      * @return network the address is valid for
      * @throws AddressFormatException if the given base58 doesn't parse or the checksum is invalid
      */
@@ -260,5 +259,21 @@ public class Address extends AbstractAddress {
     @Override
     public Address clone() throws CloneNotSupportedException {
         return (Address) super.clone();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param o other {@code Address} object
+     * @return comparison result
+     */
+    @Override
+    public int compareTo(AbstractAddress o) {
+        int result = compareAddressPartial(o);
+        if (result != 0) return result;
+
+        // Compare version byte and finally the {@code bytes} field itself
+        result = Integer.compare(getVersion(), ((Address) o).getVersion());
+        return result != 0 ? result : UnsignedBytes.lexicographicalComparator().compare(this.bytes, o.bytes);
     }
 }
