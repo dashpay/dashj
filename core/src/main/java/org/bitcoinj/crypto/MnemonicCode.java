@@ -31,9 +31,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.text.Collator;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.bitcoinj.core.Utils.HEX;
@@ -56,6 +57,8 @@ public class MnemonicCode {
     public static long BIP39_STANDARDISATION_TIME_SECS = 1381276800;
 
     private static final int PBKDF2_ROUNDS = 2048;
+
+    private final Collator diacriticsInsensitiveComparer = Collator.getInstance(Locale.ENGLISH);
 
     public static MnemonicCode INSTANCE;
 
@@ -108,6 +111,7 @@ public class MnemonicCode {
             if (!hexdigest.equals(wordListDigest))
                 throw new IllegalArgumentException("wordlist digest mismatch");
         }
+        diacriticsInsensitiveComparer.setStrength(Collator.NO_DECOMPOSITION);
     }
 
     /**
@@ -158,7 +162,7 @@ public class MnemonicCode {
         int wordindex = 0;
         for (String word : words) {
             // Find the words index in the wordlist.
-            int ndx = Collections.binarySearch(this.wordList, word);
+            int ndx = search(this.wordList, word);
             if (ndx < 0)
                 throw new MnemonicException.MnemonicWordException(word);
 
@@ -188,6 +192,16 @@ public class MnemonicCode {
                 throw new MnemonicException.MnemonicChecksumException();
 
         return entropy;
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    int search(List<String> wordlist, String word) {
+        for (int i = 0; i < wordlist.size(); i++) {
+            if (diacriticsInsensitiveComparer.compare(wordlist.get(i), word) == 0) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**
