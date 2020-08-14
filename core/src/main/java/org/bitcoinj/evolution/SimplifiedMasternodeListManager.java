@@ -345,7 +345,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             log.info("masternodeListManager.notifyNewBestBlock: {}/{}", block.getHeight(), block.getHeader().getHash());
             boolean value = initChainTipSyncComplete || !context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
             if(value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
-                long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE  * 3 * 60;
+                long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE  * 3 * 60L;
                 if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
                     if(syncOptions == SyncOptions.SYNC_MINIMUM) {
                         try {
@@ -376,7 +376,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 if (value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                     maybeGetMNListDiffFresh();
                     if (!waitingForMNListDiff && mnList.getBlockHash().equals(params.getGenesisBlock().getHash()) || mnList.getHeight() < blockChain.getBestChainHeight()) {
-                        long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
+                        long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60L;
                         if (Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < timePeriod) {
                             StoredBlock block = blockChain.getChainHead();
                             if (syncOptions == SyncOptions.SYNC_MINIMUM) {
@@ -424,10 +424,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 SimplifiedMasternodeList mnlistAtSplitPoint = mnListsCache.get(splitPoint.getHeader().getHash());
                 if (mnlistAtSplitPoint != null) {
                     Iterator<Map.Entry<Sha256Hash, SimplifiedMasternodeList>> iterator = mnListsCache.entrySet().iterator();
-                    boolean foundSplitPoint = true;
+                    boolean foundSplitPoint = false;
                     while (iterator.hasNext()) {
                         Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry = iterator.next();
-                        if (entry.getValue().equals(splitPoint.getHeader().getHash())) {
+                        if (entry.getKey().equals(splitPoint.getHeader().getHash())) {
                             foundSplitPoint = true;
                             continue;
                         }
@@ -478,7 +478,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
         lock.lock();
         try {
-            long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
+            long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60L;
             if (pendingBlocks.size() > 0) {
                 if (!waitingForMNListDiff) {
                     requestNextMNListDiff();
@@ -865,7 +865,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(blockChain == null || blockChain.getBestChainHeight() >= getListAtChainTip().getHeight())
                 return;
             StoredBlock block = blockChain.getChainHead();
-            long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
+            long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60L;
             if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
                 if (syncOptions == SyncOptions.SYNC_MINIMUM) {
                     try {
