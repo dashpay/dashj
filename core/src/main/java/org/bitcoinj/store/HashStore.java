@@ -104,9 +104,8 @@ public class HashStore {
             }
 
             StoredBlock cursor = head;
-            StoredBlock last = head;
 
-            if(last == null || last.getHeight() == 0 || head.getHeight()+1 < blockHeight)
+            if(head.getHeight() == 0 || head.getHeight()+1 < blockHeight)
                 return null;
 
             int blocksAgo = 0;
@@ -117,7 +116,7 @@ public class HashStore {
                 return null;
 
             int n = 0;
-            for (int i = 1; cursor != null && cursor.getHeight() > 0; i++)
+            for (; cursor.getHeight() > 0; )
             {
                 if(n >= blocksAgo) {
                     Sha256Hash hash = cursor.getHeader().getHash();
@@ -134,8 +133,7 @@ public class HashStore {
                 cursor = cursor.getPrev(blockStore);
             }
 
-        } catch (BlockStoreException x)
-        {
+        } catch (BlockStoreException x) {
             return null;
         }
         return null;
