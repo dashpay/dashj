@@ -16,6 +16,7 @@
 package org.bitcoinj.core;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -93,6 +94,11 @@ public class KeyId extends ChildMessage {
         } catch (IOException x) {
             throw new RuntimeException(x);
         }
+    }
+
+    @Override
+    public int hashCode() {
+        return Ints.fromBytes(bytes[MESSAGE_SIZE - 4], bytes[MESSAGE_SIZE - 3], bytes[MESSAGE_SIZE - 2], bytes[MESSAGE_SIZE - 1]);
     }
 
 }
