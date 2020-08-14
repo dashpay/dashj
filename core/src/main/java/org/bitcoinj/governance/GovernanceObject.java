@@ -634,7 +634,7 @@ public class GovernanceObject extends Message implements Serializable {
         int nCount = 0;
         for (Map.Entry<TransactionOutPoint, VoteRecord> it : mapCurrentMNVotes.entrySet()) {
             final VoteRecord recVote = it.getValue();
-            VoteInstance voteInstance = recVote.mapInstances.get(eVoteSignalIn);
+            VoteInstance voteInstance = recVote.mapInstances.get(eVoteSignalIn.value);
             if (voteInstance == null) {
                 continue;
             }
