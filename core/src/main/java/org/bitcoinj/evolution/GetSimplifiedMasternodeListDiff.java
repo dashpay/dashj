@@ -7,6 +7,7 @@ import org.bitcoinj.core.Sha256Hash;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 
 public class GetSimplifiedMasternodeListDiff extends Message {
 
@@ -45,5 +46,10 @@ public class GetSimplifiedMasternodeListDiff extends Message {
 
         GetSimplifiedMasternodeListDiff diff = (GetSimplifiedMasternodeListDiff)obj;
         return diff.blockHash.equals(blockHash) && diff.baseBlockHash.equals(baseBlockHash);
+    }
+
+    @Override
+    public int hashCode() {
+        return new BigInteger(baseBlockHash.getBytes()).add(new BigInteger(blockHash.getBytes())).hashCode();
     }
 }
