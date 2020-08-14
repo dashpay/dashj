@@ -71,8 +71,7 @@ public class SPVRecoveredSignaturesDatabase extends AbstractManager implements R
     public boolean hasRecoveredSigForHash(Sha256Hash hash) {
         lock.lock();
         try {
-            Boolean result = hasSigForHashCache.containsKey(hash);
-            return result != null ? result : false;
+            return hasSigForHashCache.containsKey(hash);
         } finally {
             lock.unlock();
         }
