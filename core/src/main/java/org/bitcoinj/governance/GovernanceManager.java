@@ -514,7 +514,7 @@ public class GovernanceManager extends AbstractManager {
             final TransactionOutPoint outpoint = govobj.getMasternodeOutpoint();
             long nTimestamp = govobj.getCreationTime();
             long nNow = Utils.currentTimeSeconds();
-            long nSuperblockCycleSeconds = params.getSuperblockCycle() * params.TARGET_SPACING;
+            long nSuperblockCycleSeconds = (long)params.getSuperblockCycle() * params.TARGET_SPACING;
 
             String strHash = govobj.getHash().toString();
 
@@ -692,7 +692,7 @@ public class GovernanceManager extends AbstractManager {
 
                 if(!updateCurrentWatchdog(govobj)) {
                     // Allow wd's which are not current to be reprocessed
-                    if(pfrom != null && !nHashWatchdogCurrent.equals(BigInteger.ZERO)) {
+                    if(pfrom != null && !nHashWatchdogCurrent.equals(Sha256Hash.ZERO_HASH)) {
                         pfrom.pushInventory(new InventoryItem(InventoryItem.Type.GovernanceObject, nHashWatchdogCurrent));
                     }
                     log.info("gobject--CGovernanceManager::AddGovernanceObject -- Watchdog not better than current: hash = {}", nHash.toString());
@@ -725,7 +725,7 @@ public class GovernanceManager extends AbstractManager {
                     break;
             }
 
-            log.info("AddGovernanceObject -- {} new, received from {}", strHash, pfrom == null ? pfrom.getAddress().getHostname() : "NULL");
+            log.info("AddGovernanceObject -- {} new, received from {}", strHash, pfrom != null ? pfrom.getAddress().getHostname() : "NULL");
             govobj.relay();
 
             // Update the rate buffer
@@ -962,7 +962,7 @@ public class GovernanceManager extends AbstractManager {
                             }
                         }
 
-                        long nSuperblockCycleSeconds = params.getSuperblockCycle() * params.TARGET_SPACING;
+                        long nSuperblockCycleSeconds = (long)params.getSuperblockCycle() * params.TARGET_SPACING;
                         long nTimeExpired = pObj.getCreationTime() + 2 * nSuperblockCycleSeconds + GOVERNANCE_DELETION_DELAY;
 
                         if (pObj.getObjectType() == GOVERNANCE_OBJECT_WATCHDOG) {
@@ -1180,7 +1180,7 @@ public class GovernanceManager extends AbstractManager {
 
             // Perform additional relays for triggers/watchdogs
             long nNow = Utils.currentTimeSeconds();
-            long nSuperblockCycleSeconds = params.getSuperblockCycle() * params.TARGET_SPACING;
+            long nSuperblockCycleSeconds = (long)params.getSuperblockCycle() * params.TARGET_SPACING;
 
             Iterator<Sha256Hash> it2 = setAdditionalRelayObjects.iterator();
             while (it.hasNext()) {
@@ -1188,7 +1188,6 @@ public class GovernanceManager extends AbstractManager {
                 Sha256Hash hash = it2.next();
                 GovernanceObject govobj = mapObjects.get(hash);
                 if (govobj != null) {
-
 
                     long nTimestamp = govobj.getCreationTime();
 
@@ -1205,7 +1204,7 @@ public class GovernanceManager extends AbstractManager {
                     }
 
                 } else {
-                    log.info("CGovernanceManager::CheckPostponedObjects -- additional relay of unknown object: {}", govobj.toString());
+                    log.info("CGovernanceManager::CheckPostponedObjects -- additional relay of unknown object: {}", hash);
                 }
 
                 it.remove();
@@ -1427,7 +1426,7 @@ public class GovernanceManager extends AbstractManager {
 
             pnode.sendMessage(new SyncStatusCount(MasternodeSync.MASTERNODE_SYNC_GOVOBJ, 1));
             pnode.sendMessage(new SyncStatusCount(MasternodeSync.MASTERNODE_SYNC_GOVOBJ_VOTE, nVoteCount));
-            log.info("CGovernanceManager::{} -- sent 1 object and {} votes to peer={}", nVoteCount, pnode.hashCode());
+            log.info("CGovernanceManager:: -- sent 1 object and {} votes to peer={}", nVoteCount, pnode.hashCode());
         } finally {
             lock.unlock();
         }
@@ -1466,7 +1465,7 @@ public class GovernanceManager extends AbstractManager {
                 log.info("gobject--CGovernanceManager:: -- attempting to sync govobj: {}, peer={}\n", strHash, pnode.hashCode());
 
                 if (govobj.isSetCachedDelete() || govobj.isSetExpired()) {
-                    log.info("CGovernanceManager::{} -- not syncing deleted/expired govobj: {}, peer={}\n", strHash, pnode.hashCode());
+                    log.info("CGovernanceManager:: -- not syncing deleted/expired govobj: {}, peer={}\n", strHash, pnode.hashCode());
                     continue;
                 }
 
