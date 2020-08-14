@@ -445,7 +445,7 @@ public class Utils {
      * Advances (or rewinds) the mock clock by the given number of seconds.
      */
     public static Date rollMockClock(int seconds) {
-        return rollMockClockMillis(seconds * 1000);
+        return rollMockClockMillis(seconds * 1000L);
     }
 
     /**
