@@ -517,14 +517,14 @@ public abstract class DatabaseFullPrunedBlockStore implements FullPrunedBlockSto
         // create all the database tables
         for (String sql : getCreateTablesSQL()) {
             if (log.isDebugEnabled()) {
-                log.debug("DatabaseFullPrunedBlockStore : CREATE table [SQL= {0}]", sql);
+                log.debug("DatabaseFullPrunedBlockStore : CREATE table [SQL= {}]", sql);
             }
             s.executeUpdate(sql);
         }
         // create all the database indexes
         for (String sql : getCreateIndexesSQL()) {
             if (log.isDebugEnabled()) {
-                log.debug("DatabaseFullPrunedBlockStore : CREATE index [SQL= {0}]", sql);
+                log.debug("DatabaseFullPrunedBlockStore : CREATE index [SQL= {}]", sql);
             }
             s.executeUpdate(sql);
         }
