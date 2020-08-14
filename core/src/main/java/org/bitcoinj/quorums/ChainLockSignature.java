@@ -77,4 +77,9 @@ public class ChainLockSignature extends Message {
 
         return getHash().equals(clsig.getHash());
     }
+
+    @Override
+    public int hashCode() {
+        return getHash().hashCode();
+    }
 }
