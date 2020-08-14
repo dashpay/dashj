@@ -144,7 +144,7 @@ public class BuildCheckpoints {
         long now = new Date().getTime() / 1000;
         peerGroup.setFastCatchupTimeSecs(now);
 
-        final long timeAgo = now - (86400 * options.valueOf(daysFlag));
+        final long timeAgo = now - (86400L * options.valueOf(daysFlag));
         System.out.println("Checkpointing up to " + Utils.dateTimeFormat(timeAgo * 1000));
 
         chain.addNewBestBlockListener(Threading.SAME_THREAD, new NewBestBlockListener() {
