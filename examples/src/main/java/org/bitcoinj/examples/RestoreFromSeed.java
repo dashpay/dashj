@@ -41,7 +41,7 @@ public class RestoreFromSeed {
         // Here we restore our wallet from a seed with no passphrase. Also have a look at the BackupToMnemonicSeed.java example that shows how to backup a wallet by creating a mnemonic sentence.
         String seedCode = "yard impulse luxury drive today throw farm pepper survey wreck glass federal";
         String passphrase = "";
-        Long creationtime = 1409478661L;
+        long creationtime = 1409478661L;
 
         DeterministicSeed seed = new DeterministicSeed(seedCode, null, passphrase, creationtime);
 
