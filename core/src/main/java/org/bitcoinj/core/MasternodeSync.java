@@ -44,7 +44,9 @@ public class MasternodeSync {
         SYNC_QUORUM_LIST,
         SYNC_CHAINLOCKS,
         SYNC_INSTANTSENDLOCKS,
-        SYNC_SPORKS
+        SYNC_SPORKS,
+        SYNC_HEADERS_MN_LIST_FIRST,
+        SYNC_BLOCKS_AFTER_PREPROCESSING
     }
 
     public enum VERIFY_FLAGS {
@@ -165,6 +167,7 @@ public class MasternodeSync {
         this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
         this.syncFlags = syncFlags == null ? EnumSet.noneOf(SYNC_FLAGS.class) : syncFlags;
         this.verifyFlags = EnumSet.noneOf(VERIFY_FLAGS.class);
+        this.featureFlags = EnumSet.noneOf(FEATURE_FLAGS.class);
         if(syncFlags.contains(SYNC_FLAGS.SYNC_DMN_LIST)) {
             verifyFlags.add(VERIFY_FLAGS.MNLISTDIFF_MNLIST);
             verifyFlags.add(VERIFY_FLAGS.BLS_SIGNATURES);
