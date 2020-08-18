@@ -80,6 +80,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     static final long WAIT_GETMNLISTDIFF = 5000;
     Peer downloadPeer;
     boolean waitingForMNListDiff;
+    boolean initChainTipSync = false;
     LinkedHashMap<Sha256Hash, StoredBlock> pendingBlocksMap;
     ArrayList<StoredBlock> pendingBlocks;
 
@@ -225,11 +226,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         Stopwatch watch = Stopwatch.createStarted();
         Stopwatch watchMNList = Stopwatch.createUnstarted();
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
+        boolean isSyncingHeaders = downloadPeer.isDownloadHeaders();
         log.info("processing mnlistdiff between : " + mnList.getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
             block = blockChain.getBlockStore().get(mnlistdiff.blockHash);
-            if(!isLoadingBootStrap && block.getHeight() != newHeight)
+            if(!isSyncingHeaders && !isLoadingBootStrap && block.getHeight() != newHeight)
                 throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
 
             watchMNList.start();
@@ -310,6 +312,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             watch.stop();
             log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
             waitingForMNListDiff = false;
+            if (isSyncingHeaders) {
+                if (downloadPeer != null) {
+                    log.info("initChainTipSync=false");
+                    context.peerGroup.getHeadersDownloadedFuture().set(true);
+                    log.info("initChainTipSync=true");
+                    initChainTipSync = true;
+                } else {
+                    context.peerGroup.getHeadersDownloadedFuture().set(true);
+                    initChainTipSync = true;
+                }
+            }
             requestNextMNListDiff();
             lock.unlock();
         }
@@ -318,7 +331,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            if(isDeterministicMNsSporkActive() && isLoadedFromFile()) {
+            boolean value = initChainTipSync;
+            //log.info("initChainTipSync={}", value);
+            if(value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                 long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE  * 3 * 60;
                 if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
                     if(syncOptions == SyncOptions.SYNC_MINIMUM) {
@@ -346,7 +361,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             try {
                 if (downloadPeer == null)
                     downloadPeer = peer;
-                if (isDeterministicMNsSporkActive() && isLoadedFromFile()) {
+                boolean value = initChainTipSync;
+                if (value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                     maybeGetMNListDiffFresh();
                     if (!waitingForMNListDiff && mnList.getBlockHash().equals(params.getGenesisBlock().getHash()) || mnList.getHeight() < blockChain.getBestChainHeight()) {
                         long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
@@ -915,5 +931,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public ReentrantLock getLock() {
         return lock;
+    }
+
+    public Peer getDownloadPeer() {
+        return downloadPeer != null ? downloadPeer : peerGroup.getDownloadPeer();
     }
 }
