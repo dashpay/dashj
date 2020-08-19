@@ -1819,10 +1819,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     private class ChainDownloadSpeedCalculator implements BlocksDownloadedEventListener, Runnable,
-        HeadersDownloadedEventListener {
+        HeadersDownloadedEventListener, PreBlocksDownloadListener {
         private int blocksInLastSecond, txnsInLastSecond, origTxnsInLastSecond;
         private int headersInLastSecond;
         private long bytesInLastSecond;
+        private boolean waitForPreBlockDownload = false;
 
         // If we take more stalls than this, we assume we're on some kind of terminally slow network and the
         // stall threshold just isn't set properly. We give up on stall disconnects after that.
@@ -1841,6 +1842,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
         @Override
         public synchronized void onBlocksDownloaded(Peer peer, Block block, @Nullable FilteredBlock filteredBlock, int blocksLeft) {
+            waitForPreBlockDownload = false;
             blocksInLastSecond++;
             bytesInLastSecond += Block.HEADER_SIZE;
             List<Transaction> blockTransactions = block.getTransactions();
@@ -1915,7 +1917,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                         if (bytesInLastSecond > 0)
                             log.info(statsString
                                     + String.format(Locale.US, " (warming up %d more seconds)", warmupSeconds));
-                    } else if (average < minSpeedBytesPerSec) {
+                    } else if (average < minSpeedBytesPerSec && !waitForPreBlockDownload) {
                         log.info(statsString + ", STALLED " + thresholdString);
                         maxStalls--;
                         if (maxStalls == 0) {
@@ -1953,6 +1955,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         public void onHeadersDownloaded(Peer peer, Block block, int blocksLeft) {
             headersInLastSecond += 2000; // this will be correct most of the time
             bytesInLastSecond += Block.HEADER_SIZE * 2000;
+        }
+
+        @Override
+        public void onPreBlocksDownload(Peer peer) {
+            waitForPreBlockDownload = true;
         }
     }
     @Nullable private ChainDownloadSpeedCalculator chainDownloadSpeedCalculator;
@@ -2038,6 +2045,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             }
             peer.addBlocksDownloadedEventListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
             peer.addHeadersDownloadedEventListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
+            addPreBlocksDownloadListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
 
             // how can we download headers first, then at the end do the blockchain/merkle blocks
             Set<MasternodeSync.SYNC_FLAGS> flags = Context.get().getSyncFlags();
@@ -2046,6 +2054,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     initBlockChainDownloadFutures(peer);
                     Futures.addCallback(headersDownloadedFuture, headersDownloadedCallback, executor);
                     if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) {
+                        addPreBlocksDownloadListener(executor, downloadListener);
                         Futures.addCallback(preBlockDownloadFuture, preBlocksDownloadCallback, executor);
                         //queuePreBlockDownloadListeners(peer);
                     }

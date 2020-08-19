@@ -25,5 +25,6 @@ import org.bitcoinj.core.*;
  */
 public interface PeerDataEventListener extends BlocksDownloadedEventListener, ChainDownloadStartedEventListener,
         GetDataEventListener, PreMessageReceivedEventListener,
-        HeadersDownloadedEventListener, HeadersDownloadStartedEventListener {
+        HeadersDownloadedEventListener, HeadersDownloadStartedEventListener,
+        PreBlocksDownloadListener {
 }

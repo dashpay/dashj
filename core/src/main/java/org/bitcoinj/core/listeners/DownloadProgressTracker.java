@@ -45,8 +45,10 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
     private int lastHeadersPercent = 0;
     private SettableFuture<Long> future = SettableFuture.create();
     private boolean caughtUp = false;
+    private boolean requiresHeaders = false;
     private boolean headersCaughtUp = false;
     private static final double SYNC_HEADERS = 10.0;
+    private static final double SYNC_PREDOWNLOAD = 10.0;
 
     @Override
     public void onChainDownloadStarted(Peer peer, int blocksLeft) {
@@ -97,7 +99,7 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
      * @param date the date of the last block downloaded
      */
     protected void progress(double pct, int blocksSoFar, Date date) {
-        if (headersCaughtUp) {
+        if (headersCaughtUp && requiresHeaders) {
             log.info(String.format(Locale.US, "Chain download %d%% done with %d blocks to go, block date %s", (int) pct, blocksSoFar,
                     Utils.dateTimeFormat(date)));
         } else {
@@ -143,6 +145,7 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
 
     @Override
     public void onHeadersDownloadStarted(Peer peer, int blocksLeft) {
+        requiresHeaders = true;
         if (blocksLeft > 0 && originalHeadersLeft == -1)
             startDownload(blocksLeft);
         // Only mark this the first time, because this method can be called more than once during a chain download
@@ -158,7 +161,7 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
 
     @Override
     public void onHeadersDownloaded(Peer peer, Block lastBlock, int blocksLeft) {
-        if (caughtUp)
+        if (caughtUp || headersCaughtUp)
             return;
 
         if (blocksLeft == 0) {
@@ -167,7 +170,7 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
                 lastHeadersPercent = 100;
                 progress(calculatePercentage(lastHeadersPercent, lastPercent), blocksLeft, new Date(lastBlock.getTimeSeconds() * 1000));
             }
-            doneDownload();
+            doneHeaderDownload();
             future.set(peer.getBestHeight());
             return;
         }
