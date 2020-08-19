@@ -33,6 +33,7 @@ import org.slf4j.*;
 
 import java.io.File;
 import java.util.EnumSet;
+import java.util.Set;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -406,18 +407,18 @@ public class Context {
     {
         params.setDIPActiveAtTip(chainHead.getHeight() >= params.getDIP0001BlockHeight());
         if(initializedDash) {
-
-
-        masternodeListManager.updatedBlockTip(chainHead);
-
-        /*darkSendPool.UpdatedBlockTip(pindex);
-        instantsend.UpdatedBlockTip(pindex);
-        mnpayments.UpdatedBlockTip(pindex);
-        governance.UpdatedBlockTip(pindex);
-        masternodeSync.UpdatedBlockTip(pindex);*/
+            masternodeListManager.updatedBlockTip(chainHead);
         }
     }
     public VoteConfidenceTable getVoteConfidenceTable() {
         return voteConfidenceTable;
+    }
+
+    Set<MasternodeSync.SYNC_FLAGS> getSyncFlags() {
+        if (masternodeSync != null) {
+            return masternodeSync.syncFlags;
+        } else {
+            return MasternodeSync.SYNC_DEFAULT_SPV;
+        }
     }
 }
