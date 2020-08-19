@@ -80,8 +80,12 @@ public class Peer extends PeerSocketHandler {
 
     private final CopyOnWriteArrayList<ListenerRegistration<BlocksDownloadedEventListener>> blocksDownloadedEventListeners
         = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<HeadersDownloadedEventListener>> headersDownloadedEventListeners
+            = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<ChainDownloadStartedEventListener>> chainDownloadStartedEventListeners
         = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<HeadersDownloadStartedEventListener>> headersDownloadStartedEventListeners
+            = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<PeerConnectedEventListener>> connectedEventListeners
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<PeerDisconnectedEventListener>> disconnectedEventListeners
@@ -288,6 +292,16 @@ public class Peer extends PeerSocketHandler {
         blocksDownloadedEventListeners.add(new ListenerRegistration(listener, executor));
     }
 
+    /** Registers a listener that is invoked when new blocks are downloaded. */
+    public void addHeadersDownloadedEventListener(HeadersDownloadedEventListener listener) {
+        addHeadersDownloadedEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /** Registers a listener that is invoked when new blocks are downloaded. */
+    public void addHeadersDownloadedEventListener(Executor executor, HeadersDownloadedEventListener listener) {
+        headersDownloadedEventListeners.add(new ListenerRegistration(listener, executor));
+    }
+
     /** Registers a listener that is invoked when a blockchain downloaded starts. */
     public void addChainDownloadStartedEventListener(ChainDownloadStartedEventListener listener) {
         addChainDownloadStartedEventListener(Threading.USER_THREAD, listener);
@@ -296,6 +310,16 @@ public class Peer extends PeerSocketHandler {
     /** Registers a listener that is invoked when a blockchain downloaded starts. */
     public void addChainDownloadStartedEventListener(Executor executor, ChainDownloadStartedEventListener listener) {
         chainDownloadStartedEventListeners.add(new ListenerRegistration(listener, executor));
+    }
+
+    /** Registers a listener that is invoked when a blockchain downloaded starts. */
+    public void addHeadersDownloadStartedEventListener(HeadersDownloadStartedEventListener listener) {
+        addHeadersDownloadStartedEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /** Registers a listener that is invoked when a blockchain downloaded starts. */
+    public void addHeadersDownloadStartedEventListener(Executor executor, HeadersDownloadStartedEventListener listener) {
+        headersDownloadStartedEventListeners.add(new ListenerRegistration(listener, executor));
     }
 
     /** Registers a listener that is invoked when a peer is connected. */
@@ -352,8 +376,16 @@ public class Peer extends PeerSocketHandler {
         return ListenerRegistration.removeFromList(listener, blocksDownloadedEventListeners);
     }
 
+    public boolean removeHeadersDownloadedEventListener(HeadersDownloadedEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, headersDownloadedEventListeners);
+    }
+
     public boolean removeChainDownloadStartedEventListener(ChainDownloadStartedEventListener listener) {
         return ListenerRegistration.removeFromList(listener, chainDownloadStartedEventListeners);
+    }
+
+    public boolean removeHeadersDownloadStartedEventListener(HeadersDownloadStartedEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, headersDownloadStartedEventListeners);
     }
 
     public boolean removeConnectedEventListener(PeerConnectedEventListener listener) {
@@ -737,6 +769,7 @@ public class Peer extends PeerSocketHandler {
                 }
             }
             previousBlockHeader = new StoredBlock(previous, work, previousBlock.getHeight() + m.getBlockHeaders().size());
+            invokeOnHeadersDownloaded(previousBlockHeader);
             log.info("processing headers till {}", previousBlockHeader.getHeight());
             if (m.getBlockHeaders().size() < HeadersMessage.MAX_HEADERS) {
                 // vDownloadHeaders = false; //
@@ -1243,6 +1276,21 @@ public class Peer extends PeerSocketHandler {
                 @Override
                 public void run() {
                     registration.listener.onBlocksDownloaded(Peer.this, block, fb, blocksLeft);
+                }
+            });
+        }
+    }
+
+    private void invokeOnHeadersDownloaded(final StoredBlock block) {
+        // It is possible for the peer block height difference to be negative when blocks have been solved and broadcast
+        // since the time we first connected to the peer. However, it's weird and unexpected to receive a callback
+        // with negative "blocks left" in this case, so we clamp to zero so the API user doesn't have to think about it.
+        final int blocksLeft = Math.max(0, (int) vPeerVersionMessage.bestHeight - block.getHeight());
+        for (final ListenerRegistration<HeadersDownloadedEventListener> registration : headersDownloadedEventListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onHeadersDownloaded(Peer.this, block.getHeader(), blocksLeft);
                 }
             });
         }
@@ -1768,7 +1816,7 @@ public class Peer extends PeerSocketHandler {
         //    sendMessage(message);
         //} else {
             // Downloading headers for a while instead of full blocks.
-        log.info("Requesting headers from : ", blockLocator.get(0));
+        log.info("Requesting headers from : {}", this);
             GetHeadersMessage message = new GetHeadersMessage(params, blockLocator, toHash);
             sendMessage(message);
         //}
@@ -1808,11 +1856,11 @@ public class Peer extends PeerSocketHandler {
         // chain even if the chain block count is lower.
         final int blocksLeft = getPeerBlockHeightDifference();
         if (blocksLeft >= 0) {
-            for (final ListenerRegistration<ChainDownloadStartedEventListener> registration : chainDownloadStartedEventListeners) {
+            for (final ListenerRegistration<HeadersDownloadStartedEventListener> registration : headersDownloadStartedEventListeners) {
                 registration.executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        //registration.listener.onChainDownloadStarted(Peer.this, blocksLeft);
+                        registration.listener.onHeadersDownloadStarted(Peer.this, blocksLeft);
                     }
                 });
             }
