@@ -73,6 +73,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     Sha256Hash tipBlockHash;
 
     AbstractBlockChain blockChain;
+    AbstractBlockChain headersChain;
 
     Sha256Hash lastRequestHash = Sha256Hash.ZERO_HASH;
     GetSimplifiedMasternodeListDiff lastRequestMessage;
@@ -226,12 +227,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         Stopwatch watch = Stopwatch.createStarted();
         Stopwatch watchMNList = Stopwatch.createUnstarted();
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
-        boolean isSyncingHeaders = downloadPeer.isDownloadHeaders();
+        boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
+        AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
         log.info("processing mnlistdiff between : " + mnList.getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
-            block = blockChain.getBlockStore().get(mnlistdiff.blockHash);
-            if(!isSyncingHeaders && !isLoadingBootStrap && block.getHeight() != newHeight)
+            block = chain.getBlockStore().get(mnlistdiff.blockHash);
+            if(!isLoadingBootStrap && block.getHeight() != newHeight)
                 throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
 
             watchMNList.start();
@@ -261,6 +263,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 pendingBlocks.remove(0);
                 pendingBlocksMap.remove(thisBlock.getHeader().getHash());
             } else log.warn("pendingBlocks is empty");
+
+            peerGroup.queueMasternodeListDownloadedListeners(mnlistdiff);
 
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
                 setFormatVersion(LLMQ_FORMAT_VERSION);
@@ -312,14 +316,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             watch.stop();
             log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
             waitingForMNListDiff = false;
-            if (isSyncingHeaders) {
+            if (isSyncingHeadersFirst) {
                 if (downloadPeer != null) {
                     log.info("initChainTipSync=false");
-                    context.peerGroup.getHeadersDownloadedFuture().set(true);
+                    context.peerGroup.triggerMnListDownloadComplete();
                     log.info("initChainTipSync=true");
                     initChainTipSync = true;
                 } else {
-                    context.peerGroup.getHeadersDownloadedFuture().set(true);
+                    context.peerGroup.triggerMnListDownloadComplete();
                     initChainTipSync = true;
                 }
             }
@@ -618,9 +622,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
+    public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headersChain, PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
+        this.headersChain = headersChain;
         if(shouldProcessMNListDiff()) {
             blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
             blockChain.addReorganizeListener(reorganizeListener);
@@ -734,6 +739,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
+                initChainTipSync = false;
                 unCache();
                 try {
                     if(bootStrapFilePath == null)
@@ -843,7 +849,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public void onFirstSaveComplete() {
         lock.lock();
         try {
-            if(blockChain == null)
+            if(blockChain == null || blockChain.getBestChainHeight() >= getListAtChainTip().getHeight())
                 return;
             StoredBlock block = blockChain.getChainHead();
             long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
