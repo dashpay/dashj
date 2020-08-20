@@ -2049,7 +2049,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         headersDownloadedCallback = new FutureCallback<Boolean>() {
             @Override
             public void onSuccess(@Nullable Boolean aBoolean) {
-                log.info("Stage header download completed successfully {}", aBoolean);
+                log.info("Stage header download completed successfully: {}", aBoolean);
                 if (aBoolean) {
                     peer.setDownloadHeaders(false);
                     setSyncStage(SyncStage.MNLIST);
@@ -2071,9 +2071,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             public void onSuccess(@Nullable Boolean aBoolean) {
                 log.info("Stage masternode list download successful: {}", aBoolean);
                 Set<MasternodeSync.SYNC_FLAGS> flags = Context.get().masternodeSync.syncFlags;
-                if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING) && syncStage.value < SyncStage.PREBLOCKS.value) {
-                    setSyncStage(SyncStage.PREBLOCKS);
-                    queuePreBlockDownloadListeners(peer);
+                if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) {
+                    if(syncStage.value < SyncStage.PREBLOCKS.value) {
+                        setSyncStage(SyncStage.PREBLOCKS);
+                        queuePreBlockDownloadListeners(peer);
+                    }
                 } else {
                     setSyncStage(SyncStage.BLOCKS);
                     peer.startBlockChainDownload();
@@ -2134,6 +2136,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         lock.lock();
         try {
             setDownloadPeer(peer);
+            log.info("Initiating Synchronization with {}", peer);
 
             if (chainDownloadSpeedCalculator == null) {
                 // Every second, run the calculator which will log how fast we are downloading the chain.
@@ -2143,11 +2146,14 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             peer.addBlocksDownloadedEventListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
             peer.addHeadersDownloadedEventListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
             addPreBlocksDownloadListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
+            addMasternodeListDownloadListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
 
             // how can we download headers first, then at the end do the blockchain/merkle blocks
             Set<MasternodeSync.SYNC_FLAGS> flags = Context.get().getSyncFlags();
             if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
-                if (peer.getBestHeight() > chain.chainHead.getHeight() && syncStage.value < SyncStage.HEADERS.value) {
+                log.info("Attempting to sync headers first");
+                if (peer.getBestHeight() > headers.getChainHead().getHeight() &&
+                        syncStage.value <= SyncStage.HEADERS.value) {
                     initBlockChainDownloadFutures(peer);
                     Futures.addCallback(headersDownloadedFuture, headersDownloadedCallback, executor);
                     Futures.addCallback(mnListDownloadedFuture, mnListDownloadedCallback, executor);
@@ -2160,20 +2166,22 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 } else if (syncStage.value == SyncStage.MNLIST.value) {
                     peer.startMasternodeListDownload();
                 } else {
-
                     if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING) && syncStage.value < SyncStage.PREBLOCKS.value) {
                         initBlockChainDownloadFutures(peer);
                         Futures.addCallback(preBlockDownloadFuture, preBlocksDownloadCallback, executor);
+                        log.info("startBlockChainDownloadFromPeer");
                         setSyncStage(SyncStage.PREBLOCKS);
                         queuePreBlockDownloadListeners(peer);
                     } else {
                         // startBlockChainDownload will setDownloadData(true) on itself automatically.
+                        log.info("startBlockChainDownloadFromPeer 1");
                         setSyncStage(SyncStage.BLOCKS);
                         peer.startBlockChainDownload();
                     }
                 }
             } else {
                 // startBlockChainDownload will setDownloadData(true) on itself automatically.
+                log.info("startBlockChainDownloadFromPeer 2");
                 setSyncStage(SyncStage.BLOCKS);
                 peer.startBlockChainDownload();
             }
