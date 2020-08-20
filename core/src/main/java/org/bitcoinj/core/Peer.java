@@ -31,6 +31,7 @@ import org.bitcoinj.net.NioClientManager;
 import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.quorums.ChainLockSignature;
 import org.bitcoinj.quorums.InstantSendLock;
+import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
@@ -761,7 +762,16 @@ public class Peer extends PeerSocketHandler {
             try {
                 for (int i = 0; i < m.getBlockHeaders().size(); i++) {
                     Block header = m.getBlockHeaders().get(i);
-                    headerChain.add(header);
+                    if(!headerChain.add(header)) {
+                        log.info("Received bad header[{}] {} - try again", i, header.getHash());
+                        lock.lock();
+                        try {
+                            blockChainHeaderDownloadLocked(Sha256Hash.ZERO_HASH);
+                        } finally {
+                            lock.unlock();
+                        }
+                        return;
+                    }
                 }
                 StoredBlock lastHeader = headerChain.getChainHead();//new StoredBlock(previous, work, previousBlock.getHeight() + m.getBlockHeaders().size());
                 invokeOnHeadersDownloaded(lastHeader);
@@ -777,6 +787,8 @@ public class Peer extends PeerSocketHandler {
                     }
                 }
                 return;
+            } catch (VerificationException e) {
+                log.warn("Block header verification failed", e);
             } catch (PrunedException x) {
                 throw new RuntimeException(x);
             }
@@ -844,8 +856,8 @@ public class Peer extends PeerSocketHandler {
     public void startMasternodeListDownload() {
         try {
             StoredBlock masternodeListBlock = headerChain.getChainHead().getHeight() != 0 ?
-                    headerChain.getBlockStore().get(headerChain.getBestChainHeight() - 8) :
-                    blockChain.getBlockStore().get(blockChain.getBestChainHeight() - 8);
+                    headerChain.getBlockStore().get(headerChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET) :
+                    blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
 
             GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
             sendMessage(msg);
