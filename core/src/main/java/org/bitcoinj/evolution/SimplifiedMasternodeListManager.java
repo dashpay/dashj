@@ -336,7 +336,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
             boolean value = initChainTipSync;
-            //log.info("initChainTipSync={}", value);
             if(value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                 long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE  * 3 * 60;
                 if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
