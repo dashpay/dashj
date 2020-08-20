@@ -71,4 +71,10 @@ public interface KeyChainFactory {
      */
     DeterministicKeyChain makeSpendingKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicKey accountKey,
             boolean isMarried, Script.ScriptType outputScriptType) throws UnreadableWalletException;
+
+    DeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
+                                                            KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException;
+
+    DeterministicKeyChain makeWatchingFriendKeyChain(DeterministicKey accountKey, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException;
+
 }

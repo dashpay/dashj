@@ -510,6 +510,32 @@ public class DeterministicKey extends ECKey {
         return serializePrivB58(params, Script.ScriptType.P2PKH);
     }
 
+    /** serializes a HD Key according to the dashpay encryptedPublicKey specification **/
+    public byte[] serializeContactPub() {
+        ByteBuffer ser = ByteBuffer.allocate(69);
+        // header (xpub) not included
+        // depth not included
+        ser.putInt(getParentFingerprint());
+        // child number not included
+        ser.put(getChainCode());
+        ser.put(getPubKey());
+        checkState(ser.position() == 69);
+        return ser.array();
+    }
+
+    public static DeterministicKey deserializeContactPub(NetworkParameters params, byte [] contactPub) {
+        checkArgument(contactPub.length == 69);
+        ByteBuffer serXPub = ByteBuffer.allocate(78);
+        serXPub.putInt(params.getBip32HeaderP2PKHpub()); // header
+        serXPub.put((byte) 7); // use depth 0 (master)
+        serXPub.putInt((int)Utils.readUint32(contactPub, 0)); // fingerprint
+        serXPub.putInt(0); // use child number 0
+        serXPub.put(Arrays.copyOfRange(contactPub, 4, 36)); // chain code
+        serXPub.put(Arrays.copyOfRange(contactPub, 36, contactPub.length)); //public key
+        checkState(serXPub.position() == 78);
+        return deserialize(params, serXPub.array(), null);
+    }
+
     static String toBase58(byte[] ser) {
         return Base58.encode(addChecksum(ser));
     }
@@ -529,10 +555,18 @@ public class DeterministicKey extends ECKey {
     }
 
     /**
+     * Deserialize a base-58-encoded HD Key and associates it with a given path.
+     *  @throws IllegalArgumentException if the base58 encoded key could not be parsed.
+     */
+    public static DeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
+        return deserialize(params, Base58.decodeChecked(base58), null, path);
+    }
+
+    /**
       * Deserialize an HD Key with no parent
       */
     public static DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey) {
-        return deserialize(params, serializedKey, null);
+        return deserialize(params, serializedKey, (DeterministicKey)null);
     }
 
     /**
@@ -577,6 +611,36 @@ public class DeterministicKey extends ECKey {
             return new DeterministicKey(path, chainCode, new LazyECPoint(ECKey.CURVE.getCurve(), data), parent, depth, parentFingerprint);
         } else {
             return new DeterministicKey(path, chainCode, new BigInteger(1, data), parent, depth, parentFingerprint);
+        }
+    }
+
+    /**
+     * Deserialize an HD Key and associate it with a full path.
+     */
+    public static DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, DeterministicKey parent, ImmutableList<ChildNumber> fullPath) {
+        ByteBuffer buffer = ByteBuffer.wrap(serializedKey);
+        int header = buffer.getInt();
+        if (header != params.getBip32HeaderP2PKHpriv() && header != params.getBip32HeaderP2PKHpub())
+            throw new IllegalArgumentException("Unknown header bytes: " + toBase58(serializedKey).substring(0, 4));
+        boolean pub = header == params.getBip32HeaderP2PKHpub();
+        int depth = buffer.get() & 0xFF; // convert signed byte to positive int since depth cannot be negative
+        final int parentFingerprint = buffer.getInt();
+        final int i = buffer.getInt();
+        ImmutableList<ChildNumber> path;
+
+        if (depth >= 1)
+            path = fullPath;
+        else path = ImmutableList.of();
+
+        byte[] chainCode = new byte[32];
+        buffer.get(chainCode);
+        byte[] data = new byte[33];
+        buffer.get(data);
+        checkArgument(!buffer.hasRemaining(), "Found unexpected data in key");
+        if (pub) {
+            return new DeterministicKey(path, chainCode, new LazyECPoint(ECKey.CURVE.getCurve(), data), null, depth, parentFingerprint);
+        } else {
+            return new DeterministicKey(path, chainCode, new BigInteger(1, data), null, depth, parentFingerprint);
         }
     }
 

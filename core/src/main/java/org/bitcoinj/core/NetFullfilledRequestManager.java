@@ -21,33 +21,28 @@ public class NetFullfilledRequestManager extends AbstractManager {
     ReentrantLock lock = Threading.lock("NetFullfilledRequestManager");
 
 
-    public NetFullfilledRequestManager(Context context)
-    {
+    public NetFullfilledRequestManager(Context context) {
         super(context);
         mapFulfilledRequests = new HashMap<PeerAddress, HashMap<String, Long>>(100);
     }
 
-    public NetFullfilledRequestManager(NetworkParameters params, byte [] payload, int cursor)
-    {
+    public NetFullfilledRequestManager(NetworkParameters params, byte[] payload, int cursor) {
         super(params, payload, cursor);
         context = Context.get();
     }
 
-    public int calculateMessageSizeInBytes()
-    {
+    public int calculateMessageSizeInBytes() {
         lock.lock();
         int messageSize = 0;
         try {
-            int size = (int)readVarInt();
+            int size = (int) readVarInt();
             messageSize += VarInt.sizeOf(size);
             mapFulfilledRequests = new HashMap<PeerAddress, HashMap<String, Long>>(size);
-            for (int i = 0 ; i < size; ++i)
-            {
+            for (int i = 0; i < size; ++i) {
                 messageSize += PeerAddress.MESSAGE_SIZE;
-                int size2 = (int)readVarInt();
+                int size2 = (int) readVarInt();
                 messageSize += VarInt.sizeOf(size);
-                for (int j = 0; j < size2; ++j)
-                {
+                for (int j = 0; j < size2; ++j) {
                     cursor = messageSize;
                     String message = readStr();
                     messageSize += message.length() + 8;
@@ -56,8 +51,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
             }
             cursor = offset;
             return messageSize;
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -65,16 +59,13 @@ public class NetFullfilledRequestManager extends AbstractManager {
     @Override
     protected void parse() throws ProtocolException {
 
-
-        int size = (int)readVarInt();
+        int size = (int) readVarInt();
         mapFulfilledRequests = new HashMap<PeerAddress, HashMap<String, Long>>(size);
-        for (int i = 0 ; i < size; ++i)
-        {
+        for (int i = 0; i < size; ++i) {
             PeerAddress address = new PeerAddress(params, payload, offset, 0);
-            int size2 = (int)readVarInt();
+            int size2 = (int) readVarInt();
             HashMap<String, Long> addressData = new HashMap<String, Long>(size2);
-            for (int j = 0; j < size2; ++j)
-            {
+            for (int j = 0; j < size2; ++j) {
                 String message = readStr();
                 long time = readInt64();
                 addressData.put(message, time);
@@ -82,9 +73,9 @@ public class NetFullfilledRequestManager extends AbstractManager {
             mapFulfilledRequests.put(address, addressData);
         }
 
-
         length = cursor - offset;
     }
+
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
 
@@ -94,7 +85,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
             for (Map.Entry<PeerAddress, HashMap<String, Long>> entry : mapFulfilledRequests.entrySet()) {
                 entry.getKey().bitcoinSerializeToStream(stream);
                 HashMap<String, Long> messages = entry.getValue();
-                for(Map.Entry<String, Long> msg : messages.entrySet()) {
+                for (Map.Entry<String, Long> msg : messages.entrySet()) {
                     stream.write(msg.getKey().getBytes());
                     Utils.int64ToByteStreamLE(msg.getValue(), stream);
                 }
@@ -104,8 +95,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
         }
     }
 
-    public void addFulfilledRequest(PeerAddress addr, String strRequest)
-    {
+    public void addFulfilledRequest(PeerAddress addr, String strRequest) {
         lock.lock();
         try {
             //mapFulfilledRequests[addr][strRequest] = Utils.currentTimeSeconds() + context.getParams().fulfilledRequestExpireTime();
@@ -122,8 +112,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
         }
     }
 
-    public boolean hasFulfilledRequest(PeerAddress addr, String strRequest)
-    {
+    public boolean hasFulfilledRequest(PeerAddress addr, String strRequest) {
         lock.lock();
         try {
             HashMap<String, Long> entry = mapFulfilledRequests.get(addr);
@@ -136,16 +125,14 @@ public class NetFullfilledRequestManager extends AbstractManager {
         } finally {
             lock.unlock();
         }
-
     }
 
-    public void removeFulfilledRequest(PeerAddress addr, String strRequest)
-    {
+    public void removeFulfilledRequest(PeerAddress addr, String strRequest) {
         lock.lock();
         try {
             HashMap<String, Long> entry = mapFulfilledRequests.get(addr);
             if (entry != null) {
-                mapFulfilledRequests.remove(entry);
+                mapFulfilledRequests.remove(addr);
             }
         } finally {
             lock.unlock();
@@ -153,8 +140,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
     }
 
     @Override
-    public void checkAndRemove()
-    {
+    public void checkAndRemove() {
         lock.lock();
         try {
 
@@ -177,14 +163,12 @@ public class NetFullfilledRequestManager extends AbstractManager {
     }
 
     @Override
-    public void clear()
-    {
+    public void clear() {
         mapFulfilledRequests.clear();
     }
 
-    public String toString()
-    {
-        return "Nodes with fulfilled requests: " +  mapFulfilledRequests.size();
+    public String toString() {
+        return "Nodes with fulfilled requests: " + mapFulfilledRequests.size();
     }
 
     @Override

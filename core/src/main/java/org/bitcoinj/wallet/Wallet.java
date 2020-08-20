@@ -24,6 +24,7 @@ import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
+import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Base58;
@@ -40,6 +41,8 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerFilterProvider;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
@@ -58,6 +61,7 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.TransactionConfidence.*;
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.script.*;
 import org.bitcoinj.script.Script.ScriptType;
 import org.bitcoinj.signers.*;
@@ -186,6 +190,7 @@ public class Wallet extends BaseTaggableObject
 
     protected final Context context;
     protected final NetworkParameters params;
+    protected final DerivationPathFactory derivationPathFactory;
 
     @Nullable private Sha256Hash lastBlockSeenHash;
     private int lastBlockSeenHeight;
@@ -203,7 +208,8 @@ public class Wallet extends BaseTaggableObject
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<TransactionConfidenceEventListener>> transactionConfidenceListeners
         = new CopyOnWriteArrayList<>();
-
+    private final CopyOnWriteArrayList<ListenerRegistration<CreditFundingTransactionEventListener>> creditFundingListeners
+            = new CopyOnWriteArrayList<>();
     // A listener that relays confidence changes from the transaction confidence object to the wallet event listener,
     // as a convenience to API users so they don't have to register on every transaction themselves.
     private TransactionConfidence.Listener txConfidenceListener;
@@ -390,7 +396,7 @@ public class Wallet extends BaseTaggableObject
      * know the creation time, you can pass {@link DeterministicHierarchy#BIP32_STANDARDISATION_TIME_SECS}.
      */
     public static Wallet fromWatchingKeyB58(NetworkParameters params, String watchKeyB58, long creationTimeSeconds) {
-        final DeterministicKey watchKey = DeterministicKey.deserializeB58(null, watchKeyB58, params);
+        final DeterministicKey watchKey = DeterministicKey.deserializeB58((DeterministicKey)null, watchKeyB58, params);
         watchKey.setCreationTimeSeconds(creationTimeSeconds);
         return fromWatchingKey(params, watchKey, outputScriptTypeFromB58(params, watchKeyB58));
     }
@@ -482,6 +488,9 @@ public class Wallet extends BaseTaggableObject
         signers = new ArrayList<>();
         addTransactionSigner(new LocalTransactionSigner());
         createTransientState();
+        derivationPathFactory = new DerivationPathFactory(params);
+        receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+        sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
     }
 
     private void createTransientState() {
@@ -1158,7 +1167,10 @@ public class Wallet extends BaseTaggableObject
     public ECKey findKeyFromPubKeyHash(byte[] pubKeyHash, @Nullable Script.ScriptType scriptType) {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
+            ECKey key = keyChainGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
+            if (key == null && receivingFromFriendsGroup != null)
+                key = receivingFromFriendsGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
+            return key;
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1168,7 +1180,7 @@ public class Wallet extends BaseTaggableObject
     public boolean hasKey(ECKey key) {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.hasKey(key);
+            return keyChainGroup.hasKey(key) || (receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKey(key));
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1229,7 +1241,11 @@ public class Wallet extends BaseTaggableObject
     public ECKey findKeyFromPubKey(byte[] pubKey) {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.findKeyFromPubKey(pubKey);
+            ECKey key = keyChainGroup.findKeyFromPubKey(pubKey);
+            if (key == null && receivingFromFriendsGroup != null) {
+                key = receivingFromFriendsGroup.findKeyFromPubKey(pubKey);
+            }
+            return key;
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1273,13 +1289,23 @@ public class Wallet extends BaseTaggableObject
                     if (ScriptPattern.isP2PK(script)) {
                         byte[] pubkey = ScriptPattern.extractKeyFromP2PK(script);
                         keyChainGroup.markPubKeyAsUsed(pubkey);
+                        receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
+                        sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
                     } else if (ScriptPattern.isP2PKH(script)) {
                         byte[] pubkeyHash = ScriptPattern.extractHashFromP2PKH(script);
                         keyChainGroup.markPubKeyHashAsUsed(pubkeyHash);
+                        receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                        sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
                     } else if (ScriptPattern.isP2SH(script)) {
                         Address a = Address.fromScriptHash(tx.getParams(),
                                 ScriptPattern.extractHashFromP2SH(script));
                         keyChainGroup.markP2SHAddressAsUsed(a);
+                        receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
+                        sendingToFriendsGroup.markP2SHAddressAsUsed(a);
+                    } else if (ScriptPattern.isCreditBurn(script)) {
+                        byte [] h = ScriptPattern.extractCreditBurnKeyId(script);
+                        if (authenticationGroup != null)
+                            authenticationGroup.markPubKeyHashAsUsed(h);
                     }
                 } catch (ScriptException e) {
                     // Just means we didn't understand the output of this transaction: ignore it.
@@ -2280,6 +2306,10 @@ public class Wallet extends BaseTaggableObject
         }
 
         informConfidenceListenersIfNotReorganizing();
+        if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+            CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
+            queueOnCreditFundingEvent(cftx, block, blockType);
+        }
         isConsistentOrThrow();
         // Optimization for the case where a block has tons of relevant transactions.
         saveLater();
@@ -2680,10 +2710,6 @@ public class Wallet extends BaseTaggableObject
                 return false;
             log.info("commitTx of {}", tx.getTxId());
 
-            if(context.evoUserManager != null) { //Check for unit tests
-                context.evoUserManager.processSpecialTransaction(tx, null);
-            }
-
             log.info("commitTx of {}", tx.getHashAsString());
             Coin balance = getBalance();
             tx.setUpdateTime(Utils.now());
@@ -2758,6 +2784,11 @@ public class Wallet extends BaseTaggableObject
             //Dash Specific
             if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
                 context.instantSendManager.syncTransaction(tx, null, -1);
+
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
+                queueOnCreditFundingEvent(cftx, null, BlockChain.NewBlockType.BEST_CHAIN);
+            }
 
             informConfidenceListenersIfNotReorganizing();
             saveNow();
@@ -2968,6 +2999,31 @@ public class Wallet extends BaseTaggableObject
         return ListenerRegistration.removeFromList(listener, transactionConfidenceListeners);
     }
 
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addCreditFundingEventListener(TransactionConfidenceEventListener listener) {
+        addTransactionConfidenceEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addCreditFundingEventListener(Executor executor, CreditFundingTransactionEventListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        creditFundingListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeCreditFundingEventListener(CreditFundingTransactionEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, creditFundingListeners);
+    }
+
     private void queueOnTransactionConfidenceChanged(final Transaction tx) {
         checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<TransactionConfidenceEventListener> registration : transactionConfidenceListeners) {
@@ -3043,6 +3099,19 @@ public class Wallet extends BaseTaggableObject
                 @Override
                 public void run() {
                     registration.listener.onScriptsChanged(Wallet.this, scripts, isAddingScripts);
+                }
+            });
+        }
+    }
+
+    protected void queueOnCreditFundingEvent(final CreditFundingTransaction tx, StoredBlock block,
+                                             BlockChain.NewBlockType blockType) {
+        checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<CreditFundingTransactionEventListener> registration : creditFundingListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onTransactionReceived(tx, block, blockType);
                 }
             });
         }
@@ -3482,6 +3551,19 @@ public class Wallet extends BaseTaggableObject
                 builder.append("Key rotation time:      ").append(Utils.dateTimeFormat(keyRotationTime)).append('\n');
             builder.append(keyChainGroup.toString(includeLookahead, includePrivateKeys, aesKey));
 
+            if(authenticationGroup != null) {
+                builder.append("\nAuthentication\n");
+                builder.append(authenticationGroup.toString(includeLookahead, includePrivateKeys, aesKey));
+            }
+
+            if(receivingFromFriendsGroup != null) {
+                builder.append("\nContacts (receiving)\n");
+                builder.append(receivingFromFriendsGroup.toString(includeLookahead, includePrivateKeys, aesKey));
+            }
+            if(sendingToFriendsGroup != null) {
+                builder.append("\nContacts (sending)\n");
+                builder.append(sendingToFriendsGroup.toString(includeLookahead, includePrivateKeys, aesKey));
+            }
             if (!watchedScripts.isEmpty()) {
                 builder.append("\nWatched scripts:\n");
                 for (Script script : watchedScripts) {
@@ -4184,8 +4266,8 @@ public class Wallet extends BaseTaggableObject
             checkArgument(!req.completed, "Given SendRequest has already been completed.");
             // Calculate the amount of value we need to import.
             Coin value = Coin.ZERO;
-            boolean requiresInputs = req.tx.getType() != Transaction.Type.TRANSACTION_SUBTX_RESETKEY;
-            boolean requiresNoFee = req.tx.getType() == Transaction.Type.TRANSACTION_SUBTX_RESETKEY;
+            boolean requiresInputs = req.tx.getType() != Transaction.Type.TRANSACTION_QUORUM_COMMITMENT;
+            boolean requiresNoFee = req.tx.getType() == Transaction.Type.TRANSACTION_QUORUM_COMMITMENT;
             for (TransactionOutput output : req.tx.getOutputs()) {
                 value = value.add(output.getValue());
             }
@@ -4861,9 +4943,8 @@ public class Wallet extends BaseTaggableObject
 
         for (Transaction tx : all) {
             if(tx.getVersionShort() == 3 && tx.getType() != Transaction.Type.TRANSACTION_NORMAL) {
-                if(tx.getType() == Transaction.Type.TRANSACTION_PROVIDER_REGISTER ||
-                    tx.getType() == Transaction.Type.TRANSACTION_SUBTX_REGISTER) {
-                    bloomSpecialTxHashes.add(tx.getHash());
+                if(tx.getType() == Transaction.Type.TRANSACTION_PROVIDER_REGISTER) {
+                    bloomSpecialTxHashes.add(tx.getTxId());
                 }
             }
         }
@@ -4897,6 +4978,8 @@ public class Wallet extends BaseTaggableObject
             size += bloomSpecialTxHashes.size();
             size += bloomSpecialTxScripts.size();
             size += bloomSpecialTxOutpoints.size();
+            if (receivingFromFriendsGroup != null)
+                size += receivingFromFriendsGroup.getBloomFilterElementCount();
             return size;
         } finally {
             endBloomFilterCalculation();
@@ -4939,10 +5022,10 @@ public class Wallet extends BaseTaggableObject
      * <p>Gets a bloom filter that contains all of the public keys from this wallet, and which will provide the given
      * false-positive rate if it has size elements. Keep in mind that you will get 2 elements in the bloom filter for
      * each key in the wallet, for the public key and the hash of the public key (address form).</p>
-     * 
+     *
      * <p>This is used to generate a BloomFilter which can be {@link BloomFilter#merge(BloomFilter)}d with another.
      * It could also be used if you have a specific target for the filter's size.</p>
-     * 
+     *
      * <p>See the docs for {@link BloomFilter#BloomFilter(int, double, long, BloomFilter.BloomUpdate)} for a brief explanation of anonymity when using bloom
      * filters.</p>
      */
@@ -4984,6 +5067,10 @@ public class Wallet extends BaseTaggableObject
             if(authenticationGroup != null) {
                 BloomFilter authFilter = authenticationGroup.getBloomFilter(size, falsePositiveRate, nTweak);
                 filter.merge(authFilter);
+            }
+            if(receivingFromFriendsGroup != null) {
+                BloomFilter friendFilter = receivingFromFriendsGroup.getBloomFilter(size, falsePositiveRate, nTweak);
+                filter.merge(friendFilter);
             }
             return filter;
         } finally {
@@ -5365,7 +5452,7 @@ public class Wallet extends BaseTaggableObject
      * believed to be compromised. The rotation time is persisted to the wallet. You can stop key rotation by calling
      * this method again with {@code 0} as the argument.
      * </p>
-     * 
+     *
      * <p>
      * Once set up, calling {@link #doMaintenance(KeyParameter, boolean)} will create and possibly send rotation
      * transactions: but it won't be done automatically (because you might have to ask for the users password). This may
@@ -5625,18 +5712,34 @@ public class Wallet extends BaseTaggableObject
 
     AuthenticationKeyChain providerOwnerKeyChain;
     AuthenticationKeyChain providerVoterKeyChain;
-    AuthenticationKeyChain blockchainUserKeyChain;
-    KeyChainGroup authenticationGroup;
+    AuthenticationKeyChain blockchainIdentityFundingKeyChain;
+    AuthenticationKeyChain blockchainIdentityTopupKeyChain;
+    AuthenticationKeyChain blockchainIdentityKeyChain;
+    AuthenticationKeyChainGroup authenticationGroup;
 
-    public void initializeAuthenticationKeyChains(DeterministicSeed seed, KeyCrypter keyCrypter) {
-        boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
-        providerOwnerKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.PROVIDER_OWNER_PATH : DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET);
-        providerVoterKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.PROVIDER_VOTING_PATH : DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET);
-        blockchainUserKeyChain = new AuthenticationKeyChain(seed, keyCrypter, isMainNet ? DeterministicKeyChain.BLOCKCHAIN_USER_PATH : DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET);
-        authenticationGroup = KeyChainGroup.builder(getParams()).build();
-        authenticationGroup.addAndActivateHDChain(providerOwnerKeyChain);
-        authenticationGroup.addAndActivateHDChain(providerVoterKeyChain);
-        authenticationGroup.addAndActivateHDChain(blockchainUserKeyChain);
+    public void initializeAuthenticationKeyChains(DeterministicSeed seed, @Nullable KeyParameter keyParameter) {
+        providerOwnerKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeOwnerDerivationPath()).type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER).build();
+        providerVoterKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeVotingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING).build();
+        blockchainIdentityFundingKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING).build();
+        blockchainIdentityTopupKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityTopupFundingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP).build();
+        blockchainIdentityKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityECDSADerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY).build();
+
+        //encrypt all of the key chains if necessary
+        if(keyParameter != null && getKeyCrypter() != null) {
+            providerOwnerKeyChain = providerVoterKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+            providerVoterKeyChain = providerVoterKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+            blockchainIdentityKeyChain = blockchainIdentityKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+            blockchainIdentityFundingKeyChain = blockchainIdentityFundingKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+            blockchainIdentityTopupKeyChain = blockchainIdentityTopupKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+        }
+
+        authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams())
+                .addChain(providerOwnerKeyChain)
+                .addChain(providerVoterKeyChain)
+                .addChain(blockchainIdentityFundingKeyChain)
+                .addChain(blockchainIdentityFundingKeyChain)
+                .addChain(blockchainIdentityKeyChain)
+                .build();
     }
 
     public AuthenticationKeyChain getProviderOwnerKeyChain() {
@@ -5647,7 +5750,529 @@ public class Wallet extends BaseTaggableObject
         return providerVoterKeyChain;
     }
 
-    public AuthenticationKeyChain getBlockchainUserKeyChain() {
-        return blockchainUserKeyChain;
+    public AuthenticationKeyChain getBlockchainIdentityKeyChain() {
+        return blockchainIdentityKeyChain;
     }
+
+    public AuthenticationKeyChain getBlockchainIdentityFundingKeyChain() {
+        return blockchainIdentityFundingKeyChain;
+    }
+
+    public AuthenticationKeyChain getBlockchainIdentityTopupKeyChain() {
+        return blockchainIdentityTopupKeyChain;
+    }
+
+    //package level access
+    void setAuthenticationKeyChain(AuthenticationKeyChain chain, AuthenticationKeyChain.KeyChainType type) {
+        chain.setType(type);
+        if(authenticationGroup == null)
+            authenticationGroup =  AuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
+
+        switch(type) {
+            case MASTERNODE_VOTING:
+                providerVoterKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
+            case MASTERNODE_OWNER:
+                providerOwnerKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
+            case BLOCKCHAIN_IDENTITY:
+                blockchainIdentityKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
+            case BLOCKCHAIN_IDENTITY_FUNDING:
+                blockchainIdentityFundingKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
+            case BLOCKCHAIN_IDENTITY_TOPUP:
+                blockchainIdentityTopupKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
+        }
+    }
+
+    public boolean hasAuthenticationKeyChains() {
+        return authenticationGroup != null && !authenticationGroup.chains.isEmpty();
+    }
+
+    HashMap<Sha256Hash, CreditFundingTransaction> mapCreditFundingTxs = new HashMap<>();
+
+    /**
+     * @return list of credit funding transactions found in the wallet.
+     */
+
+    public List<CreditFundingTransaction> getCreditFundingTransactions() {
+        mapCreditFundingTxs.clear();
+        ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
+        for(WalletTransaction wtx : getWalletTransactions()) {
+            Transaction tx = wtx.getTransaction();
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
+                txs.add(cftx);
+                mapCreditFundingTxs.put(cftx.getTxId(), cftx);
+            }
+        }
+        return txs;
+    }
+
+    /**
+     * Get a CreditFundingTransaction object for a specific transaction
+     */
+    public CreditFundingTransaction getCreditFundingTransaction(Transaction tx) {
+        if(mapCreditFundingTxs.containsKey(tx.getTxId()))
+            return mapCreditFundingTxs.get(tx.getTxId());
+
+        AuthenticationKeyChain chain = getBlockchainIdentityFundingKeyChain();
+
+        CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
+
+        // set some internal data for the transaction
+        DeterministicKey publicKey = chain.getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+        if(publicKey != null)
+            cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
+        else log.error("Cannot find " + new KeyId(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
+
+        mapCreditFundingTxs.put(cftx.getTxId(), cftx);
+        return cftx;
+    }
+    // ***************************************************************************************************************
+
+    //region Authentication Key Management
+
+    /**
+     * Returns a key that hasn't been seen in a transaction yet, and which is suitable for displaying in a wallet
+     * user interface as "a convenient key to receive funds on" when the purpose parameter is
+     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS}. The returned key is stable until
+     * it's actually seen in a pending or confirmed transaction, at which point this method will start returning
+     * a different key (for each purpose independently).
+     */
+    public DeterministicKey currentAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            return authenticationGroup.currentKey(type);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns address for a {@link #currentKey(KeyChain.KeyPurpose)}
+     */
+    public Address currentAuthenticationAddress(AuthenticationKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            return authenticationGroup.currentAddress(type);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns a key that has not been returned by this method before (fresh). You can think of this as being
+     * a newly created key, although the notion of "create" is not really valid for a
+     * {@link DeterministicKeyChain}. When the parameter is
+     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS} the returned key is suitable for being put
+     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key out
+     * to someone who wishes to send money.
+     */
+    public DeterministicKey freshAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
+        return freshAuthenticationKeys(type, 1).get(0);
+    }
+
+    /**
+     * Returns a key/s that has not been returned by this method before (fresh). You can think of this as being
+     * a newly created key/s, although the notion of "create" is not really valid for a
+     * {@link DeterministicKeyChain}. When the parameter is
+     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS} the returned key is suitable for being put
+     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key/s out
+     * to someone who wishes to send money.
+     */
+    public List<DeterministicKey> freshAuthenticationKeys(AuthenticationKeyChain.KeyChainType type, int numberOfKeys) {
+        List<DeterministicKey> keys;
+        keyChainGroupLock.lock();
+        try {
+            keys = authenticationGroup.freshKeys(type, numberOfKeys);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
+        // and that's not quite so important, so we could coalesce for more performance.
+        saveNow();
+        return keys;
+    }
+
+    /**
+     * Returns address for a {@link #freshKey(KeyChain.KeyPurpose)}
+     */
+    public Address freshAuthenticationAddress(AuthenticationKeyChain.KeyChainType type) {
+        Address key;
+        keyChainGroupLock.lock();
+        try {
+            key = authenticationGroup.freshAddress(type);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        saveNow();
+        return key;
+    }
+
+    /**
+     * Returns only the keys that have been issued by {@link #freshReceiveKey()}, {@link #freshReceiveAddress()},
+     * {@link #currentReceiveKey()} or {@link #currentReceiveAddress()}.
+     */
+    public List<ECKey> getIssuedAuthenticationKeys(AuthenticationKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            List<ECKey> keys = new LinkedList<>();
+            long keyRotationTimeSecs = vKeyRotationTimestamp;
+            for (final DeterministicKeyChain chain : authenticationGroup.getActiveKeyChains(keyRotationTimeSecs))
+                keys.addAll(chain.getIssuedReceiveKeys());
+            return keys;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns only the addresses that have been issued by {@link #freshReceiveKey()}, {@link #freshReceiveAddress()},
+     * {@link #currentReceiveKey()} or {@link #currentReceiveAddress()}.
+     */
+    public List<Address> getIssuedAuthenticationAddresses(AuthenticationKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            List<Address> addresses = new ArrayList<>();
+            long keyRotationTimeSecs = vKeyRotationTimestamp;
+            for (final DeterministicKeyChain chain : keyChainGroup.getActiveKeyChains(keyRotationTimeSecs)) {
+                Script.ScriptType outputScriptType = chain.getOutputScriptType();
+                for (ECKey key : chain.getIssuedReceiveKeys())
+                    addresses.add(Address.fromKey(getParams(), key, outputScriptType));
+            }
+            return addresses;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+
+    FriendKeyChainGroup receivingFromFriendsGroup;
+    FriendKeyChainGroup sendingToFriendsGroup;
+
+    public void addReceivingFromFriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
+        boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
+
+        FriendKeyChain chain = new FriendKeyChain(seed, keyCrypter, isMainNet ? FriendKeyChain.FRIEND_ROOT_PATH : FriendKeyChain.FRIEND_ROOT_PATH_TESTNET,
+                account, myBlockchainUserId, theirBlockchainUserId);
+        addReceivingFromFriendKeyChain(chain);
+    }
+
+    public void addReceivingFromFriendKeyChain(FriendKeyChain chain) {
+        keyChainGroupLock.lock();
+        try {
+            if(receivingFromFriendsGroup == null) {
+                receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+            }
+            receivingFromFriendsGroup.addAndActivateHDChain(chain);
+            saveNow();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    public void addSendingToFriendKeyChain(String xpub, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
+        boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
+
+        FriendKeyChain chain = new FriendKeyChain(getParams(), xpub, new EvolutionContact(myBlockchainUserId, theirBlockchainUserId));
+        addSendingToFriendKeyChain(chain);
+    }
+
+    public void addSendingToFriendKeyChain(FriendKeyChain chain) {
+        keyChainGroupLock.lock();
+        try {
+            if(sendingToFriendsGroup == null) {
+                sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+            }
+            sendingToFriendsGroup.addAndActivateHDChain(chain);
+            saveNow();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    public void addRecievingFromFriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, EvolutionContact contact) {
+        addReceivingFromFriendKeyChain(seed, keyCrypter, contact.getUserAccount(), contact.getEvolutionUserId(), contact.getFriendUserId());
+    }
+
+    public List<Transaction> getTransactionsWithFriend(EvolutionContact contact) {
+        FriendKeyChain fromChain = receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+        FriendKeyChain toChain = sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), FriendKeyChain.KeyChainType.SENDING_CHAIN);
+
+        ArrayList<Transaction> txs = Lists.newArrayList();
+        if (fromChain == null && toChain == null) {
+            return txs;
+        }
+
+        for(WalletTransaction wtx : getWalletTransactions()) {
+            Transaction tx = wtx.getTransaction();
+            for(TransactionOutput output : tx.getOutputs()) {
+                if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                    byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                    if((fromChain != null && fromChain.findKeyFromPubHash(hash160) != null) ||
+                            (toChain != null && toChain.findKeyFromPubHash(hash160) != null)) {
+                        txs.add(tx);
+                    }
+                }
+            }
+        }
+        return txs;
+    }
+
+    public EvolutionContact getFriendFromTransaction(Transaction tx) {
+        for(TransactionOutput output : tx.getOutputs()) {
+            if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                EvolutionContact contact = sendingToFriendsGroup.getFriendFromPublicKeyHash(hash160);
+                if (contact != null) {
+                    return contact;
+                } else {
+                    contact = receivingFromFriendsGroup.getFriendFromPublicKeyHash(hash160);
+                    if (contact != null) {
+                        return contact;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean hasReceivingKeyChain(EvolutionContact contact) {
+        return receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) != null;
+    }
+
+    public boolean hasSendingKeyChain(EvolutionContact contact) {
+        return sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN) != null;
+    }
+
+    public boolean hasReceivingFriendKeyChains() {
+        return receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKeyChains();
+    }
+
+    protected void setReceivingFromFriendsGroup(FriendKeyChainGroup receivingFromFriendsGroup) {
+        this.receivingFromFriendsGroup = receivingFromFriendsGroup;
+    }
+
+    protected void setSendingToFriendsGroup(FriendKeyChainGroup sendingToFriendsGroup) {
+        this.sendingToFriendsGroup = sendingToFriendsGroup;
+    }
+
+    // ***************************************************************************************************************
+
+    //region Friend Key Management
+
+    /**
+     * Returns a key that hasn't been seen in a transaction yet, and which is suitable for displaying in a wallet
+     * user interface as "a convenient key to receive funds on" when the purpose parameter is
+     * {@link org.bitcoinj.wallet.KeyChain.KeyPurpose#RECEIVE_FUNDS}. The returned key is stable until
+     * it's actually seen in a pending or confirmed transaction, at which point this method will start returning
+     * a different key (for each purpose independently).
+     */
+    public DeterministicKey currentKey(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            if(type == FriendKeyChain.KeyChainType.RECEIVING_CHAIN)
+                return receivingFromFriendsGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+            else if(type == FriendKeyChain.KeyChainType.SENDING_CHAIN)
+                return sendingToFriendsGroup.currentKey(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+            else throw new IllegalArgumentException("invalid keychain type");
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * An alias for calling {@link #currentKey(org.bitcoinj.wallet.KeyChain.KeyPurpose)} with
+     * {@link org.bitcoinj.wallet.KeyChain.KeyPurpose#RECEIVE_FUNDS} as the parameter.
+     */
+    public DeterministicKey currentReceiveKey(EvolutionContact contact) {
+        return currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+    }
+
+    /**
+     * An alias for calling {@link #currentKey(org.bitcoinj.wallet.KeyChain.KeyPurpose)} with
+     * {@link org.bitcoinj.wallet.KeyChain.KeyPurpose#RECEIVE_FUNDS} as the parameter.
+     */
+    public DeterministicKey currentSendKey(EvolutionContact contact) {
+        return currentKey(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+    }
+
+    /**
+     * Returns address for a {@link #currentKey(org.bitcoinj.wallet.KeyChain.KeyPurpose)}
+     */
+    public Address currentAddress(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        keyChainGroupLock.lock();
+        try {
+            return Address.fromKey(params, currentKey(contact, type));
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * An alias for calling {@link #currentAddress(org.bitcoinj.evolution.EvolutionContact, FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#RECEIVING_CHAIN} as the parameter.
+     */
+    public Address currentReceiveAddress(EvolutionContact contact) {
+        return currentAddress(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+    }
+
+    /**
+     * An alias for calling {@link #currentAddress(org.bitcoinj.evolution.EvolutionContact, FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#SENDING_CHAIN} as the parameter.
+     */
+    public Address currentSendAddress(EvolutionContact contact) {
+        return currentAddress(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+    }
+
+    /**
+     * Returns a key that has not been returned by this method before (fresh). You can think of this as being
+     * a newly created key, although the notion of "create" is not really valid for a
+     * {@link org.bitcoinj.wallet.DeterministicKeyChain}. The returned key is suitable for being put
+     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key out
+     * to someone who wishes to send money.
+     */
+    public DeterministicKey freshKey(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        return freshKeys(contact, type, 1).get(0);
+    }
+
+    /**
+     * Returns a key/s that has not been returned by this method before (fresh). You can think of this as being
+     * a newly created key/s, although the notion of "create" is not really valid for a
+     * {@link org.bitcoinj.wallet.DeterministicKeyChain}.
+     * The returned key is suitable for being put
+     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key/s out
+     * to someone who wishes to send money.
+     */
+    public List<DeterministicKey> freshKeys(EvolutionContact contact, FriendKeyChain.KeyChainType type, int numberOfKeys) {
+        List<DeterministicKey> keys;
+        keyChainGroupLock.lock();
+        try {
+            if(type == FriendKeyChain.KeyChainType.RECEIVING_CHAIN)
+                keys = receivingFromFriendsGroup.freshKeys(contact, type, numberOfKeys);
+            else if(type == FriendKeyChain.KeyChainType.SENDING_CHAIN)
+                keys = sendingToFriendsGroup.freshKeys(contact, type, numberOfKeys);
+            else keys = Lists.newArrayList();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
+        // and that's not quite so important, so we could coalesce for more performance.
+        saveNow();
+        return keys;
+    }
+
+    /**
+     * An alias for calling {@link #freshKey(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#RECEIVING_CHAIN} as the parameter.
+     */
+    public DeterministicKey freshReceiveKey(EvolutionContact contact) {
+        return freshKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+    }
+
+    /**
+     * An alias for calling {@link #freshKey(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#SENDING_CHAIN} as the parameter.
+     */
+    public DeterministicKey freshSendKey(EvolutionContact contact) {
+        return freshKey(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+    }
+
+    /**
+     * Returns address for a {@link #freshKey(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)}
+     */
+    public Address freshAddress(EvolutionContact contact, FriendKeyChain.KeyChainType type) {
+        Address key;
+        keyChainGroupLock.lock();
+        try {
+            if(type == FriendKeyChain.KeyChainType.RECEIVING_CHAIN)
+                key = receivingFromFriendsGroup.freshAddress(contact, type);
+            else if(type == FriendKeyChain.KeyChainType.SENDING_CHAIN)
+                key = sendingToFriendsGroup.freshAddress(contact, type);
+            else throw new IllegalArgumentException("Invalid keychain type");
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        saveNow();
+        return key;
+    }
+
+    /**
+     * An alias for calling {@link #freshAddress(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#RECEIVING_CHAIN} as the parameter.
+     */
+    public Address freshReceiveAddress(EvolutionContact contact) {
+        return freshAddress(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+    }
+
+    /**
+     * An alias for calling {@link #freshAddress(org.bitcoinj.evolution.EvolutionContact, org.bitcoinj.wallet.FriendKeyChain.KeyChainType)} with
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType#SENDING_CHAIN} as the parameter.
+     */
+    public Address freshSendAddress(EvolutionContact contact) {
+        return freshAddress(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+    }
+
+    /**
+     * Returns only the keys that have been issued by {@link #freshReceiveKey(org.bitcoinj.evolution.EvolutionContact)}, {@link #freshReceiveAddress(org.bitcoinj.evolution.EvolutionContact)},
+     * {@link #currentReceiveKey(org.bitcoinj.evolution.EvolutionContact)} or {@link #currentReceiveAddress(org.bitcoinj.evolution.EvolutionContact)}.
+     */
+    public List<ECKey> getIssuedReceiveKeys(EvolutionContact contact) {
+        keyChainGroupLock.lock();
+        try {
+            List<DeterministicKey> detkeys = receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN).getIssuedReceiveKeys();
+            List<ECKey> keys = new ArrayList<>(detkeys);
+            return keys;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns only the keys that have been issued by {@link #freshSendKey(org.bitcoinj.evolution.EvolutionContact)}, {@link #freshSendAddress(org.bitcoinj.evolution.EvolutionContact)},
+     * {@link #currentSendKey(org.bitcoinj.evolution.EvolutionContact)} or {@link #currentSendAddress(org.bitcoinj.evolution.EvolutionContact)}.
+     */
+    public List<ECKey> getIssuedSendKeys(EvolutionContact contact) {
+        keyChainGroupLock.lock();
+        try {
+            List<DeterministicKey> detkeys = sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN).getIssuedReceiveKeys();
+            List<ECKey> keys = new LinkedList<>(detkeys);
+            return keys;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns only the addresses that have been issued by {@link #freshReceiveKey(org.bitcoinj.evolution.EvolutionContact)}, {@link #freshReceiveAddress(org.bitcoinj.evolution.EvolutionContact)},
+     * {@link #currentReceiveKey(org.bitcoinj.evolution.EvolutionContact)} or {@link #currentReceiveAddress(org.bitcoinj.evolution.EvolutionContact)}.
+     */
+    public List<Address> getIssuedReceiveAddresses(EvolutionContact contact) {
+        final List<ECKey> keys = getIssuedReceiveKeys(contact);
+        List<Address> addresses = new ArrayList<Address>(keys.size());
+        for (ECKey key : keys)
+            addresses.add(Address.fromKey(getParams(), key));
+        return addresses;
+    }
+
+    /**
+     * Returns only the contact send addresses that have been issued by {@link #freshSendKey(org.bitcoinj.evolution.EvolutionContact)}, {@link #freshSendAddress(org.bitcoinj.evolution.EvolutionContact)},
+     *      * {@link #currentSendKey(org.bitcoinj.evolution.EvolutionContact)} or {@link #currentSendAddress(org.bitcoinj.evolution.EvolutionContact)}.
+     */
+    public List<Address> getIssuedSendAddresses(EvolutionContact contact) {
+        final List<ECKey> keys = getIssuedSendKeys(contact);
+        List<Address> addresses = new ArrayList<Address>(keys.size());
+        for (ECKey key : keys)
+            addresses.add(Address.fromKey(getParams(), key));
+        return addresses;
+    }
+
 }

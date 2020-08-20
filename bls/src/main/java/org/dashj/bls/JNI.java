@@ -234,6 +234,6 @@ public class JNI {
   public final static native long BLS_RecoverPublicKey(long jarg1, long jarg2);
   public final static native long BLS_SignatureShare(long jarg1, byte [] jarg2);
   public final static native long BLS_RecoverSig(long jarg1, long jarg2);
-  public final static native long BLS_DHKeyExchange(long jarg1, long jarg2);
   */
+  public final static native long BLS_DHKeyExchange(long jarg1, long jarg2);
 }

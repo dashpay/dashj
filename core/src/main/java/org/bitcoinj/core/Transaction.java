@@ -106,14 +106,9 @@ public class Transaction extends ChildMessage {
         TRANSACTION_PROVIDER_UPDATE_REVOKE(4),
         TRANSACTION_COINBASE(5),
         TRANSACTION_QUORUM_COMMITMENT(6),
-        TRANSACTION_SUBTX_REGISTER(8),
-        TRANSACTION_SUBTX_TOPUP(9),
-        TRANSACTION_SUBTX_RESETKEY(10),
-        TRANSACTION_SUBTX_CLOSEACCOUNT(11),
-        TRANSACTION_SUBTX_TRANSITION(12),
         TRANSACTION_UNKNOWN(1024);
 
-        int value;
+        final int value;
 
         Type(int value) {
             this.value = value;
@@ -122,10 +117,13 @@ public class Transaction extends ChildMessage {
 
         private static java.util.HashMap<Integer, Type> mappings;
         private static java.util.HashMap<Integer, Type> getMappings() {
-            if (mappings == null) {
+            java.util.HashMap<Integer, Type> mappingsResult = mappings;
+            if (mappingsResult == null) {
                 synchronized (Type.class) {
-                    if (mappings == null) {
-                        mappings = new java.util.HashMap<Integer, Type>();
+                    mappingsResult = mappings;
+                    if (mappingsResult == null) {
+                        mappingsResult = new java.util.HashMap<>();
+                        mappings = mappingsResult;
                     }
                 }
             }
@@ -142,7 +140,7 @@ public class Transaction extends ChildMessage {
         }
 
         public boolean isSpecial() {
-            return this != TRANSACTION_UNKNOWN || this != TRANSACTION_NORMAL;
+            return this != TRANSACTION_UNKNOWN && this != TRANSACTION_NORMAL;
         }
     }
 
@@ -613,7 +611,7 @@ public class Transaction extends ChildMessage {
             varint = new VarInt(buf, cursor);
             scriptLen = varint.value;
             // 4 = length of sequence field (unint32)
-            cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
+            cursor += (int)scriptLen + 4 + varint.getOriginalSizeInBytes();
         }
 
         varint = new VarInt(buf, cursor);
@@ -625,7 +623,7 @@ public class Transaction extends ChildMessage {
             cursor += 8;
             varint = new VarInt(buf, cursor);
             scriptLen = varint.value;
-            cursor += scriptLen + varint.getOriginalSizeInBytes();
+            cursor += (int)scriptLen + varint.getOriginalSizeInBytes();
         }
         // 4 = length of lock_time field (uint32)
         return cursor - offset + 4;
@@ -667,8 +665,8 @@ public class Transaction extends ChildMessage {
             TransactionInput input = new TransactionInput(params, this, payload, cursor, serializer);
             inputs.add(input);
             long scriptLen = readVarInt(TransactionOutPoint.MESSAGE_LENGTH);
-            optimalEncodingMessageSize += TransactionOutPoint.MESSAGE_LENGTH + VarInt.sizeOf(scriptLen) + scriptLen + 4;
-            cursor += scriptLen + 4;
+            optimalEncodingMessageSize += TransactionOutPoint.MESSAGE_LENGTH + VarInt.sizeOf(scriptLen) + (int)scriptLen + 4;
+            cursor += (int)scriptLen + 4;
         }
     }
 
@@ -680,8 +678,8 @@ public class Transaction extends ChildMessage {
             TransactionOutput output = new TransactionOutput(params, this, payload, cursor, serializer);
             outputs.add(output);
             long scriptLen = readVarInt(8);
-            optimalEncodingMessageSize += 8 + VarInt.sizeOf(scriptLen) + scriptLen;
-            cursor += scriptLen;
+            optimalEncodingMessageSize += 8 + VarInt.sizeOf(scriptLen) + (int)scriptLen;
+            cursor += (int)scriptLen;
         }
     }
 
@@ -847,9 +845,14 @@ public class Transaction extends ChildMessage {
                 s.append('\n');
                 s.append(indent).append("        ");
                 ScriptType scriptType = scriptPubKey.getScriptType();
-                if (scriptType != null)
-                    s.append(scriptType).append(" addr:").append(scriptPubKey.getToAddress(params));
-                else
+                if (scriptType != null) {
+                    if (scriptType != ScriptType.CREDITBURN)
+                        s.append(scriptType).append(" addr:").append(scriptPubKey.getToAddress(params));
+                    else if (ScriptPattern.isCreditBurn(scriptPubKey)) {
+                        byte [] hash160 = ScriptPattern.extractCreditBurnKeyId(scriptPubKey);
+                        s.append(scriptType).append(" addr:").append(Address.fromPubKeyHash(params, hash160));
+                    }
+                } else
                     s.append("unknown script type");
                 if (!out.isAvailableForSpending()) {
                     s.append("  spent");
@@ -1678,18 +1681,6 @@ public class Transaction extends ChildMessage {
             case TRANSACTION_QUORUM_COMMITMENT:
                 extraPayloadObject = new FinalCommitmentTxPayload(params, this);
                 break;
-            case TRANSACTION_SUBTX_REGISTER:
-                extraPayloadObject = new SubTxRegister(params, this);
-                break;
-            case TRANSACTION_SUBTX_RESETKEY:
-                extraPayloadObject = new SubTxResetKey(params, this);
-                break;
-            case TRANSACTION_SUBTX_TOPUP:
-                extraPayloadObject = new SubTxTopup(params, this);
-                break;
-            case TRANSACTION_SUBTX_CLOSEACCOUNT:
-            case TRANSACTION_SUBTX_TRANSITION:
-                break;
         }
     }
 
@@ -1709,7 +1700,6 @@ public class Transaction extends ChildMessage {
     public boolean requiresInputs() {
         switch (getType()) {
             case TRANSACTION_QUORUM_COMMITMENT:
-            case TRANSACTION_SUBTX_RESETKEY:
                 return false;
             default:
                 return true;

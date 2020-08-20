@@ -726,4 +726,11 @@ public abstract class NetworkParameters {
     public int getBIP65Height() {
         return BIP65Height;
     }
+
+    // Coin Type
+    protected int coinType;
+
+    public int getCoinType() {
+        return coinType;
+    }
 }

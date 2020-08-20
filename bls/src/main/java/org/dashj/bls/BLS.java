@@ -25,7 +25,7 @@ public class BLS {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;
 
-  public static final String DASHJ_VERSION = "0.17.3";
+  public static final String DASHJ_VERSION = "0.18-SNAPSHOT";
 
 
   static {
@@ -102,11 +102,11 @@ public class BLS {
   public static InsecureSignature RecoverSig(InsecureSignatureVector sigs, MessageHashVector ids) {
     return new InsecureSignature(JNI.BLS_RecoverSig(InsecureSignatureVector.getCPtr(sigs), MessageHashVector.getCPtr(ids)), true);
   }
+  */
 
   public static PublicKey DHKeyExchange(PrivateKey privKey, PublicKey pubKey) {
     return new PublicKey(JNI.BLS_DHKeyExchange(PrivateKey.getCPtr(privKey), PublicKey.getCPtr(pubKey)), true);
   }
-  */
 
   public static void CheckRelicErrors() {
     JNI.BLS_CheckRelicErrors();

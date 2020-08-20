@@ -32,9 +32,7 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.evolution.SubTxRegister;
-import org.bitcoinj.evolution.SubTxResetKey;
-import org.bitcoinj.evolution.SubTxTopup;
+import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptChunk;
@@ -199,50 +197,6 @@ public class SendRequest {
         return req;
     }
 
-    /**
-     * <p>Creates a new SendRequest for a SubTxRegister (create blockchain user) with credits.</p>
-     * The SubTxRegister payload must already be signed.
-     */
-    public static SendRequest forSubTxRegister(NetworkParameters params, SubTxRegister subTxRegister, Coin credits) {
-        SendRequest req = new SendRequest();
-        req.tx = new Transaction(params);
-        req.tx.setVersion(3);
-        req.tx.setType(Transaction.Type.TRANSACTION_SUBTX_REGISTER);
-        req.tx.setExtraPayload(subTxRegister);
-        ScriptBuilder builder = new ScriptBuilder().addChunk(new ScriptChunk(OP_RETURN, null));
-        TransactionOutput output = new TransactionOutput(params, null, credits, builder.build().getProgram());
-        req.tx.addOutput(output);
-        return req;
-    }
-
-    /**
-     * <p>Creates a new SendRequest for a SubTxTopup (topup blockchain user) with credits.</p>
-     */
-    public static SendRequest forSubTxTopup(NetworkParameters params, SubTxTopup subTxTopup, Coin credits) {
-        SendRequest req = new SendRequest();
-        req.tx = new Transaction(params);
-        req.tx.setVersion(3);
-        req.tx.setType(Transaction.Type.TRANSACTION_SUBTX_TOPUP);
-        req.tx.setExtraPayload(subTxTopup);
-        ScriptBuilder builder = new ScriptBuilder().addChunk(new ScriptChunk(OP_RETURN, null));
-        TransactionOutput output = new TransactionOutput(params, null, credits, builder.build().getProgram());
-        req.tx.addOutput(output);
-        return req;
-    }
-
-    /**
-     * <p>Creates a new SendRequest for a forSubTxResetKey (reset key for blockchain user).</p>
-     * The SubTxResetKey payload must already be signed.
-     */
-    public static SendRequest forSubTxResetKey(NetworkParameters params, SubTxResetKey subTxResetKey) {
-        SendRequest req = new SendRequest();
-        req.tx = new Transaction(params);
-        req.tx.setVersion(3);
-        req.tx.setType(Transaction.Type.TRANSACTION_SUBTX_RESETKEY);
-        req.tx.setExtraPayload(subTxResetKey);
-        return req;
-    }
-
     public static SendRequest emptyWallet(Address destination) {
         SendRequest req = new SendRequest();
         final NetworkParameters parameters = destination.getParameters();
@@ -250,6 +204,15 @@ public class SendRequest {
         req.tx = new Transaction(parameters);
         req.tx.addOutput(Coin.ZERO, destination);
         req.emptyWallet = true;
+        return req;
+    }
+
+    /**
+     * <p>Creates a new credit funding transaction for a public key with a funding amount.</p>
+     */
+    public static SendRequest creditFundingTransaction(NetworkParameters params, ECKey publicKey, Coin credits) {
+        SendRequest req = new SendRequest();
+        req.tx = new CreditFundingTransaction(params, publicKey, credits);
         return req;
     }
 

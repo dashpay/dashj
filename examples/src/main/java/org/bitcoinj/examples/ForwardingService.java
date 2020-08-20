@@ -17,19 +17,14 @@
 
 package org.bitcoinj.examples;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.InsufficientMoneyException;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.*;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
@@ -43,6 +38,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -58,7 +54,7 @@ public class ForwardingService {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
         BriefLogFormatter.init();
         if (args.length < 1) {
-            System.err.println("Usage: address-to-send-back-to [regtest|testnet]");
+            System.err.println("Usage: address-to-send-back-to [regtest|testnet|evonet|palinka|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
             return;
         }
 
@@ -73,7 +69,21 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
-        } else {
+        } else if (args.length > 1 && args[1].equals("palinka")) {
+            params = PalinkaDevNetParams.get();
+            filePrefix = "forwarding-service-palinka";
+        } else if (args.length > 1 && args[1].equals("mobile")) {
+            params = MobileDevNetParams.get();
+            filePrefix = "forwarding-service-mobile";
+        } else if (args.length > 1 && args[1].equals("evonet")) {
+            params = EvoNetParams.get();
+            filePrefix = "forwarding-service-evonet";
+        } else if( args.length > 6 && args[1].equals("devnet")) {
+            String [] dnsSeeds = new String[args.length - 5];
+            System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
+            params = DevNetParams.get(args[2], args[3], Integer.parseInt(args[4]), dnsSeeds);
+            filePrefix = "forwarding-service-devnet";
+        }else {
             params = MainNetParams.get();
             filePrefix = "forwarding-service";
             checkpoints = "checkpoints.txt";
@@ -85,7 +95,13 @@ public class ForwardingService {
         System.out.println("Forwarding address: " + forwardingAddress);
 
         // Start up a basic app using a class that automates some boilerplate.
-        kit = new WalletAppKit(params, new File("."), filePrefix);
+        kit = new WalletAppKit(params, new File("."), filePrefix) {
+            @Override
+            protected void onSetupCompleted() {
+                if(!kit.wallet().hasAuthenticationKeyChains())
+                    kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
+            }
+        };
 
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.

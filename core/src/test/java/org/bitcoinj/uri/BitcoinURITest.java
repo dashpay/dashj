@@ -327,6 +327,19 @@ public class BitcoinURITest {
         assertEquals("aardvark=zebra", new BitcoinURI(MAINNET, BITCOIN_SCHEME + ":"
                 + MAINNET_GOOD_ADDRESS + "?label=aardvark=zebra").getLabel());
     }
+
+    /**
+     * Handles a user
+     *
+     * @throws BitcoinURIParseException
+     *             If something goes wrong
+     */
+    @Test
+    public void testGood_User() throws BitcoinURIParseException {
+        testObject = new BitcoinURI(MAINNET, BITCOIN_SCHEME + ":" + MAINNET_GOOD_ADDRESS
+                + "?user=quantumexplorer");
+        assertEquals("quantumexplorer", testObject.getUser());
+    }
     
     /**
      * Handles unknown fields (required and not required)

@@ -17,7 +17,7 @@
 /*
  * Authors: Jim Burton, Miron Cuperman, Andreas Schildbach
  */
- 
+
 /* Notes:
  * - Endianness: All byte arrays that represent numbers (such as hashes and private keys) are Big Endian
  * - To regenerate after editing, run: mvn generate-sources -DupdateProtobuf
@@ -39,6 +39,14 @@ message PeerAddress {
 message EncryptedData {
   required bytes initialisation_vector = 1;       // The initialisation vector for the AES encryption (16 bytes)
   required bytes encrypted_private_key = 2;       // The encrypted private key
+}
+
+message ExtendedChildNumber {
+    required bool simple = 1 [default = true];
+    optional uint32 i = 2;
+    optional uint32 size = 3;
+    optional bool hardened = 4;
+    optional bytes bi = 5;
 }
 
 /**
@@ -72,6 +80,8 @@ message DeterministicKey {
   // Number of signatures required to spend. This field is needed only for married keychains to reconstruct KeyChain
   // and represents the N value from N-of-M CHECKMULTISIG script. For regular single keychains it will always be 1.
   optional uint32 sigsRequiredToSpend = 6 [default = 1];
+
+  repeated ExtendedChildNumber extendedPath = 7;
 }
 
 /**
@@ -144,6 +154,8 @@ message Key {
   }
   // Type of addresses (aka output scripts) to generate for receiving.
   optional OutputScriptType output_script_type = 11;
+
+  repeated ExtendedChildNumber extendedPath = 20;
 }
 
 message Script {
@@ -378,6 +390,38 @@ message Tag {
     required bytes data = 2;
 }
 
+/**
+ * Data required to reconstruct TransactionSigner.
+ */
+message TransactionSigner {
+	// fully qualified class name of TransactionSigner implementation
+	required string class_name = 1;
+	// arbitrary data required for signer to function
+	optional bytes data = 2;
+}
+
+/**
+ * A wallet can contain other keychains that are not for spending, but for signing special transactions
+*/
+message ExtendedKeyChain {
+  enum ExtendedKeyChainType {
+    BLOCKCHAIN_IDENTITY = 0;
+    MASTERNODE_HOLDINGS = 1;
+    MASTERNODE_OWNER = 2;
+    MASTERNODE_OPERATOR = 3;
+    MASTERNODE_VOTING = 4;
+    BLOCKCHAIN_IDENTITY_FUNDING = 5;
+    BLOCKCHAIN_IDENTITY_TOPUP = 6;
+  }
+  enum KeyType {
+    ECDSA = 0;
+    BLS = 1;
+  }
+  required ExtendedKeyChainType type = 1;
+  required KeyType keyType = 2;
+  repeated Key key = 3;
+}
+
 /** A bitcoin wallet */
 message Wallet {
   /**
@@ -390,6 +434,8 @@ message Wallet {
   enum EncryptionType {
     UNENCRYPTED = 1;                 // All keys in the wallet are unencrypted
     ENCRYPTED_SCRYPT_AES = 2;        // All keys are encrypted with a passphrase based KDF of scrypt and AES encryption
+    ENCRYPTED_BLS_KEYEXCHANGE_AES = 3;           // Not used for wallet
+    ENCRYPTED_ECDH_KEYEXCHANGE_AES = 4;          // Not used for wallet
   }
 
   required string network_identifier = 1; // the network used by this wallet
@@ -433,6 +479,10 @@ message Wallet {
 
   // (field number 17 was used by transaction_signers)
 
+  repeated ExtendedKeyChain extKeyChains = 29;
+
+  repeated Key keysForFriends = 30;  //spending, friends send us money
+  repeated Key keysFromFriends = 31; //watching, we send money to friends
   // Next tag: 18
 }
 

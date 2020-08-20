@@ -225,6 +225,57 @@ public class WalletProtobufSerializer {
         // Populate the wallet version.
         walletBuilder.setVersion(wallet.getVersion());
 
+        List<Protos.ExtendedKeyChain> extendedKeyChains = Lists.newArrayList();
+        //authentication keys
+        if(wallet.getBlockchainIdentityKeyChain() != null) {
+            Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
+            extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY);
+            extendedKeyChainBuilder.addAllKey(wallet.getBlockchainIdentityKeyChain().serializeToProtobuf());
+            extendedKeyChains.add(extendedKeyChainBuilder.build());
+        }
+        if(wallet.getBlockchainIdentityFundingKeyChain() != null) {
+            Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
+            extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
+            extendedKeyChainBuilder.addAllKey(wallet.getBlockchainIdentityFundingKeyChain().serializeToProtobuf());
+            extendedKeyChains.add(extendedKeyChainBuilder.build());
+        }
+        if(wallet.getBlockchainIdentityTopupKeyChain() != null) {
+            Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
+            extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
+            extendedKeyChainBuilder.addAllKey(wallet.getBlockchainIdentityTopupKeyChain().serializeToProtobuf());
+            extendedKeyChains.add(extendedKeyChainBuilder.build());
+        }
+        if(wallet.getProviderOwnerKeyChain() != null) {
+            Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
+            extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.MASTERNODE_OWNER);
+            extendedKeyChainBuilder.addAllKey(wallet.getProviderOwnerKeyChain().serializeToProtobuf());
+            extendedKeyChains.add(extendedKeyChainBuilder.build());
+        }
+        if(wallet.getProviderVoterKeyChain() != null) {
+            Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
+            extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.MASTERNODE_VOTING);
+            extendedKeyChainBuilder.addAllKey(wallet.getProviderVoterKeyChain().serializeToProtobuf());
+            extendedKeyChains.add(extendedKeyChainBuilder.build());
+        }
+        walletBuilder.addAllExtKeyChains(extendedKeyChains);
+
+        //Add FriendKeyChains:  Receiving
+        if(wallet.receivingFromFriendsGroup != null && wallet.receivingFromFriendsGroup.hasKeyChains()) {
+            List<Protos.Key> keys = wallet.receivingFromFriendsGroup.serializeToProtobuf();
+            walletBuilder.addAllKeysForFriends(keys);
+        }
+
+        //Add FriendKeyChains:  Sending
+        if(wallet.sendingToFriendsGroup != null && wallet.sendingToFriendsGroup.hasKeyChains()) {
+            List<Protos.Key> keys = wallet.sendingToFriendsGroup.serializeToProtobuf();
+            walletBuilder.addAllKeysFromFriends(keys);
+        }
+
         return walletBuilder.build();
     }
 
@@ -609,6 +660,80 @@ public class WalletProtobufSerializer {
 
         if (walletProto.hasVersion()) {
             wallet.setVersion(walletProto.getVersion());
+        }
+
+        if(walletProto.getExtKeyChainsCount() > 0) {
+            AuthenticationKeyChainFactory factory = new AuthenticationKeyChainFactory();
+            KeyCrypter keyCrypter = null;
+            if (walletProto.hasEncryptionParameters()) {
+                Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
+                keyCrypter = new KeyCrypterScrypt(encryptionParameters);
+            }
+
+            for(int i = 0; i < walletProto.getExtKeyChainsCount(); ++i) {
+                Protos.ExtendedKeyChain extendedKeyChain = walletProto.getExtKeyChains(i);
+                AuthenticationKeyChain.KeyChainType type;
+                switch(extendedKeyChain.getType()) {
+                    case BLOCKCHAIN_IDENTITY:
+                        type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY;
+                        break;
+                    case BLOCKCHAIN_IDENTITY_FUNDING:
+                        type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING;
+                        break;
+                    case BLOCKCHAIN_IDENTITY_TOPUP:
+                        type = AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP;
+                        break;
+                    case MASTERNODE_OWNER:
+                        type = AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER;
+                        break;
+                    case MASTERNODE_VOTING:
+                        type = AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING;
+                        break;
+                    case MASTERNODE_OPERATOR:
+                        type = AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR;
+                        break;
+                    case MASTERNODE_HOLDINGS:
+                        type = AuthenticationKeyChain.KeyChainType.MASTERNODE_HOLDINGS;
+                        break;
+                    default:
+                        type = AuthenticationKeyChain.KeyChainType.INVALID_KEY_CHAIN;
+                }
+                if(extendedKeyChain.getKeyType() == Protos.ExtendedKeyChain.KeyType.ECDSA) {
+                    if (extendedKeyChain.getKeyCount() > 0) {
+                        List<DeterministicKeyChain> chains = AuthenticationKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory);
+                        if (!chains.isEmpty())
+                            wallet.setAuthenticationKeyChain((AuthenticationKeyChain)chains.get(0), type);
+                    }
+                }
+            }
+        }
+
+        //read the keys for friends (they send, we spend)
+
+        if(walletProto.getKeysForFriendsCount() > 0) {
+            KeyCrypter keyCrypter = null;
+            FriendKeyChainGroup friendKeyChainGroup = null;
+            if (walletProto.hasEncryptionParameters()) {
+                Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
+                keyCrypter = new KeyCrypterScrypt(encryptionParameters);
+                friendKeyChainGroup = FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysForFriendsList(), keyCrypter, keyChainFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+            } else {
+                friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysForFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+            }
+            wallet.setReceivingFromFriendsGroup(friendKeyChainGroup);
+        }
+
+        if(walletProto.getKeysFromFriendsCount() > 0) {
+            KeyCrypter keyCrypter = null;
+            FriendKeyChainGroup friendKeyChainGroup = null;
+            if (walletProto.hasEncryptionParameters()) {
+                Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
+                keyCrypter = new KeyCrypterScrypt(encryptionParameters);
+                friendKeyChainGroup = FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysFromFriendsList(), keyCrypter, keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+            } else {
+                friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysFromFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+            }
+            wallet.setSendingToFriendsGroup(friendKeyChainGroup);
         }
 
         // Make sure the object can be re-used to read another wallet without corruption.

@@ -63,4 +63,32 @@ public class DefaultKeyChainFactory implements KeyChainFactory {
             chain = DeterministicKeyChain.builder().spend(accountKey).outputScriptType(outputScriptType).build();
         return chain;
     }
+
+    @Override
+    public DeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
+                                                            KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException
+    {
+        DeterministicKeyChain chain;
+        if (isMarried)
+            throw new UnsupportedOperationException("Married Friend Keychains are not allowed");
+        else if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && /* allow any coin type */
+                accountPath.get(2).equals(ChildNumber.FIVE_HARDENED) && accountPath.get(3).equals(ChildNumber.ONE_HARDENED))
+            chain = new FriendKeyChain(seed, crypter, accountPath);
+        else return new DeterministicKeyChain(seed, crypter, Script.ScriptType.P2PKH, accountPath);
+        return chain;
+    }
+
+    @Override
+    public DeterministicKeyChain makeWatchingFriendKeyChain(DeterministicKey accountKey, ImmutableList<ChildNumber> accountPath)
+    {
+        DeterministicKeyChain chain;
+        if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && /* allow any coin type */
+                accountPath.get(2).equals(ChildNumber.FIVE_HARDENED) && accountPath.get(3).equals(ChildNumber.ONE_HARDENED)) {
+            chain = new FriendKeyChain(accountKey);
+        }
+        else {
+            throw new UnsupportedOperationException("Must be a watching friend key");
+        }
+        return chain;
+    }
 }

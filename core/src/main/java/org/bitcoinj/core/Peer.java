@@ -848,9 +848,6 @@ public class Peer extends PeerSocketHandler {
                                     try {
                                         log.info("{}: Dependency download complete!", getAddress());
                                         wallet.receivePending(tx, dependencies);
-
-                                        if(context.evoUserManager != null)
-                                            context.evoUserManager.processSpecialTransaction(tx, null);
                                     } catch (VerificationException e) {
                                         log.error("{}: Wallet failed to process pending transaction {}", getAddress(), tx.getTxId());
                                         log.error("Error was: ", e);
@@ -867,9 +864,6 @@ public class Peer extends PeerSocketHandler {
                             }, MoreExecutors.directExecutor());
                         } else {
                             wallet.receivePending(tx, null);
-
-                            if(context.evoUserManager != null)
-                                context.evoUserManager.processSpecialTransaction(tx, null);
                         }
                     }
                 } catch (VerificationException e) {
@@ -1220,36 +1214,16 @@ public class Peer extends PeerSocketHandler {
         switch (inv.type)
         {
             case Spork:
-                return context.sporkManager.mapSporks.containsKey(inv.hash);
+                return context.sporkManager.hasSpork(inv.hash);
             case MasternodePaymentVote:
-                /*if(context.masternodePayments.mapMasternodePayeeVotes.containsKey(inv.hash)) {
-                    context.masternodeSync.AddedMasternodeWinner(inv.hash);
-                    return true;
-                }*/
                 return false;
             case BudgetVote:
-                /*if(budget.mapSeenMasternodeBudgetVotes.containsKey(inv.hash)) {
-                    masternodeSync.AddedBudgetItem(inv.hash);
-                    return true;
-                }*/
                 return false;
             case BudgetProposal:
-               /*if(budget.mapSeenMasternodeBudgetProposals.containsKey(inv.hash)) {
-                    masternodeSync.AddedBudgetItem(inv.hash);
-                    return true;
-                }*/
                 return false;
             case BudgetFinalizedVote:
-                /*if(budget.mapSeenFinalizedBudgetVotes.count(inv.hash)) {
-                    masternodeSync.AddedBudgetItem(inv.hash);
-                    return true;
-                }*/
                 return false;
             case BudgetFinalized:
-                /*if(budget.mapSeenFinalizedBudgets.count(inv.hash)) {
-                    masternodeSync.AddedBudgetItem(inv.hash);
-                    return true;
-                }*/
                 return false;
             case GovernanceObject:
                 return !context.governanceManager.confirmInventoryRequest(inv);
