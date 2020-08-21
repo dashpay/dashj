@@ -99,7 +99,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     protected final NetworkParameters params;
     protected final Context context;
     @Nullable protected final AbstractBlockChain chain;
-    @Nullable protected AbstractBlockChain headers;
+    @Nullable protected AbstractBlockChain headerChain;
 
     // This executor is used to queue up jobs: it's used when we don't want to use locks for mutual exclusion,
     // typically because the job might call in to user provided code that needs/wants the freedom to use the API
@@ -1507,7 +1507,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** You can override this to customise the creation of {@link Peer} objects. */
     @GuardedBy("lock")
     protected Peer createPeer(PeerAddress address, VersionMessage ver) {
-        return new Peer(params, ver, address, chain, headers, downloadTxDependencyDepth);
+        return new Peer(params, ver, address, chain, headerChain, downloadTxDependencyDepth);
     }
 
     /**
@@ -2152,7 +2152,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             Set<MasternodeSync.SYNC_FLAGS> flags = Context.get().getSyncFlags();
             if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
                 log.info("Attempting to sync headers first");
-                if (peer.getBestHeight() > headers.getChainHead().getHeight() &&
+                if (peer.getBestHeight() > headerChain.getChainHead().getHeight() &&
                         syncStage.value <= SyncStage.HEADERS.value) {
                     initBlockChainDownloadFutures(peer);
                     Futures.addCallback(headersDownloadedFuture, headersDownloadedCallback, executor);
@@ -2172,18 +2172,26 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                         log.info("startBlockChainDownloadFromPeer");
                         setSyncStage(SyncStage.PREBLOCKS);
                         queuePreBlockDownloadListeners(peer);
-                    } else {
+                    } else if (syncStage.value > SyncStage.PREBLOCKS.value) {
                         // startBlockChainDownload will setDownloadData(true) on itself automatically.
-                        log.info("startBlockChainDownloadFromPeer 1");
+                        log.info("startBlockChainDownloadFromPeer 3");
                         setSyncStage(SyncStage.BLOCKS);
                         peer.startBlockChainDownload();
                     }
                 }
             } else {
-                // startBlockChainDownload will setDownloadData(true) on itself automatically.
-                log.info("startBlockChainDownloadFromPeer 2");
-                setSyncStage(SyncStage.BLOCKS);
-                peer.startBlockChainDownload();
+                if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING) && syncStage.value < SyncStage.PREBLOCKS.value) {
+                    initBlockChainDownloadFutures(peer);
+                    Futures.addCallback(preBlockDownloadFuture, preBlocksDownloadCallback, executor);
+                    log.info("startBlockChainDownloadFromPeer");
+                    setSyncStage(SyncStage.PREBLOCKS);
+                    queuePreBlockDownloadListeners(peer);
+                } else {
+                    // startBlockChainDownload will setDownloadData(true) on itself automatically.
+                    log.info("startBlockChainDownloadFromPeer 1");
+                    setSyncStage(SyncStage.BLOCKS);
+                    peer.startBlockChainDownload();
+                }
             }
         } finally {
             lock.unlock();

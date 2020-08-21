@@ -351,7 +351,7 @@ public class Context {
         if(initializedDash) {
             sporkManager.setBlockChain(chain, peerGroup);
             masternodeSync.setBlockChain(chain);
-            masternodeListManager.setBlockChain(chain, peerGroup.headers, peerGroup);
+            masternodeListManager.setBlockChain(chain, peerGroup.headerChain, peerGroup);
             instantSendManager.setBlockChain(chain, peerGroup);
             signingManager.setBlockChain(chain);
             chainLockHandler.setBlockChain(chain);
