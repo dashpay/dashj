@@ -334,7 +334,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     /** See {@link #PeerGroup(Context, AbstractBlockChain)} */
     public PeerGroup(NetworkParameters params, @Nullable AbstractBlockChain chain) {
-        this(Context.getOrCreate(params), chain, new NioClientManager());
+        this(Context.getOrCreate(params), chain, null, new NioClientManager());
+    }
+
+    /** See {@link #PeerGroup(Context, AbstractBlockChain)} */
+    public PeerGroup(NetworkParameters params, @Nullable AbstractBlockChain chain, @Nullable AbstractBlockChain headerChain) {
+        this(Context.getOrCreate(params), chain, headerChain, new NioClientManager());
     }
 
     /**
@@ -342,19 +347,19 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * and downloaded. This is probably the constructor you want to use.
      */
     public PeerGroup(Context context, @Nullable AbstractBlockChain chain) {
-        this(context, chain, new NioClientManager());
+        this(context, chain, null, new NioClientManager());
     }
 
-    /** See {@link #PeerGroup(Context, AbstractBlockChain, ClientConnectionManager)} */
+    /** See {@link #PeerGroup(Context, AbstractBlockChain, AbstractBlockChain, ClientConnectionManager)} */
     public PeerGroup(NetworkParameters params, @Nullable AbstractBlockChain chain, ClientConnectionManager connectionManager) {
-        this(Context.getOrCreate(params), chain, connectionManager);
+        this(Context.getOrCreate(params), chain, null, connectionManager);
     }
 
     /**
      * Creates a new PeerGroup allowing you to specify the {@link ClientConnectionManager} which is used to create new
      * connections and keep track of existing ones.
      */
-    private PeerGroup(Context context, @Nullable AbstractBlockChain chain, ClientConnectionManager connectionManager) {
+    private PeerGroup(Context context, @Nullable AbstractBlockChain chain, @Nullable AbstractBlockChain headerChain, ClientConnectionManager connectionManager) {
         checkNotNull(context);
         this.context = context;
         this.params = context.getParams();
@@ -397,22 +402,23 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         runningBroadcasts = Collections.synchronizedSet(new HashSet<TransactionBroadcast>());
         bloomFilterMerger = new FilterMerger(DEFAULT_BLOOM_FILTER_FP_RATE);
 
-        //DashSpecific
-
-
-
         vMinRequiredProtocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM);
         runningVoteBroadcasts = Collections.synchronizedSet(new HashSet<GovernanceVoteBroadcast>());
 
-        if (context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
-            try {
-                headers = new BlockChain(params, new MemoryBlockStore(params));
-            } catch (BlockStoreException x) {
-                // swallow
-                headers = null;
+        //DashSpecific
+        if (headerChain == null) {
+            if (context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
+                try {
+                    this.headerChain = new BlockChain(params, new MemoryBlockStore(params));
+                } catch (BlockStoreException x) {
+                    // swallow
+                    this.headerChain = null;
+                }
+            } else {
+                this.headerChain = null;
             }
         } else {
-            headers = null;
+            this.headerChain = headerChain;
         }
         context.setPeerGroupAndBlockChain(this, chain);
     }
