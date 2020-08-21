@@ -71,7 +71,6 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
         try {
             super.tearDown();
             blockJobs = false;
-            Utils.finishMockSleep();
             if (masternodeGroup.isRunning())
                 masternodeGroup.stopAsync();
             system.remove();
