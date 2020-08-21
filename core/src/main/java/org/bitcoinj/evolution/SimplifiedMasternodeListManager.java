@@ -107,6 +107,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         loadedFromFile = false;
         requiresLoadingFromFile = true;
         lastRequestMessage = new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH);
+        initChainTipSync = !context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
     }
 
     @Override
@@ -244,7 +245,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
                 watchQuorums.start();
-                newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap);
+                newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, chain);
                 if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
                     newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
             } else {
