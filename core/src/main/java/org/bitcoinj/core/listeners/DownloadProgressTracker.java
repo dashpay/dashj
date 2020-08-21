@@ -99,7 +99,7 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
      * @param date the date of the last block downloaded
      */
     protected void progress(double pct, int blocksSoFar, Date date) {
-        if (headersCaughtUp && requiresHeaders) {
+        if (!requiresHeaders || headersCaughtUp) {
             log.info(String.format(Locale.US, "Chain download %d%% done with %d blocks to go, block date %s", (int) pct, blocksSoFar,
                     Utils.dateTimeFormat(date)));
         } else {
@@ -190,6 +190,12 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
     }
 
     private double calculatePercentage(double percentHeaders, double percentBlocks) {
-        return 0.1 * percentHeaders + 0.9 * percentBlocks;
+        double headersWeight = 0.3;
+        double blocksWeight = 1.0 - headersWeight;
+        if (!requiresHeaders) {
+            headersWeight = 0;
+            blocksWeight = 1.0;
+        }
+        return headersWeight * percentHeaders + blocksWeight * percentBlocks;
     }
 }
