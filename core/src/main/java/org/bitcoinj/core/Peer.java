@@ -1755,55 +1755,21 @@ public class Peer extends PeerSocketHandler {
     @GuardedBy("lock")
     private void blockChainHeaderDownloadLocked(Sha256Hash toHash) {
         checkState(lock.isHeldByCurrentThread());
-        // The block chain download process is a bit complicated. Basically, we start with one or more blocks in a
-        // chain that we have from a previous session. We want to catch up to the head of the chain BUT we don't know
-        // where that chain is up to or even if the top block we have is even still in the chain - we
-        // might have got ourselves onto a fork that was later resolved by the network.
-        //
-        // To solve this, we send the peer a block locator which is just a list of block hashes. It contains the
-        // blocks we know about, but not all of them, just enough of them so the peer can figure out if we did end up
-        // on a fork and if so, what the earliest still valid block we know about is likely to be.
-        //
-        // Once it has decided which blocks we need, it will send us an inv with up to 500 block messages. We may
-        // have some of them already if we already have a block chain and just need to catch up. Once we request the
-        // last block, if there are still more to come it sends us an "inv" containing only the hash of the head
-        // block.
-        //
-        // That causes us to download the head block but then we find (in processBlock) that we can't connect
-        // it to the chain yet because we don't have the intermediate blocks. So we rerun this function building a
-        // new block locator describing where we're up to.
-        //
-        // The getblocks with the new locator gets us another inv with another bunch of blocks. We download them once
-        // again. This time when the peer sends us an inv with the head block, we already have it so we won't download
-        // it again - but we recognize this case as special and call back into blockChainDownloadLocked to continue the
-        // process.
-        //
-        // So this is a complicated process but it has the advantage that we can download a chain of enormous length
-        // in a relatively stateless manner and with constant memory usage.
-        //
-        // All this is made more complicated by the desire to skip downloading the bodies of blocks that pre-date the
-        // 'fast catchup time', which is usually set to the creation date of the earliest key in the wallet. Because
-        // we know there are no transactions using our keys before that date, we need only the headers. To do that we
-        // use the "getheaders" command. Once we find we've gone past the target date, we throw away the downloaded
-        // headers and then request the blocks from that point onwards. "getheaders" does not send us an inv, it just
-        // sends us the data we requested in a "headers" message.
 
         BlockLocator blockLocator = new BlockLocator();
-        // For now we don't do the exponential thinning as suggested here:
-        //
-        //   https://en.bitcoin.it/wiki/Protocol_specification#getblocks
-        //
-        // This is because it requires scanning all the block chain headers, which is very slow. Instead we add the top
-        // 100 block headers. If there is a re-org deeper than that, we'll end up downloading the entire chain. We
-        // must always put the genesis block as the first entry.
+
+        // copy blocks from the blockChain into the headerChain if:
+        // - the headerChain is on the Genesis Block
+        // - the headerChain is behind blockChain
         BlockStore store = headerChain.getBlockStore();
-        if (checkNotNull(headerChain).getChainHead().getHeight() == 0 && checkNotNull(blockChain).getChainHead().getHeight() != 0) {
-            BlockStore blockStore = checkNotNull(blockChain).getBlockStore();
+        if ((checkNotNull(headerChain).getChainHead().getHeight() == 0 && checkNotNull(blockChain).getChainHead().getHeight() != 0) ||
+                headerChain.getChainHead().getHeight() < blockChain.getChainHead().getHeight()) {
+            BlockStore blockStore = blockChain.getBlockStore();
             StoredBlock cursor = blockChain.getChainHead();
-            ArrayList<StoredBlock> lastTenBlocks = new ArrayList<>(10);
+            ArrayList<StoredBlock> lastTenBlocks = new ArrayList<>(100);
             try {
 
-                for (int i = 0; cursor != null && i < 10; ++i) {
+                for (int i = 0; cursor != null && i < 100; ++i) {
                     lastTenBlocks.add(cursor);
                     cursor = cursor.getPrev(blockStore);
                 }
@@ -1820,6 +1786,7 @@ public class Peer extends PeerSocketHandler {
                 throw new RuntimeException(e);
             }
         }
+
         StoredBlock chainHead = headerChain.getChainHead();
         Sha256Hash chainHeadHash = chainHead.getHeader().getHash();
         // Did we already make this request? If so, don't do it again.
