@@ -107,7 +107,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         loadedFromFile = false;
         requiresLoadingFromFile = true;
         lastRequestMessage = new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH);
-        initChainTipSync = !context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+        initChainTipSync = !context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
     }
 
     @Override

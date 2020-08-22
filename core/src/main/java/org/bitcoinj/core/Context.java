@@ -414,7 +414,7 @@ public class Context {
         return voteConfidenceTable;
     }
 
-    Set<MasternodeSync.SYNC_FLAGS> getSyncFlags() {
+    public Set<MasternodeSync.SYNC_FLAGS> getSyncFlags() {
         if (masternodeSync != null) {
             return masternodeSync.syncFlags;
         } else {
