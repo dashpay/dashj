@@ -568,7 +568,6 @@ public class PeerGroupTest extends TestWithPeerGroup {
         });
         peerGroup.setMaxConnections(3);
 
-        Utils.setMockSleep(true);
         blockJobs = true;
 
         jobBlocks.release(2);   // startup + first peer discovery
