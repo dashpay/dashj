@@ -177,7 +177,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     private final CopyOnWriteArrayList<PeerFilterProvider> peerFilterProviders;
 
     public enum SyncStage {
-        NONE(0),
+        OFFLINE(0),
         HEADERS(1),
         MNLIST(2),
         PREBLOCKS(3),
@@ -190,7 +190,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     }
 
-    SyncStage syncStage = SyncStage.NONE;
+    SyncStage syncStage = SyncStage.OFFLINE;
 
     // This event listener is added to every peer. It's here so when we announce transactions via an "inv", every
     // peer can fetch them.
@@ -1841,6 +1841,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             });
             peer.removeDisconnectedEventListener(registration.listener);
         }
+
+        if (numConnectedPeers == 0) {
+            // restart the sync stages when the next peer is connected
+            setSyncStage(SyncStage.OFFLINE);
+        }
     }
 
     @GuardedBy("lock") private int stallPeriodSeconds = 10;
@@ -2076,7 +2081,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             @Override
             public void onSuccess(@Nullable Boolean aBoolean) {
                 log.info("Stage masternode list download successful: {}", aBoolean);
-                Set<MasternodeSync.SYNC_FLAGS> flags = Context.get().masternodeSync.syncFlags;
+                Set<MasternodeSync.SYNC_FLAGS> flags = context.getSyncFlags();
                 if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) {
                     if(syncStage.value < SyncStage.PREBLOCKS.value) {
                         setSyncStage(SyncStage.PREBLOCKS);
