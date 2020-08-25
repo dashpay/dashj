@@ -327,7 +327,7 @@ public class PaymentChannelClient implements IPaymentChannelClient {
                     // Make an initial payment of the dust limit, and put it into the message as well. The size of the
                     // server-requested dust limit was already sanity checked by this point.
                     PaymentChannelClientState.IncrementedPayment payment = state().incrementPaymentBy(Coin.valueOf(minPayment), userKeySetup);
-                    Protos.UpdatePayment.Builder initialMsg = provideContractBuilder.getInitialPaymentBuilder();
+                    Protos.UpdatePayment.Builder initialMsg = provideContractBuilder.getInitialPayment().toBuilder();
                     initialMsg.setSignature(ByteString.copyFrom(payment.signature.encodeToBitcoin()));
                     initialMsg.setClientChangeValue(state.getValueRefunded().value);
                 } catch (ValueOutOfRangeException e) {
@@ -369,7 +369,7 @@ public class PaymentChannelClient implements IPaymentChannelClient {
             // Make an initial payment of the dust limit, and put it into the message as well. The size of the
             // server-requested dust limit was already sanity checked by this point.
             PaymentChannelClientState.IncrementedPayment payment = state().incrementPaymentBy(Coin.valueOf(minPayment), userKey);
-            Protos.UpdatePayment.Builder initialMsg = contractMsg.getInitialPaymentBuilder();
+            Protos.UpdatePayment.Builder initialMsg = contractMsg.getInitialPayment().toBuilder();
             initialMsg.setSignature(ByteString.copyFrom(payment.signature.encodeToBitcoin()));
             initialMsg.setClientChangeValue(state.getValueRefunded().value);
         } catch (ValueOutOfRangeException e) {
