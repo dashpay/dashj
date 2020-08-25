@@ -6,667 +6,492 @@ package org.bitcoin.crawler;
 public final class PeerSeedProtos {
   private PeerSeedProtos() {}
   public static void registerAllExtensions(
-      com.google.protobuf.ExtensionRegistry registry) {
+      com.google.protobuf.ExtensionRegistryLite registry) {
   }
   public interface PeerSeedDataOrBuilder extends
       // @@protoc_insertion_point(interface_extends:org.bitcoin.crawler.PeerSeedData)
-      com.google.protobuf.MessageOrBuilder {
+      com.google.protobuf.MessageLiteOrBuilder {
 
     /**
      * <code>required string ip_address = 1;</code>
+     * @return Whether the ipAddress field is set.
      */
     boolean hasIpAddress();
     /**
      * <code>required string ip_address = 1;</code>
+     * @return The ipAddress.
      */
     java.lang.String getIpAddress();
     /**
      * <code>required string ip_address = 1;</code>
+     * @return The bytes for ipAddress.
      */
     com.google.protobuf.ByteString
         getIpAddressBytes();
 
     /**
      * <code>required uint32 port = 2;</code>
+     * @return Whether the port field is set.
      */
     boolean hasPort();
     /**
      * <code>required uint32 port = 2;</code>
+     * @return The port.
      */
     int getPort();
 
     /**
      * <code>required uint32 services = 3;</code>
+     * @return Whether the services field is set.
      */
     boolean hasServices();
     /**
      * <code>required uint32 services = 3;</code>
+     * @return The services.
      */
     int getServices();
   }
   /**
    * Protobuf type {@code org.bitcoin.crawler.PeerSeedData}
    */
-  public static final class PeerSeedData extends
-      com.google.protobuf.GeneratedMessage implements
+  public  static final class PeerSeedData extends
+      com.google.protobuf.GeneratedMessageLite<
+          PeerSeedData, PeerSeedData.Builder> implements
       // @@protoc_insertion_point(message_implements:org.bitcoin.crawler.PeerSeedData)
       PeerSeedDataOrBuilder {
-    // Use PeerSeedData.newBuilder() to construct.
-    private PeerSeedData(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
+    private PeerSeedData() {
+      ipAddress_ = "";
     }
-    private PeerSeedData(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final PeerSeedData defaultInstance;
-    public static PeerSeedData getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public PeerSeedData getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private PeerSeedData(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000001;
-              ipAddress_ = bs;
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              port_ = input.readUInt32();
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              services_ = input.readUInt32();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeedData_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeedData_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.class, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<PeerSeedData> PARSER =
-        new com.google.protobuf.AbstractParser<PeerSeedData>() {
-      public PeerSeedData parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new PeerSeedData(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<PeerSeedData> getParserForType() {
-      return PARSER;
-    }
-
     private int bitField0_;
     public static final int IP_ADDRESS_FIELD_NUMBER = 1;
-    private java.lang.Object ipAddress_;
+    private java.lang.String ipAddress_;
     /**
      * <code>required string ip_address = 1;</code>
+     * @return Whether the ipAddress field is set.
      */
+    @java.lang.Override
     public boolean hasIpAddress() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required string ip_address = 1;</code>
+     * @return The ipAddress.
      */
+    @java.lang.Override
     public java.lang.String getIpAddress() {
-      java.lang.Object ref = ipAddress_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          ipAddress_ = s;
-        }
-        return s;
-      }
+      return ipAddress_;
     }
     /**
      * <code>required string ip_address = 1;</code>
+     * @return The bytes for ipAddress.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getIpAddressBytes() {
-      java.lang.Object ref = ipAddress_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        ipAddress_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+      return com.google.protobuf.ByteString.copyFromUtf8(ipAddress_);
+    }
+    /**
+     * <code>required string ip_address = 1;</code>
+     * @param value The ipAddress to set.
+     */
+    private void setIpAddress(
+        java.lang.String value) {
+      value.getClass();
+  bitField0_ |= 0x00000001;
+      ipAddress_ = value;
+    }
+    /**
+     * <code>required string ip_address = 1;</code>
+     */
+    private void clearIpAddress() {
+      bitField0_ = (bitField0_ & ~0x00000001);
+      ipAddress_ = getDefaultInstance().getIpAddress();
+    }
+    /**
+     * <code>required string ip_address = 1;</code>
+     * @param value The bytes for ipAddress to set.
+     */
+    private void setIpAddressBytes(
+        com.google.protobuf.ByteString value) {
+      ipAddress_ = value.toStringUtf8();
+      bitField0_ |= 0x00000001;
     }
 
     public static final int PORT_FIELD_NUMBER = 2;
     private int port_;
     /**
      * <code>required uint32 port = 2;</code>
+     * @return Whether the port field is set.
      */
+    @java.lang.Override
     public boolean hasPort() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <code>required uint32 port = 2;</code>
+     * @return The port.
+     */
+    @java.lang.Override
+    public int getPort() {
+      return port_;
+    }
+    /**
+     * <code>required uint32 port = 2;</code>
+     * @param value The port to set.
+     */
+    private void setPort(int value) {
+      bitField0_ |= 0x00000002;
+      port_ = value;
     }
     /**
      * <code>required uint32 port = 2;</code>
      */
-    public int getPort() {
-      return port_;
+    private void clearPort() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      port_ = 0;
     }
 
     public static final int SERVICES_FIELD_NUMBER = 3;
     private int services_;
     /**
      * <code>required uint32 services = 3;</code>
+     * @return Whether the services field is set.
      */
+    @java.lang.Override
     public boolean hasServices() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /**
+     * <code>required uint32 services = 3;</code>
+     * @return The services.
+     */
+    @java.lang.Override
+    public int getServices() {
+      return services_;
+    }
+    /**
+     * <code>required uint32 services = 3;</code>
+     * @param value The services to set.
+     */
+    private void setServices(int value) {
+      bitField0_ |= 0x00000004;
+      services_ = value;
     }
     /**
      * <code>required uint32 services = 3;</code>
      */
-    public int getServices() {
-      return services_;
-    }
-
-    private void initFields() {
-      ipAddress_ = "";
-      port_ = 0;
+    private void clearServices() {
+      bitField0_ = (bitField0_ & ~0x00000004);
       services_ = 0;
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
-
-      if (!hasIpAddress()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasPort()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasServices()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(1, getIpAddressBytes());
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeUInt32(2, port_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeUInt32(3, services_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, getIpAddressBytes());
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(2, port_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(3, services_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
     }
 
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
 
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
     public static Builder newBuilder(org.bitcoin.crawler.PeerSeedProtos.PeerSeedData prototype) {
-      return newBuilder().mergeFrom(prototype);
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
     }
-    public Builder toBuilder() { return newBuilder(this); }
 
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
     /**
      * Protobuf type {@code org.bitcoin.crawler.PeerSeedData}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          org.bitcoin.crawler.PeerSeedProtos.PeerSeedData, Builder> implements
         // @@protoc_insertion_point(builder_implements:org.bitcoin.crawler.PeerSeedData)
         org.bitcoin.crawler.PeerSeedProtos.PeerSeedDataOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeedData_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeedData_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.class, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder.class);
-      }
-
       // Construct using org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+        super(DEFAULT_INSTANCE);
       }
 
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
 
-      public Builder clear() {
-        super.clear();
-        ipAddress_ = "";
-        bitField0_ = (bitField0_ & ~0x00000001);
-        port_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        services_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000004);
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeedData_descriptor;
-      }
-
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeedData getDefaultInstanceForType() {
-        return org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.getDefaultInstance();
-      }
-
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeedData build() {
-        org.bitcoin.crawler.PeerSeedProtos.PeerSeedData result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeedData buildPartial() {
-        org.bitcoin.crawler.PeerSeedProtos.PeerSeedData result = new org.bitcoin.crawler.PeerSeedProtos.PeerSeedData(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.ipAddress_ = ipAddress_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.port_ = port_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.services_ = services_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.bitcoin.crawler.PeerSeedProtos.PeerSeedData) {
-          return mergeFrom((org.bitcoin.crawler.PeerSeedProtos.PeerSeedData)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.bitcoin.crawler.PeerSeedProtos.PeerSeedData other) {
-        if (other == org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.getDefaultInstance()) return this;
-        if (other.hasIpAddress()) {
-          bitField0_ |= 0x00000001;
-          ipAddress_ = other.ipAddress_;
-          onChanged();
-        }
-        if (other.hasPort()) {
-          setPort(other.getPort());
-        }
-        if (other.hasServices()) {
-          setServices(other.getServices());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        if (!hasIpAddress()) {
-          
-          return false;
-        }
-        if (!hasPort()) {
-          
-          return false;
-        }
-        if (!hasServices()) {
-          
-          return false;
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.bitcoin.crawler.PeerSeedProtos.PeerSeedData parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.bitcoin.crawler.PeerSeedProtos.PeerSeedData) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      private java.lang.Object ipAddress_ = "";
       /**
        * <code>required string ip_address = 1;</code>
+       * @return Whether the ipAddress field is set.
        */
+      @java.lang.Override
       public boolean hasIpAddress() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return instance.hasIpAddress();
       }
       /**
        * <code>required string ip_address = 1;</code>
+       * @return The ipAddress.
        */
+      @java.lang.Override
       public java.lang.String getIpAddress() {
-        java.lang.Object ref = ipAddress_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            ipAddress_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+        return instance.getIpAddress();
       }
       /**
        * <code>required string ip_address = 1;</code>
+       * @return The bytes for ipAddress.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString
           getIpAddressBytes() {
-        java.lang.Object ref = ipAddress_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          ipAddress_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
+        return instance.getIpAddressBytes();
       }
       /**
        * <code>required string ip_address = 1;</code>
+       * @param value The ipAddress to set.
+       * @return This builder for chaining.
        */
       public Builder setIpAddress(
           java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-        ipAddress_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setIpAddress(value);
         return this;
       }
       /**
        * <code>required string ip_address = 1;</code>
+       * @return This builder for chaining.
        */
       public Builder clearIpAddress() {
-        bitField0_ = (bitField0_ & ~0x00000001);
-        ipAddress_ = getDefaultInstance().getIpAddress();
-        onChanged();
+        copyOnWrite();
+        instance.clearIpAddress();
         return this;
       }
       /**
        * <code>required string ip_address = 1;</code>
+       * @param value The bytes for ipAddress to set.
+       * @return This builder for chaining.
        */
       public Builder setIpAddressBytes(
           com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-        ipAddress_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setIpAddressBytes(value);
         return this;
       }
 
-      private int port_ ;
       /**
        * <code>required uint32 port = 2;</code>
+       * @return Whether the port field is set.
        */
+      @java.lang.Override
       public boolean hasPort() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return instance.hasPort();
       }
       /**
        * <code>required uint32 port = 2;</code>
+       * @return The port.
        */
+      @java.lang.Override
       public int getPort() {
-        return port_;
+        return instance.getPort();
       }
       /**
        * <code>required uint32 port = 2;</code>
+       * @param value The port to set.
+       * @return This builder for chaining.
        */
       public Builder setPort(int value) {
-        bitField0_ |= 0x00000002;
-        port_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setPort(value);
         return this;
       }
       /**
        * <code>required uint32 port = 2;</code>
+       * @return This builder for chaining.
        */
       public Builder clearPort() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        port_ = 0;
-        onChanged();
+        copyOnWrite();
+        instance.clearPort();
         return this;
       }
 
-      private int services_ ;
       /**
        * <code>required uint32 services = 3;</code>
+       * @return Whether the services field is set.
        */
+      @java.lang.Override
       public boolean hasServices() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return instance.hasServices();
       }
       /**
        * <code>required uint32 services = 3;</code>
+       * @return The services.
        */
+      @java.lang.Override
       public int getServices() {
-        return services_;
+        return instance.getServices();
       }
       /**
        * <code>required uint32 services = 3;</code>
+       * @param value The services to set.
+       * @return This builder for chaining.
        */
       public Builder setServices(int value) {
-        bitField0_ |= 0x00000004;
-        services_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setServices(value);
         return this;
       }
       /**
        * <code>required uint32 services = 3;</code>
+       * @return This builder for chaining.
        */
       public Builder clearServices() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        services_ = 0;
-        onChanged();
+        copyOnWrite();
+        instance.clearServices();
         return this;
       }
 
       // @@protoc_insertion_point(builder_scope:org.bitcoin.crawler.PeerSeedData)
     }
-
-    static {
-      defaultInstance = new PeerSeedData(true);
-      defaultInstance.initFields();
+    private byte memoizedIsInitialized = 2;
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+        com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+        java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new org.bitcoin.crawler.PeerSeedProtos.PeerSeedData();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+            java.lang.Object[] objects = new java.lang.Object[] {
+              "bitField0_",
+              "ipAddress_",
+              "port_",
+              "services_",
+            };
+            java.lang.String info =
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u0508\u0000\u0002" +
+                "\u050b\u0001\u0003\u050b\u0002";
+            return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData> parser = PARSER;
+          if (parser == null) {
+            synchronized (org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                    new DefaultInstanceBasedParser<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData>(
+                        DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+      }
+      case GET_MEMOIZED_IS_INITIALIZED: {
+        return memoizedIsInitialized;
+      }
+      case SET_MEMOIZED_IS_INITIALIZED: {
+        memoizedIsInitialized = (byte) (arg0 == null ? 0 : 1);
+        return null;
+      }
+      }
+      throw new UnsupportedOperationException();
     }
 
+
     // @@protoc_insertion_point(class_scope:org.bitcoin.crawler.PeerSeedData)
+    private static final org.bitcoin.crawler.PeerSeedProtos.PeerSeedData DEFAULT_INSTANCE;
+    static {
+      PeerSeedData defaultInstance = new PeerSeedData();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+        PeerSeedData.class, defaultInstance);
+    }
+
+    public static org.bitcoin.crawler.PeerSeedProtos.PeerSeedData getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<PeerSeedData> PARSER;
+
+    public static com.google.protobuf.Parser<PeerSeedData> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
   }
 
   public interface PeerSeedsOrBuilder extends
       // @@protoc_insertion_point(interface_extends:org.bitcoin.crawler.PeerSeeds)
-      com.google.protobuf.MessageOrBuilder {
+      com.google.protobuf.MessageLiteOrBuilder {
 
     /**
      * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
@@ -681,44 +506,39 @@ public final class PeerSeedProtos {
      * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
      */
     int getSeedCount();
-    /**
-     * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
-     */
-    java.util.List<? extends org.bitcoin.crawler.PeerSeedProtos.PeerSeedDataOrBuilder> 
-        getSeedOrBuilderList();
-    /**
-     * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
-     */
-    org.bitcoin.crawler.PeerSeedProtos.PeerSeedDataOrBuilder getSeedOrBuilder(
-        int index);
 
     /**
-     * <code>required uint64 timestamp = 2;</code>
-     *
      * <pre>
      * seconds since UNIX epoch
      * </pre>
+     *
+     * <code>required uint64 timestamp = 2;</code>
+     * @return Whether the timestamp field is set.
      */
     boolean hasTimestamp();
     /**
-     * <code>required uint64 timestamp = 2;</code>
-     *
      * <pre>
      * seconds since UNIX epoch
      * </pre>
+     *
+     * <code>required uint64 timestamp = 2;</code>
+     * @return The timestamp.
      */
     long getTimestamp();
 
     /**
      * <code>required string net = 3;</code>
+     * @return Whether the net field is set.
      */
     boolean hasNet();
     /**
      * <code>required string net = 3;</code>
+     * @return The net.
      */
     java.lang.String getNet();
     /**
      * <code>required string net = 3;</code>
+     * @return The bytes for net.
      */
     com.google.protobuf.ByteString
         getNetBytes();
@@ -726,122 +546,22 @@ public final class PeerSeedProtos {
   /**
    * Protobuf type {@code org.bitcoin.crawler.PeerSeeds}
    */
-  public static final class PeerSeeds extends
-      com.google.protobuf.GeneratedMessage implements
+  public  static final class PeerSeeds extends
+      com.google.protobuf.GeneratedMessageLite<
+          PeerSeeds, PeerSeeds.Builder> implements
       // @@protoc_insertion_point(message_implements:org.bitcoin.crawler.PeerSeeds)
       PeerSeedsOrBuilder {
-    // Use PeerSeeds.newBuilder() to construct.
-    private PeerSeeds(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
+    private PeerSeeds() {
+      seed_ = emptyProtobufList();
+      net_ = "";
     }
-    private PeerSeeds(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final PeerSeeds defaultInstance;
-    public static PeerSeeds getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public PeerSeeds getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private PeerSeeds(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-                seed_ = new java.util.ArrayList<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData>();
-                mutable_bitField0_ |= 0x00000001;
-              }
-              seed_.add(input.readMessage(org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.PARSER, extensionRegistry));
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000001;
-              timestamp_ = input.readUInt64();
-              break;
-            }
-            case 26: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000002;
-              net_ = bs;
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-          seed_ = java.util.Collections.unmodifiableList(seed_);
-        }
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeeds_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeeds_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.bitcoin.crawler.PeerSeedProtos.PeerSeeds.class, org.bitcoin.crawler.PeerSeedProtos.PeerSeeds.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<PeerSeeds> PARSER =
-        new com.google.protobuf.AbstractParser<PeerSeeds>() {
-      public PeerSeeds parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new PeerSeeds(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<PeerSeeds> getParserForType() {
-      return PARSER;
-    }
-
     private int bitField0_;
     public static final int SEED_FIELD_NUMBER = 1;
-    private java.util.List<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData> seed_;
+    private com.google.protobuf.Internal.ProtobufList<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData> seed_;
     /**
      * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
      */
+    @java.lang.Override
     public java.util.List<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData> getSeedList() {
       return seed_;
     }
@@ -855,12 +575,14 @@ public final class PeerSeedProtos {
     /**
      * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
      */
+    @java.lang.Override
     public int getSeedCount() {
       return seed_.size();
     }
     /**
      * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
      */
+    @java.lang.Override
     public org.bitcoin.crawler.PeerSeedProtos.PeerSeedData getSeed(int index) {
       return seed_.get(index);
     }
@@ -871,455 +593,289 @@ public final class PeerSeedProtos {
         int index) {
       return seed_.get(index);
     }
+    private void ensureSeedIsMutable() {
+      if (!seed_.isModifiable()) {
+        seed_ =
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(seed_);
+       }
+    }
+
+    /**
+     * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
+     */
+    private void setSeed(
+        int index, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData value) {
+      value.getClass();
+  ensureSeedIsMutable();
+      seed_.set(index, value);
+    }
+    /**
+     * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
+     */
+    private void addSeed(org.bitcoin.crawler.PeerSeedProtos.PeerSeedData value) {
+      value.getClass();
+  ensureSeedIsMutable();
+      seed_.add(value);
+    }
+    /**
+     * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
+     */
+    private void addSeed(
+        int index, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData value) {
+      value.getClass();
+  ensureSeedIsMutable();
+      seed_.add(index, value);
+    }
+    /**
+     * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
+     */
+    private void addAllSeed(
+        java.lang.Iterable<? extends org.bitcoin.crawler.PeerSeedProtos.PeerSeedData> values) {
+      ensureSeedIsMutable();
+      com.google.protobuf.AbstractMessageLite.addAll(
+          values, seed_);
+    }
+    /**
+     * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
+     */
+    private void clearSeed() {
+      seed_ = emptyProtobufList();
+    }
+    /**
+     * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
+     */
+    private void removeSeed(int index) {
+      ensureSeedIsMutable();
+      seed_.remove(index);
+    }
 
     public static final int TIMESTAMP_FIELD_NUMBER = 2;
     private long timestamp_;
     /**
-     * <code>required uint64 timestamp = 2;</code>
-     *
      * <pre>
      * seconds since UNIX epoch
      * </pre>
+     *
+     * <code>required uint64 timestamp = 2;</code>
+     * @return Whether the timestamp field is set.
      */
+    @java.lang.Override
     public boolean hasTimestamp() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
-     * <code>required uint64 timestamp = 2;</code>
-     *
      * <pre>
      * seconds since UNIX epoch
      * </pre>
+     *
+     * <code>required uint64 timestamp = 2;</code>
+     * @return The timestamp.
      */
+    @java.lang.Override
     public long getTimestamp() {
       return timestamp_;
     }
+    /**
+     * <pre>
+     * seconds since UNIX epoch
+     * </pre>
+     *
+     * <code>required uint64 timestamp = 2;</code>
+     * @param value The timestamp to set.
+     */
+    private void setTimestamp(long value) {
+      bitField0_ |= 0x00000001;
+      timestamp_ = value;
+    }
+    /**
+     * <pre>
+     * seconds since UNIX epoch
+     * </pre>
+     *
+     * <code>required uint64 timestamp = 2;</code>
+     */
+    private void clearTimestamp() {
+      bitField0_ = (bitField0_ & ~0x00000001);
+      timestamp_ = 0L;
+    }
 
     public static final int NET_FIELD_NUMBER = 3;
-    private java.lang.Object net_;
+    private java.lang.String net_;
     /**
      * <code>required string net = 3;</code>
+     * @return Whether the net field is set.
      */
+    @java.lang.Override
     public boolean hasNet() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required string net = 3;</code>
+     * @return The net.
      */
+    @java.lang.Override
     public java.lang.String getNet() {
-      java.lang.Object ref = net_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          net_ = s;
-        }
-        return s;
-      }
+      return net_;
     }
     /**
      * <code>required string net = 3;</code>
+     * @return The bytes for net.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
         getNetBytes() {
-      java.lang.Object ref = net_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        net_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+      return com.google.protobuf.ByteString.copyFromUtf8(net_);
     }
-
-    private void initFields() {
-      seed_ = java.util.Collections.emptyList();
-      timestamp_ = 0L;
-      net_ = "";
+    /**
+     * <code>required string net = 3;</code>
+     * @param value The net to set.
+     */
+    private void setNet(
+        java.lang.String value) {
+      value.getClass();
+  bitField0_ |= 0x00000002;
+      net_ = value;
     }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
-
-      if (!hasTimestamp()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasNet()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      for (int i = 0; i < getSeedCount(); i++) {
-        if (!getSeed(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
-      memoizedIsInitialized = 1;
-      return true;
+    /**
+     * <code>required string net = 3;</code>
+     */
+    private void clearNet() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      net_ = getDefaultInstance().getNet();
     }
-
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      for (int i = 0; i < seed_.size(); i++) {
-        output.writeMessage(1, seed_.get(i));
-      }
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt64(2, timestamp_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBytes(3, getNetBytes());
-      }
-      getUnknownFields().writeTo(output);
-    }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      for (int i = 0; i < seed_.size(); i++) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, seed_.get(i));
-      }
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(2, timestamp_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, getNetBytes());
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
+    /**
+     * <code>required string net = 3;</code>
+     * @param value The bytes for net to set.
+     */
+    private void setNetBytes(
+        com.google.protobuf.ByteString value) {
+      net_ = value.toStringUtf8();
+      bitField0_ |= 0x00000002;
     }
 
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
 
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
     public static Builder newBuilder(org.bitcoin.crawler.PeerSeedProtos.PeerSeeds prototype) {
-      return newBuilder().mergeFrom(prototype);
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
     }
-    public Builder toBuilder() { return newBuilder(this); }
 
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
     /**
      * Protobuf type {@code org.bitcoin.crawler.PeerSeeds}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          org.bitcoin.crawler.PeerSeedProtos.PeerSeeds, Builder> implements
         // @@protoc_insertion_point(builder_implements:org.bitcoin.crawler.PeerSeeds)
         org.bitcoin.crawler.PeerSeedProtos.PeerSeedsOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeeds_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeeds_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.bitcoin.crawler.PeerSeedProtos.PeerSeeds.class, org.bitcoin.crawler.PeerSeedProtos.PeerSeeds.Builder.class);
-      }
-
       // Construct using org.bitcoin.crawler.PeerSeedProtos.PeerSeeds.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+        super(DEFAULT_INSTANCE);
       }
 
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getSeedFieldBuilder();
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-
-      public Builder clear() {
-        super.clear();
-        if (seedBuilder_ == null) {
-          seed_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
-        } else {
-          seedBuilder_.clear();
-        }
-        timestamp_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        net_ = "";
-        bitField0_ = (bitField0_ & ~0x00000004);
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_PeerSeeds_descriptor;
-      }
-
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeeds getDefaultInstanceForType() {
-        return org.bitcoin.crawler.PeerSeedProtos.PeerSeeds.getDefaultInstance();
-      }
-
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeeds build() {
-        org.bitcoin.crawler.PeerSeedProtos.PeerSeeds result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeeds buildPartial() {
-        org.bitcoin.crawler.PeerSeedProtos.PeerSeeds result = new org.bitcoin.crawler.PeerSeedProtos.PeerSeeds(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (seedBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001)) {
-            seed_ = java.util.Collections.unmodifiableList(seed_);
-            bitField0_ = (bitField0_ & ~0x00000001);
-          }
-          result.seed_ = seed_;
-        } else {
-          result.seed_ = seedBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.timestamp_ = timestamp_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.net_ = net_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.bitcoin.crawler.PeerSeedProtos.PeerSeeds) {
-          return mergeFrom((org.bitcoin.crawler.PeerSeedProtos.PeerSeeds)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.bitcoin.crawler.PeerSeedProtos.PeerSeeds other) {
-        if (other == org.bitcoin.crawler.PeerSeedProtos.PeerSeeds.getDefaultInstance()) return this;
-        if (seedBuilder_ == null) {
-          if (!other.seed_.isEmpty()) {
-            if (seed_.isEmpty()) {
-              seed_ = other.seed_;
-              bitField0_ = (bitField0_ & ~0x00000001);
-            } else {
-              ensureSeedIsMutable();
-              seed_.addAll(other.seed_);
-            }
-            onChanged();
-          }
-        } else {
-          if (!other.seed_.isEmpty()) {
-            if (seedBuilder_.isEmpty()) {
-              seedBuilder_.dispose();
-              seedBuilder_ = null;
-              seed_ = other.seed_;
-              bitField0_ = (bitField0_ & ~0x00000001);
-              seedBuilder_ = 
-                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getSeedFieldBuilder() : null;
-            } else {
-              seedBuilder_.addAllMessages(other.seed_);
-            }
-          }
-        }
-        if (other.hasTimestamp()) {
-          setTimestamp(other.getTimestamp());
-        }
-        if (other.hasNet()) {
-          bitField0_ |= 0x00000004;
-          net_ = other.net_;
-          onChanged();
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        if (!hasTimestamp()) {
-          
-          return false;
-        }
-        if (!hasNet()) {
-          
-          return false;
-        }
-        for (int i = 0; i < getSeedCount(); i++) {
-          if (!getSeed(i).isInitialized()) {
-            
-            return false;
-          }
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.bitcoin.crawler.PeerSeedProtos.PeerSeeds parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.bitcoin.crawler.PeerSeedProtos.PeerSeeds) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      private java.util.List<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData> seed_ =
-        java.util.Collections.emptyList();
-      private void ensureSeedIsMutable() {
-        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          seed_ = new java.util.ArrayList<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData>(seed_);
-          bitField0_ |= 0x00000001;
-         }
-      }
-
-      private com.google.protobuf.RepeatedFieldBuilder<
-          org.bitcoin.crawler.PeerSeedProtos.PeerSeedData, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder, org.bitcoin.crawler.PeerSeedProtos.PeerSeedDataOrBuilder> seedBuilder_;
 
       /**
        * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
        */
+      @java.lang.Override
       public java.util.List<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData> getSeedList() {
-        if (seedBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(seed_);
-        } else {
-          return seedBuilder_.getMessageList();
-        }
+        return java.util.Collections.unmodifiableList(
+            instance.getSeedList());
       }
       /**
        * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
        */
+      @java.lang.Override
       public int getSeedCount() {
-        if (seedBuilder_ == null) {
-          return seed_.size();
-        } else {
-          return seedBuilder_.getCount();
-        }
-      }
-      /**
+        return instance.getSeedCount();
+      }/**
        * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
        */
+      @java.lang.Override
       public org.bitcoin.crawler.PeerSeedProtos.PeerSeedData getSeed(int index) {
-        if (seedBuilder_ == null) {
-          return seed_.get(index);
-        } else {
-          return seedBuilder_.getMessage(index);
-        }
+        return instance.getSeed(index);
       }
       /**
        * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
        */
       public Builder setSeed(
           int index, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData value) {
-        if (seedBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureSeedIsMutable();
-          seed_.set(index, value);
-          onChanged();
-        } else {
-          seedBuilder_.setMessage(index, value);
-        }
+        copyOnWrite();
+        instance.setSeed(index, value);
         return this;
       }
       /**
@@ -1327,29 +883,17 @@ public final class PeerSeedProtos {
        */
       public Builder setSeed(
           int index, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder builderForValue) {
-        if (seedBuilder_ == null) {
-          ensureSeedIsMutable();
-          seed_.set(index, builderForValue.build());
-          onChanged();
-        } else {
-          seedBuilder_.setMessage(index, builderForValue.build());
-        }
+        copyOnWrite();
+        instance.setSeed(index,
+            builderForValue.build());
         return this;
       }
       /**
        * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
        */
       public Builder addSeed(org.bitcoin.crawler.PeerSeedProtos.PeerSeedData value) {
-        if (seedBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureSeedIsMutable();
-          seed_.add(value);
-          onChanged();
-        } else {
-          seedBuilder_.addMessage(value);
-        }
+        copyOnWrite();
+        instance.addSeed(value);
         return this;
       }
       /**
@@ -1357,16 +901,8 @@ public final class PeerSeedProtos {
        */
       public Builder addSeed(
           int index, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData value) {
-        if (seedBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureSeedIsMutable();
-          seed_.add(index, value);
-          onChanged();
-        } else {
-          seedBuilder_.addMessage(index, value);
-        }
+        copyOnWrite();
+        instance.addSeed(index, value);
         return this;
       }
       /**
@@ -1374,13 +910,8 @@ public final class PeerSeedProtos {
        */
       public Builder addSeed(
           org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder builderForValue) {
-        if (seedBuilder_ == null) {
-          ensureSeedIsMutable();
-          seed_.add(builderForValue.build());
-          onChanged();
-        } else {
-          seedBuilder_.addMessage(builderForValue.build());
-        }
+        copyOnWrite();
+        instance.addSeed(builderForValue.build());
         return this;
       }
       /**
@@ -1388,13 +919,9 @@ public final class PeerSeedProtos {
        */
       public Builder addSeed(
           int index, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder builderForValue) {
-        if (seedBuilder_ == null) {
-          ensureSeedIsMutable();
-          seed_.add(index, builderForValue.build());
-          onChanged();
-        } else {
-          seedBuilder_.addMessage(index, builderForValue.build());
-        }
+        copyOnWrite();
+        instance.addSeed(index,
+            builderForValue.build());
         return this;
       }
       /**
@@ -1402,891 +929,658 @@ public final class PeerSeedProtos {
        */
       public Builder addAllSeed(
           java.lang.Iterable<? extends org.bitcoin.crawler.PeerSeedProtos.PeerSeedData> values) {
-        if (seedBuilder_ == null) {
-          ensureSeedIsMutable();
-          com.google.protobuf.AbstractMessageLite.Builder.addAll(
-              values, seed_);
-          onChanged();
-        } else {
-          seedBuilder_.addAllMessages(values);
-        }
+        copyOnWrite();
+        instance.addAllSeed(values);
         return this;
       }
       /**
        * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
        */
       public Builder clearSeed() {
-        if (seedBuilder_ == null) {
-          seed_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
-          onChanged();
-        } else {
-          seedBuilder_.clear();
-        }
+        copyOnWrite();
+        instance.clearSeed();
         return this;
       }
       /**
        * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
        */
       public Builder removeSeed(int index) {
-        if (seedBuilder_ == null) {
-          ensureSeedIsMutable();
-          seed_.remove(index);
-          onChanged();
-        } else {
-          seedBuilder_.remove(index);
-        }
+        copyOnWrite();
+        instance.removeSeed(index);
         return this;
       }
-      /**
-       * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
-       */
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder getSeedBuilder(
-          int index) {
-        return getSeedFieldBuilder().getBuilder(index);
-      }
-      /**
-       * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
-       */
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeedDataOrBuilder getSeedOrBuilder(
-          int index) {
-        if (seedBuilder_ == null) {
-          return seed_.get(index);  } else {
-          return seedBuilder_.getMessageOrBuilder(index);
-        }
-      }
-      /**
-       * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
-       */
-      public java.util.List<? extends org.bitcoin.crawler.PeerSeedProtos.PeerSeedDataOrBuilder> 
-           getSeedOrBuilderList() {
-        if (seedBuilder_ != null) {
-          return seedBuilder_.getMessageOrBuilderList();
-        } else {
-          return java.util.Collections.unmodifiableList(seed_);
-        }
-      }
-      /**
-       * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
-       */
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder addSeedBuilder() {
-        return getSeedFieldBuilder().addBuilder(
-            org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.getDefaultInstance());
-      }
-      /**
-       * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
-       */
-      public org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder addSeedBuilder(
-          int index) {
-        return getSeedFieldBuilder().addBuilder(
-            index, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.getDefaultInstance());
-      }
-      /**
-       * <code>repeated .org.bitcoin.crawler.PeerSeedData seed = 1;</code>
-       */
-      public java.util.List<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder> 
-           getSeedBuilderList() {
-        return getSeedFieldBuilder().getBuilderList();
-      }
-      private com.google.protobuf.RepeatedFieldBuilder<
-          org.bitcoin.crawler.PeerSeedProtos.PeerSeedData, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder, org.bitcoin.crawler.PeerSeedProtos.PeerSeedDataOrBuilder> 
-          getSeedFieldBuilder() {
-        if (seedBuilder_ == null) {
-          seedBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.bitcoin.crawler.PeerSeedProtos.PeerSeedData, org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.Builder, org.bitcoin.crawler.PeerSeedProtos.PeerSeedDataOrBuilder>(
-                  seed_,
-                  ((bitField0_ & 0x00000001) == 0x00000001),
-                  getParentForChildren(),
-                  isClean());
-          seed_ = null;
-        }
-        return seedBuilder_;
-      }
 
-      private long timestamp_ ;
       /**
-       * <code>required uint64 timestamp = 2;</code>
-       *
        * <pre>
        * seconds since UNIX epoch
        * </pre>
+       *
+       * <code>required uint64 timestamp = 2;</code>
+       * @return Whether the timestamp field is set.
        */
+      @java.lang.Override
       public boolean hasTimestamp() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return instance.hasTimestamp();
       }
       /**
-       * <code>required uint64 timestamp = 2;</code>
-       *
        * <pre>
        * seconds since UNIX epoch
        * </pre>
+       *
+       * <code>required uint64 timestamp = 2;</code>
+       * @return The timestamp.
        */
+      @java.lang.Override
       public long getTimestamp() {
-        return timestamp_;
+        return instance.getTimestamp();
       }
       /**
-       * <code>required uint64 timestamp = 2;</code>
-       *
        * <pre>
        * seconds since UNIX epoch
        * </pre>
+       *
+       * <code>required uint64 timestamp = 2;</code>
+       * @param value The timestamp to set.
+       * @return This builder for chaining.
        */
       public Builder setTimestamp(long value) {
-        bitField0_ |= 0x00000002;
-        timestamp_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setTimestamp(value);
         return this;
       }
       /**
-       * <code>required uint64 timestamp = 2;</code>
-       *
        * <pre>
        * seconds since UNIX epoch
        * </pre>
+       *
+       * <code>required uint64 timestamp = 2;</code>
+       * @return This builder for chaining.
        */
       public Builder clearTimestamp() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        timestamp_ = 0L;
-        onChanged();
+        copyOnWrite();
+        instance.clearTimestamp();
         return this;
       }
 
-      private java.lang.Object net_ = "";
       /**
        * <code>required string net = 3;</code>
+       * @return Whether the net field is set.
        */
+      @java.lang.Override
       public boolean hasNet() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return instance.hasNet();
       }
       /**
        * <code>required string net = 3;</code>
+       * @return The net.
        */
+      @java.lang.Override
       public java.lang.String getNet() {
-        java.lang.Object ref = net_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            net_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+        return instance.getNet();
       }
       /**
        * <code>required string net = 3;</code>
+       * @return The bytes for net.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString
           getNetBytes() {
-        java.lang.Object ref = net_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          net_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
+        return instance.getNetBytes();
       }
       /**
        * <code>required string net = 3;</code>
+       * @param value The net to set.
+       * @return This builder for chaining.
        */
       public Builder setNet(
           java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
-        net_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setNet(value);
         return this;
       }
       /**
        * <code>required string net = 3;</code>
+       * @return This builder for chaining.
        */
       public Builder clearNet() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        net_ = getDefaultInstance().getNet();
-        onChanged();
+        copyOnWrite();
+        instance.clearNet();
         return this;
       }
       /**
        * <code>required string net = 3;</code>
+       * @param value The bytes for net to set.
+       * @return This builder for chaining.
        */
       public Builder setNetBytes(
           com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
-        net_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setNetBytes(value);
         return this;
       }
 
       // @@protoc_insertion_point(builder_scope:org.bitcoin.crawler.PeerSeeds)
     }
-
-    static {
-      defaultInstance = new PeerSeeds(true);
-      defaultInstance.initFields();
+    private byte memoizedIsInitialized = 2;
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+        com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+        java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new org.bitcoin.crawler.PeerSeedProtos.PeerSeeds();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+            java.lang.Object[] objects = new java.lang.Object[] {
+              "bitField0_",
+              "seed_",
+              org.bitcoin.crawler.PeerSeedProtos.PeerSeedData.class,
+              "timestamp_",
+              "net_",
+            };
+            java.lang.String info =
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0001\u0003\u0001\u041b\u0002\u0503" +
+                "\u0000\u0003\u0508\u0001";
+            return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<org.bitcoin.crawler.PeerSeedProtos.PeerSeeds> parser = PARSER;
+          if (parser == null) {
+            synchronized (org.bitcoin.crawler.PeerSeedProtos.PeerSeeds.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                    new DefaultInstanceBasedParser<org.bitcoin.crawler.PeerSeedProtos.PeerSeeds>(
+                        DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+      }
+      case GET_MEMOIZED_IS_INITIALIZED: {
+        return memoizedIsInitialized;
+      }
+      case SET_MEMOIZED_IS_INITIALIZED: {
+        memoizedIsInitialized = (byte) (arg0 == null ? 0 : 1);
+        return null;
+      }
+      }
+      throw new UnsupportedOperationException();
     }
 
+
     // @@protoc_insertion_point(class_scope:org.bitcoin.crawler.PeerSeeds)
+    private static final org.bitcoin.crawler.PeerSeedProtos.PeerSeeds DEFAULT_INSTANCE;
+    static {
+      PeerSeeds defaultInstance = new PeerSeeds();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+        PeerSeeds.class, defaultInstance);
+    }
+
+    public static org.bitcoin.crawler.PeerSeedProtos.PeerSeeds getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<PeerSeeds> PARSER;
+
+    public static com.google.protobuf.Parser<PeerSeeds> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
   }
 
   public interface SignedPeerSeedsOrBuilder extends
       // @@protoc_insertion_point(interface_extends:org.bitcoin.crawler.SignedPeerSeeds)
-      com.google.protobuf.MessageOrBuilder {
+      com.google.protobuf.MessageLiteOrBuilder {
 
     /**
      * <code>required bytes peer_seeds = 1;</code>
+     * @return Whether the peerSeeds field is set.
      */
     boolean hasPeerSeeds();
     /**
      * <code>required bytes peer_seeds = 1;</code>
+     * @return The peerSeeds.
      */
     com.google.protobuf.ByteString getPeerSeeds();
 
     /**
      * <code>required bytes signature = 2;</code>
+     * @return Whether the signature field is set.
      */
     boolean hasSignature();
     /**
      * <code>required bytes signature = 2;</code>
+     * @return The signature.
      */
     com.google.protobuf.ByteString getSignature();
 
     /**
      * <code>required bytes pubkey = 3;</code>
+     * @return Whether the pubkey field is set.
      */
     boolean hasPubkey();
     /**
      * <code>required bytes pubkey = 3;</code>
+     * @return The pubkey.
      */
     com.google.protobuf.ByteString getPubkey();
   }
   /**
    * Protobuf type {@code org.bitcoin.crawler.SignedPeerSeeds}
    */
-  public static final class SignedPeerSeeds extends
-      com.google.protobuf.GeneratedMessage implements
+  public  static final class SignedPeerSeeds extends
+      com.google.protobuf.GeneratedMessageLite<
+          SignedPeerSeeds, SignedPeerSeeds.Builder> implements
       // @@protoc_insertion_point(message_implements:org.bitcoin.crawler.SignedPeerSeeds)
       SignedPeerSeedsOrBuilder {
-    // Use SignedPeerSeeds.newBuilder() to construct.
-    private SignedPeerSeeds(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
+    private SignedPeerSeeds() {
+      peerSeeds_ = com.google.protobuf.ByteString.EMPTY;
+      signature_ = com.google.protobuf.ByteString.EMPTY;
+      pubkey_ = com.google.protobuf.ByteString.EMPTY;
     }
-    private SignedPeerSeeds(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final SignedPeerSeeds defaultInstance;
-    public static SignedPeerSeeds getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public SignedPeerSeeds getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private SignedPeerSeeds(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              peerSeeds_ = input.readBytes();
-              break;
-            }
-            case 18: {
-              bitField0_ |= 0x00000002;
-              signature_ = input.readBytes();
-              break;
-            }
-            case 26: {
-              bitField0_ |= 0x00000004;
-              pubkey_ = input.readBytes();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_SignedPeerSeeds_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_SignedPeerSeeds_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds.class, org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<SignedPeerSeeds> PARSER =
-        new com.google.protobuf.AbstractParser<SignedPeerSeeds>() {
-      public SignedPeerSeeds parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new SignedPeerSeeds(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<SignedPeerSeeds> getParserForType() {
-      return PARSER;
-    }
-
     private int bitField0_;
     public static final int PEER_SEEDS_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString peerSeeds_;
     /**
      * <code>required bytes peer_seeds = 1;</code>
+     * @return Whether the peerSeeds field is set.
      */
+    @java.lang.Override
     public boolean hasPeerSeeds() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <code>required bytes peer_seeds = 1;</code>
+     * @return The peerSeeds.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getPeerSeeds() {
+      return peerSeeds_;
+    }
+    /**
+     * <code>required bytes peer_seeds = 1;</code>
+     * @param value The peerSeeds to set.
+     */
+    private void setPeerSeeds(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000001;
+      peerSeeds_ = value;
     }
     /**
      * <code>required bytes peer_seeds = 1;</code>
      */
-    public com.google.protobuf.ByteString getPeerSeeds() {
-      return peerSeeds_;
+    private void clearPeerSeeds() {
+      bitField0_ = (bitField0_ & ~0x00000001);
+      peerSeeds_ = getDefaultInstance().getPeerSeeds();
     }
 
     public static final int SIGNATURE_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString signature_;
     /**
      * <code>required bytes signature = 2;</code>
+     * @return Whether the signature field is set.
      */
+    @java.lang.Override
     public boolean hasSignature() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <code>required bytes signature = 2;</code>
+     * @return The signature.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getSignature() {
+      return signature_;
+    }
+    /**
+     * <code>required bytes signature = 2;</code>
+     * @param value The signature to set.
+     */
+    private void setSignature(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000002;
+      signature_ = value;
     }
     /**
      * <code>required bytes signature = 2;</code>
      */
-    public com.google.protobuf.ByteString getSignature() {
-      return signature_;
+    private void clearSignature() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      signature_ = getDefaultInstance().getSignature();
     }
 
     public static final int PUBKEY_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString pubkey_;
     /**
      * <code>required bytes pubkey = 3;</code>
+     * @return Whether the pubkey field is set.
      */
+    @java.lang.Override
     public boolean hasPubkey() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /**
+     * <code>required bytes pubkey = 3;</code>
+     * @return The pubkey.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getPubkey() {
+      return pubkey_;
+    }
+    /**
+     * <code>required bytes pubkey = 3;</code>
+     * @param value The pubkey to set.
+     */
+    private void setPubkey(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000004;
+      pubkey_ = value;
     }
     /**
      * <code>required bytes pubkey = 3;</code>
      */
-    public com.google.protobuf.ByteString getPubkey() {
-      return pubkey_;
-    }
-
-    private void initFields() {
-      peerSeeds_ = com.google.protobuf.ByteString.EMPTY;
-      signature_ = com.google.protobuf.ByteString.EMPTY;
-      pubkey_ = com.google.protobuf.ByteString.EMPTY;
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
-
-      if (!hasPeerSeeds()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasSignature()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasPubkey()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(1, peerSeeds_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBytes(2, signature_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeBytes(3, pubkey_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, peerSeeds_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, signature_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, pubkey_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
+    private void clearPubkey() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      pubkey_ = getDefaultInstance().getPubkey();
     }
 
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
     }
     public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
     }
 
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
     public static Builder newBuilder(org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds prototype) {
-      return newBuilder().mergeFrom(prototype);
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
     }
-    public Builder toBuilder() { return newBuilder(this); }
 
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
     /**
      * Protobuf type {@code org.bitcoin.crawler.SignedPeerSeeds}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds, Builder> implements
         // @@protoc_insertion_point(builder_implements:org.bitcoin.crawler.SignedPeerSeeds)
         org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeedsOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_SignedPeerSeeds_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_SignedPeerSeeds_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds.class, org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds.Builder.class);
-      }
-
       // Construct using org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+        super(DEFAULT_INSTANCE);
       }
 
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
 
-      public Builder clear() {
-        super.clear();
-        peerSeeds_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        signature_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        pubkey_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000004);
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.bitcoin.crawler.PeerSeedProtos.internal_static_org_bitcoin_crawler_SignedPeerSeeds_descriptor;
-      }
-
-      public org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds getDefaultInstanceForType() {
-        return org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds.getDefaultInstance();
-      }
-
-      public org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds build() {
-        org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds buildPartial() {
-        org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds result = new org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.peerSeeds_ = peerSeeds_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.signature_ = signature_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.pubkey_ = pubkey_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds) {
-          return mergeFrom((org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds other) {
-        if (other == org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds.getDefaultInstance()) return this;
-        if (other.hasPeerSeeds()) {
-          setPeerSeeds(other.getPeerSeeds());
-        }
-        if (other.hasSignature()) {
-          setSignature(other.getSignature());
-        }
-        if (other.hasPubkey()) {
-          setPubkey(other.getPubkey());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        if (!hasPeerSeeds()) {
-          
-          return false;
-        }
-        if (!hasSignature()) {
-          
-          return false;
-        }
-        if (!hasPubkey()) {
-          
-          return false;
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      private com.google.protobuf.ByteString peerSeeds_ = com.google.protobuf.ByteString.EMPTY;
       /**
        * <code>required bytes peer_seeds = 1;</code>
+       * @return Whether the peerSeeds field is set.
        */
+      @java.lang.Override
       public boolean hasPeerSeeds() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return instance.hasPeerSeeds();
       }
       /**
        * <code>required bytes peer_seeds = 1;</code>
+       * @return The peerSeeds.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getPeerSeeds() {
-        return peerSeeds_;
+        return instance.getPeerSeeds();
       }
       /**
        * <code>required bytes peer_seeds = 1;</code>
+       * @param value The peerSeeds to set.
+       * @return This builder for chaining.
        */
       public Builder setPeerSeeds(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-        peerSeeds_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setPeerSeeds(value);
         return this;
       }
       /**
        * <code>required bytes peer_seeds = 1;</code>
+       * @return This builder for chaining.
        */
       public Builder clearPeerSeeds() {
-        bitField0_ = (bitField0_ & ~0x00000001);
-        peerSeeds_ = getDefaultInstance().getPeerSeeds();
-        onChanged();
+        copyOnWrite();
+        instance.clearPeerSeeds();
         return this;
       }
 
-      private com.google.protobuf.ByteString signature_ = com.google.protobuf.ByteString.EMPTY;
       /**
        * <code>required bytes signature = 2;</code>
+       * @return Whether the signature field is set.
        */
+      @java.lang.Override
       public boolean hasSignature() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return instance.hasSignature();
       }
       /**
        * <code>required bytes signature = 2;</code>
+       * @return The signature.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getSignature() {
-        return signature_;
+        return instance.getSignature();
       }
       /**
        * <code>required bytes signature = 2;</code>
+       * @param value The signature to set.
+       * @return This builder for chaining.
        */
       public Builder setSignature(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
-        signature_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setSignature(value);
         return this;
       }
       /**
        * <code>required bytes signature = 2;</code>
+       * @return This builder for chaining.
        */
       public Builder clearSignature() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        signature_ = getDefaultInstance().getSignature();
-        onChanged();
+        copyOnWrite();
+        instance.clearSignature();
         return this;
       }
 
-      private com.google.protobuf.ByteString pubkey_ = com.google.protobuf.ByteString.EMPTY;
       /**
        * <code>required bytes pubkey = 3;</code>
+       * @return Whether the pubkey field is set.
        */
+      @java.lang.Override
       public boolean hasPubkey() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return instance.hasPubkey();
       }
       /**
        * <code>required bytes pubkey = 3;</code>
+       * @return The pubkey.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getPubkey() {
-        return pubkey_;
+        return instance.getPubkey();
       }
       /**
        * <code>required bytes pubkey = 3;</code>
+       * @param value The pubkey to set.
+       * @return This builder for chaining.
        */
       public Builder setPubkey(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
-        pubkey_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setPubkey(value);
         return this;
       }
       /**
        * <code>required bytes pubkey = 3;</code>
+       * @return This builder for chaining.
        */
       public Builder clearPubkey() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        pubkey_ = getDefaultInstance().getPubkey();
-        onChanged();
+        copyOnWrite();
+        instance.clearPubkey();
         return this;
       }
 
       // @@protoc_insertion_point(builder_scope:org.bitcoin.crawler.SignedPeerSeeds)
     }
-
-    static {
-      defaultInstance = new SignedPeerSeeds(true);
-      defaultInstance.initFields();
+    private byte memoizedIsInitialized = 2;
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+        com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+        java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+            java.lang.Object[] objects = new java.lang.Object[] {
+              "bitField0_",
+              "peerSeeds_",
+              "signature_",
+              "pubkey_",
+            };
+            java.lang.String info =
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u050a\u0000\u0002" +
+                "\u050a\u0001\u0003\u050a\u0002";
+            return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds> parser = PARSER;
+          if (parser == null) {
+            synchronized (org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                    new DefaultInstanceBasedParser<org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds>(
+                        DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+      }
+      case GET_MEMOIZED_IS_INITIALIZED: {
+        return memoizedIsInitialized;
+      }
+      case SET_MEMOIZED_IS_INITIALIZED: {
+        memoizedIsInitialized = (byte) (arg0 == null ? 0 : 1);
+        return null;
+      }
+      }
+      throw new UnsupportedOperationException();
     }
 
+
     // @@protoc_insertion_point(class_scope:org.bitcoin.crawler.SignedPeerSeeds)
+    private static final org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds DEFAULT_INSTANCE;
+    static {
+      SignedPeerSeeds defaultInstance = new SignedPeerSeeds();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+        SignedPeerSeeds.class, defaultInstance);
+    }
+
+    public static org.bitcoin.crawler.PeerSeedProtos.SignedPeerSeeds getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<SignedPeerSeeds> PARSER;
+
+    public static com.google.protobuf.Parser<SignedPeerSeeds> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
   }
 
-  private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_org_bitcoin_crawler_PeerSeedData_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_org_bitcoin_crawler_PeerSeedData_fieldAccessorTable;
-  private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_org_bitcoin_crawler_PeerSeeds_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_org_bitcoin_crawler_PeerSeeds_fieldAccessorTable;
-  private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_org_bitcoin_crawler_SignedPeerSeeds_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_org_bitcoin_crawler_SignedPeerSeeds_fieldAccessorTable;
 
-  public static com.google.protobuf.Descriptors.FileDescriptor
-      getDescriptor() {
-    return descriptor;
-  }
-  private static com.google.protobuf.Descriptors.FileDescriptor
-      descriptor;
   static {
-    java.lang.String[] descriptorData = {
-      "\n\017peerseeds.proto\022\023org.bitcoin.crawler\"B" +
-      "\n\014PeerSeedData\022\022\n\nip_address\030\001 \002(\t\022\014\n\004po" +
-      "rt\030\002 \002(\r\022\020\n\010services\030\003 \002(\r\"\\\n\tPeerSeeds\022" +
-      "/\n\004seed\030\001 \003(\0132!.org.bitcoin.crawler.Peer" +
-      "SeedData\022\021\n\ttimestamp\030\002 \002(\004\022\013\n\003net\030\003 \002(\t" +
-      "\"H\n\017SignedPeerSeeds\022\022\n\npeer_seeds\030\001 \002(\014\022" +
-      "\021\n\tsignature\030\002 \002(\014\022\016\n\006pubkey\030\003 \002(\014B%\n\023or" +
-      "g.bitcoin.crawlerB\016PeerSeedProtos"
-    };
-    com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
-        new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
-          public com.google.protobuf.ExtensionRegistry assignDescriptors(
-              com.google.protobuf.Descriptors.FileDescriptor root) {
-            descriptor = root;
-            return null;
-          }
-        };
-    com.google.protobuf.Descriptors.FileDescriptor
-      .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[] {
-        }, assigner);
-    internal_static_org_bitcoin_crawler_PeerSeedData_descriptor =
-      getDescriptor().getMessageTypes().get(0);
-    internal_static_org_bitcoin_crawler_PeerSeedData_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-        internal_static_org_bitcoin_crawler_PeerSeedData_descriptor,
-        new java.lang.String[] { "IpAddress", "Port", "Services", });
-    internal_static_org_bitcoin_crawler_PeerSeeds_descriptor =
-      getDescriptor().getMessageTypes().get(1);
-    internal_static_org_bitcoin_crawler_PeerSeeds_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-        internal_static_org_bitcoin_crawler_PeerSeeds_descriptor,
-        new java.lang.String[] { "Seed", "Timestamp", "Net", });
-    internal_static_org_bitcoin_crawler_SignedPeerSeeds_descriptor =
-      getDescriptor().getMessageTypes().get(2);
-    internal_static_org_bitcoin_crawler_SignedPeerSeeds_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-        internal_static_org_bitcoin_crawler_SignedPeerSeeds_descriptor,
-        new java.lang.String[] { "PeerSeeds", "Signature", "Pubkey", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

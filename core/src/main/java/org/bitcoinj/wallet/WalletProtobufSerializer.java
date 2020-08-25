@@ -17,7 +17,6 @@
 
 package org.bitcoinj.wallet;
 
-import com.google.protobuf.Message;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.KeyCrypter;
@@ -32,7 +31,6 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.TextFormat;
 import com.google.protobuf.WireFormat;
 
 import org.slf4j.Logger;
@@ -148,15 +146,14 @@ public class WalletProtobufSerializer {
     }
 
     /**
-     * Returns the given wallet formatted as text. The text format is that used by protocol buffers and although it
-     * can also be parsed using {@link TextFormat#merge(CharSequence, Message.Builder)},
+     * Returns the given wallet formatted as text. The text format is that used by protocol buffers and
      * it is designed more for debugging than storage. It is not well specified and wallets are largely binary data
      * structures anyway, consisting as they do of keys (large random numbers) and {@link Transaction}s which also
      * mostly contain keys and hashes.
      */
     public String walletToText(Wallet wallet) {
         Protos.Wallet walletProto = walletToProto(wallet);
-        return TextFormat.printToString(walletProto);
+        return walletProto.toString();
     }
 
     /**
