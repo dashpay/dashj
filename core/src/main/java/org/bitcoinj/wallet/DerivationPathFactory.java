@@ -40,8 +40,8 @@ public class DerivationPathFactory {
     }
 
     /** blockchain identity keys derivation path (EC Keys)
-     * m/9'/5'/5'/0'/0' (mainnet)
-     * m/9'/1'/5'/0'/0' (testnet, devnets)
+     * m/9'/5'/5'/0'/0'/(blockchain identity index)/ (mainnet)
+     * m/9'/1'/5'/0'/0'/(blockchain identity index)/ (testnet, devnets)
      */
     public ImmutableList<ChildNumber> blockchainIdentityECDSADerivationPath() {
         return ImmutableList.<ChildNumber>builder()
@@ -50,12 +50,13 @@ public class DerivationPathFactory {
                 .add(ChildNumber.FIVE_HARDENED)
                 .add(ChildNumber.ZERO_HARDENED)
                 .add(ChildNumber.ZERO_HARDENED)
+                .add(ChildNumber.ZERO) // default to 0 for now
                 .build();
     }
 
     /** blockchain identity keys derivation path (BLS Keys)
-     * m/9'/5'/5'/0'/1' (mainnet)
-     * m/9'/1'/5'/0'/1' (testnet, devnets)
+     * m/9'/5'/5'/0'/1'/(blockchain identity index)/ (mainnet)
+     * m/9'/1'/5'/0'/1'/(blockchain identity index)/ (testnet, devnets)
      */
     public ImmutableList<ChildNumber> blockchainIdentityBLSDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
@@ -64,6 +65,7 @@ public class DerivationPathFactory {
                 .add(ChildNumber.FIVE_HARDENED)
                 .add(ChildNumber.ZERO_HARDENED)
                 .add(ChildNumber.ONE_HARDENED)
+                .add(ChildNumber.ZERO) // default to 0 for now
                 .build();
     }
 

@@ -297,9 +297,13 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
     static byte[] trimByteArray(byte [] bytes) {
         if (bytes.length == 32)
             return bytes;
-        else if(bytes.length == 33 && bytes[0] == 0x00) {
+        else if (bytes.length == 33 && bytes[0] == 0x00) {
             byte [] newValue = new byte[32];
             System.arraycopy(bytes, 1, newValue, 0, 32);
+            return newValue;
+        } else if (bytes.length < 32) {
+            byte [] newValue = new byte[32];
+            System.arraycopy(bytes, bytes.length - 32, newValue, 0, 32);
             return newValue;
         }
         throw new IllegalArgumentException("bytes does not have length 32 or 33 ");
