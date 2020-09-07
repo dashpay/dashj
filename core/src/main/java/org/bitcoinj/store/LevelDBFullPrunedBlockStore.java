@@ -747,11 +747,7 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
             if (instrument)
                 endMethod("getTransactionOutput");
             return txout;
-        } catch (DBException e) {
-            log.error("Exception in getTransactionOutput.", e);
-            if (instrument)
-                endMethod("getTransactionOutput");
-        } catch (IOException e) {
+        } catch (DBException | IOException e) {
             log.error("Exception in getTransactionOutput.", e);
             if (instrument)
                 endMethod("getTransactionOutput");
@@ -894,11 +890,7 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
                 a = Address.fromBase58(params, out.getAddress());
                 hashBytes = a.getHash();
             }
-        } catch (AddressFormatException e) {
-            if (instrument)
-                endMethod("removeUnspentTransactionOutput");
-            return;
-        } catch (ScriptException e) {
+        } catch (AddressFormatException | ScriptException e) {
             if (instrument)
                 endMethod("removeUnspentTransactionOutput");
             return;

@@ -770,13 +770,7 @@ public class WalletTool {
             List<Peer> peerList = peerGroup.getConnectedPeers();
             if (peerList.size() == 1)
                 peerList.get(0).ping().get();
-        } catch (BlockStoreException e) {
-            throw new RuntimeException(e);
-        } catch (KeyCrypterException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
+        } catch (BlockStoreException | ExecutionException | InterruptedException | KeyCrypterException e) {
             throw new RuntimeException(e);
         } catch (InsufficientMoneyException e) {
             BalanceType type = isCoinJoin ? BalanceType.COINJOIN_SPENDABLE : BalanceType.AVAILABLE_SPENDABLE;
@@ -1204,13 +1198,7 @@ public class WalletTool {
                 wallet.commitTx(req.tx);
                 System.out.println("Memo from server: " + ack.getMemo());
             }
-        } catch (PaymentProtocolException e) {
-            System.err.println("Failed to send payment " + e.getMessage());
-            System.exit(1);
-        } catch (VerificationException e) {
-            System.err.println("Failed to send payment " + e.getMessage());
-            System.exit(1);
-        } catch (ExecutionException e) {
+        } catch (PaymentProtocolException | ExecutionException | VerificationException e) {
             System.err.println("Failed to send payment " + e.getMessage());
             System.exit(1);
         } catch (IOException e) {

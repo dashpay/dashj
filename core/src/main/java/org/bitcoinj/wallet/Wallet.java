@@ -1530,9 +1530,7 @@ public class Wallet extends BaseTaggableObject
             }
             if (receivingFromFriendsGroup != null)
                 receivingFromFriendsGroup.decrypt(aesKey);
-        } catch (KeyCrypterException.InvalidCipherText e) {
-            throw new BadWalletEncryptionKeyException(e);
-        } catch (KeyCrypterException.PublicPrivateMismatch e) {
+        } catch (KeyCrypterException.InvalidCipherText | KeyCrypterException.PublicPrivateMismatch e) {
             throw new BadWalletEncryptionKeyException(e);
         } finally {
             keyChainGroupLock.unlock();
@@ -1557,9 +1555,7 @@ public class Wallet extends BaseTaggableObject
             }
             if (receivingFromFriendsGroup != null)
                 receivingFromFriendsGroup.decrypt(aesKey);
-        } catch (KeyCrypterException.InvalidCipherText e) {
-            throw new BadWalletEncryptionKeyException(e);
-        } catch (KeyCrypterException.PublicPrivateMismatch e) {
+        } catch (KeyCrypterException.InvalidCipherText | KeyCrypterException.PublicPrivateMismatch e) {
             throw new BadWalletEncryptionKeyException(e);
         } finally {
             keyChainGroupLock.unlock();
@@ -4931,9 +4927,7 @@ public class Wallet extends BaseTaggableObject
 
             // resolve missing sigs if any
             new MissingSigResolutionSigner(req.missingSigsMode).signInputs(proposal, maybeDecryptingKeyBag);
-        } catch (KeyCrypterException.InvalidCipherText e) {
-            throw new BadWalletEncryptionKeyException(e);
-        } catch (KeyCrypterException.PublicPrivateMismatch e) {
+        } catch (KeyCrypterException.InvalidCipherText | KeyCrypterException.PublicPrivateMismatch e) {
             throw new BadWalletEncryptionKeyException(e);
         } finally {
             lock.writeLock().unlock();
