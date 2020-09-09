@@ -162,7 +162,7 @@ public final class HDKeyDerivation {
         byte[] parentPublicKey = parent.getPubKeyPoint().getEncoded(true);
         checkState(parentPublicKey.length == 33, "Parent pubkey must be 33 bytes, but is " + parentPublicKey.length);
         boolean simple = childNumber instanceof ExtendedChildNumber == false;
-        ByteBuffer data = ByteBuffer.allocate(simple ? 37 : 37 - 4 + 1 + ((ExtendedChildNumber)childNumber).bi().toByteArray().length);
+        ByteBuffer data = ByteBuffer.allocate(simple ? 37 : 37 - 4 + 1 + Sha256Hash.LENGTH);
         if (childNumber.isHardened()) {
             data.put(parent.getPrivKeyBytes33());
         } else {
@@ -170,7 +170,7 @@ public final class HDKeyDerivation {
         }
         if(childNumber instanceof ExtendedChildNumber) {
             data.put((byte)(childNumber.isHardened() ? 1 : 0));
-            data.put(((ExtendedChildNumber)childNumber).bi().toByteArray());
+            data.put(Sha256Hash.wrap(((ExtendedChildNumber)childNumber).bi()).getBytes());
         } else {
             data.putInt(childNumber.i());
         }
@@ -199,7 +199,7 @@ public final class HDKeyDerivation {
         data.put(parentPublicKey);
         if(childNumber instanceof ExtendedChildNumber) {
             data.put((byte)(childNumber.isHardened() ? 1 : 0));
-            data.put(((ExtendedChildNumber)childNumber).bi().toByteArray());
+            data.put(Sha256Hash.wrap(((ExtendedChildNumber)childNumber).bi()).getBytes());
         } else {
             data.putInt(childNumber.i());
         }

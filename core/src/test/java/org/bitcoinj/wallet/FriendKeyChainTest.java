@@ -177,7 +177,7 @@ public class FriendKeyChainTest {
         publicGroupFromKey.addAndActivateHDChain(publicChainFromKey);
         DeterministicKey publicKey = privateGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
 
-        String tpub = "tpubDLkp5kSwctd6bsLgG2pfbUpLSyjedfkBjy8HYtuczzPUwMCBkRW2Fe7TcEoVin5cLTr6YApGpy2MdKU7sfgLL7cMXTn16dLPdgKMqGg9tVE";
+        String tpub = "tpubDKdSfcxQHGrEkdf6Hk38ZB8JKTjPyZ9dQbsQUGBVBtt27TgZspbusBZyaBVL5fzqKRXtd9XAPaFu5JuBwjS54dQh8hg9wzbxpaXSt67vmuY";
 
 
         //Their contact info - we still need to figure out what is going one with the direction!!!!
