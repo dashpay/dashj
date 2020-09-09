@@ -40,9 +40,9 @@ public class DerivationPathFactoryTest {
 
     // m / 9' / 5' / 0' / 0' - Blockchain Identity Path
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_PATH = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED);
+            ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO);
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED);
+            ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO);
 
     // m / 9' / 5' / 0' / 0' - Blockchain Identity Funding Path
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_FUNDING_PATH = ImmutableList.of(new ChildNumber(9, true),
