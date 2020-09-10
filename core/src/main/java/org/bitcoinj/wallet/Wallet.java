@@ -2882,6 +2882,7 @@ public class Wallet extends BaseTaggableObject
      */
     public void addKeyChainEventListener(KeyChainEventListener listener) {
         keyChainGroup.addEventListener(listener, Threading.USER_THREAD);
+        receivingFromFriendsGroup.addEventListener(listener, Threading.USER_THREAD);
     }
 
     /**
@@ -2890,6 +2891,7 @@ public class Wallet extends BaseTaggableObject
      */
     public void addKeyChainEventListener(Executor executor, KeyChainEventListener listener) {
         keyChainGroup.addEventListener(listener, executor);
+        receivingFromFriendsGroup.addEventListener(listener, executor);
     }
 
     /**
