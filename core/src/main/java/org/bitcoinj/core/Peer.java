@@ -31,6 +31,7 @@ import org.bitcoinj.net.NioClientManager;
 import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.quorums.ChainLockSignature;
 import org.bitcoinj.quorums.InstantSendLock;
+import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
@@ -48,6 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.math.BigInteger;
 import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -76,12 +78,17 @@ public class Peer extends PeerSocketHandler {
 
     private final NetworkParameters params;
     private final AbstractBlockChain blockChain;
+    private final AbstractBlockChain headerChain;
     private final Context context;
 
     private final CopyOnWriteArrayList<ListenerRegistration<BlocksDownloadedEventListener>> blocksDownloadedEventListeners
         = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<HeadersDownloadedEventListener>> headersDownloadedEventListeners
+            = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<ChainDownloadStartedEventListener>> chainDownloadStartedEventListeners
         = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<HeadersDownloadStartedEventListener>> headersDownloadStartedEventListeners
+            = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<PeerConnectedEventListener>> connectedEventListeners
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<PeerDisconnectedEventListener>> disconnectedEventListeners
@@ -96,6 +103,9 @@ public class Peer extends PeerSocketHandler {
     // primary peer. This is to avoid redundant work and concurrency problems with downloading the same chain
     // in parallel.
     private volatile boolean vDownloadData;
+
+    private volatile boolean vDownloadHeaders;
+    //private StoredBlock previousBlockHeader = null;
     // The version data to announce to the other side of the connections we make: useful for setting our "user agent"
     // equivalent and other things.
     private final VersionMessage versionMessage;
@@ -233,12 +243,13 @@ public class Peer extends PeerSocketHandler {
      * used to keep track of which peers relayed transactions and offer more descriptive logging.</p>
      */
     public Peer(NetworkParameters params, VersionMessage ver, PeerAddress remoteAddress,
-                @Nullable AbstractBlockChain chain, int downloadTxDependencyDepth) {
+                @Nullable AbstractBlockChain chain, @Nullable AbstractBlockChain headers, int downloadTxDependencyDepth) {
         super(params, remoteAddress);
         this.params = Preconditions.checkNotNull(params);
         this.versionMessage = Preconditions.checkNotNull(ver);
         this.vDownloadTxDependencyDepth = chain != null ? downloadTxDependencyDepth : 0;
         this.blockChain = chain;  // Allowed to be null.
+        this.headerChain = headers;
         this.vDownloadData = chain != null;
         this.getDataFutures = new CopyOnWriteArrayList<>();
         this.getAddrFutures = new LinkedList<>();
@@ -254,6 +265,11 @@ public class Peer extends PeerSocketHandler {
                 versionHandshakeComplete();
             }
         }, Threading.SAME_THREAD);
+    }
+
+    public Peer(NetworkParameters params, VersionMessage ver, PeerAddress remoteAddress,
+                @Nullable AbstractBlockChain chain, int downloadTxDependencyDepth) {
+        this(params, ver, remoteAddress, chain, null, downloadTxDependencyDepth);
     }
 
     /**
@@ -285,6 +301,16 @@ public class Peer extends PeerSocketHandler {
         blocksDownloadedEventListeners.add(new ListenerRegistration(listener, executor));
     }
 
+    /** Registers a listener that is invoked when new blocks are downloaded. */
+    public void addHeadersDownloadedEventListener(HeadersDownloadedEventListener listener) {
+        addHeadersDownloadedEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /** Registers a listener that is invoked when new blocks are downloaded. */
+    public void addHeadersDownloadedEventListener(Executor executor, HeadersDownloadedEventListener listener) {
+        headersDownloadedEventListeners.add(new ListenerRegistration(listener, executor));
+    }
+
     /** Registers a listener that is invoked when a blockchain downloaded starts. */
     public void addChainDownloadStartedEventListener(ChainDownloadStartedEventListener listener) {
         addChainDownloadStartedEventListener(Threading.USER_THREAD, listener);
@@ -293,6 +319,16 @@ public class Peer extends PeerSocketHandler {
     /** Registers a listener that is invoked when a blockchain downloaded starts. */
     public void addChainDownloadStartedEventListener(Executor executor, ChainDownloadStartedEventListener listener) {
         chainDownloadStartedEventListeners.add(new ListenerRegistration(listener, executor));
+    }
+
+    /** Registers a listener that is invoked when a blockchain downloaded starts. */
+    public void addHeadersDownloadStartedEventListener(HeadersDownloadStartedEventListener listener) {
+        addHeadersDownloadStartedEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /** Registers a listener that is invoked when a blockchain downloaded starts. */
+    public void addHeadersDownloadStartedEventListener(Executor executor, HeadersDownloadStartedEventListener listener) {
+        headersDownloadStartedEventListeners.add(new ListenerRegistration(listener, executor));
     }
 
     /** Registers a listener that is invoked when a peer is connected. */
@@ -349,8 +385,16 @@ public class Peer extends PeerSocketHandler {
         return ListenerRegistration.removeFromList(listener, blocksDownloadedEventListeners);
     }
 
+    public boolean removeHeadersDownloadedEventListener(HeadersDownloadedEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, headersDownloadedEventListeners);
+    }
+
     public boolean removeChainDownloadStartedEventListener(ChainDownloadStartedEventListener listener) {
         return ListenerRegistration.removeFromList(listener, chainDownloadStartedEventListeners);
+    }
+
+    public boolean removeHeadersDownloadStartedEventListener(HeadersDownloadStartedEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, headersDownloadStartedEventListeners);
     }
 
     public boolean removeConnectedEventListener(PeerConnectedEventListener listener) {
@@ -733,6 +777,42 @@ public class Peer extends PeerSocketHandler {
             lock.unlock();
         }
 
+        if (vDownloadHeaders) {
+            try {
+                for (int i = 0; i < m.getBlockHeaders().size(); i++) {
+                    Block header = m.getBlockHeaders().get(i);
+                    if(!headerChain.add(header)) {
+                        log.info("Received bad header[{}] {} - try again", i, header.getHash());
+                        lock.lock();
+                        try {
+                            blockChainHeaderDownloadLocked(Sha256Hash.ZERO_HASH);
+                        } finally {
+                            lock.unlock();
+                        }
+                        return;
+                    }
+                }
+                StoredBlock lastHeader = headerChain.getChainHead();//new StoredBlock(previous, work, previousBlock.getHeight() + m.getBlockHeaders().size());
+                invokeOnHeadersDownloaded(lastHeader);
+                log.info("processing headers till {}", lastHeader.getHeight());
+                if (m.getBlockHeaders().size() < HeadersMessage.MAX_HEADERS) {
+                    context.peerGroup.triggerHeadersDownloadComplete();
+                } else {
+                    lock.lock();
+                    try {
+                        blockChainHeaderDownloadLocked(Sha256Hash.ZERO_HASH);
+                    } finally {
+                        lock.unlock();
+                    }
+                }
+                return;
+            } catch (VerificationException e) {
+                log.warn("Block header verification failed", e);
+            } catch (PrunedException x) {
+                throw new RuntimeException(x);
+            }
+        }
+
         try {
             checkState(!downloadBlockBodies, toString());
             for (int i = 0; i < m.getBlockHeaders().size(); i++) {
@@ -789,6 +869,21 @@ public class Peer extends PeerSocketHandler {
         } catch (PrunedException e) {
             // Unreachable when in SPV mode.
             throw new RuntimeException(e);
+        }
+    }
+
+    public void startMasternodeListDownload() {
+        try {
+            StoredBlock masternodeListBlock = headerChain.getChainHead().getHeight() != 0 ?
+                    headerChain.getBlockStore().get(headerChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET) :
+                    blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
+
+            GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
+            sendMessage(msg);
+        } catch (BlockStoreException x) {
+            throw new RuntimeException(x);
+        } catch (Exception x) {
+            context.peerGroup.triggerHeadersDownloadComplete();
         }
     }
 
@@ -1227,6 +1322,21 @@ public class Peer extends PeerSocketHandler {
         }
     }
 
+    private void invokeOnHeadersDownloaded(final StoredBlock block) {
+        // It is possible for the peer block height difference to be negative when blocks have been solved and broadcast
+        // since the time we first connected to the peer. However, it's weird and unexpected to receive a callback
+        // with negative "blocks left" in this case, so we clamp to zero so the API user doesn't have to think about it.
+        final int blocksLeft = Math.max(0, (int) vPeerVersionMessage.bestHeight - block.getHeight());
+        for (final ListenerRegistration<HeadersDownloadedEventListener> registration : headersDownloadedEventListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onHeadersDownloaded(Peer.this, block.getHeader(), blocksLeft);
+                }
+            });
+        }
+    }
+
     //added for dash
     boolean alreadyHave(InventoryItem inv)
     {
@@ -1572,6 +1682,9 @@ public class Peer extends PeerSocketHandler {
     private Sha256Hash lastGetBlocksBegin, lastGetBlocksEnd;
 
     @GuardedBy("lock")
+    private Sha256Hash lastGetHeadersBegin, lastGetHeadersEnd;
+
+    @GuardedBy("lock")
     private void blockChainDownloadLocked(Sha256Hash toHash) {
         checkState(lock.isHeldByCurrentThread());
         // The block chain download process is a bit complicated. Basically, we start with one or more blocks in a
@@ -1658,6 +1771,85 @@ public class Peer extends PeerSocketHandler {
         }
     }
 
+    @GuardedBy("lock")
+    private void blockChainHeaderDownloadLocked(Sha256Hash toHash) {
+        checkState(lock.isHeldByCurrentThread());
+
+        BlockLocator blockLocator = new BlockLocator();
+
+        // copy blocks from the blockChain into the headerChain if:
+        // - the headerChain is on the Genesis Block
+        // - the headerChain is behind blockChain
+        BlockStore store = headerChain.getBlockStore();
+        if ((checkNotNull(headerChain).getChainHead().getHeight() == 0 && checkNotNull(blockChain).getChainHead().getHeight() != 0) ||
+                headerChain.getChainHead().getHeight() < blockChain.getChainHead().getHeight()) {
+            BlockStore blockStore = blockChain.getBlockStore();
+            StoredBlock cursor = blockChain.getChainHead();
+            ArrayList<StoredBlock> lastTenBlocks = new ArrayList<>(100);
+            try {
+
+                for (int i = 0; cursor != null && i < 100; ++i) {
+                    lastTenBlocks.add(cursor);
+                    cursor = cursor.getPrev(blockStore);
+                }
+
+                for (int i = lastTenBlocks.size() - 1; i >= 0; --i) {
+                    headerChain.getBlockStore().put(lastTenBlocks.get(i));
+                }
+
+                headerChain.getBlockStore().setChainHead(lastTenBlocks.get(0));
+                headerChain.setChainHead(lastTenBlocks.get(0));
+
+            } catch (BlockStoreException e) {
+                log.error("Failed to walk the block chain whilst constructing a locator");
+                throw new RuntimeException(e);
+            }
+        }
+
+        StoredBlock chainHead = headerChain.getChainHead();
+        Sha256Hash chainHeadHash = chainHead.getHeader().getHash();
+        // Did we already make this request? If so, don't do it again.
+        if (Objects.equal(lastGetHeadersBegin, chainHeadHash) && Objects.equal(lastGetHeadersEnd, toHash)) {
+            log.info("blockChainDownloadLocked({}): ignoring duplicated request: {}", toHash, chainHeadHash);
+            for (Sha256Hash hash : pendingBlockDownloads)
+                log.info("Pending block download: {}", hash);
+            log.info(Throwables.getStackTraceAsString(new Throwable()));
+            return;
+        }
+        if (log.isDebugEnabled())
+            log.debug("{}: blockChainDownloadLocked({}) current head = {}",
+                    this, toHash, chainHead.getHeader().getHashAsString());
+        StoredBlock cursor = chainHead;
+        for (int i = 100; cursor != null && i > 0; i--) {
+            blockLocator = blockLocator.add(cursor.getHeader().getHash());
+            try {
+                cursor = cursor.getPrev(store);
+            } catch (BlockStoreException e) {
+                log.error("Failed to walk the block chain whilst constructing a locator");
+                throw new RuntimeException(e);
+            }
+        }
+
+        // Only add the locator if we didn't already do so. If the chain is < 50 blocks we already reached it.
+        if (cursor != null)
+            blockLocator = blockLocator.add(params.getGenesisBlock().getHash());
+
+        // Record that we requested this range of blocks so we can filter out duplicate requests in the event of a
+        // block being solved during chain download.
+        lastGetHeadersBegin = chainHeadHash;
+        lastGetHeadersEnd = toHash;
+
+        //if (downloadBlockBodies) {
+        //    GetBlocksMessage message = new GetBlocksMessage(params, blockLocator, toHash);
+        //    sendMessage(message);
+        //} else {
+            // Downloading headers for a while instead of full blocks.
+        log.info("Requesting headers from : {}", this);
+        GetHeadersMessage message = new GetHeadersMessage(params, blockLocator, toHash);
+        sendMessage(message);
+        //}
+    }
+
     /**
      * Starts an asynchronous download of the block chain. The chain download is deemed to be complete once we've
      * downloaded the same number of blocks that the peer advertised having in its version handshake message.
@@ -1684,6 +1876,37 @@ public class Peer extends PeerSocketHandler {
                 lock.unlock();
             }
         }
+    }
+
+    public void startBlockChainHeaderDownload() {
+        vDownloadHeaders = true;
+        // TODO: peer might still have blocks that we don't have, and even have a heavier
+        // chain even if the chain block count is lower.
+        final int blocksLeft = getPeerBlockHeightDifference();
+        if (blocksLeft >= 0) {
+            for (final ListenerRegistration<HeadersDownloadStartedEventListener> registration : headersDownloadStartedEventListeners) {
+                registration.executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        registration.listener.onHeadersDownloadStarted(Peer.this, blocksLeft);
+                    }
+                });
+            }
+            // When we just want as many blocks as possible, we can set the target hash to zero.
+            lock.lock();
+            try {
+                blockChainHeaderDownloadLocked(Sha256Hash.ZERO_HASH);
+            } finally {
+                lock.unlock();
+            }
+        }
+    }
+
+    public void continueDownloadingBlocks() {
+       if (vDownloadHeaders) {
+           setDownloadHeaders(false);
+           startBlockChainDownload();
+       }
     }
 
     private class PendingPing {
@@ -1839,6 +2062,14 @@ public class Peer extends PeerSocketHandler {
      */
     public void setDownloadData(boolean downloadData) {
         this.vDownloadData = downloadData;
+    }
+
+    public boolean isDownloadHeaders() {
+        return vDownloadHeaders;
+    }
+
+    public void setDownloadHeaders(boolean downloadHeaders) {
+        this.vDownloadHeaders = downloadHeaders;
     }
 
     /** Returns version data announced by the remote peer. */

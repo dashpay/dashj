@@ -24,7 +24,8 @@ import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import net.jcip.annotations.*;
 import org.bitcoinj.core.listeners.*;
-import org.bitcoinj.crypto.*;
+import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
+import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.governance.GovernanceVote;
 import org.bitcoinj.governance.GovernanceVoteBroadcast;
 import org.bitcoinj.governance.GovernanceVoteBroadcaster;
@@ -32,6 +33,8 @@ import org.bitcoinj.governance.GovernanceVoteConfidence;
 import org.bitcoinj.net.*;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.script.*;
+import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -96,6 +99,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     protected final NetworkParameters params;
     protected final Context context;
     @Nullable protected final AbstractBlockChain chain;
+    @Nullable protected AbstractBlockChain headerChain;
 
     // This executor is used to queue up jobs: it's used when we don't want to use locks for mutual exclusion,
     // typically because the job might call in to user provided code that needs/wants the freedom to use the API
@@ -123,8 +127,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     @Nullable @GuardedBy("lock") private PeerDataEventListener downloadListener;
     private final CopyOnWriteArrayList<ListenerRegistration<BlocksDownloadedEventListener>> peersBlocksDownloadedEventListeners
         = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<HeadersDownloadedEventListener>> peersHeadersDownloadedEventListeners
+            = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<ChainDownloadStartedEventListener>> peersChainDownloadStartedEventListeners
         = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<HeadersDownloadStartedEventListener>> peersHeadersDownloadStartedEventListeners
+            = new CopyOnWriteArrayList<>();
     /** Callbacks for events related to peers connecting */
     protected final CopyOnWriteArrayList<ListenerRegistration<PeerConnectedEventListener>> peerConnectedEventListeners
         = new CopyOnWriteArrayList<>();
@@ -141,6 +149,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         = new CopyOnWriteArrayList<>();
     protected final CopyOnWriteArrayList<ListenerRegistration<OnTransactionBroadcastListener>> peersTransactionBroadastEventListeners
         = new CopyOnWriteArrayList<>();
+    protected final CopyOnWriteArrayList<ListenerRegistration<PreBlocksDownloadListener>> preBlocksDownloadListeners
+            = new CopyOnWriteArrayList<>();
+    protected final CopyOnWriteArrayList<ListenerRegistration<MasternodeListDownloadedListener>> masternodeListDownloadListeners
+            = new CopyOnWriteArrayList<>();
     // Peer discovery sources, will be polled occasionally if there aren't enough inactives.
     private final CopyOnWriteArraySet<PeerDiscovery> peerDiscoverers;
     // The version message to use for new connections.
@@ -163,6 +175,22 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     @GuardedBy("lock") private long fastCatchupTimeSecs;
     private final CopyOnWriteArrayList<Wallet> wallets;
     private final CopyOnWriteArrayList<PeerFilterProvider> peerFilterProviders;
+
+    public enum SyncStage {
+        OFFLINE(0),
+        HEADERS(1),
+        MNLIST(2),
+        PREBLOCKS(3),
+        BLOCKS(4),
+        COMPLETE(5);
+
+        public int value;
+        SyncStage(int value) {
+            this.value = value;
+        }
+    }
+
+    SyncStage syncStage = SyncStage.OFFLINE;
 
     // This event listener is added to every peer. It's here so when we announce transactions via an "inv", every
     // peer can fetch them.
@@ -306,7 +334,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     /** See {@link #PeerGroup(Context, AbstractBlockChain)} */
     public PeerGroup(NetworkParameters params, @Nullable AbstractBlockChain chain) {
-        this(Context.getOrCreate(params), chain, new NioClientManager());
+        this(Context.getOrCreate(params), chain, null, new NioClientManager());
+    }
+
+    /** See {@link #PeerGroup(Context, AbstractBlockChain)} */
+    public PeerGroup(NetworkParameters params, @Nullable AbstractBlockChain chain, @Nullable AbstractBlockChain headerChain) {
+        this(Context.getOrCreate(params), chain, headerChain, new NioClientManager());
     }
 
     /**
@@ -314,19 +347,19 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * and downloaded. This is probably the constructor you want to use.
      */
     public PeerGroup(Context context, @Nullable AbstractBlockChain chain) {
-        this(context, chain, new NioClientManager());
+        this(context, chain, null, new NioClientManager());
     }
 
-    /** See {@link #PeerGroup(Context, AbstractBlockChain, ClientConnectionManager)} */
+    /** See {@link #PeerGroup(Context, AbstractBlockChain, AbstractBlockChain, ClientConnectionManager)} */
     public PeerGroup(NetworkParameters params, @Nullable AbstractBlockChain chain, ClientConnectionManager connectionManager) {
-        this(Context.getOrCreate(params), chain, connectionManager);
+        this(Context.getOrCreate(params), chain, null, connectionManager);
     }
 
     /**
      * Creates a new PeerGroup allowing you to specify the {@link ClientConnectionManager} which is used to create new
      * connections and keep track of existing ones.
      */
-    private PeerGroup(Context context, @Nullable AbstractBlockChain chain, ClientConnectionManager connectionManager) {
+    private PeerGroup(Context context, @Nullable AbstractBlockChain chain, @Nullable AbstractBlockChain headerChain, ClientConnectionManager connectionManager) {
         checkNotNull(context);
         this.context = context;
         this.params = context.getParams();
@@ -369,13 +402,25 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         runningBroadcasts = Collections.synchronizedSet(new HashSet<TransactionBroadcast>());
         bloomFilterMerger = new FilterMerger(DEFAULT_BLOOM_FILTER_FP_RATE);
 
-        //DashSpecific
-
-
-
-        context.setPeerGroupAndBlockChain(this, chain);
         vMinRequiredProtocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM);
         runningVoteBroadcasts = Collections.synchronizedSet(new HashSet<GovernanceVoteBroadcast>());
+
+        //DashSpecific
+        if (headerChain == null) {
+            if (context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
+                try {
+                    this.headerChain = new BlockChain(params, new MemoryBlockStore(params));
+                } catch (BlockStoreException x) {
+                    // swallow
+                    this.headerChain = null;
+                }
+            } else {
+                this.headerChain = null;
+            }
+        } else {
+            this.headerChain = headerChain;
+        }
+        context.setPeerGroupAndBlockChain(this, chain);
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);
@@ -664,6 +709,24 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             peer.addBlocksDownloadedEventListener(executor, listener);
     }
 
+    /** See {@link Peer#addHeadersDownloadedEventListener(HeadersDownloadedEventListener)} */
+    public void addHeadersDownloadedEventListener(HeadersDownloadedEventListener listener) {
+        addHeadersDownloadedEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * <p>Adds a listener that will be notified on the given executor when
+     * headers are downloaded by the download peer.</p>
+     * @see Peer#addBlocksDownloadedEventListener(Executor, BlocksDownloadedEventListener)
+     */
+    public void addHeadersDownloadedEventListener(Executor executor, HeadersDownloadedEventListener listener) {
+        peersHeadersDownloadedEventListeners.add(new ListenerRegistration<>(checkNotNull(listener), executor));
+        for (Peer peer : getConnectedPeers())
+            peer.addHeadersDownloadedEventListener(executor, listener);
+        for (Peer peer : getPendingPeers())
+            peer.addHeadersDownloadedEventListener(executor, listener);
+    }
+
     /** See {@link Peer#addBlocksDownloadedEventListener(BlocksDownloadedEventListener)} */
     public void addChainDownloadStartedEventListener(ChainDownloadStartedEventListener listener) {
         addChainDownloadStartedEventListener(Threading.USER_THREAD, listener);
@@ -679,6 +742,18 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             peer.addChainDownloadStartedEventListener(executor, listener);
         for (Peer peer : getPendingPeers())
             peer.addChainDownloadStartedEventListener(executor, listener);
+    }
+
+    /**
+     * <p>Adds a listener that will be notified on the given executor when
+     * chain download starts.</p>
+     */
+    public void addHeadersDownloadStartedEventListener(Executor executor, HeadersDownloadStartedEventListener listener) {
+        peersHeadersDownloadStartedEventListeners.add(new ListenerRegistration<>(checkNotNull(listener), executor));
+        for (Peer peer : getConnectedPeers())
+            peer.addHeadersDownloadStartedEventListener(executor, listener);
+        for (Peer peer : getPendingPeers())
+            peer.addHeadersDownloadStartedEventListener(executor, listener);
     }
 
     /** See {@link Peer#addConnectedEventListener(PeerConnectedEventListener)} */
@@ -756,6 +831,16 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             peer.addOnTransactionBroadcastListener(executor, listener);
     }
 
+    /** See {@link Peer#addOnTransactionBroadcastListener(OnTransactionBroadcastListener)} */
+    public void addPreBlocksDownloadListener(Executor executor, PreBlocksDownloadListener listener) {
+        preBlocksDownloadListeners.add(new ListenerRegistration<>(checkNotNull(listener), executor));
+    }
+
+    /** See {@link Peer#addOnTransactionBroadcastListener(OnTransactionBroadcastListener)} */
+    public void addMasternodeListDownloadListener(Executor executor, MasternodeListDownloadedListener listener) {
+        masternodeListDownloadListeners.add(new ListenerRegistration<>(checkNotNull(listener), executor));
+    }
+
     /** See {@link Peer#addPreMessageReceivedEventListener(PreMessageReceivedEventListener)} */
     public void addPreMessageReceivedEventListener(PreMessageReceivedEventListener listener) {
         addPreMessageReceivedEventListener(Threading.USER_THREAD, listener);
@@ -779,12 +864,30 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         return result;
     }
 
+    public boolean removeHeadersDownloadedEventListener(HeadersDownloadedEventListener listener) {
+        boolean result = ListenerRegistration.removeFromList(listener, peersHeadersDownloadedEventListeners);
+        for (Peer peer : getConnectedPeers())
+            peer.removeHeadersDownloadedEventListener(listener);
+        for (Peer peer : getPendingPeers())
+            peer.removeHeadersDownloadedEventListener(listener);
+        return result;
+    }
+
     public boolean removeChainDownloadStartedEventListener(ChainDownloadStartedEventListener listener) {
         boolean result = ListenerRegistration.removeFromList(listener, peersChainDownloadStartedEventListeners);
         for (Peer peer : getConnectedPeers())
             peer.removeChainDownloadStartedEventListener(listener);
         for (Peer peer : getPendingPeers())
             peer.removeChainDownloadStartedEventListener(listener);
+        return result;
+    }
+
+    public boolean removeHeadersDownloadStartedEventListener(HeadersDownloadStartedEventListener listener) {
+        boolean result = ListenerRegistration.removeFromList(listener, peersHeadersDownloadStartedEventListeners);
+        for (Peer peer : getConnectedPeers())
+            peer.removeHeadersDownloadStartedEventListener(listener);
+        for (Peer peer : getPendingPeers())
+            peer.removeHeadersDownloadStartedEventListener(listener);
         return result;
     }
 
@@ -832,6 +935,16 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         for (Peer peer : getPendingPeers())
             peer.removeOnTransactionBroadcastListener(listener);
         return result;
+    }
+
+    /** The given event listener will no longer be called with events. */
+    public boolean removePreBlocksDownloadedListener(PreBlocksDownloadListener listener) {
+        return ListenerRegistration.removeFromList(listener, preBlocksDownloadListeners);
+    }
+
+    /** The given event listener will no longer be called with events. */
+    public boolean removeMasternodeListDownloadedListener(MasternodeListDownloadedListener listener) {
+        return ListenerRegistration.removeFromList(listener, masternodeListDownloadListeners);
     }
 
     public boolean removePreMessageReceivedEventListener(PreMessageReceivedEventListener listener) {
@@ -1402,7 +1515,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** You can override this to customise the creation of {@link Peer} objects. */
     @GuardedBy("lock")
     protected Peer createPeer(PeerAddress address, VersionMessage ver) {
-        return new Peer(params, ver, address, chain, downloadTxDependencyDepth);
+        return new Peer(params, ver, address, chain, headerChain, downloadTxDependencyDepth);
     }
 
     /**
@@ -1451,7 +1564,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      */
     private static void addDataEventListenerToPeer(Executor executor, Peer peer, PeerDataEventListener downloadListener) {
         peer.addBlocksDownloadedEventListener(executor, downloadListener);
+        peer.addHeadersDownloadedEventListener(executor, downloadListener);
         peer.addChainDownloadStartedEventListener(executor, downloadListener);
+        peer.addHeadersDownloadStartedEventListener(executor, downloadListener);
         peer.addGetDataEventListener(executor, downloadListener);
         peer.addPreMessageReceivedEventListener(executor, downloadListener);
     }
@@ -1463,7 +1578,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      */
     private static void removeDataEventListenerFromPeer(Peer peer, PeerDataEventListener listener) {
         peer.removeBlocksDownloadedEventListener(listener);
+        peer.removeHeadersDownloadedEventListener(listener);
         peer.removeChainDownloadStartedEventListener(listener);
+        peer.removeHeadersDownloadStartedEventListener(listener);
         peer.removeGetDataEventListener(listener);
         peer.removePreMessageReceivedEventListener(listener);
     }
@@ -1522,8 +1639,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             // And set up event listeners for clients. This will allow them to find out about new transactions and blocks.
             for (ListenerRegistration<BlocksDownloadedEventListener> registration : peersBlocksDownloadedEventListeners)
                 peer.addBlocksDownloadedEventListener(registration.executor, registration.listener);
+            for (ListenerRegistration<HeadersDownloadedEventListener> registration : peersHeadersDownloadedEventListeners)
+                peer.addHeadersDownloadedEventListener(registration.executor, registration.listener);
             for (ListenerRegistration<ChainDownloadStartedEventListener> registration : peersChainDownloadStartedEventListeners)
                 peer.addChainDownloadStartedEventListener(registration.executor, registration.listener);
+            for (ListenerRegistration<HeadersDownloadStartedEventListener> registration : peersHeadersDownloadStartedEventListeners)
+                peer.addHeadersDownloadStartedEventListener(registration.executor, registration.listener);
             for (ListenerRegistration<PeerConnectedEventListener> registration : peerConnectedEventListeners)
                 peer.addConnectedEventListener(registration.executor, registration.listener);
             // We intentionally do not add disconnect listeners to peers
@@ -1722,6 +1843,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             });
             peer.removeDisconnectedEventListener(registration.listener);
         }
+
+        if (numConnectedPeers == 0) {
+            // restart the sync stages when the next peer is connected
+            setSyncStage(SyncStage.OFFLINE);
+        }
     }
 
     @GuardedBy("lock") private int stallPeriodSeconds = 10;
@@ -1748,9 +1874,13 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     }
 
-    private class ChainDownloadSpeedCalculator implements BlocksDownloadedEventListener, Runnable {
+    private class ChainDownloadSpeedCalculator implements BlocksDownloadedEventListener, Runnable,
+        HeadersDownloadedEventListener, PreBlocksDownloadListener, MasternodeListDownloadedListener {
         private int blocksInLastSecond, txnsInLastSecond, origTxnsInLastSecond;
+        private int headersInLastSecond;
         private long bytesInLastSecond;
+        private boolean waitForPreBlockDownload = false;
+        private int masternodeListsInLastSecond;
 
         // If we take more stalls than this, we assume we're on some kind of terminally slow network and the
         // stall threshold just isn't set properly. We give up on stall disconnects after that.
@@ -1769,6 +1899,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
         @Override
         public synchronized void onBlocksDownloaded(Peer peer, Block block, @Nullable FilteredBlock filteredBlock, int blocksLeft) {
+            waitForPreBlockDownload = false;
             blocksInLastSecond++;
             bytesInLastSecond += Block.HEADER_SIZE;
             List<Transaction> blockTransactions = block.getTransactions();
@@ -1831,8 +1962,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     average /= samples.length;
 
                     String statsString = String.format(Locale.US,
-                            "%d blocks/sec, %d tx/sec, %d pre-filtered tx/sec, avg/last %.2f/%.2f kilobytes per sec, chain/common height %d/%d",
-                            blocksInLastSecond, txnsInLastSecond, origTxnsInLastSecond, average / 1024.0,
+                            "%d blocks/sec, %d tx/sec, %d pre-filtered tx/sec, %d headers/sec, %d mnlistdiff/sec, avg/last %.2f/%.2f kilobytes per sec, chain/common height %d/%d",
+                            blocksInLastSecond, txnsInLastSecond, origTxnsInLastSecond, headersInLastSecond,
+                            masternodeListsInLastSecond, average / 1024.0,
                             bytesInLastSecond / 1024.0, chainHeight, mostCommonChainHeight);
                     String thresholdString = String.format(Locale.US, "(threshold <%.2f KB/sec for %d seconds)",
                             minSpeedBytesPerSec / 1024.0, samples.length);
@@ -1843,7 +1975,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                         if (bytesInLastSecond > 0)
                             log.info(statsString
                                     + String.format(Locale.US, " (warming up %d more seconds)", warmupSeconds));
-                    } else if (average < minSpeedBytesPerSec) {
+                    } else if (average < minSpeedBytesPerSec && !waitForPreBlockDownload) {
                         log.info(statsString + ", STALLED " + thresholdString);
                         maxStalls--;
                         if (maxStalls == 0) {
@@ -1875,15 +2007,151 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 txnsInLastSecond = 0;
                 origTxnsInLastSecond = 0;
                 bytesInLastSecond = 0;
+                headersInLastSecond = 0;
+                masternodeListsInLastSecond = 0;
             }
+        }
+
+        @Override
+        public void onHeadersDownloaded(Peer peer, Block block, int blocksLeft) {
+            headersInLastSecond += 2000; // this will be correct most of the time
+            bytesInLastSecond += Block.HEADER_SIZE * 2000;
+        }
+
+        @Override
+        public void onPreBlocksDownload(Peer peer) {
+            waitForPreBlockDownload = true;
+        }
+
+        @Override
+        public void onMasterNodeListDiffDownloaded(SimplifiedMasternodeListDiff mnlistdiff) {
+            masternodeListsInLastSecond++;
+            bytesInLastSecond += mnlistdiff.getMessageSize();
         }
     }
     @Nullable private ChainDownloadSpeedCalculator chainDownloadSpeedCalculator;
+
+    private final SettableFuture<Boolean> headersDownloadedFuture = SettableFuture.create();
+    private final SettableFuture<Boolean> mnListDownloadedFuture = SettableFuture.create();
+    private final SettableFuture<Boolean> preBlockDownloadFuture = SettableFuture.create();
+
+    public SettableFuture<Boolean> getHeadersDownloadedFuture() {
+        return headersDownloadedFuture;
+    }
+
+    public SettableFuture<Boolean> getPreBlockDownloadFuture() {
+        return preBlockDownloadFuture;
+    }
+
+    public void triggerHeadersDownloadComplete() {
+        headersDownloadedFuture.set(true);
+    }
+
+    public void triggerPreBlockDownloadComplete() {
+        preBlockDownloadFuture.set(true);
+    }
+
+    public void triggerMnListDownloadComplete() {
+        mnListDownloadedFuture.set(true);
+    }
+
+    FutureCallback<Boolean> headersDownloadedCallback;
+    FutureCallback<Boolean> mnListDownloadedCallback;
+    FutureCallback<Boolean> preBlocksDownloadCallback;
+
+
+    private void initBlockChainDownloadFutures(Peer peer) {
+        headersDownloadedCallback = new FutureCallback<Boolean>() {
+            @Override
+            public void onSuccess(@Nullable Boolean aBoolean) {
+                log.info("Stage header download completed successfully: {}", aBoolean);
+                if (aBoolean) {
+                    peer.setDownloadHeaders(false);
+                    setSyncStage(SyncStage.MNLIST);
+                    peer.startMasternodeListDownload();
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                log.info("Stage header download failed: {}", throwable.getMessage());
+                peer.setDownloadHeaders(false);
+                setSyncStage(SyncStage.BLOCKS);
+                peer.startBlockChainDownload();
+            }
+        };
+
+        mnListDownloadedCallback = new FutureCallback<Boolean>() {
+            @Override
+            public void onSuccess(@Nullable Boolean aBoolean) {
+                log.info("Stage masternode list download successful: {}", aBoolean);
+                Set<MasternodeSync.SYNC_FLAGS> flags = context.getSyncFlags();
+                if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) {
+                    if(syncStage.value < SyncStage.PREBLOCKS.value) {
+                        setSyncStage(SyncStage.PREBLOCKS);
+                        queuePreBlockDownloadListeners(peer);
+                    }
+                } else {
+                    setSyncStage(SyncStage.BLOCKS);
+                    peer.startBlockChainDownload();
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                log.info("Stage masternode download failed: {}", throwable.getMessage());
+                setSyncStage(SyncStage.BLOCKS);
+                peer.startBlockChainDownload();
+            }
+        };
+
+        preBlocksDownloadCallback = new FutureCallback<Boolean>() {
+            @Override
+            public void onSuccess(@Nullable Boolean aBoolean) {
+                if (aBoolean) {
+                    log.info("Stage preblock successful");
+                    setSyncStage(SyncStage.BLOCKS);
+                    peer.startBlockChainDownload();
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                log.info("Stage preblock processing failed: {}", throwable.getMessage());
+                setSyncStage(SyncStage.BLOCKS);
+                peer.startBlockChainDownload();
+            }
+        };
+    }
+
+    private void queuePreBlockDownloadListeners(Peer peer) {
+        Preconditions.checkState(preBlocksDownloadListeners.size() > 0);
+        for (final ListenerRegistration<PreBlocksDownloadListener> registration : preBlocksDownloadListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onPreBlocksDownload(peer);
+                }
+            });
+        }
+    }
+
+    public void queueMasternodeListDownloadedListeners(SimplifiedMasternodeListDiff mnlistdiff) {
+        for (final ListenerRegistration<MasternodeListDownloadedListener> registration : masternodeListDownloadListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onMasterNodeListDiffDownloaded(mnlistdiff);
+                }
+            });
+        }
+    }
 
     private void startBlockChainDownloadFromPeer(Peer peer) {
         lock.lock();
         try {
             setDownloadPeer(peer);
+            log.info("Initiating Synchronization with {}", peer);
 
             if (chainDownloadSpeedCalculator == null) {
                 // Every second, run the calculator which will log how fast we are downloading the chain.
@@ -1891,9 +2159,55 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 executor.scheduleAtFixedRate(chainDownloadSpeedCalculator, 1, 1, TimeUnit.SECONDS);
             }
             peer.addBlocksDownloadedEventListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
+            peer.addHeadersDownloadedEventListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
+            addPreBlocksDownloadListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
+            addMasternodeListDownloadListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
 
-            // startBlockChainDownload will setDownloadData(true) on itself automatically.
-            peer.startBlockChainDownload();
+            // how can we download headers first, then at the end do the blockchain/merkle blocks
+            Set<MasternodeSync.SYNC_FLAGS> flags = Context.get().getSyncFlags();
+            if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
+                log.info("Attempting to sync headers first");
+                if (peer.getBestHeight() > headerChain.getChainHead().getHeight() &&
+                        syncStage.value <= SyncStage.HEADERS.value) {
+                    initBlockChainDownloadFutures(peer);
+                    Futures.addCallback(headersDownloadedFuture, headersDownloadedCallback, executor);
+                    Futures.addCallback(mnListDownloadedFuture, mnListDownloadedCallback, executor);
+                    if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) {
+                        addPreBlocksDownloadListener(executor, downloadListener);
+                        Futures.addCallback(preBlockDownloadFuture, preBlocksDownloadCallback, executor);
+                    }
+                    setSyncStage(SyncStage.HEADERS);
+                    peer.startBlockChainHeaderDownload();
+                } else if (syncStage.value == SyncStage.MNLIST.value) {
+                    peer.startMasternodeListDownload();
+                } else {
+                    if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING) && syncStage.value < SyncStage.PREBLOCKS.value) {
+                        initBlockChainDownloadFutures(peer);
+                        Futures.addCallback(preBlockDownloadFuture, preBlocksDownloadCallback, executor);
+                        log.info("startBlockChainDownloadFromPeer");
+                        setSyncStage(SyncStage.PREBLOCKS);
+                        queuePreBlockDownloadListeners(peer);
+                    } else if (syncStage.value > SyncStage.PREBLOCKS.value) {
+                        // startBlockChainDownload will setDownloadData(true) on itself automatically.
+                        log.info("startBlockChainDownloadFromPeer 3");
+                        setSyncStage(SyncStage.BLOCKS);
+                        peer.startBlockChainDownload();
+                    }
+                }
+            } else {
+                if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING) && syncStage.value < SyncStage.PREBLOCKS.value) {
+                    initBlockChainDownloadFutures(peer);
+                    Futures.addCallback(preBlockDownloadFuture, preBlocksDownloadCallback, executor);
+                    log.info("startBlockChainDownloadFromPeer");
+                    setSyncStage(SyncStage.PREBLOCKS);
+                    queuePreBlockDownloadListeners(peer);
+                } else {
+                    // startBlockChainDownload will setDownloadData(true) on itself automatically.
+                    log.info("startBlockChainDownloadFromPeer 1");
+                    setSyncStage(SyncStage.BLOCKS);
+                    peer.startBlockChainDownload();
+                }
+            }
         } finally {
             lock.unlock();
         }
@@ -2422,5 +2736,14 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         } finally {
             lock.unlock();
         }
+    }
+
+    public SyncStage getSyncStage() {
+        return syncStage;
+    }
+
+    protected void setSyncStage(SyncStage syncStage) {
+        log.info("Sync Stage change from {} to {}", this.syncStage.name(), syncStage.name());
+        this.syncStage = syncStage;
     }
 }
