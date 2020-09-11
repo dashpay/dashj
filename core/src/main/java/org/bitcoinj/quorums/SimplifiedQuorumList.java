@@ -32,7 +32,7 @@ public class SimplifiedQuorumList extends Message {
     private CoinbaseTx coinbaseTxPayload;
 
     static final Sha256Hash invalidTestNetQuorumHash72000 = Sha256Hash.wrap("0000000007697fd69a799bfa26576a177e817bc0e45b9fcfbf48b362b05aeff2");
-
+    static final Sha256Hash invalidTestNetQuorumHash338688 = Sha256Hash.wrap("000000339cd97d45ee18cd0cba0fd590fb9c64e127d3c30885e5b7376af94fdf");
 
     public SimplifiedQuorumList(NetworkParameters params) {
         super(params);
@@ -110,7 +110,7 @@ public class SimplifiedQuorumList extends Message {
         return "SimplifiedQuorumList(count: " + size() + ")";
     }
 
-    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap) throws MasternodeListDiffException{
+    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, AbstractBlockChain chain) throws MasternodeListDiffException{
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
@@ -127,7 +127,7 @@ public class SimplifiedQuorumList extends Message {
                 result.removeCommitment(quorum);
             }
             for (FinalCommitment entry : diff.getNewQuorums()) {
-                StoredBlock block = Context.get().blockChain.getBlockStore().get(entry.getQuorumHash());
+                StoredBlock block = chain.getBlockStore().get(entry.getQuorumHash());
                 if(block != null) {
                     LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(entry.getLlmqType()));
                     if(llmqParameters == null)
@@ -135,14 +135,15 @@ public class SimplifiedQuorumList extends Message {
                     int dkgInterval = llmqParameters.dkgInterval;
                     if (block.getHeight() % dkgInterval != 0)
                         throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
-                    checkCommitment(entry, Context.get().blockChain.getChainHead(), Context.get().masternodeListManager);
+                    checkCommitment(entry, chain.getChainHead(), Context.get().masternodeListManager, chain);
                     isFirstQuorumCheck = false;
                 } else {
-                    int chainHeight = Context.get().blockChain.getBestChainHeight();
+                    int chainHeight = chain.getBestChainHeight();
                     //if quorum was created before DIP8 activation, then allow it to be added
                     if(chainHeight >= params.getDIP0008BlockHeight() || !isLoadingBootstrap) {
                         //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
-                        if (!isFirstQuorumCheck && entry.llmqType != 2 && !entry.quorumHash.equals(invalidTestNetQuorumHash72000))
+                        if (!isFirstQuorumCheck && entry.llmqType != 2 &&
+                                (!entry.quorumHash.equals(invalidTestNetQuorumHash72000) && !entry.quorumHash.equals(invalidTestNetQuorumHash338688)))
                             throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
                     }
                 }
@@ -365,13 +366,13 @@ public class SimplifiedQuorumList extends Message {
         blockHash = masternodeList.getBlockHash();
     }
 
-    void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager) throws BlockStoreException
+    void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager, AbstractBlockChain chain) throws BlockStoreException
     {
         if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitmentTxPayload.CURRENT_VERSION) {
             throw new VerificationException("invalid quorum commitment version" + commitment.getVersion());
         }
 
-        BlockStore blockStore = Context.get().blockChain.getBlockStore();
+        BlockStore blockStore = chain.getBlockStore();
         StoredBlock quorumBlock = blockStore.get(commitment.quorumHash);
         if(quorumBlock == null)
             throw new VerificationException("invalid quorum hash: " + commitment.quorumHash);

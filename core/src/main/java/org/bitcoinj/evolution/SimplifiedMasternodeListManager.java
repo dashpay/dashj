@@ -73,6 +73,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     Sha256Hash tipBlockHash;
 
     AbstractBlockChain blockChain;
+    AbstractBlockChain headersChain;
 
     Sha256Hash lastRequestHash = Sha256Hash.ZERO_HASH;
     GetSimplifiedMasternodeListDiff lastRequestMessage;
@@ -80,6 +81,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     static final long WAIT_GETMNLISTDIFF = 5000;
     Peer downloadPeer;
     boolean waitingForMNListDiff;
+    boolean initChainTipSync = false;
     LinkedHashMap<Sha256Hash, StoredBlock> pendingBlocksMap;
     ArrayList<StoredBlock> pendingBlocks;
 
@@ -105,6 +107,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         loadedFromFile = false;
         requiresLoadingFromFile = true;
         lastRequestMessage = new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH);
+        initChainTipSync = !context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
     }
 
     @Override
@@ -225,10 +228,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         Stopwatch watch = Stopwatch.createStarted();
         Stopwatch watchMNList = Stopwatch.createUnstarted();
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
+        boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
+        AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
         log.info("processing mnlistdiff between : " + mnList.getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
-            block = blockChain.getBlockStore().get(mnlistdiff.blockHash);
+            block = chain.getBlockStore().get(mnlistdiff.blockHash);
             if(!isLoadingBootStrap && block.getHeight() != newHeight)
                 throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
 
@@ -240,7 +245,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
                 watchQuorums.start();
-                newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap);
+                newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, chain);
                 if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
                     newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
             } else {
@@ -259,6 +264,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 pendingBlocks.remove(0);
                 pendingBlocksMap.remove(thisBlock.getHeader().getHash());
             } else log.warn("pendingBlocks is empty");
+
+            peerGroup.queueMasternodeListDownloadedListeners(mnlistdiff);
 
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
                 setFormatVersion(LLMQ_FORMAT_VERSION);
@@ -310,6 +317,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             watch.stop();
             log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
             waitingForMNListDiff = false;
+            if (isSyncingHeadersFirst) {
+                if (downloadPeer != null) {
+                    log.info("initChainTipSync=false");
+                    context.peerGroup.triggerMnListDownloadComplete();
+                    log.info("initChainTipSync=true");
+                    initChainTipSync = true;
+                } else {
+                    context.peerGroup.triggerMnListDownloadComplete();
+                    initChainTipSync = true;
+                }
+            }
             requestNextMNListDiff();
             lock.unlock();
         }
@@ -318,7 +336,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            if(isDeterministicMNsSporkActive() && isLoadedFromFile()) {
+            boolean value = initChainTipSync;
+            if(value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                 long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE  * 3 * 60;
                 if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
                     if(syncOptions == SyncOptions.SYNC_MINIMUM) {
@@ -346,7 +365,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             try {
                 if (downloadPeer == null)
                     downloadPeer = peer;
-                if (isDeterministicMNsSporkActive() && isLoadedFromFile()) {
+                boolean value = initChainTipSync;
+                if (value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                     maybeGetMNListDiffFresh();
                     if (!waitingForMNListDiff && mnList.getBlockHash().equals(params.getGenesisBlock().getHash()) || mnList.getHeight() < blockChain.getBestChainHeight()) {
                         long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
@@ -602,9 +622,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
+    public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headersChain, PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
+        this.headersChain = headersChain;
         if(shouldProcessMNListDiff()) {
             blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
             blockChain.addReorganizeListener(reorganizeListener);
@@ -718,6 +739,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
+                initChainTipSync = false;
                 unCache();
                 try {
                     if(bootStrapFilePath == null)
@@ -827,7 +849,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public void onFirstSaveComplete() {
         lock.lock();
         try {
-            if(blockChain == null)
+            if(blockChain == null || blockChain.getBestChainHeight() >= getListAtChainTip().getHeight())
                 return;
             StoredBlock block = blockChain.getChainHead();
             long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
@@ -915,5 +937,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public ReentrantLock getLock() {
         return lock;
+    }
+
+    public Peer getDownloadPeer() {
+        return downloadPeer != null ? downloadPeer : peerGroup.getDownloadPeer();
     }
 }

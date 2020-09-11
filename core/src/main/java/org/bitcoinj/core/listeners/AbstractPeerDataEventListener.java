@@ -44,4 +44,16 @@ public abstract class AbstractPeerDataEventListener implements PeerDataEventList
     public List<Message> getData(Peer peer, GetDataMessage m) {
         return null;
     }
+
+    @Override
+    public void onHeadersDownloaded(Peer peer, Block block, int blocksLeft) {
+    }
+
+    @Override
+    public void onHeadersDownloadStarted(Peer peer, int blocksLeft) {
+    }
+
+    @Override
+    public void onPreBlocksDownload(Peer peer) {
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Google Inc.
+ * Copyright 2020 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,30 @@
 
 package org.bitcoinj.core.listeners;
 
-import org.bitcoinj.core.*;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.FilteredBlock;
+import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.PeerGroup;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * <p>Implementors can listen to events like blocks being downloaded/transactions being broadcast/connect/disconnects,
  * they can pre-filter messages before they are processed by a {@link Peer} or {@link PeerGroup}, and they can
  * provide transactions to remote peers when they ask for them.</p>
  */
-public interface PeerDataEventListener extends BlocksDownloadedEventListener, ChainDownloadStartedEventListener,
-        GetDataEventListener, PreMessageReceivedEventListener,
-        HeadersDownloadedEventListener, HeadersDownloadStartedEventListener,
-        PreBlocksDownloadListener {
+public interface HeadersDownloadedEventListener {
+
+    /**
+     * <p>Called on a Peer thread when a group of headers received.</p>
+     *
+     * <p>The block may be a Block object that contains transactions, a Block object that is only a header when
+     * fast catchup is being used. If set, filteredBlock can be used to retrieve the list of associated transactions.</p>
+     *
+     * @param peer       the peer receiving the block
+     * @param block      the last downloaded block header from getheaders()
+     * @param blocksLeft the number of blocks left to download
+     */
+    void onHeadersDownloaded(Peer peer, Block block, int blocksLeft);
 }
