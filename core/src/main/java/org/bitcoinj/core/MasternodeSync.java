@@ -44,7 +44,9 @@ public class MasternodeSync {
         SYNC_QUORUM_LIST,
         SYNC_CHAINLOCKS,
         SYNC_INSTANTSENDLOCKS,
-        SYNC_SPORKS
+        SYNC_SPORKS,
+        SYNC_HEADERS_MN_LIST_FIRST,
+        SYNC_BLOCKS_AFTER_PREPROCESSING
     }
 
     public enum VERIFY_FLAGS {
