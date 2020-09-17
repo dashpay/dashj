@@ -348,4 +348,27 @@ public class SPVBlockStore implements BlockStore {
             return null;
         } finally { lock.unlock(); }
     }
+
+    @Override
+    public StoredBlock getChainHeadFromHash(Sha256Hash hash) throws BlockStoreException {
+
+        StoredBlock cursor = get(hash);
+        StoredBlock current = cursor;
+        while (cursor != null) {
+            cursor = getNextBlock(cursor.getHeader().getHash());
+            if (cursor == null)
+                return current;
+            current = cursor;
+        }
+
+        return null;
+    }
+
+    private StoredBlock getNextBlock(Sha256Hash hash) {
+        for (Map.Entry<Sha256Hash, StoredBlock> entry : blockCache.entrySet()) {
+            if (entry.getValue().getHeader().getPrevBlockHash().equals(hash))
+                return entry.getValue();
+        }
+        return null;
+    }
 }

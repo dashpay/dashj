@@ -18,6 +18,8 @@ package org.bitcoinj.store;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -154,5 +156,13 @@ public class MySQLFullPrunedBlockStore extends DatabaseFullPrunedBlockStore {
     @Override
     protected String getDatabaseDriverClass() {
         return DATABASE_DRIVER_CLASS;
+    }
+
+    /**
+     * Returns the StoredBlock at the head of the chain specified by hash.
+     * If no such block is found, returns null.
+     */
+    public StoredBlock getChainHeadFromHash(Sha256Hash hash) throws BlockStoreException {
+        throw new UnsupportedOperationException();
     }
 }
