@@ -7,6 +7,7 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -75,10 +76,11 @@ public class SporkManager {
         eventListeners = new CopyOnWriteArrayList<ListenerRegistration<SporkUpdatedEventListener>>();
     }
 
-    void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup)
-    {
+    void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup) {
         this.blockChain = blockChain;
-        peerGroup.addConnectedEventListener(peerConnectedEventListener);
+        if (peerGroup != null) {
+            peerGroup.addConnectedEventListener(peerConnectedEventListener);
+        }
     }
 
     public void close(PeerGroup peerGroup) {

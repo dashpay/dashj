@@ -15,6 +15,7 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,11 +58,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
         this.runWithoutThread = runWithoutThread;
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
+    public void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.blockChain.addTransactionReceivedListener(this.transactionReceivedInBlockListener);
         this.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, this.newBestBlockListener);
-        peerGroup.addOnTransactionBroadcastListener(this.transactionBroadcastListener);
+        if (peerGroup != null) {
+            peerGroup.addOnTransactionBroadcastListener(this.transactionBroadcastListener);
+        }
         context.chainLockHandler.addChainLockListener(this.chainLockListener, Threading.SAME_THREAD);
     }
 

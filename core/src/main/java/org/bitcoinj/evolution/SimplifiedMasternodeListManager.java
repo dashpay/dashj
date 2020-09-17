@@ -17,6 +17,7 @@ import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
@@ -389,6 +390,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     ReorganizeListener reorganizeListener = new ReorganizeListener() {
         @Override
         public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks, List<StoredBlock> newBlocks) throws VerificationException {
+            if (!shouldProcessMNListDiff()) {
+                return;
+            }
             lock.lock();
             try {
                 SimplifiedMasternodeList mnlistAtSplitPoint = mnListsCache.get(splitPoint.getHeader().getHash());
@@ -602,15 +606,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
+    public void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
         if(shouldProcessMNListDiff()) {
             blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
             blockChain.addReorganizeListener(reorganizeListener);
-            peerGroup.addConnectedEventListener(peerConnectedEventListener);
-            peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
-            peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
+            if (peerGroup != null) {
+                peerGroup.addConnectedEventListener(peerConnectedEventListener);
+                peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+                peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
+            }
         }
     }
 
