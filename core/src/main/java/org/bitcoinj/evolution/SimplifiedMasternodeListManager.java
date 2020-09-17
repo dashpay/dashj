@@ -416,6 +416,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     ReorganizeListener reorganizeListener = new ReorganizeListener() {
         @Override
         public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks, List<StoredBlock> newBlocks) throws VerificationException {
+            if (!shouldProcessMNListDiff()) {
+                return;
+            }
             lock.lock();
             try {
                 SimplifiedMasternodeList mnlistAtSplitPoint = mnListsCache.get(splitPoint.getHeader().getHash());
@@ -629,16 +632,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headersChain, PeerGroup peerGroup) {
+    public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headersChain, @Nullable PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
         this.headersChain = headersChain;
         if(shouldProcessMNListDiff()) {
             blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
             blockChain.addReorganizeListener(reorganizeListener);
-            peerGroup.addConnectedEventListener(peerConnectedEventListener);
-            peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
-            peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
+            if (peerGroup != null) {
+                peerGroup.addConnectedEventListener(peerConnectedEventListener);
+                peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+                peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
+            }
         }
     }
 
