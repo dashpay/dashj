@@ -690,8 +690,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         return "SimplifiedMNListManager:  {tip:" + mnList + ", " + quorumList + ", pending blocks: " + pendingBlocks.size() + "}";
     }
 
+    @Deprecated
     public long getSpork15Value() {
-        return context.sporkManager.getSporkValue(SporkManager.SPORK_15_DETERMINISTIC_MNS_ENABLED);
+        return 0;
     }
 
     public boolean isDeterministicMNsSporkActive(long height) {

@@ -72,16 +72,16 @@ public class InstantSendManager implements RecoveredSignatureListener {
         context.chainLockHandler.removeChainLockListener(this.chainLockListener);
     }
 
+    @Deprecated
     public boolean isOldInstantSendEnabled()
     {
-        return context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) &&
-                !context.sporkManager.isSporkActive(SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED);
+        return false;
     }
 
+    @Deprecated
     public boolean isNewInstantSendEnabled()
     {
-        return context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) &&
-                context.sporkManager.isSporkActive(SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED);
+        return isInstantSendEnabled();
     }
 
     public boolean isInstantSendEnabled()
@@ -90,7 +90,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
     }
 
     public void processInstantSendLock(Peer peer, InstantSendLock isLock) {
-        if(!isNewInstantSendEnabled())
+        if(!isInstantSendEnabled())
             return;
 
         if (!preVerifyInstantSendLock(peer.hashCode(), isLock)) {
@@ -155,7 +155,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     public boolean alreadyHave(InventoryItem inv)
     {
-        if (!isNewInstantSendEnabled()) {
+        if (!isInstantSendEnabled()) {
             return true;
         }
 
@@ -243,10 +243,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     public boolean checkCanLock(Transaction tx, boolean printDebug)
     {
-        if (context.sporkManager.isSporkActive(SporkManager.SPORK_16_INSTANTSEND_AUTOLOCKS) ) {
-            return false;
-        }
-
         if (tx.getInputs().isEmpty()) {
             // can't lock TXs without inputs (e.g. quorum commitments)
             return false;
@@ -273,19 +269,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 if(in.getValue() != null)
                     value = value.add(in.getValue());
             }
-        }
-
-        // TODO decide if we should limit max input values. This was ok to do in the old system, but in the new system
-        // where we want to have all TXs locked at some point, this is counterproductive (especially when ChainLocks later
-        // depend on all TXs being locked first)
-        Coin maxValueIn = Coin.valueOf(context.sporkManager.getSporkValue(SporkManager.SPORK_5_INSTANTSEND_MAX_VALUE));
-
-        if (value.compareTo(maxValueIn) > 0) {
-            if (printDebug) {
-                log.info("txid={}: TX input value too high. nValueIn={}, maxValueIn={}",
-                         tx.getHash().toString(), value, maxValueIn);
-            }
-            return false;
         }
 
         return true;
@@ -406,7 +389,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             return false;
         }
 
-        if (!isNewInstantSendEnabled()) {
+        if (!isInstantSendEnabled()) {
             return false;
         }
 
@@ -598,7 +581,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     public void syncTransaction(Transaction tx, StoredBlock block, int posInBlock)
     {
-        if (!isNewInstantSendEnabled()) {
+        if (!isInstantSendEnabled()) {
             return;
         }
 
@@ -701,7 +684,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     public InstantSendLock getInstantSendLockByHash(Sha256Hash hash)
     {
-        if (!isNewInstantSendEnabled()) {
+        if (!isInstantSendEnabled()) {
             return null;
         }
 
@@ -716,7 +699,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     boolean isLocked(Sha256Hash txHash)
     {
-        if (!isNewInstantSendEnabled()) {
+        if (!isInstantSendEnabled()) {
             return false;
         }
 
@@ -741,7 +724,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     public Sha256Hash getConflictingTx(Transaction tx)
     {
-        if (!isNewInstantSendEnabled()) {
+        if (!isInstantSendEnabled()) {
             return null;
         }
 
@@ -765,7 +748,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     @Override
     public void onNewRecoveredSignature(RecoveredSignature recoveredSig) {
-        if (!isNewInstantSendEnabled()) {
+        if (!isInstantSendEnabled()) {
             return;
         }
 

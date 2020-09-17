@@ -52,28 +52,25 @@ public class SporkManager {
     public static final int SPORK_18_QUORUM_DEBUG_ENABLED                          = 10017;
     public static final int SPORK_19_CHAINLOCKS_ENABLED                            = 10018;
     public static final int SPORK_20_INSTANTSEND_LLMQ_BASED                        = 10019;
+    public static final int SPORK_21_QUORUM_ALL_CONNECTED                          = 10020;
+    public static final int SPORK_22_PS_MORE_PARTICIPANTS                          = 10021;
 
 
     static final int SPORK_START = SPORK_2_INSTANTSEND_ENABLED;
-    static final int SPORK_END   = SPORK_20_INSTANTSEND_LLMQ_BASED;
+    static final int SPORK_END   = SPORK_22_PS_MORE_PARTICIPANTS;
 
     private static final HashMap<Integer, Long> mapSporkDefaults;
     static {
         mapSporkDefaults = new HashMap<>();
         mapSporkDefaults.put(SPORK_2_INSTANTSEND_ENABLED, 0L);
         mapSporkDefaults.put(SPORK_3_INSTANTSEND_BLOCK_FILTERING, 0L);
-        mapSporkDefaults.put(SPORK_5_INSTANTSEND_MAX_VALUE, 1000L);
-        mapSporkDefaults.put(SPORK_6_NEW_SIGS, 4070908800L);
+        mapSporkDefaults.put(SPORK_6_NEW_SIGS, 4070908800L); // obsolete, but still used in Governance code
         mapSporkDefaults.put(SPORK_9_SUPERBLOCKS_ENABLED, 4070908800L);
-        mapSporkDefaults.put(SPORK_10_MASTERNODE_PAY_UPDATED_NODES, 4070908800L);
-        mapSporkDefaults.put(SPORK_12_RECONSIDER_BLOCKS, 0L);
-        mapSporkDefaults.put(SPORK_14_REQUIRE_SENTINEL_FLAG, 4070908800L);
-        mapSporkDefaults.put(SPORK_15_DETERMINISTIC_MNS_ENABLED, 4070908800L); // OFF
-        mapSporkDefaults.put(SPORK_16_INSTANTSEND_AUTOLOCKS,         4070908800L); // OFF
         mapSporkDefaults.put(SPORK_17_QUORUM_DKG_ENABLED,            4070908800L);// OFF
         mapSporkDefaults.put(SPORK_18_QUORUM_DEBUG_ENABLED,          4070908800L); // OFF
         mapSporkDefaults.put(SPORK_19_CHAINLOCKS_ENABLED,            4070908800L); // OFF
-        mapSporkDefaults.put(SPORK_20_INSTANTSEND_LLMQ_BASED,        4070908800L); // OFF
+        mapSporkDefaults.put(SPORK_21_QUORUM_ALL_CONNECTED,          4070908800L); // OFF
+        mapSporkDefaults.put(SPORK_22_PS_MORE_PARTICIPANTS, 4070908800L); // OFF
     }
 
     byte [] sporkPubKeyId;
@@ -174,15 +171,7 @@ public class SporkManager {
 
     public void executeSpork(int sporkId, long value)
     {
-        //correct fork via spork technology
-        if(sporkId == SPORK_12_RECONSIDER_BLOCKS && value > 0) {
-            reprocessBlocks((int) value);
-        }
-    }
 
-    void reprocessBlocks(int blocks)
-    {
-        //no implementation
     }
 
     public int getSporkIdByName(String strName)
@@ -201,7 +190,8 @@ public class SporkManager {
         if (strName.equals("SPORK_18_QUORUM_DEBUG_ENABLED"))             return SPORK_18_QUORUM_DEBUG_ENABLED;
         if (strName.equals("SPORK_19_CHAINLOCKS_ENABLED"))               return SPORK_19_CHAINLOCKS_ENABLED;
         if (strName.equals("SPORK_20_INSTANTSEND_LLMQ_BASED"))           return SPORK_20_INSTANTSEND_LLMQ_BASED;
-
+        if (strName.equals("SPORK_21_QUORUM_ALL_CONNECTED"))             return SPORK_21_QUORUM_ALL_CONNECTED;
+        if (strName.equals("SPORK_22_PS_MORE_PARTICIPANTS"))             return SPORK_22_PS_MORE_PARTICIPANTS;
         return -1;
     }
 
@@ -223,6 +213,8 @@ public class SporkManager {
             case SPORK_18_QUORUM_DEBUG_ENABLED:             return "SPORK_18_QUORUM_DEBUG_ENABLED";
             case SPORK_19_CHAINLOCKS_ENABLED:               return "SPORK_19_CHAINLOCKS_ENABLED";
             case SPORK_20_INSTANTSEND_LLMQ_BASED:           return "SPORK_20_INSTANTSEND_LLMQ_BASED";
+            case SPORK_21_QUORUM_ALL_CONNECTED:             return "SPORK_21_QUORUM_ALL_CONNECTED";
+            case SPORK_22_PS_MORE_PARTICIPANTS:             return "SPORK_22_PS_MORE_PARTICIPANTS";
             default:
                 return "Unknown";
         }

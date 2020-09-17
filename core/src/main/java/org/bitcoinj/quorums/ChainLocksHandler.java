@@ -308,8 +308,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     public boolean isNewInstantSendEnabled()
     {
-        return context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED) &&
-                context.sporkManager.isSporkActive(SporkManager.SPORK_20_INSTANTSEND_LLMQ_BASED);
+        return context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED);
     }
 
     void enforceBestChainLock()
