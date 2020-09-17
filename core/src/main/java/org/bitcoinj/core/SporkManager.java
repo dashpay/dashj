@@ -35,28 +35,25 @@ public class SporkManager {
     public static final int SPORK_18_QUORUM_DEBUG_ENABLED                          = 10017;
     public static final int SPORK_19_CHAINLOCKS_ENABLED                            = 10018;
     public static final int SPORK_20_INSTANTSEND_LLMQ_BASED                        = 10019;
+    public static final int SPORK_21_QUORUM_ALL_CONNECTED                          = 10020;
+    public static final int SPORK_22_PS_MORE_PARTICIPANTS                          = 10021;
 
 
     static final int SPORK_START = SPORK_2_INSTANTSEND_ENABLED;
-    static final int SPORK_END   = SPORK_20_INSTANTSEND_LLMQ_BASED;
+    static final int SPORK_END   = SPORK_22_PS_MORE_PARTICIPANTS;
 
     private static HashMap<Integer, Long> mapSporkDefaults;
     static {
         mapSporkDefaults = new HashMap<Integer, Long>();
         mapSporkDefaults.put(SPORK_2_INSTANTSEND_ENABLED, 0L);
         mapSporkDefaults.put(SPORK_3_INSTANTSEND_BLOCK_FILTERING, 0L);
-        mapSporkDefaults.put(SPORK_5_INSTANTSEND_MAX_VALUE, 1000L);
-        mapSporkDefaults.put(SPORK_6_NEW_SIGS, 4070908800L);
+        mapSporkDefaults.put(SPORK_6_NEW_SIGS, 4070908800L); // obsolete, but still used in Governance code
         mapSporkDefaults.put(SPORK_9_SUPERBLOCKS_ENABLED, 4070908800L);
-        mapSporkDefaults.put(SPORK_10_MASTERNODE_PAY_UPDATED_NODES, 4070908800L);
-        mapSporkDefaults.put(SPORK_12_RECONSIDER_BLOCKS, 0L);
-        mapSporkDefaults.put(SPORK_14_REQUIRE_SENTINEL_FLAG, 4070908800L);
-        mapSporkDefaults.put(SPORK_15_DETERMINISTIC_MNS_ENABLED, 4070908800L); // OFF
-        mapSporkDefaults.put(SPORK_16_INSTANTSEND_AUTOLOCKS,         4070908800L); // OFF
         mapSporkDefaults.put(SPORK_17_QUORUM_DKG_ENABLED,            4070908800L);// OFF
         mapSporkDefaults.put(SPORK_18_QUORUM_DEBUG_ENABLED,          4070908800L); // OFF
         mapSporkDefaults.put(SPORK_19_CHAINLOCKS_ENABLED,            4070908800L); // OFF
-        mapSporkDefaults.put(SPORK_20_INSTANTSEND_LLMQ_BASED,        4070908800L); // OFF
+        mapSporkDefaults.put(SPORK_21_QUORUM_ALL_CONNECTED,          4070908800L); // OFF
+        mapSporkDefaults.put(SPORK_22_PS_MORE_PARTICIPANTS, 4070908800L); // OFF
     }
 
     MasternodeSignature sig;
@@ -176,15 +173,7 @@ public class SporkManager {
 
     public void executeSpork(int nSporkID, long nValue)
     {
-        //correct fork via spork technology
-        if(nSporkID == SPORK_12_RECONSIDER_BLOCKS && nValue > 0) {
-            reprocessBlocks((int) nValue);
-        }
-    }
 
-    void reprocessBlocks(int nBlocks)
-    {
-        //no implementation
     }
 
     boolean updateSpork(int nSporkID, long nValue)
@@ -241,20 +230,22 @@ public class SporkManager {
 
     public int getSporkIDByName(String strName)
     {
-        if (strName == "SPORK_2_INSTANTSEND_ENABLED")               return SPORK_2_INSTANTSEND_ENABLED;
-        if (strName == "SPORK_3_INSTANTSEND_BLOCK_FILTERING")       return SPORK_3_INSTANTSEND_BLOCK_FILTERING;
-        if (strName == "SPORK_5_INSTANTSEND_MAX_VALUE")             return SPORK_5_INSTANTSEND_MAX_VALUE;
-        if (strName == "SPORK_6_NEW_SIGS")                          return SPORK_6_NEW_SIGS;
-        if (strName == "SPORK_9_SUPERBLOCKS_ENABLED")               return SPORK_9_SUPERBLOCKS_ENABLED;
-        if (strName == "SPORK_10_MASTERNODE_PAY_UPDATED_NODES")     return SPORK_10_MASTERNODE_PAY_UPDATED_NODES;
-        if (strName == "SPORK_12_RECONSIDER_BLOCKS")                return SPORK_12_RECONSIDER_BLOCKS;
-        if (strName == "SPORK_14_REQUIRE_SENTINEL_FLAG")            return SPORK_14_REQUIRE_SENTINEL_FLAG;
-        if (strName == "SPORK_15_DETERMINISTIC_MNS_ENABLED")        return SPORK_15_DETERMINISTIC_MNS_ENABLED;
-        if (strName == "SPORK_16_INSTANTSEND_AUTOLOCKS")            return SPORK_16_INSTANTSEND_AUTOLOCKS;
-        if (strName == "SPORK_17_QUORUM_DKG_ENABLED")               return SPORK_17_QUORUM_DKG_ENABLED;
-        if (strName == "SPORK_18_QUORUM_DEBUG_ENABLED")             return SPORK_18_QUORUM_DEBUG_ENABLED;
-        if (strName == "SPORK_19_CHAINLOCKS_ENABLED")               return SPORK_19_CHAINLOCKS_ENABLED;
-        if (strName == "SPORK_20_INSTANTSEND_LLMQ_BASED")           return SPORK_20_INSTANTSEND_LLMQ_BASED;
+        if (strName.equals("SPORK_2_INSTANTSEND_ENABLED"))               return SPORK_2_INSTANTSEND_ENABLED;
+        if (strName.equals("SPORK_3_INSTANTSEND_BLOCK_FILTERING"))       return SPORK_3_INSTANTSEND_BLOCK_FILTERING;
+        if (strName.equals("SPORK_5_INSTANTSEND_MAX_VALUE"))             return SPORK_5_INSTANTSEND_MAX_VALUE;
+        if (strName.equals("SPORK_6_NEW_SIGS"))                          return SPORK_6_NEW_SIGS;
+        if (strName.equals("SPORK_9_SUPERBLOCKS_ENABLED"))               return SPORK_9_SUPERBLOCKS_ENABLED;
+        if (strName.equals("SPORK_10_MASTERNODE_PAY_UPDATED_NODES"))     return SPORK_10_MASTERNODE_PAY_UPDATED_NODES;
+        if (strName.equals("SPORK_12_RECONSIDER_BLOCKS"))                return SPORK_12_RECONSIDER_BLOCKS;
+        if (strName.equals("SPORK_14_REQUIRE_SENTINEL_FLAG"))            return SPORK_14_REQUIRE_SENTINEL_FLAG;
+        if (strName.equals("SPORK_15_DETERMINISTIC_MNS_ENABLED"))        return SPORK_15_DETERMINISTIC_MNS_ENABLED;
+        if (strName.equals("SPORK_16_INSTANTSEND_AUTOLOCKS"))            return SPORK_16_INSTANTSEND_AUTOLOCKS;
+        if (strName.equals("SPORK_17_QUORUM_DKG_ENABLED"))               return SPORK_17_QUORUM_DKG_ENABLED;
+        if (strName.equals("SPORK_18_QUORUM_DEBUG_ENABLED"))             return SPORK_18_QUORUM_DEBUG_ENABLED;
+        if (strName.equals("SPORK_19_CHAINLOCKS_ENABLED"))               return SPORK_19_CHAINLOCKS_ENABLED;
+        if (strName.equals("SPORK_20_INSTANTSEND_LLMQ_BASED"))           return SPORK_20_INSTANTSEND_LLMQ_BASED;
+        if (strName.equals("SPORK_21_QUORUM_ALL_CONNECTED"))             return SPORK_21_QUORUM_ALL_CONNECTED;
+        if (strName.equals("SPORK_22_PS_MORE_PARTICIPANTS"))             return SPORK_22_PS_MORE_PARTICIPANTS;
 
         return -1;
     }
@@ -277,6 +268,8 @@ public class SporkManager {
             case SPORK_18_QUORUM_DEBUG_ENABLED:             return "SPORK_18_QUORUM_DEBUG_ENABLED";
             case SPORK_19_CHAINLOCKS_ENABLED:               return "SPORK_19_CHAINLOCKS_ENABLED";
             case SPORK_20_INSTANTSEND_LLMQ_BASED:           return "SPORK_20_INSTANTSEND_LLMQ_BASED";
+            case SPORK_21_QUORUM_ALL_CONNECTED:             return "SPORK_21_QUORUM_ALL_CONNECTED";
+            case SPORK_22_PS_MORE_PARTICIPANTS:             return "SPORK_22_PS_MORE_PARTICIPANTS";
             default:
                 return "Unknown";
         }
