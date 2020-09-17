@@ -145,14 +145,14 @@ class RuleList {
 
 public class FullBlockTestGenerator {
     // Used by BitcoindComparisonTool and AbstractFullPrunedBlockChainTest to create test cases
-    private NetworkParameters params;
+    protected NetworkParameters params;
     private ECKey coinbaseOutKey;
-    private byte[] coinbaseOutKeyPubKey;
+    protected byte[] coinbaseOutKeyPubKey;
 
     // Used to double-check that we are always using the right next-height
     private Map<Sha256Hash, Integer> blockToHeightMap = new HashMap<>();
 
-    private Map<Sha256Hash, Block> hashHeaderMap = new HashMap<>();
+    protected Map<Sha256Hash, Block> hashHeaderMap = new HashMap<>();
     private Map<Sha256Hash, Sha256Hash> coinbaseBlockMap = new HashMap<>();
 
     public FullBlockTestGenerator(NetworkParameters params) {
@@ -1776,8 +1776,8 @@ public class FullBlockTestGenerator {
     }
 
     private byte uniquenessCounter = 0;
-    private NewBlock createNextBlock(Block baseBlock, int nextBlockHeight, @Nullable TransactionOutPointWithValue prevOut,
-                                     Coin additionalCoinbaseValue) throws ScriptException {
+    protected NewBlock createNextBlock(Block baseBlock, int nextBlockHeight, @Nullable TransactionOutPointWithValue prevOut,
+                                       Coin additionalCoinbaseValue) throws ScriptException {
         Integer height = blockToHeightMap.get(baseBlock.getHash());
         if (height != null)
             checkState(height == nextBlockHeight - 1);
@@ -1797,8 +1797,8 @@ public class FullBlockTestGenerator {
         }
         return new NewBlock(block, prevOut == null ? null : new TransactionOutPointWithValue(t, 1));
     }
-    private NewBlock createNextBlock(NewBlock baseBlock, int nextBlockHeight, @Nullable TransactionOutPointWithValue prevOut,
-                                     Coin additionalCoinbaseValue) throws ScriptException {
+    protected NewBlock createNextBlock(NewBlock baseBlock, int nextBlockHeight, @Nullable TransactionOutPointWithValue prevOut,
+                             Coin additionalCoinbaseValue) throws ScriptException {
         return createNextBlock(baseBlock.block, nextBlockHeight, prevOut, additionalCoinbaseValue);
     }
 

@@ -21,6 +21,8 @@ import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 import org.bitcoinj.core.listeners.*;
+import org.bitcoinj.quorums.ChainLocksHandler;
+import org.bitcoinj.quorums.listeners.ChainLockListener;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.store.*;
 import org.bitcoinj.utils.*;
@@ -94,6 +96,8 @@ public abstract class AbstractBlockChain {
      * potentially invalidating transactions in our wallet.
      */
     protected StoredBlock chainHead;
+
+    protected ChainLocksHandler chainLocksHandler;
 
     // TODO: Scrap this and use a proper read/write for all of the block chain objects.
     // The chainHead field is read/written synchronized with this object rather than BlockChain. However writing is
@@ -554,7 +558,24 @@ public abstract class AbstractBlockChain {
             // Note that we send the transactions to the wallet FIRST, even if we're about to re-organize this block
             // to become the new best chain head. This simplifies handling of the re-org in the Wallet class.
             StoredBlock newBlock = storedPrev.build(block);
-            boolean haveNewBestChain = newBlock.moreWorkThan(head);
+            boolean isOldBlockChainLocked = false;
+            if (hasChainlocksHandler()) {
+                final StoredBlock chainLockedBlock = chainLocksHandler.getBestChainLockBlock();
+                // we need to rewind the blockchain to find the last chainlocked block
+                StoredBlock commonParent = findSplit(newBlock, chainHead, blockStore);
+                if (chainLockedBlock != null) {
+                    StoredBlock cursor = chainHead;
+                    while (cursor != null && !commonParent.getHeader().getHash().equals(cursor) &&
+                        cursor.getHeight() >= chainLockedBlock.getHeight()) {
+                        if (cursor.getHeader().getHash().equals(chainLockedBlock.getHeader().getHash())) {
+                            isOldBlockChainLocked = true;
+                            break;
+                        }
+                        cursor = cursor.getPrev(blockStore);
+                    }
+                }
+            }
+            boolean haveNewBestChain = newBlock.moreWorkThan(head) && !isOldBlockChainLocked;
             if (haveNewBestChain) {
                 log.info("Block is causing a re-organize");
             } else {
@@ -769,7 +790,13 @@ public abstract class AbstractBlockChain {
             }
         } else {
             // (Finally) write block to block store
-            storedNewHead = addToBlockStore(storedPrev, newChainHead.getHeader());
+            // is the block already in the block store
+            StoredBlock existingBlock = blockStore.get(newChainHead.getHeader().getHash());
+            if (existingBlock == null) {
+                storedNewHead = addToBlockStore(storedPrev, newChainHead.getHeader());
+            } else {
+                storedNewHead = existingBlock;
+            }
         }
         // Now inform the listeners. This is necessary so the set of currently active transactions (that we can spend)
         // can be updated to take into account the re-organize. We might also have received new coins we didn't have
@@ -1061,5 +1088,75 @@ public abstract class AbstractBlockChain {
 
     protected VersionTally getVersionTally() {
         return versionTally;
+    }
+
+    public ChainLocksHandler getChainLocksHandler() {
+        return chainLocksHandler;
+    }
+
+    private ChainLockListener chainLockListener = new ChainLockListener() {
+        @Override
+        public void onNewChainLock(StoredBlock block) {
+            // determine if this block is active chain
+            handleChainLock(block);
+        }
+    };
+
+    public void handleChainLock(StoredBlock chainLockedBlock) {
+        lock.lock();
+        try {
+            if (!chainLockedBlock.getHeader().getHash().equals(getChainHead().getHeader().getHash())) {
+                // did we get the new block yet
+                try {
+                    //check to see if this refers to a previous block in the same chain
+                    StoredBlock storedChainLockedBlock = blockStore.get(chainLockedBlock.getHeader().getHash());
+                    if (storedChainLockedBlock != null) {
+                        StoredBlock cursor = chainHead;
+                        while (cursor != null && cursor.getHeight() >= storedChainLockedBlock.getHeight()) {
+                            cursor = cursor.getPrev(blockStore);
+                            if (cursor.getHeader().getHash().equals(storedChainLockedBlock.getHeader().getHash())) {
+                                // if there is a chainlock on this chain, then don't reorganize
+                                return;
+                            }
+                        }
+                        StoredBlock prevBlock = getChainHead();
+                        // is chainLockedBlock the tip of the new chain
+                        // Finding the new tip only works in SPV mode, not FullPruned mode
+                        StoredBlock newTip = chainLockedBlock;
+                        try {
+                            newTip = blockStore.getChainHeadFromHash(storedChainLockedBlock.getHeader().getHash());
+
+                            if (newTip == null)
+                                newTip = chainLockedBlock;
+
+                        } catch (UnsupportedOperationException x) {
+                            // swallow
+                        }
+                        handleNewBestChain(prevBlock, newTip, newTip.getHeader(), shouldVerifyTransactions());
+                    }
+                } catch (BlockStoreException x) {
+                    throw new RuntimeException(x);
+                } catch (PrunedException x) {
+                    //swallow
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void setChainLocksHandler(ChainLocksHandler chainLocksHandler) {
+        this.chainLocksHandler = chainLocksHandler;
+        this.chainLocksHandler.addChainLockListener(chainLockListener);
+    }
+
+    protected boolean hasChainlocksHandler() {
+        return chainLocksHandler != null;
+    }
+
+    public void close() {
+        if (hasChainlocksHandler()) {
+            chainLocksHandler.removeChainLockListener(chainLockListener);
+        }
     }
 }

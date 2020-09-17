@@ -17,17 +17,21 @@ package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
+import org.bitcoinj.crypto.BLSSecretKey;
+import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.quorums.listeners.ChainLockListener;
 import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
+import org.dashj.bls.PrivateKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -637,5 +641,19 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     @Override
     public String toString() {
         return "ChainLocksHandler(" + (bestChainLockHash != null ? bestChainLockHash : "no chain locked") + ")";
+    }
+
+    public void setBestChainLockBlockMock(StoredBlock bestChainLockBlock) {
+        this.bestChainLockBlock = bestChainLockBlock;
+        BLSSecretKey secretKey = new BLSSecretKey(PrivateKey.FromSeed(bestChainLockBlock.getHeader().getHash().getBytes(), 32));
+        BLSSignature signature = secretKey.Sign(bestChainLockBlock.getHeader().getHash());
+        this.bestChainLock = new ChainLockSignature(bestChainLockBlock.getHeight(), bestChainLockBlock.getHeader().getHash(), signature);
+        this.bestChainLockHash = bestChainLockBlock.getHeader().getHash();
+        blockChain.handleChainLock(bestChainLockBlock);
+    }
+
+    public void setBestChainLockBlockMock(Block bestChainLockBlock, int height) {
+        StoredBlock storedBlock = new StoredBlock(bestChainLockBlock, BigInteger.ONE, height);
+        setBestChainLockBlockMock(storedBlock);
     }
 }
