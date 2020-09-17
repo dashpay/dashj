@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+@Deprecated
 public class EvolutionUser extends ChildMessage {
 
     private Sha256Hash regTxId;

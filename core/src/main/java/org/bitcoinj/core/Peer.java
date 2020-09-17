@@ -848,9 +848,6 @@ public class Peer extends PeerSocketHandler {
                                     try {
                                         log.info("{}: Dependency download complete!", getAddress());
                                         wallet.receivePending(tx, dependencies);
-
-                                        if(context.evoUserManager != null)
-                                            context.evoUserManager.processSpecialTransaction(tx, null);
                                     } catch (VerificationException e) {
                                         log.error("{}: Wallet failed to process pending transaction {}", getAddress(), tx.getTxId());
                                         log.error("Error was: ", e);
@@ -867,9 +864,6 @@ public class Peer extends PeerSocketHandler {
                             }, MoreExecutors.directExecutor());
                         } else {
                             wallet.receivePending(tx, null);
-
-                            if(context.evoUserManager != null)
-                                context.evoUserManager.processSpecialTransaction(tx, null);
                         }
                     }
                 } catch (VerificationException e) {

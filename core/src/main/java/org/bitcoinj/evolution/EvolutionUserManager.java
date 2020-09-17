@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.evolution.SubTxTransition.EVO_TS_MAX_FEE;
 import static org.bitcoinj.evolution.SubTxTransition.EVO_TS_MIN_FEE;
-
+@Deprecated
 public class EvolutionUserManager extends AbstractManager implements TransactionReceivedInBlockListener {
 
     private static final Logger log = LoggerFactory.getLogger(EvolutionUserManager.class);

@@ -20,7 +20,6 @@ import org.bitcoinj.evolution.MasternodeMetaDataManager;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import javax.annotation.Nullable;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
-import org.bitcoinj.evolution.EvolutionUserManager;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceTriggerManager;
@@ -82,7 +81,6 @@ public class Context {
     public GovernanceManager governanceManager;
     public GovernanceTriggerManager triggerManager;
     public NetFullfilledRequestManager netFullfilledRequestManager;
-    public EvolutionUserManager evoUserManager;
     public SimplifiedMasternodeListManager masternodeListManager;
     public static boolean fMasterNode = false;
     private VoteConfidenceTable voteConfidenceTable;
@@ -258,7 +256,6 @@ public class Context {
         triggerManager = new GovernanceTriggerManager(this);
 
         netFullfilledRequestManager = new NetFullfilledRequestManager(this);
-        evoUserManager = new EvolutionUserManager(this);
         masternodeListManager = new SimplifiedMasternodeListManager(this);
         recoveredSigsDB = new SPVRecoveredSignaturesDatabase(this);
         quorumManager = new SPVQuorumManager(this, masternodeListManager);
@@ -285,7 +282,6 @@ public class Context {
         initializedDash = false;
         governanceManager = null;
         masternodeListManager = null;
-        evoUserManager = null;
     }
 
     public void initDashSync(final String directory)
@@ -303,9 +299,9 @@ public class Context {
 
                 boolean success = gmdb.load(governanceManager);
 
-                FlatDB<EvolutionUserManager> evdb = new FlatDB<EvolutionUserManager>(directory, "user.dat", "magicMasternodeCache");
+                //latDB<EvolutionUserManager> evdb = new FlatDB<EvolutionUserManager>(directory, "user.dat", "magicMasternodeCache");
 
-                success = evdb.load(evoUserManager);
+                //success = evdb.load(evoUserManager);
 
                 FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(Context.this, directory, false);
 
@@ -341,7 +337,6 @@ public class Context {
             sporkManager.close(peerGroup);
             masternodeSync.close();
             masternodeListManager.close();
-            blockChain.removeTransactionReceivedListener(evoUserManager);
             instantSendManager.close(peerGroup);
             signingManager.close();
             chainLockHandler.close();
@@ -362,10 +357,10 @@ public class Context {
             sporkManager.setBlockChain(chain, peerGroup);
             masternodeSync.setBlockChain(chain);
             masternodeListManager.setBlockChain(chain, peerGroup);
-            chain.addTransactionReceivedListener(evoUserManager);
             instantSendManager.setBlockChain(chain, peerGroup);
             signingManager.setBlockChain(chain);
             chainLockHandler.setBlockChain(chain);
+            blockChain.setChainLocksHandler(chainLockHandler);
             quorumManager.setBlockChain(chain);
             updatedChainHead(chain.getChainHead());
         }

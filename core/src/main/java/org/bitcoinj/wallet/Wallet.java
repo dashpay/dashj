@@ -2680,10 +2680,6 @@ public class Wallet extends BaseTaggableObject
                 return false;
             log.info("commitTx of {}", tx.getTxId());
 
-            if(context.evoUserManager != null) { //Check for unit tests
-                context.evoUserManager.processSpecialTransaction(tx, null);
-            }
-
             log.info("commitTx of {}", tx.getHashAsString());
             Coin balance = getBalance();
             tx.setUpdateTime(Utils.now());
