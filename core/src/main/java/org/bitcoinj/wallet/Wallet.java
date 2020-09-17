@@ -2782,7 +2782,7 @@ public class Wallet extends BaseTaggableObject
             isConsistentOrThrow();
 
             //Dash Specific
-            if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
+            if(context.instantSendManager != null && context.instantSendManager.isInstantSendEnabled())
                 context.instantSendManager.syncTransaction(tx, null, -1);
 
             if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
@@ -5411,7 +5411,7 @@ public class Wallet extends BaseTaggableObject
 
             }
             //Dash Specific
-            if (context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled())
+            if (context.instantSendManager != null && context.instantSendManager.isInstantSendEnabled())
                 context.instantSendManager.syncTransaction(tx, null, -1);
 
             checkState(confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.IN_CONFLICT,
