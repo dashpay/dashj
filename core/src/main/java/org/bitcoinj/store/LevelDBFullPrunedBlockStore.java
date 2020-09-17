@@ -1167,4 +1167,12 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
 
         return null;
     }
+
+    /**
+     * Returns the StoredBlock at the head of the chain specified by hash.
+     * If no such block is found, returns null.
+     */
+    public StoredBlock getChainHeadFromHash(Sha256Hash hash) throws BlockStoreException {
+        throw new UnsupportedOperationException();
+    }
 }

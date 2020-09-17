@@ -162,4 +162,12 @@ public class H2FullPrunedBlockStore extends DatabaseFullPrunedBlockStore {
     protected String getDatabaseDriverClass() {
         return DATABASE_DRIVER_CLASS;
     }
+
+    /**
+     * Returns the StoredBlock at the head of the chain specified by hash.
+     * If no such block is found, returns null.
+     */
+    public StoredBlock getChainHeadFromHash(Sha256Hash hash) throws BlockStoreException {
+        throw new UnsupportedOperationException();
+    }
 }

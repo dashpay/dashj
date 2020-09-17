@@ -71,4 +71,10 @@ public interface BlockStore {
      * Returns the StoredBlock given a height.  If no such block is found, returns null.
      */
     StoredBlock get(int height) throws BlockStoreException;
+
+    /**
+     * Returns the StoredBlock at the head of the chain specified by hash.
+     * If no such block is found, returns null.
+     */
+    StoredBlock getChainHeadFromHash(Sha256Hash hash) throws BlockStoreException;
 }
