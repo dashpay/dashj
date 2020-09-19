@@ -16,6 +16,10 @@ public class EvolutionContact {
         this(Sha256Hash.wrap(Base58.decode(userId)), Sha256Hash.wrap(Base58.decode(friendUserId)));
     }
 
+    public EvolutionContact(String userId, int account, String friendUserId) {
+        this(Sha256Hash.wrap(Base58.decode(userId)), account, Sha256Hash.wrap(Base58.decode(friendUserId)));
+    }
+
     public EvolutionContact(Sha256Hash evolutionUserId, Sha256Hash friendUserId) {
         this(evolutionUserId, 0, friendUserId);
     }
