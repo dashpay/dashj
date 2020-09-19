@@ -21,6 +21,7 @@ import org.bitcoinj.core.ECKey;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.digests.SHA512Digest;
 import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.params.KeyParameter;
@@ -55,6 +56,25 @@ public final class HDUtils {
 
     public static byte[] hmacSha512(byte[] key, byte[] data) {
         return hmacSha512(createHmacSha512Digest(key), data);
+    }
+
+    static HMac createHmacSha256Digest(byte[] key) {
+        SHA256Digest digest = new SHA256Digest();
+        HMac hMac = new HMac(digest);
+        hMac.init(new KeyParameter(key));
+        return hMac;
+    }
+
+    static byte[] hmacSha256(HMac hmacSha256, byte[] input) {
+        hmacSha256.reset();
+        hmacSha256.update(input, 0, input.length);
+        byte[] out = new byte[32];
+        hmacSha256.doFinal(out, 0);
+        return out;
+    }
+
+    public static byte[] hmacSha256(byte[] key, byte[] data) {
+        return hmacSha256(createHmacSha256Digest(key), data);
     }
 
     static byte[] toCompressed(byte[] uncompressedPoint) {
