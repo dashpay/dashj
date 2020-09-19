@@ -9,6 +9,8 @@ public class DerivationPathFactory {
     private NetworkParameters params;
     private final ChildNumber coinType;
     private static final ChildNumber FEATURE_PURPOSE = ChildNumber.NINE_HARDENED;
+    private static final ChildNumber FEATURE_PURPOSE_IDENTITIES = ChildNumber.FIVE_HARDENED;
+    public static final ChildNumber FEATURE_PURPOSE_DASHPAY = new ChildNumber(15, true);
 
     public DerivationPathFactory(NetworkParameters params) {
         this.params = params;
@@ -16,26 +18,28 @@ public class DerivationPathFactory {
     }
 
     /** blockchain identity registration funding derivation path
-     * m/9'/5'/12' (mainnet)
-     * m/9'/1'/12' (testnet, devnets)
+     * m/9'/5'/5'/1' (mainnet)
+     * m/9'/1'/5'/1' (testnet, devnets)
      */
     public ImmutableList<ChildNumber> blockchainIdentityRegistrationFundingDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
-                .add(new ChildNumber(12, true))
+                .add(FEATURE_PURPOSE_IDENTITIES)
+                .add(ChildNumber.ONE_HARDENED)
                 .build();
     }
 
     /** blockchain identity topup funding derivation path
-     * m/9'/5'/13' (mainnet)
-     * m/9'/1'/13' (testnet, devnets)
+     * m/9'/5'/5'/2' (mainnet)
+     * m/9'/1'/5'/2' (testnet, devnets)
      */
     public ImmutableList<ChildNumber> blockchainIdentityTopupFundingDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
-                .add(new ChildNumber(13, true))
+                .add(FEATURE_PURPOSE_IDENTITIES)
+                .add(new ChildNumber(2, true))
                 .build();
     }
 
@@ -47,7 +51,7 @@ public class DerivationPathFactory {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
-                .add(ChildNumber.FIVE_HARDENED)
+                .add(FEATURE_PURPOSE_IDENTITIES)
                 .add(ChildNumber.ZERO_HARDENED)
                 .add(ChildNumber.ZERO_HARDENED)
                 .add(ChildNumber.ZERO) // default to 0 for now
@@ -62,7 +66,7 @@ public class DerivationPathFactory {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
-                .add(ChildNumber.FIVE_HARDENED)
+                .add(FEATURE_PURPOSE_IDENTITIES)
                 .add(ChildNumber.ZERO_HARDENED)
                 .add(ChildNumber.ONE_HARDENED)
                 .add(ChildNumber.ZERO) // default to 0 for now

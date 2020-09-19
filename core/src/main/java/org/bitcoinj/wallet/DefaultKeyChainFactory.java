@@ -72,7 +72,7 @@ public class DefaultKeyChainFactory implements KeyChainFactory {
         if (isMarried)
             throw new UnsupportedOperationException("Married Friend Keychains are not allowed");
         else if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && /* allow any coin type */
-                accountPath.get(2).equals(ChildNumber.FIVE_HARDENED) && accountPath.get(3).equals(ChildNumber.ONE_HARDENED))
+                accountPath.get(2).equals(new ChildNumber(15, true)))
             chain = new FriendKeyChain(seed, crypter, accountPath);
         else return new DeterministicKeyChain(seed, crypter, Script.ScriptType.P2PKH, accountPath);
         return chain;
@@ -83,7 +83,7 @@ public class DefaultKeyChainFactory implements KeyChainFactory {
     {
         DeterministicKeyChain chain;
         if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && /* allow any coin type */
-                accountPath.get(2).equals(ChildNumber.FIVE_HARDENED) && accountPath.get(3).equals(ChildNumber.ONE_HARDENED)) {
+                accountPath.get(2).equals(new ChildNumber(15, true))) {
             chain = new FriendKeyChain(accountKey);
         }
         else {

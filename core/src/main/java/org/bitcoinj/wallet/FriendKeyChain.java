@@ -45,11 +45,12 @@ public class FriendKeyChain extends ExternalKeyChain {
     KeyChainType type;
 
 
-    // m / 9' / 5' / 5' / 1' - Friend Key Chain root path
+    // m / 9' / 5' / 15' - Friend Key Chain root path
     public static final ImmutableList<ChildNumber> FRIEND_ROOT_PATH = ImmutableList.of(ChildNumber.NINE_HARDENED,
-            ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED);
+            ChildNumber.FIVE_HARDENED, DerivationPathFactory.FEATURE_PURPOSE_DASHPAY);
+    // m / 9' / 1' / 15' - Friend Key Chain root path (testnet)
     public static final ImmutableList<ChildNumber> FRIEND_ROOT_PATH_TESTNET = ImmutableList.of(ChildNumber.NINE_HARDENED,
-            ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED);
+            ChildNumber.ONE_HARDENED, DerivationPathFactory.FEATURE_PURPOSE_DASHPAY);
 
     public static ImmutableList<ChildNumber> getRootPath(NetworkParameters params) {
         return params.getId().equals(NetworkParameters.ID_MAINNET) ? FRIEND_ROOT_PATH : FRIEND_ROOT_PATH_TESTNET;
@@ -61,9 +62,9 @@ public class FriendKeyChain extends ExternalKeyChain {
         return new ImmutableList.Builder().addAll(getRootPath(params)).add(new ChildNumber(contact.getUserAccount(), true)).add(new ExtendedChildNumber(userA)).add(new ExtendedChildNumber(userB)).build();
     }
 
-    public static final int PATH_INDEX_ACCOUNT = 4;
-    public static final int PATH_INDEX_TO_ID = 5;
-    public static final int PATH_INDEX_FROM_ID = 6;
+    public static final int PATH_INDEX_ACCOUNT = 3;
+    public static final int PATH_INDEX_TO_ID = 4;
+    public static final int PATH_INDEX_FROM_ID = 5;
 
 
     public FriendKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> rootPath, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
