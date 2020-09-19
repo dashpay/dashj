@@ -6051,6 +6051,14 @@ public class Wallet extends BaseTaggableObject
         return receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) != null;
     }
 
+    public DeterministicKey getReceivingExtendedPublicKey(EvolutionContact contact) {
+        FriendKeyChain chain = receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+        if (chain != null) {
+            return chain.getWatchingKey().dropPrivateBytes();
+        }
+        return null;
+    }
+
     public boolean hasSendingKeyChain(EvolutionContact contact) {
         return sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN) != null;
     }
