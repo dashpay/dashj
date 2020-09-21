@@ -158,7 +158,8 @@ public class CreditFundingTransactionTest {
     @Test
     public void creditFundingFromWalletTest() throws UnreadableWalletException {
         // recovery phrase from a wallet that was used to generate a credit funding transaction
-        String mnemonic = "spirit machine panther pigeon maple enough velvet deny mail federal letter barely";
+        // this is generated using the CreateWallet example in android-dashpay
+        String mnemonic = "odor hammer panda sunset strong fee keep demise start eagle wagon avocado";
         DerivationPathFactory factory = new DerivationPathFactory(PARAMS);
 
         // Create the keychain for blockchain identity funding
@@ -176,8 +177,8 @@ public class CreditFundingTransactionTest {
         // Get the first key from the blockchain identity funding keychain
         DeterministicKey firstKey = group.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
 
-        /* tx data for a8abd4337d4906041324f1c9f713342112c0d24655fd295a57fe3563ac969896 */
-        byte [] txData = Utils.HEX.decode("0100000001fde772f6b9ca9f572da1424b54e9d081ed34194284644979a4679386fefe932a000000006a47304402207db8b157eeb8988556a03e817fd44f24e56c2c9341c5a0e512a89607481b8cb002204e7c3831e1b522e0ef740cf31926fa0e4e6cdd6496cde5005ff29f6b449920580121023bd027cf07a4eab516e22db16c7d77bb615bcd25a57bee6ee69dfaef23a61dacffffffff02409c000000000000166a14d0949bd75de50fbba5081d932fea0a0ee7407fa520a50e00000000001976a91429f4856f82e55313c8e7bf791ac868924ec9c59b88ac00000000");
+        /* tx data for 9788d647c020db783bd58f354eb56f049ea5f471b6a536ceb94d98b88bae4c31 */
+        byte [] txData = Utils.HEX.decode("0100000001f19f93e98caea51ab67560a52b237dad7ca54546d0985aa11a1a639e9354fdba000000006a473044022074cd6796416991302d89954e458b996203428482a2d6650419ef0bba3f2a4791022054dead5e4a4eb2797628e4aecbd4be7679680293c668ae5008dc8174ec9dcd560121022535f1ee20879f1189656abd502a64c6dcbcbe5b732d4c2f780a4f6580a9f20affffffff0240420f0000000000166a14b98ac3c815ec340d9543cdc78ca2d24db1951aec20083d00000000001976a914afe755e29b119efa77f1b08c5ceacd885b53e5d088ac00000000");
         CreditFundingTransaction cftx = new CreditFundingTransaction(PARAMS, txData);
 
         // compare the credit burn public key id to the public key hash of the first key
