@@ -44,11 +44,13 @@ public class DerivationPathFactoryTest {
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO);
 
-    // m / 9' / 5' / 0' / 0' - Blockchain Identity Funding Path
+    // Blockchain Identity Funding Path
+    // m/9'/5'/5'/1' (mainnet)
+    // m/9'/1'/5'/1' (testnet, devnets)
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_FUNDING_PATH = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.FIVE_HARDENED, new ChildNumber(12, true));
+            ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED);
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_FUNDING_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.ONE_HARDENED, new ChildNumber(12, true));
+            ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED);
 
     @Test
     public void validateMainNet() {

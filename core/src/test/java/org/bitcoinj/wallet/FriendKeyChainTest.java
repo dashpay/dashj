@@ -79,7 +79,7 @@ public class FriendKeyChainTest {
         DeterministicKey key = friend.getWatchingKey();
 
         ImmutableList<ChildNumber> accountPath = ImmutableList.of(ChildNumber.NINE_HARDENED, ChildNumber.FIVE_HARDENED,
-                ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED,
+                new ChildNumber(15, true), ChildNumber.ZERO_HARDENED,
                 new ExtendedChildNumber(userAhash), new ExtendedChildNumber(userBhash));
 
         assertEquals(accountPath, key.getPath());
@@ -146,7 +146,7 @@ public class FriendKeyChainTest {
         DeterministicKey currentKeyAfterDeserialization = walletReloaded.receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN).getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
 
         ImmutableList<ChildNumber> accountPath = ImmutableList.of(ChildNumber.NINE_HARDENED, ChildNumber.ONE_HARDENED,
-                ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED,
+                new ChildNumber(15, true), ChildNumber.ZERO_HARDENED,
                 new ExtendedChildNumber(userAhash), new ExtendedChildNumber(userBhash));
 
         assertEquals(accountPath, key.getPath());
@@ -177,8 +177,9 @@ public class FriendKeyChainTest {
         publicGroupFromKey.addAndActivateHDChain(publicChainFromKey);
         DeterministicKey publicKey = privateGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
 
-        String tpub = "tpubDKdSfcxQHGrEkdf6Hk38ZB8JKTjPyZ9dQbsQUGBVBtt27TgZspbusBZyaBVL5fzqKRXtd9XAPaFu5JuBwjS54dQh8hg9wzbxpaXSt67vmuY";
-
+        // this tpub is taken from privateChain.getWatchingKey().serializePub58
+        String tpub = "tpubDJpLMgpPM22N5KkKz3KcRPpWBmYcQ7mGeefMqgM4Q6anpKjy2mYTE5CKSLAqh9gZDopgi4uhZFQF3Jp6hNUX1AdcByYZzkKuBuqjEVV7M6j";
+        assertEquals(tpub, privateChain.getWatchingKey().serializePubB58(PARAMS));
 
         //Their contact info - we still need to figure out what is going one with the direction!!!!
         EvolutionContact theirContact = new EvolutionContact(contact.getFriendUserId(), contact.getUserAccount(), contact.getEvolutionUserId());
