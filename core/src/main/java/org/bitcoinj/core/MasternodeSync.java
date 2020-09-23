@@ -165,6 +165,7 @@ public class MasternodeSync {
         this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
         this.syncFlags = syncFlags == null ? EnumSet.noneOf(SYNC_FLAGS.class) : syncFlags;
         this.verifyFlags = EnumSet.noneOf(VERIFY_FLAGS.class);
+        this.featureFlags = EnumSet.noneOf(FEATURE_FLAGS.class);
         if(syncFlags.contains(SYNC_FLAGS.SYNC_DMN_LIST)) {
             verifyFlags.add(VERIFY_FLAGS.MNLISTDIFF_MNLIST);
             verifyFlags.add(VERIFY_FLAGS.BLS_SIGNATURES);
