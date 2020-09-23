@@ -626,7 +626,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headersChain, @Nullable PeerGroup peerGroup) {
+    public void setBlockChain(AbstractBlockChain blockChain, @Nullable AbstractBlockChain headersChain, @Nullable PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
         this.headersChain = headersChain;
