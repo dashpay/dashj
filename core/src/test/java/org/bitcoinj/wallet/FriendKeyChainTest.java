@@ -79,7 +79,7 @@ public class FriendKeyChainTest {
         DeterministicKey key = friend.getWatchingKey();
 
         ImmutableList<ChildNumber> accountPath = ImmutableList.of(ChildNumber.NINE_HARDENED, ChildNumber.FIVE_HARDENED,
-                new ChildNumber(15, true), ChildNumber.ZERO_HARDENED,
+                DerivationPathFactory.FEATURE_PURPOSE_DASHPAY, ChildNumber.ZERO_HARDENED,
                 new ExtendedChildNumber(userAhash), new ExtendedChildNumber(userBhash));
 
         assertEquals(accountPath, key.getPath());
@@ -146,7 +146,7 @@ public class FriendKeyChainTest {
         DeterministicKey currentKeyAfterDeserialization = walletReloaded.receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN).getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
 
         ImmutableList<ChildNumber> accountPath = ImmutableList.of(ChildNumber.NINE_HARDENED, ChildNumber.ONE_HARDENED,
-                new ChildNumber(15, true), ChildNumber.ZERO_HARDENED,
+                DerivationPathFactory.FEATURE_PURPOSE_DASHPAY, ChildNumber.ZERO_HARDENED,
                 new ExtendedChildNumber(userAhash), new ExtendedChildNumber(userBhash));
 
         assertEquals(accountPath, key.getPath());
