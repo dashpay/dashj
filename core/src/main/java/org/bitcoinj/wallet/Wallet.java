@@ -5728,7 +5728,7 @@ public class Wallet extends BaseTaggableObject
 
         //encrypt all of the key chains if necessary
         if(keyParameter != null && getKeyCrypter() != null) {
-            providerOwnerKeyChain = providerVoterKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+            providerOwnerKeyChain = providerOwnerKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
             providerVoterKeyChain = providerVoterKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
             blockchainIdentityKeyChain = blockchainIdentityKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
             blockchainIdentityFundingKeyChain = blockchainIdentityFundingKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
