@@ -52,9 +52,10 @@ public class DerivationPathFactory {
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
                 .add(FEATURE_PURPOSE_IDENTITIES)
-                .add(ChildNumber.ZERO_HARDENED)
-                .add(ChildNumber.ZERO_HARDENED)
-                .add(ChildNumber.ZERO) // default to 0 for now
+                .add(ChildNumber.ZERO_HARDENED) //sub feature 0
+                .add(ChildNumber.ZERO_HARDENED) //key type (0 is ECDSA key)
+                .add(ChildNumber.ZERO_HARDENED) //identity index (default to 0 for now)
+                .add(ChildNumber.ZERO_HARDENED) //key index (default to 0 for now)
                 .build();
     }
 
@@ -67,9 +68,10 @@ public class DerivationPathFactory {
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
                 .add(FEATURE_PURPOSE_IDENTITIES)
-                .add(ChildNumber.ZERO_HARDENED)
-                .add(ChildNumber.ONE_HARDENED)
-                .add(ChildNumber.ZERO) // default to 0 for now
+                .add(ChildNumber.ZERO_HARDENED) //sub feature 0
+                .add(ChildNumber.ONE_HARDENED) //key type (0 is ECDSA key)
+                .add(ChildNumber.ZERO_HARDENED) // identity index (default to 0 for now)
+                .add(ChildNumber.ZERO_HARDENED) //key index (default to 0 for now)
                 .build();
     }
 
