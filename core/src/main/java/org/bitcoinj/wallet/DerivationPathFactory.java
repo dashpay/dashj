@@ -44,8 +44,8 @@ public class DerivationPathFactory {
     }
 
     /** blockchain identity keys derivation path (EC Keys)
-     * m/9'/5'/5'/0'/0'/(blockchain identity index)/ (mainnet)
-     * m/9'/1'/5'/0'/0'/(blockchain identity index)/ (testnet, devnets)
+     * m/9'/5'/5'/0'/0'/(blockchain identity index)'/(key index)' (mainnet)
+     * m/9'/1'/5'/0'/0'/(blockchain identity index)'/(key index)' (testnet, devnets)
      */
     public ImmutableList<ChildNumber> blockchainIdentityECDSADerivationPath() {
         return ImmutableList.<ChildNumber>builder()
@@ -60,8 +60,8 @@ public class DerivationPathFactory {
     }
 
     /** blockchain identity keys derivation path (BLS Keys)
-     * m/9'/5'/5'/0'/1'/(blockchain identity index)/ (mainnet)
-     * m/9'/1'/5'/0'/1'/(blockchain identity index)/ (testnet, devnets)
+     * m/9'/5'/5'/0'/1'/(blockchain identity index)/(key index)' (mainnet)
+     * m/9'/1'/5'/0'/1'/(blockchain identity index)/(key index)' (testnet, devnets)
      */
     public ImmutableList<ChildNumber> blockchainIdentityBLSDerivationPath() {
         return ImmutableList.<ChildNumber>builder()

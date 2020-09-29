@@ -38,11 +38,11 @@ public class DerivationPathFactoryTest {
     public static final ImmutableList<ChildNumber> PROVIDER_OPERATOR_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.ONE_HARDENED, new ChildNumber(3, true), new ChildNumber(3, true));
 
-    // m / 9' / 5' / 0' / 0' - Blockchain Identity Path
+    // m / 9' / 5' / 0' / 0' / 0' / 0'  - Blockchain Identity Path
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_PATH = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO);
+            ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED);
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO);
+            ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED);
 
     // Blockchain Identity Funding Path
     // m/9'/5'/5'/1' (mainnet)
