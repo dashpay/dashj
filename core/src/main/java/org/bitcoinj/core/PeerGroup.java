@@ -1127,7 +1127,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             }
         }
         watch.stop();
-        log.info("Peer discovery took {} and returned {} items", watch, addressList.size());
+        log.info("Peer discovery took {} and returned {} items from {} discoverers", watch, addressList.size(),
+                peerDiscoverers.size());
         return addressList.size();
     }
 
