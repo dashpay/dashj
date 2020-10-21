@@ -171,7 +171,6 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
                 progress(calculatePercentage(lastHeadersPercent, lastPercent), blocksLeft, new Date(lastBlock.getTimeSeconds() * 1000));
             }
             doneHeaderDownload();
-            future.set(peer.getBestHeight());
             return;
         }
 
