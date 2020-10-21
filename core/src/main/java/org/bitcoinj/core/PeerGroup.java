@@ -1162,6 +1162,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     channels.awaitRunning();
                     triggerConnections();
                     setupPinging();
+                    context.start();
                 } catch (Throwable e) {
                     log.error("Exception when starting up", e);  // The executor swallows exceptions :(
                 }
@@ -1191,6 +1192,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     for (PeerDiscovery peerDiscovery : peerDiscoverers) {
                         peerDiscovery.shutdown();
                     }
+                    context.shutdown();
                     vRunning = false;
                     log.info("Stopped, took {}.", watch);
                 } catch (Throwable e) {
