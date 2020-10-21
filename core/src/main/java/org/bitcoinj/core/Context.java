@@ -316,20 +316,23 @@ public class Context {
                 FlatDB<ChainLocksHandler> clh = new FlatDB<ChainLocksHandler>(Context.this, directory, false);
                 success = clh.load(chainLockHandler);
 
-                //other functions
-                darkSendPool.startBackgroundProcessing();
-
-                if(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
-                    if (!llmqBackgroundThread.isAlive()) {
-                        llmqBackgroundThread = new LLMQBackgroundThread(Context.this);
-                        llmqBackgroundThread.start();
-                    }
-                }
-
                 signingManager.initializeSignatureLog(directory);
 
             }
         }).start();
+    }
+
+    private void startLLMQThread() {
+        if (!llmqBackgroundThread.isAlive()) {
+            llmqBackgroundThread = new LLMQBackgroundThread(Context.this);
+            llmqBackgroundThread.start();
+        }
+    }
+
+    private void stopLLMQThread() {
+        if (llmqBackgroundThread.isAlive()) {
+            llmqBackgroundThread.interrupt();
+        }
     }
 
     public void close() {
@@ -426,5 +429,27 @@ public class Context {
     }
     public VoteConfidenceTable getVoteConfidenceTable() {
         return voteConfidenceTable;
+    }
+
+    public Set<MasternodeSync.SYNC_FLAGS> getSyncFlags() {
+        if (masternodeSync != null) {
+            return masternodeSync.syncFlags;
+        } else {
+            return MasternodeSync.SYNC_DEFAULT_SPV;
+        }
+    }
+
+    public void start()  {
+        if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
+            startLLMQThread();
+        }
+        darkSendPool.startBackgroundProcessing();
+    }
+
+    public void shutdown() {
+        if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
+            stopLLMQThread();
+        }
+        darkSendPool.close();
     }
 }
