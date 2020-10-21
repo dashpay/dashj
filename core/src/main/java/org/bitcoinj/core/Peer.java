@@ -877,13 +877,16 @@ public class Peer extends PeerSocketHandler {
             StoredBlock masternodeListBlock = headerChain.getChainHead().getHeight() != 0 ?
                     headerChain.getBlockStore().get(headerChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET) :
                     blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
-
-            GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
-            sendMessage(msg);
+            if (context.masternodeListManager.getListAtChainTip().getHeight() < masternodeListBlock.getHeight()) {
+                GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
+                sendMessage(msg);
+            } else {
+                context.peerGroup.triggerMnListDownloadComplete();
+            }
         } catch (BlockStoreException x) {
             throw new RuntimeException(x);
         } catch (Exception x) {
-            context.peerGroup.triggerHeadersDownloadComplete();
+            context.peerGroup.triggerMnListDownloadComplete();
         }
     }
 
