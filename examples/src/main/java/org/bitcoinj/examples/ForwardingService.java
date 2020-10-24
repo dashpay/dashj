@@ -159,7 +159,7 @@ public class ForwardingService {
                 public void onSuccess(TransactionConfidence result) {
                     Context.propagate(kit.wallet().getContext());
                     System.out.println("Confirmation received.");
-                    forwardCoins(tx);
+                    forwardCoins();
                     txReport.printReport();
                 }
 
@@ -194,7 +194,7 @@ public class ForwardingService {
         } catch (InterruptedException ignored) {}
     }
 
-    private static void forwardCoins(Transaction tx) {
+    private static void forwardCoins() {
         try {
             // Now send the coins onwards.
             if (kit.wallet().getBalance().equals(Coin.ZERO)) {
