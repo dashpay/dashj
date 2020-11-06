@@ -15,6 +15,7 @@ import java.io.OutputStream;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.core.Sha256Hash.ZERO_HASH;
 import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedQuorumList extends Message {
@@ -230,7 +231,7 @@ public class SimplifiedQuorumList extends Message {
                 }
             });
 
-            if (!cbtx.getMerkleRootQuorums().equals(calculateMerkleRoot(commitmentHashes)))
+            if (!cbtx.getMerkleRootQuorums().equals(ZERO_HASH) && !cbtx.getMerkleRootQuorums().equals(calculateMerkleRoot(commitmentHashes)))
                 throw new VerificationException("MerkleRoot of quorum list does not match coinbaseTx - " + commitmentHashes.size());
 
             return true;
