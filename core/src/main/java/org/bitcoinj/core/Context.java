@@ -323,7 +323,7 @@ public class Context {
     }
 
     private void startLLMQThread() {
-        if (!llmqBackgroundThread.isAlive()) {
+        if (llmqBackgroundThread == null || !llmqBackgroundThread.isAlive()) {
             llmqBackgroundThread = new LLMQBackgroundThread(Context.this);
             llmqBackgroundThread.start();
         }
