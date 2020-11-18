@@ -1,6 +1,5 @@
 /*
- * Copyright 2013 Google Inc.
- * Copyright 2014 Andreas Schildbach
+ * Copyright 2020 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,11 +119,14 @@ public class DevNetParams extends AbstractBitcoinNetParams {
 
         instantSendConfirmationsRequired = 2;
         instantSendKeepLock = 6;
+        deterministicMasternodesEnabledHeight = 2;
+        deterministicMasternodesEnabled = true;
 
         this.protocolVersion = protocolVersion;
 
         //LLMQ parameters
-        llmqs = new HashMap<LLMQParameters.LLMQType, LLMQParameters>(3);
+        llmqs = new HashMap<>(4);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_DEVNET, LLMQParameters.llmq_devnet);
         llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
         llmqs.put(LLMQParameters.LLMQType.LLMQ_400_60, LLMQParameters.llmq400_60);
         llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
@@ -153,11 +155,21 @@ public class DevNetParams extends AbstractBitcoinNetParams {
     }
 
     public static synchronized DevNetParams get(String devNetName) {
+        if (instances == null) {
+            instances = new HashMap<>(1);
+        }
+
         if(!instances.containsKey("devnet-" + devNetName)) {
             return null;
         } else {
             return instances.get("devnet-" + devNetName);
         }
+    }
+
+    public static synchronized void add(DevNetParams params) {
+        if (instances == null)
+            instances = new HashMap<>(1);
+        instances.put(params.devNetName, params);
     }
 
     @Override
@@ -186,4 +198,29 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         }
         return super.getProtocolVersionNum(version);
     }
+
+    public String [] getDefaultMasternodeList() {
+        return new String[0];
+    }
+
+    void setLLMQChainLocks(LLMQParameters.LLMQType llmqChainLocks) {
+        this.llmqChainLocks = llmqChainLocks;
+    }
+
+    void updateLLMQDevnetParams(int size, int threshold) {
+        LLMQParameters llmqParameters = llmqs.get(LLMQParameters.LLMQType.LLMQ_DEVNET);
+        llmqParameters.setSize(size);
+        llmqParameters.setMinSize(threshold);
+        llmqParameters.setThreshold(threshold);
+        llmqParameters.setDkgBadVotesThreshold(threshold);
+    }
+
+    void updateLLMQTestParams(int size, int threshold) {
+        LLMQParameters llmqParameters = llmqs.get(LLMQParameters.LLMQType.LLMQ_TEST);
+        llmqParameters.setSize(size);
+        llmqParameters.setMinSize(threshold);
+        llmqParameters.setThreshold(threshold);
+        llmqParameters.setDkgBadVotesThreshold(threshold);
+    }
+
 }
