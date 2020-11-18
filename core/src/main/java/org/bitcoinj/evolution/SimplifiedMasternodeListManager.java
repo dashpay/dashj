@@ -35,7 +35,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public static final int LISTS_CACHE_SIZE = 576;
     public static final int SNAPSHOT_TIME_PERIOD = 60 * 60 * 26;
 
-    public static int MAX_CACHE_SIZE = 8;
+    public static int MAX_CACHE_SIZE = 10;
     public static int MIN_CACHE_SIZE = 1;
 
     public enum SaveOptions {
