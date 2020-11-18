@@ -9,7 +9,9 @@ public class LLMQParameters {
         LLMQ_400_60(2), // 400 members, 240 (60%) threshold, one every 12 hours
         LLMQ_400_85(3), // 400 members, 340 (85%) threshold, one every 24 hours
         // for testing only
-        LLMQ_5_60(100); // 5 members, 3 (60%) threshold, one per hour
+        LLMQ_TEST(100), // 3 members, 2 (66%) threshold, one per hour
+        // for devnets only
+        LLMQ_DEVNET(101); // 10 members, 6 (60%) threshold, one per hour
 
         int value;
         LLMQType(int value) {
@@ -38,17 +40,25 @@ public class LLMQParameters {
         }
     }
 
-    public static LLMQParameters llmq5_60 = new LLMQParameters(LLMQType.LLMQ_5_60, "llmq_5_60",
-            5, 3, 3, 24, 2, 10, 18, 8, 2, 24);
+    public static LLMQParameters llmq_test = new LLMQParameters(LLMQType.LLMQ_TEST, "llmq_test",
+            3, 2, 2, 24, 2, 10,
+            18, 2, 2, 3, 3);
+
+    public static LLMQParameters llmq_devnet = new LLMQParameters(LLMQType.LLMQ_DEVNET, "llmq_devnet",
+            10, 7, 6, 24, 2, 10,
+            18, 7, 3, 4, 6);
 
     public static LLMQParameters llmq50_60 = new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",
-    50, 40, 30, 24, 2, 01, 18, 20, 24, 24);
+            50, 40, 30, 24, 2, 10,
+            18,40, 24, 25, 25);
 
     public static LLMQParameters llmq400_60 = new LLMQParameters(LLMQType.LLMQ_400_60, "llmq_400_60",
-    400, 300, 240, 24*12, 4, 20, 28, 300, 4, 4);
+            400, 300, 240, 24*12, 4, 20,
+            28, 300, 4, 5, 100);
 
     public static LLMQParameters llmq400_85 = new LLMQParameters(LLMQType.LLMQ_400_85, "llmq_400_85",
-            400, 350, 340, 24 * 24, 4, 20, 48, 300, 4, 4);
+            400, 350, 340, 24 * 24, 4, 20,
+            48, 300, 4, 5, 100);
 
     // Configures a LLMQ and its DKG
     // See https://github.com/dashpay/dips/blob/master/dip-0006.md for more details
@@ -109,10 +119,13 @@ public class LLMQParameters {
     // should be at least as much as the active quorums set.
     int keepOldConnections;
 
+    // How many members should we try to send all sigShares to before we give up.
+    int recoveryMembers;
+
     LLMQParameters(LLMQType type, String name, int size, int minSize, int threshold,
                    int dkgInterval, int dkgPhaseBlocks, int dkgMiningWindowStart,
                    int dkgMiningWindowEnd, int dkgBadVotesThreshold, int signingActiveQuorumCount,
-                   int keepOldConnections) {
+                   int keepOldConnections, int recoveryMembers) {
         this.type = type;
         this.name = name;
         this.size = size;
@@ -125,6 +138,7 @@ public class LLMQParameters {
         this.dkgBadVotesThreshold = dkgBadVotesThreshold;
         this.signingActiveQuorumCount = signingActiveQuorumCount;
         this.keepOldConnections = keepOldConnections;
+        this.recoveryMembers = recoveryMembers;
     }
 
     public LLMQType getType() {
@@ -173,5 +187,23 @@ public class LLMQParameters {
 
     public int getKeepOldConnections() {
         return keepOldConnections;
+    }
+
+    public int getRecoveryMembers() { return recoveryMembers; }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public void setMinSize(int minSize) {
+        this.minSize = minSize;
+    }
+
+    public void setThreshold(int threshold) {
+        this.threshold = threshold;
+    }
+
+    public void setDkgBadVotesThreshold(int dkgBadVotesThreshold) {
+        this.dkgBadVotesThreshold = dkgBadVotesThreshold;
     }
 }
