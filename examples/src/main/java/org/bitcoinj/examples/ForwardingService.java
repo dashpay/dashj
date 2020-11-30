@@ -24,6 +24,7 @@ import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.*;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
@@ -100,6 +101,15 @@ public class ForwardingService {
             protected void onSetupCompleted() {
                 if(!kit.wallet().hasAuthenticationKeyChains())
                     kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
+
+                kit.peerGroup().addPreBlocksDownloadListener(Threading.SAME_THREAD, (i) -> {
+                    try {
+                        Thread.sleep(1000);
+                        kit.peerGroup().triggerPreBlockDownloadComplete();
+                    } catch (InterruptedException x) {
+
+                    }
+                });
             }
         };
 

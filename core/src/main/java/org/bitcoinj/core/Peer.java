@@ -21,6 +21,7 @@ import com.google.common.base.Objects;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
+import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.governance.GovernanceObject;
 import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.governance.GovernanceVote;
@@ -98,6 +99,8 @@ public class Peer extends PeerSocketHandler {
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<OnTransactionBroadcastListener>> onTransactionEventListeners
         = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<MasternodeListDownloadedListener>> masternodeListDownloadedListeners
+            = new CopyOnWriteArrayList<>();
     // Whether to try and download blocks and transactions from this peer. Set to false by PeerGroup if not the
     // primary peer. This is to avoid redundant work and concurrency problems with downloading the same chain
     // in parallel.
@@ -380,6 +383,11 @@ public class Peer extends PeerSocketHandler {
         preMessageReceivedEventListeners.add(new ListenerRegistration<>(listener, executor));
     }
 
+    /** Registers a listener that is called immediately before a message is received */
+    public void addMasternodeListDownloadedListener(Executor executor, MasternodeListDownloadedListener listener) {
+        masternodeListDownloadedListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
     public boolean removeBlocksDownloadedEventListener(BlocksDownloadedEventListener listener) {
         return ListenerRegistration.removeFromList(listener, blocksDownloadedEventListeners);
     }
@@ -414,6 +422,10 @@ public class Peer extends PeerSocketHandler {
 
     public boolean removePreMessageReceivedEventListener(PreMessageReceivedEventListener listener) {
         return ListenerRegistration.removeFromList(listener, preMessageReceivedEventListeners);
+    }
+
+    public boolean removeMasternodeListDownloadedListener(MasternodeListDownloadedListener listener) {
+        return ListenerRegistration.removeFromList(listener, masternodeListDownloadedListeners);
     }
 
     @Override
@@ -595,7 +607,7 @@ public class Peer extends PeerSocketHandler {
         } else if(m instanceof GovernanceVote) {
             context.governanceManager.processGovernanceObjectVote(this, (GovernanceVote)m);
         } else if (m instanceof SimplifiedMasternodeListDiff) {
-            context.masternodeListManager.processMasternodeListDiff((SimplifiedMasternodeListDiff) m);
+            context.masternodeListManager.processMasternodeListDiff(this, (SimplifiedMasternodeListDiff) m);
         } else if(m instanceof InstantSendLock) {
             context.instantSendManager.processInstantSendLock(this, (InstantSendLock) m);
         } else if(m instanceof ChainLockSignature) {
@@ -861,6 +873,7 @@ public class Peer extends PeerSocketHandler {
             if (context.masternodeListManager.getListAtChainTip().getHeight() < masternodeListBlock.getHeight()) {
                 GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
                 sendMessage(msg);
+                queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Requesting, null);
             } else {
                 context.peerGroup.triggerMnListDownloadComplete();
             }
@@ -2313,4 +2326,14 @@ public class Peer extends PeerSocketHandler {
         //TODO: This needs to be finished or we may not need it
     }
 
+    public void queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage stage, @Nullable SimplifiedMasternodeListDiff mnlistdiff) {
+        for (final ListenerRegistration<MasternodeListDownloadedListener> registration : masternodeListDownloadedListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
+                }
+            });
+        }
+    }
 }
