@@ -610,58 +610,6 @@ public class WalletProtobufSerializer {
             }
         }
 
-        wallet.addWatchedScripts(scripts);
-
-        if (walletProto.hasDescription()) {
-            wallet.setDescription(walletProto.getDescription());
-        }
-
-        if (forceReset) {
-            // Should mirror Wallet.reset()
-            wallet.setLastBlockSeenHash(null);
-            wallet.setLastBlockSeenHeight(-1);
-            wallet.setLastBlockSeenTimeSecs(0);
-        } else {
-            // Read all transactions and insert into the txMap.
-            for (Protos.Transaction txProto : walletProto.getTransactionList()) {
-                readTransaction(txProto, wallet.getParams());
-            }
-
-            // Update transaction outputs to point to inputs that spend them
-            for (Protos.Transaction txProto : walletProto.getTransactionList()) {
-                WalletTransaction wtx = connectTransactionOutputs(params, txProto);
-                wallet.addWalletTransaction(wtx);
-            }
-
-            // Update the lastBlockSeenHash.
-            if (!walletProto.hasLastSeenBlockHash()) {
-                wallet.setLastBlockSeenHash(null);
-            } else {
-                wallet.setLastBlockSeenHash(byteStringToHash(walletProto.getLastSeenBlockHash()));
-            }
-            if (!walletProto.hasLastSeenBlockHeight()) {
-                wallet.setLastBlockSeenHeight(-1);
-            } else {
-                wallet.setLastBlockSeenHeight(walletProto.getLastSeenBlockHeight());
-            }
-            // Will default to zero if not present.
-            wallet.setLastBlockSeenTimeSecs(walletProto.getLastSeenBlockTimeSecs());
-
-            if (walletProto.hasKeyRotationTime()) {
-                wallet.setKeyRotationTime(new Date(walletProto.getKeyRotationTime() * 1000));
-            }
-        }
-
-        loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
-
-        for (Protos.Tag tag : walletProto.getTagsList()) {
-            wallet.setTag(tag.getTag(), tag.getData());
-        }
-
-        if (walletProto.hasVersion()) {
-            wallet.setVersion(walletProto.getVersion());
-        }
-
         if(walletProto.getExtKeyChainsCount() > 0) {
             AuthenticationKeyChainFactory factory = new AuthenticationKeyChainFactory();
             KeyCrypter keyCrypter = null;
@@ -734,6 +682,58 @@ public class WalletProtobufSerializer {
                 friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysFromFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
             }
             wallet.setSendingToFriendsGroup(friendKeyChainGroup);
+        }
+
+        wallet.addWatchedScripts(scripts);
+
+        if (walletProto.hasDescription()) {
+            wallet.setDescription(walletProto.getDescription());
+        }
+
+        if (forceReset) {
+            // Should mirror Wallet.reset()
+            wallet.setLastBlockSeenHash(null);
+            wallet.setLastBlockSeenHeight(-1);
+            wallet.setLastBlockSeenTimeSecs(0);
+        } else {
+            // Read all transactions and insert into the txMap.
+            for (Protos.Transaction txProto : walletProto.getTransactionList()) {
+                readTransaction(txProto, wallet.getParams());
+            }
+
+            // Update transaction outputs to point to inputs that spend them
+            for (Protos.Transaction txProto : walletProto.getTransactionList()) {
+                WalletTransaction wtx = connectTransactionOutputs(params, txProto);
+                wallet.addWalletTransaction(wtx);
+            }
+
+            // Update the lastBlockSeenHash.
+            if (!walletProto.hasLastSeenBlockHash()) {
+                wallet.setLastBlockSeenHash(null);
+            } else {
+                wallet.setLastBlockSeenHash(byteStringToHash(walletProto.getLastSeenBlockHash()));
+            }
+            if (!walletProto.hasLastSeenBlockHeight()) {
+                wallet.setLastBlockSeenHeight(-1);
+            } else {
+                wallet.setLastBlockSeenHeight(walletProto.getLastSeenBlockHeight());
+            }
+            // Will default to zero if not present.
+            wallet.setLastBlockSeenTimeSecs(walletProto.getLastSeenBlockTimeSecs());
+
+            if (walletProto.hasKeyRotationTime()) {
+                wallet.setKeyRotationTime(new Date(walletProto.getKeyRotationTime() * 1000));
+            }
+        }
+
+        loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
+
+        for (Protos.Tag tag : walletProto.getTagsList()) {
+            wallet.setTag(tag.getTag(), tag.getData());
+        }
+
+        if (walletProto.hasVersion()) {
+            wallet.setVersion(walletProto.getVersion());
         }
 
         // Make sure the object can be re-used to read another wallet without corruption.
