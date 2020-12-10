@@ -69,18 +69,27 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
         }
     }
 
+    protected void updateBlocksWeight() {
+        blocksWeight = 1.0 - headersWeight - masternodeListWeight - preBlocksWeight;
+    }
+
+    public void setPreBlocksWeight(double preBlocksWeight) {
+        this.preBlocksWeight = preBlocksWeight;
+        updateBlocksWeight();
+    }
+
     @Override
     public void onChainDownloadStarted(Peer peer, int blocksLeft) {
         if (blocksLeft == 0) {
             headersWeight = 0.0;
             masternodeListWeight = 0.0;
             preBlocksWeight = 1.0;
-            blocksWeight = 0.0;
+            updateBlocksWeight();
         } else {
             headersWeight = SYNC_HEADERS;
             masternodeListWeight = SYNC_MASTERNODE_LIST;
-            preBlocksWeight = hasPreBlockProcessing ? SYNC_PREDOWNLOAD : 0.0;
-            blocksWeight = 1.0 - headersWeight - masternodeListWeight - preBlocksWeight;
+            // don't set preblockweight, it may have been set already
+            updateBlocksWeight();
         }
         if (blocksLeft > 0 && originalBlocksLeft == -1)
             startDownload(blocksLeft);
@@ -184,12 +193,12 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
             headersWeight = 0.0;
             masternodeListWeight = 0.0;
             preBlocksWeight = 1.0;
-            blocksWeight = 0.0;
+            updateBlocksWeight();
         } else {
             headersWeight = SYNC_HEADERS;
             masternodeListWeight = SYNC_MASTERNODE_LIST;
             preBlocksWeight = hasPreBlockProcessing ? SYNC_PREDOWNLOAD : 0.0;
-            blocksWeight = 1.0 - headersWeight - masternodeListWeight - preBlocksWeight;
+            updateBlocksWeight();
         }
         if (blocksLeft > 0 && originalHeadersLeft == -1)
             startDownload(blocksLeft);
