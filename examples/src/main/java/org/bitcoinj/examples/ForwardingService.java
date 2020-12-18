@@ -19,13 +19,9 @@ package org.bitcoinj.examples;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.*;
-import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
