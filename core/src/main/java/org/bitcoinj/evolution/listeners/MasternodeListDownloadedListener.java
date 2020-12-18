@@ -18,6 +18,18 @@ package org.bitcoinj.evolution.listeners;
 
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 
+import javax.annotation.Nullable;
+
 public interface MasternodeListDownloadedListener {
-    void onMasterNodeListDiffDownloaded(SimplifiedMasternodeListDiff mnlistdiff);
+    enum Stage {
+        BeforeStarting,
+        Requesting,
+        Received,
+        Processing,
+        ProcessedMasternodes,
+        ProcessedQuorums,
+        Finished,
+        Complete
+    }
+    void onMasterNodeListDiffDownloaded(Stage stage, @Nullable SimplifiedMasternodeListDiff mnlistdiff);
 }
