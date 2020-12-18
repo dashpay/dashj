@@ -8,6 +8,7 @@ import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.core.listeners.ReorganizeListener;
+import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.quorums.SigningManager;
@@ -215,17 +216,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_QUORUM_LIST);
     }
 
-    public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff) {
+    public void processMasternodeListDiff(Peer peer, SimplifiedMasternodeListDiff mnlistdiff) {
         if(!shouldProcessMNListDiff())
             return;
 
-        processMasternodeListDiff(mnlistdiff, false);
+        processMasternodeListDiff(peer, mnlistdiff, false);
     }
 
 
-    public void processMasternodeListDiff(SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap) {
+    public void processMasternodeListDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap) {
         StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
+        if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);
         Stopwatch watch = Stopwatch.createStarted();
         Stopwatch watchMNList = Stopwatch.createUnstarted();
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
@@ -239,9 +241,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
 
             watchMNList.start();
+            if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Processing, mnlistdiff);
+
             SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
             if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST))
                 newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
+            if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
             newMNList.setBlock(block, block == null ? false : block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
             SimplifiedQuorumList newQuorumList = quorumList;
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
@@ -252,6 +257,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             } else {
                 quorumList.syncWithMasternodeList(newMNList);
             }
+            if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedQuorums, mnlistdiff);
             mnListsCache.put(newMNList.getBlockHash(), newMNList);
             quorumsCache.put(newQuorumList.getBlockHash(), newQuorumList);
             mnList = newMNList;
@@ -266,7 +272,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 pendingBlocksMap.remove(thisBlock.getHeader().getHash());
             } else log.warn("pendingBlocks is empty");
 
-            peerGroup.queueMasternodeListDownloadedListeners(mnlistdiff);
+            if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, mnlistdiff);
 
             if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
                 setFormatVersion(LLMQ_FORMAT_VERSION);
@@ -916,7 +922,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
                     isLoadingBootStrap = true;
                     SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, buffer);
-                    processMasternodeListDiff(mnlistdiff, true);
+                    processMasternodeListDiff(null, mnlistdiff, true);
                     log.info("finished loading mnlist bootstrap file");
                 } catch (VerificationException | FileNotFoundException x) {
                     log.info("failed loading mnlist bootstrap file" + x.getMessage());

@@ -839,6 +839,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** See {@link Peer#addOnTransactionBroadcastListener(OnTransactionBroadcastListener)} */
     public void addMasternodeListDownloadListener(Executor executor, MasternodeListDownloadedListener listener) {
         masternodeListDownloadListeners.add(new ListenerRegistration<>(checkNotNull(listener), executor));
+        for (Peer peer : getConnectedPeers())
+            peer.addMasternodeListDownloadedListener(executor, listener);
+        for (Peer peer : getPendingPeers())
+            peer.addMasternodeListDownloadedListener(executor, listener);
     }
 
     /** See {@link Peer#addPreMessageReceivedEventListener(PreMessageReceivedEventListener)} */
@@ -944,7 +948,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     /** The given event listener will no longer be called with events. */
     public boolean removeMasternodeListDownloadedListener(MasternodeListDownloadedListener listener) {
-        return ListenerRegistration.removeFromList(listener, masternodeListDownloadListeners);
+        boolean result = ListenerRegistration.removeFromList(listener, masternodeListDownloadListeners);
+        for (Peer peer : getConnectedPeers())
+            peer.removeMasternodeListDownloadedListener(listener);
+        for (Peer peer : getPendingPeers())
+            peer.removeMasternodeListDownloadedListener(listener);
+        return result;
     }
 
     public boolean removePreMessageReceivedEventListener(PreMessageReceivedEventListener listener) {
@@ -1569,6 +1578,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         peer.addHeadersDownloadStartedEventListener(executor, downloadListener);
         peer.addGetDataEventListener(executor, downloadListener);
         peer.addPreMessageReceivedEventListener(executor, downloadListener);
+        peer.addMasternodeListDownloadedListener(executor, downloadListener);
     }
 
     /**
@@ -1654,6 +1664,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 peer.addOnTransactionBroadcastListener(registration.executor, registration.listener);
             for (ListenerRegistration<PreMessageReceivedEventListener> registration : peersPreMessageReceivedEventListeners)
                 peer.addPreMessageReceivedEventListener(registration.executor, registration.listener);
+            for (ListenerRegistration<MasternodeListDownloadedListener> registration : masternodeListDownloadListeners)
+                peer.addMasternodeListDownloadedListener(registration.executor, registration.listener);
         } finally {
             lock.unlock();
         }
@@ -1832,6 +1844,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             peer.removeGetDataEventListener(registration.listener);
         for (ListenerRegistration<PreMessageReceivedEventListener> registration: peersPreMessageReceivedEventListeners)
             peer.removePreMessageReceivedEventListener(registration.listener);
+        for (ListenerRegistration<MasternodeListDownloadedListener> registration: masternodeListDownloadListeners)
+            peer.removeMasternodeListDownloadedListener(registration.listener);
         for (ListenerRegistration<OnTransactionBroadcastListener> registration : peersTransactionBroadastEventListeners)
             peer.removeOnTransactionBroadcastListener(registration.listener);
         for (final ListenerRegistration<PeerDisconnectedEventListener> registration : peerDisconnectedEventListeners) {
@@ -2024,9 +2038,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
 
         @Override
-        public void onMasterNodeListDiffDownloaded(SimplifiedMasternodeListDiff mnlistdiff) {
-            masternodeListsInLastSecond++;
-            bytesInLastSecond += mnlistdiff.getMessageSize();
+        public void onMasterNodeListDiffDownloaded(Stage stage, SimplifiedMasternodeListDiff mnlistdiff) {
+            if (stage == Stage.Finished) {
+                masternodeListsInLastSecond++;
+                bytesInLastSecond += mnlistdiff.getMessageSize();
+            }
         }
     }
     @Nullable private ChainDownloadSpeedCalculator chainDownloadSpeedCalculator;
@@ -2136,12 +2152,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     }
 
-    public void queueMasternodeListDownloadedListeners(SimplifiedMasternodeListDiff mnlistdiff) {
+    public void queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage stage, @Nullable SimplifiedMasternodeListDiff mnlistdiff) {
         for (final ListenerRegistration<MasternodeListDownloadedListener> registration : masternodeListDownloadListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    registration.listener.onMasterNodeListDiffDownloaded(mnlistdiff);
+                    registration.listener.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
                 }
             });
         }
