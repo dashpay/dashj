@@ -127,8 +127,6 @@ public class WalletAppKit extends AbstractIdleService {
         this.filePrefix = checkNotNull(filePrefix);
 
         context.initDash(true, true);
-        context.masternodeSync.syncFlags.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-        context.masternodeSync.syncFlags.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
         context.initDashSync(directory.getAbsolutePath());
     }
 

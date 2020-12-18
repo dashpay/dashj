@@ -101,15 +101,6 @@ public class ForwardingService {
             protected void onSetupCompleted() {
                 if(!kit.wallet().hasAuthenticationKeyChains())
                     kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
-
-                kit.peerGroup().addPreBlocksDownloadListener(Threading.SAME_THREAD, (i) -> {
-                    try {
-                        Thread.sleep(1000);
-                        kit.peerGroup().triggerPreBlockDownloadComplete();
-                    } catch (InterruptedException x) {
-
-                    }
-                });
             }
         };
 
