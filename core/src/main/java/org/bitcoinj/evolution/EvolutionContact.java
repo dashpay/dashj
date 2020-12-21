@@ -11,23 +11,25 @@ public class EvolutionContact {
     Sha256Hash evolutionUserId;
     Sha256Hash friendUserId;
     int userAccount;
+    int friendAccountReference;
 
     public EvolutionContact(String userId, String friendUserId) {
         this(Sha256Hash.wrap(Base58.decode(userId)), Sha256Hash.wrap(Base58.decode(friendUserId)));
     }
 
-    public EvolutionContact(String userId, int account, String friendUserId) {
-        this(Sha256Hash.wrap(Base58.decode(userId)), account, Sha256Hash.wrap(Base58.decode(friendUserId)));
+    public EvolutionContact(String userId, int account, String friendUserId, int friendAccountReference) {
+        this(Sha256Hash.wrap(Base58.decode(userId)), account, Sha256Hash.wrap(Base58.decode(friendUserId)), friendAccountReference);
     }
 
     public EvolutionContact(Sha256Hash evolutionUserId, Sha256Hash friendUserId) {
-        this(evolutionUserId, 0, friendUserId);
+        this(evolutionUserId, 0, friendUserId, 0);
     }
 
-    public EvolutionContact(Sha256Hash evolutionUserId, int userAccount, Sha256Hash friendUserId) {
+    public EvolutionContact(Sha256Hash evolutionUserId, int userAccount, Sha256Hash friendUserId, int friendAccountReference) {
         this.evolutionUserId = evolutionUserId;
         this.userAccount = userAccount;
         this.friendUserId = friendUserId;
+        this.friendAccountReference = friendAccountReference;
     }
 
     public EvolutionContact(ImmutableList<ChildNumber> accountPath, boolean owner) {
@@ -35,7 +37,8 @@ public class EvolutionContact {
                 FriendKeyChain.PATH_INDEX_TO_ID : FriendKeyChain.PATH_INDEX_FROM_ID)).bi());
         this.friendUserId = Sha256Hash.wrap(((ExtendedChildNumber)accountPath.get(!owner ?
                 FriendKeyChain.PATH_INDEX_TO_ID : FriendKeyChain.PATH_INDEX_FROM_ID)).bi());
-        this.userAccount = accountPath.get(FriendKeyChain.PATH_INDEX_ACCOUNT).num();
+        this.userAccount = owner ? accountPath.get(FriendKeyChain.PATH_INDEX_ACCOUNT).num() : 0;
+        this.friendAccountReference = !owner ? accountPath.get(FriendKeyChain.PATH_INDEX_ACCOUNT).num() : -1;
     }
 
     public Sha256Hash getEvolutionUserId() {
@@ -48,5 +51,9 @@ public class EvolutionContact {
 
     public int getUserAccount() {
         return userAccount;
+    }
+
+    public int getFriendAccountReference() {
+        return friendAccountReference;
     }
 }
