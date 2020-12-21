@@ -59,7 +59,8 @@ public class FriendKeyChain extends ExternalKeyChain {
     public static ImmutableList<ChildNumber> getContactPath(NetworkParameters params, EvolutionContact contact, KeyChainType type) {
         Sha256Hash userA = type == KeyChainType.RECEIVING_CHAIN ? contact.getEvolutionUserId() : contact.getFriendUserId();
         Sha256Hash userB = type == KeyChainType.RECEIVING_CHAIN ? contact.getFriendUserId() : contact.getEvolutionUserId();
-        return new ImmutableList.Builder().addAll(getRootPath(params)).add(new ChildNumber(contact.getUserAccount(), true)).add(new ExtendedChildNumber(userA)).add(new ExtendedChildNumber(userB)).build();
+        int account = type == KeyChainType.RECEIVING_CHAIN ? contact.getUserAccount() : contact.getFriendAccountReference();
+        return new ImmutableList.Builder().addAll(getRootPath(params)).add(new ChildNumber(account, true)).add(new ExtendedChildNumber(userA)).add(new ExtendedChildNumber(userB)).build();
     }
 
     public static final int PATH_INDEX_ACCOUNT = 3;

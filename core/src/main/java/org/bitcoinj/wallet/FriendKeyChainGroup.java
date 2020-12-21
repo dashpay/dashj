@@ -151,22 +151,25 @@ public class FriendKeyChainGroup extends KeyChainGroup {
                 new HashMap<ImmutableList<ChildNumber>, DeterministicKey>();
     }
 
-    public FriendKeyChain getFriendKeyChain(Sha256Hash myBlockchainUserId, int account, Sha256Hash theirBlockchainUserId, FriendKeyChain.KeyChainType type ) {
+    public FriendKeyChain getFriendKeyChain(Sha256Hash myBlockchainUserId, int account, Sha256Hash theirBlockchainUserId, int friendAccountReference, FriendKeyChain.KeyChainType type) {
         Preconditions.checkNotNull(theirBlockchainUserId);
         Preconditions.checkArgument(!theirBlockchainUserId.equals(Sha256Hash.ZERO_HASH));
 
         Sha256Hash to, from;
+        int accountReference;
         if(type == FriendKeyChain.KeyChainType.RECEIVING_CHAIN)
         {
             from = theirBlockchainUserId;
             to = myBlockchainUserId;
+            accountReference = account;
         } else {
             to = theirBlockchainUserId;
             from = myBlockchainUserId;
+            accountReference = friendAccountReference;
         }
         for(DeterministicKeyChain chain : chains) {
             ImmutableList<ChildNumber> accountPath = chain.getAccountPath();
-            if(accountPath.get(PATH_INDEX_ACCOUNT).equals(new ChildNumber(account, true)) &&
+            if(accountPath.get(PATH_INDEX_ACCOUNT).equals(new ChildNumber(accountReference, true)) &&
             accountPath.get(PATH_INDEX_TO_ID).equals(new ExtendedChildNumber(to)) &&
             accountPath.get(PATH_INDEX_FROM_ID).equals(new ExtendedChildNumber(from)))
                 return (FriendKeyChain)chain;
@@ -174,12 +177,13 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         return null;
     }
 
+    @Deprecated
     public FriendKeyChain getFriendKeyChain(Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId, FriendKeyChain.KeyChainType type ) {
-        return getFriendKeyChain(myBlockchainUserId, 0, theirBlockchainUserId, type);
+        return getFriendKeyChain(myBlockchainUserId, 0, theirBlockchainUserId, 0, type);
     }
 
     public FriendKeyChain getFriendKeyChain(EvolutionContact contact, FriendKeyChain.KeyChainType type ) {
-        return getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), type);
+        return getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), type);
     }
 
     @Override
