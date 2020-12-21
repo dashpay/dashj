@@ -5982,10 +5982,10 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
-    public void addSendingToFriendKeyChain(String xpub, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
+    public void addSendingToFriendKeyChain(String xpub, Sha256Hash myBlockchainUserId, int account, Sha256Hash theirBlockchainUserId, int accountReference) {
         boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
 
-        FriendKeyChain chain = new FriendKeyChain(getParams(), xpub, new EvolutionContact(myBlockchainUserId, theirBlockchainUserId));
+        FriendKeyChain chain = new FriendKeyChain(getParams(), xpub, new EvolutionContact(myBlockchainUserId, account, theirBlockchainUserId, accountReference));
         addSendingToFriendKeyChain(chain);
     }
 
@@ -6007,8 +6007,8 @@ public class Wallet extends BaseTaggableObject
     }
 
     public List<Transaction> getTransactionsWithFriend(EvolutionContact contact) {
-        FriendKeyChain fromChain = receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
-        FriendKeyChain toChain = sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), FriendKeyChain.KeyChainType.SENDING_CHAIN);
+        FriendKeyChain fromChain = receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+        FriendKeyChain toChain = sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN);
 
         ArrayList<Transaction> txs = Lists.newArrayList();
         if (fromChain == null && toChain == null) {
@@ -6082,8 +6082,8 @@ public class Wallet extends BaseTaggableObject
 
     /**
      * Returns a key that hasn't been seen in a transaction yet, and which is suitable for displaying in a wallet
-     * user interface as "a convenient key to receive funds on" when the purpose parameter is
-     * {@link org.bitcoinj.wallet.KeyChain.KeyPurpose#RECEIVE_FUNDS}. The returned key is stable until
+     * user interface as "a convenient key to receive funds on" when the type parameter is
+     * {@link org.bitcoinj.wallet.FriendKeyChain.KeyChainType}. The returned key is stable until
      * it's actually seen in a pending or confirmed transaction, at which point this method will start returning
      * a different key (for each purpose independently).
      */
