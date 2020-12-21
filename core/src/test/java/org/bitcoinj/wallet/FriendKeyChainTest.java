@@ -124,7 +124,7 @@ public class FriendKeyChainTest {
         Sha256Hash userAhash = Sha256Hash.wrap("c27eb14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
         Sha256Hash userBhash = Sha256Hash.wrap("ee2052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
 
-        EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash);
+        EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash, 0);
 
         wallet.addAndActivateHDChain(bip44chain);
 
@@ -162,7 +162,7 @@ public class FriendKeyChainTest {
         Sha256Hash userAhash = Sha256Hash.wrap("a11ce14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
         Sha256Hash userBhash = Sha256Hash.wrap("b0b052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
 
-        EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash);
+        EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash, 0);
 
         FriendKeyChain privateChain = new FriendKeyChain(bip44chain.getSeed(),
                 FriendKeyChain.FRIEND_ROOT_PATH_TESTNET, 0, userAhash, userBhash);
@@ -182,7 +182,7 @@ public class FriendKeyChainTest {
         assertEquals(tpub, privateChain.getWatchingKey().serializePubB58(PARAMS));
 
         //Their contact info - we still need to figure out what is going one with the direction!!!!
-        EvolutionContact theirContact = new EvolutionContact(contact.getFriendUserId(), contact.getUserAccount(), contact.getEvolutionUserId());
+        EvolutionContact theirContact = new EvolutionContact(contact.getFriendUserId(), contact.getUserAccount(), contact.getEvolutionUserId(), 0);
         FriendKeyChain publicChainFromB58 = new FriendKeyChain(PARAMS, tpub, theirContact);
         FriendKeyChainGroup publicGroupFromB58 = FriendKeyChainGroup.friendlybuilder(PARAMS).build();
         publicChainFromB58.setLookaheadSize(5);
@@ -212,10 +212,10 @@ public class FriendKeyChainTest {
         Sha256Hash userAhash = Sha256Hash.wrap("a11ce14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
         Sha256Hash userBhash = Sha256Hash.wrap("b0b052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
 
-        EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash);
+        EvolutionContact contact = new EvolutionContact(userAhash, 0, userBhash, 0);
         String tpub = "tpubDLkp5kSwctd6bsLgG2pfbUpLSyjedfkBjy8HYtuczzPUwMCBkRW2Fe7TcEoVin5cLTr6YApGpy2MdKU7sfgLL7cMXTn16dLPdgKMqGg9tVE";
 
-        EvolutionContact theirContact = new EvolutionContact(contact.getFriendUserId(), contact.getUserAccount(), contact.getEvolutionUserId());
+        EvolutionContact theirContact = new EvolutionContact(contact.getFriendUserId(), contact.getUserAccount(), contact.getEvolutionUserId(), contact.getFriendAccountReference());
         DeterministicKeyChain publicChainFromB58 = new FriendKeyChain(PARAMS, tpub, theirContact);
 
         DeterministicKey contactKey = publicChainFromB58.getWatchingKey();
