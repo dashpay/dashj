@@ -211,8 +211,7 @@ public class DarkSendPool {
             backgroundThread = new ContextPropagatingThreadFactory("dash-privatesend").newThread(threadCheckDarkSendPool);
             backgroundThread.start();
             return true;
-        }
-        else if(backgroundThread.getState() == Thread.State.TERMINATED) {
+        } else if(backgroundThread.getState() == Thread.State.TERMINATED) {
             //if the thread was stopped, start it again
             backgroundThread = new ContextPropagatingThreadFactory("dash-privatesend").newThread(threadCheckDarkSendPool);
             backgroundThread.start();
@@ -223,6 +222,8 @@ public class DarkSendPool {
 
     public void close()
     {
-        threadCheckDarkSendPool.stop();
+        if (threadCheckDarkSendPool != null) {
+            threadCheckDarkSendPool.stop();
+        }
     }
 }
