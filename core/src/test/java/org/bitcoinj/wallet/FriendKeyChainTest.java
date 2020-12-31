@@ -112,7 +112,7 @@ public class FriendKeyChainTest {
 
         DeterministicKeyChain keyChain = DeterministicKeyChain.builder().seed(seed).accountPath(path).build();
         DeterministicKey watchingKey = keyChain.getWatchingKey();
-        assertEquals("02909fb2c2cd18c8fb99277bc26ec606e381d27c2af6bd87e222304e3baf450bf7", Utils.HEX.encode(watchingKey.getPubKey()));
+        assertEquals("029d469d2a7070d6367afc099be3d0a8d6467ced43228b8ce3d1723f6f4f78cac7", Utils.HEX.encode(watchingKey.getPubKey()));
     }
 
     @Test
@@ -179,7 +179,7 @@ public class FriendKeyChainTest {
         DeterministicKey publicKey = privateGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
 
         // this tpub is taken from privateChain.getWatchingKey().serializePub58
-        String tpub = "tpubDJpLMgpPM22N5KkKz3KcRPpWBmYcQ7mGeefMqgM4Q6anpKjy2mYTE5CKSLAqh9gZDopgi4uhZFQF3Jp6hNUX1AdcByYZzkKuBuqjEVV7M6j";
+        String tpub = "tpubDKVkbAHG8foFoR8iAP2ueWdM6frdNmNXNAoUETNaZCPU6j1iBtjbZTRZmQbbXCcwsgf77KbGcKUo3LyDyuvqkE2zPoBNgBYZSm2YUtWV5KA";
         assertEquals(tpub, privateChain.getWatchingKey().serializePubB58(PARAMS));
 
         //Their contact info - we still need to figure out what is going one with the direction!!!!
