@@ -201,10 +201,6 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         return super.getProtocolVersionNum(version);
     }
 
-    public String [] getDefaultMasternodeList() {
-        return new String[0];
-    }
-
     void setLLMQChainLocks(LLMQParameters.LLMQType llmqChainLocks) {
         this.llmqChainLocks = llmqChainLocks;
     }
