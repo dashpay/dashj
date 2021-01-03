@@ -8,6 +8,8 @@ public class LLMQParameters {
         LLMQ_50_60(1), // 50 members, 30 (60%) threshold, one per hour
         LLMQ_400_60(2), // 400 members, 240 (60%) threshold, one every 12 hours
         LLMQ_400_85(3), // 400 members, 340 (85%) threshold, one every 24 hours
+        LLMQ_100_67(4), // 100 members, 67 (67%) threshold, one per hour
+
         // for testing only
         LLMQ_TEST(100), // 3 members, 2 (66%) threshold, one per hour
         // for devnets only
@@ -59,6 +61,10 @@ public class LLMQParameters {
     public static LLMQParameters llmq400_85 = new LLMQParameters(LLMQType.LLMQ_400_85, "llmq_400_85",
             400, 350, 340, 24 * 24, 4, 20,
             48, 300, 4, 5, 100);
+
+    public static LLMQParameters llmq100_67 = new LLMQParameters(LLMQType.LLMQ_100_67, "llmq_100_67",
+            100, 800, 67, 2, 2, 10,
+            18, 80, 24, 25, 50);
 
     // Configures a LLMQ and its DKG
     // See https://github.com/dashpay/dips/blob/master/dip-0006.md for more details
