@@ -735,4 +735,8 @@ public abstract class NetworkParameters {
     public int getCoinType() {
         return coinType;
     }
+
+    public String [] getDefaultMasternodeList() {
+        return new String[0];
+    }
 }
