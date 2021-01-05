@@ -700,6 +700,36 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
     }
 
+    public InstantSendLock getInstantSendLockByTxId(Sha256Hash hash)
+    {
+        if (!isInstantSendEnabled()) {
+            return null;
+        }
+
+        lock.lock();
+        try {
+            InstantSendLock islock = db.getInstantSendLockByTxid(hash);
+            if (islock == null) {
+                for (InstantSendLock invalidLock : invalidInstantSendLocks.keySet()) {
+                    if (invalidLock.txid.equals(hash)) {
+                        islock = invalidLock;
+                        break;
+                    }
+                }
+
+                for (Pair<Long, InstantSendLock> entry : pendingInstantSendLocks.values()) {
+                    if (entry.getSecond().txid.equals(hash)) {
+                        islock = entry.getSecond();
+                        break;
+                    }
+                }
+            }
+            return islock;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     boolean isLocked(Sha256Hash txHash)
     {
         if (!isInstantSendEnabled()) {
