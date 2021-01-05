@@ -209,4 +209,17 @@ public class CreditFundingTransaction extends Transaction {
         }
         return false;
     }
+
+    /**
+     * Determines the first output that is a credit burn output
+     * or returns -1.
+     */
+    public long getOutputIndex() {
+        int outputCount = getOutputs().size();
+        for (int i = 0; i < outputCount; ++i) {
+            if (ScriptPattern.isCreditBurn(getOutput(i).getScriptPubKey()))
+                return i;
+        }
+        return -1;
+    }
 }
