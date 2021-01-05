@@ -161,15 +161,14 @@ public final class HDKeyDerivation {
         checkArgument(parent.hasPrivKey(), "Parent key must have private key bytes for this method.");
         byte[] parentPublicKey = parent.getPubKeyPoint().getEncoded(true);
         checkState(parentPublicKey.length == 33, "Parent pubkey must be 33 bytes, but is " + parentPublicKey.length);
-        boolean simple = childNumber instanceof ExtendedChildNumber == false;
-        ByteBuffer data = ByteBuffer.allocate(simple ? 37 : 37 - 4 + 1 + Sha256Hash.LENGTH);
+        boolean simple = !(childNumber instanceof ExtendedChildNumber);
+        ByteBuffer data = ByteBuffer.allocate(simple ? 37 : 33 + Sha256Hash.LENGTH);
         if (childNumber.isHardened()) {
             data.put(parent.getPrivKeyBytes33());
         } else {
             data.put(parentPublicKey);
         }
-        if(childNumber instanceof ExtendedChildNumber) {
-            data.put((byte)(childNumber.isHardened() ? 1 : 0));
+        if (!simple) {
             data.put(Sha256Hash.wrap(((ExtendedChildNumber)childNumber).bi()).getBytes());
         } else {
             data.putInt(childNumber.i());
@@ -195,10 +194,10 @@ public final class HDKeyDerivation {
         checkArgument(!childNumber.isHardened(), "Hardened derivation is unsupported (%s).", childNumber);
         byte[] parentPublicKey = parent.getPubKeyPoint().getEncoded(true);
         checkState(parentPublicKey.length == 33, "Parent pubkey must be 33 bytes, but is " + parentPublicKey.length);
-        ByteBuffer data = ByteBuffer.allocate(37);
+        boolean simple = !(childNumber instanceof ExtendedChildNumber);
+        ByteBuffer data = ByteBuffer.allocate(simple ? 37 : 33 + Sha256Hash.LENGTH);
         data.put(parentPublicKey);
-        if(childNumber instanceof ExtendedChildNumber) {
-            data.put((byte)(childNumber.isHardened() ? 1 : 0));
+        if (!simple) {
             data.put(Sha256Hash.wrap(((ExtendedChildNumber)childNumber).bi()).getBytes());
         } else {
             data.putInt(childNumber.i());

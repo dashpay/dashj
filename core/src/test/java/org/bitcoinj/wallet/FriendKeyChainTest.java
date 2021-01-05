@@ -23,6 +23,7 @@ import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.ExtendedChildNumber;
 import org.bitcoinj.crypto.HDKeyDerivation;
 import org.bitcoinj.evolution.EvolutionContact;
+import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.BriefLogFormatter;
@@ -111,7 +112,7 @@ public class FriendKeyChainTest {
 
         DeterministicKeyChain keyChain = DeterministicKeyChain.builder().seed(seed).accountPath(path).build();
         DeterministicKey watchingKey = keyChain.getWatchingKey();
-        assertEquals("02909fb2c2cd18c8fb99277bc26ec606e381d27c2af6bd87e222304e3baf450bf7", Utils.HEX.encode(watchingKey.getPubKey()));
+        assertEquals("029d469d2a7070d6367afc099be3d0a8d6467ced43228b8ce3d1723f6f4f78cac7", Utils.HEX.encode(watchingKey.getPubKey()));
     }
 
     @Test
@@ -178,7 +179,7 @@ public class FriendKeyChainTest {
         DeterministicKey publicKey = privateGroup.currentKey(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
 
         // this tpub is taken from privateChain.getWatchingKey().serializePub58
-        String tpub = "tpubDJpLMgpPM22N5KkKz3KcRPpWBmYcQ7mGeefMqgM4Q6anpKjy2mYTE5CKSLAqh9gZDopgi4uhZFQF3Jp6hNUX1AdcByYZzkKuBuqjEVV7M6j";
+        String tpub = "tpubDKVkbAHG8foFoR8iAP2ueWdM6frdNmNXNAoUETNaZCPU6j1iBtjbZTRZmQbbXCcwsgf77KbGcKUo3LyDyuvqkE2zPoBNgBYZSm2YUtWV5KA";
         assertEquals(tpub, privateChain.getWatchingKey().serializePubB58(PARAMS));
 
         //Their contact info - we still need to figure out what is going one with the direction!!!!
@@ -230,5 +231,65 @@ public class FriendKeyChainTest {
         DeterministicKey contactKeyFirstKey = HDKeyDerivation.deriveChildKey(contactKey, new ChildNumber(0, false));
         DeterministicKey contactPubKeyFirstKey = HDKeyDerivation.deriveChildKey(contactPubKey, new ChildNumber(0, false));
         assertArrayEquals(contactKeyFirstKey.getPubKey(), contactPubKeyFirstKey.getPubKey());
+    }
+
+    /*
+
+        Test Vector 1:
+            Mnemonic : birth kingdom trash renew flavor utility donkey gasp regular alert pave layer
+            Seed Data : b16d3782e714da7c55a397d5f19104cfed7ffa8036ac514509bbb50807f8ac598eeb26f0797bd8cc221a6cbff2168d90a5e9ee025a5bd977977b9eccd97894bb
+            Key Type : Secp256k1
+            Derivation (Note : The second derivation is hardened) :
+                “m/
+                    0x775d3854c910b7dee436869c4724bed2fe0784e198b8a39f02bbb49d8ebcfc3b/
+                    0xf537439f36d04a15474ff7423e4b904a14373fafb37a41db74c84f1dbb5c89a6'/
+                    0x4c4592ca670c983fc43397dfd21a6f427fac9b4ac53cb4dcdc6522ec51e81e79
+                    0”
+            Key : 0xe8781fdef72862968cd9a4d2df34edaf9dcc5b17629ec505f0d2d1a8ed6f9f09
+
+        Test Vector 2:
+            Mnemonic : birth kingdom trash renew flavor utility donkey gasp regular alert pave layer
+            Seed Data : b16d3782e714da7c55a397d5f19104cfed7ffa8036ac514509bbb50807f8ac598eeb26f0797bd8cc221a6cbff2168d90a5e9ee025a5bd977977b9eccd97894bb
+            Key Type : Secp256k1
+            Derivation (Note : All derivations except the last are hardened) : “m/9'/5'/15'/0'/
+            0x555d3854c910b7dee436869c4724bed2fe0784e198b8a39f02bbb49d8ebcfc3a'/
+            0xa137439f36d04a15474ff7423e4b904a14373fafb37a41db74c84f1dbb5c89b5'/0”
+            Key : 0xfac40790776d171ee1db90899b5eb2df2f7d2aaf35ad56f07ffb8ed2c57f8e60
+
+     */
+    @Test
+    public void test256BitDerivationDip14() throws UnreadableWalletException {
+        String seedPhrase = "birth kingdom trash renew flavor utility donkey gasp regular alert pave layer";
+
+        long now = Utils.currentTimeSeconds();
+        DeterministicSeed seed = new DeterministicSeed(seedPhrase, null, "", now);
+
+        assertEquals("b16d3782e714da7c55a397d5f19104cfed7ffa8036ac514509bbb50807f8ac598eeb26f0797bd8cc221a6cbff2168d90a5e9ee025a5bd977977b9eccd97894bb", Utils.HEX.encode(seed.getSeedBytes()));
+
+        ImmutableList<ChildNumber> path = ImmutableList.of(
+                new ExtendedChildNumber(Sha256Hash.wrap("775d3854c910b7dee436869c4724bed2fe0784e198b8a39f02bbb49d8ebcfc3b")),
+                new ExtendedChildNumber(Sha256Hash.wrap("f537439f36d04a15474ff7423e4b904a14373fafb37a41db74c84f1dbb5c89a6"), true),
+                new ExtendedChildNumber(Sha256Hash.wrap("4c4592ca670c983fc43397dfd21a6f427fac9b4ac53cb4dcdc6522ec51e81e79")),
+                ChildNumber.ZERO
+        );
+
+        DeterministicKeyChain keyChain = DeterministicKeyChain.builder().seed(seed).accountPath(path).build();
+        DeterministicKey watchingKey = keyChain.getWatchingKey();
+        assertEquals("e8781fdef72862968cd9a4d2df34edaf9dcc5b17629ec505f0d2d1a8ed6f9f09", watchingKey.getPrivateKeyAsHex());
+
+        // using a DIP15 path
+        ImmutableList<ChildNumber> dip15path = ImmutableList.of(
+                new ChildNumber(9, true),
+                ChildNumber.FIVE_HARDENED,
+                DerivationPathFactory.FEATURE_PURPOSE_DASHPAY,
+                ChildNumber.ZERO_HARDENED,
+                new ExtendedChildNumber(Sha256Hash.wrap("555d3854c910b7dee436869c4724bed2fe0784e198b8a39f02bbb49d8ebcfc3a"), true),
+                new ExtendedChildNumber(Sha256Hash.wrap("a137439f36d04a15474ff7423e4b904a14373fafb37a41db74c84f1dbb5c89b5"), true),
+                ChildNumber.ZERO
+        );
+
+        DeterministicKeyChain keyChainDip15 = DeterministicKeyChain.builder().seed(seed).accountPath(dip15path).build();
+        DeterministicKey watchingKeyDip15 = keyChainDip15.getWatchingKey();
+        assertEquals("fac40790776d171ee1db90899b5eb2df2f7d2aaf35ad56f07ffb8ed2c57f8e60", watchingKeyDip15.getPrivateKeyAsHex());
     }
 }
