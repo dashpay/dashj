@@ -30,9 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.*;
-import java.time.Instant;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
@@ -273,7 +271,7 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
     public void onMasterNodeListDiffDownloaded(Stage stage, @Nullable SimplifiedMasternodeListDiff mnlistdiff) {
         if (lastMasternodeListStage != Stage.Complete) {
             lastMasternodeListStage = stage;
-            progress(calculatePercentage(stage), originalBlocksLeft, Date.from(Instant.now()));
+            progress(calculatePercentage(stage), originalBlocksLeft, new Date(Utils.currentTimeSeconds()));
             if (stage == Stage.Finished)
                 lastMasternodeListStage = Stage.Complete;
         }
