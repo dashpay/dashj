@@ -443,13 +443,17 @@ public class Context {
         if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             startLLMQThread();
         }
-        darkSendPool.startBackgroundProcessing();
+        if (darkSendPool != null) {
+            darkSendPool.startBackgroundProcessing();
+        }
     }
 
     public void shutdown() {
         if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             stopLLMQThread();
         }
-        darkSendPool.close();
+        if (darkSendPool != null) {
+            darkSendPool.close();
+        }
     }
 }
