@@ -167,7 +167,6 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
 
     protected long calculateNextDifficulty(StoredBlock storedBlock, Block nextBlock, BigInteger newTarget) {
         if (newTarget.compareTo(this.getMaxTarget()) > 0) {
-            log.info("Difficulty hit proof of work limit: {}", newTarget.toString(16));
             newTarget = this.getMaxTarget();
         }
 
