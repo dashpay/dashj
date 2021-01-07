@@ -416,10 +416,12 @@ public class InstantSendManager implements RecoveredSignatureListener {
             InstantSendLock islock = p.getValue().getSecond();
     
             if (batchVerifier.getBadSources().contains(nodeId)) {
+                log.info("islock: bad sources contains this node: " + nodeId);
                 continue;
             }
     
             if (!islock.signature.getSignature().isValid()) {
+                log.info("islock: signature is not valid: " + islock.signature);
                 batchVerifier.getBadSources().add(nodeId);
                 continue;
             }
@@ -428,12 +430,15 @@ public class InstantSendManager implements RecoveredSignatureListener {
     
             // no need to verify an ISLOCK if we already have verified the recovered sig that belongs to it
             if (quorumSigningManager.hasRecoveredSig(llmqType, id, islock.txid)) {
+                log.info("islock: signature has already been verified: " + islock.txid);
                 continue;
             }
     
             Quorum quorum = quorumSigningManager.selectQuorumForSigning(llmqType, tipHeight, id);
             if (quorum == null) {
                 // should not happen, but if one fails to select, all others will also fail to select
+                log.info("islock: quorum not found to verify signature [tipHeight: " + tipHeight + " vs " + context.masternodeListManager.getQuorumListAtTip().getHeight() + "]");
+                invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 return false;
             }
             Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.commitment.quorumHash, id, islock.txid);
@@ -459,6 +464,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             batchVerifier.verify();
 
         if (!batchVerifier.getBadSources().isEmpty()) {
+            log.warn("islock: bad sources: " + batchVerifier.getBadSources());
             for (Long nodeId : batchVerifier.getBadSources()) {
                 // Let's not be too harsh, as the peer might simply be unlucky and might have sent us an old lock which
                 // does not validate anymore due to changed quorums
