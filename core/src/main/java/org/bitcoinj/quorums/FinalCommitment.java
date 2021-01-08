@@ -140,11 +140,11 @@ public class FinalCommitment extends SpecialTxPayload {
             return false;
 
         if(countValidMembers() < llmqParameters.minSize) {
-            log.error("invalid validMembers count. validMembersCount={1}", countValidMembers());
+            log.error("invalid validMembers count. validMembersCount={} < {}", countValidMembers(), llmqParameters.minSize);
             return false;
         }
         if (countSigners() < llmqParameters.minSize) {
-            log.error("invalid signers count. signersCount={1}", countSigners());
+            log.error("invalid signers count. signersCount={} < {}", countSigners(), llmqParameters.minSize);
             return false;
         }
         if (!quorumPublicKey.isValid()) {
