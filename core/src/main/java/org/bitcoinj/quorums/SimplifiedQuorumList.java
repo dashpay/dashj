@@ -409,7 +409,7 @@ public class SimplifiedQuorumList extends Message {
             return;
         }
         if (!commitment.verify(members, true)) {
-            throw new VerificationException("invalid quorum commitment");
+            throw new VerificationException("invalid quorum commitment: " + commitment);
         }
     }
 }
