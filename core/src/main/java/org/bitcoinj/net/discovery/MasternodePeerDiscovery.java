@@ -32,6 +32,13 @@ public class MasternodePeerDiscovery implements PeerDiscovery {
         });
     }
 
+    public MasternodePeerDiscovery(String [] mnList, int port) {
+        masternodeSeeds = new ArrayList<InetSocketAddress>(mnList.length);
+        for (String mn: mnList) {
+            masternodeSeeds.add(new InetSocketAddress(mn, port));
+        }
+    }
+
     /**
      * Acts as an iterator, returning the address of each node in the list sequentially.
      * Once all the list has been iterated, null will be returned for each subsequent query.
