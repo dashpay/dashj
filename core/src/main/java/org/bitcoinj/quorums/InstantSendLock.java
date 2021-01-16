@@ -7,17 +7,21 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.List;
 
 public class InstantSendLock extends Message {
 
     static final String ISLOCK_REQUESTID_PREFIX = "islock";
 
-    ArrayList<TransactionOutPoint> inputs;
+    List<TransactionOutPoint> inputs;
     Sha256Hash txid;
     BLSLazySignature signature;
 
-    public InstantSendLock() {
-
+    public InstantSendLock(NetworkParameters params, List<TransactionOutPoint> inputs, Sha256Hash txid, BLSLazySignature signature) {
+        super(params);
+        this.inputs = inputs;
+        this.txid = txid;
+        this.signature = signature;
     }
 
     public InstantSendLock(NetworkParameters params, byte [] payload) {
@@ -27,7 +31,7 @@ public class InstantSendLock extends Message {
     @Override
     protected void parse() throws ProtocolException {
         int countInputs = (int)readVarInt();
-        inputs = new ArrayList<TransactionOutPoint>(countInputs);
+        inputs = new ArrayList<>(countInputs);
         for(int i = 0; i < countInputs; ++i) {
             TransactionOutPoint outpoint = new TransactionOutPoint(params, payload, cursor);
             cursor += outpoint.getMessageSize();
@@ -44,8 +48,8 @@ public class InstantSendLock extends Message {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         stream.write(new VarInt(inputs.size()).encode());
-        for(int i = 0; i < inputs.size(); ++i) {
-            inputs.get(i).bitcoinSerialize(stream);
+        for (TransactionOutPoint input : inputs) {
+            input.bitcoinSerialize(stream);
         }
         stream.write(txid.getReversedBytes());
         signature.bitcoinSerialize(stream);
@@ -81,6 +85,11 @@ public class InstantSendLock extends Message {
     }
 
     @Override
+    public int hashCode() {
+        return txid.hashCode();
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -88,5 +97,17 @@ public class InstantSendLock extends Message {
         InstantSendLock islock = (InstantSendLock)o;
 
         return getHash().equals(islock.getHash());
+    }
+
+    public List<TransactionOutPoint> getInputs() {
+        return inputs;
+    }
+
+    public BLSLazySignature getSignature() {
+        return signature;
+    }
+
+    public Sha256Hash getTxId() {
+        return txid;
     }
 }
