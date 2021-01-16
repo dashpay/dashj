@@ -107,6 +107,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 return;
             }
             confidence.setIXType(TransactionConfidence.IXType.IX_REQUEST);
+            confidence.setInstantSendLock(isLock);
             confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
         }
 
