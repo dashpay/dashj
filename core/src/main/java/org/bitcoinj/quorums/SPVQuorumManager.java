@@ -43,8 +43,13 @@ public class SPVQuorumManager extends QuorumManager {
             log.warn("quorum list is old, the quorums may not match");
         final ArrayList<Quorum> result = new ArrayList<Quorum>();
         SimplifiedQuorumList list = masternodeListManager.getQuorumListForBlock(start.getHeader().getHash());
-        if(list == null)
-            return result;  // return empty list
+        if (list == null) {
+            // if the list isn't found, use the most recent list
+            list = masternodeListManager.getQuorumListAtTip();
+            log.warn("quorum list for " + start.getHeight() + "not found, using most recent quorum list: " + list.getHeight());
+            if (list == null)
+                return result;  // return empty list
+        }
         final LLMQParameters llmqParameters = context.getParams().getLlmqs().get(llmqType);
         list.forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
             int found = 0;
