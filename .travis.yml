@@ -9,10 +9,13 @@ addons:
 jdk: oraclejdk8
 install: true # remove default
 script:
-  - mvn -q clean install -Pno-network
+  - cd bls
+  - mvn clean package -Pbuild-bls-only -pl :dashj-bls -DskipTests -Dmaven.javadoc.skip=true --settings ../.travis.settings.xml
+  - cd ..
+  - mvn -q clean install -Pno-network --settings .travis.settings.xml
   - jdk_switcher use openjdk8
   - cd core
-  - mvn -q clean package -Pno-network
+  - mvn -q clean install -Pno-network --settings ../.travis.settings.xml
 
 after_success:
   - cd ../core
