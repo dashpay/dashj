@@ -200,6 +200,17 @@ message RejectMessage {
 }
 
 /**
+ * A structure defining Reject Messages for transactions
+ *
+ */
+
+message InstantSendLock {
+  repeated TransactionOutput inputs = 1;
+  required bytes txid = 2;
+  required bytes signature = 3;
+}
+
+/**
  * A description of the confidence we have that a transaction cannot be reversed in the future.
  *
  * Parsing should be lenient, since this could change for different applications yet we should
@@ -264,6 +275,7 @@ message TransactionConfidence {
   optional int64 sentTime = 22;
 
   repeated RejectMessage rejects = 32;
+  optional InstantSendLock islock = 33;
 
   // Next tag: 9
 }

@@ -19,8 +19,10 @@ package org.bitcoinj.wallet;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.crypto.BLSLazySignature;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
+import org.bitcoinj.quorums.InstantSendLock;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.ExchangeRate;
@@ -374,6 +376,21 @@ public class WalletProtobufSerializer {
                 case IX_NONE:
                 default: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_NONE); break;
             }
+
+            InstantSendLock isLock = confidence.getInstantSendlock();
+            if (isLock != null) {
+                Protos.InstantSendLock.Builder isLockProto = Protos.InstantSendLock.newBuilder();
+                for (TransactionOutPoint input: isLock.getInputs()) {
+                    isLockProto.addInputs(Protos.TransactionOutput.newBuilder()
+                            .setSpentByTransactionIndex((int)input.getIndex())
+                            .setValue(0)
+                            .setSpentByTransactionHash(ByteString.copyFrom(input.getHash().getBytes()))
+                            .setScriptBytes(ByteString.EMPTY)
+                            .build());
+                }
+                isLockProto.setSignature(ByteString.copyFrom(isLock.getSignature().bitcoinSerialize()));
+                isLockProto.setTxid(ByteString.copyFrom(isLock.getHash().getBytes()));
+            }
         }
 
         for (PeerAddress address : confidence.getBroadcastBy()) {
@@ -438,6 +455,7 @@ public class WalletProtobufSerializer {
                 confidenceBuilder.addRejects(builder.build());
             }
         }
+
         txBuilder.setConfidence(confidenceBuilder);
     }
 
@@ -870,6 +888,17 @@ public class WalletProtobufSerializer {
             default:
                 confidence.setIXType(TransactionConfidence.IXType.IX_NONE); break;
 
+        }
+        if (confidenceProto.hasIslock()) {
+            Protos.InstantSendLock isLockProto = confidenceProto.getIslock();
+            List<TransactionOutPoint> inputs = new ArrayList<>(isLockProto.getInputsCount());
+            for (Protos.TransactionOutput output : isLockProto.getInputsList()) {
+                inputs.add(new TransactionOutPoint(params, output.getSpentByTransactionIndex(), Sha256Hash.wrap(output.getSpentByTransactionHash().toByteArray())));
+            }
+            InstantSendLock islock = new InstantSendLock(params, inputs,
+                    Sha256Hash.wrap(isLockProto.getTxid().toByteArray()),
+                    new BLSLazySignature(params, isLockProto.getSignature().toByteArray(), 0));
+            confidence.setInstantSendLock(islock);
         }
         if(confidenceProto.hasSentTime())
             confidence.setSentTime(new Date(confidenceProto.getSentTime()));
