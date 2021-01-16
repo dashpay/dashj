@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 
+import org.bitcoinj.quorums.InstantSendLock;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Wallet;
@@ -596,6 +597,16 @@ public class TransactionConfidence {
 
     public boolean isIX() { return ixType != IXType.IX_NONE; }
     public boolean isTransactionLocked() { return ixType == IXType.IX_LOCKED; }
+
+    InstantSendLock islock;
+
+    public InstantSendLock getInstantSendlock() {
+        return islock;
+    }
+
+    public void setInstantSendLock(InstantSendLock islock) {
+        this.islock = islock;
+    }
 
     //
     // Information about peer count when sent
