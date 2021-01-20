@@ -21,7 +21,7 @@
 
   <groupId>org.dashj</groupId>
   <artifactId>dashj-parent</artifactId>
-  <version>0.17.6-SNAPSHOT</version>
+  <version>0.17.6</version>
   <packaging>pom</packaging>
 
   <modules>
