@@ -14706,6 +14706,10 @@ public final class Protos {
        * <code>BLOCKCHAIN_IDENTITY_TOPUP = 6;</code>
        */
       BLOCKCHAIN_IDENTITY_TOPUP(6),
+      /**
+       * <code>INVITATION_FUNDING = 7;</code>
+       */
+      INVITATION_FUNDING(7),
       ;
 
       /**
@@ -14736,6 +14740,10 @@ public final class Protos {
        * <code>BLOCKCHAIN_IDENTITY_TOPUP = 6;</code>
        */
       public static final int BLOCKCHAIN_IDENTITY_TOPUP_VALUE = 6;
+      /**
+       * <code>INVITATION_FUNDING = 7;</code>
+       */
+      public static final int INVITATION_FUNDING_VALUE = 7;
 
 
       @java.lang.Override
@@ -14762,6 +14770,7 @@ public final class Protos {
           case 4: return MASTERNODE_VOTING;
           case 5: return BLOCKCHAIN_IDENTITY_FUNDING;
           case 6: return BLOCKCHAIN_IDENTITY_TOPUP;
+          case 7: return INVITATION_FUNDING;
           default: return null;
         }
       }
