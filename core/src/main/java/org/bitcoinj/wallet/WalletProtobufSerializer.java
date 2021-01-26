@@ -248,6 +248,13 @@ public class WalletProtobufSerializer {
             extendedKeyChainBuilder.addAllKey(wallet.getBlockchainIdentityTopupKeyChain().serializeToProtobuf());
             extendedKeyChains.add(extendedKeyChainBuilder.build());
         }
+        if(wallet.getInvitationFundingKeyChain() != null) {
+            Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
+            extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.INVITATION_FUNDING);
+            extendedKeyChainBuilder.addAllKey(wallet.getInvitationFundingKeyChain().serializeToProtobuf());
+            extendedKeyChains.add(extendedKeyChainBuilder.build());
+        }
         if(wallet.getProviderOwnerKeyChain() != null) {
             Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
             extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
@@ -642,6 +649,9 @@ public class WalletProtobufSerializer {
                         break;
                     case MASTERNODE_HOLDINGS:
                         type = AuthenticationKeyChain.KeyChainType.MASTERNODE_HOLDINGS;
+                        break;
+                    case INVITATION_FUNDING:
+                        type = AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING;
                         break;
                     default:
                         type = AuthenticationKeyChain.KeyChainType.INVALID_KEY_CHAIN;

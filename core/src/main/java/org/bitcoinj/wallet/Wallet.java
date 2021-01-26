@@ -5717,32 +5717,54 @@ public class Wallet extends BaseTaggableObject
     AuthenticationKeyChain blockchainIdentityFundingKeyChain;
     AuthenticationKeyChain blockchainIdentityTopupKeyChain;
     AuthenticationKeyChain blockchainIdentityKeyChain;
+    AuthenticationKeyChain invitationFundingKeyChain;
     AuthenticationKeyChainGroup authenticationGroup;
 
     public void initializeAuthenticationKeyChains(DeterministicSeed seed, @Nullable KeyParameter keyParameter) {
         //TODO: add provider*KeyChains when that functionality is required
-        //providerOwnerKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeOwnerDerivationPath()).type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER).build();
-        //providerVoterKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.masternodeVotingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING).build();
-        blockchainIdentityFundingKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING).build();
-        blockchainIdentityTopupKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityTopupFundingDerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP).build();
-        blockchainIdentityKeyChain = AuthenticationKeyChain.authenticationBuilder().seed(seed).accountPath(derivationPathFactory.blockchainIdentityECDSADerivationPath()).type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY).build();
+        //addAuthenticationKeyChain(seed,
+        //        derivationPathFactory.masternodeOwnerDerivationPath(),
+        //        AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
+        //        keyParameter);
+        //addAuthenticationKeyChain(seed,
+        //        derivationPathFactory.masternodeVotingDerivationPath(),
+        //        AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+        //        keyParameter);
+        addAuthenticationKeyChain(seed,
+                derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath(),
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
+                keyParameter);
+        addAuthenticationKeyChain(seed,
+                derivationPathFactory.blockchainIdentityTopupFundingDerivationPath(),
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
+                keyParameter);
+        addAuthenticationKeyChain(seed,
+                derivationPathFactory.blockchainIdentityECDSADerivationPath(),
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
+                keyParameter);
+        addAuthenticationKeyChain(seed,
+                derivationPathFactory.identityInvitationFundingDerivationPath(),
+                AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
+                keyParameter);
+    }
 
-        //encrypt all of the key chains if necessary
-        if(keyParameter != null && getKeyCrypter() != null) {
-            //providerOwnerKeyChain = providerOwnerKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
-            //providerVoterKeyChain = providerVoterKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
-            blockchainIdentityKeyChain = blockchainIdentityKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
-            blockchainIdentityFundingKeyChain = blockchainIdentityFundingKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
-            blockchainIdentityTopupKeyChain = blockchainIdentityTopupKeyChain.toEncrypted(getKeyCrypter(), keyParameter);
+    void addAuthenticationKeyChain(DeterministicSeed seed,
+                                   ImmutableList<ChildNumber> path,
+                                   AuthenticationKeyChain.KeyChainType type,
+                                   @Nullable KeyParameter keyParameter) {
+
+        if (authenticationGroup == null || authenticationGroup.getKeyChain(type) == null) {
+            AuthenticationKeyChain chain = AuthenticationKeyChain.authenticationBuilder()
+                    .seed(seed).accountPath(path).type(type)
+                    .build();
+
+            if (authenticationGroup != null && authenticationGroup.getKeyChain(chain.type) == null) {
+                if (keyParameter != null && getKeyCrypter() != null) {
+                    chain = chain.toEncrypted(getKeyCrypter(), keyParameter);
+                }
+                setAuthenticationKeyChain(chain, chain.type);
+            }
         }
-
-        authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams())
-                //.addChain(providerOwnerKeyChain)
-                //.addChain(providerVoterKeyChain)
-                .addChain(blockchainIdentityTopupKeyChain)
-                .addChain(blockchainIdentityFundingKeyChain)
-                .addChain(blockchainIdentityKeyChain)
-                .build();
     }
 
     public AuthenticationKeyChain getProviderOwnerKeyChain() {
@@ -5763,6 +5785,10 @@ public class Wallet extends BaseTaggableObject
 
     public AuthenticationKeyChain getBlockchainIdentityTopupKeyChain() {
         return blockchainIdentityTopupKeyChain;
+    }
+
+    public AuthenticationKeyChain getInvitationFundingKeyChain() {
+        return invitationFundingKeyChain;
     }
 
     //package level access
@@ -5792,6 +5818,10 @@ public class Wallet extends BaseTaggableObject
                 blockchainIdentityTopupKeyChain = chain;
                 authenticationGroup.addAndActivateHDChain(chain);
                 break;
+            case INVITATION_FUNDING:
+                invitationFundingKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
         }
     }
 
@@ -5818,6 +5848,32 @@ public class Wallet extends BaseTaggableObject
         }
         return txs;
     }
+
+    public List<CreditFundingTransaction> getIdentityFundingTransactions() {
+        return getFundingTransactions(blockchainIdentityFundingKeyChain);
+    }
+
+    public List<CreditFundingTransaction> getTopupFundingTransactions() {
+        return getFundingTransactions(blockchainIdentityTopupKeyChain);
+    }
+
+    public List<CreditFundingTransaction> getInvitationFundingTransactions() {
+        return getFundingTransactions(invitationFundingKeyChain);
+    }
+
+    private List<CreditFundingTransaction> getFundingTransactions(AuthenticationKeyChain chain) {
+        ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
+        List<CreditFundingTransaction> allTxs = getCreditFundingTransactions();
+
+        for (CreditFundingTransaction cftx : allTxs) {
+            if(chain.findKeyFromPubHash(cftx.getCreditBurnPublicKeyId().getBytes()) != null) {
+                txs.add(cftx);
+            }
+        }
+        return txs;
+    }
+
+
 
     /**
      * Get a CreditFundingTransaction object for a specific transaction
