@@ -43,6 +43,19 @@ public class DerivationPathFactory {
                 .build();
     }
 
+    /** blockchain identity invitation funding derivation path
+     * m/9'/5'/5'/3' (mainnet)
+     * m/9'/1'/5'/3' (testnet, devnets)
+     */
+    public ImmutableList<ChildNumber> identityInvitationFundingDerivationPath() {
+        return ImmutableList.<ChildNumber>builder()
+                .add(FEATURE_PURPOSE)
+                .add(coinType)
+                .add(FEATURE_PURPOSE_IDENTITIES)
+                .add(new ChildNumber(3, true))
+                .build();
+    }
+
     /** blockchain identity keys derivation path (EC Keys)
      * m/9'/5'/5'/0'/0'/(blockchain identity index)'/(key index)' (mainnet)
      * m/9'/1'/5'/0'/0'/(blockchain identity index)'/(key index)' (testnet, devnets)
