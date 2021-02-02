@@ -5730,41 +5730,46 @@ public class Wallet extends BaseTaggableObject
         //        derivationPathFactory.masternodeVotingDerivationPath(),
         //        AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
         //        keyParameter);
-        addAuthenticationKeyChain(seed,
+        blockchainIdentityFundingKeyChain = addAuthenticationKeyChain(seed,
                 derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath(),
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
                 keyParameter);
-        addAuthenticationKeyChain(seed,
+        blockchainIdentityTopupKeyChain = addAuthenticationKeyChain(seed,
                 derivationPathFactory.blockchainIdentityTopupFundingDerivationPath(),
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
                 keyParameter);
-        addAuthenticationKeyChain(seed,
+        blockchainIdentityKeyChain = addAuthenticationKeyChain(seed,
                 derivationPathFactory.blockchainIdentityECDSADerivationPath(),
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
                 keyParameter);
-        addAuthenticationKeyChain(seed,
+        invitationFundingKeyChain = addAuthenticationKeyChain(seed,
                 derivationPathFactory.identityInvitationFundingDerivationPath(),
                 AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
                 keyParameter);
     }
 
-    void addAuthenticationKeyChain(DeterministicSeed seed,
+    AuthenticationKeyChain addAuthenticationKeyChain(DeterministicSeed seed,
                                    ImmutableList<ChildNumber> path,
                                    AuthenticationKeyChain.KeyChainType type,
                                    @Nullable KeyParameter keyParameter) {
 
-        if (authenticationGroup == null || authenticationGroup.getKeyChain(type) == null) {
-            AuthenticationKeyChain chain = AuthenticationKeyChain.authenticationBuilder()
+        if (authenticationGroup == null) {
+            authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(params).build();
+        }
+        AuthenticationKeyChain chain = authenticationGroup.getKeyChain(type);
+        if (chain == null) {
+
+            chain = AuthenticationKeyChain.authenticationBuilder()
                     .seed(seed).accountPath(path).type(type)
                     .build();
 
-            if (authenticationGroup != null && authenticationGroup.getKeyChain(chain.type) == null) {
-                if (keyParameter != null && getKeyCrypter() != null) {
-                    chain = chain.toEncrypted(getKeyCrypter(), keyParameter);
-                }
-                setAuthenticationKeyChain(chain, chain.type);
+            if (keyParameter != null && getKeyCrypter() != null) {
+                chain = chain.toEncrypted(getKeyCrypter(), keyParameter);
             }
+
+            authenticationGroup.addAndActivateHDChain(chain);
         }
+        return chain;
     }
 
     public AuthenticationKeyChain getProviderOwnerKeyChain() {
@@ -5795,7 +5800,7 @@ public class Wallet extends BaseTaggableObject
     void setAuthenticationKeyChain(AuthenticationKeyChain chain, AuthenticationKeyChain.KeyChainType type) {
         chain.setType(type);
         if(authenticationGroup == null)
-            authenticationGroup =  AuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
+            authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
 
         switch(type) {
             case MASTERNODE_VOTING:
