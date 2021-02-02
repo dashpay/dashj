@@ -208,9 +208,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
     }
 
     /**
-     * Returns a key that hasn't been seen in a transaction yet, and which is suitable for displaying in a wallet
-     * user interface as "a convenient key to receive funds on" when the purpose parameter is
-     * {@link KeyPurpose#RECEIVE_FUNDS}. The returned key is stable until
+     * Returns a key that hasn't been seen in a transaction yet. The returned key is stable until
      * it's actually seen in a pending or confirmed transaction, at which point this method will start returning
      * a different key (for each purpose independently).
      * <p>This method is not supposed to be used for married keychains and will throw UnsupportedOperationException if
@@ -329,13 +327,18 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
         for (Map.Entry<AuthenticationKeyChain.KeyChainType, DeterministicKey> entry : currentAuthenticationKeys.entrySet()) {
             if (entry.getValue() != null && entry.getValue().equals(key)) {
                 log.info("Marking key as used: {}", key);
-                currentAuthenticationKeys.put(entry.getKey(), freshKey(getKeyChainType()));
+                currentAuthenticationKeys.put(entry.getKey(), freshKey(entry.getKey()));
                 return;
             }
         }
     }
 
-    protected AuthenticationKeyChain.KeyChainType getKeyChainType() {
-        return chains.size() > 0 ? ((AuthenticationKeyChain)chains.get(0)).type : null;
+    protected AuthenticationKeyChain.KeyChainType getKeyChainType(byte [] pubkeyHash) {
+        for (DeterministicKeyChain chain: chains) {
+            if (chain.findKeyFromPubHash(pubkeyHash) != null) {
+                return ((AuthenticationKeyChain)chain).getType();
+            }
+        }
+        return AuthenticationKeyChain.KeyChainType.INVALID_KEY_CHAIN;
     }
 }

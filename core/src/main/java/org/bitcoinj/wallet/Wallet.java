@@ -5830,6 +5830,18 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
+    public AuthenticationKeyChain.KeyChainType getAuthenticationKeyType(byte [] pubkeyHash) {
+        keyChainGroupLock.lock();
+        try {
+            if (authenticationGroup != null) {
+                return authenticationGroup.getKeyChainType(pubkeyHash);
+            }
+            return AuthenticationKeyChain.KeyChainType.INVALID_KEY_CHAIN;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
     public boolean hasAuthenticationKeyChains() {
         return authenticationGroup != null && !authenticationGroup.chains.isEmpty();
     }

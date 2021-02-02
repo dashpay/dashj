@@ -288,4 +288,8 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
     public AuthenticationKeyChain toEncrypted(KeyCrypter keyCrypter, KeyParameter aesKey) {
         return new AuthenticationKeyChain(keyCrypter, aesKey, this);
     }
+
+    public KeyChainType getType() {
+        return type;
+    }
 }
