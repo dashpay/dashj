@@ -21,6 +21,7 @@ public class LLMQBackgroundThread extends Thread {
     @Override
     public void run() {
         Context.propagate(context);
+        log.info("starting LLMQBackgroundThread.run");
         try {
             context.signingManager.addRecoveredSignatureListener(context.instantSendManager);
             context.signingManager.addRecoveredSignatureListener(context.chainLockHandler);
@@ -47,14 +48,14 @@ public class LLMQBackgroundThread extends Thread {
                 }
 
             }
-        } catch (BlockStoreException x ) {
-
+        } catch (BlockStoreException x) {
+            log.info("stopping LLMQBackgroundThread via BlockStoreException");
         } catch (InterruptedException x) {
+            log.info("stopping LLMQBackgroundThread via InterruptedException");
             //let the thread stop
         } finally {
             context.signingManager.removeRecoveredSignatureListener(context.instantSendManager);
             context.signingManager.removeRecoveredSignatureListener(context.chainLockHandler);
-
         }
     }
 }
