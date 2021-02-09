@@ -660,18 +660,15 @@ public class InstantSendManager implements RecoveredSignatureListener {
                         islock.txid.toString(), islockHash.toString());
             }
 
+            // Keep invalid ISLocks for 1 hour
+            invalidInstantSendLocks.entrySet().removeIf(instantSendLockLongEntry -> instantSendLockLongEntry.getValue() < Utils.currentTimeSeconds() - context.getParams().getInstantSendKeepLock());
+
         } finally {
             lock.unlock();
         }
 
         for (Map.Entry<Sha256Hash, InstantSendLock> p : removeISLocks.entrySet()) {
             updateWalletTransaction(p.getValue().txid, null);
-        }
-
-        // Keep invalid ISLocks for 1 hour
-        for(Map.Entry<InstantSendLock, Long> entry : invalidInstantSendLocks.entrySet()) {
-            if(entry.getValue() < Utils.currentTimeSeconds() - context.getParams().getInstantSendKeepLock())
-                invalidInstantSendLocks.remove(entry.getKey());
         }
     }
     static final String INPUTLOCK_REQUESTID_PREFIX = "inlock";
