@@ -326,12 +326,14 @@ public class Context {
     private void startLLMQThread() {
         if (llmqBackgroundThread == null || !llmqBackgroundThread.isAlive()) {
             llmqBackgroundThread = new LLMQBackgroundThread(Context.this);
+            log.info("starting LLMQThread");
             llmqBackgroundThread.start();
         }
     }
 
     private void stopLLMQThread() {
         if (llmqBackgroundThread.isAlive()) {
+            log.info("stopping LLMQThread");
             llmqBackgroundThread.interrupt();
         }
     }
