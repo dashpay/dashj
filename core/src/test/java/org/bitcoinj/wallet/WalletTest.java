@@ -2706,7 +2706,7 @@ public class WalletTest extends TestWithWallet {
         emptyReq.allowUnconfirmed();
         wallet.completeTx(emptyReq);
         final Coin feePerKb = emptyReq.tx.getFee().multiply(1000).divide(emptyReq.tx.getMessageSize());
-        assertThat((double) feePerKb.value, closeTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.value,20));
+        assertThat((double) feePerKb.toSat(), closeTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.toSat(),20));
         wallet.commitTx(emptyReq.tx);
     }
 
