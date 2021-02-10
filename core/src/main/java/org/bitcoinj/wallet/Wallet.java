@@ -5899,12 +5899,17 @@ public class Wallet extends BaseTaggableObject
         if(mapCreditFundingTxs.containsKey(tx.getTxId()))
             return mapCreditFundingTxs.get(tx.getTxId());
 
-        AuthenticationKeyChain chain = getBlockchainIdentityFundingKeyChain();
-
         CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
 
         // set some internal data for the transaction
-        DeterministicKey publicKey = chain.getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+        DeterministicKey publicKey = getBlockchainIdentityFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+
+        if (publicKey == null)
+            publicKey = getBlockchainIdentityTopupKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+
+        if (publicKey == null)
+            publicKey = getInvitationFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+
         if(publicKey != null)
             cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
         else log.error("Cannot find " + new KeyId(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
