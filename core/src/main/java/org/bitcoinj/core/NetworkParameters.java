@@ -739,4 +739,10 @@ public abstract class NetworkParameters {
     public String [] getDefaultMasternodeList() {
         return new String[0];
     }
+
+    protected List<Sha256Hash> assumeValidQuorums;
+
+    public List<Sha256Hash> getAssumeValidQuorums() {
+        return assumeValidQuorums;
+    }
 }

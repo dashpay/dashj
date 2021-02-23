@@ -20,6 +20,7 @@ package org.bitcoinj.params;
 import static org.bitcoinj.core.Utils.HEX;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -167,7 +168,10 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         BIP65Height = 2431; // 0000039cf01242c7f921dcb4806a5994bc003b48c1973ae0c89b67809c2bb2ab
 
         coinType = 1;
-    }
+        assumeValidQuorums = new ArrayList<>();
+        assumeValidQuorums.add(Sha256Hash.wrap("0000000007697fd69a799bfa26576a177e817bc0e45b9fcfbf48b362b05aeff2"));
+        assumeValidQuorums.add(Sha256Hash.wrap("000000339cd97d45ee18cd0cba0fd590fb9c64e127d3c30885e5b7376af94fdf"));
+     }
 
     private static TestNet3Params instance;
 
