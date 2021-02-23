@@ -20,6 +20,7 @@ package org.bitcoinj.params;
 import static org.bitcoinj.core.Utils.HEX;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -80,28 +81,42 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         checkpoints.put(   1999, Sha256Hash.wrap("00000052e538d27fa53693efe6fb6892a0c1d26c0235f599171c48a3cce553b1"));
         checkpoints.put(   2999, Sha256Hash.wrap("0000024bc3f4f4cb30d29827c13d921ad77d2c6072e586c7f60d83c2722cdcc5"));
 
-        addrSeeds = new int[] {
-                0x65e3d503,
-                0xdbcab923,
-                0x4ced202d,
-                0x4faf4433,
-                0x51532334,
-                0x3ce1cc34,
-                0x1135b75f,
-                0x8035b75f,
-                0x4a490c6a,
-                0x90bd3d6c,
-                0x2fc03d6c,
-                0x3847eb6d,
-                0x705ad186,
-                0x4fe7d186,
-                0x333b528c,
-                0x14424c90,
-                0x2f56d990,
-                0x95d516a5,
-                0xf9cb3eb2,
-                0x0125d5b9,
-                0x0225d5b9
+        addrSeeds = new int[]{
+                0xaa34ca12,
+                0xaa34ca12,
+                0xaa34ca12,
+                0xaa34ca12,
+                0xaa34ca12,
+                0xaa34ca12,
+                0x140fff22,
+                0x140fff22,
+                0x140fff22,
+                0x140fff22,
+                0x140fff22,
+                0x140fff22,
+                0x35d03234,
+                0x35d03234,
+                0x35d03234,
+                0x35d03234,
+                0x35d03234,
+                0x35d03234,
+                0x55ee213f,
+                0x55ee213f,
+                0x55ee213f,
+                0x55ee213f,
+                0x55ee213f,
+                0x55ee213f,
+                0x10ebef91,
+                0x11ebef91,
+                0x12ebef91,
+                0x13ebef91,
+                0x14ebef91,
+                0x15ebef91,
+                0x16ebef91,
+                0x17ebef91,
+                0x18ebef91,
+                0x19ebef91,
+                0xf9cb3eb2
         };
         bip32HeaderP2PKHpub = 0x043587cf;
         bip32HeaderP2PKHpriv = 0x04358394;
@@ -119,7 +134,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         DIP0001Upgrade = TESTNET_MAJORITY_DIP0001_THRESHOLD;
         DIP0001BlockHeight = 4400;
 
-        fulfilledRequestExpireTime = 5*60;
+        fulfilledRequestExpireTime = 5 * 60;
         masternodeMinimumConfirmations = 1;
         superblockStartBlock = 4200;
         superblockCycle = 24;
@@ -152,9 +167,14 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
 
         BIP65Height = 2431; // 0000039cf01242c7f921dcb4806a5994bc003b48c1973ae0c89b67809c2bb2ab
 
-    }
+        coinType = 1;
+        assumeValidQuorums = new ArrayList<>();
+        assumeValidQuorums.add(Sha256Hash.wrap("0000000007697fd69a799bfa26576a177e817bc0e45b9fcfbf48b362b05aeff2"));
+        assumeValidQuorums.add(Sha256Hash.wrap("000000339cd97d45ee18cd0cba0fd590fb9c64e127d3c30885e5b7376af94fdf"));
+     }
 
     private static TestNet3Params instance;
+
     public static synchronized TestNet3Params get() {
         if (instance == null) {
             instance = new TestNet3Params();

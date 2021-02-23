@@ -32,9 +32,6 @@ public class SimplifiedQuorumList extends Message {
     LinkedHashMap<Sha256Hash, FinalCommitment> minableCommitments;
     private CoinbaseTx coinbaseTxPayload;
 
-    static final Sha256Hash invalidTestNetQuorumHash = Sha256Hash.wrap("000000339cd97d45ee18cd0cba0fd590fb9c64e127d3c30885e5b7376af94fdf");
-
-
     public SimplifiedQuorumList(NetworkParameters params) {
         super(params);
         blockHash = params.getGenesisBlock().getHash();
@@ -143,8 +140,9 @@ public class SimplifiedQuorumList extends Message {
                     //if quorum was created before DIP8 activation, then allow it to be added
                     if(chainHeight >= params.getDIP0008BlockHeight() || !isLoadingBootstrap) {
                         //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
-                        if (!isFirstQuorumCheck && entry.llmqType != 2 && !entry.quorumHash.equals(invalidTestNetQuorumHash))
+                        if (!isFirstQuorumCheck && entry.llmqType != 2 && !params.getAssumeValidQuorums().contains(entry.quorumHash)) {
                             throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
+                        }
                     }
                 }
                 result.addCommitment(entry);
