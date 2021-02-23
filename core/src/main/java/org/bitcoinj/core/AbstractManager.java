@@ -189,11 +189,15 @@ public abstract class AbstractManager extends Message {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    long start = Utils.currentTimeMillis();
-                    FlatDB<AbstractManager> flatDB = new FlatDB<AbstractManager>(context, filename, true, magicMessage, getFormatVersion());
-                    flatDB.dump(AbstractManager.this);
-                    long end = Utils.currentTimeMillis();
-                    log.info(AbstractManager.class.getCanonicalName() + " Save time:  " + (end - start) + "ms");
+                    try {
+                        long start = Utils.currentTimeMillis();
+                        FlatDB<AbstractManager> flatDB = new FlatDB<AbstractManager>(context, filename, true, magicMessage, getFormatVersion());
+                        flatDB.dump(AbstractManager.this);
+                        long end = Utils.currentTimeMillis();
+                        log.info(AbstractManager.class.getCanonicalName() + " Save time:  " + (end - start) + "ms");
+                    } catch (Exception x) {
+                        log.warn("Saving failed for " + getDefaultFileName());
+                    }
                 }
             }).start();
         } else throw new FileNotFoundException("filename is not set");
