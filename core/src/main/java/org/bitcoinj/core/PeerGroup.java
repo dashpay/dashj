@@ -2119,12 +2119,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             Context context = Context.get();
             @Override
             public void onSuccess(Transaction transaction) {
-                log.info("Successfully sent tx {}", tx.getHash());
+                log.info("Successfully sent tx {}", transaction.getTxId());
                 Context.propagate(context);
 
                 if(transaction.getConfidence().numBroadcastPeers() == 0) {
                     // TODO: this tx was sent to a single peer, should we send it again to make sure or see if there are more connections?
-                    int sentCount = pendingTxSendCounts.get(tx.getHash());
+                    int sentCount = pendingTxSendCounts.get(transaction.getTxId());
 
                     if(sentCount <= 2) {
                         log.info("resending tx {} since it was only sent to 1 peer", tx.getHash());
