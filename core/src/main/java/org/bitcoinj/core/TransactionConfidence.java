@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 
+import org.bitcoinj.crypto.BLSLazySignature;
 import org.bitcoinj.quorums.InstantSendLock;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.wallet.CoinSelector;
@@ -400,6 +401,7 @@ public class TransactionConfidence {
         }
 
         builder.append("\n");
+
         switch(getIXType())
         {
             case IX_LOCKED:
@@ -414,6 +416,16 @@ public class TransactionConfidence {
             case IX_NONE:
                 builder.append("  InstantSendLock: Unknown status");
                 break;
+        }
+
+        InstantSendLock islock = getInstantSendlock();
+        if (islock != null) {
+            BLSLazySignature isLockSig = islock.getSignature();
+            if (isLockSig != null) {
+                builder.append(" [sig=" + isLockSig +"]");
+            } else {
+                builder.append(" [sig=null]");
+            }
         }
         builder.append("\n");
 
