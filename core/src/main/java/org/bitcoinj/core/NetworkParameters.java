@@ -48,12 +48,6 @@ import org.bitcoinj.utils.VersionTally;
  * them, you are encouraged to call the static get() methods on each specific params class directly.</p>
  */
 public abstract class NetworkParameters {
-    /**
-     * The alert signing key originally owned by Satoshi, and now passed on to Gavin along with a few others.
-     */
-    @Deprecated
-    public static final byte[] SATOSHI_KEY = Utils.HEX.decode("048240a8748a80a286b270ba126705ced4f2ce5a7847b3610ea3c06513150dade2a8512ed5ea86320824683fc0818f0ac019214973e677acd1244f6d0571fc5103");
-
     /** The string returned by getId() for the main, production network where people trade things. */
     public static final String ID_MAINNET = "org.darkcoin.production";
     /** The string returned by getId() for the testnet. */
@@ -90,8 +84,6 @@ public abstract class NetworkParameters {
     protected String segwitAddressHrp;
     protected int interval;
     protected int targetTimespan;
-    @Deprecated
-    protected byte[] alertSigningKey;
     protected int bip32HeaderP2PKHpub;
     protected int bip32HeaderP2PKHpriv;
     protected int bip32HeaderP2WPKHpub;
@@ -179,7 +171,6 @@ public abstract class NetworkParameters {
     }
 
     protected NetworkParameters() {
-        alertSigningKey = SATOSHI_KEY;
         genesisBlock = createGenesis(this);
     }
 
@@ -490,15 +481,6 @@ public abstract class NetworkParameters {
     /** Maximum target represents the easiest allowable proof of work. */
     public BigInteger getMaxTarget() {
         return maxTarget;
-    }
-
-    /**
-     * The key used to sign {@link AlertMessage}s. You can use {@link ECKey#verify(byte[], byte[], byte[])} to verify
-     * signatures using it.
-     */
-    @Deprecated
-    public byte[] getAlertSigningKey() {
-        return alertSigningKey;
     }
 
     /** Returns the 4 byte header for BIP32 wallet P2PKH - public key part. */

@@ -51,9 +51,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         genesisBlock.setNonce(3861367235L);
         spendableCoinbaseDepth = 100;
         String genesisHash = genesisBlock.getHashAsString();
-
         checkState(genesisHash.equals("00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c"));
-        alertSigningKey = HEX.decode("04517d8a699cb43d3938d7b24faaff7cda448ca4ea267723ba614784de661949bf632d6304316b244646dea079735b9a6fc4af804efb4752075b9fe2245e14e412");
 
         dnsSeeds = new String[] {
                 "testnet-seed.dashdot.io" // this seeder is offline

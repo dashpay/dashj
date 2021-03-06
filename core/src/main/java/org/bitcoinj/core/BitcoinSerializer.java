@@ -292,8 +292,6 @@ public class BitcoinSerializer extends MessageSerializer {
             return new GetHeaders2Message(params, payloadBytes);
         } else if (command.equals("sendheaders2")) {
             return new SendHeaders2Message(params, payloadBytes);
-        } else if (command.equals("alert")) {
-            return makeAlertMessage(payloadBytes);
         } else if (command.equals("filterload")) {
             return makeBloomFilter(payloadBytes);
         } else if (command.equals("notfound")) {
@@ -378,15 +376,6 @@ public class BitcoinSerializer extends MessageSerializer {
     @Override
     public AddressMessage makeAddressMessage(byte[] payloadBytes, int length) throws ProtocolException {
         return new AddressMessage(params, payloadBytes, this, length);
-    }
-
-    /**
-     * Make an alert message from the payload. Extension point for alternative
-     * serialization format support.
-     */
-    @Override
-    public Message makeAlertMessage(byte[] payloadBytes) throws ProtocolException {
-        return new AlertMessage(params, payloadBytes);
     }
 
     /**
