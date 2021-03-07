@@ -461,7 +461,7 @@ public class ProviderTests {
 
         assertArrayEquals(ScriptPattern.extractRecipientPubKeyFromCltvPaymentChannel(message), ScriptPattern.extractRecipientPubKeyFromCltvPaymentChannel(data));
 
-        message.correctlySpends(providerRegistrationTransactionFromMessage, 0, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), Script.ALL_VERIFY_FLAGS);
+        message.correctlySpends(providerRegistrationTransactionFromMessage, 0, null, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), Script.ALL_VERIFY_FLAGS);
 
         //TODO:  The signatures are not correct on the providerRegistrationTransaction
         //data.correctlySpends(providerRegistrationTransaction, 0, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), Script.ALL_VERIFY_FLAGS);
@@ -590,7 +590,7 @@ public class ProviderTests {
 
         Script data = providerUpdateRegistrarTransaction.getInput(0).getScriptSig();
 
-        data.correctlySpends(providerUpdateRegistrarTransaction, 0, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), Script.ALL_VERIFY_FLAGS);
+        data.correctlySpends(providerUpdateRegistrarTransaction, 0, null, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), Script.ALL_VERIFY_FLAGS);
 
     }
 

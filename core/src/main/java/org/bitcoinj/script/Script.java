@@ -1527,6 +1527,53 @@ public class Script {
         return opCount;
     }
 
+
+    /**
+     * Verifies that this script (interpreted as a scriptSig) correctly spends the given scriptPubKey.
+     * @param txContainingThis The transaction in which this input scriptSig resides.
+     *                         Accessing txContainingThis from another thread while this method runs results in undefined behavior.
+     * @param scriptSigIndex The index in txContainingThis of the scriptSig (note: NOT the index of the scriptPubKey).
+     * @param scriptPubKey The connected scriptPubKey containing the conditions needed to claim the value.
+     * @param value Value of the output. Needed for SegWit scripts.
+     * @param verifyFlags Each flag enables one validation rule.
+     */
+    public void correctlySpends(Transaction txContainingThis, int scriptSigIndex, @Nullable Coin value,
+                                Script scriptPubKey, Set<VerifyFlag> verifyFlags) throws ScriptException {
+        if (ScriptPattern.isP2PKH(scriptPubKey)) {
+            if (chunks.size() != 2)
+                throw new ScriptException(ScriptError.SCRIPT_ERR_SCRIPT_SIZE, "Invalid size: " + chunks.size());
+            TransactionSignature signature;
+            try {
+                signature = TransactionSignature.decodeFromBitcoin(chunks.get(0).data, true, true);
+            } catch (SignatureDecodeException x) {
+                throw new ScriptException(ScriptError.SCRIPT_ERR_SIG_DER, "Cannot decode", x);
+            }
+            ECKey pubkey = ECKey.fromPublicOnly(chunks.get(1).data);
+            Sha256Hash sigHash = txContainingThis.hashForSignature(scriptSigIndex, scriptPubKey,
+                    signature.sigHashMode(), false);
+            boolean validSig = pubkey.verify(sigHash, signature);
+            if (!validSig)
+                throw new ScriptException(ScriptError.SCRIPT_ERR_CHECKSIGVERIFY, "Invalid signature");
+        } else if (ScriptPattern.isP2PK(scriptPubKey)) {
+            if (chunks.size() != 1)
+                throw new ScriptException(ScriptError.SCRIPT_ERR_SCRIPT_SIZE, "Invalid size: " + chunks.size());
+            TransactionSignature signature;
+            try {
+                signature = TransactionSignature.decodeFromBitcoin(chunks.get(0).data, false, false);
+            } catch (SignatureDecodeException x) {
+                throw new ScriptException(ScriptError.SCRIPT_ERR_SIG_DER, "Cannot decode", x);
+            }
+            ECKey pubkey = ECKey.fromPublicOnly(ScriptPattern.extractKeyFromP2PK(scriptPubKey));
+            Sha256Hash sigHash = txContainingThis.hashForSignature(scriptSigIndex, scriptPubKey,
+                    signature.sigHashMode(), false);
+            boolean validSig = pubkey.verify(sigHash, signature);
+            if (!validSig)
+                throw new ScriptException(ScriptError.SCRIPT_ERR_CHECKSIGVERIFY, "Invalid signature");
+        } else {
+            correctlySpends(txContainingThis, scriptSigIndex, scriptPubKey, verifyFlags);
+        }
+    }
+
     /**
      * Verifies that this script (interpreted as a scriptSig) correctly spends the given scriptPubKey.
      * @param txContainingThis The transaction in which this input scriptSig resides.
@@ -1534,6 +1581,7 @@ public class Script {
      * @param scriptSigIndex The index in txContainingThis of the scriptSig (note: NOT the index of the scriptPubKey).
      * @param scriptPubKey The connected scriptPubKey containing the conditions needed to claim the value.
      * @param verifyFlags Each flag enables one validation rule.
+     * @deprecated Use {@link #correctlySpends(Transaction, int, Coin, Script, Set)} instead.
      */
     public void correctlySpends(Transaction txContainingThis, long scriptSigIndex, Script scriptPubKey,
                                 Set<VerifyFlag> verifyFlags) throws ScriptException {

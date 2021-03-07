@@ -211,22 +211,22 @@ public class TransactionTest {
                 ScriptBuilder.createCLTVPaymentChannelInput(incorrectSig, toSig);
 
         try {
-            scriptSig.correctlySpends(tx, 0, outputScript, Script.ALL_VERIFY_FLAGS);
+            scriptSig.correctlySpends(tx, 0, null, outputScript, Script.ALL_VERIFY_FLAGS);
         } catch (ScriptException e) {
             e.printStackTrace();
             fail("Settle transaction failed to correctly spend the payment channel");
         }
 
         try {
-            refundSig.correctlySpends(tx, 0, outputScript, Script.ALL_VERIFY_FLAGS);
+            refundSig.correctlySpends(tx, 0, null, outputScript, Script.ALL_VERIFY_FLAGS);
             fail("Refund passed before expiry");
         } catch (ScriptException e) { }
         try {
-            invalidScriptSig1.correctlySpends(tx, 0, outputScript, Script.ALL_VERIFY_FLAGS);
+            invalidScriptSig1.correctlySpends(tx, 0, null, outputScript, Script.ALL_VERIFY_FLAGS);
             fail("Invalid sig 1 passed");
         } catch (ScriptException e) { }
         try {
-            invalidScriptSig2.correctlySpends(tx, 0, outputScript, Script.ALL_VERIFY_FLAGS);
+            invalidScriptSig2.correctlySpends(tx, 0, null, outputScript, Script.ALL_VERIFY_FLAGS);
             fail("Invalid sig 2 passed");
         } catch (ScriptException e) { }
     }
@@ -262,14 +262,14 @@ public class TransactionTest {
                 ScriptBuilder.createCLTVPaymentChannelRefund(incorrectSig);
 
         try {
-            scriptSig.correctlySpends(tx, 0, outputScript, Script.ALL_VERIFY_FLAGS);
+            scriptSig.correctlySpends(tx, 0, null, outputScript, Script.ALL_VERIFY_FLAGS);
         } catch (ScriptException e) {
             e.printStackTrace();
             fail("Refund failed to correctly spend the payment channel");
         }
 
         try {
-            invalidScriptSig.correctlySpends(tx, 0, outputScript, Script.ALL_VERIFY_FLAGS);
+            invalidScriptSig.correctlySpends(tx, 0, null, outputScript, Script.ALL_VERIFY_FLAGS);
             fail("Invalid sig passed");
         } catch (ScriptException e) { }
     }
