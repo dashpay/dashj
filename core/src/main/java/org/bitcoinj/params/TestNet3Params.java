@@ -171,6 +171,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         assumeValidQuorums = new ArrayList<>();
         assumeValidQuorums.add(Sha256Hash.wrap("0000000007697fd69a799bfa26576a177e817bc0e45b9fcfbf48b362b05aeff2"));
         assumeValidQuorums.add(Sha256Hash.wrap("000000339cd97d45ee18cd0cba0fd590fb9c64e127d3c30885e5b7376af94fdf"));
+        assumeValidQuorums.add(Sha256Hash.wrap("0000007833f1b154218be64712cabe0e7c695867cc0c452311b2d786e14622fa"));
      }
 
     private static TestNet3Params instance;
