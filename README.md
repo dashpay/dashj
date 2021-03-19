@@ -25,15 +25,19 @@ git submodule update  --init --recursive
 ```
 To perform a full build use (this includes the dashjbls shared library):
 ```
-mvn clean package
+cd bls
+mvn clean package -Pbuild-bls-only -pl :dashj-bls -DskipTests -Dmaven.javadoc.skip=true --settings ../maven-settings.xml
+cd ..
+mvn clean package --settings maven-settings.xml
 ```
 To perform a full build without building the bls shared library and skip the test:
 ```
-mvn clean package -Pno-build-bls -DskipTests
+
+mvn clean package -Pno-build-bls -DskipTests --settings maven-settings.xml
 ```
 To perform a full build and install it in the local maven repository:
 ```
-mvn clean install
+mvn clean install --settings maven-settings.xml
 ```
 You can also run
 ```
