@@ -31,7 +31,6 @@ public class X11 {
 
     private static final Logger log = LoggerFactory.getLogger(X11.class);
     private static boolean native_library_loaded = false;
-    private static Digest [] algorithms;
 
     static {
         try {
@@ -43,21 +42,19 @@ public class X11 {
         catch(UnsatisfiedLinkError x)
         {
             log.info("Loading x11 failed: " + x.getMessage());
-            init();
         }
         catch(Exception e)
         {
             native_library_loaded = false;
             log.info("Loading x11 failed: " + e.getMessage());
-            init();
         }
     }
 
     /**
      * create the hash objects only if the native library failed to load
      */
-    static void init() {
-        algorithms = new Digest[]{
+    static Digest [] initAlgorithms() {
+        return new Digest[] {
                 new BLAKE512(),
                 new BMW512(),
                 new Groestl512(),
@@ -88,6 +85,7 @@ public class X11 {
     static native byte [] x11_native(byte [] input, int offset, int length);
 
     public static byte [] x11(byte input[], int offset, int length) {
+        Digest [] algorithms = initAlgorithms();
         Digest algorithm = algorithms[0];
         algorithm.reset();
         algorithm.update(input, offset, length);
