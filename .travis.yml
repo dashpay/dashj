@@ -9,13 +9,13 @@ addons:
 jdk: oraclejdk8
 install: true # remove default
 script:
-  - cd bls
-  - mvn clean package -Pbuild-bls-only -pl :dashj-bls -DskipTests -Dmaven.javadoc.skip=true --settings ../maven-settings.xml
-  - cd ..
-  - mvn -q clean install -Pno-network --settings maven-settings.xml
+#  - cd bls
+#  - mvn clean package -Pbuild-bls-only -pl :dashj-bls -DskipTests -Dmaven.javadoc.skip=true --settings ../maven-settings.xml
+#  - cd ..
+  - mvn -q clean install -Pno-network #--settings maven-settings.xml
   - jdk_switcher use openjdk8
   - cd core
-  - mvn -q clean install -Pno-network --settings ../maven-settings.xml
+  - mvn -q clean install -Pno-network #--settings ../maven-settings.xml
 
 after_success:
   - cd ../core
