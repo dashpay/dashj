@@ -744,49 +744,50 @@ public class WalletTool implements Callable<Integer> {
         }
     }
 
-    private void send(List<String> outputs, Coin feePerVkb, String lockTimeStr, boolean allowUnconfirmed, boolean isCoinJoin, boolean returnChange) throws VerificationException {
-        try {
-            // Convert the input strings to outputs.
-            Transaction t = new Transaction(params);
-            for (String spec : outputs) {
-                try {
-                    OutputSpec outputSpec = new OutputSpec(spec, isCoinJoin);
-                    if (outputSpec.isAddress()) {
-                        t.addOutput(outputSpec.value, outputSpec.addr);
-                    } else {
-                        t.addOutput(outputSpec.value, outputSpec.key);
-                    }
-                } catch (AddressFormatException.WrongNetwork e) {
-                    System.err.println("Malformed output specification, address is for a different network: " + spec);
-                    return;
-                } catch (AddressFormatException e) {
-                    System.err.println("Malformed output specification, could not parse as address: " + spec);
-                    return;
-                } catch (NumberFormatException e) {
-                    System.err.println("Malformed output specification, could not parse as value: " + spec);
-                    return;
-                } catch (IllegalArgumentException e) {
-                    System.err.println(e.getMessage());
-                    return;
+    private void send(List<String> outputs, Coin feePerVkb, String lockTimeStr, boolean allowUnconfirmed) throws VerificationException {
+        // Convert the input strings to outputs.
+        Transaction t = new Transaction(params);
+        for (String spec : outputs) {
+            try {
+                OutputSpec outputSpec = new OutputSpec(spec);
+                if (outputSpec.isAddress()) {
+                    t.addOutput(outputSpec.value, outputSpec.addr);
+                } else {
+                    t.addOutput(outputSpec.value, outputSpec.key);
                 }
+            } catch (AddressFormatException.WrongNetwork e) {
+                System.err.println("Malformed output specification, address is for a different network: " + spec);
+                return;
+            } catch (AddressFormatException e) {
+                System.err.println("Malformed output specification, could not parse as address: " + spec);
+                return;
+            } catch (NumberFormatException e) {
+                System.err.println("Malformed output specification, could not parse as value: " + spec);
+                return;
+            } catch (IllegalArgumentException e) {
+                System.err.println(e.getMessage());
+                return;
             }
-            SendRequest req = isCoinJoin ? CoinJoinSendRequest.forTx(wallet, t, returnChange) : SendRequest.forTx(t);
-            if (!isCoinJoin)
-                req.coinSelector = UnmixedZeroConfCoinSelector.get();
-            if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) :wallet.getBalance())) {
-                log.info("Emptying out wallet, recipient may get less than what you expect");
-                req.emptyWallet = true;
-            }
-            if (feePerVkb != null)
-                req.feePerKb = feePerVkb;
-            if (allowUnconfirmed) {
-                req.allowUnconfirmed();
-            }
-            if (password != null) {
-                req.aesKey = passwordToKey(true);
-                if (req.aesKey == null)
-                    return;  // Error message already printed.
-            }
+        }
+        SendRequest req = isCoinJoin ? CoinJoinSendRequest.forTx(wallet, t, returnChange) : SendRequest.forTx(t);
+        if (!isCoinJoin)
+            req.coinSelector = UnmixedZeroConfCoinSelector.get();
+        if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(wallet.getBalance())) {
+            log.info("Emptying out wallet, recipient may get less than what you expect");
+            req.emptyWallet = true;
+        }
+        if (feePerVkb != null)
+            req.setFeePerVkb(feePerVkb);
+        if (allowUnconfirmed) {
+            req.allowUnconfirmed();
+        }
+        if (password != null) {
+            req.aesKey = passwordToKey(true);
+            if (req.aesKey == null)
+                return;  // Error message already printed.
+        }
+
+        try {
             wallet.completeTx(req);
 
             try {
@@ -1216,21 +1217,22 @@ public class WalletTool implements Callable<Integer> {
     }
 
     private void send(PaymentSession session) {
+        System.out.println("Payment Request");
+        System.out.println("Coin: " + session.getValue().toFriendlyString());
+        System.out.println("Date: " + session.getDate());
+        System.out.println("Memo: " + session.getMemo());
+        if (session.pkiVerificationData != null) {
+            System.out.println("Pki-Verified Name: " + session.pkiVerificationData.displayName);
+            System.out.println("PKI data verified by: " + session.pkiVerificationData.rootAuthorityName);
+        }
+        final SendRequest req = session.getSendRequest();
+        if (password != null) {
+            req.aesKey = passwordToKey(true);
+            if (req.aesKey == null)
+                return;   // Error message already printed.
+        }
+
         try {
-            System.out.println("Payment Request");
-            System.out.println("Coin: " + session.getValue().toFriendlyString());
-            System.out.println("Date: " + session.getDate());
-            System.out.println("Memo: " + session.getMemo());
-            if (session.pkiVerificationData != null) {
-                System.out.println("Pki-Verified Name: " + session.pkiVerificationData.displayName);
-                System.out.println("PKI data verified by: " + session.pkiVerificationData.rootAuthorityName);
-            }
-            final SendRequest req = session.getSendRequest();
-            if (password != null) {
-                req.aesKey = passwordToKey(true);
-                if (req.aesKey == null)
-                    return;   // Error message already printed.
-            }
             wallet.completeTx(req);  // may throw InsufficientMoneyException.
             if (offline) {
                 wallet.commitTx(req.tx);
