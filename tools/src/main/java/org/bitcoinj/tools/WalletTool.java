@@ -750,11 +750,12 @@ public class WalletTool implements Callable<Integer> {
         for (String spec : outputs) {
             try {
                 OutputSpec outputSpec = new OutputSpec(spec);
-                if (outputSpec.isAddress()) {
-                    t.addOutput(outputSpec.value, outputSpec.addr);
-                } else {
-                    t.addOutput(outputSpec.value, outputSpec.key);
-                }
+                Coin value = outputSpec.value != null ? outputSpec.value :
+                        wallet.getBalance(allowUnconfirmed ? BalanceType.ESTIMATED : BalanceType.AVAILABLE);
+                if (outputSpec.isAddress())
+                    t.addOutput(value, outputSpec.addr);
+                else
+                    t.addOutput(value, outputSpec.key);
             } catch (AddressFormatException.WrongNetwork e) {
                 System.err.println("Malformed output specification, address is for a different network: " + spec);
                 return;
@@ -845,7 +846,7 @@ public class WalletTool implements Callable<Integer> {
             }
             String destination = parts[0];
             if ("ALL".equalsIgnoreCase(parts[1]))
-                value = isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) : wallet.getBalance(BalanceType.ESTIMATED);
+                value = null;
             else
                 value = parseCoin(parts[1]);
             if (destination.startsWith("0")) {
