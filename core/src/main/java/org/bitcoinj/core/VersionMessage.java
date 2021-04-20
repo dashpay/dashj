@@ -125,6 +125,7 @@ public class VersionMessage extends Message {
         // Note that the Dash Core doesn't do anything with these, and finding out your own external IP address
         // is kind of tricky anyway, so we just put nonsense here for now.
         InetAddress localhost = InetAddresses.forString("127.0.0.1");
+        MessageSerializer serializer = this.serializer.withProtocolVersion(0);
         receivingAddr = new PeerAddress(params, localhost, params.getPort(), BigInteger.ZERO, serializer);
         receivingAddr.setParent(this);
         fromAddr = new PeerAddress(params, localhost, params.getPort(), BigInteger.ZERO, serializer);
@@ -136,9 +137,6 @@ public class VersionMessage extends Message {
         }
         bestHeight = newBestHeight;
         relayTxesBeforeFilter = true;
-
-        length = 4 + 8 + 8 + receivingAddr.getMessageSize() + fromAddr.getMessageSize() + 8
-                + VarInt.sizeOf(subVer.length()) + subVer.length() + 4 + 1;
     }
 
     @Override

@@ -521,7 +521,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         // No further communication is possible until version handshake is complete.
-        if (!(m instanceof VersionMessage || m instanceof VersionAck || m instanceof SendAddressMessageV2
+        if (!(m instanceof VersionMessage || m instanceof VersionAck || m instanceof SendAddrV2Message
                 || (versionHandshakeFuture.isDone() && !versionHandshakeFuture.isCancelled())))
             throw new ProtocolException(
                     "Received " + m.getClass().getSimpleName() + " before version handshake is complete.");
@@ -566,7 +566,7 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof SendHeaders2Message) {
             // We ignore this message, because we don't announce new blocks.
             log.info("{}: Peer requested compressed header announcements (sendheaders2)", this);
-        } else if (m instanceof SendAddressMessageV2) {
+        } else if (m instanceof SendAddressV2Message) {
             // We ignore this message, because we don't reply to sendaddrv2 message.
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
@@ -628,6 +628,8 @@ public class Peer extends PeerSocketHandler {
         setMessageSerializer(params.getSerializer(false, vPeerVersionMessage.clientVersion));
 
         // Now it's our turn ...
+        // Send a sendaddrv2 message, indicating that we prefer to receive addrv2 messages.
+        sendMessage(new SendAddrV2Message(params));
         // Send an ACK message stating we accept the peers protocol version.
         sendMessage(new VersionAck());
         if (log.isDebugEnabled())
