@@ -94,6 +94,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     public ReentrantLock getLock() { return lock; }  //for dash
 
     protected final NetworkParameters params;
+    protected final Context context;
     @Nullable protected final AbstractBlockChain chain;
 
     // This executor is used to queue up jobs: it's used when we don't want to use locks for mutual exclusion,
@@ -327,6 +328,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      */
     private PeerGroup(Context context, @Nullable AbstractBlockChain chain, ClientConnectionManager connectionManager) {
         checkNotNull(context);
+        this.context = context;
         this.params = context.getParams();
         this.chain = chain;
         fastCatchupTimeSecs = params.getGenesisBlock().getTimeSeconds();
