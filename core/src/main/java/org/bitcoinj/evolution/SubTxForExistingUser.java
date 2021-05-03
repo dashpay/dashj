@@ -25,7 +25,7 @@ public abstract class SubTxForExistingUser extends SpecialTxPayload {
         this.regTxId = Sha256Hash.wrap(regTxId.getBytes());
         this.hashPrevSubTx = Sha256Hash.wrap(hashPrevSubTx.getBytes());
         this.creditFee = Coin.valueOf(creditFee.value);
-        this.signature = signature.duplicate();
+        this.signature = signature;
     }
 
     protected SubTxForExistingUser(NetworkParameters params, Transaction tx) {
@@ -37,7 +37,6 @@ public abstract class SubTxForExistingUser extends SpecialTxPayload {
             return calculateSignatureHash();
         else {
             SubTxForExistingUser subtx = duplicate();
-            subtx.signature.clear();
             return subtx.calculateSignatureHash();
         }
     }
