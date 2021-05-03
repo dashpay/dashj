@@ -1,5 +1,6 @@
 package org.bitcoinj.quorums;
 
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.UnsafeByteArrayOutputStream;
 import org.bitcoinj.core.Utils;
@@ -7,6 +8,12 @@ import org.bitcoinj.crypto.BLSPublicKey;
 
 import java.io.IOException;
 import java.util.ArrayList;
+
+import static org.bitcoinj.core.SporkManager.SPORK_21_QUORUM_ALL_CONNECTED;
+import static org.bitcoinj.core.SporkManager.SPORK_23_QUORUM_POSE;
+import static org.bitcoinj.quorums.LLMQParameters.LLMQType.LLMQ_100_67;
+import static org.bitcoinj.quorums.LLMQParameters.LLMQType.LLMQ_400_60;
+import static org.bitcoinj.quorums.LLMQParameters.LLMQType.LLMQ_400_85;
 
 public class LLMQUtils {
     static public Sha256Hash buildCommitmentHash(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash, ArrayList<Boolean> validMembers, BLSPublicKey pubKey, Sha256Hash vvecHash)
@@ -59,5 +66,20 @@ public class LLMQUtils {
         } catch (IOException x) {
             throw new RuntimeException(x);
         }
+    }
+
+    static boolean evalSpork(LLMQParameters.LLMQType llmqType, long sporkValue) {
+        if (sporkValue == 0) {
+            return true;
+        }
+        return sporkValue == 1 && llmqType != LLMQ_100_67 && llmqType != LLMQ_400_60 && llmqType != LLMQ_400_85;
+    }
+
+    boolean isAllMembersConnectedEnabled(LLMQParameters.LLMQType llmqType) {
+        return evalSpork(llmqType, Context.get().sporkManager.getSporkValue(SPORK_21_QUORUM_ALL_CONNECTED));
+    }
+
+    boolean isQuorumPoseEnabled(LLMQParameters.LLMQType llmqType) {
+        return evalSpork(llmqType, Context.get().sporkManager.getSporkValue(SPORK_23_QUORUM_POSE));
     }
 }
