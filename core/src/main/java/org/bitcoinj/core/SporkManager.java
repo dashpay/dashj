@@ -55,10 +55,13 @@ public class SporkManager {
     public static final int SPORK_20_INSTANTSEND_LLMQ_BASED                        = 10019;
     public static final int SPORK_21_QUORUM_ALL_CONNECTED                          = 10020;
     public static final int SPORK_22_PS_MORE_PARTICIPANTS                          = 10021;
+    public static final int SPORK_23_QUORUM_POSE                                   = 10022;
+    public static final int SPORK_INVALID                                          = -1;
+
 
 
     static final int SPORK_START = SPORK_2_INSTANTSEND_ENABLED;
-    static final int SPORK_END   = SPORK_22_PS_MORE_PARTICIPANTS;
+    static final int SPORK_END   = SPORK_23_QUORUM_POSE;
 
     private static final HashMap<Integer, Long> mapSporkDefaults;
     static {
@@ -68,10 +71,9 @@ public class SporkManager {
         mapSporkDefaults.put(SPORK_6_NEW_SIGS, 4070908800L); // obsolete, but still used in Governance code
         mapSporkDefaults.put(SPORK_9_SUPERBLOCKS_ENABLED, 4070908800L);
         mapSporkDefaults.put(SPORK_17_QUORUM_DKG_ENABLED,            4070908800L);// OFF
-        mapSporkDefaults.put(SPORK_18_QUORUM_DEBUG_ENABLED,          4070908800L); // OFF
         mapSporkDefaults.put(SPORK_19_CHAINLOCKS_ENABLED,            4070908800L); // OFF
         mapSporkDefaults.put(SPORK_21_QUORUM_ALL_CONNECTED,          4070908800L); // OFF
-        mapSporkDefaults.put(SPORK_22_PS_MORE_PARTICIPANTS, 4070908800L); // OFF
+        mapSporkDefaults.put(SPORK_23_QUORUM_POSE, 4070908800L); // OFF
     }
 
     byte [] sporkPubKeyId;
