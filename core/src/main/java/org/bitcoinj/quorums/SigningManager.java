@@ -165,7 +165,7 @@ public class SigningManager {
 
         StoredBlock startBlock = null;
         long startBlockHeight = signHeight - SIGN_HEIGHT_OFFSET;
-        if(startBlockHeight > blockChain.getBestChainHeight())
+        if(startBlockHeight > blockChain.getBestChainHeight() || startBlockHeight < 0)
             return null;
 
 
