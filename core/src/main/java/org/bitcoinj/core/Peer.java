@@ -488,7 +488,7 @@ public class Peer extends PeerSocketHandler {
 
         // If we are in the middle of receiving transactions as part of a filtered block push from the remote node,
         // and we receive something that's not a transaction, then we're done.
-        if (currentFilteredBlock != null && !(m instanceof Transaction)) {
+        if (currentFilteredBlock != null && !(m instanceof Transaction || m instanceof InstantSendLock)) {
             endFilteredBlock(currentFilteredBlock);
             currentFilteredBlock = null;
         }
@@ -561,6 +561,20 @@ public class Peer extends PeerSocketHandler {
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
+    }
+
+    protected void processInstantSendLock(InstantSendLock islock) {
+        if (currentFilteredBlock != null) {
+            if (!currentFilteredBlock.getTransactionHashes().contains(islock.getTxId())) {
+                // Got an islock that didn't fit into the filtered block, so we must have received everything.
+                endFilteredBlock(currentFilteredBlock);
+                currentFilteredBlock = null;
+            } else {
+                // if this transaction is more than old, don't process the islock
+                //return;
+            }
+        }
+        context.instantSendManager.processInstantSendLock(this, islock);
     }
 
     protected void processUTXOMessage(UTXOsMessage m) {
