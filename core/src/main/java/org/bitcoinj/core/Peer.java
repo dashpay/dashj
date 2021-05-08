@@ -53,6 +53,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -570,8 +571,10 @@ public class Peer extends PeerSocketHandler {
                 endFilteredBlock(currentFilteredBlock);
                 currentFilteredBlock = null;
             } else {
-                // if this transaction is more than old, don't process the islock
-                //return;
+                //if this transaction is more than 24 hours old, don't process the islock
+                if (currentFilteredBlock.getBlockHeader().getTimeSeconds() + TimeUnit.DAYS.toSeconds(1) > System.currentTimeMillis()) {
+                    return;
+                }
             }
         }
         context.instantSendManager.processInstantSendLock(this, islock);
