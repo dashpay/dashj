@@ -374,4 +374,20 @@ public class BloomFilter extends Message {
     public synchronized int hashCode() {
         return Objects.hashCode(hashFuncs, nTweak, Arrays.hashCode(data));
     }
+
+    public final byte[] getData() {
+        return data;
+    }
+
+    public byte getFlags() {
+        return nFlags;
+    }
+
+    public long getTweak() {
+        return nTweak;
+    }
+
+    public long getHashFuncs() {
+        return hashFuncs;
+    }
 }
