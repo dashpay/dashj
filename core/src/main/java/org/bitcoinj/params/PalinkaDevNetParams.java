@@ -79,7 +79,7 @@ public class PalinkaDevNetParams extends DevNetParams {
     };
 
     public PalinkaDevNetParams() {
-        super(DEVNET_NAME, "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001,
+        super(DEVNET_NAME, "yYZh9ZGhvr4TAid4BZ9XZ5u6HU2LKkY4XV", 20001,
                 MASTERNODES, true, 70215);
         dnsSeeds = MASTERNODES;
         //TODO: Normally this is the way to set up dnsSeeds
