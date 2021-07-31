@@ -33,6 +33,7 @@ import com.google.protobuf.ByteString;
 import org.bitcoin.paymentchannel.Protos;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -56,7 +57,7 @@ import static org.bitcoinj.testing.FakeTxBuilder.createFakeBlock;
 import static org.bitcoin.paymentchannel.Protos.TwoWayChannelMessage.MessageType;
 import static org.junit.Assert.*;
 
-@RunWith(Parameterized.class)
+@RunWith(Parameterized.class) @Ignore
 public class ChannelConnectionTest extends TestWithWallet {
     private static final int CLIENT_MAJOR_VERSION = 1;
     private Wallet serverWallet;
