@@ -37,6 +37,7 @@ import static org.junit.Assert.*;
 
 public class FriendKeyChainTest {
 
+    private UnitTestParams PARAMS = UnitTestParams.get();
     private DeterministicKeyChain chain;
     private DeterministicKeyChain bip44chain;
     private final byte[] ENTROPY = Sha256Hash.hash("don't use a string seed like this in real life".getBytes());
@@ -277,6 +278,9 @@ public class FriendKeyChainTest {
         DeterministicKey watchingKey = keyChain.getWatchingKey();
         assertEquals("e8781fdef72862968cd9a4d2df34edaf9dcc5b17629ec505f0d2d1a8ed6f9f09", watchingKey.getPrivateKeyAsHex());
 
+        assertEquals(watchingKey.serializePubB58(PARAMS), "tpubDF4tEyAdpXySRui9CvGRTSQU4BgLwGxuLPKEb9WqEE93raF2ffU1PRQ6oJHCgZ7dArzcMj9iKG8s8EFA1DdwgzWAXs61uFuRE1bQi8kAmLy");
+        assertEquals(watchingKey.serializePrivB58(PARAMS), "tprv8iNr6Z8PgAHmYSgMKGbq42kMVAAQmwmzm5iTJdUXoxLf25zG3GeRCvnEdC6HKTHkU59nZkfjvcGk9VW2YHsFQMwsZrQLyNrGx9c37kgb368");
+
         // using a DIP15 path
         ImmutableList<ChildNumber> dip15path = ImmutableList.of(
                 new ChildNumber(9, true),
@@ -291,5 +295,34 @@ public class FriendKeyChainTest {
         DeterministicKeyChain keyChainDip15 = DeterministicKeyChain.builder().seed(seed).accountPath(dip15path).build();
         DeterministicKey watchingKeyDip15 = keyChainDip15.getWatchingKey();
         assertEquals("fac40790776d171ee1db90899b5eb2df2f7d2aaf35ad56f07ffb8ed2c57f8e60", watchingKeyDip15.getPrivateKeyAsHex());
+
+        assertEquals(watchingKeyDip15.serializePubB58(PARAMS), "tpubDLqNye58JQGox9dqWN5xZUgC5XGC6KwWmTSX6qGugrGEa5QffDm3iDfsVtX7qyXuWoQsXA6YCSuckKshyjnwiGGoYWHonAv2X98HTU613UH");
+        assertEquals(watchingKeyDip15.serializePrivB58(PARAMS), "tprv8p9LqE2tA2b94gc3ciRNA525WVkFvzkcC9qjpKEcGaTqjb9u2pwTXj41KkZTj3c1a6fJUpyXRfcB4dimsYsLMjQjsTJwi5Ukx6tJ5BpmYpx");
+
+        // Test Vector 3
+        ImmutableList<ChildNumber> path3 = ImmutableList.of(
+                new ExtendedChildNumber(Sha256Hash.wrap("775d3854c910b7dee436869c4724bed2fe0784e198b8a39f02bbb49d8ebcfc3b"))
+        );
+
+        DeterministicKeyChain keyChain3 = DeterministicKeyChain.builder().seed(seed).accountPath(path3).build();
+        DeterministicKey watchingKey3 = keyChain3.getWatchingKey();
+        assertEquals("f6a95ae75ea8362d9478932f71b262b3d981918fe030316686a475dea4889938", watchingKey3.getPrivateKeyAsHex());
+
+        assertEquals(watchingKey3.serializeDip14PubB58(PARAMS), "dptp1C5gGd8NzvAke5WNKyRfpDRyvV2UZ3jjrZVZU77qk9yZemMGSdZpkWp7y6wt3FzvFxAHSW8VMCaC1p6Ny5EqWuRm2sjvZLUUFMMwXhmW6eS69qjX958RYBH5R8bUCGZkCfUyQ8UVWcx9katkrRr");
+        assertEquals(watchingKey3.serializeDip14PrivB58(PARAMS), "dpts1vgMVEs9mmv1YLwURCeoTn9CFMZ8JMVhyZuxQSKttNSETR3zydMFHMKTTNDQPf6nnupCCtcNnSu3nKZXAJhaguyoJWD4Ju5PE6PSkBqAKWci7HLz37qmFmZZU6GMkLvNLtST2iV8NmqqbX37c45");
+
+        // Test Vector 4
+        ImmutableList<ChildNumber> path4 = ImmutableList.of(
+                new ExtendedChildNumber(Sha256Hash.wrap("775d3854c910b7dee436869c4724bed2fe0784e198b8a39f02bbb49d8ebcfc3b")),
+                new ExtendedChildNumber(Sha256Hash.wrap("f537439f36d04a15474ff7423e4b904a14373fafb37a41db74c84f1dbb5c89a6"), true)
+        );
+
+        DeterministicKeyChain keyChain4 = DeterministicKeyChain.builder().seed(seed).accountPath(path4).build();
+        DeterministicKey watchingKey4 = keyChain4.getWatchingKey();
+        assertEquals("b898ad92d3a0698bc3117d3777d82676673816ce52f4fc2f1263a2f676825f90", watchingKey4.getPrivateKeyAsHex());
+
+        assertEquals(watchingKey4.serializeDip14PubB58(PARAMS), "dptp1CLkexeadp6guoi8Fbiwq6CLZm3hT1DJLwHsxWvwYSeAhjenFhcQ9HumZSftfZEr4dyQjFD7gkM5bSn6Aj7F1Jve8KTn4JsMEaj9dFyJkYs4Ga5HSUqeajxGVmzaY1pEioDmvUtZL3J1NCDCmzQ");
+        assertEquals(watchingKey4.serializeDip14PrivB58(PARAMS), "dpts1vwRsaPMQfqwp59ELpx5UeuYtdaMCJyGTwiGtr8zgf6qWPMWnhPpg8R73hwR1xLibbdKVdh17zfwMxFEMxZzBKUgPwvuosUGDKW4ayZjs3AQB9EGRcVpDoFT8V6nkcc6KzksmZxvmDcd3MqiPEu");
+
     }
 }
