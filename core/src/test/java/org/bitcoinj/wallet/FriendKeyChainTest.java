@@ -38,6 +38,7 @@ import static org.junit.Assert.*;
 public class FriendKeyChainTest {
 
     private UnitTestParams PARAMS = UnitTestParams.get();
+    private MainNetParams MAINNET = MainNetParams.get();
     private DeterministicKeyChain chain;
     private DeterministicKeyChain bip44chain;
     private final byte[] ENTROPY = Sha256Hash.hash("don't use a string seed like this in real life".getBytes());
@@ -311,6 +312,9 @@ public class FriendKeyChainTest {
         assertEquals(watchingKey3.serializeDip14PubB58(PARAMS), "dptp1C5gGd8NzvAke5WNKyRfpDRyvV2UZ3jjrZVZU77qk9yZemMGSdZpkWp7y6wt3FzvFxAHSW8VMCaC1p6Ny5EqWuRm2sjvZLUUFMMwXhmW6eS69qjX958RYBH5R8bUCGZkCfUyQ8UVWcx9katkrRr");
         assertEquals(watchingKey3.serializeDip14PrivB58(PARAMS), "dpts1vgMVEs9mmv1YLwURCeoTn9CFMZ8JMVhyZuxQSKttNSETR3zydMFHMKTTNDQPf6nnupCCtcNnSu3nKZXAJhaguyoJWD4Ju5PE6PSkBqAKWci7HLz37qmFmZZU6GMkLvNLtST2iV8NmqqbX37c45");
 
+        assertEquals(watchingKey3.serializeDip14PubB58(MAINNET), "dpmp3JtXQXZA5MubBzdvYUPjtGNGdavHNr7P6hSftQx86bdkZghoGRMkddVdrbwPjWdmdCjyD6HuuG7TfZNMxVeTVMXLw1t6aVkzzUsVJnEbz11JCEhP7YExu5idgEg1gxZw7pTLhpsYfoHSLrbeTmn");
+        assertEquals(watchingKey3.serializeDip14PrivB58(MAINNET), "dpms2Ny3QsV82Hbg1Ltr5cXDu1pBARrwsNxTKANfQUWVzNZnYPMw9ZRsFhM8YkS2RbqfLN1yYkaVAsqteuAaVWGtaJCp374xEfxP5rzws6GVc7ULjYep7EaJ8kG81yJPWxinRksWbFsHZTwkES3o2pW");
+
         // Test Vector 4
         ImmutableList<ChildNumber> path4 = ImmutableList.of(
                 new ExtendedChildNumber(Sha256Hash.wrap("775d3854c910b7dee436869c4724bed2fe0784e198b8a39f02bbb49d8ebcfc3b")),
@@ -324,5 +328,9 @@ public class FriendKeyChainTest {
         assertEquals(watchingKey4.serializeDip14PubB58(PARAMS), "dptp1CLkexeadp6guoi8Fbiwq6CLZm3hT1DJLwHsxWvwYSeAhjenFhcQ9HumZSftfZEr4dyQjFD7gkM5bSn6Aj7F1Jve8KTn4JsMEaj9dFyJkYs4Ga5HSUqeajxGVmzaY1pEioDmvUtZL3J1NCDCmzQ");
         assertEquals(watchingKey4.serializeDip14PrivB58(PARAMS), "dpts1vwRsaPMQfqwp59ELpx5UeuYtdaMCJyGTwiGtr8zgf6qWPMWnhPpg8R73hwR1xLibbdKVdh17zfwMxFEMxZzBKUgPwvuosUGDKW4ayZjs3AQB9EGRcVpDoFT8V6nkcc6KzksmZxvmDcd3MqiPEu");
 
+        assertEquals(watchingKey4.serializeDip14PubB58(MAINNET), "dpmp3K9bns5MiFqXTiqgU6h1u98dGrwWGoawb5EzNpmDttJMcf1K5VQL2QbHSwfQMoshRtZ6VqNYEotMFC45A9Wrym2E2Tbx5U9syiEhQLSQduSGJy39QwxBwePpkt582hpRdxC9EBHcVDdHxUxNjGt");
+        assertEquals(watchingKey4.serializeDip14PrivB58(MAINNET), "dpms2PE7oD1KfBXcH56c1EpVutaXohtAmLS1oYAyttKbnfEPbMfSxdUSeUSn96A33u5b93q6qVf7WRcnEXrHhA9J4hhh8YnojeMG567Zht159e22oQY6VjEM6mx1gN8pXEQWQsBwL7M5wuiXgGY3tWK");
+
+        // we should do a round trip, but there are no deserialization methods for DIP14.
     }
 }
