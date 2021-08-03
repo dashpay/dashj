@@ -1,0 +1,28 @@
+name: Java CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        #java: [ '8', '11', '15' ]
+        java: [ '8' ]
+      fail-fast: false
+    name: JAVA ${{ matrix.java }} OS ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+      - name: build and trun tests
+        run: |
+          git submodule update --init --recursive
+          cd bls
+          mvn clean package -Pbuild-bls-only -pl :dashj-bls -DskipTests -Dmaven.javadoc.skip=true --settings ../.travis.settings.xml
+          cd ..
+          mvn -q clean install -Pno-network --settings .travis.settings.xml -DskipTests -pl !:wallettemplate
+          #jdk_switcher use openjdk8
+          #cd core
+          #mvn -q clean install -Pno-network --settings ../.travis.settings.xml -DskipTests  -pl !:wallettemplate

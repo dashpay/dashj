@@ -226,7 +226,7 @@
                                         <urn>org.sonatype.plugins:nexus-staging-maven-plugin:1.6.5:maven-plugin:null:runtime:455ca2aa8cd14a06608f1538bd6a1efd09561563</urn>
                                         <urn>postgresql:postgresql:9.1-901.jdbc4:jar:null:compile:153f2f92a786f12fc111d0111f709012df87c808</urn>
                                         <urn>de.sfuhrm:saphir-hash-core:3.0.5:jar:null:compile:b618a7ea48adbca7e3c444e4d0f4297bfe337591</urn>
-                                        <urn>org.dashj:dashj-bls:0.17.5:jar:null:compile:772f8a7cfbb527c2deb901edf525235c6e65fdc7</urn>
+                                        <urn>org.dashj:dashj-bls:0.17.5:jar:null:compile:c485830bf5abe87c07c3a38ae535b7f67f93c898</urn>
                                         <!-- A check for the rules themselves -->
                                         <urn>uk.co.froot.maven.enforcer:digest-enforcer-rules:0.0.1:jar:null:runtime:16a9e04f3fe4bb143c42782d07d5faf65b32106f</urn>
                                     </urns>
