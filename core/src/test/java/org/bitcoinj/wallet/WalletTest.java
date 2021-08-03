@@ -383,6 +383,7 @@ public class WalletTest extends TestWithWallet {
 
         // Complete the transaction successfully.
         req.shuffleOutputs = false;
+        req.sortByBIP69 = false;
         wallet.completeTx(req);
 
         Transaction t2 = req.tx;
@@ -1285,18 +1286,21 @@ public class WalletTest extends TestWithWallet {
             SendRequest req2a = SendRequest.to(OTHER_ADDRESS, valueOf(100, 0));
             req2a.tx.addInput(send2.getOutput(0));
             req2a.shuffleOutputs = false;
+            req2a.sortByBIP69 = false;
             wallet.completeTx(req2a);
             Transaction send2a = req2a.tx;
 
             SendRequest req2b = SendRequest.to(OTHER_ADDRESS, valueOf(50, 0));
             req2b.tx.addInput(send2a.getOutput(1));
             req2b.shuffleOutputs = false;
+            req2b.sortByBIP69 = false;
             wallet.completeTx(req2b);
             Transaction send2b = req2b.tx;
 
             SendRequest req2c = SendRequest.to(OTHER_ADDRESS, valueOf(25, 0));
             req2c.tx.addInput(send2b.getOutput(1));
             req2c.shuffleOutputs = false;
+            req2c.sortByBIP69 = false;
             wallet.completeTx(req2c);
             Transaction send2c = req2c.tx;
 
@@ -2678,6 +2682,7 @@ public class WalletTest extends TestWithWallet {
         request5.ensureMinRequiredFee = true;
         request5.recipientsPayFees = true;
         request5.shuffleOutputs = false;
+        request5.sortByBIP69 = false;
         wallet.completeTx(request5);
         assertEquals(fee5, request5.tx.getFee());
         Transaction spend5 = request5.tx;
