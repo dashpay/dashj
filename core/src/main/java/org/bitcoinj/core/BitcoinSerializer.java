@@ -95,6 +95,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(InstantSendLock.class, "islock");
         names.put(ChainLockSignature.class, "clsig");
         names.put(SendHeadersMessage.class, "sendheaders");
+        names.put(SendAddressMessageV2.class, "sendaddrv2");
         names.put(GetMasternodePaymentRequestSyncMessage.class, "mnget");
     }
 
@@ -262,6 +263,8 @@ public class BitcoinSerializer extends MessageSerializer {
             return new SporkMessage(params, payloadBytes, 0);
         } else if(command.equals("ssc")) {
             return new SyncStatusCount(params, payloadBytes);
+        } else if(command.equals("sendaddrv2")) {
+            return new SendAddressMessageV2(params, payloadBytes);
         } else if(command.equals("sendheaders")) {
             return new SendHeadersMessage(params, payloadBytes);
         } else if(command.equals("sendcmpct")) {
