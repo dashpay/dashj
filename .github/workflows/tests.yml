@@ -1,0 +1,26 @@
+name: Java CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        #os: [ubuntu-latest, macOS-latest, windows-latest]
+        os: [ubuntu-latest, macOS-latest]
+        #java: [ '8', '11', '15' ]
+        java: [ '8' ]
+      fail-fast: false
+    name: JAVA ${{ matrix.java }} OS ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+      - name: build and run tests
+        run: |
+          git submodule update --init --recursive
+          mvn -q clean install -Pno-network -pl !:wallettemplate
+          #jdk_switcher use openjdk8
+          #cd core
+          #mvn -q clean install -Pno-network -DskipTests  -pl !:wallettemplate
