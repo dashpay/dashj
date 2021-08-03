@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.primitives.UnsignedBytes;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.evolution.*;
@@ -1384,6 +1385,40 @@ public class Transaction extends ChildMessage {
     /** Randomly re-orders the transaction outputs: good for privacy */
     public void shuffleOutputs() {
         Collections.shuffle(outputs);
+    }
+
+    private Comparator<byte[]> compareBytes = UnsignedBytes.lexicographicalComparator();
+    private Comparator<TransactionOutput> compareTransactionOutputs = new Comparator<TransactionOutput>() {
+        @Override
+        public int compare(TransactionOutput o1, TransactionOutput o2) {
+            int compareValues = o1.getValue().compareTo(o2.getValue());
+            if (compareValues != 0) {
+                return compareValues;
+            } else {
+                return compareBytes.compare(o1.getScriptBytes(), o2.getScriptBytes());
+            }
+        }
+    };
+
+    private Comparator<TransactionInput> compareTransactionInputs = new Comparator<TransactionInput>() {
+        @Override
+        public int compare(TransactionInput i1, TransactionInput i2) {
+            int compareValues = compareBytes.compare(i1.getOutpoint().getHash().getBytes(), i2.getOutpoint().getHash().getBytes());
+            if (compareValues != 0) {
+                return compareValues;
+            } else {
+                return Long.compare(i1.getOutpoint().getIndex(), i2.getOutpoint().getIndex());
+            }
+        }
+    };
+
+    /** Sorts transaction outputs according to BIP69 first by amount, then by scriptPubKey **/
+    public void sortOutputs() {
+        Collections.sort(outputs, compareTransactionOutputs);
+    }
+
+    public void sortInputs() {
+        Collections.sort(inputs, compareTransactionInputs);
     }
 
     /** Same as getInputs().get(index). */
