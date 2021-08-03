@@ -615,6 +615,8 @@ public class Peer extends PeerSocketHandler {
             context.chainLockHandler.processChainLockSignature(this, (ChainLockSignature)m);
         } else if (m instanceof SendHeadersMessage) {
             // We ignore this message, because we don't announce new blocks.
+        } else if (m instanceof SendAddressMessageV2) {
+            // We ignore this message, because we don't reply to sendaddrv2 message.
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
