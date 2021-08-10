@@ -2498,6 +2498,7 @@ public class WalletTest extends TestWithWallet {
         request19 = SendRequest.forTx(request19.tx);
         request19.feePerKb = Transaction.DEFAULT_TX_FEE;
         request19.shuffleOutputs = false;
+        request19.sortByBIP69 = false;
         wallet.completeTx(request19);
         assertEquals(Coin.valueOf(3742), request19.tx.getFee());
         assertEquals(2, request19.tx.getInputs().size());
@@ -2518,6 +2519,7 @@ public class WalletTest extends TestWithWallet {
         request20.tx.clearInputs();
         request20 = SendRequest.forTx(request20.tx);
         request20.feePerKb = Transaction.DEFAULT_TX_FEE;
+        request20.sortByBIP69 = false;
         wallet.completeTx(request20);
         // 4kb tx.
         assertEquals(Coin.valueOf(3742), request20.tx.getFee());
@@ -2529,6 +2531,7 @@ public class WalletTest extends TestWithWallet {
         SendRequest request21 = SendRequest.to(OTHER_ADDRESS, CENT);
         request21.feePerKb = ZERO;
         request21.ensureMinRequiredFee = true;
+        request21.sortByBIP69 = false;
         for (int i = 0; i < 99; i++)
             request21.tx.addOutput(CENT, OTHER_ADDRESS);
         //request21.tx.addOutput(CENT.subtract(Coin.valueOf(18880-10)), OTHER_ADDRESS); //fails because tx size is calculated with a change output
@@ -2557,6 +2560,7 @@ public class WalletTest extends TestWithWallet {
         request25 = SendRequest.forTx(request25.tx);
         request25.feePerKb = Transaction.DEFAULT_TX_FEE;
         request25.shuffleOutputs = false;
+        request25.sortByBIP69 = false;
         wallet.completeTx(request25);
         assertEquals(Coin.valueOf(2790), request25.tx.getFee());
         assertEquals(2, request25.tx.getInputs().size());
