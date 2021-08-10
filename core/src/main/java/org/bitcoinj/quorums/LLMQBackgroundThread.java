@@ -22,6 +22,10 @@ public class LLMQBackgroundThread extends Thread {
     public void run() {
         Context.propagate(context);
         log.info("starting LLMQBackgroundThread.run");
+        if (context.signingManager == null) {
+            // stop this thread if there is no signing manager
+            return;
+        }
         try {
             context.signingManager.addRecoveredSignatureListener(context.instantSendManager);
             context.signingManager.addRecoveredSignatureListener(context.chainLockHandler);
