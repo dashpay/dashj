@@ -5,7 +5,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        #building bls does not work on windows
+        #os: [ ubuntu-latest, macOS-latest, windows-latest ]
+        os: [ubuntu-latest, macOS-latest]
         #java: [ '8', '11', '15' ]
         java: [ '8' ]
       fail-fast: false
@@ -20,9 +22,6 @@ jobs:
         run: |
           git submodule update --init --recursive
           cd bls
-          mvn clean package -Pbuild-bls-only -pl :dashj-bls -DskipTests -Dmaven.javadoc.skip=true --settings ../.travis.settings.xml
+          mvn clean package -Pbuild-bls-only -pl :dashj-bls
           cd ..
-          mvn -q clean install -Pno-network --settings .travis.settings.xml -DskipTests -pl !:wallettemplate
-          #jdk_switcher use openjdk8
-          #cd core
-          #mvn -q clean install -Pno-network --settings ../.travis.settings.xml -DskipTests  -pl !:wallettemplate
+          mvn -q clean install -Pno-network -pl !:wallettemplate
