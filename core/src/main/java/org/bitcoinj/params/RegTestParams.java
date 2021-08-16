@@ -34,17 +34,17 @@ public class RegTestParams extends AbstractBitcoinNetParams {
 
     public RegTestParams() {
         super();
-        packetMagic = 0xfabfb5daL;
+        packetMagic = 0xfcc1b7dcL;
         addressHeader = CoinDefinition.testnetAddressHeader;
         p2shHeader = CoinDefinition.testnetp2shHeader;
         targetTimespan = TARGET_TIMESPAN;
         dumpedPrivateKeyHeader = 128 + CoinDefinition.testnetAddressHeader;
-        genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime);
-        genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget);
-        genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce);
+        genesisBlock.setTime(1417713337L);
+        genesisBlock.setDifficultyTarget(0x207fffff);
+        genesisBlock.setNonce(1096447);
         spendableCoinbaseDepth = 100;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash));
+        checkState(genesisHash.equals("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
         dnsSeeds = null;
         addrSeeds = null;
         bip32HeaderP2PKHpub = 0x043587cf; // The 4 byte header that serializes in base58 to "tpub".
@@ -58,7 +58,7 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         interval = Integer.MAX_VALUE;
         maxTarget = MAX_TARGET;
         subsidyDecreaseBlockCount = 150;
-        port = 18444;
+        port = 19899;
         id = ID_REGTEST;
 
         majorityEnforceBlockUpgrade = TestNet3Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
@@ -116,7 +116,6 @@ public class RegTestParams extends AbstractBitcoinNetParams {
                 genesis.setNonce(2);
                 genesis.setDifficultyTarget(0x207fFFFFL);
                 genesis.setTime(1296688602L);
-                //checkState(genesis.getHashAsString().toLowerCase().equals("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
             }
             return genesis;
         }
