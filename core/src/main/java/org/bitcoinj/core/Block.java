@@ -275,7 +275,31 @@ public class Block extends Message {
         parseTransactions(offset + HEADER_SIZE);
         length = cursor - offset;
     }
-    
+
+    static Block createGenesis(NetworkParameters n) {
+        Block genesisBlock = new Block(n, BLOCK_VERSION_GENESIS);
+        Transaction t = new Transaction(n);
+        try {
+            // A script containing the difficulty bits and the following message:
+            //
+            //   "LYWired 09/Jan/2014 The Grand Experiment Goes Live: Overstock.com Is Now Accepting Bitcoins"
+
+            byte[] bytes = Utils.HEX.decode
+                    ("04ffff001d01044c5957697265642030392f4a616e2f3230313420546865204772616e64204578706572696d656e7420476f6573204c6976653a204f76657273746f636b2e636f6d204973204e6f7720416363657074696e6720426974636f696e73");
+            t.addInput(new TransactionInput(n, t, bytes));
+            ByteArrayOutputStream scriptPubKeyBytes = new ByteArrayOutputStream();
+            Script.writeBytes(scriptPubKeyBytes, Utils.HEX.decode
+                    ("040184710fa689ad5023690c80f3a49c8f13f8d45b8c857fbcbc8bc4a8e4d3eb4b10f4d4604fa08dce601aaf0f470216fe1b51850b4acf21b179c45070ac7b03a9"));
+            scriptPubKeyBytes.write(ScriptOpCodes.OP_CHECKSIG);
+            t.addOutput(new TransactionOutput(n, t, FIFTY_COINS, scriptPubKeyBytes.toByteArray()));
+        } catch (Exception e) {
+            // Cannot happen.
+            throw new RuntimeException(e);
+        }
+        genesisBlock.addTransaction(t);
+        return genesisBlock;
+    }
+
     public int getOptimalEncodingMessageSize() {
         if (optimalEncodingMessageSize != 0)
             return optimalEncodingMessageSize;
