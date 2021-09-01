@@ -48,6 +48,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
      * Scheme part for Bitcoin URIs.
      */
     public static final String BITCOIN_SCHEME = "dash";
+    public static final int REWARD_DECREASE_INTERVAL = 210240;
 
     private static final Logger log = LoggerFactory.getLogger(AbstractBitcoinNetParams.class);
 
@@ -59,7 +60,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     public AbstractBitcoinNetParams() {
         super();
         interval = INTERVAL;
-        subsidyDecreaseBlockCount = 210240;
+        subsidyDecreaseBlockCount = REWARD_DECREASE_INTERVAL;
     }
 
     /** Dash doesn't have halving, but this is when there are changes in the max rewards */
