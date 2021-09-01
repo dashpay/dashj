@@ -513,6 +513,7 @@ public class Block extends Message {
      * <p>This can loop forever if a solution cannot be found solely by incrementing nonce. It doesn't change
      * extraNonce.</p>
      */
+    @VisibleForTesting
     public void solve() {
         while (true) {
             try {
@@ -760,6 +761,7 @@ public class Block extends Message {
     }
 
     /** Exists only for unit testing. */
+    @VisibleForTesting
     void setMerkleRoot(Sha256Hash value) {
         unCacheHeader();
         merkleRoot = value;
@@ -801,6 +803,7 @@ public class Block extends Message {
         return prevBlockHash;
     }
 
+    @VisibleForTesting
     void setPrevBlockHash(Sha256Hash prevBlockHash) {
         unCacheHeader();
         this.prevBlockHash = prevBlockHash;
@@ -822,6 +825,7 @@ public class Block extends Message {
         return new Date(getTimeSeconds()*1000);
     }
 
+    @VisibleForTesting
     public void setTime(long time) {
         unCacheHeader();
         this.time = time;
@@ -842,6 +846,7 @@ public class Block extends Message {
     }
 
     /** Sets the difficulty target in compact form. */
+    @VisibleForTesting
     public void setDifficultyTarget(long compactForm) {
         unCacheHeader();
         this.difficultyTarget = compactForm;
@@ -857,6 +862,7 @@ public class Block extends Message {
     }
 
     /** Sets the nonce and clears any cached data. */
+    @VisibleForTesting
     public void setNonce(long nonce) {
         unCacheHeader();
         this.nonce = nonce;
@@ -949,6 +955,7 @@ public class Block extends Message {
      *
      * @param height block height, if known, or -1 otherwise.
      */
+    @VisibleForTesting
     Block createNextBlock(@Nullable final Address to, final long version,
                           @Nullable TransactionOutPoint prevOut, final long time,
                           final byte[] pubKey, final Coin coinbaseValue,
