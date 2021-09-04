@@ -339,13 +339,13 @@ public class BlockTest {
         String block842284hash = "000000000000000cdf5cc24c3beb0669b31e942d1301e07b53d6f0c7db10860d";
 
         Sha256Hash firstBlockHash = Sha256Hash.wrap(block842285hash);
-        Block firstBlock = new Block(TESTNET, Utils.HEX.decode(block842285));
+        Block firstBlock = new Block(TESTNET, Utils.HEX.decode(block842285), TESTNET.getDefaultSerializer(), Message.UNKNOWN_LENGTH);
         assertEquals(firstBlockHash, firstBlock.getHash());
         assertEquals(12, firstBlock.getTransactions().size());
         assertEquals(1, firstBlock.getTransactions().get(0).getVersion());
 
         Sha256Hash secondBlockHash = Sha256Hash.wrap(block842284hash);
-        Block secondBlock = new Block(TESTNET, Utils.HEX.decode(block842284));
+        Block secondBlock = new Block(TESTNET, Utils.HEX.decode(block842284), TESTNET.getDefaultSerializer(), Message.UNKNOWN_LENGTH);
         assertEquals(secondBlockHash, secondBlock.getHash());
         assertEquals(14, secondBlock.getTransactions().size());
 

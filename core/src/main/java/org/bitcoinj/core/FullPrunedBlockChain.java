@@ -18,6 +18,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.governance.Superblock;
+import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.Script.VerifyFlag;
 import org.bitcoinj.script.ScriptPattern;
@@ -317,7 +318,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     listScriptVerificationResults.add(future);
                 }
             }
-            boolean feesDontMatch = block.getBlockInflation(height, storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0;
+            boolean feesDontMatch = getBlockInflation(height, storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0;
             if (totalFees.compareTo(params.getMaxMoney()) > 0 || feesDontMatch) {
                 if(feesDontMatch && !Superblock.isValidBudgetBlockHeight(params, height))
                     throw new VerificationException("Transaction fees out of range");
@@ -448,7 +449,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     }
                 }
 
-                boolean feesDontMatch = newBlock.getHeader().getBlockInflation(newBlock.getHeight(), storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0;
+                boolean feesDontMatch = getBlockInflation(newBlock.getHeight(), storedPrev.getHeader().getDifficultyTarget(), false).add(totalFees).compareTo(coinbaseValue) < 0;
                 if (totalFees.compareTo(params.getMaxMoney()) > 0 || feesDontMatch) {
                     if(feesDontMatch && !Superblock.isValidBudgetBlockHeight(params, newBlock.getHeight()))
                         throw new VerificationException("Transaction fees out of range");
@@ -526,5 +527,9 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
     protected StoredBlock getStoredBlockInCurrentScope(Sha256Hash hash) throws BlockStoreException {
         checkState(lock.isHeldByCurrentThread());
         return blockStore.getOnceUndoableStoredBlock(hash);
+    }
+
+    private Coin getBlockInflation(int height, long prevBits, boolean isSuperBlock) {
+        return ((AbstractBitcoinNetParams) params).getBlockInflation(height, prevBits, isSuperBlock);
     }
 }
