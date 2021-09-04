@@ -77,7 +77,6 @@ public class BlockTest {
         assertEquals("000000000fba0622132b6acd887021db720c541590d0408bc3ae525277fb2636", block.getHashAsString());
     }
     
-    @SuppressWarnings("deprecation")
     @Test
     public void testDate() throws Exception {
         Block block = TESTNET.getDefaultSerializer().makeBlock(blockBytes);
