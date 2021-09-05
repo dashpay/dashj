@@ -17,15 +17,23 @@
 
 package org.bitcoinj.params;
 
-import org.bitcoinj.core.*;
+import java.net.URI;
+
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.net.discovery.HttpDiscovery;
+import java.math.BigInteger;
+import java.util.HashMap;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
-import java.util.HashMap;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Parameters for the main production network on which people trade goods and services.
@@ -39,15 +47,21 @@ public class MainNetParams extends AbstractBitcoinNetParams {
 
     public MainNetParams() {
         super();
-        targetTimespan = TARGET_TIMESPAN;
+        id = ID_MAINNET;
 
-        // 00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        targetTimespan = TARGET_TIMESPAN;
         maxTarget = Utils.decodeCompactBits(0x1e0fffffL);
+
+        genesisBlock.setDifficultyTarget(0x1d00ffffL);
+        genesisBlock.setTime(1231006505L);
+        genesisBlock.setNonce(2083236893);
+
+        port = 9999;
+        packetMagic = 0xbf0c6bbdL;
         dumpedPrivateKeyHeader = 204;
         addressHeader = 76;
         p2shHeader = 16;
-        port = 9999;
-        packetMagic = 0xbf0c6bbdL;
+        spendableCoinbaseDepth = 100;
         bip32HeaderP2PKHpub = 0x0488b21e; // The 4 byte header that serializes in base58 to "xpub".
         bip32HeaderP2PKHpriv = 0x0488ade4; // The 4 byte header that serializes in base58 to "xprv"
         dip14HeaderP2PKHpub = 0x0eecefc5; // The 4 byte header that serializes in base58 to "dpmp".
@@ -61,8 +75,6 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         majorityRejectBlockOutdated = MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MAINNET_MAJORITY_WINDOW;
 
-        id = ID_MAINNET;
-        spendableCoinbaseDepth = 100;
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals("00000ffd590b1485b3caadc19b22e6379c733355108f107a430458cdf3407ab6"),
                 genesisHash);

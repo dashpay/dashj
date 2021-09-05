@@ -37,31 +37,36 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
     public TestNet3Params() {
         super();
         id = ID_TESTNET;
-        packetMagic = 0xcee2caffL;
-        targetTimespan = TARGET_TIMESPAN;
 
-        // 00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        targetTimespan = TARGET_TIMESPAN;
         maxTarget = Utils.decodeCompactBits(0x1e0fffffL);
+
+        genesisBlock.setDifficultyTarget(0x1e0ffff0L);
+        genesisBlock.setTime(1390666206L);
+        genesisBlock.setNonce(3861367235L);
+
         port = 19999;
+        packetMagic = 0xcee2caffL;
+        dumpedPrivateKeyHeader = 239;
         addressHeader = 140;
         p2shHeader = 19;
-        dumpedPrivateKeyHeader = 239;
-        genesisBlock.setTime(1390666206L);
-        genesisBlock.setDifficultyTarget(0x1e0ffff0L);
-        genesisBlock.setNonce(3861367235L);
         spendableCoinbaseDepth = 100;
+        bip32HeaderP2PKHpub = 0x043587cf; // The 4 byte header that serializes in base58 to "tpub".
+        bip32HeaderP2PKHpriv = 0x04358394; // The 4 byte header that serializes in base58 to "tprv"
+        bip32HeaderP2WPKHpub = 0x0eed270b; // The 4 byte header that serializes in base58 to "dptp".
+        bip32HeaderP2WPKHpriv = 0x0eed2774; // The 4 byte header that serializes in base58 to "dpts"
+
+        majorityEnforceBlockUpgrade = TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
+        majorityRejectBlockOutdated = TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
+        majorityWindow = TESTNET_MAJORITY_WINDOW;
+
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals("00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c"));
 
         dnsSeeds = new String[] {
                 "testnet-seed.dashdot.io" // this seeder is offline
         };
-
-        bip32HeaderP2PKHpub = 0x043587cf; // The 4 byte header that serializes in base58 to "tpub".
-        bip32HeaderP2PKHpriv = 0x04358394; // The 4 byte header that serializes in base58 to "tprv"
-        dip14HeaderP2PKHpub = 0x0eed270b; // The 4 byte header that serializes in base58 to "dptp".
-        dip14HeaderP2PKHpriv = 0x0eed2774; // The 4 byte header that serializes in base58 to "dpts"
-
+        addrSeeds = null;
 
         checkpoints.put(261, Sha256Hash.wrap("00000c26026d0815a7e2ce4fa270775f61403c040647ff2c3091f99e894a4618"));
         checkpoints.put(1999, Sha256Hash.wrap("00000052e538d27fa53693efe6fb6892a0c1d26c0235f599171c48a3cce553b1"));
@@ -98,10 +103,6 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         budgetPaymentsStartBlock = 4100;
         budgetPaymentsCycleBlocks = 50;
         budgetPaymentsWindowBlocks = 10;
-
-        majorityEnforceBlockUpgrade = TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
-        majorityRejectBlockOutdated = TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
-        majorityWindow = TESTNET_MAJORITY_WINDOW;
 
         DIP0001BlockHeight = 4400;
 
@@ -155,7 +156,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         // coinjoin
         poolMinParticipants = 2;
         poolMaxParticipants = 20;
-     }
+    }
 
     private static TestNet3Params instance;
 

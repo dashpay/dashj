@@ -33,19 +33,26 @@ public class RegTestParams extends AbstractBitcoinNetParams {
 
     public RegTestParams() {
         super();
+        id = ID_REGTEST;
+
+        targetTimespan = TARGET_TIMESPAN;
+        maxTarget = MAX_TARGET;
+        // Difficulty adjustments are disabled for regtest.
+        // By setting the block interval for difficulty adjustments to Integer.MAX_VALUE we make sure difficulty never
+        // changes.
+        interval = Integer.MAX_VALUE;
+        subsidyDecreaseBlockCount = 150;
+
+        genesisBlock.setDifficultyTarget(0x207fffff);
+        genesisBlock.setTime(1417713337L);
+        genesisBlock.setNonce(1096447);
+
+        port = 19899;
         packetMagic = 0xfcc1b7dcL;
+        dumpedPrivateKeyHeader = 128 + 140;
         addressHeader = 140;
         p2shHeader = 19;
-        targetTimespan = TARGET_TIMESPAN;
-        dumpedPrivateKeyHeader = 128 + 140;
-        genesisBlock.setTime(1417713337L);
-        genesisBlock.setDifficultyTarget(0x207fffff);
-        genesisBlock.setNonce(1096447);
         spendableCoinbaseDepth = 100;
-        String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
-        dnsSeeds = null;
-        addrSeeds = null;
         bip32HeaderP2PKHpub = 0x043587cf; // The 4 byte header that serializes in base58 to "tpub".
         bip32HeaderP2PKHpriv = 0x04358394; // The 4 byte header that serializes in base58 to "tprv"
         bip32HeaderP2WPKHpub = 0x045f1cf6; // The 4 byte header that serializes in base58 to "vpub".
@@ -53,18 +60,15 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         dip14HeaderP2PKHpub = 0x02FDA7E8; // The 4 byte header that serializes in base58 to "dptp".
         dip14HeaderP2PKHpriv = 0x02FDA7FD; // The 4 byte header that serializes in base58 to "dpts"
 
-        // Difficulty adjustments are disabled for regtest.
-        // By setting the block interval for difficulty adjustments to Integer.MAX_VALUE we make sure difficulty never
-        // changes.
-        interval = Integer.MAX_VALUE;
-        maxTarget = MAX_TARGET;
-        subsidyDecreaseBlockCount = 150;
-        port = 19899;
-        id = ID_REGTEST;
-
-        majorityEnforceBlockUpgrade = TestNet3Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
-        majorityRejectBlockOutdated = TestNet3Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
+        majorityEnforceBlockUpgrade = MainNetParams.MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
+        majorityRejectBlockOutdated = MainNetParams.MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MainNetParams.MAINNET_MAJORITY_WINDOW;
+
+        String genesisHash = genesisBlock.getHashAsString();
+        checkState(genesisHash.equals("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
+
+        dnsSeeds = null;
+        addrSeeds = null;
 
         DIP0001BlockHeight = 15000;
         strSporkAddress = "yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55";
