@@ -35,7 +35,7 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         id = ID_UNITTESTNET;
 
         targetTimespan = 200000000;  // 6 years. Just a very big number.
-        maxTarget = new BigInteger("00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
+        maxTarget = new BigInteger("007fffff0000000000000000000000000000000000000000000000000000000000", 16);  // equivalent to EASIEST_DIFFICULTY_TARGET
         interval = 576;
         subsidyDecreaseBlockCount = 100;
 
