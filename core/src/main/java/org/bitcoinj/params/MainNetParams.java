@@ -39,6 +39,7 @@ public class MainNetParams extends AbstractBitcoinNetParams {
     public static final int MAINNET_MAJORITY_WINDOW = 1000;
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
+    public static final Sha256Hash GENESIS_HASH = Sha256Hash.wrap("00000ffd590b1485b3caadc19b22e6379c733355108f107a430458cdf3407ab6");
 
     public MainNetParams() {
         super();
@@ -47,9 +48,10 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         targetTimespan = TARGET_TIMESPAN;
         maxTarget = Utils.decodeCompactBits(0x1e0fffffL);
 
-        genesisBlock.setDifficultyTarget(0x1d00ffffL);
-        genesisBlock.setTime(1231006505L);
-        genesisBlock.setNonce(2083236893);
+        genesisBlock.setDifficultyTarget(0x1e0ffff0L);
+        genesisBlock.setTime(1390095618L);
+        genesisBlock.setNonce(28917698);
+        checkState(genesisBlock.getHash().equals(GENESIS_HASH), "Invalid genesis hash");
 
         port = 9999;
         packetMagic = 0xbf0c6bbdL;
@@ -69,14 +71,6 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         majorityEnforceBlockUpgrade = MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
         majorityRejectBlockOutdated = MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MAINNET_MAJORITY_WINDOW;
-
-        String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals("00000ffd590b1485b3caadc19b22e6379c733355108f107a430458cdf3407ab6"),
-                genesisHash);
-
-        dnsSeeds = new String[] {
-                "dnsseed.dash.org"
-        };
 
         // This contains (at a minimum) the blocks which are not BIP30 compliant. BIP30 changed how duplicate
         // transactions are handled. Duplicated transactions could occur in the case where a coinbase had the same
@@ -109,6 +103,10 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         checkpoints.put(1167570, Sha256Hash.wrap("000000000000000fb7b1e9b81700283dff0f7d87cf458e5edfdae00c669de661"));
         checkpoints.put(1364585, Sha256Hash.wrap("00000000000000022f355c52417fca9b73306958f7c0832b3a7bce006ca369ef"));
         checkpoints.put(1450000, Sha256Hash.wrap("00000000000000105cfae44a995332d8ec256850ea33a1f7b700474e3dad82bc"));
+
+        dnsSeeds = new String[] {
+                "dnsseed.dash.org"
+        };
 
         // Dash does not have a Http Seeder
         // If an Http Seeder is set up, add it here.  References: HttpDiscovery

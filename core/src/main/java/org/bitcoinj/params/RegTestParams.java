@@ -18,6 +18,7 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.Block;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.quorums.LLMQParameters;
 
 import java.math.BigInteger;
@@ -29,6 +30,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class RegTestParams extends AbstractBitcoinNetParams {
     private static final BigInteger MAX_TARGET = new BigInteger("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
+    public static final Sha256Hash GENESIS_HASH = Sha256Hash.wrap("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e");
 
     public RegTestParams() {
         super();
@@ -45,12 +47,14 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         genesisBlock.setDifficultyTarget(0x207fffff);
         genesisBlock.setTime(1417713337L);
         genesisBlock.setNonce(1096447);
+        checkState(genesisBlock.getHash().equals(GENESIS_HASH), "Invalid genesis hash");
 
         port = 19899;
         packetMagic = 0xfcc1b7dcL;
         dumpedPrivateKeyHeader = 128 + 140;
         addressHeader = 140;
         p2shHeader = 19;
+
         spendableCoinbaseDepth = 100;
         bip32HeaderP2PKHpub = 0x043587cf; // The 4 byte header that serializes in base58 to "tpub".
         bip32HeaderP2PKHpriv = 0x04358394; // The 4 byte header that serializes in base58 to "tprv"
@@ -62,9 +66,6 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         majorityEnforceBlockUpgrade = MainNetParams.MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
         majorityRejectBlockOutdated = MainNetParams.MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MainNetParams.MAINNET_MAJORITY_WINDOW;
-
-        String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
 
         dnsSeeds = null;
         addrSeeds = null;
