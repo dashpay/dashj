@@ -29,7 +29,7 @@ import static com.google.common.base.Preconditions.checkState;
  * Network parameters for the regression test mode of bitcoind in which all blocks are trivially solvable.
  */
 public class RegTestParams extends AbstractBitcoinNetParams {
-    private static final BigInteger MAX_TARGET = new BigInteger("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
+    private static final BigInteger MAX_TARGET = new BigInteger("7fffff0000000000000000000000000000000000000000000000000000000000", 16); // equivalent to EASIEST_DIFFICULTY_TARGET
     public static final Sha256Hash GENESIS_HASH = Sha256Hash.wrap("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e");
 
     public RegTestParams() {
