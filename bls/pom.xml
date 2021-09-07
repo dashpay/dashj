@@ -501,7 +501,7 @@
             <properties>
                 <platform>linux-generic32</platform>
                 <build.type>release</build.type>
-                <cmake.classifier>linux-generic32</cmake.classifier>
+                <cmake.classifier>linux-arm_32</cmake.classifier>
                 <cmake.generator>Unix Makefiles</cmake.generator>
                 <download.cmake>false</download.cmake>
             </properties>
