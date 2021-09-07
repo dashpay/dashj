@@ -80,6 +80,12 @@ public class Block extends Message {
     public static final int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE / 50;
     public static final int MAX_BLOCK_SIGOPS_DIP00001 = MAX_BLOCK_SIZE_DIP0001 / 50;
 
+    /** Standard maximum value for difficultyTarget (nBits) (Dash MainNet and TestNet) */
+    public static final long STANDARD_MAX_DIFFICULTY_TARGET = 0x1e0fffffL;
+
+    /** Standard value for difficultyTarget (nBits) for genesis block (Dash MainNet and TestNet) */
+    public static final long STANDARD_GENESIS_DIFFICULTY_TARGET = 0x1e0ffff0L;
+
     /** A value for difficultyTarget (nBits) that allows (slightly less than) half of all possible hash solutions. Used in unit testing. */
     public static final long EASIEST_DIFFICULTY_TARGET = 0x207fFFFFL;
 

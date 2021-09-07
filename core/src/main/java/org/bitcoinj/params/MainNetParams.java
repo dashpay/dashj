@@ -39,6 +39,8 @@ public class MainNetParams extends AbstractBitcoinNetParams {
     public static final int MAINNET_MAJORITY_WINDOW = 1000;
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
+    private static final long GENESIS_TIME = 1390095618L;
+    private static final long GENESIS_NONCE = 28917698;
     public static final Sha256Hash GENESIS_HASH = Sha256Hash.wrap("00000ffd590b1485b3caadc19b22e6379c733355108f107a430458cdf3407ab6");
 
     public MainNetParams() {
@@ -46,11 +48,11 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         id = ID_MAINNET;
 
         targetTimespan = TARGET_TIMESPAN;
-        maxTarget = Utils.decodeCompactBits(0x1e0fffffL);
+        maxTarget = Utils.decodeCompactBits(Block.STANDARD_MAX_DIFFICULTY_TARGET);
 
-        genesisBlock.setDifficultyTarget(0x1e0ffff0L);
-        genesisBlock.setTime(1390095618L);
-        genesisBlock.setNonce(28917698);
+        genesisBlock.setDifficultyTarget(Block.STANDARD_GENESIS_DIFFICULTY_TARGET);
+        genesisBlock.setTime(GENESIS_TIME);
+        genesisBlock.setNonce(GENESIS_NONCE);
         checkState(genesisBlock.getHash().equals(GENESIS_HASH), "Invalid genesis hash");
 
         port = 9999;
