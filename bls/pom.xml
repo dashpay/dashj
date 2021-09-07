@@ -319,6 +319,7 @@
                                         <echo>* linux-x86_64-release</echo>
                                         <echo>* mac-x86_64-debug</echo>
                                         <echo>* mac-x86_64-release</echo>
+                                        <echo>* linux-armv7l_32-release</echo>
                                         <echo/>
                                         <echo>For instance: mvn -Pwindows-x86_32-debug install</echo>
                                         <fail/>
@@ -484,6 +485,28 @@
                 <cmake.generator>Unix Makefiles</cmake.generator>
             </properties>
         </profile>
+
+        <profile>
+            <id>linux-armv7l_32-release</id>
+            <activation>
+                <property>
+                    <name>osDetection</name>
+                    <value>!false</value>
+                </property>
+                <os>
+                    <family>linux</family>
+                    <arch>armv7l</arch>
+                </os>
+            </activation>
+            <properties>
+                <platform>linux-generic32</platform>
+                <build.type>release</build.type>
+                <cmake.classifier>linux-generic32</cmake.classifier>
+                <cmake.generator>Unix Makefiles</cmake.generator>
+                <download.cmake>false</download.cmake>
+            </properties>
+        </profile>
+
         <profile>
             <id>portable</id>
             <!--
