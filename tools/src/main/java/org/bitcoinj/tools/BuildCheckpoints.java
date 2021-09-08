@@ -20,7 +20,6 @@ package org.bitcoinj.tools;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.*;
 import org.bitcoinj.net.discovery.DnsDiscovery;
-import org.bitcoinj.params.EvoNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.MobileDevNetParams;
 import org.bitcoinj.params.RegTestParams;
@@ -93,10 +92,6 @@ public class BuildCheckpoints {
             case MOBILE:
                 params = MobileDevNetParams.get();
                 suffix = "-mobile";
-                break;
-            case EVONET:
-                params = EvoNetParams.get();
-                suffix = "-evonet";
                 break;
             default:
                 throw new RuntimeException("Unreachable.");
