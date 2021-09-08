@@ -21,7 +21,6 @@ import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.*;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.MobileDevNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStore;
@@ -88,10 +87,6 @@ public class BuildCheckpoints {
             case REGTEST:
                 params = RegTestParams.get();
                 suffix = "-regtest";
-                break;
-            case MOBILE:
-                params = MobileDevNetParams.get();
-                suffix = "-mobile";
                 break;
             default:
                 throw new RuntimeException("Unreachable.");
