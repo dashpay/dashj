@@ -66,9 +66,6 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
-        } else if (args.length > 1 && args[1].equals("palinka")) {
-            params = PalinkaDevNetParams.get();
-            filePrefix = "forwarding-service-palinka";
         } else if (args.length > 1 && args[1].equals("schnapps")) {
             params = SchnappsDevNetParams.get();
             filePrefix = "forwarding-service-schnapps";
