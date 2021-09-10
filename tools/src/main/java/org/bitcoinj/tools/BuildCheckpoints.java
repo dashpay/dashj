@@ -20,10 +20,7 @@ package org.bitcoinj.tools;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.*;
 import org.bitcoinj.net.discovery.DnsDiscovery;
-import org.bitcoinj.params.EvoNetParams;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.MobileDevNetParams;
-import org.bitcoinj.params.PalinkaDevNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStore;
@@ -90,18 +87,6 @@ public class BuildCheckpoints {
             case REGTEST:
                 params = RegTestParams.get();
                 suffix = "-regtest";
-                break;
-            case MOBILE:
-                params = MobileDevNetParams.get();
-                suffix = "-mobile";
-                break;
-            case EVONET:
-                params = EvoNetParams.get();
-                suffix = "-evonet";
-                break;
-            case PALINKA:
-                params = PalinkaDevNetParams.get();
-                suffix = "-palinka";
                 break;
             default:
                 throw new RuntimeException("Unreachable.");

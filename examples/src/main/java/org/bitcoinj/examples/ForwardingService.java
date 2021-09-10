@@ -66,18 +66,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
-        } else if (args.length > 1 && args[1].equals("palinka")) {
-            params = PalinkaDevNetParams.get();
-            filePrefix = "forwarding-service-palinka";
         } else if (args.length > 1 && args[1].equals("schnapps")) {
             params = SchnappsDevNetParams.get();
             filePrefix = "forwarding-service-schnapps";
-        } else if (args.length > 1 && args[1].equals("mobile")) {
-            params = MobileDevNetParams.get();
-            filePrefix = "forwarding-service-mobile";
-        } else if (args.length > 1 && args[1].equals("evonet")) {
-            params = EvoNetParams.get();
-            filePrefix = "forwarding-service-evonet";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
