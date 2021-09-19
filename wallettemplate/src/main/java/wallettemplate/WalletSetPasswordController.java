@@ -21,6 +21,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.wallet.*;
+import org.bitcoinj.walletfx.overlay.OverlayWindowController;
 import org.slf4j.*;
 import org.bouncycastle.crypto.params.*;
 
@@ -32,7 +33,7 @@ import java.util.concurrent.*;
 import org.bitcoinj.walletfx.utils.KeyDerivationTasks;
 import static org.bitcoinj.walletfx.utils.GuiUtils.*;
 
-public class WalletSetPasswordController {
+public class WalletSetPasswordController implements OverlayWindowController<WalletSetPasswordController> {
     private static final Logger log = LoggerFactory.getLogger(WalletSetPasswordController.class);
     public PasswordField pass1, pass2;
 
@@ -41,7 +42,7 @@ public class WalletSetPasswordController {
     public Button closeButton;
     public Label explanationLabel;
 
-    public MainController.OverlayUI overlayUI;
+    private MainController.OverlayUI<? extends OverlayWindowController<WalletSetPasswordController>> overlayUI;
     // These params were determined empirically on a top-range (as of 2014) MacBook Pro with native scrypt support,
     // using the scryptenc command line tool from the original scrypt distribution, given a memory limit of 40mb.
     public static final Protos.ScryptParameters SCRYPT_PARAMETERS = Protos.ScryptParameters.newBuilder()
@@ -50,6 +51,11 @@ public class WalletSetPasswordController {
             .setN(32768)
             .setSalt(ByteString.copyFrom(KeyCrypterScrypt.randomSalt()))
             .build();
+
+    @Override
+    public void setOverlayUI(MainController.OverlayUI<? extends OverlayWindowController<WalletSetPasswordController>> ui) {
+        overlayUI = ui;
+    }
 
     public void initialize() {
         progressMeter.setOpacity(0);

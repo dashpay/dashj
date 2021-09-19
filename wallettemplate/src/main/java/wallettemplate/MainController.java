@@ -37,12 +37,12 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.layout.HBox;
 import javafx.util.Duration;
+import org.bitcoinj.walletfx.overlay.OverlayWindowController;
 import org.bitcoinj.walletfx.utils.GuiUtils;
 import org.bitcoinj.walletfx.utils.TextFieldValidator;
 import wallettemplate.controls.ClickableBitcoinAddress;
 import wallettemplate.controls.NotificationBarPane;
 import org.bitcoinj.walletfx.utils.BitcoinUIModel;
-import org.bitcoinj.walletfx.utils.GuiUtils;
 import org.bitcoinj.walletfx.utils.easing.EasingMode;
 import org.bitcoinj.walletfx.utils.easing.ElasticInterpolator;
 
@@ -195,7 +195,7 @@ public class MainController {
         return model.getDownloadProgressTracker();
     }
 
-    public class OverlayUI<T> {
+    public class OverlayUI<T extends OverlayWindowController<T>> {
         public Node ui;
         public T controller;
 
@@ -244,22 +244,18 @@ public class MainController {
     }
 
     @Nullable
-    private OverlayUI currentOverlay;
+    private OverlayUI<? extends OverlayWindowController<?>> currentOverlay;
 
-    public <T> OverlayUI<T> overlayUI(Node node, T controller) {
+    public <T extends OverlayWindowController<T>> OverlayUI<T> overlayUI(Node node, T controller) {
         checkGuiThread();
         OverlayUI<T> pair = new OverlayUI<>(node, controller);
-        // Auto-magically set the overlayUI member, if it's there.
-        try {
-            controller.getClass().getField("overlayUI").set(controller, pair);
-        } catch (IllegalAccessException | NoSuchFieldException ignored) {
-        }
+        controller.setOverlayUI(pair);
         pair.show();
         return pair;
     }
 
     /** Loads the FXML file with the given name, blurs out the main UI and puts this one on top. */
-    public <T> OverlayUI<T> overlayUI(String name) {
+    public <T extends OverlayWindowController<T>> OverlayUI<T> overlayUI(String name) {
         try {
             checkGuiThread();
             // Load the UI from disk.
@@ -268,13 +264,7 @@ public class MainController {
             Pane ui = loader.load();
             T controller = loader.getController();
             OverlayUI<T> pair = new OverlayUI<>(ui, controller);
-            // Auto-magically set the overlayUI member, if it's there.
-            try {
-                if (controller != null)
-                    controller.getClass().getField("overlayUI").set(controller, pair);
-            } catch (IllegalAccessException | NoSuchFieldException ignored) {
-                ignored.printStackTrace();
-            }
+            controller.setOverlayUI(pair);
             pair.show();
             return pair;
         } catch (IOException e) {
