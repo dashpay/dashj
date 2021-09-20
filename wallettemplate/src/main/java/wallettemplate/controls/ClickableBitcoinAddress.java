@@ -42,13 +42,11 @@ import org.bitcoinj.uri.BitcoinURI;
 
 import org.bitcoinj.walletfx.overlay.OverlayController;
 import org.bitcoinj.walletfx.overlay.OverlayableStackPaneController;
-import wallettemplate.Main;
 import org.bitcoinj.walletfx.utils.GuiUtils;
 import org.bitcoinj.walletfx.utils.QRCodeImages;
 
 import de.jensd.fx.fontawesome.AwesomeDude;
 import de.jensd.fx.fontawesome.AwesomeIcon;
-import wallettemplate.MainController;
 
 import static javafx.beans.binding.Bindings.convert;
 
@@ -66,9 +64,23 @@ public class ClickableBitcoinAddress extends AnchorPane implements OverlayContro
     protected SimpleObjectProperty<Address> address = new SimpleObjectProperty<>();
     private final StringExpression addressStr;
 
+    private OverlayableStackPaneController rootController;
+
+    private String appName = "app-name";
+
     @Override
-    public void setOverlayUI(OverlayableStackPaneController.OverlayUI<? extends OverlayController<ClickableBitcoinAddress>> ui) {
+    public void initOverlay(OverlayableStackPaneController overlayableStackPaneController, OverlayableStackPaneController.OverlayUI<? extends OverlayController<ClickableBitcoinAddress>> ui) {
+        rootController = overlayableStackPaneController;
     }
+
+    /**
+     * @param theAppName The application name to use in Bitcoin URIs
+     */
+    public void setAppName(String theAppName) {
+        appName = theAppName;
+    }
+
+
 
     public ClickableBitcoinAddress() {
         try {
@@ -93,7 +105,7 @@ public class ClickableBitcoinAddress extends AnchorPane implements OverlayContro
     }
 
     public String uri() {
-        return BitcoinURI.convertToBitcoinURI(address.get(), null, Main.APP_NAME, null);
+        return BitcoinURI.convertToBitcoinURI(address.get(), null, appName, null);
     }
 
     public Address getAddress() {
@@ -148,7 +160,7 @@ public class ClickableBitcoinAddress extends AnchorPane implements OverlayContro
         // non-centered on the screen. Finally fade/blur it in.
         Pane pane = new Pane(view);
         pane.setMaxSize(qrImage.getWidth(), qrImage.getHeight());
-        final OverlayableStackPaneController.OverlayUI<ClickableBitcoinAddress> overlay = MainController.instance.overlayUI(pane, this);
+        final OverlayableStackPaneController.OverlayUI<ClickableBitcoinAddress> overlay = rootController.overlayUI(pane, this);
         view.setOnMouseClicked(event1 -> overlay.done());
     }
 
