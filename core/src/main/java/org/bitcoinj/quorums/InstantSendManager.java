@@ -17,8 +17,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -615,7 +617,17 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     db.writeInstantSendLockMined(islockHash, block.getHeight());
                 }
                 // remove related InstantSend Locks from the invalid list
-                invalidInstantSendLocks.entrySet().removeIf(instantSendLockLongEntry -> instantSendLockLongEntry.getKey().getHash().equals(tx.getTxId()));
+                List<InstantSendLock> keysToRemove = new ArrayList<>();
+
+                for (Map.Entry<InstantSendLock, Long> entry : invalidInstantSendLocks.entrySet()) {
+                    if (entry.getKey().getHash().equals(tx.getTxId())) {
+                        keysToRemove.add(entry.getKey());
+                    }
+                }
+
+                for (InstantSendLock key : keysToRemove) {
+                    invalidInstantSendLocks.remove(key);
+                }
             }
         } finally {
             lock.unlock();
@@ -663,8 +675,17 @@ public class InstantSendManager implements RecoveredSignatureListener {
             }
 
             // Keep invalid ISLocks for 1 hour
-            invalidInstantSendLocks.entrySet().removeIf(instantSendLockLongEntry -> instantSendLockLongEntry.getValue() < Utils.currentTimeSeconds() - context.getParams().getInstantSendKeepLock());
+            List<InstantSendLock> keysToRemove = new ArrayList<>();
 
+            for (Map.Entry<InstantSendLock, Long> entry : invalidInstantSendLocks.entrySet()) {
+                if (entry.getValue() < Utils.currentTimeSeconds() - context.getParams().getInstantSendKeepLock()) {
+                    keysToRemove.add(entry.getKey());
+                }
+            }
+
+            for (InstantSendLock key : keysToRemove) {
+                invalidInstantSendLocks.remove(key);
+            }
         } finally {
             lock.unlock();
         }
