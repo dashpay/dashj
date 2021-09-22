@@ -36,6 +36,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.layout.HBox;
 import javafx.util.Duration;
+import org.bitcoinj.walletfx.application.WalletApplication;
 import org.bitcoinj.walletfx.overlay.OverlayableStackPaneController;
 import org.bitcoinj.walletfx.utils.GuiUtils;
 import org.bitcoinj.walletfx.utils.TextFieldValidator;
@@ -48,7 +49,7 @@ import org.bitcoinj.walletfx.utils.easing.ElasticInterpolator;
 import java.text.DateFormat;
 import java.util.Date;
 
-import static wallettemplate.WalletTemplate.bitcoin;
+import static org.bitcoinj.walletfx.application.WalletApplication.bitcoin;
 
 /**
  * Gets created auto-magically by FXMLLoader via reflection. The widget fields are set to the GUI controls they're named
@@ -66,6 +67,7 @@ public class MainController extends OverlayableStackPaneController {
     private NotificationBarPane.Item syncItem;
     private static final MonetaryFormat MONETARY_FORMAT = MonetaryFormat.BTC.noCode();
 
+    private Scene scene;
     private NotificationBarPane notificationBar;
 
     // Called by FXMLLoader.
@@ -74,24 +76,27 @@ public class MainController extends OverlayableStackPaneController {
         // Special case of initOverlay that passes null as the 2nd parameter because ClickableBitcoinAddress is loaded by FXML
         // TODO: Extract QRCode Pane to separate reusable class that is a more standard OverlayController instance
         addressControl.initOverlay(this, null);
-        addressControl.setAppName(WalletTemplate.instance.applicationName);
+        addressControl.setAppName(WalletApplication.instance.applicationName);
         addressControl.setOpacity(0.0);
     }
 
-    Scene controllerStart(Pane mainUI, String cssResourceName) {
+    public Scene scene() {
+        return scene;
+    }
+
+    public void controllerStart(Pane mainUI, String cssResourceName) {
         this.mainUI = mainUI;
         // Configure the window with a StackPane so we can overlay things on top of the main UI, and a
         // NotificationBarPane so we can slide messages and progress bars in from the bottom. Note that
         // ordering of the construction and connection matters here, otherwise we get (harmless) CSS error
         // spew to the logs.
         notificationBar = new NotificationBarPane(mainUI);
-        Scene scene = new Scene(uiStack);
+        scene = new Scene(uiStack);
         TextFieldValidator.configureScene(scene);
         // Add CSS that we need. cssResourceName will be loaded from the same package as this class.
         scene.getStylesheets().add(getClass().getResource(cssResourceName).toString());
         uiStack.getChildren().add(notificationBar);
         scene.getAccelerators().put(KeyCombination.valueOf("Shortcut+F"), () -> bitcoin.peerGroup().getDownloadPeer().close());
-        return scene;
     }
 
     public void onBitcoinSetup() {
