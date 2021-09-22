@@ -1,4 +1,6 @@
 /*
+ * Copyright by the original author or authors.
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,7 +48,7 @@ import org.bitcoinj.walletfx.utils.easing.ElasticInterpolator;
 import java.text.DateFormat;
 import java.util.Date;
 
-import static wallettemplate.Main.bitcoin;
+import static wallettemplate.WalletTemplate.bitcoin;
 
 /**
  * Gets created auto-magically by FXMLLoader via reflection. The widget fields are set to the GUI controls they're named
@@ -72,7 +74,7 @@ public class MainController extends OverlayableStackPaneController {
         // Special case of initOverlay that passes null as the 2nd parameter because ClickableBitcoinAddress is loaded by FXML
         // TODO: Extract QRCode Pane to separate reusable class that is a more standard OverlayController instance
         addressControl.initOverlay(this, null);
-        addressControl.setAppName(Main.APP_NAME);
+        addressControl.setAppName(WalletTemplate.instance.applicationName);
         addressControl.setOpacity(0.0);
     }
 
