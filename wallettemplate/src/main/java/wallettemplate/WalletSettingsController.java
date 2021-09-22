@@ -176,7 +176,7 @@ public class WalletSettingsController implements OverlayController<WalletSetting
         informationalAlert("Wallet restore in progress",
                 "Your wallet will now be resynced from the Dash network. This can take a long time for old wallets.");
         overlayUI.done();
-        MainController.instance.restoreFromSeedAnimation();
+        app.mainWindowController().restoreFromSeedAnimation();
 
         long birthday = datePicker.getValue().atStartOfDay().toEpochSecond(ZoneOffset.UTC);
         DeterministicSeed seed = new DeterministicSeed(Splitter.on(' ').splitToList(wordsArea.getText()), null, "", birthday);
