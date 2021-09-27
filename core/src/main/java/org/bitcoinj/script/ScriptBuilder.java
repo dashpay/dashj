@@ -548,4 +548,11 @@ public class ScriptBuilder {
         builder.smallNum(1); // Use the CHECKLOCKTIMEVERIFY if branch
         return builder.build();
     }
+
+    public static Script createCreditBurnOutput(ECKey creditBurnKey) {
+        ScriptBuilder builder = new ScriptBuilder();
+        builder.addChunk(new ScriptChunk(OP_RETURN, null));
+        builder.data(creditBurnKey.getPubKeyHash());
+        return builder.build();
+    }
 }
