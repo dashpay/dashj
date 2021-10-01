@@ -81,42 +81,15 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         checkpoints.put(   1999, Sha256Hash.wrap("00000052e538d27fa53693efe6fb6892a0c1d26c0235f599171c48a3cce553b1"));
         checkpoints.put(   2999, Sha256Hash.wrap("0000024bc3f4f4cb30d29827c13d921ad77d2c6072e586c7f60d83c2722cdcc5"));
 
+        // updated with Dash Core 0.17.0.3 seed list
         addrSeeds = new int[]{
-                0xaa34ca12,
-                0xaa34ca12,
-                0xaa34ca12,
-                0xaa34ca12,
-                0xaa34ca12,
-                0xaa34ca12,
-                0x140fff22,
-                0x140fff22,
-                0x140fff22,
-                0x140fff22,
-                0x140fff22,
-                0x140fff22,
-                0x35d03234,
-                0x35d03234,
-                0x35d03234,
-                0x35d03234,
-                0x35d03234,
-                0x35d03234,
-                0x55ee213f,
-                0x55ee213f,
-                0x55ee213f,
-                0x55ee213f,
-                0x55ee213f,
-                0x55ee213f,
-                0x10ebef91,
-                0x11ebef91,
-                0x12ebef91,
-                0x13ebef91,
-                0x14ebef91,
-                0x15ebef91,
-                0x16ebef91,
-                0x17ebef91,
-                0x18ebef91,
-                0x19ebef91,
-                0xf9cb3eb2
+                0x10a8302d,
+                0x4faf4433,
+                0x05dacd3c,
+                0x939c6e8f,
+                0xf9cb3eb2,
+                0xf093bdce
+
         };
         bip32HeaderP2PKHpub = 0x043587cf;
         bip32HeaderP2PKHpriv = 0x04358394;
