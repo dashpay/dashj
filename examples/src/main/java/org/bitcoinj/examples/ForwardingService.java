@@ -19,6 +19,7 @@ package org.bitcoinj.examples;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
@@ -28,7 +29,7 @@ import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.store.FlatDB;
+import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
@@ -37,12 +38,10 @@ import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.bitcoinj.utils.Pair;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -85,7 +84,9 @@ public class ForwardingService {
         System.out.println("Forwarding address: " + forwardingAddress);
 
         // Start up a basic app using a class that automates some boilerplate.
+
         kit = new WalletAppKit(params, new File("."), filePrefix);
+        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
 
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.
