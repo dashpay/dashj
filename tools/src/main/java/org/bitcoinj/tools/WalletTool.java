@@ -18,6 +18,7 @@
 package org.bitcoinj.tools;
 
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -1299,7 +1300,9 @@ public class WalletTool {
                 }
             }
         } else {
-            peerGroup.setRequiredServices(0);
+            //TODO: peerGroup.setRequiredServices(0); was used here previously, which is better
+            //for now, however peerGroup doesn't work with masternodeListManager, but it should
+            peerGroup.addPeerDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
         }
     }
 
