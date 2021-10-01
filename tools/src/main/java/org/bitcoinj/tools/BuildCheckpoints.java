@@ -19,9 +19,10 @@ package org.bitcoinj.tools;
 
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.*;
-import org.bitcoinj.net.discovery.DnsDiscovery;
+import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
+import org.bitcoinj.params.SchnappsDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
@@ -88,6 +89,10 @@ public class BuildCheckpoints {
                 params = RegTestParams.get();
                 suffix = "-regtest";
                 break;
+            case SCHNAPPS:
+                params = SchnappsDevNetParams.get();
+                suffix = "-schnapps";
+                break;
             default:
                 throw new RuntimeException("Unreachable.");
         }
@@ -119,7 +124,7 @@ public class BuildCheckpoints {
             // for PROD and TEST use a peer group discovered with dns
             peerGroup.setUserAgent("PeerMonitor", "1.0");
             peerGroup.setMaxConnections(20);
-            peerGroup.addPeerDiscovery(new DnsDiscovery(params));
+            peerGroup.addPeerDiscovery(new ThreeMethodPeerDiscovery(params));
             peerGroup.start();
 
             // Connect to at least 4 peers because some may not support download
