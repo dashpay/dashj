@@ -18,8 +18,10 @@
 package org.bitcoinj.tools;
 
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
+import org.bitcoinj.params.SchnappsDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
@@ -308,6 +310,10 @@ public class WalletTool {
             case REGTEST:
                 params = RegTestParams.get();
                 chainFileName = new File("regtest.chain");
+                break;
+            case SCHNAPPS:
+                params = SchnappsDevNetParams.get();
+                chainFileName = new File("schnapps.chain");
                 break;
             default:
                 throw new RuntimeException("Unreachable.");
@@ -1299,7 +1305,9 @@ public class WalletTool {
                 }
             }
         } else {
-            peerGroup.setRequiredServices(0);
+            //TODO: peerGroup.setRequiredServices(0); was used here previously, which is better
+            //for now, however peerGroup doesn't work with masternodeListManager, but it should
+            peerGroup.addPeerDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
         }
     }
 
