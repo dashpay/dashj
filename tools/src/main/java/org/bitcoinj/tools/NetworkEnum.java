@@ -21,8 +21,5 @@ public enum NetworkEnum {
     PROD, // alias for MAIN
     TEST,
     REGTEST,
-    MOBILE,
-    EVONET,
-    PALINKA,
-    DEVNET
+    SCHNAPPS
 }
