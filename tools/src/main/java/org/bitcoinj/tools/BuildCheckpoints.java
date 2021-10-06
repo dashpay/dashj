@@ -41,6 +41,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.DigestOutputStream;
@@ -194,7 +195,7 @@ public class BuildCheckpoints implements Callable<Integer> {
             for (StoredBlock block : checkpoints.values()) {
                 block.serializeCompact(buffer);
                 dataOutputStream.write(buffer.array());
-                buffer.position(0);
+                ((Buffer) buffer).position(0);
             }
             Sha256Hash checkpointsHash = Sha256Hash.wrap(digest.digest());
             System.out.println("Hash of checkpoints data is " + checkpointsHash);
@@ -213,7 +214,7 @@ public class BuildCheckpoints implements Callable<Integer> {
             for (StoredBlock block : checkpoints.values()) {
                 block.serializeCompact(buffer);
                 writer.println(CheckpointManager.BASE64.encode(buffer.array()));
-                buffer.position(0);
+                ((Buffer) buffer).position(0);
             }
             System.out.println("Checkpoints written to '" + file.getCanonicalPath() + "'.");
         }
