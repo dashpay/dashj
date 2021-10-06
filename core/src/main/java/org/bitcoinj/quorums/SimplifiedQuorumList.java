@@ -188,11 +188,7 @@ public class SimplifiedQuorumList extends Message {
     {
         lock.lock();
         try {
-            FinalCommitment p = minableCommitments.get(commitmentHash);
-            if (p == null) {
-                return null;
-            }
-            return p;
+            return minableCommitments.get(commitmentHash);
         } finally {
             lock.unlock();
         }
