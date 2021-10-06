@@ -199,6 +199,28 @@ public class SimplifiedQuorumList extends Message {
     }
 
 
+    public Quorum getQuorum(Sha256Hash quorumHash) {
+        lock.lock();
+        FinalCommitment finalCommitment = null;
+        try {
+            for (FinalCommitment commitment : minableCommitments.values()) {
+                if (commitment.quorumHash.equals(quorumHash)) {
+                    finalCommitment = commitment;
+                    break;
+                }
+            }
+
+            if (finalCommitment == null) {
+                return null;
+            }
+            LLMQParameters llmqParameters = LLMQParameters.fromType(LLMQParameters.LLMQType.fromValue(finalCommitment.llmqType));
+            return new Quorum(llmqParameters, finalCommitment);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
     public boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff,
                           SimplifiedQuorumList prevList, SimplifiedMasternodeList mnList) throws VerificationException {
         lock.lock();
