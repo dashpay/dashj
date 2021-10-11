@@ -66,6 +66,35 @@ public class LLMQParameters {
             100, 800, 67, 2, 2, 10,
             18, 80, 24, 25, 50);
 
+    public static LLMQParameters fromType(LLMQParameters.LLMQType type) {
+        LLMQParameters result;
+        switch (type) {
+            case LLMQ_100_67:
+                result = llmq100_67;
+                break;
+            case LLMQ_400_85:
+                result = llmq400_85;
+                break;
+            case LLMQ_400_60:
+                result = llmq400_60;
+                break;
+            case LLMQ_TEST:
+                result = llmq_test;
+                break;
+            case LLMQ_DEVNET:
+                result = llmq_devnet;
+                break;
+            case LLMQ_50_60:
+                result = llmq50_60;
+                break;
+            default:
+            case LLMQ_NONE:
+                result = null;
+                break;
+        }
+        return result;
+    }
+
     // Configures a LLMQ and its DKG
     // See https://github.com/dashpay/dips/blob/master/dip-0006.md for more details
     LLMQType type;
