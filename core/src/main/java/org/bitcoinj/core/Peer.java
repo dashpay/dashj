@@ -825,6 +825,15 @@ public class Peer extends PeerSocketHandler {
             }
         }
 
+        // if the header chain is behind the blockchain, then stop processing headers
+        // this is to avoid cases were the headers were requested when they are not needed
+        if (headerChain != null && blockChain.getChainHead().getHeight() >= headerChain.getChainHead().getHeight()) {
+            log.info("header chain is at {} while block chain is at {}; stop processing {} headers",
+                    headerChain.getChainHead().getHeight(), blockChain.getChainHead().getHeight(),
+                    m.getBlockHeaders().size());
+            return;
+        }
+
         try {
             checkState(!downloadBlockBodies, toString());
             for (int i = 0; i < m.getBlockHeaders().size(); i++) {
