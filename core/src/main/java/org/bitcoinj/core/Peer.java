@@ -1864,15 +1864,9 @@ public class Peer extends PeerSocketHandler {
         lastGetHeadersBegin = chainHeadHash;
         lastGetHeadersEnd = toHash;
 
-        //if (downloadBlockBodies) {
-        //    GetBlocksMessage message = new GetBlocksMessage(params, blockLocator, toHash);
-        //    sendMessage(message);
-        //} else {
-            // Downloading headers for a while instead of full blocks.
         log.info("Requesting headers from : {}", this);
         GetHeadersMessage message = new GetHeadersMessage(params, blockLocator, toHash);
         sendMessage(message);
-        //}
     }
 
     /**
