@@ -177,7 +177,7 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.28</version>
+        <version>1.7.29</version>
       </dependency>
       <!-- dashj consumers are expected to provide their own SLF4J adapters
     such as logback, slf4j-log4j12, slf4j-jcl and so on
@@ -185,7 +185,7 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-jdk14</artifactId>
-        <version>1.7.28</version>
+        <version>1.7.29</version>
         <scope>runtime</scope>
         <optional>true</optional>
       </dependency>
