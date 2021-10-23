@@ -188,7 +188,7 @@
                                         <urn>com.fasterxml.jackson.core:jackson-core:2.5.1:jar:null:test:e2a00ad1d7e540ec395e9296a34da484c8888d4d</urn>
                                         <urn>com.fasterxml.jackson.core:jackson-databind:2.9.10.7:jar:null:test:caa7f72b6b488e827cb2c8d72615fc8a53176e47</urn>
                                         <urn>com.google.code.findbugs:jsr305:2.0.1:jar:null:compile:516c03b21d50a644d538de0f0369c620989cd8f0</urn>
-                                        <urn>com.google.guava:guava:28.1-android:jar:null:compile:c2526f8fad32a65a6d7032dd8e9524eb276b108b</urn>
+                                        <urn>com.google.guava:guava:28.2-android:jar:null:compile:e11db6e27f5d1ec19826848a865c496c798398fa</urn>
                                         <urn>org.checkerframework:checker-compat-qual:2.0.0:jar:null:compile:fc89b03860d11d6213d0154a62bcd1c2f69b9efa</urn>
                                         <urn>com.google.errorprone:error_prone_annotations:2.0.18:jar:null:compile:5f65affce1684999e2f4024983835efc3504012e</urn>
                                         <urn>com.google.j2objc:j2objc-annotations:1.1:jar:null:compile:ed28ded51a8b1c6b112568def5f4b455e6809019</urn>
@@ -408,7 +408,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>28.1-android</version>
+            <version>28.2-android</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.google.code.findbugs</groupId>
