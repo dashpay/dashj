@@ -1527,7 +1527,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** You can override this to customise the creation of {@link Peer} objects. */
     @GuardedBy("lock")
     protected Peer createPeer(PeerAddress address, VersionMessage ver) {
-        return new Peer(params, ver, address, chain, headerChain, downloadTxDependencyDepth);
+        return new Peer(params, ver, address, chain, headerChain, requiredServices, downloadTxDependencyDepth);
     }
 
     /**
