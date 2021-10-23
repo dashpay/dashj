@@ -79,9 +79,10 @@ public final class ClientState {
       return channels_.get(index);
     }
     private void ensureChannelsIsMutable() {
-      if (!channels_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.protocols.channels.ClientState.StoredClientPaymentChannel> tmp = channels_;
+      if (!tmp.isModifiable()) {
         channels_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(channels_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -1689,9 +1690,9 @@ public final class ClientState {
               "serverKey_",
             };
             java.lang.String info =
-                "\u0001\u000b\u0000\u0001\u0001\u000b\u000b\u0000\u0000\u0007\u0001\u050a\u0000\u0002" +
-                "\u050a\u0001\u0003\u050a\u0002\u0004\u050a\u0004\u0005\u0503\u0005\u0006\u0503\u0006" +
-                "\u0007\n\u0007\b\u050a\u0003\t\u000b\b\n\u0003\t\u000b\n\n";
+                "\u0001\u000b\u0000\u0001\u0001\u000b\u000b\u0000\u0000\u0007\u0001\u150a\u0000\u0002" +
+                "\u150a\u0001\u0003\u150a\u0002\u0004\u150a\u0004\u0005\u1503\u0005\u0006\u1503\u0006" +
+                "\u0007\u100a\u0007\b\u150a\u0003\t\u100b\b\n\u1003\t\u000b\u100a\n";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
