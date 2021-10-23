@@ -221,8 +221,8 @@
                                         <urn>org.objenesis:objenesis:1.2:jar:null:test:bfcb0539a071a4c5a30690388903ac48c0667f2a</urn>
                                         <urn>com.squareup.okhttp3:okhttp:3.12.8:jar:null:runtime:d5a53914b7c942b749c7edce638166aed65c30a2</urn>
                                         <urn>com.squareup.okio:okio:1.13.0:jar:null:runtime:a9283170b7305c8d92d25aff02a6ab7e45d06cbe</urn>
-                                        <urn>org.slf4j:slf4j-api:1.7.29:jar:null:compile:e56bf4473a4c6b71c7dd397a833dce86d1993d9d</urn>
-                                        <urn>org.slf4j:slf4j-jdk14:1.7.29:jar:null:test:0270d3d114557abd5d18292f5d106c5fda7398ab</urn>
+                                        <urn>org.slf4j:slf4j-api:1.7.30:jar:null:compile:b5a4b6d16ab13e34a88fae84c35cd5d68cac922c</urn>
+                                        <urn>org.slf4j:slf4j-jdk14:1.7.30:jar:null:test:d35953dd2fe54ebe39fdf18cfd82fe6eb35b25ed</urn>
                                         <urn>org.sonatype.plugins:nexus-staging-maven-plugin:1.6.5:maven-plugin:null:runtime:455ca2aa8cd14a06608f1538bd6a1efd09561563</urn>
                                         <urn>postgresql:postgresql:9.1-901.jdbc4:jar:null:compile:153f2f92a786f12fc111d0111f709012df87c808</urn>
                                         <urn>de.sfuhrm:saphir-hash-core:3.0.5:jar:null:compile:b618a7ea48adbca7e3c444e4d0f4297bfe337591</urn>
@@ -380,7 +380,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
-            <version>1.7.29</version>
+            <version>1.7.30</version>
             <scope>test</scope>
         </dependency>
         <dependency>
