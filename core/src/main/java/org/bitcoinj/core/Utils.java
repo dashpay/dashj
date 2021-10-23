@@ -27,7 +27,12 @@ import java.net.URL;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -42,10 +47,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.io.BaseEncoding;
-import com.google.common.primitives.Ints;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
@@ -601,45 +603,6 @@ public class Utils {
         if (mockSleepQueue != null) {
             mockSleepQueue.offer(true);
         }
-    }
-
-    private static class Pair implements Comparable<Pair> {
-        int item, count;
-        public Pair(int item, int count) { this.count = count; this.item = item; }
-        // note that in this implementation compareTo() is not consistent with equals()
-        @Override public int compareTo(Pair o) { return -Ints.compare(count, o.count); }
-    }
-
-    public static int maxOfMostFreq(int... items) {
-        ArrayList<Integer> list = new ArrayList<>(items.length);
-        for (int item : items) list.add(item);
-        return maxOfMostFreq(list);
-    }
-
-    public static int maxOfMostFreq(List<Integer> items) {
-        if (items.isEmpty())
-            return 0;
-        // This would be much easier in a functional language (or in Java 8).
-        items = Ordering.natural().reverse().sortedCopy(items);
-        LinkedList<Pair> pairs = Lists.newLinkedList();
-        pairs.add(new Pair(items.get(0), 0));
-        for (int item : items) {
-            Pair pair = pairs.getLast();
-            if (pair.item != item)
-                pairs.add((pair = new Pair(item, 0)));
-            pair.count++;
-        }
-        // pairs now contains a uniqified list of the sorted inputs, with counts for how often that item appeared.
-        // Now sort by how frequently they occur, and pick the max of the most frequent.
-        Collections.sort(pairs);
-        int maxCount = pairs.getFirst().count;
-        int maxItem = pairs.getFirst().item;
-        for (Pair pair : pairs) {
-            if (pair.count != maxCount)
-                break;
-            maxItem = Math.max(maxItem, pair.item);
-        }
-        return maxItem;
     }
 
     private enum Runtime {
