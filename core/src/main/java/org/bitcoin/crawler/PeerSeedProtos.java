@@ -432,8 +432,8 @@ public final class PeerSeedProtos {
               "services_",
             };
             java.lang.String info =
-                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u0508\u0000\u0002" +
-                "\u050b\u0001\u0003\u050b\u0002";
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u1508\u0000\u0002" +
+                "\u150b\u0001\u0003\u150b\u0002";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -594,9 +594,10 @@ public final class PeerSeedProtos {
       return seed_.get(index);
     }
     private void ensureSeedIsMutable() {
-      if (!seed_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoin.crawler.PeerSeedProtos.PeerSeedData> tmp = seed_;
+      if (!tmp.isModifiable()) {
         seed_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(seed_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -1083,8 +1084,8 @@ public final class PeerSeedProtos {
               "net_",
             };
             java.lang.String info =
-                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0001\u0003\u0001\u041b\u0002\u0503" +
-                "\u0000\u0003\u0508\u0001";
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0001\u0003\u0001\u041b\u0002\u1503" +
+                "\u0000\u0003\u1508\u0001";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -1522,8 +1523,8 @@ public final class PeerSeedProtos {
               "pubkey_",
             };
             java.lang.String info =
-                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u050a\u0000\u0002" +
-                "\u050a\u0001\u0003\u050a\u0002";
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u150a\u0000\u0002" +
+                "\u150a\u0001\u0003\u150a\u0002";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
