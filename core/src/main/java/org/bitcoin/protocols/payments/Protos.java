@@ -392,8 +392,8 @@ public final class Protos {
               "script_",
             };
             java.lang.String info =
-                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0001\u0001\u0003\u0000\u0002" +
-                "\u050a\u0001";
+                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0001\u0001\u1003\u0000\u0002" +
+                "\u150a\u0001";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -775,9 +775,10 @@ public final class Protos {
       return outputs_.get(index);
     }
     private void ensureOutputsIsMutable() {
-      if (!outputs_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoin.protocols.payments.Protos.Output> tmp = outputs_;
+      if (!tmp.isModifiable()) {
         outputs_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(outputs_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -1833,9 +1834,9 @@ public final class Protos {
               "merchantData_",
             };
             java.lang.String info =
-                "\u0001\u0007\u0000\u0001\u0001\u0007\u0007\u0000\u0001\u0002\u0001\b\u0000\u0002" +
-                "\u041b\u0003\u0503\u0001\u0004\u0003\u0002\u0005\b\u0003\u0006\b\u0004\u0007\n\u0005" +
-                "";
+                "\u0001\u0007\u0000\u0001\u0001\u0007\u0007\u0000\u0001\u0002\u0001\u1008\u0000\u0002" +
+                "\u041b\u0003\u1503\u0001\u0004\u1003\u0002\u0005\u1008\u0003\u0006\u1008\u0004\u0007" +
+                "\u100a\u0005";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -2666,8 +2667,8 @@ public final class Protos {
               "signature_",
             };
             java.lang.String info =
-                "\u0001\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0001\u0001\u000b\u0000\u0002" +
-                "\b\u0001\u0003\n\u0002\u0004\u050a\u0003\u0005\n\u0004";
+                "\u0001\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0001\u0001\u100b\u0000\u0002" +
+                "\u1008\u0001\u0003\u100a\u0002\u0004\u150a\u0003\u0005\u100a\u0004";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -2808,9 +2809,10 @@ public final class Protos {
       return certificate_.get(index);
     }
     private void ensureCertificateIsMutable() {
-      if (!certificate_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<com.google.protobuf.ByteString> tmp = certificate_;
+      if (!tmp.isModifiable()) {
         certificate_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(certificate_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
     /**
@@ -3346,9 +3348,10 @@ public final class Protos {
       return transactions_.get(index);
     }
     private void ensureTransactionsIsMutable() {
-      if (!transactions_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<com.google.protobuf.ByteString> tmp = transactions_;
+      if (!tmp.isModifiable()) {
         transactions_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(transactions_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
     /**
@@ -3462,9 +3465,10 @@ public final class Protos {
       return refundTo_.get(index);
     }
     private void ensureRefundToIsMutable() {
-      if (!refundTo_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoin.protocols.payments.Protos.Output> tmp = refundTo_;
+      if (!tmp.isModifiable()) {
         refundTo_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(refundTo_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -4119,8 +4123,8 @@ public final class Protos {
               "memo_",
             };
             java.lang.String info =
-                "\u0001\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0002\u0001\u0001\n\u0000\u0002" +
-                "\u001c\u0003\u041b\u0004\b\u0001";
+                "\u0001\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0002\u0001\u0001\u100a\u0000\u0002" +
+                "\u001c\u0003\u041b\u0004\u1008\u0001";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -4653,8 +4657,8 @@ public final class Protos {
               "memo_",
             };
             java.lang.String info =
-                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0001\u0001\u0509\u0000\u0002" +
-                "\b\u0001";
+                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0001\u0001\u1509\u0000\u0002" +
+                "\u1008\u0001";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through

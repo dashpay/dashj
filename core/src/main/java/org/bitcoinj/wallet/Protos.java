@@ -386,8 +386,8 @@ public final class Protos {
               "services_",
             };
             java.lang.String info =
-                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u050a\u0000\u0002" +
-                "\u050b\u0001\u0003\u0503\u0002";
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u150a\u0000\u0002" +
+                "\u150b\u0001\u0003\u1503\u0002";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -821,8 +821,8 @@ public final class Protos {
               "encryptedPrivateKey_",
             };
             java.lang.String info =
-                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0002\u0001\u050a\u0000\u0002" +
-                "\u050a\u0001";
+                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0002\u0001\u150a\u0000\u0002" +
+                "\u150a\u0001";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -1421,8 +1421,8 @@ public final class Protos {
               "bi_",
             };
             java.lang.String info =
-                "\u0001\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0001\u0001\u0507\u0000\u0002" +
-                "\u000b\u0001\u0003\u000b\u0002\u0004\u0007\u0003\u0005\n\u0004";
+                "\u0001\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0001\u0001\u1507\u0000\u0002" +
+                "\u100b\u0001\u0003\u100b\u0002\u0004\u1007\u0003\u0005\u100a\u0004";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -1752,9 +1752,10 @@ public final class Protos {
       return path_.getInt(index);
     }
     private void ensurePathIsMutable() {
-      if (!path_.isModifiable()) {
+      com.google.protobuf.Internal.IntList tmp = path_;
+      if (!tmp.isModifiable()) {
         path_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(path_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
     /**
@@ -2066,9 +2067,10 @@ public final class Protos {
       return extendedPath_.get(index);
     }
     private void ensureExtendedPathIsMutable() {
-      if (!extendedPath_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.ExtendedChildNumber> tmp = extendedPath_;
+      if (!tmp.isModifiable()) {
         extendedPath_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(extendedPath_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -2735,8 +2737,8 @@ public final class Protos {
               org.bitcoinj.wallet.Protos.ExtendedChildNumber.class,
             };
             java.lang.String info =
-                "\u0001\u0007\u0000\u0001\u0001\u0007\u0007\u0000\u0002\u0002\u0001\u050a\u0000\u0002" +
-                "\u001d\u0003\u000b\u0001\u0004\u000b\u0002\u0005\u0007\u0003\u0006\u000b\u0004\u0007" +
+                "\u0001\u0007\u0000\u0001\u0001\u0007\u0007\u0000\u0002\u0002\u0001\u150a\u0000\u0002" +
+                "\u001d\u0003\u100b\u0001\u0004\u100b\u0002\u0005\u1007\u0003\u0006\u100b\u0004\u0007" +
                 "\u041b";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
@@ -3844,9 +3846,10 @@ public final class Protos {
     }
     private int accountPathMemoizedSerializedSize = -1;
     private void ensureAccountPathIsMutable() {
-      if (!accountPath_.isModifiable()) {
+      com.google.protobuf.Internal.IntList tmp = accountPath_;
+      if (!tmp.isModifiable()) {
         accountPath_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(accountPath_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
     /**
@@ -3989,9 +3992,10 @@ public final class Protos {
       return extendedPath_.get(index);
     }
     private void ensureExtendedPathIsMutable() {
-      if (!extendedPath_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.ExtendedChildNumber> tmp = extendedPath_;
+      if (!tmp.isModifiable()) {
         extendedPath_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(extendedPath_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -4964,9 +4968,9 @@ public final class Protos {
               org.bitcoinj.wallet.Protos.ExtendedChildNumber.class,
             };
             java.lang.String info =
-                "\u0001\f\u0000\u0001\u0001\u0014\f\u0000\u0002\u0005\u0001\u050c\u0000\u0002\n\u0001" +
-                "\u0003\n\u0003\u0004\b\u0004\u0005\u0002\u0005\u0006\u0409\u0002\u0007\u0409\u0006" +
-                "\b\n\u0007\t\u0409\b\n+\u000b\f\t\u0014\u041b";
+                "\u0001\f\u0000\u0001\u0001\u0014\f\u0000\u0002\u0005\u0001\u150c\u0000\u0002\u100a" +
+                "\u0001\u0003\u100a\u0003\u0004\u1008\u0004\u0005\u1002\u0005\u0006\u1409\u0002\u0007" +
+                "\u1409\u0006\b\u100a\u0007\t\u1409\b\n+\u000b\u100c\t\u0014\u041b";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -5368,8 +5372,8 @@ public final class Protos {
               "creationTimestamp_",
             };
             java.lang.String info =
-                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0002\u0001\u050a\u0000\u0002" +
-                "\u0502\u0001";
+                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0002\u0001\u150a\u0000\u0002" +
+                "\u1502\u0001";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -6169,8 +6173,8 @@ public final class Protos {
               "value_",
             };
             java.lang.String info =
-                "\u0001\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0003\u0001\u050a\u0000\u0002" +
-                "\u050b\u0001\u0003\u050a\u0002\u0004\u000b\u0003\u0005\u0002\u0004";
+                "\u0001\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0003\u0001\u150a\u0000\u0002" +
+                "\u150b\u0001\u0003\u150a\u0002\u0004\u100b\u0003\u0005\u1002\u0004";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -6808,8 +6812,8 @@ public final class Protos {
               "spentByTransactionIndex_",
             };
             java.lang.String info =
-                "\u0001\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0000\u0002\u0001\u0502\u0000\u0002" +
-                "\u050a\u0001\u0003\n\u0002\u0004\u0004\u0003";
+                "\u0001\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0000\u0002\u0001\u1502\u0000\u0002" +
+                "\u150a\u0001\u0003\u100a\u0002\u0004\u1004\u0003";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -7592,8 +7596,8 @@ public final class Protos {
               "peer_",
             };
             java.lang.String info =
-                "\u0001\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0000\u0004\u0001\u050c\u0000\u0002" +
-                "\u0508\u0001\u0003\u0508\u0002\u0004\u0509\u0003";
+                "\u0001\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0000\u0004\u0001\u150c\u0000\u0002" +
+                "\u1508\u0001\u0003\u1508\u0002\u0004\u1509\u0003";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -7741,9 +7745,10 @@ public final class Protos {
       return inputs_.get(index);
     }
     private void ensureInputsIsMutable() {
-      if (!inputs_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.TransactionOutput> tmp = inputs_;
+      if (!tmp.isModifiable()) {
         inputs_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(inputs_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -8159,8 +8164,8 @@ public final class Protos {
               "signature_",
             };
             java.lang.String info =
-                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0001\u0003\u0001\u041b\u0002\u050a" +
-                "\u0000\u0003\u050a\u0001";
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0001\u0003\u0001\u041b\u0002\u150a" +
+                "\u0000\u0003\u150a\u0001";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -9079,9 +9084,10 @@ public final class Protos {
       return broadcastBy_.get(index);
     }
     private void ensureBroadcastByIsMutable() {
-      if (!broadcastBy_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.PeerAddress> tmp = broadcastBy_;
+      if (!tmp.isModifiable()) {
         broadcastBy_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(broadcastBy_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -9394,9 +9400,10 @@ public final class Protos {
       return rejects_.get(index);
     }
     private void ensureRejectsIsMutable() {
-      if (!rejects_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.RejectMessage> tmp = rejects_;
+      if (!tmp.isModifiable()) {
         rejects_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(rejects_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -10338,9 +10345,10 @@ public final class Protos {
               "islock_",
             };
             java.lang.String info =
-                "\u0001\r\u0000\u0001\u0001!\r\u0000\u0002\u0003\u0001\f\u0000\u0002\u0004\u0001\u0003" +
-                "\n\u0002\u0004\u0004\u0003\u0006\u041b\u0007\f\u0005\b\u0002\u0004\u0013\f\u0006" +
-                "\u0014\u0004\u0007\u0015\u0004\b\u0016\u0002\t \u041b!\u0409\n";
+                "\u0001\r\u0000\u0001\u0001!\r\u0000\u0002\u0003\u0001\u100c\u0000\u0002\u1004\u0001" +
+                "\u0003\u100a\u0002\u0004\u1004\u0003\u0006\u041b\u0007\u100c\u0005\b\u1002\u0004" +
+                "\u0013\u100c\u0006\u0014\u1004\u0007\u0015\u1004\b\u0016\u1002\t \u041b!\u1409\n" +
+                "";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -11321,9 +11329,10 @@ public final class Protos {
       return transactionInput_.get(index);
     }
     private void ensureTransactionInputIsMutable() {
-      if (!transactionInput_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.TransactionInput> tmp = transactionInput_;
+      if (!tmp.isModifiable()) {
         transactionInput_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(transactionInput_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -11414,9 +11423,10 @@ public final class Protos {
       return transactionOutput_.get(index);
     }
     private void ensureTransactionOutputIsMutable() {
-      if (!transactionOutput_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.TransactionOutput> tmp = transactionOutput_;
+      if (!tmp.isModifiable()) {
         transactionOutput_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(transactionOutput_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -11513,9 +11523,10 @@ public final class Protos {
       return blockHash_.get(index);
     }
     private void ensureBlockHashIsMutable() {
-      if (!blockHash_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<com.google.protobuf.ByteString> tmp = blockHash_;
+      if (!tmp.isModifiable()) {
         blockHash_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(blockHash_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
     /**
@@ -11604,9 +11615,10 @@ public final class Protos {
       return blockRelativityOffsets_.getInt(index);
     }
     private void ensureBlockRelativityOffsetsIsMutable() {
-      if (!blockRelativityOffsets_.isModifiable()) {
+      com.google.protobuf.Internal.IntList tmp = blockRelativityOffsets_;
+      if (!tmp.isModifiable()) {
         blockRelativityOffsets_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(blockRelativityOffsets_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
     /**
@@ -12997,10 +13009,10 @@ public final class Protos {
               "extraPayload_",
             };
             java.lang.String info =
-                "\u0001\u000e\u0000\u0001\u0001\u0014\u000e\u0000\u0004\u0006\u0001\u0504\u0000\u0002" +
-                "\u050a\u0001\u0003\f\u0002\u0004\u000b\u0003\u0005\u0002\u0004\u0006\u041b\u0007" +
-                "\u041b\b\u001c\t\u0409\u0005\n\f\u0006\u000b\u0016\f\u0409\u0007\r\b\b\u0014\n\t" +
-                "";
+                "\u0001\u000e\u0000\u0001\u0001\u0014\u000e\u0000\u0004\u0006\u0001\u1504\u0000\u0002" +
+                "\u150a\u0001\u0003\u100c\u0002\u0004\u100b\u0003\u0005\u1002\u0004\u0006\u041b\u0007" +
+                "\u041b\b\u001c\t\u1409\u0005\n\u100c\u0006\u000b\u0016\f\u1409\u0007\r\u1008\b\u0014" +
+                "\u100a\t";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -13695,8 +13707,8 @@ public final class Protos {
               "p_",
             };
             java.lang.String info =
-                "\u0001\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0000\u0001\u0001\u050a\u0000\u0002" +
-                "\u0002\u0001\u0003\u0004\u0002\u0004\u0004\u0003";
+                "\u0001\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0000\u0001\u0001\u150a\u0000\u0002" +
+                "\u1002\u0001\u0003\u1004\u0002\u0004\u1004\u0003";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -14306,8 +14318,8 @@ public final class Protos {
               "mandatory_",
             };
             java.lang.String info =
-                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u0508\u0000\u0002" +
-                "\u050a\u0001\u0003\u0507\u0002";
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u1508\u0000\u0002" +
+                "\u150a\u0001\u0003\u1507\u0002";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -14721,8 +14733,8 @@ public final class Protos {
               "data_",
             };
             java.lang.String info =
-                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0002\u0001\u0508\u0000\u0002" +
-                "\u050a\u0001";
+                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0002\u0001\u1508\u0000\u0002" +
+                "\u150a\u0001";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -15232,8 +15244,8 @@ public final class Protos {
               "data_",
             };
             java.lang.String info =
-                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0001\u0001\u0508\u0000\u0002" +
-                "\n\u0001";
+                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0001\u0001\u1508\u0000\u0002" +
+                "\u100a\u0001";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -15676,9 +15688,10 @@ public final class Protos {
       return key_.get(index);
     }
     private void ensureKeyIsMutable() {
-      if (!key_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Key> tmp = key_;
+      if (!tmp.isModifiable()) {
         key_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(key_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -16031,8 +16044,8 @@ public final class Protos {
               org.bitcoinj.wallet.Protos.Key.class,
             };
             java.lang.String info =
-                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0001\u0003\u0001\u050c\u0000\u0002" +
-                "\u050c\u0001\u0003\u041b";
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0001\u0003\u0001\u150c\u0000\u0002" +
+                "\u150c\u0001\u0003\u041b";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -16824,9 +16837,10 @@ public final class Protos {
       return key_.get(index);
     }
     private void ensureKeyIsMutable() {
-      if (!key_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Key> tmp = key_;
+      if (!tmp.isModifiable()) {
         key_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(key_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -16917,9 +16931,10 @@ public final class Protos {
       return transaction_.get(index);
     }
     private void ensureTransactionIsMutable() {
-      if (!transaction_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Transaction> tmp = transaction_;
+      if (!tmp.isModifiable()) {
         transaction_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(transaction_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -17010,9 +17025,10 @@ public final class Protos {
       return watchedScript_.get(index);
     }
     private void ensureWatchedScriptIsMutable() {
-      if (!watchedScript_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Script> tmp = watchedScript_;
+      if (!tmp.isModifiable()) {
         watchedScript_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(watchedScript_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -17242,9 +17258,10 @@ public final class Protos {
       return extension_.get(index);
     }
     private void ensureExtensionIsMutable() {
-      if (!extension_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Extension> tmp = extension_;
+      if (!tmp.isModifiable()) {
         extension_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(extension_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -17471,9 +17488,10 @@ public final class Protos {
       return tags_.get(index);
     }
     private void ensureTagsIsMutable() {
-      if (!tags_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Tag> tmp = tags_;
+      if (!tmp.isModifiable()) {
         tags_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(tags_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -17564,9 +17582,10 @@ public final class Protos {
       return extKeyChains_.get(index);
     }
     private void ensureExtKeyChainsIsMutable() {
-      if (!extKeyChains_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.ExtendedKeyChain> tmp = extKeyChains_;
+      if (!tmp.isModifiable()) {
         extKeyChains_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(extKeyChains_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -17677,9 +17696,10 @@ public final class Protos {
       return keysForFriends_.get(index);
     }
     private void ensureKeysForFriendsIsMutable() {
-      if (!keysForFriends_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Key> tmp = keysForFriends_;
+      if (!tmp.isModifiable()) {
         keysForFriends_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(keysForFriends_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -17814,9 +17834,10 @@ public final class Protos {
       return keysFromFriends_.get(index);
     }
     private void ensureKeysFromFriendsIsMutable() {
-      if (!keysFromFriends_.isModifiable()) {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Key> tmp = keysFromFriends_;
+      if (!tmp.isModifiable()) {
         keysFromFriends_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(keysFromFriends_);
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
        }
     }
 
@@ -19455,10 +19476,10 @@ public final class Protos {
               org.bitcoinj.wallet.Protos.Key.class,
             };
             java.lang.String info =
-                "\u0001\u0011\u0000\u0001\u0001\u001f\u0011\u0000\b\n\u0001\u0508\u0000\u0002\n\u0001" +
-                "\u0003\u041b\u0004\u041b\u0005\f\u0004\u0006\u0409\u0005\u0007\u0004\u0006\n\u041b" +
-                "\u000b\b\u0007\f\u000b\u0002\r\u0003\b\u000e\u0002\u0003\u000f\u041b\u0010\u041b" +
-                "\u001d\u041b\u001e\u041b\u001f\u041b";
+                "\u0001\u0011\u0000\u0001\u0001\u001f\u0011\u0000\b\n\u0001\u1508\u0000\u0002\u100a" +
+                "\u0001\u0003\u041b\u0004\u041b\u0005\u100c\u0004\u0006\u1409\u0005\u0007\u1004\u0006" +
+                "\n\u041b\u000b\u1008\u0007\f\u100b\u0002\r\u1003\b\u000e\u1002\u0003\u000f\u041b" +
+                "\u0010\u041b\u001d\u041b\u001e\u041b\u001f\u041b";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -20086,8 +20107,8 @@ public final class Protos {
               "fiatCurrencyCode_",
             };
             java.lang.String info =
-                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u0502\u0000\u0002" +
-                "\u0502\u0001\u0003\u0508\u0002";
+                "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0003\u0001\u1502\u0000\u0002" +
+                "\u1502\u0001\u0003\u1508\u0002";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
