@@ -162,7 +162,7 @@ public class WalletSettingsController {
 
         log.info("Attempting wallet restore using seed '{}' from date {}", wordsArea.getText(), datePicker.getValue());
         informationalAlert("Wallet restore in progress",
-                "Your wallet will now be resynced from the Bitcoin network. This can take a long time for old wallets.");
+                "Your wallet will now be resynced from the Dash network. This can take a long time for old wallets.");
         overlayUI.done();
         Main.instance.controller.restoreFromSeedAnimation();
 

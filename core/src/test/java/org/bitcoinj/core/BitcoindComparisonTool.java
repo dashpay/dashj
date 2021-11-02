@@ -100,7 +100,7 @@ public class BitcoindComparisonTool {
                                        "************************************************************************************************************************");
                     System.out.println();
                 }
-                log.info("bitcoind connected");
+                log.info("dashd connected");
                 // Make sure bitcoind has no blocks
                 bitcoind.setDownloadParameters(0, false);
                 bitcoind.startBlockChainDownload();
@@ -111,7 +111,7 @@ public class BitcoindComparisonTool {
         bitcoind.addDisconnectedEventListener(Threading.SAME_THREAD, new PeerDisconnectedEventListener() {
             @Override
             public void onPeerDisconnected(Peer peer, int peerCount) {
-                log.error("bitcoind node disconnected!");
+                log.error("dashd node disconnected!");
                 System.exit(1);
             }
         });
@@ -122,13 +122,13 @@ public class BitcoindComparisonTool {
                 if (m instanceof HeadersMessage) {
                     if (!((HeadersMessage) m).getBlockHeaders().isEmpty()) {
                         Block b = Iterables.getLast(((HeadersMessage) m).getBlockHeaders());
-                        log.info("Got header from bitcoind " + b.getHashAsString());
+                        log.info("Got header from dashd " + b.getHashAsString());
                         bitcoindChainHead = b.getHash();
                     } else
-                        log.info("Got empty header message from bitcoind");
+                        log.info("Got empty header message from dashd");
                     return null;
                 } else if (m instanceof Block) {
-                    log.error("bitcoind sent us a block it already had, make sure bitcoind has no blocks!");
+                    log.error("dashd sent us a block it already had, make sure dashd has no blocks!");
                     System.exit(1);
                 } else if (m instanceof GetDataMessage) {
                     for (InventoryItem item : ((GetDataMessage) m).items)
@@ -277,17 +277,17 @@ public class BitcoindComparisonTool {
                 for (int i = 0; !shouldntRequest && !blocksRequested.contains(nextBlock.getHash()); i++) {
                     int SLEEP_TIME = 1;
                     if (i % 1000/SLEEP_TIME == 1000/SLEEP_TIME - 1)
-                        log.error("bitcoind still hasn't requested block " + block.ruleName + " with hash " + nextBlock.getHash());
+                        log.error("dashd still hasn't requested block " + block.ruleName + " with hash " + nextBlock.getHash());
                     Thread.sleep(SLEEP_TIME);
                     if (i > 60000/SLEEP_TIME) {
-                        log.error("bitcoind failed to request block " + block.ruleName);
+                        log.error("dashd failed to request block " + block.ruleName);
                         System.exit(1);
                     }
                 }
                 if (shouldntRequest) {
                     Thread.sleep(100);
                     if (blocksRequested.contains(nextBlock.getHash())) {
-                        log.error("ERROR: bitcoind re-requested block " + block.ruleName + " with hash " + nextBlock.getHash());
+                        log.error("ERROR: dashd re-requested block " + block.ruleName + " with hash " + nextBlock.getHash());
                         rulesSinceFirstFail++;
                     }
                 }
@@ -301,7 +301,7 @@ public class BitcoindComparisonTool {
                 bitcoind.ping().get();
                 if (!chain.getChainHead().getHeader().getHash().equals(bitcoindChainHead)) {
                     rulesSinceFirstFail++;
-                    log.error("ERROR: bitcoind and bitcoinj acceptance differs on block \"" + block.ruleName + "\"");
+                    log.error("ERROR: dashd and dashj acceptance differs on block \"" + block.ruleName + "\"");
                 }
                 if (block.sendOnce)
                     preloadedBlocks.remove(nextBlock.getHash());
@@ -311,10 +311,10 @@ public class BitcoindComparisonTool {
                 bitcoind.sendMessage(message);
                 bitcoind.ping().get();
                 if (mostRecentInv == null && !((MemoryPoolState) rule).mempool.isEmpty()) {
-                    log.error("ERROR: bitcoind had an empty mempool, but we expected some transactions on rule " + rule.ruleName);
+                    log.error("ERROR: dashd had an empty mempool, but we expected some transactions on rule " + rule.ruleName);
                     rulesSinceFirstFail++;
                 } else if (mostRecentInv != null && ((MemoryPoolState) rule).mempool.isEmpty()) {
-                    log.error("ERROR: bitcoind had a non-empty mempool, but we expected an empty one on rule " + rule.ruleName);
+                    log.error("ERROR: dashd had a non-empty mempool, but we expected an empty one on rule " + rule.ruleName);
                     rulesSinceFirstFail++;
                 } else if (mostRecentInv != null) {
                     Set<InventoryItem> originalRuleSet = new HashSet<>(((MemoryPoolState)rule).mempool);
@@ -324,8 +324,8 @@ public class BitcoindComparisonTool {
                             matches = false;
                     if (matches)
                         continue;
-                    log.error("bitcoind's mempool didn't match what we were expecting on rule " + rule.ruleName);
-                    log.info("  bitcoind's mempool was: ");
+                    log.error("dashd's mempool didn't match what we were expecting on rule " + rule.ruleName);
+                    log.info("  dashd's mempool was: ");
                     for (InventoryItem item : mostRecentInv.items)
                         log.info("    " + item.hash);
                     log.info("  The expected mempool was: ");
@@ -357,7 +357,7 @@ public class BitcoindComparisonTool {
         }
 
         if (unexpectedInvs.get() > 0)
-            log.error("ERROR: Got " + unexpectedInvs.get() + " unexpected invs from bitcoind");
+            log.error("ERROR: Got " + unexpectedInvs.get() + " unexpected invs from dashd");
         log.info("Done testing.");
         System.exit(rulesSinceFirstFail > 0 || unexpectedInvs.get() > 0 ? 1 : 0);
     }

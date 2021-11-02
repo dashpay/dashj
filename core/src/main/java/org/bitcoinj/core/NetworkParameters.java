@@ -162,7 +162,7 @@ public abstract class NetworkParameters {
         alertSigningKey = SATOSHI_KEY;
         genesisBlock = createGenesis(this);
     }
-    //TODO:  put these bytes into the CoinDefinition
+
     private static Block createGenesis(NetworkParameters n) {
         Block genesisBlock = new Block(n, Block.BLOCK_VERSION_GENESIS);
         Transaction t = new Transaction(n);

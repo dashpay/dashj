@@ -74,7 +74,7 @@ public class MainController {
     }
 
     private void showBitcoinSyncMessage() {
-        syncItem = Main.instance.notificationBar.pushItem("Synchronising with the Bitcoin network", model.syncProgressProperty());
+        syncItem = Main.instance.notificationBar.pushItem("Synchronising with the Dash network", model.syncProgressProperty());
     }
 
     public void sendMoneyOut(ActionEvent event) {

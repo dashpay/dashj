@@ -111,7 +111,7 @@ public class Context {
      * @param ensureMinRequiredFee Whether to ensure the minimum required fee by default when completing transactions. For details, see {@link SendRequest#ensureMinRequiredFee}.
      */
     public Context(NetworkParameters params, int eventHorizon, Coin feePerKb, boolean ensureMinRequiredFee) {
-        log.info("Creating bitcoinj {} context.", VersionMessage.BITCOINJ_VERSION);
+        log.info("Creating dashj {} context.", VersionMessage.BITCOINJ_VERSION);
         this.confidenceTable = new TxConfidenceTable();
         this.voteConfidenceTable = new VoteConfidenceTable();
         this.params = params;
@@ -140,12 +140,12 @@ public class Context {
         Context tls = slot.get();
         if (tls == null) {
             if (isStrictMode) {
-                log.error("Thread is missing a bitcoinj context.");
+                log.error("Thread is missing a dashj context.");
                 log.error("You should use Context.propagate() or a ContextPropagatingThreadFactory.");
                 throw new IllegalStateException("missing context");
             }
             if (lastConstructed == null)
-                throw new IllegalStateException("You must construct a Context object before using bitcoinj!");
+                throw new IllegalStateException("You must construct a Context object before using dashj!");
             slot.set(lastConstructed);
             log.error("Performing thread fixup: you are accessing dashj via a thread that has not had any context set on it.");
             log.error("This error has been corrected for, but doing this makes your app less robust.");

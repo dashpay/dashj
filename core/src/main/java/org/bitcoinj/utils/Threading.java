@@ -91,7 +91,7 @@ public class Threading {
         private LinkedBlockingQueue<Runnable> tasks;
 
         public UserThread() {
-            super("dashj user thread");      //Modified for CoinDefinition
+            super("dashj user thread");
             setDaemon(true);
             tasks = new LinkedBlockingQueue<>();
             start();
