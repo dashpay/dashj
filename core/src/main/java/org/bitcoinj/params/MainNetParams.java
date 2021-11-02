@@ -44,27 +44,29 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         super();
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        maxTarget = CoinDefinition.proofOfWorkLimit;
+
+        // 00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        maxTarget = Utils.decodeCompactBits(0x1e0fffffL);
         dumpedPrivateKeyHeader = 204;
-        addressHeader = CoinDefinition.AddressHeader;
-        p2shHeader = CoinDefinition.p2shHeader;
-        port = CoinDefinition.Port;
-        packetMagic = CoinDefinition.PacketMagic;
+        addressHeader = 76;
+        p2shHeader = 16;
+        port = 9999;
+        packetMagic = 0xbf0c6bbd;
         bip32HeaderP2PKHpub = 0x0488b21e; // The 4 byte header that serializes in base58 to "xpub".
         bip32HeaderP2PKHpriv = 0x0488ade4; // The 4 byte header that serializes in base58 to "xprv"
-        genesisBlock.setDifficultyTarget(CoinDefinition.genesisBlockDifficultyTarget);
-        genesisBlock.setTime(CoinDefinition.genesisBlockTime);
-        genesisBlock.setNonce(CoinDefinition.genesisBlockNonce);
+        genesisBlock.setDifficultyTarget(0x1e0ffff0L);
+        genesisBlock.setTime(1390095618L);
+        genesisBlock.setNonce(28917698);
 
         majorityEnforceBlockUpgrade = MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
         majorityRejectBlockOutdated = MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MAINNET_MAJORITY_WINDOW;
 
         id = ID_MAINNET;
-        subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
-        spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
+        subsidyDecreaseBlockCount = 210240;
+        spendableCoinbaseDepth = 100;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals(CoinDefinition.genesisHash),
+        checkState(genesisHash.equals("00000ffd590b1485b3caadc19b22e6379c733355108f107a430458cdf3407ab6"),
                 genesisHash);
 
         //CoinDefinition.initCheckpoints(checkpoints);

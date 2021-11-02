@@ -48,27 +48,25 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         super();
         id = ID_TESTNET;
 
-        // Genesis hash is
-
-        packetMagic = CoinDefinition.testnetPacketMagic;
+        packetMagic = 0xcee2caff;
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
 
-        maxTarget = CoinDefinition.proofOfWorkLimit;//Utils.decodeCompactBits(0x1d00ffffL);
-        port = CoinDefinition.TestPort;
-        addressHeader = CoinDefinition.testnetAddressHeader;
-        p2shHeader = CoinDefinition.testnetp2shHeader;
+        // 00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        maxTarget = Utils.decodeCompactBits(0x1e0fffffL);
+        port = 19999;
+        addressHeader = 140;
+        p2shHeader = 19;
         dumpedPrivateKeyHeader = 239;
-        genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime);
-        genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget);
-        genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce);
+        genesisBlock.setTime(1390666206L);
+        genesisBlock.setDifficultyTarget(0x1e0ffff0L);
+        genesisBlock.setNonce(3861367235L);
         spendableCoinbaseDepth = 100;
-        subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
+        subsidyDecreaseBlockCount = 210240;
         String genesisHash = genesisBlock.getHashAsString();
 
-        if (CoinDefinition.supportsTestNet)
-            checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash));
-        alertSigningKey = HEX.decode(CoinDefinition.TESTNET_SATOSHI_KEY);
+        checkState(genesisHash.equals("00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c"));
+        alertSigningKey = HEX.decode("04517d8a699cb43d3938d7b24faaff7cda448ca4ea267723ba614784de661949bf632d6304316b244646dea079735b9a6fc4af804efb4752075b9fe2245e14e412");
 
         dnsSeeds = new String[]{
                 "testnet-seed.dashdot.io" // this seeder is offline

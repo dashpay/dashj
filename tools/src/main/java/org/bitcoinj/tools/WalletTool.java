@@ -76,7 +76,6 @@ import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.listeners.BlocksDownloadedEventListener;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.wallet.MarriedKeyChain;
@@ -1080,7 +1079,7 @@ public class WalletTool {
     }
 
     private static void sendPaymentRequest(String location, boolean verifyPki) {
-        if (location.startsWith("http") || location.startsWith(CoinDefinition.coinURIScheme)) {
+        if (location.startsWith("http") || location.startsWith(AbstractBitcoinNetParams.BITCOIN_SCHEME)) {
             try {
                 ListenableFuture<PaymentSession> future;
                 if (location.startsWith("http")) {
@@ -1100,7 +1099,7 @@ public class WalletTool {
                 System.err.println("Error creating payment session " + e.getMessage());
                 System.exit(1);
             } catch (BitcoinURIParseException e) {
-                System.err.println("Invalid "+CoinDefinition.coinName +" uri: " + e.getMessage());
+                System.err.println("Invalid Dash uri: " + e.getMessage());
                 System.exit(1);
             } catch (InterruptedException e) {
                 // Ignore.
@@ -1508,7 +1507,7 @@ public class WalletTool {
                 Address address = Address.fromString(wallet.getParams(), addr);
                 key = wallet.findKeyFromAddress(address);
             } catch (AddressFormatException e) {
-                System.err.println(addr + " does not parse as a "+CoinDefinition.coinName +" address of the right network parameters.");
+                System.err.println(addr + " does not parse as a Dash address of the right network parameters.");
                 return;
             }
         }

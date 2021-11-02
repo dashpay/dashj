@@ -113,7 +113,7 @@ public class AddressTest {
 
     @Test
     public void getNetwork() throws Exception {
-        NetworkParameters params = Address.getParametersFromAddress(CoinDefinition.UNITTEST_ADDRESS);
+        NetworkParameters params = Address.getParametersFromAddress("XgxQxd6B8iYgEEryemnJrpvoWZ3149MCkK");
         assertEquals(MAINNET.getId(), params.getId());
         params = Address.getParametersFromAddress("ydzm4Uvr2GkLxTwQnwiyijYUukk1eweBo4");
         assertEquals(TESTNET.getId(), params.getId());

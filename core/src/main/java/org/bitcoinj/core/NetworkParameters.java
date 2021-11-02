@@ -51,17 +51,17 @@ public abstract class NetworkParameters {
     /**
      * The alert signing key originally owned by Satoshi, and now passed on to Gavin along with a few others.
      */
-    public static final byte[] SATOSHI_KEY = Utils.HEX.decode(CoinDefinition.SATOSHI_KEY); //Hex.decode("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
+    public static final byte[] SATOSHI_KEY = Utils.HEX.decode("048240a8748a80a286b270ba126705ced4f2ce5a7847b3610ea3c06513150dade2a8512ed5ea86320824683fc0818f0ac019214973e677acd1244f6d0571fc5103");
 
     /** The string returned by getId() for the main, production network where people trade things. */
-    public static final String ID_MAINNET = CoinDefinition.ID_MAINNET; //"org.bitcoin.production";
+    public static final String ID_MAINNET = "org.darkcoin.production";
     /** The string returned by getId() for the testnet. */
 
-    public static final String ID_TESTNET = CoinDefinition.ID_TESTNET; //"org.bitcoin.test";
+    public static final String ID_TESTNET = "org.darkcoin.test";
     /** The string returned by getId() for the devnet. */
     public static final String ID_DEVNET = "org.dash.dev";
     /** Unit test network. */
-    public static final String ID_UNITTESTNET = CoinDefinition.ID_UNITTESTNET; //"com.google.bitcoin.unittest";
+    public static final String ID_UNITTESTNET = "com.google.darkcoin.unittest";
     /** The string returned by getId() for regtest mode. */
     public static final String ID_REGTEST = "org.bitcoin.regtest";
 
@@ -170,14 +170,14 @@ public abstract class NetworkParameters {
             // A script containing the difficulty bits and the following message:
             //
             //   coin dependent
-            byte[] bytes = Utils.HEX.decode(CoinDefinition.genesisTxInBytes);
+            byte[] bytes = Utils.HEX.decode("04ffff001d01044c5957697265642030392f4a616e2f3230313420546865204772616e64204578706572696d656e7420476f6573204c6976653a204f76657273746f636b2e636f6d204973204e6f7720416363657074696e6720426974636f696e73");
 
             t.addInput(new TransactionInput(n, t, bytes));
             ByteArrayOutputStream scriptPubKeyBytes = new ByteArrayOutputStream();
-            Script.writeBytes(scriptPubKeyBytes, Utils.HEX.decode(CoinDefinition.genesisTxOutBytes));
+            Script.writeBytes(scriptPubKeyBytes, Utils.HEX.decode("040184710fa689ad5023690c80f3a49c8f13f8d45b8c857fbcbc8bc4a8e4d3eb4b10f4d4604fa08dce601aaf0f470216fe1b51850b4acf21b179c45070ac7b03a9"));
 
             scriptPubKeyBytes.write(ScriptOpCodes.OP_CHECKSIG);
-            t.addOutput(new TransactionOutput(n, t, Coin.valueOf(CoinDefinition.genesisBlockValue, 0), scriptPubKeyBytes.toByteArray()));
+            t.addOutput(new TransactionOutput(n, t, Coin.valueOf(50, 0), scriptPubKeyBytes.toByteArray()));
         } catch (Exception e) {
             // Cannot happen.
             throw new RuntimeException(e);
@@ -224,9 +224,9 @@ public abstract class NetworkParameters {
 
 
 
-    public static final int TARGET_TIMESPAN = CoinDefinition.TARGET_TIMESPAN;//14 * 24 * 60 * 60;  // 2 weeks per difficulty cycle, on average.
-    public static final int TARGET_SPACING = CoinDefinition.TARGET_SPACING;// 10 * 60;  // 10 minutes per block.
-    public static final int INTERVAL = CoinDefinition.INTERVAL;//TARGET_TIMESPAN / TARGET_SPACING;
+    public static final int TARGET_TIMESPAN = (int)(24 * 60 * 60); // 24 hours
+    public static final int TARGET_SPACING = (int)(2.5 * 60);      // 2.5 minutes per block
+    public static final int INTERVAL = TARGET_TIMESPAN / TARGET_SPACING;
     
     /**
      * Blocks with a timestamp after this should enforce BIP 16, aka "Pay to script hash". This BIP changed the
@@ -238,7 +238,7 @@ public abstract class NetworkParameters {
     /**
      * The maximum number of coins to be generated
      */
-    public static final long MAX_COINS = CoinDefinition.MAX_COINS;
+    public static final long MAX_COINS = 22000000;
 
     /**
      * The maximum money to be generated

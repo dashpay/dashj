@@ -16,7 +16,6 @@
 
 package org.bitcoinj.utils;
 
-import org.bitcoinj.core.CoinDefinition;
 import com.google.common.util.concurrent.CycleDetectingLockFactory;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -92,7 +91,7 @@ public class Threading {
         private LinkedBlockingQueue<Runnable> tasks;
 
         public UserThread() {
-            super(CoinDefinition.coinURIScheme + "j user thread");      //Modified for CoinDefinition
+            super("dashj user thread");      //Modified for CoinDefinition
             setDaemon(true);
             tasks = new LinkedBlockingQueue<>();
             start();

@@ -93,7 +93,7 @@ public class VersionMessage extends Message {
     public static final String BITCOINJ_VERSION = "0.18-SNAPSHOT";
 
     /** The value that is prepended to the subVer field of this application. */
-    public static final String LIBRARY_SUBVER = "/"+CoinDefinition.coinName+"J:" + BITCOINJ_VERSION + "/";
+    public static final String LIBRARY_SUBVER = "/DashJ:" + BITCOINJ_VERSION + "/";
 
 
     public VersionMessage(NetworkParameters params, byte[] payload) throws ProtocolException {
@@ -118,7 +118,7 @@ public class VersionMessage extends Message {
         fromAddr.setParent(this);
         subVer = LIBRARY_SUBVER;
         if(params.getDevNetGenesisBlock() != null)
-            subVer = "/"+CoinDefinition.coinName+"J:" + BITCOINJ_VERSION + "(devnet=" + params.getDevNetName() +")/";
+            subVer = "/DashJ:" + BITCOINJ_VERSION + "(devnet=" + params.getDevNetName() +")/";
         bestHeight = newBestHeight;
         relayTxesBeforeFilter = true;
 

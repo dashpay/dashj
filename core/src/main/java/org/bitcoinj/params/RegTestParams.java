@@ -18,7 +18,6 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.Block;
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.quorums.LLMQParameters;
 
 import java.math.BigInteger;
@@ -35,10 +34,10 @@ public class RegTestParams extends AbstractBitcoinNetParams {
     public RegTestParams() {
         super();
         packetMagic = 0xfcc1b7dcL;
-        addressHeader = CoinDefinition.testnetAddressHeader;
-        p2shHeader = CoinDefinition.testnetp2shHeader;
+        addressHeader = 140;
+        p2shHeader = 19;
         targetTimespan = TARGET_TIMESPAN;
-        dumpedPrivateKeyHeader = 128 + CoinDefinition.testnetAddressHeader;
+        dumpedPrivateKeyHeader = 128 + 140;
         genesisBlock.setTime(1417713337L);
         genesisBlock.setDifficultyTarget(0x207fffff);
         genesisBlock.setNonce(1096447);

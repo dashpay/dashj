@@ -69,8 +69,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
 
         maxTarget = MAX_TARGET;
         port = defaultPort;
-        addressHeader = CoinDefinition.testnetAddressHeader;
-        p2shHeader = CoinDefinition.testnetp2shHeader;
+        addressHeader = 140;
+        p2shHeader = 19;
         dumpedPrivateKeyHeader = 239;
         genesisBlock.setTime(1417713337L);
         genesisBlock.setDifficultyTarget(0x207fffff);
@@ -81,7 +81,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         checkState(genesisHash.equals("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
 
         devnetGenesisBlock = findDevnetGenesis(this, this.devNetName, getGenesisBlock(), Coin.valueOf(50, 0));
-        alertSigningKey = HEX.decode(CoinDefinition.TESTNET_SATOSHI_KEY);
+        alertSigningKey = HEX.decode("04517d8a699cb43d3938d7b24faaff7cda448ca4ea267723ba614784de661949bf632d6304316b244646dea079735b9a6fc4af804efb4752075b9fe2245e14e412");
 
         this.dnsSeeds = dnsSeeds;
 
