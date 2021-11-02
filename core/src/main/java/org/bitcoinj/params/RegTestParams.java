@@ -95,7 +95,9 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_TEST;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_TEST;
 
+        BIP34Height = 100000000;
         BIP65Height = 1365;
+        BIP66Height = 1251;
 
         coinType = 1;
     }

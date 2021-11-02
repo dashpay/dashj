@@ -37,9 +37,6 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class TestNet3Params extends AbstractBitcoinNetParams {
 
-    public static final int TESTNET_MAJORITY_DIP0001_WINDOW = 4032;
-    public static final int TESTNET_MAJORITY_DIP0001_THRESHOLD = 3226;
-
     public static final int TESTNET_MAJORITY_WINDOW = 100;
     public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 75;
     public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 51;
@@ -101,8 +98,6 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         majorityRejectBlockOutdated = TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = TESTNET_MAJORITY_WINDOW;
 
-        DIP0001Window = TESTNET_MAJORITY_DIP0001_WINDOW;
-        DIP0001Upgrade = TESTNET_MAJORITY_DIP0001_THRESHOLD;
         DIP0001BlockHeight = 4400;
 
         fulfilledRequestExpireTime = 5 * 60;
@@ -136,7 +131,9 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
 
+        BIP34Height = 76;   // 000008ebb1db2598e897d17275285767717c6acfeac4c73def49fbea1ddcbcb6
         BIP65Height = 2431; // 0000039cf01242c7f921dcb4806a5994bc003b48c1973ae0c89b67809c2bb2ab
+        BIP66Height = 2075;
 
         coinType = 1;
         assumeValidQuorums = new ArrayList<>();

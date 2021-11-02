@@ -37,9 +37,6 @@ public class MainNetParams extends AbstractBitcoinNetParams {
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
 
-    public static final int MAINNET_MAJORITY_DIP0001_WINDOW = 4032;
-    public static final int MAINNET_MAJORITY_DIP0001_THRESHOLD = 3226;
-
     public MainNetParams() {
         super();
         interval = INTERVAL;
@@ -331,8 +328,6 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         budgetPaymentsCycleBlocks = 16616;
         budgetPaymentsWindowBlocks = 100;
 
-        DIP0001Window = MAINNET_MAJORITY_DIP0001_WINDOW;
-        DIP0001Upgrade = MAINNET_MAJORITY_DIP0001_THRESHOLD;
         DIP0001BlockHeight = 782208;
 
         fulfilledRequestExpireTime = 60*60;
@@ -366,7 +361,9 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
 
+        BIP34Height = 951;    // 000001f35e70f7c5705f64c6c5cc3dea9449e74d5b5c7cf74dad1bcca14a8012
         BIP65Height = 619382; // 00000000000076d8fcea02ec0963de4abfd01e771fec0863f960c2c64fe6f357
+        BIP66Height = 245817;
 
         coinType = 5;
     }

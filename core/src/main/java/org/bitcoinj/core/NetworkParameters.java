@@ -100,12 +100,16 @@ public abstract class NetworkParameters {
     protected int majorityRejectBlockOutdated;
     protected int majorityWindow;
 
+    /** Use to check for BIP34 upgrade */
+    protected int BIP34Height;
+
     /** Use to check for BIP65 upgrade */
     protected int BIP65Height;
 
+    /** Use to check for BIP65 upgrade */
+    protected int BIP66Height;
+
     /** Used to check for DIP0001 upgrade */
-    protected int DIP0001Window;
-    protected int DIP0001Upgrade;
     protected int DIP0001BlockHeight;
     protected boolean DIP0001ActiveAtTip = false;
 

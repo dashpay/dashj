@@ -39,9 +39,6 @@ import static org.bitcoinj.core.Utils.HEX;
 public class DevNetParams extends AbstractBitcoinNetParams {
     private static final Logger log = LoggerFactory.getLogger(DevNetParams.class);
 
-    public static final int DEVNET_MAJORITY_DIP0001_WINDOW = 4032;
-    public static final int DEVNET_MAJORITY_DIP0001_THRESHOLD = 3226;
-
     private static final BigInteger MAX_TARGET = Utils.decodeCompactBits(0x207fffff);
     BigInteger maxUint256 = new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
 
@@ -100,8 +97,6 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         majorityRejectBlockOutdated = TestNet3Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = TestNet3Params.TESTNET_MAJORITY_WINDOW;
 
-        DIP0001Window = DEVNET_MAJORITY_DIP0001_WINDOW;
-        DIP0001Upgrade = DEVNET_MAJORITY_DIP0001_THRESHOLD;
         DIP0001BlockHeight = 2;
 
         fulfilledRequestExpireTime = 5*60;
@@ -135,8 +130,9 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
 
+        BIP34Height = 1;
         BIP65Height = 1;
-
+        BIP66Height = 1;
         coinType = 1;
     }
 
