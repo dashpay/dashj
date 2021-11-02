@@ -66,9 +66,6 @@ public class RegTestParams extends AbstractBitcoinNetParams {
 
         DIP0001BlockHeight = 15000;
         strSporkAddress = "yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55";
-        budgetPaymentsStartBlock = 4100;
-        budgetPaymentsCycleBlocks = 50;
-        budgetPaymentsWindowBlocks = 10;
 
         fulfilledRequestExpireTime = 5*60;
         masternodeMinimumConfirmations = 1;

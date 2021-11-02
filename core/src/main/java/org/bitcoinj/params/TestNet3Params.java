@@ -19,15 +19,11 @@ package org.bitcoinj.params;
 
 import static org.bitcoinj.core.Utils.HEX;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.LLMQParameters;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -88,7 +84,6 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
                 0x939c6e8f,
                 0xf9cb3eb2,
                 0xf093bdce
-
         };
         bip32HeaderP2PKHpub = 0x043587cf;
         bip32HeaderP2PKHpriv = 0x04358394;

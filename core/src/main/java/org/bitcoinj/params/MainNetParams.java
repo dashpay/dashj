@@ -70,8 +70,6 @@ public class MainNetParams extends AbstractBitcoinNetParams {
                 "dnsseed.dash.org"
         };
 
-        httpSeeds = null; /*new HttpDiscovery.Details[] {*/
-
         // This contains (at a minimum) the blocks which are not BIP30 compliant. BIP30 changed how duplicate
         // transactions are handled. Duplicated transactions could occur in the case where a coinbase had the same
         // extraNonce and the same outputs but appeared at different heights, and greatly complicated re-org handling.
@@ -105,13 +103,8 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         checkpoints.put(1450000, Sha256Hash.wrap("00000000000000105cfae44a995332d8ec256850ea33a1f7b700474e3dad82bc"));
 
         // Dash does not have a Http Seeder
-//        httpSeeds = new HttpDiscovery.Details[] {
-//                // Andreas Schildbach
-//                new HttpDiscovery.Details(
-//                        ECKey.fromPublicOnly(Utils.HEX.decode("0238746c59d46d5408bf8b1d0af5740fe1a6e1703fcb56b2953f0b965c740d256f")),
-//                        URI.create("http://httpseed.bitcoin.schildbach.de/peers")
-//                )
-//        };
+        // If an Http Seeder is set up, add it here.  References: HttpDiscovery
+        httpSeeds = null;
 
         // updated with Dash Core 0.17.0.3 seed list
         addrSeeds = new int[] {
@@ -392,17 +385,19 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         long receivedTargetCompact = nextBlock.getDifficultyTarget();
         int height = storedPrev.getHeight() + 1;
 
-        if (/*height >= powDGWHeight &&*/ height <= 68589) {
+        // On mainnet before block 68589: incorrect proof of work (DGW pre-fork)
+        // see ContextualCheckBlockHeader in src/validation.cpp in Core repo (dashpay/dash)
+        String msg = "Network provided difficulty bits do not match what was calculated: " +
+                Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact);
+        if (height <= 68589) {
             double n1 = convertBitsToDouble(receivedTargetCompact);
             double n2 = convertBitsToDouble(newTargetCompact);
 
             if (java.lang.Math.abs(n1 - n2) > n1 * 0.5 )
-                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
-                    Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
+                throw new VerificationException(msg);
         } else {
             if (newTargetCompact != receivedTargetCompact)
-                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
-                        Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
+                throw new VerificationException(msg);
         }
     }
 
