@@ -627,7 +627,8 @@ public abstract class NetworkParameters {
         BLOOM_FILTER_BIP111(MINIMUM.getBitcoinProtocolVersion()+1),
         @Deprecated
         DMN_LIST(70214),
-        CURRENT(70219);
+        ISDLOCK(70220),
+        CURRENT(70220);
 
         private final int bitcoinProtocol;
 
