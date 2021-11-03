@@ -48,9 +48,16 @@ public class VersionMessage extends Message {
     public static final int NODE_BLOOM = 1 << 2;
     /** Indicates that a node can be asked for blocks and transactions including witness data. */
     public static final int NODE_WITNESS = 1 << 3;
-    // NODE_XTHIN means the node supports Xtreme Thinblocks
-    // If this is turned off then the node will not service nor make xthin requests
-    public static final int NODE_XTHIN = (1 << 4);
+    /**
+     * NODE_XTHIN means the node supports Xtreme Thinblocks
+     * If this is turned off then the node will not service nor make xthin requests
+     */
+    public static final int NODE_XTHIN = 1 << 4;
+    /**
+     * NODE_COMPACT_FILTERS means the node will service basic block filter requests.
+     * See BIP157 and BIP158 for details on how this is implemented.
+     */
+    public static final int NODE_COMPACT_FILTERS = 1 << 6;
     /** A service bit that denotes whether the peer has at least the last two days worth of blockchain (BIP159). */
     public static final int NODE_NETWORK_LIMITED = 1 << 10;
 

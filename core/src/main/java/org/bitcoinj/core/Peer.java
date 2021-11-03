@@ -462,6 +462,14 @@ public class Peer extends PeerSocketHandler {
             a.add("NETWORK_LIMITED");
             services &= ~VersionMessage.NODE_NETWORK_LIMITED;
         }
+        if ((services & VersionMessage.NODE_COMPACT_FILTERS) == VersionMessage.NODE_COMPACT_FILTERS) {
+            a.add("COMPACT_FILTERS");
+            services &= ~VersionMessage.NODE_NETWORK_LIMITED;
+        }
+        if ((services & VersionMessage.NODE_XTHIN) == VersionMessage.NODE_XTHIN) {
+            a.add("XTHIN");
+            services &= ~VersionMessage.NODE_XTHIN;
+        }
         if (services != 0)
             a.add("remaining: " + Long.toBinaryString(services));
         return Joiner.on(", ").join(a);
