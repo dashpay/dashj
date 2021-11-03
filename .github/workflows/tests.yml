@@ -20,7 +20,7 @@ jobs:
       - name: build and run tests
         run: |
           git submodule update --init --recursive
-          mvn -q clean install -Pno-network -pl !:wallettemplate
+          mvn -q clean install -Pno-network
           #jdk_switcher use openjdk8
           #cd core
-          #mvn -q clean install -Pno-network -DskipTests  -pl !:wallettemplate
+          #mvn -q clean install -Pno-network -DskipTests
