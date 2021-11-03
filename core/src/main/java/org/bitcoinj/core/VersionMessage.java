@@ -118,7 +118,7 @@ public class VersionMessage extends Message {
         fromAddr.setParent(this);
         subVer = LIBRARY_SUBVER;
         if(params.getDevNetGenesisBlock() != null)
-            subVer = "/DashJ:" + BITCOINJ_VERSION + "(devnet=" + params.getDevNetName() +")/";
+            subVer = "/DashJ:" + BITCOINJ_VERSION + "(devnet." + params.getDevNetName() +")/";
         bestHeight = newBestHeight;
         relayTxesBeforeFilter = true;
 
