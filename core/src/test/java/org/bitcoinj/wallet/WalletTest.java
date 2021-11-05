@@ -2969,7 +2969,7 @@ public class WalletTest extends TestWithWallet {
 
         Transaction tx = broadcaster.waitForTransactionAndSucceed();
         final Coin THREE_CENTS = CENT.add(CENT).add(CENT);
-        assertEquals(Coin.valueOf(1000), tx.getFee());
+        assertEquals(Coin.valueOf(491), tx.getFee());
         assertEquals(THREE_CENTS, tx.getValueSentFromMe(wallet));
         assertEquals(THREE_CENTS.subtract(tx.getFee()), tx.getValueSentToMe(wallet));
         // TX sends to one of our addresses (for now we ignore married wallets).
@@ -2993,7 +2993,7 @@ public class WalletTest extends TestWithWallet {
         assertNotNull(wallet.findKeyFromPubKeyHash(tx.getOutput(0).getScriptPubKey().getPubKeyHash(),
                 toAddress.getOutputScriptType()));
         log.info("Unexpected thing: {}", tx);
-        assertEquals(Coin.valueOf(1000), tx.getFee());
+        assertEquals(Coin.valueOf(193), tx.getFee());
         assertEquals(1, tx.getInputs().size());
         assertEquals(1, tx.getOutputs().size());
         assertEquals(CENT, tx.getValueSentFromMe(wallet));
