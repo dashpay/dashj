@@ -709,7 +709,7 @@ public abstract class NetworkParameters {
     }
 
     //LLMQ parameters
-    protected HashMap<LLMQParameters.LLMQType, LLMQParameters> llmqs;
+    protected HashMap<LLMQParameters.LLMQType, LLMQParameters> llmqs = new HashMap<>();
     protected LLMQParameters.LLMQType llmqChainLocks;
     protected LLMQParameters.LLMQType llmqForInstantSend;
     protected LLMQParameters.LLMQType llmqTypePlatform;
@@ -724,6 +724,10 @@ public abstract class NetworkParameters {
 
     public LLMQParameters.LLMQType getLlmqForInstantSend() {
         return llmqForInstantSend;
+    }
+
+    protected void addLLMQ(LLMQParameters.LLMQType type) {
+        llmqs.put(type, LLMQParameters.fromType(type));
     }
 
     public int getDIP0008BlockHeight() {

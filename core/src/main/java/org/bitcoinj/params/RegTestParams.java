@@ -86,9 +86,8 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         budgetPaymentsWindowBlocks = 10;
 
         //LLMQ parameters
-        llmqs = new HashMap<>(2);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_TEST, LLMQParameters.llmq_test);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_TEST);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_TEST;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_TEST;
 

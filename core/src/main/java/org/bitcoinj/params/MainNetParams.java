@@ -349,11 +349,10 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         DIP0008BlockHeight = 1088640;
 
         // long living quorum params
-        llmqs = new HashMap<LLMQParameters.LLMQType, LLMQParameters>(3);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_60, LLMQParameters.llmq400_60);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_100_67, LLMQParameters.llmq100_67);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_400_60);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_400_85);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_100_67);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_400_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
