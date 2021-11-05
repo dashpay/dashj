@@ -66,7 +66,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     long lastCleanupTime;
 
     ScheduledExecutorService scheduledExecutorService;
-    ScheduledFuture scheduledProcessChainLock;
+    ScheduledFuture<?> scheduledProcessChainLock;
 
     public ChainLocksHandler(Context context) {
         super(context);
@@ -144,7 +144,6 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     void processNewChainLock(Peer from, ChainLockSignature clsig, Sha256Hash hash)
     {
-
         lock.lock();
         try {
             if (seenChainLocks.put(hash, Utils.currentTimeMillis()) != null) {
@@ -159,16 +158,15 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
             lock.unlock();
         }
 
-
+        log.info("process chainlock: {}", hash);
         Sha256Hash requestId = clsig.getRequestId();
         Sha256Hash msgHash = clsig.blockHash;
         if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.CHAINLOCK)) {
             try {
                 if (!quorumSigningManager.verifyRecoveredSig(context.getParams().getLlmqChainLocks(), clsig.height, requestId, msgHash, clsig.signature)) {
-                    log.info("invalid CLSIG ({}), peer={}", clsig.toString(), from != null ? from : "null");
+                    log.info("invalid CLSIG ({}), peer={}", clsig, from != null ? from : "null");
                     if (from != null) {
-                        //LOCK(cs_main);
-                        //Misbehaving(from, 10);
+                        // TODO: Dash Core increases ban score by 10
                     }
                     return;
                 }
@@ -180,13 +178,15 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                 if(scheduledProcessChainLock != null && !scheduledProcessChainLock.isDone())
                     scheduledProcessChainLock.cancel(true);
 
-                log.info("ChainLock not verified due to missing quorum, try again in 1 second");
+                log.info("ChainLock not verified due to missing quorum, try again in 5 seconds");
                 //schedule this to be checked again in 1 second
                 scheduledProcessChainLock = scheduledExecutorService.schedule(new Runnable() {
                                                               public void run() {
-                                                                  processChainLock();
+                                                                  // clear the clsig from the seen list
+                                                                  seenChainLocks.remove(hash);
+                                                                  processNewChainLock(null, clsig, hash);
                                                               }
-                                                          }, 1, TimeUnit.SECONDS);
+                                                          }, 5, TimeUnit.SECONDS);
 
                 return;
             } catch (FileNotFoundException e) {
@@ -194,15 +194,13 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
             }
         }
 
-
         lock.lock();
         try {
 
             if (internalHasConflictingChainLock(clsig.height, clsig.blockHash)) {
                 // This should not happen. If it happens, it means that a malicious entity controls a large part of the MN
                 // network. In this case, we don't allow him to reorg older chainlocks.
-                log.info("{} -- new CLSIG ({}) tries to reorg previous CLSIG ({}), peer={}",
-                        clsig.toString(), bestChainLock.toString(), from);
+                log.info("new CLSIG ({}) tries to reorg previous CLSIG ({}), peer={}", clsig, bestChainLock, from);
                 return;
             }
 
@@ -219,7 +217,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                 if (block.getHeight() != clsig.height) {
                     // Should not happen, same as the conflict check from above.
                     log.info("{} -- height of CLSIG ({}) does not match the specified block's height (%d)",
-                            clsig.toString(), block.getHeight());
+                            clsig, block.getHeight());
                     return;
                 }
                 bestChainLockWithKnownBlock = bestChainLock;
@@ -235,21 +233,20 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         //TODO: have this part executed in a different thread, run by a scheduler?
         processChainLock();
 
-        log.info("processed new CLSIG ({}), peer={}", clsig.toString(), from);
+        log.info("processed new CLSIG ({}), peer={}", clsig, from);
     }
 
-    void acceptedBlockHeader(StoredBlock newBlock)
-    {
+    void acceptedBlockHeader(StoredBlock newBlock) {
         lock.lock();
         try {
 
             if (newBlock.getHeader().getHash().equals(bestChainLock.blockHash)) {
-                log.info("{} -- block header {} came in late, updating and enforcing\n", newBlock.getHeader().getHash().toString());
+                log.info("block header {} came in late, updating and enforcing", newBlock.getHeader().getHash().toString());
 
                 if (bestChainLock.height != newBlock.getHeight()) {
                     // Should not happen, same as the conflict check from ProcessNewChainLock.
-                    log.info("{} -- height of CLSIG ({}) does not match the specified block's height (%d)",
-                            bestChainLock.toString(), newBlock.getHeight());
+                    log.info("height of CLSIG ({}) does not match the specified block's height ({})",
+                            bestChainLock, newBlock.getHeight());
                     return;
                 }
 
@@ -265,8 +262,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     }
 
-    void updatedBlockTip(StoredBlock newBlock, StoredBlock pindexFork)
-    {
+    void updatedBlockTip(StoredBlock newBlock, StoredBlock forkBlock) {
         // don't call TrySignChainTip directly but instead let the scheduler call it. This way we ensure that cs_main is
         // never locked and TrySignChainTip is not called twice in parallel. Also avoids recursive calls due to
         // EnforceBestChainLock switching chains.
@@ -284,101 +280,58 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     }
 
-    void checkActiveState()
-    {
+    void checkActiveState() {
         //TODO: check if DIP8 is active here
+        boolean isDIP0008Active = (blockChain.getBestChainHeight() - 1) > params.getDIP0008BlockHeight();
 
-        lock.lock();
-        try {
-            boolean oldIsEnforced = isEnforced;
-            isSporkActive = context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED);
-            // TODO remove this after DIP8 is active
-            boolean fEnforcedBySpork = (context.getParams().getId().equals(NetworkParameters.ID_TESTNET) && (context.sporkManager.getSporkValue(SporkManager.SPORK_19_CHAINLOCKS_ENABLED) == 1));
-            isEnforced = (/*fDIP0008Active &&*/ isSporkActive) || fEnforcedBySpork;
+        boolean oldIsEnforced = isEnforced;
+        isSporkActive = context.sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED);
+        isEnforced = (isDIP0008Active && isSporkActive);
 
-            if (!oldIsEnforced && isEnforced) {
-                // ChainLocks got activated just recently, but it's possible that it was already running before, leaving
-                // us with some stale values which we should not try to enforce anymore (there probably was a good reason
-                // to disable spork19)
+        if (!oldIsEnforced && isEnforced) {
+            // ChainLocks got activated just recently, but it's possible that it was already running before, leaving
+            // us with some stale values which we should not try to enforce anymore (there probably was a good reason
+            // to disable spork19)
+            lock.lock();
+            try {
                 bestChainLockHash = Sha256Hash.ZERO_HASH;
                 bestChainLock = bestChainLockWithKnownBlock = null;
                 bestChainLockBlock = lastNotifyChainLockBlock = null;
+            } finally {
+                lock.unlock();
+            }
+        }
+    }
+
+    public boolean isNewInstantSendEnabled() {
+        return context.sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
+    }
+
+    void enforceBestChainLock() {
+        ChainLockSignature clsig;
+        StoredBlock currentBestBlock;
+        StoredBlock currentBestChainLockBlock;
+
+        lock.lock();
+        try {
+
+            if (!isEnforced) {
+                return;
+            }
+
+            clsig = bestChainLockWithKnownBlock;
+            currentBestBlock = currentBestChainLockBlock = this.bestChainLockBlock;
+
+            if (currentBestChainLockBlock == null) {
+                // we don't have the header/block, so we can't do anything right now
+                return;
             }
         } finally {
             lock.unlock();
         }
+        log.info("enforceBestChainLock -- enforcing block {} via CLSIG ({})", currentBestBlock.getHeader().getHash(),
+                clsig);
 
-    }
-
-    public boolean isNewInstantSendEnabled()
-    {
-        return context.sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
-    }
-
-    void enforceBestChainLock()
-    {
-        ChainLockSignature clsig;
-        StoredBlock pindex;
-        StoredBlock currentBestChainLockBlock;
-        {
-            lock.lock();
-            try {
-
-                if (!isEnforced) {
-                    return;
-                }
-
-                clsig = bestChainLockWithKnownBlock;
-                pindex = currentBestChainLockBlock = this.bestChainLockBlock;
-
-                if (currentBestChainLockBlock == null) {
-                    // we don't have the header/block, so we can't do anything right now
-                    return;
-                }
-            } finally {
-                lock.unlock();
-            }
-
-        }
-/*
-        //TODO:  how do we handle this?
-        boolean activateNeeded;
-        {
-            LOCK(cs_main);
-
-            // Go backwards through the chain referenced by clsig until we find a block that is part of the main chain.
-            // For each of these blocks, check if there are children that are NOT part of the chain referenced by clsig
-            // and invalidate each of them.
-            while (pindex && !chainActive.Contains(pindex)) {
-                // Invalidate all blocks that have the same prevBlockHash but are not equal to blockHash
-                auto itp = mapPrevBlockIndex.equal_range(pindex->pprev->getBlockHash());
-                for (auto jt = itp.first; jt != itp.second; ++jt) {
-                    if (jt->second == pindex) {
-                        continue;
-                    }
-                    log.info(("{} -- CLSIG ({}) invalidates block {}\n",
-                             clsig.toString(), jt->second->getBlockHash().toString());
-                    DoInvalidateBlock(jt->second, false);
-                }
-
-                pindex = pindex->pprev;
-            }
-            // In case blocks from the correct chain are invalid at the moment, reconsider them. The only case where this
-            // can happen right now is when missing superblock triggers caused the main chain to be dismissed first. When
-            // the trigger later appears, this should bring us to the correct chain eventually. Please note that this does
-            // NOT enforce invalid blocks in any way, it just causes re-validation.
-            if (!currentBestChainLockBlockIndex->IsValid()) {
-                ResetBlockFailureFlags(mapBlockIndex.at(currentBestChainLockBlockIndex->getBlockHash()));
-            }
-
-            activateNeeded = chainActive.Tip()->getAncestor(currentBestChainLockBlockIndex->height) != currentBestChainLockBlockIndex;
-        }
-
-        CValidationState state;
-        if (activateNeeded && !ActivateBestChain(state, Params())) {
-            log.info(("{} -- ActivateBestChain failed: {}\n",  FormatStateMessage(state));
-        }
-        */
         lock.lock();
         try {
             StoredBlock blockNotify = null;
@@ -389,47 +342,18 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
             }
 
             if (blockNotify != null) {
+                // one of the listeners will handle reorgs
                 queueChainLockListeners(blockNotify);
             }
         } catch (BlockStoreException x) {
-
+            throw new RuntimeException(x);
         } finally {
             lock.unlock();
         }
 
     }
 
-    /*
-    // TODO: How do we handle this?
-    // WARNING, do not hold cs while calling this method as we'll otherwise run into a deadlock
-    void doInvalidateBlock(StoredBlock pindex, boolean activateBestChain)
-    {
-        auto& params = Params();
-
-        {
-            LOCK(cs_main);
-
-            // get the non-const pointer
-            CBlockIndex* pindex2 = mapBlockIndex[pindex->getBlockHash()];
-
-            CValidationState state;
-            if (!InvalidateBlock(state, params, pindex2)) {
-                log.info(("{} -- InvalidateBlock failed: {}\n",  FormatStateMessage(state));
-                // This should not have happened and we are in a state were it's not safe to continue anymore
-                assert(false);
-            }
-        }
-
-        CValidationState state;
-        if (activateBestChain && !ActivateBestChain(state, params)) {
-            log.info(("{} -- ActivateBestChain failed: {}\n",  FormatStateMessage(state));
-            // This should not have happened and we are in a state were it's not safe to continue anymore
-            assert(false);
-        }
-    }
-*/
-    public boolean hasChainLock(long height, Sha256Hash blockHash)
-    {
+    public boolean hasChainLock(long height, Sha256Hash blockHash) {
         lock.lock();
         try {
             return internalHasChainLock(height, blockHash);
@@ -438,8 +362,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         }
     }
 
-    boolean internalHasChainLock(long height, Sha256Hash blockHash)
-    {
+    boolean internalHasChainLock(long height, Sha256Hash blockHash) {
         checkState(lock.isHeldByCurrentThread());
         try {
             if (!isEnforced) {
@@ -468,8 +391,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         }
     }
 
-    public boolean hasConflictingChainLock(long height, Sha256Hash blockHash)
-    {
+    public boolean hasConflictingChainLock(long height, Sha256Hash blockHash) {
         lock.lock();
         try {
             return internalHasConflictingChainLock(height, blockHash);
@@ -478,8 +400,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         }
     }
 
-    boolean internalHasConflictingChainLock(long height, Sha256Hash blockHash)
-    {
+    boolean internalHasConflictingChainLock(long height, Sha256Hash blockHash) {
         checkState(lock.isHeldByCurrentThread());
         try {
             if (!isEnforced) {
@@ -505,11 +426,9 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         } catch (BlockStoreException x) {
             return false;
         }
-
     }
 
-    void cleanup()
-    {
+    void cleanup() {
         lock.lock();
         try {
             if (Utils.currentTimeMillis() - lastCleanupTime < CLEANUP_INTERVAL) {
