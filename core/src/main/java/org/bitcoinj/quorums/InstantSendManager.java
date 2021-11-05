@@ -493,7 +493,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 recSig.id = id;
                 recSig.msgHash = islock.txid;
                 recSig.signature = islock.signature;
-                recSigs.put(hash, new Pair(quorum, recSig));
+                recSigs.put(hash, new Pair<>(quorum, recSig));
             }
         }
 
@@ -591,8 +591,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
             for (TransactionOutPoint in : islock.inputs) {
                 otherIsLock = db.getInstantSendLockByInput(in);
                 if (otherIsLock != null) {
-                    log.info("CInstantSendManager::{} -- txid={}, islock={}: conflicting input in islock. input={}, other islock={}, peer={}",
-                            islock.txid.toString(), hash.toString(), in.toStringShort(), otherIsLock.getHash().toString(), from);
+                    log.info("processInstantSendLock -- txid={}, islock={}: conflicting input in islock. input={}, other islock={}, peer={}",
+                            islock.txid.toString(), hash, in.toStringShort(), otherIsLock.getHash(), from);
                 }
             }
 
