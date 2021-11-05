@@ -79,7 +79,6 @@ public class Context {
     public SporkManager sporkManager;
     public MasternodePayments masternodePayments;
     public MasternodeSync masternodeSync;
-    //public DarkSendPool darkSendPool;
     public HashStore hashStore;
     public GovernanceManager governanceManager;
     public GovernanceTriggerManager triggerManager;
@@ -258,7 +257,6 @@ public class Context {
 
         masternodePayments = new MasternodePayments(this);
         masternodeSync = syncFlags != null ? new MasternodeSync(this, syncFlags, verifyFlags) : new MasternodeSync(this);
-        //darkSendPool = new DarkSendPool(this);
         initializedDash = true;
         governanceManager = new GovernanceManager(this);
         triggerManager = new GovernanceTriggerManager(this);
@@ -285,8 +283,6 @@ public class Context {
 
         masternodePayments = null;
         masternodeSync = null;
-        ///darkSendPool.close();
-        //darkSendPool = null;
         initializedDash = false;
         governanceManager = null;
         masternodeListManager = null;
@@ -296,13 +292,13 @@ public class Context {
         initDashSync(directory, null);
     }
 
-    public void initDashSync(final String directory)
-    {
+    public void initDashSync(final String directory, @Nullable String filePrefix) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 Context.propagate(Context.this);
-                //remove mncache.dat if it exists
+
+                // remove mncache.dat if it exists
                 File oldMnCacheFile = new File(directory, "mncache.dat");
                 if(oldMnCacheFile.exists())
                     oldMnCacheFile.delete();
@@ -397,7 +393,10 @@ public class Context {
         params.setDIPActiveAtTip(chain.getBestChainHeight() >= params.getDIP0001BlockHeight());
     }
 
-    public boolean isLiteMode() { return liteMode; }
+    public boolean isLiteMode() {
+        return liteMode;
+    }
+
     public void setLiteMode(boolean liteMode)
     {
         boolean current = this.liteMode;
@@ -405,16 +404,15 @@ public class Context {
             return;
 
         this.liteMode = liteMode;
-        //if(liteMode == false)
-        //{
-        //     darkSendPool.startBackgroundProcessing();
-        //}
     }
-    public boolean allowInstantXinLiteMode() { return allowInstantX; }
+
+    public boolean allowInstantXinLiteMode() {
+        return allowInstantX;
+    }
+
     public void setAllowInstantXinLiteMode(boolean allow) {
         this.allowInstantX = allow;
     }
-
 
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
@@ -439,6 +437,7 @@ public class Context {
         return ensureMinRequiredFee;
     }
 
+    @Deprecated
     public void updatedChainHead(StoredBlock chainHead)
     {
         params.setDIPActiveAtTip(chainHead.getHeight() >= params.getDIP0001BlockHeight());
@@ -446,6 +445,7 @@ public class Context {
             masternodeListManager.updatedBlockTip(chainHead);
         }
     }
+
     public VoteConfidenceTable getVoteConfidenceTable() {
         return voteConfidenceTable;
     }
@@ -462,9 +462,7 @@ public class Context {
         if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             startLLMQThread();
         }
-        //if (darkSendPool != null) {
-        //    darkSendPool.startBackgroundProcessing();
-        //}
+
         scheduledMasternodeSync = scheduledExecutorService.scheduleWithFixedDelay(
                 () -> masternodeSync.doMaintenance(), 1, 1, TimeUnit.SECONDS);
         scheduledNetFulfilled = scheduledExecutorService.scheduleWithFixedDelay(
@@ -479,9 +477,7 @@ public class Context {
         if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             stopLLMQThread();
         }
-        //if (darkSendPool != null) {
-        //    darkSendPool.close();
-        //}
+
         scheduledMasternodeSync.cancel(false);
         scheduledMasternodeSync = null;
         scheduledNetFulfilled.cancel(false);

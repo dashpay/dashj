@@ -14,7 +14,7 @@ import static com.google.common.base.Preconditions.checkState;
  * Created by Hash Engineering on 6/21/2016.
  *
  * Base class for all Dash Manager objects.  Derived classes must implement
- * {@link #parse()} and {@link #bitcoinSerializeToStream(OutputStream)} to
+ * {@link #parse()} and {@link #bitcoinSerializeToStream(OutputStream)}
  * to serialize data to a file with FlatDB.
  */
 public abstract class AbstractManager extends Message {
@@ -206,7 +206,7 @@ public abstract class AbstractManager extends Message {
                 public void run() {
                     try {
                         long start = Utils.currentTimeMillis();
-                        FlatDB<AbstractManager> flatDB = new FlatDB<AbstractManager>(context, filename, true, magicMessage, getFormatVersion());
+                        FlatDB<AbstractManager> flatDB = new FlatDB<>(context, filename, true, magicMessage, getFormatVersion());
                         flatDB.dump(AbstractManager.this);
                         long end = Utils.currentTimeMillis();
                         log.info(AbstractManager.class.getCanonicalName() + " Save time:  " + (end - start) + "ms");
