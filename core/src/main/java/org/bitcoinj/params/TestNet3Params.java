@@ -89,6 +89,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         bip32HeaderP2PKHpriv = 0x04358394;
 
         strSporkAddress = "yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55";
+        minSporkKeys = 1;
         budgetPaymentsStartBlock = 4100;
         budgetPaymentsCycleBlocks = 50;
         budgetPaymentsWindowBlocks = 10;

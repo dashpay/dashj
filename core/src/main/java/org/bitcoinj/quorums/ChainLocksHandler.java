@@ -134,7 +134,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     public void processChainLockSignature(Peer peer, ChainLockSignature clsig)
     {
-        if (!context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED)) {
+        if (!context.sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED)) {
             return;
         }
 
@@ -312,7 +312,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     public boolean isNewInstantSendEnabled()
     {
-        return context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED);
+        return context.sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
     }
 
     void enforceBestChainLock()

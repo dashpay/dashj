@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 import org.json.*;
 
-import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
 import static org.bitcoinj.governance.GovernanceException.Type.*;
 import static org.bitcoinj.governance.GovernanceVote.MAX_SUPPORTED_VOTE_SIGNAL;
 import static org.bitcoinj.governance.GovernanceVote.VoteOutcome;
@@ -433,7 +432,7 @@ public class GovernanceObject extends Message implements Serializable {
     {
         StringBuilder strError = new StringBuilder();
 
-        if(context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+        /*if(context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
             Sha256Hash hash = getSignatureHash();
             if(HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
 
@@ -446,14 +445,14 @@ public class GovernanceObject extends Message implements Serializable {
                     return false;
                 }
             }
-        } else {
+        } else {*/
             String strMessage = getSignatureMessage();
 
             if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
                 log.error("CGovernance::CheckSignature -- VerifyMessage() failed, error: {}", strError);
                 return false;
             }
-        }
+        //}
         return true;
     }
 
@@ -800,7 +799,7 @@ public class GovernanceObject extends Message implements Serializable {
     public boolean sign(ECKey keyMasternode, PublicKey pubKeyMasternode) {
         StringBuilder strError = new StringBuilder();
 
-        if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+        /*if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
             Sha256Hash hash = getSignatureHash();
 
             if ((vchSig = HashSigner.signHash(hash, keyMasternode)) == null) {
@@ -812,7 +811,7 @@ public class GovernanceObject extends Message implements Serializable {
                 log.error("CGovernanceObject::Sign -- VerifyHash() failed, error: {}", strError);
                 return false;
             }
-        } else {
+        } else {*/
             String strMessage = getSignatureMessage();
             if ((vchSig = MessageSigner.signMessage(strMessage, keyMasternode)) == null) {
                 log.error("CGovernanceObject::Sign -- SignMessage() failed");
@@ -823,7 +822,7 @@ public class GovernanceObject extends Message implements Serializable {
                 log.error("CGovernanceObject::Sign -- VerifyMessage() failed, error: {}", strError);
                 return false;
             }
-        }
+        //}
 
         log.info("gobject", "CGovernanceObject::Sign -- pubkey id = %s, masternode = {}", Utils.HEX.encode(pubKeyMasternode.getId()), masternodeOutpoint.toStringShort());
 

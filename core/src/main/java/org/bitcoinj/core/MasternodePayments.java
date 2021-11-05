@@ -21,9 +21,10 @@ public class MasternodePayments {
     }
 
     int getMinMasternodePaymentsProto() {
-        return context.sporkManager.isSporkActive(SporkManager.SPORK_10_MASTERNODE_PAY_UPDATED_NODES)
-                ? MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2
-                : MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1;
+        //return context.sporkManager.isSporkActive(SporkId.SPORK_10_MASTERNODE_PAY_UPDATED_NODES)
+        //        ?
+        return MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2;
+            //    : MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1;
     }
 
     public void cleanPaymentList()

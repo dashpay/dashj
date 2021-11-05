@@ -147,9 +147,8 @@ public abstract class NetworkParameters {
 
     //Dash Extra Parameters
     protected String strSporkAddress;
-    String strMasternodePaymentsPubKey;
-    String strDarksendPoolDummyAddress;
-    long nStartMasternodePayments;
+    protected int minSporkKeys;
+
     protected long fulfilledRequestExpireTime;
     protected long masternodeMinimumConfirmations;
 
@@ -160,6 +159,10 @@ public abstract class NetworkParameters {
 
     public String getSporkAddress() {
         return strSporkAddress;
+    }
+
+    public int getMinSporkKeys() {
+        return minSporkKeys;
     }
 
     protected NetworkParameters() {

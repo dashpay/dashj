@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
 import static org.bitcoinj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_ENDORSED;
 
 //
@@ -392,7 +391,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     public boolean sign(ECKey keyMasternode, PublicKey pubKeyMasternode) {
         StringBuilder strError = new StringBuilder();
 
-        if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+        /*if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
             Sha256Hash hash = getSignatureHash();
 
             if ((vchSig = HashSigner.signHash(hash, keyMasternode)) == null) {
@@ -405,7 +404,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
                 return false;
             }
         } else {
-
+*/
             String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
 
             if ((vchSig = MessageSigner.signMessage(strMessage, keyMasternode)) == null) {
@@ -417,14 +416,14 @@ public class GovernanceVote extends ChildMessage implements Serializable {
                 log.error("CGovernanceVote::Sign -- VerifyMessage() failed, error: {}", strError);
                 return false;
             }
-        }
+  //      }
 
         return true;
     }
     public boolean checkSignature(PublicKey pubKeyMasternode) {
         StringBuilder strError = new StringBuilder();
 
-        if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+        /*if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
             Sha256Hash hash = getSignatureHash();
 
             if (!HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
@@ -437,14 +436,14 @@ public class GovernanceVote extends ChildMessage implements Serializable {
                     return false;
                 }
             }
-        } else {
+        } else {*/
             String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
 
             if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
                 log.info("gobject", "CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
                 return false;
             }
-        }
+        //}
 
         return true;
     }
@@ -452,7 +451,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     public boolean checkSignature(KeyId pubKeyMasternode) {
         StringBuilder strError = new StringBuilder();
 
-        if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+        /*if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
             Sha256Hash hash = getSignatureHash();
 
             if (!HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
@@ -465,14 +464,14 @@ public class GovernanceVote extends ChildMessage implements Serializable {
                     return false;
                 }
             }
-        } else {
+        } else {*/
             String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
 
             if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
                 log.info("gobject--CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
                 return false;
             }
-        }
+        //}
 
         return true;
     }

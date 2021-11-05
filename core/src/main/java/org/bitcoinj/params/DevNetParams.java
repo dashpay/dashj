@@ -134,6 +134,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         BIP65Height = 1;
         BIP66Height = 1;
         coinType = 1;
+        minSporkKeys = 1;
     }
 
     //support more than one DevNet

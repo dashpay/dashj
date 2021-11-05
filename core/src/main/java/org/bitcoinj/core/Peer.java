@@ -1512,7 +1512,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         // The ChainLock (CLSIG)
-        if(context.sporkManager != null && context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED) &&
+        if(/*context.sporkManager != null && context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED) && */
                 context.masternodeSync != null && context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_CHAINLOCKS)) {
             it = chainLocks.iterator();
             while (it.hasNext()) {

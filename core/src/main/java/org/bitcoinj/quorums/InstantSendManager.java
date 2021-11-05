@@ -91,7 +91,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     public boolean isInstantSendEnabled()
     {
-        return context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED);
+        return context.sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
     }
 
     public void processInstantSendLock(Peer peer, InstantSendLock isLock) {
@@ -677,10 +677,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            // TODO remove this after DIP8 has activated
-            //boolean fDIP0008Active = VersionBitsState(pindexNew.pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0008, versionbitscache) == THRESHOLD_ACTIVE;
 
-            if (context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED) /*&& fDIP0008Active*/) {
+            if (context.sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED)) {
                 // Nothing to do here. We should keep all islocks and let chainlocks handle them.
                 return;
             }

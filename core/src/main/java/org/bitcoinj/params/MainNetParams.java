@@ -321,6 +321,7 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         };
 
         strSporkAddress = "Xgtyuk76vhuFW2iT7UAiHgNdWXCf3J34wh";
+        minSporkKeys = 1;
         budgetPaymentsStartBlock = 328008;
         budgetPaymentsCycleBlocks = 16616;
         budgetPaymentsWindowBlocks = 100;

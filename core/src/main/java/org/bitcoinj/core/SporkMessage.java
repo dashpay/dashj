@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import static org.bitcoinj.core.SporkManager.SPORK_6_NEW_SIGS;
+import java.security.SignatureException;
 
 /**
  * Created by Hash Engineering on 2/8/2015.
@@ -32,7 +32,7 @@ public class SporkMessage extends Message{
     private static final Logger log = LoggerFactory.getLogger(SporkMessage.class);
 
     private MasternodeSignature sig;
-    private int sporkId;
+    private SporkId sporkId;
     private long value;
     private long timeSigned;
 
@@ -43,7 +43,7 @@ public class SporkMessage extends Message{
         super(params, payload, cursor);
     }
 
-    public SporkMessage(NetworkParameters params, int sporkId, long value, long timeSigned) {
+    public SporkMessage(NetworkParameters params, SporkId sporkId, long value, long timeSigned) {
         super(params);
         this.sporkId = sporkId;
         this.value = value;
@@ -52,7 +52,7 @@ public class SporkMessage extends Message{
 
     @Override
     protected void parse() throws ProtocolException {
-        sporkId = (int)readUint32();
+        sporkId = SporkId.fromValue((int)readUint32());
         value = readInt64();
         timeSigned = readInt64();
         sig = new MasternodeSignature(params, payload, cursor);
@@ -63,7 +63,7 @@ public class SporkMessage extends Message{
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        Utils.uint32ToByteStreamLE(sporkId, stream);
+        Utils.uint32ToByteStreamLE(sporkId.value, stream);
         Utils.int64ToByteStreamLE(value, stream);
         Utils.int64ToByteStreamLE(timeSigned, stream);
         sig.bitcoinSerialize(stream);
@@ -77,7 +77,7 @@ public class SporkMessage extends Message{
     {
         try {
             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(MESSAGE_SIZE_WITHOUT_SIG);
-            Utils.uint32ToByteStreamLE(sporkId, bos);
+            Utils.uint32ToByteStreamLE(sporkId.value, bos);
             Utils.int64ToByteStreamLE(value, bos);
             Utils.int64ToByteStreamLE(timeSigned, bos);
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
@@ -90,11 +90,34 @@ public class SporkMessage extends Message{
         return getHash();
     }
 
+    public KeyId getSignerKeyId() {
+        ECKey pubkeyFromSig;
+        // Harden Spork6 so that it is active on testnet and no other networks
+        if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
+            try {
+                Sha256Hash hash = getSignatureHash();
+                pubkeyFromSig = ECKey.signedMessageToKey(Sha256Hash.wrapReversed(hash.getBytes()), sig.getBytes());
+            } catch (SecurityException | SignatureException x) {
+                return null;
+            }
+        } else {
+            String message = "" + sporkId.value + value + timeSigned;
+            byte[] messageBytes = Utils.formatMessageForSigning(message);
+            try {
+                pubkeyFromSig = ECKey.signedMessageToKey(Sha256Hash.twiceOf(messageBytes), sig.getBytes());
+            } catch (SecurityException | SignatureException x) {
+                return null;
+            }
+        }
+        return new KeyId(pubkeyFromSig.getPubKeyHash());
+    }
+
     boolean checkSignature(byte [] publicKeyId)
     {
         StringBuilder errorMessage = new StringBuilder();
 
-        if(Context.get().sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
+        // Harden Spork6 so that it is active on testnet and no other networks
+        if(params.getId().equals(NetworkParameters.ID_TESTNET)) {
             Sha256Hash hash = getSignatureHash();
             if(!HashSigner.verifyHash(Sha256Hash.wrapReversed(hash.getBytes()), publicKeyId, sig, errorMessage)) {
                 // Note: unlike for many other messages when SPORK_6_NEW_SIGS is ON sporks with sigs in old format
@@ -103,7 +126,7 @@ public class SporkMessage extends Message{
                 return false;
             }
         } else {
-            String strMessage = "" + sporkId + value + timeSigned;
+            String strMessage = "" + sporkId.value + value + timeSigned;
 
             if (!MessageSigner.verifyMessage(publicKeyId, sig, strMessage, errorMessage)) {
                 Sha256Hash hash = getSignatureHash();
@@ -116,7 +139,7 @@ public class SporkMessage extends Message{
         return true;
     }
 
-    public int getSporkId() {
+    public SporkId getSporkId() {
         return sporkId;
     }
 
