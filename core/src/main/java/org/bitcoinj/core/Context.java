@@ -34,6 +34,10 @@ import org.slf4j.*;
 import java.io.File;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -75,13 +79,12 @@ public class Context {
     public SporkManager sporkManager;
     public MasternodePayments masternodePayments;
     public MasternodeSync masternodeSync;
-    public DarkSendPool darkSendPool;
+    //public DarkSendPool darkSendPool;
     public HashStore hashStore;
     public GovernanceManager governanceManager;
     public GovernanceTriggerManager triggerManager;
     public NetFullfilledRequestManager netFullfilledRequestManager;
     public SimplifiedMasternodeListManager masternodeListManager;
-    public static boolean fMasterNode = false;
     private VoteConfidenceTable voteConfidenceTable;
     private InstantSendDatabase instantSendDB;
     public InstantSendManager instantSendManager;
@@ -91,6 +94,11 @@ public class Context {
     public ChainLocksHandler chainLockHandler;
     private LLMQBackgroundThread llmqBackgroundThread;
     public MasternodeMetaDataManager masternodeMetaDataManager;
+    private final ScheduledExecutorService scheduledExecutorService;
+    private ScheduledFuture<?> scheduledMasternodeSync;
+    private ScheduledFuture<?> scheduledNetFulfilled;
+    private ScheduledFuture<?> scheduledGovernance;
+
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -119,6 +127,7 @@ public class Context {
         this.ensureMinRequiredFee = ensureMinRequiredFee;
         this.feePerKb = feePerKb;
         lastConstructed = this;
+        scheduledExecutorService = Executors.newScheduledThreadPool(1);
         slot.set(this);
     }
 
@@ -241,7 +250,7 @@ public class Context {
     public void initDash(boolean liteMode, boolean allowInstantX, @Nullable EnumSet<MasternodeSync.SYNC_FLAGS> syncFlags,
         @Nullable EnumSet<MasternodeSync.VERIFY_FLAGS> verifyFlags) {
 
-        this.liteMode = liteMode;//liteMode; --TODO: currently only lite mode has been tested and works with 12.1
+        this.liteMode = liteMode;
         this.allowInstantX = allowInstantX;
 
         //Dash Specific
@@ -249,7 +258,7 @@ public class Context {
 
         masternodePayments = new MasternodePayments(this);
         masternodeSync = syncFlags != null ? new MasternodeSync(this, syncFlags, verifyFlags) : new MasternodeSync(this);
-        darkSendPool = new DarkSendPool(this);
+        //darkSendPool = new DarkSendPool(this);
         initializedDash = true;
         governanceManager = new GovernanceManager(this);
         triggerManager = new GovernanceTriggerManager(this);
@@ -276,8 +285,8 @@ public class Context {
 
         masternodePayments = null;
         masternodeSync = null;
-        darkSendPool.close();
-        darkSendPool = null;
+        ///darkSendPool.close();
+        //darkSendPool = null;
         initializedDash = false;
         governanceManager = null;
         masternodeListManager = null;
@@ -344,6 +353,7 @@ public class Context {
             if(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS))
                 llmqBackgroundThread.interrupt();
             blockChain.removeNewBestBlockListener(newBestBlockListener);
+            scheduledMasternodeSync.cancel(true);
         }
     }
 
@@ -355,7 +365,7 @@ public class Context {
         chain.addNewBestBlockListener(newBestBlockListener);
         if(initializedDash) {
             sporkManager.setBlockChain(chain, peerGroup);
-            masternodeSync.setBlockChain(chain);
+            masternodeSync.setBlockChain(chain, netFullfilledRequestManager);
             masternodeListManager.setBlockChain(chain, peerGroup != null ? peerGroup.headerChain : null, peerGroup);
             instantSendManager.setBlockChain(chain, peerGroup);
             signingManager.setBlockChain(chain);
@@ -375,10 +385,10 @@ public class Context {
             return;
 
         this.liteMode = liteMode;
-        if(liteMode == false)
-        {
-            darkSendPool.startBackgroundProcessing();
-        }
+        //if(liteMode == false)
+        //{
+        //     darkSendPool.startBackgroundProcessing();
+        //}
     }
     public boolean allowInstantXinLiteMode() { return allowInstantX; }
     public void setAllowInstantXinLiteMode(boolean allow) {
@@ -432,8 +442,16 @@ public class Context {
         if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             startLLMQThread();
         }
-        if (darkSendPool != null) {
-            darkSendPool.startBackgroundProcessing();
+        //if (darkSendPool != null) {
+        //    darkSendPool.startBackgroundProcessing();
+        //}
+        scheduledMasternodeSync = scheduledExecutorService.scheduleWithFixedDelay(
+                () -> masternodeSync.doMaintenance(), 1, 1, TimeUnit.SECONDS);
+        scheduledNetFulfilled = scheduledExecutorService.scheduleWithFixedDelay(
+                () -> netFullfilledRequestManager.doMaintenance(), 60, 60, TimeUnit.SECONDS);
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+            scheduledGovernance = scheduledExecutorService.scheduleWithFixedDelay(
+                    () -> governanceManager.doMaintenance(), 60, 5, TimeUnit.MINUTES);
         }
     }
 
@@ -441,8 +459,16 @@ public class Context {
         if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             stopLLMQThread();
         }
-        if (darkSendPool != null) {
-            darkSendPool.close();
+        //if (darkSendPool != null) {
+        //    darkSendPool.close();
+        //}
+        scheduledMasternodeSync.cancel(false);
+        scheduledMasternodeSync = null;
+        scheduledNetFulfilled.cancel(false);
+        scheduledNetFulfilled = null;
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+            scheduledGovernance.cancel(false);
+            scheduledGovernance = null;
         }
     }
 }

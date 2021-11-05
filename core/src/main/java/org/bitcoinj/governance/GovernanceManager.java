@@ -255,7 +255,7 @@ public class GovernanceManager extends AbstractManager {
 
         peer.setAskFor.remove(nHash);
 
-        if(!context.masternodeSync.isMasternodeListSynced()) {
+        if(!context.masternodeSync.isBlockchainSynced()) {
             log.info("gobject--MNGOVERNANCEOBJECT -- masternode list not synced");
             return;
         }
@@ -339,7 +339,7 @@ public class GovernanceManager extends AbstractManager {
         peer.setAskFor.remove(nHash);
 
         // Ignore such messages until masternode list is synced
-        if (!context.masternodeSync.isMasternodeListSynced()) {
+        if (!context.masternodeSync.isBlockchainSynced()) {
             log.info("gobject--MNGOVERNANCEOBJECTVOTE -- masternode list not synced");
             return;
         }
@@ -356,7 +356,7 @@ public class GovernanceManager extends AbstractManager {
         GovernanceException exception = new GovernanceException();
         if (processVote(peer, vote, exception)) {
             log.info("gobject--MNGOVERNANCEOBJECTVOTE -- {} new", strHash);
-            context.masternodeSync.BumpAssetLastTime("MNGOVERNANCEOBJECTVOTE");
+            context.masternodeSync.bumpAssetLastTime("processGovernanceObjectVote");
             vote.relay();
         } else {
             log.info("gobject--MNGOVERNANCEOBJECTVOTE -- Rejected vote, error = {}", exception.getMessage());
@@ -731,7 +731,7 @@ public class GovernanceManager extends AbstractManager {
             // Update the rate buffer
             masternodeRateUpdate(govobj);
 
-            context.masternodeSync.BumpAssetLastTime("CGovernanceManager::AddGovernanceObject");
+            context.masternodeSync.bumpAssetLastTime("addGovernanceObject");
 
             // WE MIGHT HAVE PENDING/ORPHAN VOTES FOR THIS OBJECT
 
@@ -804,10 +804,6 @@ public class GovernanceManager extends AbstractManager {
     }
 
     public boolean confirmInventoryRequest(InventoryItem inv) {
-        // do not request objects until it's time to sync
-        if (!context.masternodeSync.isWinnersListSynced()) {
-            return false;
-        }
 
         lock.lock();
         try {
