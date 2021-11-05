@@ -76,11 +76,6 @@ public class KeyId extends ChildMessage {
         return Arrays.equals(keyId.bytes, this.bytes);
     }
 
-    @Override
-    public int hashCode() {
-        return Arrays.hashCode(bytes);
-    }
-
     Address getAddress(NetworkParameters params) {
         return Address.fromScriptHash(params, bytes);
     }
