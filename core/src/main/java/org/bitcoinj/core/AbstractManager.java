@@ -26,8 +26,13 @@ public abstract class AbstractManager extends Message {
      */
     protected Context context;
     /**
-     * The Default file name.
+     * The previous Default file name.
      * The default value is the name of the derived class + ".dat"
+     */
+    protected String previousDefaultFileName;
+    /**
+     * The Default file name.
+     * The default value is the name of the derived class + "-" network + ".dat"
      */
     protected String defaultFileName;
     /**
@@ -66,7 +71,8 @@ public abstract class AbstractManager extends Message {
         String fullClassName = this.getClass().getCanonicalName();
         this.defaultMagicMessage = fullClassName.substring(fullClassName.lastIndexOf('.')+1);
         this.magicMessage = defaultMagicMessage;
-        this.defaultFileName = this.magicMessage.toLowerCase() + defaultExtension;
+        this.previousDefaultFileName = this.magicMessage.toLowerCase() + defaultExtension;
+        this.defaultFileName = this.magicMessage.toLowerCase() + "-" + params.getNetworkName() + defaultExtension;
     }
 
     /**
@@ -135,6 +141,15 @@ public abstract class AbstractManager extends Message {
      * @return the abstract manager
      */
     public abstract AbstractManager createEmpty();
+
+    /**
+     * Gets default file name.
+     *
+     * @return the default file name
+     */
+    public String getPreviousDefaultFileName() {
+        return previousDefaultFileName;
+    }
 
     /**
      * Gets default file name.

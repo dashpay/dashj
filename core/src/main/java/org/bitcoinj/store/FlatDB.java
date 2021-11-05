@@ -23,6 +23,7 @@ import java.util.Arrays;
 public class FlatDB<Type extends AbstractManager> {
     private static final Logger log = LoggerFactory.getLogger(FlatDB.class);
     private String pathDB;
+    private String previousPathDB;
     private String fileName;
     private String directory;
     private String magicMessage;
@@ -45,7 +46,12 @@ public class FlatDB<Type extends AbstractManager> {
         this.context = context;
         if(isFileName) {
             this.pathDB = fileOrDirectory;
-            this.directory = new File(fileOrDirectory).getParentFile().getAbsolutePath();
+            this.directory = new File(pathDB).getParentFile().getAbsolutePath();
+            try {
+                this.fileName = new File(pathDB).getCanonicalFile().getName();
+            } catch (IOException x) {
+                // swallow
+            }
         } else {
             this.directory = fileOrDirectory;
             this.pathDB = null;
@@ -57,7 +63,12 @@ public class FlatDB<Type extends AbstractManager> {
         this.magicMessage = magicMessage + ((version > 1) ? "-" + version : "");
         if(isFileName) {
             this.pathDB = fileOrDirectory;
-            this.directory = new File(fileOrDirectory).getParentFile().getAbsolutePath();
+            this.directory = new File(pathDB).getParentFile().getAbsolutePath();
+            try {
+                this.fileName = new File(pathDB).getCanonicalFile().getName();
+            } catch (IOException x) {
+                // swallow
+            }
         } else {
             this.directory = fileOrDirectory;
             this.pathDB = null;
@@ -153,16 +164,17 @@ public class FlatDB<Type extends AbstractManager> {
                 pathDB = directory + File.separator + object.getDefaultFileName();
             }
 
+            if (previousPathDB == null) {
+                previousPathDB = directory + File.separator + object.getPreviousDefaultFileName();
+            }
+
             FileInputStream fileStream = new FileInputStream(pathDB);
 
             File file = new File(pathDB);
-
-            /*FILE * file = fopen(pathDB.string().c_str(), "rb");
-            CAutoFile filein (file, SER_DISK, CLIENT_VERSION);
-            if (filein.IsNull()) {
-                error("%s : Failed to open file %s", __func__, pathDB.string());
-                return FileError;
-            }*/
+            // try loading the previous file
+            if (!file.exists() && previousPathDB != null) {
+                file = new File(previousPathDB);
+            }
 
             // use file size to size memory buffer
 

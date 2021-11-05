@@ -292,6 +292,10 @@ public class Context {
         masternodeListManager = null;
     }
 
+    public void initDashSync(final String directory) {
+        initDashSync(directory, null);
+    }
+
     public void initDashSync(final String directory)
     {
         new Thread(new Runnable() {
@@ -303,13 +307,24 @@ public class Context {
                 if(oldMnCacheFile.exists())
                     oldMnCacheFile.delete();
 
-                FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
+                // load governance data
+                if (getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+                    FlatDB<GovernanceManager> gmdb;
+                    if (filePrefix != null) {
+                        gmdb = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".gobjects", true);
+                    } else {
+                        gmdb = new FlatDB<>(Context.this, directory, false);
+                    }
+                    gmdb.load(governanceManager);
+                }
 
-                boolean success = gmdb.load(governanceManager);
-
-                FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(Context.this, directory, false);
-
-                success = smnl.load(masternodeListManager);
+                FlatDB<SimplifiedMasternodeListManager> smnl;
+                if (filePrefix != null) {
+                    smnl = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".mnlist", true);
+                } else {
+                    smnl = new FlatDB<>(Context.this, directory, false);
+                }
+                smnl.load(masternodeListManager);
                 masternodeListManager.setLoadedFromFile(true);
                 masternodeListManager.onFirstSaveComplete();
 
@@ -317,8 +332,13 @@ public class Context {
                 // Load chainlocks
                 //
 
-                FlatDB<ChainLocksHandler> clh = new FlatDB<ChainLocksHandler>(Context.this, directory, false);
-                success = clh.load(chainLockHandler);
+                FlatDB<ChainLocksHandler> clh;
+                if (filePrefix != null) {
+                    clh = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".chainlocks", true);
+                } else {
+                    clh = new FlatDB<>(Context.this, directory, false);
+                }
+                clh.load(chainLockHandler);
 
                 signingManager.initializeSignatureLog(directory);
 
