@@ -757,4 +757,22 @@ public abstract class NetworkParameters {
     public List<Sha256Hash> getAssumeValidQuorums() {
         return assumeValidQuorums;
     }
+
+    public String getNetworkName() {
+        switch (id) {
+            case NetworkParameters.ID_MAINNET:
+                return "mainnet";
+            case NetworkParameters.ID_TESTNET:
+                return "testnet";
+            case NetworkParameters.ID_REGTEST:
+                return "regtest";
+            case NetworkParameters.ID_UNITTESTNET:
+                return "unittest";
+            default:
+                if (id.startsWith(NetworkParameters.ID_DEVNET)) {
+                    return getDevNetName();
+                }
+                return "invalid";
+        }
+    }
 }
