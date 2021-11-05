@@ -93,7 +93,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(SimplifiedMasternodeListDiff.class, "mnlistdiff");
         names.put(SendDsq.class, "senddsq");
         names.put(QuorumSendRecoveredSignatures.class, "qsendrecsigs");
-        names.put(InstantSendLock.class, "islock");
+        names.put(InstantSendLock.class, "isdlock");
         names.put(ChainLockSignature.class, "clsig");
         names.put(SendHeadersMessage.class, "sendheaders");
         names.put(SendAddressMessageV2.class, "sendaddrv2");
@@ -288,7 +288,9 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("qsendrecsigs")) {
             return new QuorumSendRecoveredSignatures(params);
         } else if(command.equals("islock")) {
-            return new InstantSendLock(params, payloadBytes);
+            return new InstantSendLock(params, payloadBytes, InstantSendLock.ISLOCK_VERSION);
+        } else if(command.equals("isdlock")) {
+            return new InstantSendLock(params, payloadBytes, InstantSendLock.ISDLOCK_VERSION);
         } else if(command.equals("clsig")) {
             return new ChainLockSignature(params, payloadBytes);
         } else {

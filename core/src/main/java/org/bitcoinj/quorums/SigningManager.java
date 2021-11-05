@@ -162,6 +162,9 @@ public class SigningManager {
         LLMQParameters llmqParams = context.getParams().getLlmqs().get(llmqType);
         int poolSize = (int)llmqParams.signingActiveQuorumCount;
 
+        if (signHeight == -1) {
+            signHeight = blockChain.getBestChainHeight();
+        }
 
         StoredBlock startBlock = null;
         long startBlockHeight = signHeight - SIGN_HEIGHT_OFFSET;
@@ -318,7 +321,7 @@ public class SigningManager {
                     break;
                 }
 
-                Quorum quorum = quorums.get(new Pair(recSig.llmqType, recSig.quorumHash));
+                Quorum quorum = quorums.get(new Pair<>(recSig.llmqType, recSig.quorumHash));
                 batchVerifier.pushMessage(nodeId, recSig.getHash(), LLMQUtils.buildSignHash(recSig), recSig.signature.getSignature(), quorum.commitment.quorumPublicKey);
                 verifyCount++;
 
@@ -341,9 +344,8 @@ public class SigningManager {
             ArrayList<RecoveredSignature> v = p.getValue();
 
             if (batchVerifier.getBadSources().contains(nodeId)) {
-                //LOCK(cs_main);
-                //LogPrintf("CSigningManager::%s -- invalid recSig from other node, banning peer=%d", nodeId);
-                //Misbehaving(nodeId, 100);
+                log.info("processPendingRecoveredSigs -- invalid recSig from other node, banning peer={}", nodeId);
+                // TODO: Dash Core increases ban score of the peer by 100
                 continue;
             }
 
@@ -485,7 +487,7 @@ public class SigningManager {
             }
             sigLogInitialized = true;
         } catch (IOException x) {
-
+            // swallow
         }
     }
 }

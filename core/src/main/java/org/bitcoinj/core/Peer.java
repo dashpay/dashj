@@ -1378,20 +1378,16 @@ public class Peer extends PeerSocketHandler {
             case Spork:
                 return context.sporkManager.hasSpork(inv.hash);
             case MasternodePaymentVote:
-                return false;
-            case BudgetVote:
-                return false;
-            case BudgetProposal:
-                return false;
             case BudgetFinalizedVote:
-                return false;
+            case BudgetVote:
+            case BudgetProposal:
             case BudgetFinalized:
                 return false;
             case GovernanceObject:
-                return !context.governanceManager.confirmInventoryRequest(inv);
             case GovernanceObjectVote:
                 return !context.governanceManager.confirmInventoryRequest(inv);
             case InstantSendLock:
+            case InstantSendDeterministicLock:
                 return context.instantSendManager.alreadyHave(inv);
             case ChainLockSignature:
                 return context.chainLockHandler.alreadyHave(inv);
@@ -1441,6 +1437,7 @@ public class Peer extends PeerSocketHandler {
                     break;
                 case MasternodeVerify: break;
                 case InstantSendLock:
+                case InstantSendDeterministicLock:
                     instantSendLocks.add(item);
                     break;
                 case ChainLockSignature:

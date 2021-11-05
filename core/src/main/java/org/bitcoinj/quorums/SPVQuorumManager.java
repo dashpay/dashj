@@ -35,7 +35,6 @@ public class SPVQuorumManager extends QuorumManager {
         return scanQuorums(llmqType, blockChain.getChainHead(), maxCount);
     }
 
-    // this one is cs_main-free
     @Override
     public ArrayList<Quorum> scanQuorums(final LLMQParameters.LLMQType llmqType, StoredBlock start, final long maxCount) {
         Preconditions.checkNotNull(start, "The start block must not be null");
@@ -46,7 +45,7 @@ public class SPVQuorumManager extends QuorumManager {
         if (list == null) {
             // if the list isn't found, use the most recent list
             list = masternodeListManager.getQuorumListAtTip();
-            log.warn("quorum list for " + start.getHeight() + "not found, using most recent quorum list: " + list.getHeight());
+            log.warn("quorum list for " + start.getHeight() + " not found, using most recent quorum list: " + list.getHeight());
             if (list == null)
                 return result;  // return empty list
         }

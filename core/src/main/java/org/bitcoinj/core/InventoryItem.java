@@ -59,9 +59,8 @@ public class InventoryItem {
         QuorumRecoveredSignature,
         ChainLockSignature,
         InstantSendLock,
+        InstantSendDeterministicLock,
         None,
-
-
     }
 
     public final Type type;

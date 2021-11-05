@@ -181,8 +181,10 @@ public abstract class ListMessage extends Message {
                 case 30:
                     type = InventoryItem.Type.InstantSendLock;
                     break;
+                case 31:
+                    type = InventoryItem.Type.InstantSendDeterministicLock;
+                    break;
                 default:
-                    //throw new ProtocolException("Unknown CInv type: " + typeCode);
                     type = InventoryItem.Type.None;
                     break;
             }
