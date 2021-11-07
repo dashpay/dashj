@@ -22,6 +22,9 @@ To get started, it is best to have the latest JDK and Maven installed. The HEAD 
 To initialize the repo after cloning it: 
 ```
 git submodule update  --init --recursive
+cd contrib/dashj-bls
+mvn package -DskipTests
+cd ../..
 ```
 To perform a full build use (this includes the dashjbls shared library):
 ```
