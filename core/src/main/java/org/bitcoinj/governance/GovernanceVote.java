@@ -391,59 +391,29 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     public boolean sign(ECKey keyMasternode, PublicKey pubKeyMasternode) {
         StringBuilder strError = new StringBuilder();
 
-        /*if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
-            Sha256Hash hash = getSignatureHash();
+        String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
 
-            if ((vchSig = HashSigner.signHash(hash, keyMasternode)) == null) {
-                log.error("CGovernanceVote::Sign -- SignHash() failed");
-                return false;
-            }
+        if ((vchSig = MessageSigner.signMessage(strMessage, keyMasternode)) == null) {
+            log.error("CGovernanceVote::Sign -- SignMessage() failed");
+            return false;
+        }
 
-            if (!HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
-                log.error("CGovernanceVote::Sign -- VerifyHash() failed, error: {}", strError);
-                return false;
-            }
-        } else {
-*/
-            String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
-
-            if ((vchSig = MessageSigner.signMessage(strMessage, keyMasternode)) == null) {
-                log.error("CGovernanceVote::Sign -- SignMessage() failed");
-                return false;
-            }
-
-            if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-                log.error("CGovernanceVote::Sign -- VerifyMessage() failed, error: {}", strError);
-                return false;
-            }
-  //      }
+        if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+            log.error("CGovernanceVote::Sign -- VerifyMessage() failed, error: {}", strError);
+            return false;
+        }
 
         return true;
     }
     public boolean checkSignature(PublicKey pubKeyMasternode) {
         StringBuilder strError = new StringBuilder();
 
-        /*if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
-            Sha256Hash hash = getSignatureHash();
+        String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
 
-            if (!HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
-                // could be a signature in old format
-                String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
-
-                if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-                    // nope, not in old format either
-                    log.info("gobject", "CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
-                    return false;
-                }
-            }
-        } else {*/
-            String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
-
-            if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-                log.info("gobject", "CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
-                return false;
-            }
-        //}
+        if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+            log.info("gobject", "CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
+            return false;
+        }
 
         return true;
     }
@@ -451,27 +421,12 @@ public class GovernanceVote extends ChildMessage implements Serializable {
     public boolean checkSignature(KeyId pubKeyMasternode) {
         StringBuilder strError = new StringBuilder();
 
-        /*if (context.sporkManager.isSporkActive(SPORK_6_NEW_SIGS)) {
-            Sha256Hash hash = getSignatureHash();
+        String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
 
-            if (!HashSigner.verifyHash(hash, pubKeyMasternode, vchSig, strError)) {
-                // could be a signature in old format
-                String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
-
-                if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-                    // nope, not in old format either
-                    log.info("gobject", "CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
-                    return false;
-                }
-            }
-        } else {*/
-            String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
-
-            if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-                log.info("gobject--CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
-                return false;
-            }
-        //}
+        if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
+            log.info("gobject--CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
+            return false;
+        }
 
         return true;
     }
