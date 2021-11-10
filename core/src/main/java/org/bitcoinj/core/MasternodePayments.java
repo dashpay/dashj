@@ -21,10 +21,7 @@ public class MasternodePayments {
     }
 
     int getMinMasternodePaymentsProto() {
-        //return context.sporkManager.isSporkActive(SporkId.SPORK_10_MASTERNODE_PAY_UPDATED_NODES)
-        //        ?
         return MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2;
-            //    : MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1;
     }
 
     public void cleanPaymentList()
@@ -36,14 +33,6 @@ public class MasternodePayments {
 
     }
     boolean isEnoughData() {
-        /*if(GetBlockCount() > nMnCount * nStorageCoeff && GetBlockCount() > nMinBlocksToStore)
-        {
-            float nAverageVotes = (MNPAYMENTS_SIGNATURES_TOTAL + MNPAYMENTS_SIGNATURES_REQUIRED) / 2;
-            if(GetVoteCount() > nMnCount * nStorageCoeff * nAverageVotes && GetVoteCount() > nMinBlocksToStore * nAverageVotes)
-            {
-                return true;
-            }
-        }*/
         return false;
     }
 }
