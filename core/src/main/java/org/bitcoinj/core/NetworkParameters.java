@@ -247,11 +247,9 @@ public abstract class NetworkParameters {
         return devNetGenesis;
     }
 
-
-
-    public static final int TARGET_TIMESPAN = (int)(24 * 60 * 60); // 24 hours
-    public static final int TARGET_SPACING = (int)(2.5 * 60);      // 2.5 minutes per block
-    public static final int INTERVAL = TARGET_TIMESPAN / TARGET_SPACING;
+    public static final int TARGET_TIMESPAN = (24 * 60 * 60); // 24 hours difficulty adjustment before KGW and DGW
+    public static final int TARGET_SPACING = (int)(2.5 * 60); // 2.5 minutes per block
+    public static final int INTERVAL = TARGET_TIMESPAN / TARGET_SPACING; // 576 blocks before diff adjustment pre KGW
     
     /**
      * Blocks with a timestamp after this should enforce BIP 16, aka "Pay to script hash". This BIP changed the
