@@ -20,7 +20,6 @@ public class DeterministicMasternodeState extends ChildMessage {
     Sha256Hash confirmedHashWithProRegTxHash;
 
     KeyId keyIDOwner;
-    KeyId keyIDOperator;
     BLSPublicKey pubKeyOperator;
     KeyId keyIDVoting;
     MasternodeAddress address;
@@ -58,13 +57,8 @@ public class DeterministicMasternodeState extends ChildMessage {
         confirmedHashWithProRegTxHash = readHash();
         keyIDOwner = new KeyId(params, payload, cursor);
         cursor += keyIDOwner.getMessageSize();
-        if(!params.isSupportingEvolution()) {
-            keyIDOperator = new KeyId(params, payload, cursor);
-            cursor += keyIDOperator.getMessageSize();
-        } else {
-            pubKeyOperator = new BLSPublicKey(params, payload, cursor);
-            cursor += pubKeyOperator.getMessageSize();
-        }
+        pubKeyOperator = new BLSPublicKey(params, payload, cursor);
+        cursor += pubKeyOperator.getMessageSize();
         keyIDVoting = new KeyId(params, payload, cursor);
         cursor += keyIDVoting.getMessageSize();
         address = new MasternodeAddress(params, payload, cursor, 0);
@@ -84,11 +78,7 @@ public class DeterministicMasternodeState extends ChildMessage {
         stream.write(confirmedHash.getReversedBytes());
         stream.write(confirmedHashWithProRegTxHash.getReversedBytes());
         keyIDOwner.bitcoinSerialize(stream);
-        if(!params.isSupportingEvolution()) {
-            keyIDOperator.bitcoinSerialize(stream);
-        } else {
-            pubKeyOperator.bitcoinSerialize(stream);
-        }
+        pubKeyOperator.bitcoinSerialize(stream);
         keyIDVoting.bitcoinSerialize(stream);
         address.bitcoinSerialize(stream);
         Utils.bytesToByteStream(scriptPayout.getProgram(), stream);

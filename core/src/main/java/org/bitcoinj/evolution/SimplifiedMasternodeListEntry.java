@@ -12,12 +12,10 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     Sha256Hash proRegTxHash;
     Sha256Hash confirmedHash;
     MasternodeAddress service;
-    KeyId keyIdOperator;
     BLSLazyPublicKey pubKeyOperator;
     KeyId keyIdVoting;
     boolean isValid;
     static int MESSAGE_SIZE = 151;
-    static int MESSAGE_SIZE_OLD = 151 - 28;
     //In Memory
     Sha256Hash confirmedHashWithProRegTxHash;
 
@@ -35,27 +33,20 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         proRegTxHash = other.proRegTxHash;
         confirmedHash = other.confirmedHash;
         service = other.service.duplicate();
-        keyIdOperator = other.keyIdOperator;
         keyIdVoting = other.keyIdVoting;
         pubKeyOperator = new BLSLazyPublicKey(other.pubKeyOperator);
         updateConfirmedHashWithProRegTxHash();
-        length = params.isSupportingEvolution() ? MESSAGE_SIZE : MESSAGE_SIZE_OLD;
+        length = MESSAGE_SIZE;
     }
 
     @Override
     protected void parse() throws ProtocolException {
         proRegTxHash = readHash();
-        if(params.isSupportingEvolution())
-            confirmedHash = readHash();
+        confirmedHash = readHash();
         service = new MasternodeAddress(params, payload, cursor, 0);
         cursor += service.getMessageSize();
-        if(!params.isSupportingEvolution()) {
-            keyIdOperator = new KeyId(params, payload, cursor);
-            cursor += keyIdOperator.getMessageSize();
-        } else {
-            pubKeyOperator = new BLSLazyPublicKey(params, payload, cursor);
-            cursor += pubKeyOperator.getMessageSize();
-        }
+        pubKeyOperator = new BLSLazyPublicKey(params, payload, cursor);
+        cursor += pubKeyOperator.getMessageSize();
         keyIdVoting = new KeyId(params, payload, cursor);
         cursor += keyIdVoting.getMessageSize();
         isValid = readBytes(1)[0] == 1;
@@ -68,14 +59,9 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         stream.write(proRegTxHash.getReversedBytes());
-        if(params.isSupportingEvolution())
-            stream.write(confirmedHash.getReversedBytes());
+        stream.write(confirmedHash.getReversedBytes());
         service.bitcoinSerialize(stream);
-        if(!params.isSupportingEvolution()) {
-            keyIdOperator.bitcoinSerialize(stream);
-        } else {
-            pubKeyOperator.bitcoinSerialize(stream);
-        }
+        pubKeyOperator.bitcoinSerialize(stream);
         keyIdVoting.bitcoinSerialize(stream);
         stream.write(isValid ? 1 : 0);
     }
@@ -98,7 +84,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     public String toString() {
         return String.format("SimplifiedMNListEntry(proRegTxHash=%s, service=%s, keyIDOperator=%s, keyIDVoting=%s, isValid="+isValid+")",
             proRegTxHash.toString(), service.toString(),
-                keyIdOperator, keyIdVoting);
+                pubKeyOperator, keyIdVoting);
     }
 
     public Sha256Hash getProRegTxHash() {
@@ -114,11 +100,6 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     }
 
     public KeyId getKeyIdOwner() { return null; }
-
-    //legacy key
-    public KeyId getKeyIdOperator() {
-        return keyIdOperator;
-    }
 
     public BLSPublicKey getPubKeyOperator() {
         return pubKeyOperator.getPublicKey();
