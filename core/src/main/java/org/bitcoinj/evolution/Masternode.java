@@ -29,8 +29,6 @@ public abstract class Masternode extends ChildMessage {
 
     public abstract KeyId getKeyIdOwner();
 
-    public abstract KeyId getKeyIdOperator();
-
     public abstract BLSPublicKey getPubKeyOperator();
 
     public abstract KeyId getKeyIdVoting();
