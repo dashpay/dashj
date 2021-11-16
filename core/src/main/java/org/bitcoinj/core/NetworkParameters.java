@@ -649,6 +649,7 @@ public abstract class NetworkParameters {
         BLOOM_FILTER_BIP111(MINIMUM.getBitcoinProtocolVersion()+1),
         @Deprecated
         DMN_LIST(70214),
+        CORE17(70219),
         ISDLOCK(70220),
         CURRENT(70220);
 
@@ -671,7 +672,7 @@ public abstract class NetworkParameters {
     protected int superblockStartBlock;
     protected int superblockCycle; // in blocks
 
-    protected boolean supportsEvolution = true;
+    protected boolean supportsV18 = true;
 
     /**
      * Getter for property 'nGovernanceMinQuorum'.
@@ -703,8 +704,12 @@ public abstract class NetworkParameters {
         return superblockStartBlock;
     }
 
-    public boolean isSupportingEvolution() {
-        return supportsEvolution;
+    public boolean isSupportingV18() {
+        return supportsV18;
+    }
+
+    public void setSupportsV18(boolean supportsV18) {
+        this.supportsV18 = supportsV18;
     }
 
     protected int instantSendConfirmationsRequired;
