@@ -16,7 +16,6 @@
 
 package org.bitcoinj.params;
 
-import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.store.BlockStore;
@@ -26,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.core.Utils.HEX;
@@ -48,14 +46,14 @@ public class DevNetParams extends AbstractBitcoinNetParams {
 
 
     public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds) {
-        this(devNetName, sporkAddress, defaultPort, dnsSeeds, false, DEFAULT_PROTOCOL_VERSION);
+        this(devNetName, sporkAddress, defaultPort, dnsSeeds, true, DEFAULT_PROTOCOL_VERSION);
     }
 
-    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsEvolution) {
-        this(devNetName, sporkAddress, defaultPort, dnsSeeds, supportsEvolution, DEFAULT_PROTOCOL_VERSION);
+    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsV18) {
+        this(devNetName, sporkAddress, defaultPort, dnsSeeds, supportsV18, DEFAULT_PROTOCOL_VERSION);
     }
 
-    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsEvolution, int protocolVersion) {
+    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsV18, int protocolVersion) {
         super();
         this.devNetName = "devnet-" + devNetName;
         id = ID_DEVNET + "." + devNetName;
@@ -110,7 +108,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         powKGWHeight = 4001;
         powAllowMinimumDifficulty = true;
         powNoRetargeting = false;
-        this.supportsEvolution = supportsEvolution;
+        this.supportsV18 = supportsV18;
 
         instantSendConfirmationsRequired = 2;
         instantSendKeepLock = 6;
