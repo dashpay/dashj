@@ -4084,8 +4084,10 @@ public class Wallet extends BaseTaggableObject
      */
     public Transaction createSend(Address address, Coin value) throws InsufficientMoneyException {
         SendRequest req = SendRequest.to(address, value);
-        if (params.getId().equals(NetworkParameters.ID_UNITTESTNET))
+        if (params.getId().equals(NetworkParameters.ID_UNITTESTNET)) {
             req.shuffleOutputs = false;
+            req.sortByBIP69 = false;
+        }
         completeTx(req);
         return req.tx;
     }
@@ -4333,6 +4335,10 @@ public class Wallet extends BaseTaggableObject
             for (TransactionOutput output : bestCoinSelection.gathered)
                 req.tx.addInput(output);
 
+            if (req.sortByBIP69) {
+                req.tx.sortInputs();
+            }
+
             if (req.emptyWallet) {
                 final Coin feePerKb = req.feePerKb == null ? Coin.ZERO : req.feePerKb;
                 if (!adjustOutputDownwardsForFee(req.tx, bestCoinSelection, feePerKb, req.ensureMinRequiredFee, req.useInstantSend))
@@ -4351,8 +4357,11 @@ public class Wallet extends BaseTaggableObject
             }
 
             // Now shuffle the outputs to obfuscate which is the change.
-            if (req.shuffleOutputs)
+            if (req.sortByBIP69) {
+                req.tx.sortOutputs();
+            } else if (req.shuffleOutputs) {
                 req.tx.shuffleOutputs();
+            }
 
             // Now sign the inputs, thus proving that we are entitled to redeem the connected outputs.
             if (requiresInputs && req.signInputs)

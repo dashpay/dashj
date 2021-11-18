@@ -18,7 +18,6 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.Block;
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.quorums.LLMQParameters;
 
 import java.math.BigInteger;
@@ -34,17 +33,17 @@ public class RegTestParams extends AbstractBitcoinNetParams {
 
     public RegTestParams() {
         super();
-        packetMagic = 0xfabfb5daL;
-        addressHeader = CoinDefinition.testnetAddressHeader;
-        p2shHeader = CoinDefinition.testnetp2shHeader;
+        packetMagic = 0xfcc1b7dcL;
+        addressHeader = 140;
+        p2shHeader = 19;
         targetTimespan = TARGET_TIMESPAN;
-        dumpedPrivateKeyHeader = 128 + CoinDefinition.testnetAddressHeader;
-        genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime);
-        genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget);
-        genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce);
+        dumpedPrivateKeyHeader = 128 + 140;
+        genesisBlock.setTime(1417713337L);
+        genesisBlock.setDifficultyTarget(0x207fffff);
+        genesisBlock.setNonce(1096447);
         spendableCoinbaseDepth = 100;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash));
+        checkState(genesisHash.equals("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
         dnsSeeds = null;
         addrSeeds = null;
         bip32HeaderP2PKHpub = 0x043587cf; // The 4 byte header that serializes in base58 to "tpub".
@@ -60,7 +59,7 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         interval = Integer.MAX_VALUE;
         maxTarget = MAX_TARGET;
         subsidyDecreaseBlockCount = 150;
-        port = 18444;
+        port = 19899;
         id = ID_REGTEST;
 
         majorityEnforceBlockUpgrade = TestNet3Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
@@ -69,9 +68,7 @@ public class RegTestParams extends AbstractBitcoinNetParams {
 
         DIP0001BlockHeight = 15000;
         strSporkAddress = "yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55";
-        budgetPaymentsStartBlock = 4100;
-        budgetPaymentsCycleBlocks = 50;
-        budgetPaymentsWindowBlocks = 10;
+        minSporkKeys = 1;
 
         fulfilledRequestExpireTime = 5*60;
         masternodeMinimumConfirmations = 1;
@@ -92,13 +89,14 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         budgetPaymentsWindowBlocks = 10;
 
         //LLMQ parameters
-        llmqs = new HashMap<>(2);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_TEST, LLMQParameters.llmq_test);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_TEST);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_TEST;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_TEST;
 
+        BIP34Height = 100000000;
         BIP65Height = 1365;
+        BIP66Height = 1251;
 
         coinType = 1;
     }
@@ -118,7 +116,6 @@ public class RegTestParams extends AbstractBitcoinNetParams {
                 genesis.setNonce(2);
                 genesis.setDifficultyTarget(0x207fFFFFL);
                 genesis.setTime(1296688602L);
-                //checkState(genesis.getHashAsString().toLowerCase().equals("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
             }
             return genesis;
         }

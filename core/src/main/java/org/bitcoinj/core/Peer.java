@@ -462,6 +462,14 @@ public class Peer extends PeerSocketHandler {
             a.add("NETWORK_LIMITED");
             services &= ~VersionMessage.NODE_NETWORK_LIMITED;
         }
+        if ((services & VersionMessage.NODE_COMPACT_FILTERS) == VersionMessage.NODE_COMPACT_FILTERS) {
+            a.add("COMPACT_FILTERS");
+            services &= ~VersionMessage.NODE_NETWORK_LIMITED;
+        }
+        if ((services & VersionMessage.NODE_XTHIN) == VersionMessage.NODE_XTHIN) {
+            a.add("XTHIN");
+            services &= ~VersionMessage.NODE_XTHIN;
+        }
         if (services != 0)
             a.add("remaining: " + Long.toBinaryString(services));
         return Joiner.on(", ").join(a);
@@ -615,6 +623,8 @@ public class Peer extends PeerSocketHandler {
             context.chainLockHandler.processChainLockSignature(this, (ChainLockSignature)m);
         } else if (m instanceof SendHeadersMessage) {
             // We ignore this message, because we don't announce new blocks.
+        } else if (m instanceof SendAddressMessageV2) {
+            // We ignore this message, because we don't reply to sendaddrv2 message.
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
@@ -821,6 +831,15 @@ public class Peer extends PeerSocketHandler {
             } catch (PrunedException x) {
                 throw new RuntimeException(x);
             }
+        }
+
+        // if the header chain is behind the blockchain, then stop processing headers
+        // this is to avoid cases were the headers were requested when they are not needed
+        if (headerChain != null && blockChain.getChainHead().getHeight() >= headerChain.getChainHead().getHeight()) {
+            log.info("header chain is at {} while block chain is at {}; stop processing {} headers",
+                    headerChain.getChainHead().getHeight(), blockChain.getChainHead().getHeight(),
+                    m.getBlockHeaders().size());
+            return;
         }
 
         try {
@@ -1359,20 +1378,16 @@ public class Peer extends PeerSocketHandler {
             case Spork:
                 return context.sporkManager.hasSpork(inv.hash);
             case MasternodePaymentVote:
-                return false;
-            case BudgetVote:
-                return false;
-            case BudgetProposal:
-                return false;
             case BudgetFinalizedVote:
-                return false;
+            case BudgetVote:
+            case BudgetProposal:
             case BudgetFinalized:
                 return false;
             case GovernanceObject:
-                return !context.governanceManager.confirmInventoryRequest(inv);
             case GovernanceObjectVote:
                 return !context.governanceManager.confirmInventoryRequest(inv);
             case InstantSendLock:
+            case InstantSendDeterministicLock:
                 return context.instantSendManager.alreadyHave(inv);
             case ChainLockSignature:
                 return context.chainLockHandler.alreadyHave(inv);
@@ -1422,6 +1437,7 @@ public class Peer extends PeerSocketHandler {
                     break;
                 case MasternodeVerify: break;
                 case InstantSendLock:
+                case InstantSendDeterministicLock:
                     instantSendLocks.add(item);
                     break;
                 case ChainLockSignature:
@@ -1496,7 +1512,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         // The ChainLock (CLSIG)
-        if(context.sporkManager != null && context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED) &&
+        if(/*context.sporkManager != null && context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED) && */
                 context.masternodeSync != null && context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_CHAINLOCKS)) {
             it = chainLocks.iterator();
             while (it.hasNext()) {
@@ -1853,15 +1869,9 @@ public class Peer extends PeerSocketHandler {
         lastGetHeadersBegin = chainHeadHash;
         lastGetHeadersEnd = toHash;
 
-        //if (downloadBlockBodies) {
-        //    GetBlocksMessage message = new GetBlocksMessage(params, blockLocator, toHash);
-        //    sendMessage(message);
-        //} else {
-            // Downloading headers for a while instead of full blocks.
         log.info("Requesting headers from : {}", this);
         GetHeadersMessage message = new GetHeadersMessage(params, blockLocator, toHash);
         sendMessage(message);
-        //}
     }
 
     /**

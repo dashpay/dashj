@@ -16,7 +16,6 @@
 
 package org.bitcoinj.params;
 
-import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.store.BlockStore;
@@ -26,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.core.Utils.HEX;
@@ -39,9 +37,6 @@ import static org.bitcoinj.core.Utils.HEX;
 public class DevNetParams extends AbstractBitcoinNetParams {
     private static final Logger log = LoggerFactory.getLogger(DevNetParams.class);
 
-    public static final int DEVNET_MAJORITY_DIP0001_WINDOW = 4032;
-    public static final int DEVNET_MAJORITY_DIP0001_THRESHOLD = 3226;
-
     private static final BigInteger MAX_TARGET = Utils.decodeCompactBits(0x207fffff);
     BigInteger maxUint256 = new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
 
@@ -51,14 +46,14 @@ public class DevNetParams extends AbstractBitcoinNetParams {
 
 
     public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds) {
-        this(devNetName, sporkAddress, defaultPort, dnsSeeds, false, DEFAULT_PROTOCOL_VERSION);
+        this(devNetName, sporkAddress, defaultPort, dnsSeeds, true, DEFAULT_PROTOCOL_VERSION);
     }
 
-    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsEvolution) {
-        this(devNetName, sporkAddress, defaultPort, dnsSeeds, supportsEvolution, DEFAULT_PROTOCOL_VERSION);
+    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsV18) {
+        this(devNetName, sporkAddress, defaultPort, dnsSeeds, supportsV18, DEFAULT_PROTOCOL_VERSION);
     }
 
-    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsEvolution, int protocolVersion) {
+    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsV18, int protocolVersion) {
         super();
         this.devNetName = "devnet-" + devNetName;
         id = ID_DEVNET + "." + devNetName;
@@ -69,8 +64,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
 
         maxTarget = MAX_TARGET;
         port = defaultPort;
-        addressHeader = CoinDefinition.testnetAddressHeader;
-        p2shHeader = CoinDefinition.testnetp2shHeader;
+        addressHeader = 140;
+        p2shHeader = 19;
         dumpedPrivateKeyHeader = 239;
         genesisBlock.setTime(1417713337L);
         genesisBlock.setDifficultyTarget(0x207fffff);
@@ -81,7 +76,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         checkState(genesisHash.equals("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
 
         devnetGenesisBlock = findDevnetGenesis(this, this.devNetName, getGenesisBlock(), Coin.valueOf(50, 0));
-        alertSigningKey = HEX.decode(CoinDefinition.TESTNET_SATOSHI_KEY);
+        alertSigningKey = HEX.decode("04517d8a699cb43d3938d7b24faaff7cda448ca4ea267723ba614784de661949bf632d6304316b244646dea079735b9a6fc4af804efb4752075b9fe2245e14e412");
 
         this.dnsSeeds = dnsSeeds;
 
@@ -102,8 +97,6 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         majorityRejectBlockOutdated = TestNet3Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = TestNet3Params.TESTNET_MAJORITY_WINDOW;
 
-        DIP0001Window = DEVNET_MAJORITY_DIP0001_WINDOW;
-        DIP0001Upgrade = DEVNET_MAJORITY_DIP0001_THRESHOLD;
         DIP0001BlockHeight = 2;
 
         fulfilledRequestExpireTime = 5*60;
@@ -117,7 +110,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         powKGWHeight = 4001;
         powAllowMinimumDifficulty = true;
         powNoRetargeting = false;
-        this.supportsEvolution = supportsEvolution;
+        this.supportsV18 = supportsV18;
 
         instantSendConfirmationsRequired = 2;
         instantSendKeepLock = 6;
@@ -128,18 +121,20 @@ public class DevNetParams extends AbstractBitcoinNetParams {
 
         //LLMQ parameters
         llmqs = new HashMap<>(4);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_DEVNET, LLMQParameters.llmq_devnet);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_60, LLMQParameters.llmq400_60);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_100_67, LLMQParameters.llmq100_67);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_400_60);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_400_85);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_100_67);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
 
+        BIP34Height = 1;
         BIP65Height = 1;
-
+        BIP66Height = 1;
         coinType = 1;
+        minSporkKeys = 1;
     }
 
     //support more than one DevNet

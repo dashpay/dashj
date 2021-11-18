@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.nio.channels.CancelledKeyException;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -83,7 +82,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     static final long WAIT_GETMNLISTDIFF = 5000;
     Peer downloadPeer;
     boolean waitingForMNListDiff;
-    boolean initChainTipSync = false;
+    boolean initChainTipSyncComplete = false;
     LinkedHashMap<Sha256Hash, StoredBlock> pendingBlocksMap;
     ArrayList<StoredBlock> pendingBlocks;
 
@@ -109,7 +108,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         loadedFromFile = false;
         requiresLoadingFromFile = true;
         lastRequestMessage = new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH);
-        initChainTipSync = !context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+        initChainTipSyncComplete = !context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
     }
 
     @Override
@@ -329,10 +328,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     log.info("initChainTipSync=false");
                     context.peerGroup.triggerMnListDownloadComplete();
                     log.info("initChainTipSync=true");
-                    initChainTipSync = true;
+                    initChainTipSyncComplete = true;
                 } else {
                     context.peerGroup.triggerMnListDownloadComplete();
-                    initChainTipSync = true;
+                    initChainTipSyncComplete = true;
                 }
             }
             requestNextMNListDiff();
@@ -343,7 +342,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            boolean value = initChainTipSync;
+            boolean value = initChainTipSyncComplete || !context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
             if(value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                 long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE  * 3 * 60;
                 if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
@@ -372,7 +371,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             try {
                 if (downloadPeer == null)
                     downloadPeer = peer;
-                boolean value = initChainTipSync;
+                boolean value = initChainTipSyncComplete;
                 if (value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                     maybeGetMNListDiffFresh();
                     if (!waitingForMNListDiff && mnList.getBlockHash().equals(params.getGenesisBlock().getHash()) || mnList.getHeight() < blockChain.getBestChainHeight()) {
@@ -752,7 +751,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
-                initChainTipSync = false;
+                initChainTipSyncComplete = false;
                 unCache();
                 try {
                     if(bootStrapFilePath == null)

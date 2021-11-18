@@ -19,12 +19,10 @@ package org.bitcoinj.tools;
 
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.*;
-import org.bitcoinj.net.discovery.DnsDiscovery;
-import org.bitcoinj.params.EvoNetParams;
+import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.MobileDevNetParams;
-import org.bitcoinj.params.PalinkaDevNetParams;
 import org.bitcoinj.params.RegTestParams;
+import org.bitcoinj.params.SchnappsDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
@@ -91,17 +89,9 @@ public class BuildCheckpoints {
                 params = RegTestParams.get();
                 suffix = "-regtest";
                 break;
-            case MOBILE:
-                params = MobileDevNetParams.get();
-                suffix = "-mobile";
-                break;
-            case EVONET:
-                params = EvoNetParams.get();
-                suffix = "-evonet";
-                break;
-            case PALINKA:
-                params = PalinkaDevNetParams.get();
-                suffix = "-palinka";
+            case SCHNAPPS:
+                params = SchnappsDevNetParams.get();
+                suffix = "-schnapps";
                 break;
             default:
                 throw new RuntimeException("Unreachable.");
@@ -134,7 +124,7 @@ public class BuildCheckpoints {
             // for PROD and TEST use a peer group discovered with dns
             peerGroup.setUserAgent("PeerMonitor", "1.0");
             peerGroup.setMaxConnections(20);
-            peerGroup.addPeerDiscovery(new DnsDiscovery(params));
+            peerGroup.addPeerDiscovery(new ThreeMethodPeerDiscovery(params));
             peerGroup.start();
 
             // Connect to at least 4 peers because some may not support download
@@ -161,7 +151,7 @@ public class BuildCheckpoints {
             @Override
             public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
                 int height = block.getHeight();
-                if (height % CoinDefinition.getIntervalCheckpoints() == 0 && block.getHeader().getTimeSeconds() <= timeAgo) {
+                if (height % NetworkParameters.INTERVAL == 0 && block.getHeader().getTimeSeconds() <= timeAgo) {
                     System.out.println(String.format("Checkpointing block %s at height %d, time %s",
                             block.getHeader().getHash(), block.getHeight(), Utils.dateTimeFormat(block.getHeader().getTime())));
                     checkpoints.put(height, block);

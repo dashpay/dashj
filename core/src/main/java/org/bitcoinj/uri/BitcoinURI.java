@@ -82,7 +82,7 @@ public class BitcoinURI {
      * from network parameters.
      */
     @Deprecated
-    public static final String BITCOIN_SCHEME = CoinDefinition.coinURIScheme;
+    public static final String BITCOIN_SCHEME = "dash";
     private static final String ENCODED_SPACE_CHARACTER = "%20";
     private static final String AMPERSAND_SEPARATOR = "&";
     private static final String QUESTION_MARK_SEPARATOR = "?";
@@ -150,7 +150,7 @@ public class BitcoinURI {
         // Split off the address from the rest of the query parameters.
         String[] addressSplitTokens = schemeSpecificPart.split("\\?", 2);
         if (addressSplitTokens.length == 0)
-            throw new BitcoinURIParseException("No data found after the "+CoinDefinition.coinName +": prefix");
+            throw new BitcoinURIParseException("No data found after the dash: prefix");
         String addressToken = addressSplitTokens[0];  // may be empty!
 
         String[] nameValuePairTokens;
@@ -190,11 +190,10 @@ public class BitcoinURI {
         for (String nameValuePairToken : nameValuePairTokens) {
             final int sepIndex = nameValuePairToken.indexOf('=');
             if (sepIndex == -1)
-                throw new BitcoinURIParseException("Malformed "+CoinDefinition.coinName+" URI - no separator in '" +
-
+                throw new BitcoinURIParseException("Malformed Dash URI - no separator in '" +
                         nameValuePairToken + "'");
             if (sepIndex == 0)
-                throw new BitcoinURIParseException("Malformed Bitcoin URI - empty name '" +
+                throw new BitcoinURIParseException("Malformed Dash URI - empty name '" +
                         nameValuePairToken + "'");
             final String nameToken = nameValuePairToken.substring(0, sepIndex).toLowerCase(Locale.ENGLISH);
             final String valueToken = nameValuePairToken.substring(sepIndex + 1);
@@ -323,7 +322,7 @@ public class BitcoinURI {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("BitcoinURI[");
+        StringBuilder builder = new StringBuilder("DashURI[");
         boolean first = true;
         for (Map.Entry<String, Object> entry : parameterMap.entrySet()) {
             if (first) {

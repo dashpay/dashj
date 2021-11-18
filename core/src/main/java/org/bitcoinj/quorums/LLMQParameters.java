@@ -1,4 +1,22 @@
+/*
+ * Copyright 2020 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.quorums;
+
+import java.util.HashMap;
 
 public class LLMQParameters {
 
@@ -13,7 +31,9 @@ public class LLMQParameters {
         // for testing only
         LLMQ_TEST(100), // 3 members, 2 (66%) threshold, one per hour
         // for devnets only
-        LLMQ_DEVNET(101); // 10 members, 6 (60%) threshold, one per hour
+        LLMQ_DEVNET(101), // 10 members, 6 (60%) threshold, one per hour
+        // for testing activation of new quorums only
+        LLMQ_TEST_V17(102); // 3 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestparams is used
 
         int value;
         LLMQType(int value) {
@@ -42,29 +62,66 @@ public class LLMQParameters {
         }
     }
 
+    @Deprecated
     public static LLMQParameters llmq_test = new LLMQParameters(LLMQType.LLMQ_TEST, "llmq_test",
             3, 2, 2, 24, 2, 10,
             18, 2, 2, 3, 3);
-
+    @Deprecated
     public static LLMQParameters llmq_devnet = new LLMQParameters(LLMQType.LLMQ_DEVNET, "llmq_devnet",
             10, 7, 6, 24, 2, 10,
             18, 7, 3, 4, 6);
-
+    @Deprecated
     public static LLMQParameters llmq50_60 = new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",
             50, 40, 30, 24, 2, 10,
             18,40, 24, 25, 25);
-
+    @Deprecated
     public static LLMQParameters llmq400_60 = new LLMQParameters(LLMQType.LLMQ_400_60, "llmq_400_60",
             400, 300, 240, 24*12, 4, 20,
             28, 300, 4, 5, 100);
-
+    @Deprecated
     public static LLMQParameters llmq400_85 = new LLMQParameters(LLMQType.LLMQ_400_85, "llmq_400_85",
             400, 350, 340, 24 * 24, 4, 20,
             48, 300, 4, 5, 100);
-
+    @Deprecated
     public static LLMQParameters llmq100_67 = new LLMQParameters(LLMQType.LLMQ_100_67, "llmq_100_67",
             100, 800, 67, 2, 2, 10,
             18, 80, 24, 25, 50);
+
+    protected static HashMap<LLMQType, LLMQParameters> availableLlmqs;
+
+    static {
+        availableLlmqs = new HashMap<>(7);
+        availableLlmqs.put(LLMQType.LLMQ_TEST, new LLMQParameters(LLMQType.LLMQ_TEST, "llmq_test",
+                3, 2, 2, 24, 2, 10,
+                18, 2, 2, 3, 3));
+        availableLlmqs.put(LLMQType.LLMQ_TEST_V17, new LLMQParameters(LLMQType.LLMQ_TEST_V17, "llmq_test_v17",
+                3, 2, 2, 24, 2, 10,
+                18, 2, 2, 3, 3));
+
+        availableLlmqs.put(LLMQType.LLMQ_DEVNET, new LLMQParameters(LLMQType.LLMQ_DEVNET, "llmq_devnet",
+                10, 7, 6, 24, 2, 10,
+                18, 7, 3, 4, 6));
+
+        availableLlmqs.put(LLMQType.LLMQ_50_60, new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",
+                50, 40, 30, 24, 2, 10,
+                18,40, 24, 25, 25));
+
+        availableLlmqs.put(LLMQType.LLMQ_400_60, new LLMQParameters(LLMQType.LLMQ_400_60, "llmq_400_60",
+                400, 300, 240, 24*12, 4, 20,
+                28, 300, 4, 5, 100));
+
+        availableLlmqs.put(LLMQType.LLMQ_400_85, new LLMQParameters(LLMQType.LLMQ_400_85, "llmq_400_85",
+                400, 350, 340, 24 * 24, 4, 20,
+                48, 300, 4, 5, 100));
+
+        availableLlmqs.put(LLMQType.LLMQ_100_67, new LLMQParameters(LLMQType.LLMQ_100_67, "llmq_100_67",
+                100, 800, 67, 2, 2, 10,
+                18, 80, 24, 25, 50));
+    }
+
+    public static LLMQParameters fromType(LLMQParameters.LLMQType type) {
+        return availableLlmqs.get(type);
+    }
 
     // Configures a LLMQ and its DKG
     // See https://github.com/dashpay/dips/blob/master/dip-0006.md for more details
@@ -211,5 +268,35 @@ public class LLMQParameters {
 
     public void setDkgBadVotesThreshold(int dkgBadVotesThreshold) {
         this.dkgBadVotesThreshold = dkgBadVotesThreshold;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        LLMQParameters that = (LLMQParameters) o;
+
+        if (size != that.size) return false;
+        if (minSize != that.minSize) return false;
+        if (threshold != that.threshold) return false;
+        if (dkgInterval != that.dkgInterval) return false;
+        if (dkgPhaseBlocks != that.dkgPhaseBlocks) return false;
+        if (dkgMiningWindowStart != that.dkgMiningWindowStart) return false;
+        if (dkgMiningWindowEnd != that.dkgMiningWindowEnd) return false;
+        if (dkgBadVotesThreshold != that.dkgBadVotesThreshold) return false;
+        if (signingActiveQuorumCount != that.signingActiveQuorumCount) return false;
+        if (keepOldConnections != that.keepOldConnections) return false;
+        if (recoveryMembers != that.recoveryMembers) return false;
+        if (type != that.type) return false;
+        return name.equals(that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        // The type and name are unique
+        int result = type.hashCode();
+        result = 31 * result + name.hashCode();
+        return result;
     }
 }

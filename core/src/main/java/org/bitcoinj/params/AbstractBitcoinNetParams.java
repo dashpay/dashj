@@ -39,7 +39,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     /**
      * Scheme part for Bitcoin URIs.
      */
-    public static final String BITCOIN_SCHEME = CoinDefinition.coinURIScheme;
+    public static final String BITCOIN_SCHEME = "dash";
 
     private static final Logger log = LoggerFactory.getLogger(AbstractBitcoinNetParams.class);
 
@@ -348,6 +348,9 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
 
     @Override
     public int getProtocolVersionNum(final ProtocolVersion version) {
+        // TODO: Remove this when we no longer need v17 compatibility
+        if (!supportsV18)
+            return ProtocolVersion.CORE17.getBitcoinProtocolVersion();
         return version.getBitcoinProtocolVersion();
     }
 

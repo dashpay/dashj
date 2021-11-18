@@ -55,8 +55,6 @@ public class DeterministicMasternode extends Masternode {
         return state.keyIDOwner;
     }
 
-    public KeyId getKeyIdOperator() { return state.keyIDOperator; }
-
     public BLSPublicKey getPubKeyOperator() {
         return state.pubKeyOperator;
     }

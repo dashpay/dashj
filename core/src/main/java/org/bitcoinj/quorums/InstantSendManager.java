@@ -17,8 +17,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -89,15 +91,36 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     public boolean isInstantSendEnabled()
     {
-        return context.sporkManager.isSporkActive(SporkManager.SPORK_2_INSTANTSEND_ENABLED);
+        return context.sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
     }
 
     public void processInstantSendLock(Peer peer, InstantSendLock isLock) {
         if(!isInstantSendEnabled())
             return;
 
-        if (!preVerifyInstantSendLock(peer.hashCode(), isLock)) {
-             return;
+        if (!preVerifyInstantSendLock(isLock)) {
+            // TODO: Dash Core increases ban score by 100
+            return;
+        }
+
+        if (isLock.isDeterministic()) {
+            try {
+                StoredBlock blockIndex = blockChain.getBlockStore().get(isLock.cycleHash);
+                if (blockIndex == null) {
+                    // Maybe we don't have the block yet or maybe some peer spams invalid values for cycleHash
+                    // TODO: DashCore increases ban score by 1
+                    return;
+                }
+
+                final LLMQParameters.LLMQType llmqType = context.getParams().getLlmqForInstantSend();
+                final int dkgInterval = LLMQParameters.fromType(llmqType).dkgInterval;
+                if (blockIndex.getHeight() % dkgInterval != 0) {
+                    // TODO: Dash Core increases ban score by 100
+                    return;
+                }
+            } catch (BlockStoreException x) {
+                throw new RuntimeException(x);
+            }
         }
 
         context.getConfidenceTable().seen(isLock.txid, peer.getAddress());
@@ -140,7 +163,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
     }
 
-    boolean preVerifyInstantSendLock(int nodeId, InstantSendLock islock)
+    private boolean preVerifyInstantSendLock(InstantSendLock islock)
     {
 
         if (islock.txid.equals(Sha256Hash.ZERO_HASH) || islock.inputs.isEmpty()) {
@@ -188,9 +211,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         public void run() {
             try {
                 while (!workThread.isInterrupted()) {
-                    boolean didWork = false;
-
-                    didWork |= processPendingInstantSendLocks();
+                    boolean didWork = processPendingInstantSendLocks();
 
                     if (!didWork) {
                         Thread.sleep(100);
@@ -400,7 +421,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
         int tipHeight;
         tipHeight = blockChain.getBestChainHeight();
 
-
         BLSBatchVerifier<Long, Sha256Hash> batchVerifier = new BLSBatchVerifier<Long, Sha256Hash>(false, true, 8);
         HashMap<Sha256Hash, Pair<Quorum, RecoveredSignature>> recSigs = new HashMap<Sha256Hash, Pair<Quorum, RecoveredSignature>>();
 
@@ -434,8 +454,24 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 log.info("islock: signature has already been verified: " + islock.txid);
                 continue;
             }
-    
-            Quorum quorum = quorumSigningManager.selectQuorumForSigning(llmqType, tipHeight, id);
+
+
+            int signHeight = -1;
+            if (islock.isDeterministic()) {
+
+                final StoredBlock blockIndex = blockChain.getBlockStore().get(islock.cycleHash);
+                if (blockIndex == null) {
+                    batchVerifier.getBadSources().add(nodeId);
+                    continue;
+                }
+
+                final int dkgInterval = LLMQParameters.fromType(context.getParams().getLlmqForInstantSend()).dkgInterval;
+                if (blockIndex.getHeight() + dkgInterval < blockChain.getBestChainHeight()) {
+                    signHeight = blockIndex.getHeight() + dkgInterval - 1;
+                }
+            }
+
+            Quorum quorum = quorumSigningManager.selectQuorumForSigning(llmqType, signHeight, id);
             if (quorum == null) {
                 // should not happen, but if one fails to select, all others will also fail to select
                 log.info("islock: quorum not found to verify signature [tipHeight: " + tipHeight + " vs " + context.masternodeListManager.getQuorumListAtTip().getHeight() + "]");
@@ -457,7 +493,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 recSig.id = id;
                 recSig.msgHash = islock.txid;
                 recSig.signature = islock.signature;
-                recSigs.put(hash, new Pair(quorum, recSig));
+                recSigs.put(hash, new Pair<>(quorum, recSig));
             }
         }
 
@@ -465,11 +501,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
             batchVerifier.verify();
 
         if (!batchVerifier.getBadSources().isEmpty()) {
-            log.warn("islock: bad sources: " + batchVerifier.getBadSources());
+            log.warn("islock: bad sources: {}", batchVerifier.getBadSources());
             for (Long nodeId : batchVerifier.getBadSources()) {
                 // Let's not be too harsh, as the peer might simply be unlucky and might have sent us an old lock which
                 // does not validate anymore due to changed quorums
-                //Misbehaving(nodeId, 20);
+                // TODO: Dash Core increases ban score of the peer by 20
             }
         }
         for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>>  p : pend.entrySet()) {
@@ -478,12 +514,12 @@ public class InstantSendManager implements RecoveredSignatureListener {
             InstantSendLock islock = p.getValue().getSecond();
 
             if (batchVerifier.getBadMessages().contains(hash)) {
-                log.info("-- txid={}, islock={}: invalid sig in islock, peer={}",
+                log.info("islock: -- txid={}, islock={}: invalid sig in islock, peer={}",
                         islock.txid.toString(), hash.toString(), nodeId);
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 TransactionConfidence confidence = context.getConfidenceTable().get(islock.txid);
                 if(confidence != null) {
-                    log.info("InstantSend:  set to IX_LOCK_FAILED for {}", islock.txid);
+                    log.info("islock: set to IX_LOCK_FAILED for {}", islock.txid);
                     confidence.setIXType(TransactionConfidence.IXType.IX_LOCK_FAILED);
                     confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
                 }
@@ -555,8 +591,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
             for (TransactionOutPoint in : islock.inputs) {
                 otherIsLock = db.getInstantSendLockByInput(in);
                 if (otherIsLock != null) {
-                    log.info("CInstantSendManager::{} -- txid={}, islock={}: conflicting input in islock. input={}, other islock={}, peer={}",
-                            islock.txid.toString(), hash.toString(), in.toStringShort(), otherIsLock.getHash().toString(), from);
+                    log.info("processInstantSendLock -- txid={}, islock={}: conflicting input in islock. input={}, other islock={}, peer={}",
+                            islock.txid.toString(), hash, in.toStringShort(), otherIsLock.getHash(), from);
                 }
             }
 
@@ -615,7 +651,17 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     db.writeInstantSendLockMined(islockHash, block.getHeight());
                 }
                 // remove related InstantSend Locks from the invalid list
-                invalidInstantSendLocks.entrySet().removeIf(instantSendLockLongEntry -> instantSendLockLongEntry.getKey().getHash().equals(tx.getTxId()));
+                List<InstantSendLock> keysToRemove = new ArrayList<>();
+
+                for (Map.Entry<InstantSendLock, Long> entry : invalidInstantSendLocks.entrySet()) {
+                    if (entry.getKey().getHash().equals(tx.getTxId())) {
+                        keysToRemove.add(entry.getKey());
+                    }
+                }
+
+                for (InstantSendLock key : keysToRemove) {
+                    invalidInstantSendLocks.remove(key);
+                }
             }
         } finally {
             lock.unlock();
@@ -631,10 +677,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            // TODO remove this after DIP8 has activated
-            //boolean fDIP0008Active = VersionBitsState(pindexNew.pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0008, versionbitscache) == THRESHOLD_ACTIVE;
 
-            if (context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED) /*&& fDIP0008Active*/) {
+            if (context.sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED)) {
                 // Nothing to do here. We should keep all islocks and let chainlocks handle them.
                 return;
             }
@@ -663,8 +707,17 @@ public class InstantSendManager implements RecoveredSignatureListener {
             }
 
             // Keep invalid ISLocks for 1 hour
-            invalidInstantSendLocks.entrySet().removeIf(instantSendLockLongEntry -> instantSendLockLongEntry.getValue() < Utils.currentTimeSeconds() - context.getParams().getInstantSendKeepLock());
+            List<InstantSendLock> keysToRemove = new ArrayList<>();
 
+            for (Map.Entry<InstantSendLock, Long> entry : invalidInstantSendLocks.entrySet()) {
+                if (entry.getValue() < Utils.currentTimeSeconds() - context.getParams().getInstantSendKeepLock()) {
+                    keysToRemove.add(entry.getKey());
+                }
+            }
+
+            for (InstantSendLock key : keysToRemove) {
+                invalidInstantSendLocks.remove(key);
+            }
         } finally {
             lock.unlock();
         }

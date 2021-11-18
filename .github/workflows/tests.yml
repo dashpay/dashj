@@ -1,0 +1,32 @@
+name: Java CI
+on:
+  push:
+    branches: [ master, release-* ]
+  pull_request:
+    branches: [ master, release-* ]
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        #os: [ubuntu-latest, macOS-latest, windows-latest]
+        os: [ubuntu-latest, macOS-latest]
+        #java: [ '8', '11', '15' ]
+        java: [ '8' ]
+      fail-fast: false
+    name: JAVA ${{ matrix.java }} OS ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+      - name: build bls library
+        run: |
+          git submodule update --init --recursive
+          cd contrib/dashj-bls
+          mvn package -DskipTests
+          cd ../..
+      - name: build and run tests on dashj
+        run: |
+          mvn -q clean install -Pno-network

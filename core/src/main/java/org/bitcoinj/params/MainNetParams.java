@@ -37,46 +37,41 @@ public class MainNetParams extends AbstractBitcoinNetParams {
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
 
-    public static final int MAINNET_MAJORITY_DIP0001_WINDOW = 4032;
-    public static final int MAINNET_MAJORITY_DIP0001_THRESHOLD = 3226;
-
     public MainNetParams() {
         super();
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        maxTarget = CoinDefinition.proofOfWorkLimit;
+
+        // 00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        maxTarget = Utils.decodeCompactBits(0x1e0fffffL);
         dumpedPrivateKeyHeader = 204;
-        addressHeader = CoinDefinition.AddressHeader;
-        p2shHeader = CoinDefinition.p2shHeader;
-        port = CoinDefinition.Port;
-        packetMagic = CoinDefinition.PacketMagic;
+        addressHeader = 76;
+        p2shHeader = 16;
+        port = 9999;
+        packetMagic = 0xbf0c6bbd;
         bip32HeaderP2PKHpub = 0x0488b21e; // The 4 byte header that serializes in base58 to "xpub".
         bip32HeaderP2PKHpriv = 0x0488ade4; // The 4 byte header that serializes in base58 to "xprv"
         dip14HeaderP2PKHpub = 0x0eecefc5; // The 4 byte header that serializes in base58 to "dpmp".
         dip14HeaderP2PKHpriv = 0x0eecf02e; // The 4 byte header that serializes in base58 to "dpms"
 
-        genesisBlock.setDifficultyTarget(CoinDefinition.genesisBlockDifficultyTarget);
-        genesisBlock.setTime(CoinDefinition.genesisBlockTime);
-        genesisBlock.setNonce(CoinDefinition.genesisBlockNonce);
+        genesisBlock.setDifficultyTarget(0x1e0ffff0L);
+        genesisBlock.setTime(1390095618L);
+        genesisBlock.setNonce(28917698);
 
         majorityEnforceBlockUpgrade = MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
         majorityRejectBlockOutdated = MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MAINNET_MAJORITY_WINDOW;
 
         id = ID_MAINNET;
-        subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
-        spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
+        subsidyDecreaseBlockCount = 210240;
+        spendableCoinbaseDepth = 100;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals(CoinDefinition.genesisHash),
+        checkState(genesisHash.equals("00000ffd590b1485b3caadc19b22e6379c733355108f107a430458cdf3407ab6"),
                 genesisHash);
-
-        //CoinDefinition.initCheckpoints(checkpoints);
 
         dnsSeeds = new String[] {
                 "dnsseed.dash.org"
         };
-
-        httpSeeds = null; /*new HttpDiscovery.Details[] {*/
 
         // This contains (at a minimum) the blocks which are not BIP30 compliant. BIP30 changed how duplicate
         // transactions are handled. Duplicated transactions could occur in the case where a coinbase had the same
@@ -94,320 +89,246 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         checkpoints.put( 74619, Sha256Hash.wrap("000000000011d28f38f05d01650a502cc3f4d0e793fbc26e2a2ca71f07dc3842"));
         checkpoints.put( 75095, Sha256Hash.wrap("0000000000193d12f6ad352a9996ee58ef8bdc4946818a5fec5ce99c11b87f0d"));
         checkpoints.put( 88805, Sha256Hash.wrap("00000000001392f1652e9bf45cd8bc79dc60fe935277cd11538565b4a94fa85f"));
-        checkpoints.put( 107996, Sha256Hash.wrap("00000000000a23840ac16115407488267aa3da2b9bc843e301185b7d17e4dc40"));
-        checkpoints.put( 137993, Sha256Hash.wrap("00000000000cf69ce152b1bffdeddc59188d7a80879210d6e5c9503011929c3c"));
-        checkpoints.put( 167996, Sha256Hash.wrap("000000000009486020a80f7f2cc065342b0c2fb59af5e090cd813dba68ab0fed"));
-        checkpoints.put( 207992, Sha256Hash.wrap("00000000000d85c22be098f74576ef00b7aa00c05777e966aff68a270f1e01a5"));
-        checkpoints.put( 312645, Sha256Hash.wrap("0000000000059dcb71ad35a9e40526c44e7aae6c99169a9e7017b7d84b1c2daf"));
-        checkpoints.put( 407452, Sha256Hash.wrap("000000000003c6a87e73623b9d70af7cd908ae22fee466063e4ffc20be1d2dbc"));
-        checkpoints.put( 523412, Sha256Hash.wrap("000000000000e54f036576a10597e0e42cc22a5159ce572f999c33975e121d4d"));
-        checkpoints.put( 523930, Sha256Hash.wrap("0000000000000bccdb11c2b1cfb0ecab452abf267d89b7f46eaf2d54ce6e652c"));
-        checkpoints.put(1028181, Sha256Hash.wrap("000000000000004534fd030e18578a987b443b9289a5e2de9fe18505f5fb0295"));
-/*
+        checkpoints.put(107996, Sha256Hash.wrap("00000000000a23840ac16115407488267aa3da2b9bc843e301185b7d17e4dc40"));
+        checkpoints.put(137993, Sha256Hash.wrap("00000000000cf69ce152b1bffdeddc59188d7a80879210d6e5c9503011929c3c"));
+        checkpoints.put(167996, Sha256Hash.wrap("000000000009486020a80f7f2cc065342b0c2fb59af5e090cd813dba68ab0fed"));
+        checkpoints.put(207992, Sha256Hash.wrap("00000000000d85c22be098f74576ef00b7aa00c05777e966aff68a270f1e01a5"));
+        checkpoints.put(312645, Sha256Hash.wrap("0000000000059dcb71ad35a9e40526c44e7aae6c99169a9e7017b7d84b1c2daf"));
+        checkpoints.put(407452, Sha256Hash.wrap("000000000003c6a87e73623b9d70af7cd908ae22fee466063e4ffc20be1d2dbc"));
+        checkpoints.put(523412, Sha256Hash.wrap("000000000000e54f036576a10597e0e42cc22a5159ce572f999c33975e121d4d"));
+        checkpoints.put(523930, Sha256Hash.wrap("0000000000000bccdb11c2b1cfb0ecab452abf267d89b7f46eaf2d54ce6e652c"));
+        checkpoints.put(750000, Sha256Hash.wrap("00000000000000b4181bbbdddbae464ce11fede5d0292fb63fdede1e7c8ab21c"));
+        checkpoints.put(888900, Sha256Hash.wrap("0000000000000026c29d576073ab51ebd1d3c938de02e9a44c7ee9e16f82db28"));
+        checkpoints.put(967800, Sha256Hash.wrap("0000000000000024e26c7df7e46d673724d223cf4ca2b2adc21297cc095600f4"));
+        checkpoints.put(1067570, Sha256Hash.wrap("000000000000001e09926bcf5fa4513d23e870a34f74e38200db99eb3f5b7a70"));
+        checkpoints.put(1167570, Sha256Hash.wrap("000000000000000fb7b1e9b81700283dff0f7d87cf458e5edfdae00c669de661"));
+        checkpoints.put(1364585, Sha256Hash.wrap("00000000000000022f355c52417fca9b73306958f7c0832b3a7bce006ca369ef"));
+        checkpoints.put(1450000, Sha256Hash.wrap("00000000000000105cfae44a995332d8ec256850ea33a1f7b700474e3dad82bc"));
 
-        dnsSeeds = new String[] {
-                "seed.bitcoin.sipa.be",         // Pieter Wuille
-                "dnsseed.bluematt.me",          // Matt Corallo
-                "dnsseed.bitcoin.dashjr.org",   // Luke Dashjr
-                "seed.bitcoinstats.com",        // Chris Decker
-                "seed.bitnodes.io",             // Addy Yeow
-                "bitseed.xf2.org",              // Jeff Garzik
-                "seed.bitcoin.jonasschnelli.ch",// Jonas Schnelli
-                "bitcoin.bloqseeds.net",        // Bloq
-        };
-        httpSeeds = new HttpDiscovery.Details[] {
-                // Andreas Schildbach
-                new HttpDiscovery.Details(
-                        ECKey.fromPublicOnly(Utils.HEX.decode("0238746c59d46d5408bf8b1d0af5740fe1a6e1703fcb56b2953f0b965c740d256f")),
-                        URI.create("http://httpseed.bitcoin.schildbach.de/peers")
-                )
-        };                  */
+        // Dash does not have a Http Seeder
+        // If an Http Seeder is set up, add it here.  References: HttpDiscovery
+        httpSeeds = null;
 
+        // updated with Dash Core 0.17.0.3 seed list
         addrSeeds = new int[] {
-                0x50630905,
+                0x8b86f801,
+                0xddd53802,
+                0xbe430205,
+                0x3a490205,
+                0x22ed0905,
+                0x0d632d05,
+                0xf36d4f05,
                 0x6dbf8405,
-                0xd3bf8405,
-                0xd5bf8405,
-                0xd8bf8405,
-                0x25738605,
-                0x40abbd05,
-                0x2117c805,
-                0x6035c805,
-                0x9560dd12,
-                0x6f00af17,
-                0x7000af17,
-                0x7100af17,
-                0x7200af17,
-                0x1580b617,
-                0x1780b617,
-                0x1880b617,
-                0x1980b617,
-                0x4ca0e317,
+                0x70bf8405,
+                0x0586de12,
+                0x1bf34714,
+                0x2af65117,
+                0x987b6a17,
+                0x7f00a317,
                 0x17a3e317,
-                0x34a3e317,
-                0x3d72661b,
+                0x4ce8e417,
+                0x51e8e417,
+                0xe1d5fd17,
+                0x24610a1f,
                 0x52491f1f,
-                0x6360c422,
-                0x4582c722,
-                0x6165e122,
-                0xa5c0a723,
-                0xe3f2c423,
-                0x01bbc523,
+                0x3204b21f,
+                0x765b5222,
+                0x192e5322,
+                0xf2aa5322,
+                0x84136922,
+                0xf2edd122,
+                0xf61fef22,
+                0x9d55ff22,
+                0x38e31225,
                 0x15e36125,
-                0x91a17825,
-                0xd2c79d25,
-                0xdcc0dd25,
-                0x2ac2dd25,
-                0x2bc2dd25,
-                0x2c067128,
                 0x2e4de52b,
-                0xb9ce202d,
-                0x06404c2d,
-                0xc36d1c2e,
-                0xb19e252e,
-                0x39a6a32e,
-                0x48e5342f,
-                0xe4314b2f,
-                0x9c0e5a2f,
+                0x1818212d,
+                0x7f79222d,
+                0x6b40382d,
+                0xf1274c2d,
+                0x472e4f2d,
+                0x53a2562d,
+                0x55a2562d,
+                0x329b152e,
+                0xf228242e,
+                0x1cf1fe2e,
+                0x1476382f,
+                0xe8985b2f,
+                0xbecc5b2f,
                 0x5e42622f,
-                0xcf60682f,
-                0x5166f42f,
-                0x8f2a0f33,
-                0x24692633,
-                0xfb802633,
-                0xd520ff33,
-                0x16704f34,
-                0xbb87bb34,
-                0xbb24eb34,
-                0x0825f234,
-                0xc3e74636,
-                0xa291ac36,
-                0xd6038a3e,
-                0x07088a3e,
-                0x67088a3e,
-                0x320d923e,
+                0x6a7b622f,
+                0x0223692f,
+                0x0982f42f,
+                0x5baf1132,
+                0xce600f33,
+                0xe6b32633,
+                0xd5479033,
+                0xeda99e33,
+                0x1b124734,
+                0x3c8dca34,
+                0x2bdada36,
+                0xc0038a3e,
                 0x55fd8e3f,
-                0x30da2240,
-                0x729d8c40,
-                0xe29f8c40,
-                0x56f21742,
-                0x59f21742,
-                0x5af21742,
-                0x5bf21742,
-                0x550bac42,
-                0x461bac42,
-                0x5a0d3345,
-                0x650d3345,
-                0x46143345,
-                0x47143345,
-                0xb4e4cf4a,
-                0xf8047f4b,
-                0x94db4a4c,
-                0x92e2514d,
-                0x46cf294e,
+                0xfa2dfa3f,
+                0xce41fb40,
+                0x560cac42,
+                0x44f3f442,
+                0x45f3f442,
+                0xd76b3d45,
+                0xd86b3d45,
+                0xda6b3d45,
+                0xf06b3d45,
+                0x4589764a,
+                0x6089764a,
+                0x6189764a,
+                0x9fec434e,
                 0x0013534e,
-                0x46a9854e,
-                0x961b7850,
-                0xdccda951,
-                0x54e5a951,
+                0x9c1e624f,
+                0x3b1f624f,
+                0x321e6450,
+                0x8bddd350,
                 0xf502ab51,
-                0x34e37652,
-                0x671da552,
-                0x8015d352,
-                0x8315d352,
-                0x8815d352,
-                0x8b15d352,
-                0x5260ea54,
-                0x5660ea54,
-                0x5760ea54,
-                0xd7c71955,
-                0x1dfeb855,
-                0xb5feb855,
+                0x1715d352,
+                0xb315d352,
+                0xe215d352,
+                0xf015d352,
+                0xedc5df52,
+                0xd7a96053,
+                0xccb3f254,
+                0x59a5ce55,
+                0x23f1d155,
+                0xbef1d155,
+                0xc9f1d155,
+                0x04f2d155,
                 0xceaad955,
-                0xf3abd955,
-                0x4101ff55,
-                0xd404ff55,
-                0x343f6a57,
-                0x37fd7557,
-                0xf1dc2459,
-                0x0e002859,
-                0x45722859,
-                0x4ab5ee59,
+                0x4cab7758,
+                0x2c0d2859,
+                0x36432d59,
+                0x6ceddb5b,
+                0x6feddb5b,
                 0x52efdb5b,
-                0x53efdb5b,
-                0x1c393f5c,
-                0x78393f5c,
-                0x50cd5a5d,
-                0xd0d5685d,
-                0x99d89e5d,
-                0xa6ae9c5e,
-                0x3eefb05e,
-                0xdfaab15e,
-                0xe1e0b15e,
-                0x73e1b15e,
-                0xd2e1b15e,
-                0x21e8b15e,
-                0x3dfab15e,
-                0xa28b2b5f,
-                0x2fe2b55f,
+                0xc9eeb05e,
                 0x6132b75f,
-                0x6233b75f,
                 0x8d33b75f,
-                0x8635b75f,
-                0x390bd85f,
-                0x2f93d85f,
-                0xa4607e60,
-                0x00602565,
-                0x60602565,
-                0x51a9c468,
-                0xa406df68,
-                0x238c066b,
-                0x378c066b,
-                0x96af066b,
-                0x89769b6b,
-                0xd465bf6b,
-                0x16e03d6c,
-                0x21e03d6c,
-                0x4c190a6e,
-                0x76569f73,
-                0xd6376a7a,
-                0xdaad727a,
+                0x2b34b75f,
+                0x2735b75f,
+                0x22c4d35f,
+                0xe12dd75f,
+                0x786ed75f,
+                0x43f0da67,
+                0x232aa068,
+                0x5a18a16b,
+                0x7ab23d6c,
+                0x46f73d6c,
+                0x0a9eb276,
                 0xa640c17b,
-                0x45fbb982,
-                0x71fbb982,
                 0x16668285,
-                0x17c1638b,
-                0x2a324294,
+                0x081c448a,
+                0xf0c7098b,
+                0xaaaaee8c,
+                0xa67f5b90,
+                0xc278ca90,
+                0x421c8391,
+                0x441c8391,
+                0x741c8391,
+                0x751c8391,
+                0x82a3ef91,
+                0xe00c3b92,
+                0xceafb992,
                 0x6d0aec97,
-                0xf0397f9a,
-                0xfe397f9a,
-                0x1b3b7f9a,
-                0x083c7f9a,
-                0x5e9b459f,
-                0x0c20599f,
-                0xa613649f,
-                0xa713649f,
-                0x8314cb9f,
-                0x90a72ca3,
+                0x91414398,
+                0x4aa2659e,
+                0x1ca8659e,
                 0xeda72ca3,
-                0xbfa82ca3,
-                0x610f58a7,
-                0xcb60eba8,
-                0xcd60eba8,
-                0x2f63eba8,
-                0x3ca24baa,
+                0x1da92ca3,
+                0x33ab2ca3,
+                0x6460aca3,
+                0xcd3347a7,
+                0x8a3677a8,
+                0xf155eba8,
+                0x315deba8,
+                0xbe68eba8,
+                0xa88b3ea9,
                 0xdba24baa,
-                0x6ca34baa,
-                0x2ab151ac,
-                0x947956ac,
-                0x0d4068ac,
-                0x62056eac,
-                0xa9066eac,
-                0x32f1d4ad,
-                0xcf147ab0,
-                0x1da03eb2,
-                0x1e32d1b2,
-                0x072aeeb2,
-                0x25ae16b9,
+                0x58b251ac,
+                0x6b7856ac,
+                0x82dad4ad,
+                0xc8a2d6ad,
+                0x45cce7ad,
+                0xdc115eb0,
+                0xc6397bb0,
+                0xc8397bb0,
+                0xcb397bb0,
+                0xcd397bb0,
+                0x9abd21b2,
+                0x81793fb2,
+                0xbb824fb2,
+                0x7e5b9db2,
+                0xb05b9db2,
+                0xb35b9db2,
+                0xb608aab2,
+                0x4dbf44b4,
                 0xfa7e1ab9,
-                0x5b651cb9,
-                0x85651cb9,
-                0xd94023b9,
-                0x754323b9,
                 0x7dd22bb9,
-                0x71c23ab9,
-                0xeae03ab9,
-                0xdd6840b9,
+                0xcfc12db9,
+                0xd1c12db9,
+                0xc6383eb9,
                 0xde6840b9,
                 0xdf6840b9,
-                0x2e7a6ab9,
-                0x1e5577b9,
-                0x692585b9,
-                0x9aed8bb9,
-                0x6a1a8db9,
+                0x032171b9,
+                0x052171b9,
+                0x062171b9,
+                0x6d1b8db9,
+                0x613e8db9,
                 0x90d48eb9,
-                0x7db29cb9,
-                0xd8b29cb9,
-                0xdab29cb9,
-                0xdeb29cb9,
-                0x15a8a5b9,
-                0x16a8a5b9,
                 0x17a8a5b9,
                 0x19a8a5b9,
-                0x9008a8b9,
-                0x8361b7b9,
-                0x0d28b9b9,
-                0xe575cbb9,
-                0xfa2cd4b9,
-                0x0125d5b9,
-                0x0625d5b9,
-                0x6301d9b9,
-                0x6401d9b9,
-                0x3070f3b9,
-                0x5070f3b9,
-                0xbb70f3b9,
-                0xdd70f3b9,
-                0x12bdfdb9,
-                0x42bdfdb9,
-                0x46bdfdb9,
-                0x50bdfdb9,
-                0x5845a6bc,
-                0xab4ae3bc,
-                0xc14ae3bc,
+                0x1ba8a5b9,
+                0xf3a8a5b9,
+                0x289eafb9,
+                0x8c3bb1b9,
+                0x9d62b7b9,
+                0x47dcdbb9,
+                0x4953e4b9,
+                0x7053e4b9,
+                0x7353e4b9,
+                0x9d53e4b9,
+                0x8796f8b9,
+                0x9496f8b9,
+                0x6af128bc,
+                0x9262a6bc,
+                0xec9502be,
                 0xb4b804be,
-                0xfa080abe,
-                0xe48251c0,
-                0x68b6a1c0,
-                0x6cb6a1c0,
-                0x6db6a1c0,
-                0x298fe3c0,
-                0xc4e4e3c0,
-                0x11e6fac0,
-                0x55bb1dc1,
-                0x48e0eac1,
-                0x64e0eac1,
-                0x67e0eac1,
-                0x91e0eac1,
-                0x641463c2,
-                0x6d699ac3,
-                0x7d699ac3,
-                0x746514c6,
-                0x4b8017c6,
-                0x0e4a35c6,
-                0x8ebe3dc6,
-                0xc36ec9c7,
-                0xac807ac8,
-                0x7b6247ca,
-                0x7c6247ca,
-                0x7d6247ca,
-                0x7e6247ca,
-                0x6af310cc,
-                0x62f510cc,
-                0x5758b1d1,
-                0xcb5bb1d1,
-                0x106018d4,
-                0x1a6018d4,
-                0xfdeb2fd4,
-                0x2fc9e3d4,
-                0xf025edd4,
-                0x5fc540d5,
-                0x5d5088d5,
-                0x9f5088d5,
+                0x1906a9c0,
+                0x884bb6c2,
+                0xdb5f62c3,
+                0xf4b39ac3,
+                0x11d2b5c3,
+                0x40d3b5c3,
+                0xe31b39c6,
+                0xd3f83dca,
+                0xc2dc65cc,
+                0x46e4b4cf,
+                0xcbc849d0,
+                0xcc335fd1,
+                0xf63d53d4,
+                0xf73d53d4,
+                0x3b09edd4,
+                0x684e88d5,
                 0x3ed96bd8,
-                0xa191bdd8,
+                0x5f93bdd8,
                 0xb293bdd8,
-                0x35023dd9,
-                0x6e859cdd,
-                0x1e3be7de
+                0x5e97bdd8,
+                0xcf97bdd8,
+                0x5be079dc
         };
 
         strSporkAddress = "Xgtyuk76vhuFW2iT7UAiHgNdWXCf3J34wh";
+        minSporkKeys = 1;
         budgetPaymentsStartBlock = 328008;
         budgetPaymentsCycleBlocks = 16616;
         budgetPaymentsWindowBlocks = 100;
 
-        DIP0001Window = MAINNET_MAJORITY_DIP0001_WINDOW;
-        DIP0001Upgrade = MAINNET_MAJORITY_DIP0001_THRESHOLD;
         DIP0001BlockHeight = 782208;
 
         fulfilledRequestExpireTime = 60*60;
@@ -432,16 +353,17 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         DIP0008BlockHeight = 1088640;
 
         // long living quorum params
-        llmqs = new HashMap<LLMQParameters.LLMQType, LLMQParameters>(3);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_50_60, LLMQParameters.llmq50_60);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_60, LLMQParameters.llmq400_60);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
-        llmqs.put(LLMQParameters.LLMQType.LLMQ_100_67, LLMQParameters.llmq100_67);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_400_60);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_400_85);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_100_67);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_400_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
 
+        BIP34Height = 951;    // 000001f35e70f7c5705f64c6c5cc3dea9449e74d5b5c7cf74dad1bcca14a8012
         BIP65Height = 619382; // 00000000000076d8fcea02ec0963de4abfd01e771fec0863f960c2c64fe6f357
+        BIP66Height = 245817;
 
         coinType = 5;
     }
@@ -466,17 +388,19 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         long receivedTargetCompact = nextBlock.getDifficultyTarget();
         int height = storedPrev.getHeight() + 1;
 
-        if (/*height >= powDGWHeight &&*/ height <= 68589) {
+        // On mainnet before block 68589: incorrect proof of work (DGW pre-fork)
+        // see ContextualCheckBlockHeader in src/validation.cpp in Core repo (dashpay/dash)
+        String msg = "Network provided difficulty bits do not match what was calculated: " +
+                Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact);
+        if (height <= 68589) {
             double n1 = convertBitsToDouble(receivedTargetCompact);
             double n2 = convertBitsToDouble(newTargetCompact);
 
             if (java.lang.Math.abs(n1 - n2) > n1 * 0.5 )
-                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
-                    Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
+                throw new VerificationException(msg);
         } else {
             if (newTargetCompact != receivedTargetCompact)
-                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
-                        Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
+                throw new VerificationException(msg);
         }
     }
 

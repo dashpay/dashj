@@ -34,6 +34,10 @@ import org.slf4j.*;
 import java.io.File;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -75,13 +79,11 @@ public class Context {
     public SporkManager sporkManager;
     public MasternodePayments masternodePayments;
     public MasternodeSync masternodeSync;
-    public DarkSendPool darkSendPool;
     public HashStore hashStore;
     public GovernanceManager governanceManager;
     public GovernanceTriggerManager triggerManager;
     public NetFullfilledRequestManager netFullfilledRequestManager;
     public SimplifiedMasternodeListManager masternodeListManager;
-    public static boolean fMasterNode = false;
     private VoteConfidenceTable voteConfidenceTable;
     private InstantSendDatabase instantSendDB;
     public InstantSendManager instantSendManager;
@@ -91,6 +93,11 @@ public class Context {
     public ChainLocksHandler chainLockHandler;
     private LLMQBackgroundThread llmqBackgroundThread;
     public MasternodeMetaDataManager masternodeMetaDataManager;
+    private final ScheduledExecutorService scheduledExecutorService;
+    private ScheduledFuture<?> scheduledMasternodeSync;
+    private ScheduledFuture<?> scheduledNetFulfilled;
+    private ScheduledFuture<?> scheduledGovernance;
+
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -111,7 +118,7 @@ public class Context {
      * @param ensureMinRequiredFee Whether to ensure the minimum required fee by default when completing transactions. For details, see {@link SendRequest#ensureMinRequiredFee}.
      */
     public Context(NetworkParameters params, int eventHorizon, Coin feePerKb, boolean ensureMinRequiredFee) {
-        log.info("Creating bitcoinj {} context.", VersionMessage.BITCOINJ_VERSION);
+        log.info("Creating dashj {} context.", VersionMessage.BITCOINJ_VERSION);
         this.confidenceTable = new TxConfidenceTable();
         this.voteConfidenceTable = new VoteConfidenceTable();
         this.params = params;
@@ -119,6 +126,7 @@ public class Context {
         this.ensureMinRequiredFee = ensureMinRequiredFee;
         this.feePerKb = feePerKb;
         lastConstructed = this;
+        scheduledExecutorService = Executors.newScheduledThreadPool(1);
         slot.set(this);
     }
 
@@ -140,12 +148,12 @@ public class Context {
         Context tls = slot.get();
         if (tls == null) {
             if (isStrictMode) {
-                log.error("Thread is missing a bitcoinj context.");
+                log.error("Thread is missing a dashj context.");
                 log.error("You should use Context.propagate() or a ContextPropagatingThreadFactory.");
                 throw new IllegalStateException("missing context");
             }
             if (lastConstructed == null)
-                throw new IllegalStateException("You must construct a Context object before using bitcoinj!");
+                throw new IllegalStateException("You must construct a Context object before using dashj!");
             slot.set(lastConstructed);
             log.error("Performing thread fixup: you are accessing dashj via a thread that has not had any context set on it.");
             log.error("This error has been corrected for, but doing this makes your app less robust.");
@@ -241,7 +249,7 @@ public class Context {
     public void initDash(boolean liteMode, boolean allowInstantX, @Nullable EnumSet<MasternodeSync.SYNC_FLAGS> syncFlags,
         @Nullable EnumSet<MasternodeSync.VERIFY_FLAGS> verifyFlags) {
 
-        this.liteMode = liteMode;//liteMode; --TODO: currently only lite mode has been tested and works with 12.1
+        this.liteMode = liteMode;
         this.allowInstantX = allowInstantX;
 
         //Dash Specific
@@ -249,7 +257,6 @@ public class Context {
 
         masternodePayments = new MasternodePayments(this);
         masternodeSync = syncFlags != null ? new MasternodeSync(this, syncFlags, verifyFlags) : new MasternodeSync(this);
-        darkSendPool = new DarkSendPool(this);
         initializedDash = true;
         governanceManager = new GovernanceManager(this);
         triggerManager = new GovernanceTriggerManager(this);
@@ -276,31 +283,44 @@ public class Context {
 
         masternodePayments = null;
         masternodeSync = null;
-        darkSendPool.close();
-        darkSendPool = null;
         initializedDash = false;
         governanceManager = null;
         masternodeListManager = null;
     }
 
-    public void initDashSync(final String directory)
-    {
+    public void initDashSync(final String directory) {
+        initDashSync(directory, null);
+    }
+
+    public void initDashSync(final String directory, @Nullable String filePrefix) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 Context.propagate(Context.this);
-                //remove mncache.dat if it exists
+
+                // remove mncache.dat if it exists
                 File oldMnCacheFile = new File(directory, "mncache.dat");
                 if(oldMnCacheFile.exists())
                     oldMnCacheFile.delete();
 
-                FlatDB<GovernanceManager> gmdb = new FlatDB<GovernanceManager>(directory, "goverance.dat", "magicGovernanceCache");
+                // load governance data
+                if (getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+                    FlatDB<GovernanceManager> gmdb;
+                    if (filePrefix != null) {
+                        gmdb = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".gobjects", true);
+                    } else {
+                        gmdb = new FlatDB<>(Context.this, directory, false);
+                    }
+                    gmdb.load(governanceManager);
+                }
 
-                boolean success = gmdb.load(governanceManager);
-
-                FlatDB<SimplifiedMasternodeListManager> smnl = new FlatDB<SimplifiedMasternodeListManager>(Context.this, directory, false);
-
-                success = smnl.load(masternodeListManager);
+                FlatDB<SimplifiedMasternodeListManager> smnl;
+                if (filePrefix != null) {
+                    smnl = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".mnlist", true);
+                } else {
+                    smnl = new FlatDB<>(Context.this, directory, false);
+                }
+                smnl.load(masternodeListManager);
                 masternodeListManager.setLoadedFromFile(true);
                 masternodeListManager.onFirstSaveComplete();
 
@@ -308,8 +328,13 @@ public class Context {
                 // Load chainlocks
                 //
 
-                FlatDB<ChainLocksHandler> clh = new FlatDB<ChainLocksHandler>(Context.this, directory, false);
-                success = clh.load(chainLockHandler);
+                FlatDB<ChainLocksHandler> clh;
+                if (filePrefix != null) {
+                    clh = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".chainlocks", true);
+                } else {
+                    clh = new FlatDB<>(Context.this, directory, false);
+                }
+                clh.load(chainLockHandler);
 
                 signingManager.initializeSignatureLog(directory);
 
@@ -344,6 +369,7 @@ public class Context {
             if(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS))
                 llmqBackgroundThread.interrupt();
             blockChain.removeNewBestBlockListener(newBestBlockListener);
+            scheduledMasternodeSync.cancel(true);
         }
     }
 
@@ -355,7 +381,7 @@ public class Context {
         chain.addNewBestBlockListener(newBestBlockListener);
         if(initializedDash) {
             sporkManager.setBlockChain(chain, peerGroup);
-            masternodeSync.setBlockChain(chain);
+            masternodeSync.setBlockChain(chain, netFullfilledRequestManager);
             masternodeListManager.setBlockChain(chain, peerGroup != null ? peerGroup.headerChain : null, peerGroup);
             instantSendManager.setBlockChain(chain, peerGroup);
             signingManager.setBlockChain(chain);
@@ -367,7 +393,10 @@ public class Context {
         params.setDIPActiveAtTip(chain.getBestChainHeight() >= params.getDIP0001BlockHeight());
     }
 
-    public boolean isLiteMode() { return liteMode; }
+    public boolean isLiteMode() {
+        return liteMode;
+    }
+
     public void setLiteMode(boolean liteMode)
     {
         boolean current = this.liteMode;
@@ -375,16 +404,15 @@ public class Context {
             return;
 
         this.liteMode = liteMode;
-        if(liteMode == false)
-        {
-            darkSendPool.startBackgroundProcessing();
-        }
     }
-    public boolean allowInstantXinLiteMode() { return allowInstantX; }
+
+    public boolean allowInstantXinLiteMode() {
+        return allowInstantX;
+    }
+
     public void setAllowInstantXinLiteMode(boolean allow) {
         this.allowInstantX = allow;
     }
-
 
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
@@ -409,6 +437,7 @@ public class Context {
         return ensureMinRequiredFee;
     }
 
+    @Deprecated
     public void updatedChainHead(StoredBlock chainHead)
     {
         params.setDIPActiveAtTip(chainHead.getHeight() >= params.getDIP0001BlockHeight());
@@ -416,6 +445,7 @@ public class Context {
             masternodeListManager.updatedBlockTip(chainHead);
         }
     }
+
     public VoteConfidenceTable getVoteConfidenceTable() {
         return voteConfidenceTable;
     }
@@ -432,8 +462,15 @@ public class Context {
         if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             startLLMQThread();
         }
-        if (darkSendPool != null) {
-            darkSendPool.startBackgroundProcessing();
+
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+            scheduledMasternodeSync = scheduledExecutorService.scheduleWithFixedDelay(
+                    () -> masternodeSync.doMaintenance(), 1, 1, TimeUnit.SECONDS);
+            scheduledNetFulfilled = scheduledExecutorService.scheduleWithFixedDelay(
+                    () -> netFullfilledRequestManager.doMaintenance(), 60, 60, TimeUnit.SECONDS);
+
+            scheduledGovernance = scheduledExecutorService.scheduleWithFixedDelay(
+                    () -> governanceManager.doMaintenance(), 60, 5, TimeUnit.MINUTES);
         }
     }
 
@@ -441,8 +478,14 @@ public class Context {
         if(getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             stopLLMQThread();
         }
-        if (darkSendPool != null) {
-            darkSendPool.close();
+
+        scheduledMasternodeSync.cancel(false);
+        scheduledMasternodeSync = null;
+        scheduledNetFulfilled.cancel(false);
+        scheduledNetFulfilled = null;
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+            scheduledGovernance.cancel(false);
+            scheduledGovernance = null;
         }
     }
 }

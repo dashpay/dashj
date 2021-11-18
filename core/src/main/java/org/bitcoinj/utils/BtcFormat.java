@@ -16,7 +16,6 @@
 
 package org.bitcoinj.utils;
 
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.utils.BtcAutoFormat.Style;
 import static org.bitcoinj.utils.BtcAutoFormat.Style.*;
 

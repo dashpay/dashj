@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.NetworkParameters;
@@ -30,11 +31,9 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.DevNetParams;
-import org.bitcoinj.params.EvoNetParams;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.MobileDevNetParams;
-import org.bitcoinj.params.PalinkaDevNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.BriefLogFormatter;
@@ -77,15 +76,6 @@ public class ForwardingServiceEvo {
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
-        } else if (args.length > 1 && args[1].equals("palinka")) {
-            params = PalinkaDevNetParams.get();
-            filePrefix = "forwarding-service-palinka";
-        } else if (args.length > 1 && args[1].equals("mobile")) {
-            params = MobileDevNetParams.get();
-            filePrefix = "forwarding-service-mobile";
-        } else if (args.length > 1 && args[1].equals("evonet")) {
-            params = EvoNetParams.get();
-            filePrefix = "forwarding-service-evonet";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
@@ -110,6 +100,7 @@ public class ForwardingServiceEvo {
                     kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
             }
         };
+        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
 
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.

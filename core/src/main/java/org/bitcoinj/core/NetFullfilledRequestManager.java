@@ -98,7 +98,6 @@ public class NetFullfilledRequestManager extends AbstractManager {
     public void addFulfilledRequest(PeerAddress addr, String strRequest) {
         lock.lock();
         try {
-            //mapFulfilledRequests[addr][strRequest] = Utils.currentTimeSeconds() + context.getParams().fulfilledRequestExpireTime();
             if (mapFulfilledRequests.containsKey(addr)) {
                 HashMap<String, Long> entry = mapFulfilledRequests.get(addr);
                 entry.put(strRequest, Utils.currentTimeSeconds() + context.getParams().getFulfilledRequestExpireTime());
@@ -127,7 +126,19 @@ public class NetFullfilledRequestManager extends AbstractManager {
         }
     }
 
-    public void removeFulfilledRequest(PeerAddress addr, String strRequest) {
+    private void removeFulfilledRequest(PeerAddress addr, String strRequest) {
+        lock.lock();
+        try {
+            HashMap<String, Long> entry = mapFulfilledRequests.get(addr);
+            if (entry != null) {
+                mapFulfilledRequests.remove(addr);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void removeAllFulfilledRequests(PeerAddress addr) {
         lock.lock();
         try {
             HashMap<String, Long> entry = mapFulfilledRequests.get(addr);
@@ -141,9 +152,9 @@ public class NetFullfilledRequestManager extends AbstractManager {
 
     @Override
     public void checkAndRemove() {
+        log.info("checkAndRemove: {}", this);
         lock.lock();
         try {
-
             long now = Utils.currentTimeSeconds();
             Iterator<Map.Entry<PeerAddress, HashMap<String, Long>>> it = mapFulfilledRequests.entrySet().iterator();
             while (it.hasNext()) {
@@ -179,5 +190,9 @@ public class NetFullfilledRequestManager extends AbstractManager {
     @Override
     public void close() {
 
+    }
+
+    public void doMaintenance() {
+        checkAndRemove();
     }
 }

@@ -188,11 +188,29 @@ public class SimplifiedQuorumList extends Message {
     {
         lock.lock();
         try {
-            FinalCommitment p = minableCommitments.get(commitmentHash);
-            if (p == null) {
+            return minableCommitments.get(commitmentHash);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
+    public Quorum getQuorum(Sha256Hash quorumHash) {
+        lock.lock();
+        FinalCommitment finalCommitment = null;
+        try {
+            for (FinalCommitment commitment : minableCommitments.values()) {
+                if (commitment.quorumHash.equals(quorumHash)) {
+                    finalCommitment = commitment;
+                    break;
+                }
+            }
+
+            if (finalCommitment == null) {
                 return null;
             }
-            return p;
+            LLMQParameters llmqParameters = LLMQParameters.fromType(LLMQParameters.LLMQType.fromValue(finalCommitment.llmqType));
+            return new Quorum(llmqParameters, finalCommitment);
         } finally {
             lock.unlock();
         }

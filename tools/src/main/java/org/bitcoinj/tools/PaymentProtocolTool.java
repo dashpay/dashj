@@ -57,11 +57,11 @@ public class PaymentProtocolTool {
                 session = new PaymentSession(request);
             } else if ("http".equals(uri.getScheme())) {
                 session = PaymentSession.createFromUrl(arg).get();
-            } else if ("bitcoin".equals(uri.getScheme())) {
+            } else if ("dash".equals(uri.getScheme())) {
                 BitcoinURI bcuri = new BitcoinURI(arg);
                 final String paymentRequestUrl = bcuri.getPaymentRequestUrl();
                 if (paymentRequestUrl == null) {
-                    System.err.println("No r= param in bitcoin URI");
+                    System.err.println("No r= param in dash URI");
                     return;
                 }
                 session = PaymentSession.createFromBitcoinUri(bcuri).get();
@@ -71,7 +71,7 @@ public class PaymentProtocolTool {
             }
             final int version = session.getPaymentRequest().getPaymentDetailsVersion();
             StringBuilder output = new StringBuilder(
-                    format("Bitcoin payment request, version %d%nDate: %s%n", version, session.getDate()));
+                    format("Dash payment request, version %d%nDate: %s%n", version, session.getDate()));
             PaymentProtocol.PkiVerificationData pki = PaymentProtocol.verifyPaymentRequestPki(
                     session.getPaymentRequest(), new TrustStoreLoader.DefaultTrustStoreLoader().getKeyStore());
             if (pki != null) {

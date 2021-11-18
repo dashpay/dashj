@@ -51,17 +51,18 @@ public abstract class NetworkParameters {
     /**
      * The alert signing key originally owned by Satoshi, and now passed on to Gavin along with a few others.
      */
-    public static final byte[] SATOSHI_KEY = Utils.HEX.decode(CoinDefinition.SATOSHI_KEY); //Hex.decode("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
+    @Deprecated
+    public static final byte[] SATOSHI_KEY = Utils.HEX.decode("048240a8748a80a286b270ba126705ced4f2ce5a7847b3610ea3c06513150dade2a8512ed5ea86320824683fc0818f0ac019214973e677acd1244f6d0571fc5103");
 
     /** The string returned by getId() for the main, production network where people trade things. */
-    public static final String ID_MAINNET = CoinDefinition.ID_MAINNET; //"org.bitcoin.production";
+    public static final String ID_MAINNET = "org.darkcoin.production";
     /** The string returned by getId() for the testnet. */
 
-    public static final String ID_TESTNET = CoinDefinition.ID_TESTNET; //"org.bitcoin.test";
+    public static final String ID_TESTNET = "org.darkcoin.test";
     /** The string returned by getId() for the devnet. */
     public static final String ID_DEVNET = "org.dash.dev";
     /** Unit test network. */
-    public static final String ID_UNITTESTNET = CoinDefinition.ID_UNITTESTNET; //"com.google.bitcoin.unittest";
+    public static final String ID_UNITTESTNET = "com.google.darkcoin.unittest";
     /** The string returned by getId() for regtest mode. */
     public static final String ID_REGTEST = "org.bitcoin.regtest";
 
@@ -89,6 +90,7 @@ public abstract class NetworkParameters {
     protected String segwitAddressHrp;
     protected int interval;
     protected int targetTimespan;
+    @Deprecated
     protected byte[] alertSigningKey;
     protected int bip32HeaderP2PKHpub;
     protected int bip32HeaderP2PKHpriv;
@@ -102,12 +104,16 @@ public abstract class NetworkParameters {
     protected int majorityRejectBlockOutdated;
     protected int majorityWindow;
 
+    /** Use to check for BIP34 upgrade */
+    protected int BIP34Height;
+
     /** Use to check for BIP65 upgrade */
     protected int BIP65Height;
 
+    /** Use to check for BIP65 upgrade */
+    protected int BIP66Height;
+
     /** Used to check for DIP0001 upgrade */
-    protected int DIP0001Window;
-    protected int DIP0001Upgrade;
     protected int DIP0001BlockHeight;
     protected boolean DIP0001ActiveAtTip = false;
 
@@ -145,9 +151,8 @@ public abstract class NetworkParameters {
 
     //Dash Extra Parameters
     protected String strSporkAddress;
-    String strMasternodePaymentsPubKey;
-    String strDarksendPoolDummyAddress;
-    long nStartMasternodePayments;
+    protected int minSporkKeys;
+
     protected long fulfilledRequestExpireTime;
     protected long masternodeMinimumConfirmations;
 
@@ -160,26 +165,48 @@ public abstract class NetworkParameters {
         return strSporkAddress;
     }
 
+    public int getMinSporkKeys() {
+        return minSporkKeys;
+    }
+
     protected NetworkParameters() {
         alertSigningKey = SATOSHI_KEY;
         genesisBlock = createGenesis(this);
     }
-    //TODO:  put these bytes into the CoinDefinition
+
+    /*
+     * Build the genesis block. Note that the output of its generation
+     * transaction cannot be spent since it did not originally exist in the
+     * database.
+     *
+     * CBlock(hash=00000ffd590b14, ver=1, hashPrevBlock=00000000000000, hashMerkleRoot=e0028e, nTime=1390095618, nBits=1e0ffff0, nNonce=28917698, vtx=1)
+     *   CTransaction(hash=e0028e, ver=1, vin.size=1, vout.size=1, nLockTime=0)
+     *     CTxIn(COutPoint(000000, -1), coinbase 04ffff001d01044c5957697265642030392f4a616e2f3230313420546865204772616e64204578706572696d656e7420476f6573204c6976653a204f76657273746f636b2e636f6d204973204e6f7720416363657074696e6720426974636f696e73)
+     *     CTxOut(nValue=50.00000000, scriptPubKey=0xA9037BAC7050C479B121CF)
+     *   vMerkleTree: e0028e
+     *
+     * reference: https://github.com/dashpay/dash/blob/master/src/chainparams.cpp#L65-L81
+     */
+
+    // A script the following message:
+    //"LYWired 09/Jan/2014 The Grand Experiment Goes Live: Overstock.com Is Now Accepting Bitcoins"
+    private static final String genesisTxInputScriptBytes = "04ffff001d01044c5957697265642030392f4a616e2f3230313420546865204772616e64204578706572696d656e7420476f6573204c6976653a204f76657273746f636b2e636f6d204973204e6f7720416363657074696e6720426974636f696e73";
+    //
+    //
+    private static final String genesisTxScriptPubKeyBytes = "040184710fa689ad5023690c80f3a49c8f13f8d45b8c857fbcbc8bc4a8e4d3eb4b10f4d4604fa08dce601aaf0f470216fe1b51850b4acf21b179c45070ac7b03a9";
+
     private static Block createGenesis(NetworkParameters n) {
         Block genesisBlock = new Block(n, Block.BLOCK_VERSION_GENESIS);
         Transaction t = new Transaction(n);
         try {
-            // A script containing the difficulty bits and the following message:
-            //
-            //   coin dependent
-            byte[] bytes = Utils.HEX.decode(CoinDefinition.genesisTxInBytes);
+            byte[] bytes = Utils.HEX.decode(genesisTxInputScriptBytes);
 
             t.addInput(new TransactionInput(n, t, bytes));
             ByteArrayOutputStream scriptPubKeyBytes = new ByteArrayOutputStream();
-            Script.writeBytes(scriptPubKeyBytes, Utils.HEX.decode(CoinDefinition.genesisTxOutBytes));
+            Script.writeBytes(scriptPubKeyBytes, Utils.HEX.decode(genesisTxScriptPubKeyBytes));
 
             scriptPubKeyBytes.write(ScriptOpCodes.OP_CHECKSIG);
-            t.addOutput(new TransactionOutput(n, t, Coin.valueOf(CoinDefinition.genesisBlockValue, 0), scriptPubKeyBytes.toByteArray()));
+            t.addOutput(new TransactionOutput(n, t, Coin.valueOf(50, 0), scriptPubKeyBytes.toByteArray()));
         } catch (Exception e) {
             // Cannot happen.
             throw new RuntimeException(e);
@@ -224,11 +251,9 @@ public abstract class NetworkParameters {
         return devNetGenesis;
     }
 
-
-
-    public static final int TARGET_TIMESPAN = CoinDefinition.TARGET_TIMESPAN;//14 * 24 * 60 * 60;  // 2 weeks per difficulty cycle, on average.
-    public static final int TARGET_SPACING = CoinDefinition.TARGET_SPACING;// 10 * 60;  // 10 minutes per block.
-    public static final int INTERVAL = CoinDefinition.INTERVAL;//TARGET_TIMESPAN / TARGET_SPACING;
+    public static final int TARGET_TIMESPAN = (24 * 60 * 60); // 24 hours difficulty adjustment before KGW and DGW
+    public static final int TARGET_SPACING = (int)(2.5 * 60); // 2.5 minutes per block
+    public static final int INTERVAL = TARGET_TIMESPAN / TARGET_SPACING; // 576 blocks before diff adjustment pre KGW
     
     /**
      * Blocks with a timestamp after this should enforce BIP 16, aka "Pay to script hash". This BIP changed the
@@ -240,7 +265,7 @@ public abstract class NetworkParameters {
     /**
      * The maximum number of coins to be generated
      */
-    public static final long MAX_COINS = CoinDefinition.MAX_COINS;
+    public static final long MAX_COINS = 22000000;
 
     /**
      * The maximum money to be generated
@@ -462,6 +487,7 @@ public abstract class NetworkParameters {
      * The key used to sign {@link AlertMessage}s. You can use {@link ECKey#verify(byte[], byte[], byte[])} to verify
      * signatures using it.
      */
+    @Deprecated
     public byte[] getAlertSigningKey() {
         return alertSigningKey;
     }
@@ -635,7 +661,9 @@ public abstract class NetworkParameters {
         BLOOM_FILTER_BIP111(MINIMUM.getBitcoinProtocolVersion()+1),
         @Deprecated
         DMN_LIST(70214),
-        CURRENT(70219);
+        CORE17(70219),
+        ISDLOCK(70220),
+        CURRENT(70220);
 
         private final int bitcoinProtocol;
 
@@ -656,7 +684,7 @@ public abstract class NetworkParameters {
     protected int superblockStartBlock;
     protected int superblockCycle; // in blocks
 
-    protected boolean supportsEvolution = true;
+    protected boolean supportsV18 = true;
 
     /**
      * Getter for property 'nGovernanceMinQuorum'.
@@ -688,8 +716,12 @@ public abstract class NetworkParameters {
         return superblockStartBlock;
     }
 
-    public boolean isSupportingEvolution() {
-        return supportsEvolution;
+    public boolean isSupportingV18() {
+        return supportsV18;
+    }
+
+    public void setSupportsV18(boolean supportsV18) {
+        this.supportsV18 = supportsV18;
     }
 
     protected int instantSendConfirmationsRequired;
@@ -716,7 +748,7 @@ public abstract class NetworkParameters {
     }
 
     //LLMQ parameters
-    protected HashMap<LLMQParameters.LLMQType, LLMQParameters> llmqs;
+    protected HashMap<LLMQParameters.LLMQType, LLMQParameters> llmqs = new HashMap<>();
     protected LLMQParameters.LLMQType llmqChainLocks;
     protected LLMQParameters.LLMQType llmqForInstantSend;
     protected LLMQParameters.LLMQType llmqTypePlatform;
@@ -731,6 +763,10 @@ public abstract class NetworkParameters {
 
     public LLMQParameters.LLMQType getLlmqForInstantSend() {
         return llmqForInstantSend;
+    }
+
+    protected void addLLMQ(LLMQParameters.LLMQType type) {
+        llmqs.put(type, LLMQParameters.fromType(type));
     }
 
     public int getDIP0008BlockHeight() {
@@ -756,5 +792,23 @@ public abstract class NetworkParameters {
 
     public List<Sha256Hash> getAssumeValidQuorums() {
         return assumeValidQuorums;
+    }
+
+    public String getNetworkName() {
+        switch (id) {
+            case NetworkParameters.ID_MAINNET:
+                return "mainnet";
+            case NetworkParameters.ID_TESTNET:
+                return "testnet";
+            case NetworkParameters.ID_REGTEST:
+                return "regtest";
+            case NetworkParameters.ID_UNITTESTNET:
+                return "unittest";
+            default:
+                if (id.startsWith(NetworkParameters.ID_DEVNET)) {
+                    return getDevNetName();
+                }
+                return "invalid";
+        }
     }
 }

@@ -20,3 +20,9 @@ checkpoints
 checkpoints-testnet
 checkpoints-testnet.txt
 checkpoints.txt
+checkpoints-schnapps
+checkpoints-schnapps.txt
+*.mnlist
+*.chainlocks
+*.gobjects
+*.log

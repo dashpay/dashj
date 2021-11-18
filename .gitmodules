@@ -1,4 +1,3 @@
-[submodule "bls/src/main/cpp/bls-signatures"]
-	path = bls/src/main/cpp/bls-signatures
-	url = https://github.com/Chia-Network/bls-signatures
-
+[submodule "contrib/dashj-bls"]
+	path = contrib/dashj-bls
+	url = https://github.com/HashEngineering/dashj-bls.git

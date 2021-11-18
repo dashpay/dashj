@@ -14,7 +14,7 @@ import static com.google.common.base.Preconditions.checkState;
  * Created by Hash Engineering on 6/21/2016.
  *
  * Base class for all Dash Manager objects.  Derived classes must implement
- * {@link #parse()} and {@link #bitcoinSerializeToStream(OutputStream)} to
+ * {@link #parse()} and {@link #bitcoinSerializeToStream(OutputStream)}
  * to serialize data to a file with FlatDB.
  */
 public abstract class AbstractManager extends Message {
@@ -26,8 +26,13 @@ public abstract class AbstractManager extends Message {
      */
     protected Context context;
     /**
-     * The Default file name.
+     * The previous Default file name.
      * The default value is the name of the derived class + ".dat"
+     */
+    protected String previousDefaultFileName;
+    /**
+     * The Default file name.
+     * The default value is the name of the derived class + "-" network + ".dat"
      */
     protected String defaultFileName;
     /**
@@ -66,7 +71,8 @@ public abstract class AbstractManager extends Message {
         String fullClassName = this.getClass().getCanonicalName();
         this.defaultMagicMessage = fullClassName.substring(fullClassName.lastIndexOf('.')+1);
         this.magicMessage = defaultMagicMessage;
-        this.defaultFileName = this.magicMessage.toLowerCase() + defaultExtension;
+        this.previousDefaultFileName = this.magicMessage.toLowerCase() + defaultExtension;
+        this.defaultFileName = this.magicMessage.toLowerCase() + "-" + params.getNetworkName() + defaultExtension;
     }
 
     /**
@@ -141,6 +147,15 @@ public abstract class AbstractManager extends Message {
      *
      * @return the default file name
      */
+    public String getPreviousDefaultFileName() {
+        return previousDefaultFileName;
+    }
+
+    /**
+     * Gets default file name.
+     *
+     * @return the default file name
+     */
     public String getDefaultFileName() {
         return defaultFileName;
     }
@@ -191,7 +206,7 @@ public abstract class AbstractManager extends Message {
                 public void run() {
                     try {
                         long start = Utils.currentTimeMillis();
-                        FlatDB<AbstractManager> flatDB = new FlatDB<AbstractManager>(context, filename, true, magicMessage, getFormatVersion());
+                        FlatDB<AbstractManager> flatDB = new FlatDB<>(context, filename, true, magicMessage, getFormatVersion());
                         flatDB.dump(AbstractManager.this);
                         long end = Utils.currentTimeMillis();
                         log.info(AbstractManager.class.getCanonicalName() + " Save time:  " + (end - start) + "ms");

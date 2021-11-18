@@ -31,7 +31,7 @@ import java.util.Arrays;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
- * <p>A Message is a data structure that can be serialized/deserialized using the Bitcoin serialization format.
+ * <p>A Message is a data structure that can be serialized/deserialized using the Dash serialization format.
  * Specific types of messages that are used both in the block chain, and on the wire, are derived from this
  * class.</p>
  * 
@@ -81,9 +81,9 @@ public abstract class Message {
     /**
      * 
      * @param params NetworkParameters object.
-     * @param payload Bitcoin protocol formatted byte array containing message content.
+     * @param payload Dash protocol formatted byte array containing message content.
      * @param offset The location of the first payload byte within the array.
-     * @param protocolVersion Bitcoin protocol version.
+     * @param protocolVersion Dash protocol version.
      * @param serializer the serializer to use for this message.
      * @param length The length of message payload if known.  Usually this is provided when deserializing of the wire
      * as the length will be provided as part of the header.  If unknown then set to Message.UNKNOWN_LENGTH
@@ -133,7 +133,7 @@ public abstract class Message {
              serializer, length);
     }
 
-    // These methods handle the serialization/deserialization using the custom Bitcoin protocol.
+    // These methods handle the serialization/deserialization using the custom Dash protocol.
 
     protected abstract void parse() throws ProtocolException;
 

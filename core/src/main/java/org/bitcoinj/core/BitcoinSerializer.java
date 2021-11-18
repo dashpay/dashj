@@ -93,9 +93,10 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(SimplifiedMasternodeListDiff.class, "mnlistdiff");
         names.put(SendDsq.class, "senddsq");
         names.put(QuorumSendRecoveredSignatures.class, "qsendrecsigs");
-        names.put(InstantSendLock.class, "islock");
+        names.put(InstantSendLock.class, "isdlock");
         names.put(ChainLockSignature.class, "clsig");
         names.put(SendHeadersMessage.class, "sendheaders");
+        names.put(SendAddressMessageV2.class, "sendaddrv2");
         names.put(GetMasternodePaymentRequestSyncMessage.class, "mnget");
         names.put(CreditFundingTransaction.class, "tx");
     }
@@ -264,6 +265,8 @@ public class BitcoinSerializer extends MessageSerializer {
             return new SporkMessage(params, payloadBytes, 0);
         } else if(command.equals("ssc")) {
             return new SyncStatusCount(params, payloadBytes);
+        } else if(command.equals("sendaddrv2")) {
+            return new SendAddressMessageV2(params, payloadBytes);
         } else if(command.equals("sendheaders")) {
             return new SendHeadersMessage(params, payloadBytes);
         } else if(command.equals("sendcmpct")) {
@@ -285,7 +288,9 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("qsendrecsigs")) {
             return new QuorumSendRecoveredSignatures(params);
         } else if(command.equals("islock")) {
-            return new InstantSendLock(params, payloadBytes);
+            return new InstantSendLock(params, payloadBytes, InstantSendLock.ISLOCK_VERSION);
+        } else if(command.equals("isdlock")) {
+            return new InstantSendLock(params, payloadBytes, InstantSendLock.ISDLOCK_VERSION);
         } else if(command.equals("clsig")) {
             return new ChainLockSignature(params, payloadBytes);
         } else {

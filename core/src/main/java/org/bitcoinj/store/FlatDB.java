@@ -1,15 +1,6 @@
 package org.bitcoinj.store;
 
-/**
- * Created by Hash Engineering on 6/21/2016.
- */
-
-/**
- *   Generic Dumping and Loading
- *   ---------------------------
- */
-
-
+import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,10 +10,17 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
+/**
+ * @author by Hash Engineering on 6/21/2016.
+ *   Generic Dumping and Loading
+ *   ---------------------------
+ */
 public class FlatDB<Type extends AbstractManager> {
     private static final Logger log = LoggerFactory.getLogger(FlatDB.class);
     private String pathDB;
+    private String previousPathDB;
     private String fileName;
     private String directory;
     private String magicMessage;
@@ -45,7 +43,12 @@ public class FlatDB<Type extends AbstractManager> {
         this.context = context;
         if(isFileName) {
             this.pathDB = fileOrDirectory;
-            this.directory = new File(fileOrDirectory).getParentFile().getAbsolutePath();
+            this.directory = new File(pathDB).getParentFile().getAbsolutePath();
+            try {
+                this.fileName = new File(pathDB).getCanonicalFile().getName();
+            } catch (IOException x) {
+                // swallow
+            }
         } else {
             this.directory = fileOrDirectory;
             this.pathDB = null;
@@ -57,13 +60,17 @@ public class FlatDB<Type extends AbstractManager> {
         this.magicMessage = magicMessage + ((version > 1) ? "-" + version : "");
         if(isFileName) {
             this.pathDB = fileOrDirectory;
-            this.directory = new File(fileOrDirectory).getParentFile().getAbsolutePath();
+            this.directory = new File(pathDB).getParentFile().getAbsolutePath();
+            try {
+                this.fileName = new File(pathDB).getCanonicalFile().getName();
+            } catch (IOException x) {
+                // swallow
+            }
         } else {
             this.directory = fileOrDirectory;
             this.pathDB = null;
         }
     }
-
 
     public FlatDB(String directory, String fileName, String magicMessage) {
         context = Context.get();
@@ -77,6 +84,7 @@ public class FlatDB<Type extends AbstractManager> {
         this.directory = directory;
         pathDB = directory + File.separator +file;
     }
+
     public String getDirectory()
     {
         return directory;
@@ -85,17 +93,19 @@ public class FlatDB<Type extends AbstractManager> {
     boolean write(Type object) {
 
         try {
-            long nStart = Utils.currentTimeMillis();
+            Stopwatch watch = Stopwatch.createStarted();
 
-            if(pathDB == null) {
+            if (pathDB == null) {
                 pathDB = directory + File.separator + object.getDefaultFileName();
             }
-            if(magicMessage == null) {
+
+            if (magicMessage == null) {
                 magicMessage = object.getMagicMessage();
             }
 
-            if(!magicMessage.contains("-"))
+            if (!magicMessage.contains("-"))
                 magicMessage = object.getMagicMessage();
+
             // serialize, checksum data up to that point, then append checksum
             UnsafeByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(object.calculateMessageSizeInBytes()+4+magicMessage.getBytes().length);
             stream.write(magicMessage.getBytes());
@@ -106,32 +116,16 @@ public class FlatDB<Type extends AbstractManager> {
 
             stream.write(hash.getReversedBytes());
 
-
-            // open output file, and associate with CAutoFile
-
             FileOutputStream fileStream = new FileOutputStream(pathDB);
 
-            //FILE * file = fopen(pathDB.string().c_str(), "wb");
-            //CAutoFile fileout (file, SER_DISK, CLIENT_VERSION);
-            //if (fileout.IsNull())
-            //    return error("%s : Failed to open file %s", __func__, pathDB.string());
-
-
-            // Write and commit header, data
             fileStream.write(stream.toByteArray());
-            //fileStream.write(hash.getBytes());
 
-
-
-//    FileCommit(fileout);
             fileStream.close();
-            //fileout.fclose();
 
-            log.info("Written info to {}  {}ms", pathDB, Utils.currentTimeMillis() - nStart);
-            log.info("  {}", object.toString());
+            log.info("Written info to {}  {}ms", pathDB, watch.elapsed(TimeUnit.MILLISECONDS));
+            log.info("  {}", object);
 
             return true;
-
         }
         catch(IOException x)
         {
@@ -140,33 +134,32 @@ public class FlatDB<Type extends AbstractManager> {
     }
 
     ReadResult read(Type object, boolean fDryRun) {
-
-        long nStart = Utils.currentTimeMillis();
+        Stopwatch watch = Stopwatch.createStarted();
         try {
             // open input file, and associate with CAutoFile
 
-            if(magicMessage == null) {
+            if (magicMessage == null) {
                 magicMessage = object.getMagicMessage();
             }
 
-            if(pathDB == null) {
+            if (pathDB == null) {
                 pathDB = directory + File.separator + object.getDefaultFileName();
+            }
+
+            if (previousPathDB == null) {
+                previousPathDB = directory + File.separator + object.getPreviousDefaultFileName();
             }
 
             FileInputStream fileStream = new FileInputStream(pathDB);
 
             File file = new File(pathDB);
-
-            /*FILE * file = fopen(pathDB.string().c_str(), "rb");
-            CAutoFile filein (file, SER_DISK, CLIENT_VERSION);
-            if (filein.IsNull()) {
-                error("%s : Failed to open file %s", __func__, pathDB.string());
-                return FileError;
-            }*/
+            // try loading the previous file
+            if (!file.exists() && previousPathDB != null) {
+                file = new File(previousPathDB);
+            }
 
             // use file size to size memory buffer
-
-            long fileSize = file.length();//fileStream.boost::filesystem::file_size(pathDB);
+            long fileSize = file.length();
             long dataSize = fileSize - 32;
             // Don't try to resize to a negative number if file is small
             if (dataSize < 0)
@@ -176,25 +169,16 @@ public class FlatDB<Type extends AbstractManager> {
                 return ReadResult.FileError;
             }
 
-            //vector<unsigned char>vchData;
-            //vchData.resize(dataSize);
             byte [] hashIn = new byte[32];
             byte [] vchData = new byte[(int)dataSize];
 
             try {
                 fileStream.read(vchData);
                 fileStream.read(hashIn);
-            } catch (IOException x)
-            {
+            } catch (IOException x) {
                 return ReadResult.HashReadError;
             }
             fileStream.close();
-
-
-
-            //CDataStream ssMasternodes (vchData, SER_DISK, CLIENT_VERSION);
-
-
 
             // verify stored checksum matches input data
             Sha256Hash hashTmp = Sha256Hash.twiceOf(vchData);
@@ -204,19 +188,17 @@ public class FlatDB<Type extends AbstractManager> {
             }
 
             long pchMsgTmp;
-            String strMagicMessageTmp;
+            String magicMessageTmp;
             try {
                 // de-serialize file header (masternode cache file specific magic message) and ..
+                magicMessageTmp = new String(vchData, 0, magicMessage.length());
 
-
-                strMagicMessageTmp = new String(vchData, 0, magicMessage.length());
-
-                log.info("file magic message: " + strMagicMessageTmp);
+                log.info("file magic message: {}",magicMessageTmp);
                 // ... verify the message matches predefined one
-                if (!magicMessage.equals(strMagicMessageTmp)) {
-                    String startStrMagicMessageTmp = strMagicMessageTmp.substring(0, strMagicMessageTmp.lastIndexOf('-'));
+                if (!magicMessage.equals(magicMessageTmp)) {
+                    String startStrMagicMessageTmp = magicMessageTmp.substring(0, magicMessageTmp.lastIndexOf('-'));
 
-                    String startMagicMessage = strMagicMessageTmp.substring(0, strMagicMessageTmp.lastIndexOf('-'));
+                    String startMagicMessage = magicMessageTmp.substring(0, magicMessageTmp.lastIndexOf('-'));
 
                     if(!startMagicMessage.equals(startStrMagicMessageTmp)) {
                         log.error("Invalid cache magic message");
@@ -225,7 +207,6 @@ public class FlatDB<Type extends AbstractManager> {
                 }
 
                 // de-serialize file header (network specific magic number) and ..
-                //ssMasternodes >> FLATDATA(pchMsgTmp);
                 pchMsgTmp = (int)Utils.readUint32(vchData, magicMessage.length());
 
                 // ... verify the network matches ours
@@ -236,11 +217,9 @@ public class FlatDB<Type extends AbstractManager> {
                 // de-serialize data into CMasternodeMan object
                 int version = 1;
                 try {
-                    String fileVersionString = strMagicMessageTmp.substring(strMagicMessageTmp.lastIndexOf('-') + 1);
-                    version = fileVersionString != null ? Integer.parseInt(fileVersionString) : 1;
-                } catch (IndexOutOfBoundsException x) {
-                    //swallow
-                } catch (NumberFormatException x) {
+                    String fileVersionString = magicMessageTmp.substring(magicMessageTmp.lastIndexOf('-') + 1);
+                    version = Integer.parseInt(fileVersionString);
+                } catch (IndexOutOfBoundsException | NumberFormatException x) {
                     //swallow
                 }
                 object.load(vchData, magicMessage.length()+ 4, version);
@@ -252,27 +231,28 @@ public class FlatDB<Type extends AbstractManager> {
                 return  ReadResult.IncorrectFormat;
             }
 
-            log.info("Loaded info from {}  {}ms", fileName, Utils.currentTimeMillis() - nStart);
-            log.info("  {}", object.toString());
+            log.info("Loaded info from {} {}ms", file.getCanonicalFile(), watch.elapsed(TimeUnit.MILLISECONDS));
+            log.info("  {}", object);
             if (!fDryRun) {
                 log.info("manager - cleaning....");
                 object.checkAndRemove();
                 log.info("manager - result:");
-                log.info("  {}", object.toString());
+                log.info("  {}", object);
             }
 
             return ReadResult.Ok;
-        }
-        catch(IOException x) {
+        } catch(IOException x) {
             return ReadResult.FileError;
         }
     }
-    ReadResult read(Type object) {
-            return read(object, false);
-        }
 
-    public boolean load(Type objToLoad)
-    {
+    ReadResult read(Type object) {
+        lastReadResult = read(object, false);
+        return lastReadResult;
+    }
+
+    public boolean load(Type objToLoad) {
+        String fileName = this.fileName != null ? this.fileName : objToLoad.getDefaultFileName();
         log.info("Reading info from {}...", fileName);
         ReadResult readResult = read(objToLoad);
         if (readResult == ReadResult.FileError)
@@ -280,11 +260,9 @@ public class FlatDB<Type extends AbstractManager> {
         else if (readResult != ReadResult.Ok)
         {
             log.error("Error reading {}: ", fileName);
-            if(readResult == ReadResult.IncorrectFormat)
-            {
+            if(readResult == ReadResult.IncorrectFormat) {
                 log.error("magic is ok but data has invalid format, will try to recreate");
-            }
-            else {
+            } else {
                 log.error("file format is unknown or invalid, please fix it manually");
                 // program should exit with an error
                 return false;
@@ -294,52 +272,12 @@ public class FlatDB<Type extends AbstractManager> {
         return true;
     }
 
-    public boolean dump(Type objToSave)
-    {
-        long nStart = Utils.currentTimeSeconds();
-
-
-        // LOAD SERIALIZED FILE TO DETERMINE SAFETY OF SAVING INTO THAT FILE
-
-        /*
-
-
-            2016-06-02 21:23:55     dash-shutoff |      Governance Objects: 1, Seen Budgets: 1, Seen Budget Votes: 0, Vote Count: 0
-            2016-06-02 21:23:55     dash-shutoff |      Governance Objects: 1, Seen Budgets: 0, Seen Budget Votes: 0, Vote Count: 0
-            2016-06-02 21:29:17            dashd |      Governance Objects: 1, Seen Budgets: 0, Seen Budget Votes: 0, Vote Count: 0
-            2016-06-02 21:29:17            dashd | CFlatDB - Governance Objects: 1, Seen Budgets: 0, Seen Budget Votes: 0, Vote Count: 0
-            2016-06-02 21:29:25     dash-shutoff |      Governance Objects: 1, Seen Budgets: 0, Seen Budget Votes: 0, Vote Count: 0
-            2016-06-02 21:30:07     dash-shutoff |      Governance Objects: 1, Seen Budgets: 1, Seen Budget Votes: 0, Vote Count: 0
-            2016-06-02 21:30:16            dashd |      Governance Objects: 1, Seen Budgets: 1, Seen Budget Votes: 0, Vote Count: 0
-            2016-06-02 21:30:16            dashd | CFlatDB - Governance Objects: 1, Seen Budgets: 1, Seen Budget Votes: 0, Vote Count: 0
-
-
-            This fact can be demonstrated by adding a governance item, then stopping and starting the client.
-            With the code enabled, "Seen Budgets" will equal 0, whereas the object should have one entry.
-        */
-
-        /*log.info("Verifying {} format...\n", fileName);
-        Type tmpObjToLoad = (Type)objToSave.createEmpty();
-        ReadResult readResult = read(tmpObjToLoad);
-
-        // there was an error and it was not an error on file opening => do not proceed
-        if (readResult == ReadResult.FileError)
-            log.warn("Missing file - {}, will try to recreate", fileName);
-        else if (readResult != ReadResult.Ok)
-        {
-            log.error("Error reading{}: ", fileName);
-            if(readResult == ReadResult.IncorrectFormat)
-                log.error("magic is ok but data has invalid format, will try to recreate");
-            else
-            {
-                log.error("file format is unknown or invalid, please fix it manually");
-                return false;
-            }
-        }*/
+    public boolean dump(Type objToSave) {
+        Stopwatch watch = Stopwatch.createStarted();
 
         log.info("Writing info to {}...", fileName);
         write(objToSave);
-        log.info("{} dump finished  {}ms", fileName, Utils.currentTimeSeconds() - nStart);
+        log.info("{} dump finished  {}ms", fileName, watch.elapsed(TimeUnit.MILLISECONDS));
 
         return true;
     }

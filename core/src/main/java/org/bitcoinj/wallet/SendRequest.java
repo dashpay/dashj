@@ -132,6 +132,13 @@ public class SendRequest {
     public boolean shuffleOutputs = true;
 
     /**
+     * If true (the default), the inputs and outputs will be sorted according to BIP39.
+     * This value takes priority over {@link #shuffleOutputs}. This is disabled for most
+     * unit tests.
+     */
+    public boolean sortByBIP69 = true;
+
+    /**
      * Specifies what to do with missing signatures left after completing this request. Default strategy is to
      * throw an exception on missing signature ({@link MissingSigsMode#THROW}).
      * @see MissingSigsMode

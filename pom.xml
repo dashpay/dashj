@@ -25,11 +25,11 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>bls</module>
     <module>core</module>
     <module>examples</module>
     <module>tools</module>
-    <module>wallettemplate</module>
+    <!-- disable wallettemplate for now -->
+    <!--module>wallettemplate</module-->
   </modules>
 
   <parent>

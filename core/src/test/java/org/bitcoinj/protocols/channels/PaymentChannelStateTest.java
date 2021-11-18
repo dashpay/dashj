@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -46,7 +47,7 @@ import static org.bitcoinj.testing.FakeTxBuilder.createFakeTx;
 import static org.bitcoinj.testing.FakeTxBuilder.makeSolvedTestBlock;
 import static org.junit.Assert.*;
 
-@RunWith(Parameterized.class)
+@RunWith(Parameterized.class) @Ignore
 public class PaymentChannelStateTest extends TestWithWallet {
     private ECKey serverKey;
     private Wallet serverWallet;

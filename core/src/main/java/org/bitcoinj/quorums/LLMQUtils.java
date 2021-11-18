@@ -9,8 +9,8 @@ import org.bitcoinj.crypto.BLSPublicKey;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import static org.bitcoinj.core.SporkManager.SPORK_21_QUORUM_ALL_CONNECTED;
-import static org.bitcoinj.core.SporkManager.SPORK_23_QUORUM_POSE;
+import static org.bitcoinj.core.SporkId.SPORK_21_QUORUM_ALL_CONNECTED;
+import static org.bitcoinj.core.SporkId.SPORK_23_QUORUM_POSE;
 import static org.bitcoinj.quorums.LLMQParameters.LLMQType.LLMQ_100_67;
 import static org.bitcoinj.quorums.LLMQParameters.LLMQType.LLMQ_400_60;
 import static org.bitcoinj.quorums.LLMQParameters.LLMQType.LLMQ_400_85;

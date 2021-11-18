@@ -383,6 +383,7 @@ public class WalletTest extends TestWithWallet {
 
         // Complete the transaction successfully.
         req.shuffleOutputs = false;
+        req.sortByBIP69 = false;
         wallet.completeTx(req);
 
         Transaction t2 = req.tx;
@@ -1285,18 +1286,21 @@ public class WalletTest extends TestWithWallet {
             SendRequest req2a = SendRequest.to(OTHER_ADDRESS, valueOf(100, 0));
             req2a.tx.addInput(send2.getOutput(0));
             req2a.shuffleOutputs = false;
+            req2a.sortByBIP69 = false;
             wallet.completeTx(req2a);
             Transaction send2a = req2a.tx;
 
             SendRequest req2b = SendRequest.to(OTHER_ADDRESS, valueOf(50, 0));
             req2b.tx.addInput(send2a.getOutput(1));
             req2b.shuffleOutputs = false;
+            req2b.sortByBIP69 = false;
             wallet.completeTx(req2b);
             Transaction send2b = req2b.tx;
 
             SendRequest req2c = SendRequest.to(OTHER_ADDRESS, valueOf(25, 0));
             req2c.tx.addInput(send2b.getOutput(1));
             req2c.shuffleOutputs = false;
+            req2c.sortByBIP69 = false;
             wallet.completeTx(req2c);
             Transaction send2c = req2c.tx;
 
@@ -1810,7 +1814,7 @@ public class WalletTest extends TestWithWallet {
     @Test
     public void autosaveImmediate() throws Exception {
         // Test that the wallet will save itself automatically when it changes.
-        File f = File.createTempFile("bitcoinj-unit-test", null);
+        File f = File.createTempFile("dashj-unit-test", null);
         Sha256Hash hash1 = Sha256Hash.of(f);
         // Start with zero delay and ensure the wallet file changes after adding a key.
         wallet.autosaveToFile(f, 0, TimeUnit.SECONDS, null);
@@ -1832,7 +1836,7 @@ public class WalletTest extends TestWithWallet {
         // an auto-save cycle of 1 second.
         final File[] results = new File[2];
         final CountDownLatch latch = new CountDownLatch(3);
-        File f = File.createTempFile("bitcoinj-unit-test", null);
+        File f = File.createTempFile("dashj-unit-test", null);
         Sha256Hash hash1 = Sha256Hash.of(f);
         wallet.autosaveToFile(f, 1, TimeUnit.SECONDS,
                 new WalletFiles.Listener() {
@@ -2494,6 +2498,7 @@ public class WalletTest extends TestWithWallet {
         request19 = SendRequest.forTx(request19.tx);
         request19.feePerKb = Transaction.DEFAULT_TX_FEE;
         request19.shuffleOutputs = false;
+        request19.sortByBIP69 = false;
         wallet.completeTx(request19);
         assertEquals(Coin.valueOf(3742), request19.tx.getFee());
         assertEquals(2, request19.tx.getInputs().size());
@@ -2514,6 +2519,7 @@ public class WalletTest extends TestWithWallet {
         request20.tx.clearInputs();
         request20 = SendRequest.forTx(request20.tx);
         request20.feePerKb = Transaction.DEFAULT_TX_FEE;
+        request20.sortByBIP69 = false;
         wallet.completeTx(request20);
         // 4kb tx.
         assertEquals(Coin.valueOf(3742), request20.tx.getFee());
@@ -2525,6 +2531,7 @@ public class WalletTest extends TestWithWallet {
         SendRequest request21 = SendRequest.to(OTHER_ADDRESS, CENT);
         request21.feePerKb = ZERO;
         request21.ensureMinRequiredFee = true;
+        request21.sortByBIP69 = false;
         for (int i = 0; i < 99; i++)
             request21.tx.addOutput(CENT, OTHER_ADDRESS);
         //request21.tx.addOutput(CENT.subtract(Coin.valueOf(18880-10)), OTHER_ADDRESS); //fails because tx size is calculated with a change output
@@ -2553,6 +2560,7 @@ public class WalletTest extends TestWithWallet {
         request25 = SendRequest.forTx(request25.tx);
         request25.feePerKb = Transaction.DEFAULT_TX_FEE;
         request25.shuffleOutputs = false;
+        request25.sortByBIP69 = false;
         wallet.completeTx(request25);
         assertEquals(Coin.valueOf(2790), request25.tx.getFee());
         assertEquals(2, request25.tx.getInputs().size());
@@ -2678,6 +2686,7 @@ public class WalletTest extends TestWithWallet {
         request5.ensureMinRequiredFee = true;
         request5.recipientsPayFees = true;
         request5.shuffleOutputs = false;
+        request5.sortByBIP69 = false;
         wallet.completeTx(request5);
         assertEquals(fee5, request5.tx.getFee());
         Transaction spend5 = request5.tx;

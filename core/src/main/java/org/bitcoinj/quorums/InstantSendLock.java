@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
@@ -9,27 +25,46 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This message is used to provide details of transactions that
+ * have been locked by LLMQ-based InstantSend.
+ */
 public class InstantSendLock extends Message {
 
     static final String ISLOCK_REQUESTID_PREFIX = "islock";
+    public static final int ISLOCK_VERSION = 0;
+    public static final int ISDLOCK_VERSION = 1;
 
+    private int version;
     List<TransactionOutPoint> inputs;
     Sha256Hash txid;
+    Sha256Hash cycleHash;
     BLSLazySignature signature;
 
     public InstantSendLock(NetworkParameters params, List<TransactionOutPoint> inputs, Sha256Hash txid, BLSLazySignature signature) {
         super(params);
+        this.version = ISLOCK_VERSION;
         this.inputs = inputs;
         this.txid = txid;
         this.signature = signature;
     }
 
-    public InstantSendLock(NetworkParameters params, byte [] payload) {
-        super(params, payload, 0);
+    public InstantSendLock(NetworkParameters params, List<TransactionOutPoint> inputs, Sha256Hash txid, Sha256Hash cycleHash, BLSLazySignature signature) {
+        this(params, inputs, txid, signature);
+        this.version = ISDLOCK_VERSION;
+        this.cycleHash = cycleHash;
+    }
+
+    public InstantSendLock(NetworkParameters params, byte [] payload, int version) {
+        super(params, payload, 0, version == ISDLOCK_VERSION ?
+                params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK) : 0);
     }
 
     @Override
     protected void parse() throws ProtocolException {
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK)) {
+            version = readBytes(1)[0];
+        }
         int countInputs = (int)readVarInt();
         inputs = new ArrayList<>(countInputs);
         for(int i = 0; i < countInputs; ++i) {
@@ -40,6 +75,9 @@ public class InstantSendLock extends Message {
 
         txid = readHash();
 
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK)) {
+            cycleHash = readHash();
+        }
         signature = new BLSLazySignature(params, payload, cursor);
         cursor += signature.getMessageSize();
         length = cursor - offset;
@@ -47,11 +85,17 @@ public class InstantSendLock extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK)) {
+            stream.write(version);
+        }
         stream.write(new VarInt(inputs.size()).encode());
         for (TransactionOutPoint input : inputs) {
             input.bitcoinSerialize(stream);
         }
         stream.write(txid.getReversedBytes());
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK)) {
+            stream.write(cycleHash.getReversedBytes());
+        }
         signature.bitcoinSerialize(stream);
     }
 
@@ -81,7 +125,8 @@ public class InstantSendLock extends Message {
 
     @Override
     public String toString() {
-        return String.format("InstantSendLock(%d inputs, txid=%s, sig=%s)", inputs.size(), txid, signature);
+        return String.format("InstantSendLock(version=%d, %d inputs, txid=%s, cycleHash=%s, sig=%s)",
+                version, inputs.size(), txid, cycleHash, signature);
     }
 
     @Override
@@ -103,11 +148,19 @@ public class InstantSendLock extends Message {
         return inputs;
     }
 
+    public int getVersion() {
+        return version;
+    }
+
     public BLSLazySignature getSignature() {
         return signature;
     }
 
     public Sha256Hash getTxId() {
         return txid;
+    }
+
+    public boolean isDeterministic() {
+        return version != ISLOCK_VERSION;
     }
 }

@@ -2,7 +2,7 @@
 
 > A Java library for working with Dash
 
-[![Build Status](https://travis-ci.com/dashevo/dashj.svg?token=Pzix7aqnMuGS9c6BmBz2&branch=master)](https://travis-ci.com/dashevo/dashj)
+[![Tests](https://github.com/dashevo/dashj/workflows/Java%20CI/badge.svg?branch=master)](https://github.com/dashevo/dashj/actions)
 
 ### Welcome to dashj
 
@@ -12,7 +12,7 @@ This branch is up to date with bitcoinj 0.15.4.
 
 ### Technologies
 
-* Java 8 for the core modules, Java 8 for everything else
+* Java 8
 * [Maven 3+](http://maven.apache.org) - for building the project
 * [Google Protocol Buffers](https://github.com/google/protobuf) - for use with serialization and hardware communications
 
@@ -21,28 +21,31 @@ This branch is up to date with bitcoinj 0.15.4.
 To get started, it is best to have the latest JDK and Maven installed. The HEAD of the `master` branch contains the latest development code and various production releases are provided on feature branches.
 
 #### Building from the command line
-To initialize the repo after cloning it: 
+To initialize the repo after cloning it (this will build the bls shared library): 
 ```
 git submodule update  --init --recursive
+cd contrib/dashj-bls
+mvn package -DskipTests
+cd ../..
 ```
 To perform a full build use (this includes the dashjbls shared library):
 ```
-cd bls
-mvn clean package -Pbuild-bls-only -pl :dashj-bls -DskipTests -Dmaven.javadoc.skip=true --settings ../maven-settings.xml
-cd ..
-mvn clean package --settings maven-settings.xml
+mvn clean package
 ```
 To perform a full build without building the bls shared library and skip the test:
+```bash
+mvn clean package -Pno-build-bls -DskipTests
 ```
-
-mvn clean package -Pno-build-bls -DskipTests --settings maven-settings.xml
+To perform a full build with the tests:
+```bash
+mvn clean package -Pno-network
 ```
 To perform a full build and install it in the local maven repository:
-```
-mvn clean install --settings maven-settings.xml
+```bash
+mvn clean install
 ```
 You can also run
-```
+```bash
 mvn site:site
 ```
 to generate a website with useful information like JavaDocs.
@@ -52,9 +55,9 @@ The outputs are under the `target` directory.
 #### Deployment
 
 To deploy to the maven repository:
-
+```bash
 mvn clean deploy -DskipTests -P release
-
+```
 #### Building from an IDE
 
 Alternatively, just import the project using your IDE. [IntelliJ](http://www.jetbrains.com/idea/download/) has Maven integration built-in and has a free Community Edition. Simply use `File | Import Project` and locate the `pom.xml` in the root of the cloned project source tree.

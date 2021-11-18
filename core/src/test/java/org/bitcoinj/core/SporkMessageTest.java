@@ -1,15 +1,30 @@
+/*
+ * Copyright 2020 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.core;
 
-import com.google.common.base.Preconditions;
 import org.bitcoinj.params.MainNetParams;
-import org.junit.Assert;
+import org.bitcoinj.params.TestNet3Params;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class SporkMessageTest {
-    static NetworkParameters PARAMS = MainNetParams.get();
+    static NetworkParameters PARAMS = TestNet3Params.get();
     static Context context = new Context(PARAMS);
 
     static {
@@ -18,13 +33,13 @@ public class SporkMessageTest {
 
     @Test
     public void verifySpork() {
-        byte [] sporkData = Utils.HEX.decode("1f27000000000000000000007192a45c00000000411c3acf25f6c7b4af6e7919bd5a988335228955312301622f1a576712a1bb146c347283595ab601f7263379ec7e8b03c279c785313043b4deb38a107fc5ccddff90");
-        Sha256Hash sporkHash = Sha256Hash.wrap("c89a674297530b1b9f4d1ed2aaabb89112de687999c881dae0bb389af148a8b0");
+        byte [] sporkData = Utils.HEX.decode("1227000000000000000000003b5d255b00000000411b49b470662d7f4068f5630ee90a531302ab9046d1cf8333b138c3e42db67a64ca53c390124832785a8934cf5e8a74dad9db8834c32662f8c1c69c23577b39622f");
+        Sha256Hash sporkHash = Sha256Hash.wrap("d1d32f00374284b19ee33f9ef19386055fd15091ce4a476ab58701603594cc5e");
         SporkMessage sporkMessage = new SporkMessage(PARAMS, sporkData, 0);
 
-        assertEquals(10015, sporkMessage.getSporkId());
+        assertEquals(SporkId.SPORK_3_INSTANTSEND_BLOCK_FILTERING, sporkMessage.getSporkId());
         assertEquals(0, sporkMessage.getValue());
-        assertEquals(1554289265L, sporkMessage.getTimeSigned());
+        assertEquals(1529175355L, sporkMessage.getTimeSigned());
         assertEquals(sporkHash, sporkMessage.getSignatureHash());
 
         assertTrue(sporkMessage.checkSignature(Address.fromString(PARAMS, PARAMS.getSporkAddress()).getHash()));

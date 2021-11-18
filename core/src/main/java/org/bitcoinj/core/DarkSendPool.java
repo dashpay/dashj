@@ -13,6 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Created by Eric on 2/8/2015.
  */
+@Deprecated
 public class DarkSendPool {
     private static final Logger log = LoggerFactory.getLogger(DarkSendPool.class);
     ReentrantLock lock = Threading.lock("darksendpool");

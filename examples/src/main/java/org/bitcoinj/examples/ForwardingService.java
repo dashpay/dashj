@@ -20,6 +20,7 @@ package org.bitcoinj.examples;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.*;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.SendRequest;
@@ -66,18 +67,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
-        } else if (args.length > 1 && args[1].equals("palinka")) {
-            params = PalinkaDevNetParams.get();
-            filePrefix = "forwarding-service-palinka";
         } else if (args.length > 1 && args[1].equals("schnapps")) {
             params = SchnappsDevNetParams.get();
             filePrefix = "forwarding-service-schnapps";
-        } else if (args.length > 1 && args[1].equals("mobile")) {
-            params = MobileDevNetParams.get();
-            filePrefix = "forwarding-service-mobile";
-        } else if (args.length > 1 && args[1].equals("evonet")) {
-            params = EvoNetParams.get();
-            filePrefix = "forwarding-service-evonet";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
@@ -102,6 +94,7 @@ public class ForwardingService {
                     kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
             }
         };
+        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
 
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.
