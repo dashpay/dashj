@@ -118,8 +118,8 @@ public class SporkManager {
 
         KeyId keyIdSigner = spork.getSignerKeyId();
         if (keyIdSigner == null || !setSporkPubKeyIds.contains(keyIdSigner)) {
-            log.info("processSpork -- ERROR: invalid signature");
             // TODO: need to reject this peer?  for now old peers will give us old sporks?
+            // log.info("processSpork -- ERROR: invalid signature");
             // throw new ProtocolException("spork has invalid signature");
             return;
         }
