@@ -109,8 +109,8 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
     /**
      * Convert an amount expressed in the way humans are used to into satoshis.
      *
-     * @param coins Number of bitcoins
-     * @param cents Number of bitcents (0.01 bitcoin)
+     * @param coins Number of Dash
+     * @param cents Number of Dash cents (0.01 bitcoin)
      * @return {@code Coin} object containing value in satoshis
      */
     public static Coin valueOf(final int coins, final int cents) {
