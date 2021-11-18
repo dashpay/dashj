@@ -463,11 +463,12 @@ public class Context {
             startLLMQThread();
         }
 
-        scheduledMasternodeSync = scheduledExecutorService.scheduleWithFixedDelay(
-                () -> masternodeSync.doMaintenance(), 1, 1, TimeUnit.SECONDS);
-        scheduledNetFulfilled = scheduledExecutorService.scheduleWithFixedDelay(
-                () -> netFullfilledRequestManager.doMaintenance(), 60, 60, TimeUnit.SECONDS);
         if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+            scheduledMasternodeSync = scheduledExecutorService.scheduleWithFixedDelay(
+                    () -> masternodeSync.doMaintenance(), 1, 1, TimeUnit.SECONDS);
+            scheduledNetFulfilled = scheduledExecutorService.scheduleWithFixedDelay(
+                    () -> netFullfilledRequestManager.doMaintenance(), 60, 60, TimeUnit.SECONDS);
+
             scheduledGovernance = scheduledExecutorService.scheduleWithFixedDelay(
                     () -> governanceManager.doMaintenance(), 60, 5, TimeUnit.MINUTES);
         }
