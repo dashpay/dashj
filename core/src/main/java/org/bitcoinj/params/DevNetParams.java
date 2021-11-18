@@ -85,6 +85,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         addrSeeds = null;
         bip32HeaderP2PKHpub = 0x043587cf;
         bip32HeaderP2PKHpriv = 0x04358394;
+        dip14HeaderP2PKHpub = 0x0eed270b; // The 4 byte header that serializes in base58 to "dptp".
+        dip14HeaderP2PKHpriv = 0x0eed2774; // The 4 byte header that serializes in base58 to "dpts"
 
         strSporkAddress = sporkAddress;
         budgetPaymentsStartBlock = 4100;

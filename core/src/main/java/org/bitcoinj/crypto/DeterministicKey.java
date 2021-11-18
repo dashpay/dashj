@@ -510,6 +510,43 @@ public class DeterministicKey extends ECKey {
         return serializePrivB58(params, Script.ScriptType.P2PKH);
     }
 
+    private byte[] serializeDip14(NetworkParameters params, boolean pub, Script.ScriptType outputScriptType) {
+        ByteBuffer ser = ByteBuffer.allocate(107);
+        if (outputScriptType == Script.ScriptType.P2PKH)
+            ser.putInt(pub ? params.getDip14HeaderP2PKHpub() : params.getDip14HeaderP2PKHpriv());
+        else
+            throw new IllegalStateException(outputScriptType.toString());
+        ser.put((byte) getDepth());
+        ser.putInt(getParentFingerprint());
+        if (getChildNumber() instanceof ExtendedChildNumber) {
+            ExtendedChildNumber childNumber = (ExtendedChildNumber) getChildNumber();
+            ser.put((byte)(childNumber.isHardened() ? 1 : 0));
+            ser.put(Sha256Hash.wrap(childNumber.bi()).getBytes());
+            ser.put(getChainCode());
+            ser.put(pub ? getPubKey() : getPrivKeyBytes33());
+            checkState(ser.position() == 107);
+            return ser.array();
+        } else {
+            throw new IllegalStateException("This deterministic key does not have an extended child number");
+        }
+    }
+
+    public String serializeDip14PubB58(NetworkParameters params, Script.ScriptType outputScriptType) {
+        return toBase58(serializeDip14(params, true, outputScriptType));
+    }
+
+    public String serializeDip14PrivB58(NetworkParameters params, Script.ScriptType outputScriptType) {
+        return toBase58(serializeDip14(params, false, outputScriptType));
+    }
+
+    public String serializeDip14PubB58(NetworkParameters params) {
+        return serializeDip14PubB58(params, Script.ScriptType.P2PKH);
+    }
+
+    public String serializeDip14PrivB58(NetworkParameters params) {
+        return serializeDip14PrivB58(params, Script.ScriptType.P2PKH);
+    }
+
     /** serializes a HD Key according to the dashpay encryptedPublicKey specification **/
     public byte[] serializeContactPub() {
         ByteBuffer ser = ByteBuffer.allocate(69);

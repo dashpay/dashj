@@ -8,6 +8,8 @@
 
 The dashj library is a Java implementation of the Dash protocol, which allows it to maintain a wallet and send/receive transactions without needing a local copy of Dash Core. It comes with full documentation and some example apps showing how to use it.
 
+This branch is up to date with bitcoinj 0.15.4.
+
 ### Technologies
 
 * Java 8

@@ -50,6 +50,8 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         bip32HeaderP2PKHpriv = 0x04358394; // The 4 byte header that serializes in base58 to "tprv"
         bip32HeaderP2WPKHpub = 0x045f1cf6; // The 4 byte header that serializes in base58 to "vpub".
         bip32HeaderP2WPKHpriv = 0x045f18bc; // The 4 byte header that serializes in base58 to "vprv"
+        dip14HeaderP2PKHpub = 0x02FDA7E8; // The 4 byte header that serializes in base58 to "dptp".
+        dip14HeaderP2PKHpriv = 0x02FDA7FD; // The 4 byte header that serializes in base58 to "dpts"
 
         // Difficulty adjustments are disabled for regtest.
         // By setting the block interval for difficulty adjustments to Integer.MAX_VALUE we make sure difficulty never

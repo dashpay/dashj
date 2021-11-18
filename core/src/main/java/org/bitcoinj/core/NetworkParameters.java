@@ -96,6 +96,8 @@ public abstract class NetworkParameters {
     protected int bip32HeaderP2PKHpriv;
     protected int bip32HeaderP2WPKHpub;
     protected int bip32HeaderP2WPKHpriv;
+    protected int dip14HeaderP2PKHpub;
+    protected int dip14HeaderP2PKHpriv;
 
     /** Used to check majorities for block version upgrade */
     protected int majorityEnforceBlockUpgrade;
@@ -508,6 +510,16 @@ public abstract class NetworkParameters {
     /** Returns the 4 byte header for BIP32 wallet P2WPKH - private key part. */
     public int getBip32HeaderP2WPKHpriv() {
         return bip32HeaderP2WPKHpriv;
+    }
+
+    /** Returns the 4 byte header for DIP14 wallet P2PKH - public key part. */
+    public int getDip14HeaderP2PKHpub() {
+        return dip14HeaderP2PKHpub;
+    }
+
+    /** Returns the 4 byte header for DIP14 wallet P2PKH - private key part. */
+    public int getDip14HeaderP2PKHpriv() {
+        return dip14HeaderP2PKHpriv;
     }
     /**
      * Returns the number of coins that will be produced in total, on this
