@@ -176,6 +176,7 @@ public class TransactionBroadcast {
                         future.addListener(new Runnable() {
                             @Override
                             public void run() {
+                                Context.propagate(context);
                                 Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
                                 peer.close();
                             }
