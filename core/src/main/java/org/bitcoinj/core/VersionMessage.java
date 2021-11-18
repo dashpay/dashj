@@ -321,25 +321,33 @@ public class VersionMessage extends Message {
     }
 
     public static String toStringServices(long services) {
-        List<String> strings = new LinkedList<>();
-        if ((services & NODE_NETWORK) == NODE_NETWORK) {
-            strings.add("NETWORK");
-            services &= ~NODE_NETWORK;
+        List<String> a = new LinkedList<>();
+        if ((services & VersionMessage.NODE_NETWORK) == VersionMessage.NODE_NETWORK) {
+            a.add("NETWORK");
+            services &= ~VersionMessage.NODE_NETWORK;
         }
-        if ((services & NODE_GETUTXOS) == NODE_GETUTXOS) {
-            strings.add("GETUTXOS");
-            services &= ~NODE_GETUTXOS;
+        if ((services & VersionMessage.NODE_GETUTXOS) == VersionMessage.NODE_GETUTXOS) {
+            a.add("GETUTXOS");
+            services &= ~VersionMessage.NODE_GETUTXOS;
         }
-        if ((services & NODE_BLOOM) == NODE_BLOOM) {
-            strings.add("BLOOM");
-            services &= ~NODE_BLOOM;
+        if ((services & VersionMessage.NODE_BLOOM) == VersionMessage.NODE_BLOOM) {
+            a.add("BLOOM");
+            services &= ~VersionMessage.NODE_BLOOM;
         }
-        if ((services & NODE_NETWORK_LIMITED) == NODE_NETWORK_LIMITED) {
-            strings.add("NETWORK_LIMITED");
-            services &= ~NODE_NETWORK_LIMITED;
+        if ((services & VersionMessage.NODE_NETWORK_LIMITED) == VersionMessage.NODE_NETWORK_LIMITED) {
+            a.add("NETWORK_LIMITED");
+            services &= ~VersionMessage.NODE_NETWORK_LIMITED;
+        }
+        if ((services & VersionMessage.NODE_COMPACT_FILTERS) == VersionMessage.NODE_COMPACT_FILTERS) {
+            a.add("COMPACT_FILTERS");
+            services &= ~VersionMessage.NODE_NETWORK_LIMITED;
+        }
+        if ((services & VersionMessage.NODE_XTHIN) == VersionMessage.NODE_XTHIN) {
+            a.add("XTHIN");
+            services &= ~VersionMessage.NODE_XTHIN;
         }
         if (services != 0)
-            strings.add("remaining: " + Long.toBinaryString(services));
-        return Joiner.on(", ").join(strings);
+            a.add("remaining: " + Long.toBinaryString(services));
+        return Joiner.on(", ").join(a);
     }
 }
