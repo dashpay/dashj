@@ -136,6 +136,9 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
      * @param date the date of the last block downloaded
      */
     protected void progress(double pct, int blocksSoFar, Date date) {
+        if (caughtUp)
+            return;
+
         if (lastMasternodeListStage.ordinal() > Stage.BeforeStarting.ordinal() &&
             lastMasternodeListStage.ordinal() < Stage.Complete.ordinal()) {
             log.info(String.format(Locale.US, "Chain download %d%% done. Processing Masternode Lists...", (int) pct, blocksSoFar,
