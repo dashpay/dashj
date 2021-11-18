@@ -25,7 +25,6 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>bls</module>
     <module>core</module>
     <module>examples</module>
     <module>tools</module>

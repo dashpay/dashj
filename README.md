@@ -19,9 +19,12 @@ The dashj library is a Java implementation of the Dash protocol, which allows it
 To get started, it is best to have the latest JDK and Maven installed. The HEAD of the `master` branch contains the latest development code and various production releases are provided on feature branches.
 
 #### Building from the command line
-To initialize the repo after cloning it: 
+To initialize the repo after cloning it (this will build the bls shared library): 
 ```
 git submodule update  --init --recursive
+cd contrib/dashj-bls
+mvn package -DskipTests
+cd ../..
 ```
 To perform a full build use (this includes the dashjbls shared library):
 ```

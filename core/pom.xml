@@ -331,7 +331,7 @@
                     <!-- First argument increases the maximum heap size, second argument disables a nasty HotSpot optimization
                          (see http://jawspeak.com/2010/05/26/hotspot-caused-exceptions-to-lose-their-stack-traces-in-production-and-the-fix/)
                          and last argument is required for code coverage to work. -->
-                    <argLine>-Xmx1024m -XX:-OmitStackTraceInFastThrow ${surefireArgLine} -Djava.library.path=${project.basedir}/../bls/target/cmake</argLine>
+                    <argLine>-Xmx1024m -XX:-OmitStackTraceInFastThrow ${surefireArgLine} -Djava.library.path=${project.basedir}/../contrib/dashj-bls/bls/target/cmake</argLine>
                     <runOrder>alphabetical</runOrder>
                     <systemProperties>
                         <property>
@@ -355,7 +355,7 @@
         <dependency>
             <groupId>org.dashj</groupId>
             <artifactId>dashj-bls</artifactId>
-            <version>0.18-SNAPSHOT</version>
+            <version>0.18.0</version>
         </dependency>
         <dependency>
             <groupId>de.sfuhrm</groupId>
