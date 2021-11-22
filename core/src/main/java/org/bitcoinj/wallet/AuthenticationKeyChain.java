@@ -210,7 +210,7 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
 
     /**
      * Sets the KeyChainType of this AuthenticationKeyChain.  Used by Wallet when loading from a protobuf
-     * @param type
+     * @param type the type of authentication key chain
      */
     /* package */
     void setType(KeyChainType type) {
