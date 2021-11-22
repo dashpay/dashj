@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'eclipse'
+}
+
+dependencies {
+    implementation project(':core')
+    implementation 'com.google.guava:guava:28.2-android'
+    implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    implementation 'org.slf4j:slf4j-jdk14:1.7.30'
+    implementation 'org.dashj:dashj-bls:0.18.1'
+}
+
+sourceCompatibility = 1.8
+compileJava.options.encoding = 'UTF-8'
+compileTestJava.options.encoding = 'UTF-8'
+javadoc.options.encoding = 'UTF-8'
+
+mainClassName = "org.bitcoinj.tools.WalletTool"
+applicationName = "wallet-tool"
+
+task build_checkpoints(type: JavaExec) {
+    description = 'Create checkpoint files to use with CheckpointManager.'
+    main = 'org.bitcoinj.tools.BuildCheckpoints'
+    systemProperty "java.library.path", "../contrib/dashj-bls/bls/target/cmake"
+    if (project.hasProperty('appArgs') && appArgs.length() > 0)
+        args = Arrays.asList(appArgs.split("\\s+"))
+    classpath = sourceSets.main.runtimeClasspath
+}

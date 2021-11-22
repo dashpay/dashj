@@ -1,0 +1,20 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+eclipse.project.name = 'bitcoinj-examples'
+
+dependencies {
+    implementation project(':core')
+    implementation 'com.google.guava:guava:28.2-android'
+    implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    implementation 'org.slf4j:slf4j-jdk14:1.7.30'
+    implementation 'org.fusesource.leveldbjni:leveldbjni-all:1.8'
+
+    // Dash Specific
+    implementation 'org.dashj:dashj-bls:0.18.1'
+}
+
+sourceCompatibility = 1.8
+compileJava.options.encoding = 'UTF-8'
+compileTestJava.options.encoding = 'UTF-8'
+javadoc.options.encoding = 'UTF-8'
