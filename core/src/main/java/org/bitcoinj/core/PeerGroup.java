@@ -2557,7 +2557,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     /**
-     * Calls {@link PeerGroup#broadcastTransaction(Transaction,int)} with getMinBroadcastConnections() as the number
+     * Calls {@link PeerGroup#broadcastGovernanceVote(GovernanceVote,int)} with getMinBroadcastConnections() as the number
      * of connections to wait for before commencing broadcast.
      */
     @Override
@@ -2566,9 +2566,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     /**
-     * <p>Given a transaction, sends it un-announced to one peer and then waits for it to be received back from other
+     * <p>Given a governance vote, sends it un-announced to one peer and then waits for it to be received back from other
      * peers. Once all connected peers have announced the transaction, the future available via the
-     * {@link org.bitcoinj.core.TransactionBroadcast#future()} method will be completed. If anything goes
+     * {@link org.bitcoinj.governance.GovernanceVoteBroadcast#future()} method will be completed. If anything goes
      * wrong the exception will be thrown when get() is called, or you can receive it via a callback on the
      * {@link ListenableFuture}. This method returns immediately, so if you want it to block just call get() on the
      * result.</p>
@@ -2576,15 +2576,15 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * <p>Note that if the PeerGroup is limited to only one connection (discovery is not activated) then the future
      * will complete as soon as the transaction was successfully written to that peer.</p>
      *
-     * <p>The transaction won't be sent until there are at least minConnections active connections available.
+     * <p>The vote won't be sent until there are at least minConnections active connections available.
      * A good choice for proportion would be between 0.5 and 0.8 but if you want faster transmission during initial
      * bringup of the peer group you can lower it.</p>
      *
-     * <p>The returned {@link org.bitcoinj.core.TransactionBroadcast} object can be used to get progress feedback,
-     * which is calculated by watching the transaction propagate across the network and be announced by peers.</p>
+     * <p>The returned {@link org.bitcoinj.governance.GovernanceVoteBroadcast} object can be used to get progress feedback,
+     * which is calculated by watching the vote propagate across the network and be announced by peers.</p>
      */
     public GovernanceVoteBroadcast broadcastGovernanceVote(final GovernanceVote vote, final int minConnections) {
-        // If we don't have a record of where this tx came from already, set it to be ourselves so Peer doesn't end up
+        // If we don't have a record of where this vote came from already, set it to be ourselves so Peer doesn't end up
         // redownloading it from the network redundantly.
         if (vote.getConfidence().getSource().equals(TransactionConfidence.Source.UNKNOWN)) {
             log.info("Transaction source unknown, setting to SELF: {}", vote.getHash().toString());
@@ -2597,7 +2597,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             @Override
             public void onSuccess(GovernanceVote governanceVote) {
                 runningVoteBroadcasts.remove(broadcast);
-
             }
 
             @Override
@@ -2606,9 +2605,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 runningVoteBroadcasts.remove(broadcast);
             }
         }, MoreExecutors.directExecutor());
-        // Keep a reference to the TransactionBroadcast object. This is important because otherwise, the entire tree
+        // Keep a reference to the GovernanceVoteBroadcast object. This is important because otherwise, the entire tree
         // of objects we just created would become garbage if the user doesn't hold on to the returned future, and
-        // eventually be collected. This in turn could result in the transaction not being committed to the wallet
+        // eventually be collected. This in turn could result in the vote not being committed to the wallet
         // at all.
         runningVoteBroadcasts.add(broadcast);
         broadcast.broadcast();
