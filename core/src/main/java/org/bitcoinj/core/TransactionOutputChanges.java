@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * <p>TransactionOutputChanges represents a delta to the set of unspent outputs. It used as a return value for
- * {@link AbstractBlockChain#connectTransactions(int, Block)}. It contains the full list of transaction outputs created
+ * {@link AbstractBlockChain#connectTransactions(int, Block, StoredBlock)}. It contains the full list of transaction outputs created
  * and spent in a block. It DOES contain outputs created that were spent later in the block, as those are needed for
  * BIP30 (no duplicate txid creation if the previous one was not fully spent prior to this block) verification.</p>
  */

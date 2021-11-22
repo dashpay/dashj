@@ -751,7 +751,7 @@ public class Script {
     /**
      * Exposes the script interpreter. Normally you should not use this directly, instead use
      * {@link TransactionInput#verify(TransactionOutput)} or
-     * {@link Script#correctlySpends(Transaction, int, Coin, Script, Set)}. This method
+     * {@link Script#correctlySpends(Transaction, long, Script, Set)}. This method
      * is useful if you need more precise control or access to the final state of the stack. This interface is very
      * likely to change in future.
      *
@@ -771,7 +771,7 @@ public class Script {
     /**
      * Exposes the script interpreter. Normally you should not use this directly, instead use
      * {@link TransactionInput#verify(TransactionOutput)} or
-     * {@link Script#correctlySpends(Transaction, int, Coin, Script, Set)}. This method
+     * {@link Script#correctlySpends(Transaction, long, Script, Set)}. This method
      * is useful if you need more precise control or access to the final state of the stack. This interface is very
      * likely to change in future.
      */
@@ -1533,7 +1533,7 @@ public class Script {
      *                         Accessing txContainingThis from another thread while this method runs results in undefined behavior.
      * @param scriptSigIndex The index in txContainingThis of the scriptSig (note: NOT the index of the scriptPubKey).
      * @param scriptPubKey The connected scriptPubKey containing the conditions needed to claim the value.
-     * @deprecated Use {@link #correctlySpends(Transaction, int, Coin, Script, Set)}
+     * @deprecated Use {@link #correctlySpends(Transaction, long, Script, Set)}
      * instead so that verification flags do not change as new verification options
      * are added.
      */

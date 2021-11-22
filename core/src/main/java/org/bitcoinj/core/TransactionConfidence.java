@@ -208,9 +208,9 @@ public class TransactionConfidence {
             IX_TYPE,
 
             /**
-             * Occurs when the transaction was sent to at least one peer.  {@link @sentAt} will have the time
-             * that the message was sent to the peer(s).  This was added to allow interfaces to effectively
-             * communicate the status of the transaction when there is only 1 peer.
+             * Occurs when the transaction was sent to at least one peer.  {@link org.bitcoinj.core.TransactionConfidence#sentAt}
+             * will have the time that the message was sent to the peer(s).  This was added to allow interfaces to
+             * effectively communicate the status of the transaction when there is only 1 peer.
              */
             SENT,
 
