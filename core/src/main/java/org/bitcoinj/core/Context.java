@@ -479,7 +479,7 @@ public class Context {
             stopLLMQThread();
         }
 
-        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+        if (getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
             scheduledMasternodeSync.cancel(false);
             scheduledMasternodeSync = null;
             scheduledNetFulfilled.cancel(false);
