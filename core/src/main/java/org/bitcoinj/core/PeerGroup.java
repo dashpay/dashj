@@ -2586,7 +2586,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     public GovernanceVoteBroadcast broadcastGovernanceVote(final GovernanceVote vote, final int minConnections) {
         // If we don't have a record of where this vote came from already, set it to be ourselves so Peer doesn't end up
         // redownloading it from the network redundantly.
-        if (vote.getConfidence().getSource().equals(TransactionConfidence.Source.UNKNOWN)) {
+        if (vote.getConfidence().getSource().equals(GovernanceVoteConfidence.Source.UNKNOWN)) {
             log.info("Transaction source unknown, setting to SELF: {}", vote.getHash().toString());
             vote.getConfidence().setSource(GovernanceVoteConfidence.Source.SELF);
         }
