@@ -12,7 +12,7 @@ jobs:
         #os: [ubuntu-latest, macOS-latest, windows-latest]
         os: [ubuntu-latest, macOS-latest]
         #java: [ '8', '11', '17' ]
-        java: [ '8' ]
+        java: [ '8' , '11']
       fail-fast: false
     name: JAVA ${{ matrix.distribution }} ${{ matrix.java }} OS ${{ matrix.os }} Gradle ${{ matrix.gradle }}
     steps:
@@ -25,12 +25,14 @@ jobs:
         run: |
           git submodule update --init --recursive
           cd contrib/dashj-bls
-          mvn package -DskipTests
+          mvn package -DskipTests -Dmaven.javadoc.skip=true
           cd ../..
       - name: Build dashj with Gradle
         run: ./gradlew build
       - name: Upload Test Results and Reports
         run: |
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          chmod +x codecov
-          ./codecov -t ${CODECOV_TOKEN}
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            curl -Os https://uploader.codecov.io/latest/linux/codecov
+            chmod +x codecov
+            ./codecov -t ${CODECOV_TOKEN}
+          fi

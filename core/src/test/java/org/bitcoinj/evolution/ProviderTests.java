@@ -9,10 +9,13 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.wallet.*;
+import org.dashj.bls.BLS;
+import org.dashj.bls.BLSException;
 import org.dashj.bls.ExtendedPrivateKey;
 import org.dashj.bls.JNI;
 import org.dashj.bls.PrivateKey;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.bouncycastle.util.encoders.Base64;
 
@@ -49,6 +52,7 @@ public class ProviderTests {
     static {
         try {
             System.loadLibrary(JNI.LIBRARY_NAME);
+            BLS.Init();
         } catch (UnsatisfiedLinkError x) {
             fail(x.getMessage());
         }
@@ -215,6 +219,16 @@ public class ProviderTests {
 
         assertEquals("Provider transaction hashes aren't correct", providerRegistrationTransactionFromMessage.getHash().toString(),txIdString);
 
+    }
+
+    @Test
+    public void testPublicBytes() {
+        String bytes = "157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfa";
+        try {
+            org.dashj.bls.PublicKey.FromBytes(org.dashj.bls.Utils.HEX.decode(bytes));
+        } catch (Exception x) {
+            // this call is expected to fail the first time it is called
+        }
     }
     
     @Test

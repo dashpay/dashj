@@ -63,11 +63,11 @@ test {
         events "failed"
         exceptionFormat "full"
     }
+    finalizedBy jacocoTestReport // report is always generated after tests run
 }
 
 tasks.withType(Test) {
     systemProperty "java.library.path", "../contrib/dashj-bls/bls/target/cmake"
-    println (systemProperties.get("java.library.path"))
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
@@ -122,6 +122,6 @@ jacocoTestReport {
     dependsOn test // tests are required to run before generating the report
     reports {
         xml.enabled true
-        xml.destination file("${rootProject.projectDir}/build/reports/jacoco/jacoco.xml")
+        xml.destination file("${project.projectDir}/build/reports/jacoco/jacoco.xml")
     }
 }
