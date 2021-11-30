@@ -46,22 +46,15 @@ public class SyncStatusCount extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
-
-
         itemId = (int)readUint32();
         count = (int)readUint32();
 
         length = cursor - offset;
-
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-
         Utils.uint32ToByteStreamLE(itemId, stream);
         Utils.uint32ToByteStreamLE(count, stream);
     }
-
-
-
 }
