@@ -28,7 +28,7 @@ public interface PeerConnectedEventListener {
      * Called when a peer is connected. If this listener is registered to a {@link Peer} instead of a {@link PeerGroup},
      * peerCount will always be 1.
      *
-     * @param peer
+     * @param peer the peer that was connected
      * @param peerCount the total number of connected peers
      */
     void onPeerConnected(Peer peer, int peerCount);

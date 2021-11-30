@@ -30,7 +30,7 @@ public interface PeerDisconnectedEventListener {
      * {@link Peer} instead of a {@link PeerGroup}, peerCount will always be 0. This handler can be called without
      * a corresponding invocation of onPeerConnected if the initial connection is never successful.
      *
-     * @param peer
+     * @param peer the peer that was disconnected
      * @param peerCount the total number of connected peers
      */
     void onPeerDisconnected(Peer peer, int peerCount);
