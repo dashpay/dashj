@@ -85,16 +85,6 @@ artifacts {
     archives javadocJar
 }
 
-/*publishing {
-    tasks.withType(Sign)*.enabled = false
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            artifact sourcesJar
-        }
-    }
-}*/
-
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -102,9 +92,41 @@ publishing {
             from components.java
             artifact sourcesJar
             artifact javadocJar
-
             pom {
-                description = 'A Java Dash library'
+                name = 'DashJ'
+                description = 'Dash Java Library'
+                url = 'httsp://dashj.org'
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'hashengineering'
+                        name = 'HashEngineering'
+                        email = 'hashengineeringsolutions@gmail.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/dashevo/dashj.git'
+                    developerConnection = 'scm:git:ssh://github.com/dashevo/dashj.git'
+                    url = 'http://github.com/dashevo/dashj.git'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            // change URLs to point to your repos, e.g. http://my.org/repo
+            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username project.ossrhUsername
+                password project.ossrhPassword
             }
         }
     }
@@ -112,7 +134,13 @@ publishing {
 
 signing {
     required { gradle.taskGraph.hasTask("publish") }
-    sign configurations.archives
+    sign publishing.publications.mavenJava
+}
+
+javadoc {
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
 }
 
 assemble.dependsOn(publishToMavenLocal)
