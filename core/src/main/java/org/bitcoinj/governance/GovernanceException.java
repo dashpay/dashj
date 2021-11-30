@@ -29,7 +29,7 @@ public class GovernanceException extends Exception {
             return mappings;
         }
 
-        private Type(int value) {
+        Type(int value) {
             intValue = value;
             getMappings().put(value, this);
         }
