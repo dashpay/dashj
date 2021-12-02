@@ -228,18 +228,17 @@ public class BuildCheckpoints {
 
         checkState(manager.numCheckpoints() == expectedSize);
 
-        /*
         if (params.getId().equals(NetworkParameters.ID_MAINNET)) {
-            StoredBlock test = manager.getCheckpointBefore(1390500000); // Thu Jan 23 19:00:00 CET 2014
-            checkState(test.getHeight() == 280224);
+            StoredBlock test = manager.getCheckpointBefore(1433418480); // Jun 4, 2015 11:56 AM UTC
+            checkState(test.getHeight() == 279936);
             checkState(test.getHeader().getHashAsString()
-                    .equals("00000000000000000b5d59a15f831e1c45cb688a4db6b0a60054d49a9997fa34"));
+                    .equals("0000000000047d04b799de13c27c2a88784e31130e5d2c56bc1ab54e4245ce13"));
         } else if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
-            StoredBlock test = manager.getCheckpointBefore(1390500000); // Thu Jan 23 19:00:00 CET 2014
-            checkState(test.getHeight() == 167328);
+            StoredBlock test = manager.getCheckpointBefore(1567419582); // Sep 2, 2019 3:19:42 AM
+            checkState(test.getHeight() == 167040);
             checkState(test.getHeader().getHashAsString()
-                    .equals("0000000000035ae7d5025c2538067fe7adb1cf5d5d9c31b024137d9090ed13a9"));
-        }*/
+                    .equals("00000000036ef387e3966fe879fa8938cd8e51f4a94ecdcbb4f175761004bd36"));
+        }
     }
 
     private static void startPeerGroup(PeerGroup peerGroup, InetAddress ipAddress) {
