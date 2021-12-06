@@ -784,7 +784,7 @@ public class Peer extends PeerSocketHandler {
             lock.unlock();
         }
 
-        if (vDownloadHeaders) {
+        if (vDownloadHeaders && headerChain != null) {
             try {
                 for (int i = 0; i < m.getBlockHeaders().size(); i++) {
                     Block header = m.getBlockHeaders().get(i);
