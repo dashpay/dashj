@@ -93,7 +93,7 @@ public class GovernanceTriggerManager {
             }
 
             // Remove triggers that are invalid or already executed
-            log.info("gobject--CGovernanceTriggerManager::CleanAndRemove -- mapTrigger.size() = %d\n", mapTrigger.size());
+            log.info("gobject--CGovernanceTriggerManager::CleanAndRemove -- mapTrigger.size() = {}", mapTrigger.size());
             Iterator<Map.Entry<Sha256Hash, Superblock>> it = mapTrigger.entrySet().iterator();
             while (it.hasNext()) {
                 boolean remove = false;

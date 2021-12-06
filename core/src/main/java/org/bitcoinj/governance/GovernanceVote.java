@@ -341,19 +341,19 @@ public class GovernanceVote extends ChildMessage implements Serializable {
 
     public boolean isValid(boolean useVotingKey) {
         if (nTime > Utils.currentTimeSeconds() + (60 * 60)) {
-            log.info("gobject--CGovernanceVote::IsValid -- vote is too far ahead of current time - %s - nTime %lli - Max Time %lli\n", getHash().toString(), nTime, Utils.currentTimeSeconds() + (60 * 60));
+            log.info("gobject--CGovernanceVote::IsValid -- vote is too far ahead of current time - {} - nTime {} - Max Time {}", getHash().toString(), nTime, Utils.currentTimeSeconds() + (60 * 60));
             return false;
         }
 
         // support up to 50 actions (implemented in sentinel)
         if (nVoteSignal > MAX_SUPPORTED_VOTE_SIGNAL) {
-            log.info("gobject--CGovernanceVote::IsValid -- Client attempted to vote on invalid signal(%d) - %s\n", nVoteSignal, getHash().toString());
+            log.info("gobject--CGovernanceVote::IsValid -- Client attempted to vote on invalid signal({}) - {}", nVoteSignal, getHash().toString());
             return false;
         }
 
         // 0=none, 1=yes, 2=no, 3=abstain. Beyond that reject votes
         if (nVoteOutcome > 3) {
-            log.info("gobject--CGovernanceVote::IsValid -- Client attempted to vote on invalid outcome(%d) - %s\n", nVoteSignal, getHash().toString());
+            log.info("gobject--CGovernanceVote::IsValid -- Client attempted to vote on invalid outcome({}) - {}", nVoteSignal, getHash().toString());
             return false;
         }
 

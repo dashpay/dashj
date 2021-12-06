@@ -127,7 +127,7 @@ public class Superblock extends GovernanceObject {
         // some part of all blocks issued during the cycle goes to superblock, see GetBlockSubsidy
         Coin nSuperblockPartOfSubsidy = Block.getBlockInflation(params, nBlockHeight - 1, nBits, true);
         Coin nPaymentsLimit = nSuperblockPartOfSubsidy.multiply(params.getSuperblockCycle());
-        log.info("gobject--CSuperblock::GetPaymentsLimit -- Valid superblock height %d, payments max %lld\n", nBlockHeight, nPaymentsLimit);
+        log.info("gobject--CSuperblock::GetPaymentsLimit -- Valid superblock height {}, payments max {}", nBlockHeight, nPaymentsLimit);
 
         return nPaymentsLimit;
     }
@@ -234,7 +234,7 @@ public class Superblock extends GovernanceObject {
                 vecPayments.add(payment);
             } else {
                 vecPayments.clear();
-                String message = "CSuperblock::ParsePaymentSchedule -- Invalid payment found: address = " + address.toString() + ", amount = " + nAmount;
+                String message = "CSuperblock::ParsePaymentSchedule -- Invalid payment found: address = " + address + ", amount = " + nAmount;
                 log.info(message);
                 throw new SuperblockException(message);
             }
