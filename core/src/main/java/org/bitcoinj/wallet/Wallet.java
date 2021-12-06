@@ -2454,7 +2454,7 @@ public class Wallet extends BaseTaggableObject
             // entirely by this point. We could and maybe should rebroadcast them so the network remembers and tries
             // to confirm them again. But this is a deeply unusual edge case that due to the maturity rule should never
             // happen in practice, thus for simplicities sake we ignore it here.
-            log.info("  coinbase tx <-dead: confidence {}", tx.getTxId(),
+            log.info("  coinbase tx <-dead: confidence {} {}", tx.getTxId(),
                     tx.getConfidence().getConfidenceType().name());
             dead.remove(tx.getTxId());
         }

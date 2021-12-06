@@ -1374,7 +1374,7 @@ public class GovernanceManager extends AbstractManager {
         } else {
             syncSingleObjAndItsVotes(peer, message.prop, message.bloomFilter);
         }
-        log.info("gobject--MNGOVERNANCESYNC -- syncing governance objects to our peer at %s", peer.getAddress().toString());
+        log.info("gobject--MNGOVERNANCESYNC -- syncing governance objects to our peer at {}", peer.getAddress());
     }
 
     public void syncSingleObjAndItsVotes(Peer pnode, Sha256Hash nProp, BloomFilter filter) {
