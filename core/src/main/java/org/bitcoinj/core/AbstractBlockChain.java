@@ -565,7 +565,7 @@ public abstract class AbstractBlockChain {
                 StoredBlock commonParent = findSplit(newBlock, chainHead, blockStore);
                 if (chainLockedBlock != null) {
                     StoredBlock cursor = chainHead;
-                    while (cursor != null && !commonParent.getHeader().getHash().equals(cursor) &&
+                    while (cursor != null && !commonParent.getHeader().getHash().equals(cursor.getHeader().getHash()) &&
                         cursor.getHeight() >= chainLockedBlock.getHeight()) {
                         if (cursor.getHeader().getHash().equals(chainLockedBlock.getHeader().getHash())) {
                             isOldBlockChainLocked = true;
