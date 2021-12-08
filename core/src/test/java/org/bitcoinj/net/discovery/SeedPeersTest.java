@@ -18,6 +18,7 @@
 package org.bitcoinj.net.discovery;
 
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.params.MainNetParams;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertThrows;
 
 public class SeedPeersTest {
     private static final NetworkParameters MAINNET = MainNetParams.get();
@@ -52,5 +54,17 @@ public class SeedPeersTest {
         SeedPeers seedPeers = new SeedPeers(MAINNET);
         InetSocketAddress[] addresses = seedPeers.getPeers(0, 0, TimeUnit.SECONDS);
         assertThat(addresses.length, equalTo(MAINNET.getAddrSeeds().length));
+    }
+
+    @Test
+    public void getPeers_services() {
+        SeedPeers seedPeers = new SeedPeers(MAINNET);
+        assertThrows(PeerDiscoveryException.class, () -> seedPeers.getPeers(VersionMessage.NODE_NETWORK, 0, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void getPeers_empty() {
+        SeedPeers seedPeers = new SeedPeers(new int [0], MAINNET);
+        assertThrows(PeerDiscoveryException.class, () -> seedPeers.getPeers(VersionMessage.NODE_NETWORK, 0, TimeUnit.SECONDS));
     }
 }
