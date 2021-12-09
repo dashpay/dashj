@@ -27,6 +27,7 @@ import org.bitcoinj.script.ScriptOpCodes;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -199,7 +200,7 @@ public class BlockTest {
         block.verify(5000, EnumSet.of(Block.VerifyFlag.HEIGHT_IN_COINBASE));
     }
 
-    /*@Test
+    @Test @Ignore // This needs to be updated for Dash
     public void testReceiveCoinbaseTransaction() throws Exception {
         // Block 169482 (hash 0000000000000756935f1ee9d5987857b604046f846d3df56d024cdb5f368665)
         // contains coinbase transactions that are mining pool shares.
@@ -237,7 +238,7 @@ public class BlockTest {
         // Coinbase transaction should have been received successfully but be unavailable to spend (too young).
         assertEquals(BALANCE_AFTER_BLOCK, wallet.getBalance(BalanceType.ESTIMATED));
         assertEquals(Coin.ZERO, wallet.getBalance(BalanceType.AVAILABLE));
-    }*/
+    }
 
     @Test
     public void isBIPs() throws Exception {
