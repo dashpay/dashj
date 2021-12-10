@@ -24,6 +24,7 @@ import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.ScriptOpCodes;
+import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.junit.Before;
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 
 import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.*;
@@ -200,30 +202,31 @@ public class BlockTest {
         block.verify(5000, EnumSet.of(Block.VerifyFlag.HEIGHT_IN_COINBASE));
     }
 
-    @Test @Ignore // This needs to be updated for Dash
+    @Test // This needs to be updated for Dash
     public void testReceiveCoinbaseTransaction() throws Exception {
-        // Block 169482 (hash 0000000000000756935f1ee9d5987857b604046f846d3df56d024cdb5f368665)
+        // Block 49389 from testnet (hash 0000000000a979f1ed3ab900dfd1aed39b47ab2aee9c011976d3f96eabbd276a)
         // contains coinbase transactions that are mining pool shares.
         // The private key MINERS_KEY is used to check transactions are received by a wallet correctly.
 
-        // The address for this private key is 1GqtGtn4fctXuKxsVzRPSLmYWN1YioLi9y.
-        final String MINING_PRIVATE_KEY = "5JDxPrBRghF1EvSBjDigywqfmAjpHPmTJxYtQTYJxJRHLLQA4mG";
+        // The address for this private key is yhmDZGmiwjCPJrTFFiBFZJw31PhvJFJAwq.
+        final String MINING_PRIVATE_KEY = "cQoQpMDThg8DEojcYV5u24V6E7hduWsiMHG75PVJ7beRFbYmmJv4";
 
-        final long BLOCK_NONCE = 3973947400L;
-        final Coin BALANCE_AFTER_BLOCK = Coin.valueOf(22223642);
-        Block block169482 = MAINNET.getDefaultSerializer().makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block169482.dat")));
+        final long BLOCK_NONCE = 1964091772L;
+        final Coin BALANCE_AFTER_BLOCK = Coin.valueOf(945025609L);
+        Block block49389 = TESTNET.getDefaultSerializer().makeBlock(
+                ByteStreams.toByteArray(Objects.requireNonNull(getClass().getResourceAsStream("block_testnet49389.dat")))
+        );
 
         // Check block.
-        assertNotNull(block169482);
-        block169482.verify(169482, EnumSet.noneOf(Block.VerifyFlag.class));
-        assertEquals(BLOCK_NONCE, block169482.getNonce());
+        block49389.verify(49389, EnumSet.noneOf(Block.VerifyFlag.class));
+        assertEquals(BLOCK_NONCE, block49389.getNonce());
 
-        StoredBlock storedBlock = new StoredBlock(block169482, BigInteger.ONE, 169482); // Nonsense work - not used in test.
+        StoredBlock storedBlock = new StoredBlock(block49389, BigInteger.ONE, 49389); // Nonsense work - not used in test.
 
         // Create a wallet contain the miner's key that receives a spend from a coinbase.
-        ECKey miningKey = DumpedPrivateKey.fromBase58(MAINNET, MINING_PRIVATE_KEY).getKey();
+        ECKey miningKey = DumpedPrivateKey.fromBase58(TESTNET, MINING_PRIVATE_KEY).getKey();
         assertNotNull(miningKey);
-        Context context = new Context(MAINNET);
+        Context context = new Context(TESTNET);
         Wallet wallet = new Wallet(context);
         wallet.importKey(miningKey);
 
@@ -231,7 +234,7 @@ public class BlockTest {
         assertEquals(Coin.ZERO, wallet.getBalance());
 
         // Give the wallet the first transaction in the block - this is the coinbase tx.
-        List<Transaction> transactions = block169482.getTransactions();
+        List<Transaction> transactions = block49389.getTransactions();
         assertNotNull(transactions);
         wallet.receiveFromBlock(transactions.get(0), storedBlock, NewBlockType.BEST_CHAIN, 0);
 
