@@ -15,8 +15,6 @@
  */
 package com.hashengineering.crypto;
 
-import com.google.common.base.Preconditions;
-
 import fr.cryptohash.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,11 +69,7 @@ public class X11 {
 
     public static byte[] x11Digest(byte[] input, int offset, int length)
     {
-        try {
-            return native_library_loaded ? x11_native(input, offset, length) : x11(input, offset, length);
-        } catch (Exception e) {
-            return null;
-        }
+         return native_library_loaded ? x11_native(input, offset, length) : x11(input, offset, length);
     }
 
     public static byte[] x11Digest(byte[] input) {
