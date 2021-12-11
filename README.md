@@ -28,6 +28,16 @@ cd contrib/dashj-bls
 mvn package -DskipTests
 cd ../..
 ```
+To use the x11 native library:
+```shell
+cd contrib/x11
+mkdir build
+cd build
+cmake ..
+cmake --build .
+cd ../../..
+```
+
 To perform a full build use (this includes the dashjbls shared library):
 ```
 mvn clean package
