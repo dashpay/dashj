@@ -32,7 +32,7 @@ jobs:
           cd contrib/x11
           mkdir build
           cd build
-          cmake .
+          cmake ..
           cmake --build .
           cd ../../..
       - name: Build dashj with Gradle
