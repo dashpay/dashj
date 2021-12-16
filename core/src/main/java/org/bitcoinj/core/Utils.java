@@ -771,6 +771,15 @@ public class Utils {
         stream.write(vBytes);
     }
 
+    public static void intArrayListToStream(ArrayList<Integer> vec, OutputStream stream) throws IOException
+    {
+        int size = vec.size();
+        stream.write(new VarInt(vec.size()).encode());
+        for (int i = 0; i < size; ++i) {
+            Utils.uint32ToByteStreamLE(vec.get(i), stream);
+        }
+    }
+
     public static String toString(List<byte[]> stack) {
         List<String> parts = new ArrayList<>(stack.size());
         for (byte[] push : stack)
