@@ -398,7 +398,6 @@ public abstract class Message {
 
         byte[] vBytes = readBytes((int)((size + 7) / 8));
 
-
         for (int p = 0; p < size; p++)
             vec.add((vBytes[p / 8] & (1 << (p % 8))) != 0);
         if (vBytes.length * 8 != size) {
@@ -409,6 +408,16 @@ public abstract class Message {
             }
         }
         return vec;
+    }
+
+    public ArrayList<Integer> readIntArrayList()
+    {
+        int size = (int)readVarInt();
+        ArrayList<Integer> list = new ArrayList<>(size);
+        for (int p = 0; p < size; p++) {
+            list.add((int) readUint32());
+        }
+        return list;
     }
 
     /**
