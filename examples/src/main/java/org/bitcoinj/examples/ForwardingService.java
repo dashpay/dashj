@@ -70,6 +70,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("schnapps")) {
             params = SchnappsDevNetParams.get();
             filePrefix = "forwarding-service-schnapps";
+        } else if (args.length > 1 && args[1].equals("malort")) {
+            params = MalortDevNetParams.get();
+            filePrefix = "forwarding-service-malort";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
