@@ -1,5 +1,7 @@
 package org.bitcoinj.evolution;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.utils.Pair;
@@ -24,6 +26,25 @@ public class SimplifiedMasternodeListDiff extends Message {
 
     public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload) {
         super(params, payload, 0);
+    }
+
+    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int offset) {
+        super(params, payload, offset);
+    }
+
+    public SimplifiedMasternodeListDiff(NetworkParameters params, Sha256Hash prevBlockHash, Sha256Hash blockHash,
+                                        PartialMerkleTree cbTxMerkleTree, Transaction coinBaseTx,
+                                        List<SimplifiedMasternodeListEntry> mnList,
+                                        List<FinalCommitment> quorumList) {
+        super(params);
+        this.prevBlockHash = prevBlockHash;
+        this.blockHash = blockHash;
+        this.cbTxMerkleTree = cbTxMerkleTree;
+        this.coinBaseTx = coinBaseTx;
+        this.deletedMNs = Sets.newHashSet();
+        this.mnList = Lists.newArrayList(mnList);
+        this.deletedQuorums = Lists.newArrayList();
+        this.newQuorums = Lists.newArrayList(quorumList);
     }
 
     @Override
@@ -57,7 +78,7 @@ public class SimplifiedMasternodeListDiff extends Message {
             size = (int)readVarInt();
             deletedQuorums = new ArrayList<Pair<Integer, Sha256Hash>>(size);
             for(int i = 0; i < size; ++i) {
-                deletedQuorums.add(new Pair((int)readBytes(1)[0], readHash()));
+                deletedQuorums.add(new Pair<>((int)readBytes(1)[0], readHash()));
             }
 
             size = (int)readVarInt();
@@ -89,6 +110,17 @@ public class SimplifiedMasternodeListDiff extends Message {
         stream.write(new VarInt(mnList.size()).encode());
         for(SimplifiedMasternodeListEntry entry : mnList) {
             entry.bitcoinSerializeToStream(stream);
+        }
+
+        stream.write(new VarInt(deletedQuorums.size()).encode());
+        for(Pair<Integer, Sha256Hash> entry : deletedQuorums) {
+            stream.write(entry.getFirst());
+            stream.write(entry.getSecond().getReversedBytes());
+        }
+
+        stream.write(new VarInt(newQuorums.size()).encode());
+        for(FinalCommitment entry : newQuorums) {
+            entry.bitcoinSerialize(stream);
         }
     }
 
