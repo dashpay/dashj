@@ -91,6 +91,10 @@ public class MasternodeAddress extends NetAddress {
         return new MasternodeAddress(InetAddresses.forString("127.0.0.1"), params.getPort());
     }
 
+    public MasternodeAddress(String hostname, int port) {
+        this(InetAddresses.forString(hostname), port);
+    }
+
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         // Java does not provide any utility to map an IPv4 address into IPv6 space, so we have to do it by hand.

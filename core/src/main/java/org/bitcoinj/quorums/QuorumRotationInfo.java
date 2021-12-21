@@ -35,6 +35,12 @@ public class QuorumRotationInfo extends Message {
     SimplifiedMasternodeListDiff mnListDiffAtHMinusC;
     SimplifiedMasternodeListDiff mnListDiffAtHMinus2C;
     SimplifiedMasternodeListDiff mnListDiffAtHMinus3C;
+
+    QuorumRotationInfo(NetworkParameters params) {
+        super(params);
+
+    }
+
     public QuorumRotationInfo(NetworkParameters params, byte [] payload) {
         super(params, payload, 0);
     }
@@ -120,5 +126,37 @@ public class QuorumRotationInfo extends Message {
                 ", mnListDiffAtHMinus2C=" + mnListDiffAtHMinus2C +
                 ", mnListDiffAtHMinus3C=" + mnListDiffAtHMinus3C +
                 '}';
+    }
+
+    void setCreationHeight(long creationHeight) {
+        this.creationHeight = creationHeight;
+    }
+
+    void setQuorumSnapshotAtHMinusC(QuorumSnapshot quorumSnapshotAtHMinusC) {
+        this.quorumSnapshotAtHMinusC = quorumSnapshotAtHMinusC;
+    }
+
+    void setQuorumSnapshotAtHMinus2C(QuorumSnapshot quorumSnapshotAtHMinusC) {
+        this.quorumSnapshotAtHMinus2C = quorumSnapshotAtHMinusC;
+    }
+
+    public void setQuorumSnapshotAtHMinus3C(QuorumSnapshot quorumSnapshotAtHMinus3C) {
+        this.quorumSnapshotAtHMinus3C = quorumSnapshotAtHMinus3C;
+    }
+
+    public void setMnListDiffTip(SimplifiedMasternodeListDiff mnListDiffTip) {
+        this.mnListDiffTip = mnListDiffTip;
+    }
+
+    public void setMnListDiffAtHMinusC(SimplifiedMasternodeListDiff mnListDiffAtHMinusC) {
+        this.mnListDiffAtHMinusC = mnListDiffAtHMinusC;
+    }
+
+    public void setMnListDiffAtHMinus2C(SimplifiedMasternodeListDiff mnListDiffAtHMinus2C) {
+        this.mnListDiffAtHMinus2C = mnListDiffAtHMinus2C;
+    }
+
+    public void setMnListDiffAtHMinus3C(SimplifiedMasternodeListDiff mnListDiffAtHMinus3C) {
+        this.mnListDiffAtHMinus3C = mnListDiffAtHMinus3C;
     }
 }
