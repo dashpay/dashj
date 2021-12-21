@@ -31,7 +31,10 @@ import org.bitcoinj.net.NioClient;
 import org.bitcoinj.net.NioClientManager;
 import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.quorums.ChainLockSignature;
+import org.bitcoinj.quorums.GetQuorumRotationInfo;
 import org.bitcoinj.quorums.InstantSendLock;
+import org.bitcoinj.quorums.LLMQUtils;
+import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -605,6 +608,8 @@ public class Peer extends PeerSocketHandler {
             // We ignore this message, because we don't announce new blocks.
         } else if (m instanceof SendAddressMessageV2) {
             // We ignore this message, because we don't reply to sendaddrv2 message.
+        } else if (m instanceof QuorumRotationInfo) {
+            context.masternodeListManager.processQuorumRotationInfo(this, (QuorumRotationInfo) m, false);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
@@ -894,8 +899,14 @@ public class Peer extends PeerSocketHandler {
                     headerChain.getBlockStore().get(headerChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET) :
                     blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
             if (context.masternodeListManager.getListAtChainTip().getHeight() < masternodeListBlock.getHeight()) {
-                GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
-                sendMessage(msg);
+                if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+                    GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
+                    sendMessage(msg);
+                } else {
+                    GetQuorumRotationInfo msg = new GetQuorumRotationInfo(params, 0, Lists.newArrayList(), headerChain.getChainHead().getHeader().getHash());
+                    log.info("message = {}, {}", msg, this);
+                    sendMessage(msg);
+                }
                 queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Requesting, null);
             } else {
                 context.peerGroup.triggerMnListDownloadComplete();

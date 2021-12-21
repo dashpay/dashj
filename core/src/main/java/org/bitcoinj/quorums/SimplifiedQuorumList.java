@@ -417,14 +417,18 @@ public class SimplifiedQuorumList extends Message {
             }
         }
 
-        ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
-        if(members == null) {
-            //no information about this quorum because it is before we were downloading
-            log.warn("masternode list is missing to verify quorum");
-            return;
-        }
-        if (!commitment.verify(members, true)) {
-            throw new VerificationException("invalid quorum commitment: " + commitment);
+        if (!LLMQUtils.isQuorumRotationEnabled(Context.get(), params, llmqParameters.type)) {
+
+            ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
+            if(members == null) {
+                //no information about this quorum because it is before we were downloading
+                log.warn("masternode list is missing to verify quorum");
+                return;
+            }
+
+            if (!commitment.verify(members, true)) {
+                throw new VerificationException("invalid quorum commitment: " + commitment);
+            }
         }
     }
 }

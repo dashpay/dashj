@@ -28,12 +28,12 @@ public class LLMQParametersTest {
                 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 3, 3);
         LLMQParameters llmq_devnet = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_DEVNET, "llmq_devnet",
-                10, 7, 6, 24, 2, 10,
+                12, 7, 6, 24, 2, 10,
                 18, 7, 3, 4, 6);
         LLMQParameters llmq50_60 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_50_60, "llmq_50_60",
                 50, 40, 30, 24, 2, 10,
                 18,40, 24, 25, 25);
-       LLMQParameters llmq400_60 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_400_60, "llmq_400_60",
+        LLMQParameters llmq400_60 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_400_60, "llmq_400_60",
                 400, 300, 240, 24*12, 4, 20,
                 28, 300, 4, 5, 100);
         LLMQParameters llmq400_85 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_400_85, "llmq_400_85",
