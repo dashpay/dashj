@@ -89,6 +89,7 @@ public class Context {
     public InstantSendManager instantSendManager;
     public SigningManager signingManager;
     public QuorumManager quorumManager;
+    public QuorumSnapshotManager quorumSnapshotManager;
     private RecoveredSignaturesDatabase recoveredSigsDB;
     public ChainLocksHandler chainLockHandler;
     private LLMQBackgroundThread llmqBackgroundThread;
@@ -265,6 +266,7 @@ public class Context {
         masternodeListManager = new SimplifiedMasternodeListManager(this);
         recoveredSigsDB = new SPVRecoveredSignaturesDatabase(this);
         quorumManager = new SPVQuorumManager(this, masternodeListManager);
+        quorumSnapshotManager = new QuorumSnapshotManager(this);
         signingManager = new SigningManager(this, recoveredSigsDB);
 
         instantSendDB = new SPVInstantSendDatabase(this);
@@ -382,7 +384,7 @@ public class Context {
         if(initializedDash) {
             sporkManager.setBlockChain(chain, peerGroup);
             masternodeSync.setBlockChain(chain, netFullfilledRequestManager);
-            masternodeListManager.setBlockChain(chain, peerGroup != null ? peerGroup.headerChain : null, peerGroup);
+            masternodeListManager.setBlockChain(chain, peerGroup != null ? peerGroup.headerChain : null, peerGroup, quorumManager, quorumSnapshotManager);
             instantSendManager.setBlockChain(chain, peerGroup);
             signingManager.setBlockChain(chain);
             chainLockHandler.setBlockChain(chain);
@@ -463,7 +465,7 @@ public class Context {
             startLLMQThread();
         }
 
-        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+        if (getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
             scheduledMasternodeSync = scheduledExecutorService.scheduleWithFixedDelay(
                     () -> masternodeSync.doMaintenance(), 1, 1, TimeUnit.SECONDS);
             scheduledNetFulfilled = scheduledExecutorService.scheduleWithFixedDelay(
