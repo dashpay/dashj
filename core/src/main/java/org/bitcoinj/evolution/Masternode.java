@@ -5,7 +5,7 @@ import org.bitcoinj.crypto.BLSPublicKey;
 
 public abstract class Masternode extends ChildMessage {
 
-    Sha256Hash proTxHash;
+    Sha256Hash proRegTxHash;
 
     Masternode(NetworkParameters params) {
         super(params);
@@ -16,11 +16,11 @@ public abstract class Masternode extends ChildMessage {
     }
 
     public Sha256Hash getProRegTxHash() {
-        return proTxHash;
+        return proRegTxHash;
     }
 
     public Sha256Hash getProTxHash() {
-        return proTxHash;
+        return proRegTxHash;
     }
 
     public abstract Sha256Hash getConfirmedHash();
@@ -37,4 +37,18 @@ public abstract class Masternode extends ChildMessage {
 
     public abstract Sha256Hash getConfirmedHashWithProRegTxHash();
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Masternode that = (Masternode) o;
+
+        return proRegTxHash.equals(that.proRegTxHash);
+    }
+
+    @Override
+    public int hashCode() {
+        return proRegTxHash.hashCode();
+    }
 }

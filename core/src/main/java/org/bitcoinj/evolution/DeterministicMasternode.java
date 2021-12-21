@@ -14,7 +14,7 @@ public class DeterministicMasternode extends Masternode {
 
     public DeterministicMasternode(DeterministicMasternode other) {
         super(other.params);
-        proTxHash = other.proTxHash;
+        proRegTxHash = other.proRegTxHash;
         collateralOutpoint = other.collateralOutpoint;
         operatorReward = other.operatorReward;
         state = new DeterministicMasternodeState(other.state);
@@ -26,7 +26,7 @@ public class DeterministicMasternode extends Masternode {
 
     @Override
     protected void parse() throws ProtocolException {
-        proTxHash = readHash();
+        proRegTxHash = readHash();
         collateralOutpoint = new TransactionOutPoint(params, payload, cursor);
         cursor += collateralOutpoint.getMessageSize();
         operatorReward = (short)readUint16();
@@ -37,7 +37,7 @@ public class DeterministicMasternode extends Masternode {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        stream.write(proTxHash.getReversedBytes());
+        stream.write(proRegTxHash.getReversedBytes());
         collateralOutpoint.bitcoinSerialize(stream);
         Utils.uint16ToByteStreamLE(operatorReward, stream);
         state.bitcoinSerializeToStream(stream);
@@ -75,6 +75,6 @@ public class DeterministicMasternode extends Masternode {
     public String toString()
     {
         return String.format("DeterministicMN(proTxHash=%s, nCollateralIndex=%s, operatorReward=%f, state=%s",
-                proTxHash, collateralOutpoint, (double)operatorReward / 100, state.toString());
+                proRegTxHash, collateralOutpoint, (double)operatorReward / 100, state.toString());
     }
 }
