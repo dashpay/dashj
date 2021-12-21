@@ -273,13 +273,17 @@ public class QuorumRotationInfoTest {
                 Lists.newArrayList()
         ));
 
-        Context context = Context.getOrCreate(PARAMS);
+        Context context;
+        try {
+            context = Context.get();
+        } catch (IllegalStateException e) {
+            context = Context.getOrCreate(PARAMS);
+        }
         BlockChain blockChain = new BlockChain(PARAMS, new MemoryBlockStore(PARAMS));
         PeerGroup peerGroup = new PeerGroup(PARAMS, blockChain);
         context.initDash(true, true);
         context.masternodeListManager.setBlockChain(blockChain, null, peerGroup, context.quorumManager, context.quorumSnapshotManager);
 
-        //blockChain.add(new Block())
         context.masternodeListManager.processQuorumRotationInfo(null, qrinfo, true);
 
         ArrayList<Masternode> list = context.masternodeListManager.getAllQuorumMembers(LLMQParameters.LLMQType.LLMQ_DEVNET, Sha256Hash.wrap("512157e793d0cf790b6e6305efebcb2745dfc279ae9ef3b8cc0c8ff1c29d978d"));
