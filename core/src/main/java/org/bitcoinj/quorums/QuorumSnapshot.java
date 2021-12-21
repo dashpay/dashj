@@ -45,6 +45,12 @@ public class QuorumSnapshot extends Message {
         skipList = Lists.newArrayList();
     }
 
+    public QuorumSnapshot(List<Boolean> activeQuorumMembers, int skipListMode, List<Integer> skipList) {
+        this.activeQuorumMembers = Lists.newArrayList(activeQuorumMembers);
+        this.skipListMode = skipListMode;
+        this.skipList = Lists.newArrayList(skipList);
+    }
+
     @Override
     protected void parse() throws ProtocolException {
         skipListMode = (int)readUint32();
@@ -87,5 +93,9 @@ public class QuorumSnapshot extends Message {
                 ", skipListMode=" + SnapshotSkipMode.fromValue(skipListMode) +
                 ", skipList=" + skipList +
                 '}';
+    }
+
+    public void setSkipList(ArrayList<Integer> skipList) {
+        this.skipList = skipList;
     }
 }

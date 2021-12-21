@@ -26,7 +26,7 @@ public class SimplifiedMasternodeList extends Message {
 
     private CoinbaseTx coinbaseTxPayload;
 
-    SimplifiedMasternodeList(NetworkParameters params) {
+    public SimplifiedMasternodeList(NetworkParameters params) {
         super(params);
         blockHash = params.getGenesisBlock().getHash();
         height = -1;
