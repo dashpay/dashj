@@ -123,6 +123,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         deterministicMasternodesEnabled = true;
 
         DIP0008BlockHeight = 78800;
+        DIP0024BlockHeight = Integer.MAX_VALUE;
 
         //LLMQ parameters
         addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
