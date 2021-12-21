@@ -61,7 +61,7 @@ public class MalortDevNetParams extends DevNetParams {
                 MASTERNODES, true, 70220);
         dnsSeeds = MASTERNODES;
 
-        minimumDifficultyBlocks = 1000;
+        // minimumDifficultyBlocks = 1000;
         DIP0024BlockHeight = 2200;
 
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
