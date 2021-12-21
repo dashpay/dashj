@@ -180,12 +180,13 @@ public class MasternodeSync {
             queueOnSyncStatusChanged(-1, 0);
         }
     }
-
-    public void bumpAssetLastTime(@Nullable String strFuncName)
-    {
+    public void bumpAssetLastTime(@Nullable String strFuncName) {
+        bumpAssetLastTime(strFuncName, true);
+    }
+    public void bumpAssetLastTime(@Nullable String strFuncName, boolean debug) {
         if (isSynced()) return;
         timeLastBumped.set(Utils.currentTimeSeconds());
-        if (strFuncName != null)
+        if (strFuncName != null && debug)
             log.info("bumpAssetLastTime -- "+ strFuncName);
     }
 
@@ -520,7 +521,7 @@ public class MasternodeSync {
 
         if (!isBlockchainSynced()) {
             // Postpone timeout each time new block arrives while we are still syncing blockchain
-            bumpAssetLastTime("updateBlockTip");
+            bumpAssetLastTime("updateBlockTip", false);
         }
 
         if (initialDownload) {
