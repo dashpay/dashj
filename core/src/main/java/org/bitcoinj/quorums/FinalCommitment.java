@@ -1,8 +1,25 @@
-package org.bitcoinj.quorums;
+/*
+ * Copyright 2019 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+package org.bitcoinj.quorums;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSLazyPublicKey;
+import org.bitcoinj.crypto.BLSLazySignature;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.Masternode;
@@ -18,12 +35,14 @@ import java.util.Collections;
 
 public class FinalCommitment extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 1;
+    public static final int INDEXED_QUORUM_VERSION = 2;
 
     private static final Logger log = LoggerFactory.getLogger(FinalCommitment.class);
 
 
     int llmqType; //short
     Sha256Hash quorumHash;
+    long quorumIndex; //int
     ArrayList<Boolean> signers;
     ArrayList<Boolean> validMembers;
 
@@ -49,13 +68,31 @@ public class FinalCommitment extends SpecialTxPayload {
         super(params, tx);
     }
 
+    public FinalCommitment(NetworkParameters params, int version,
+                           int llmqType, Sha256Hash quorumHash,
+                           int quorumIndex, int signersCount, byte [] signers, int validMembersCount, byte [] validMembers,
+                           byte [] quorumPublicKey, Sha256Hash quorumVvecHash, BLSLazySignature signature, BLSLazySignature membersSignature) {
+        super(version);
+        this.llmqType = llmqType;
+        this.quorumHash = quorumHash;
+        this.quorumIndex = quorumIndex;
+        this.quorumPublicKey = new BLSPublicKey(params, quorumPublicKey, 0);
+        this.quorumVvecHash = quorumVvecHash;
+        this.quorumSignature = signature.getSignature();
+        this.membersSignature = membersSignature.getSignature();
+    }
+
     @Override
     protected void parse() throws ProtocolException {
         super.parse();
 
         llmqType = readBytes(1)[0];
         quorumHash = readHash();
-
+        if (version >= INDEXED_QUORUM_VERSION) {
+            quorumIndex = readUint32();
+        } else {
+            quorumIndex = 0;
+        }
         signers = readBooleanArrayList();
         validMembers = readBooleanArrayList();
 
@@ -78,7 +115,9 @@ public class FinalCommitment extends SpecialTxPayload {
         stream.write(llmqType);
 
         stream.write(quorumHash.getReversedBytes());
-
+        if (version >= INDEXED_QUORUM_VERSION) {
+            Utils.uint32ToByteStreamLE(quorumIndex, stream);
+        }
         Utils.booleanArrayListToStream(signers, stream);
         Utils.booleanArrayListToStream(validMembers, stream);
 
@@ -126,7 +165,7 @@ public class FinalCommitment extends SpecialTxPayload {
     }
 
     public boolean verify(ArrayList<Masternode> members, boolean checkSigs) {
-        if(getVersion() == 0 || getVersion() > CURRENT_VERSION)
+        if(getVersion() == 0 || getVersion() > INDEXED_QUORUM_VERSION)
             return false;
 
         if(!params.getLlmqs().containsKey(LLMQParameters.LLMQType.fromValue(llmqType))) {
