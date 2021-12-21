@@ -147,4 +147,12 @@ public class StoredBlock {
         return String.format(Locale.US, "Block %s at height %d: %s",
                 getHeader().getHashAsString(), getHeight(), getHeader().toString());
     }
+
+    public StoredBlock getAncestor(BlockStore blockStore, int height) throws BlockStoreException {
+        StoredBlock cursor = this;
+        while (cursor != null && height != cursor.getHeight()) {
+            cursor = cursor.getPrev(blockStore);
+        }
+        return cursor;
+    }
 }

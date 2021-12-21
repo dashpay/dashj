@@ -99,7 +99,7 @@ public class LLMQParameters {
                 18, 2, 2, 3, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_DEVNET, new LLMQParameters(LLMQType.LLMQ_DEVNET, "llmq_devnet",
-                10, 7, 6, 24, 2, 10,
+                12, 7, 6, 24, 2, 10,
                 18, 7, 3, 4, 6));
 
         availableLlmqs.put(LLMQType.LLMQ_50_60, new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",

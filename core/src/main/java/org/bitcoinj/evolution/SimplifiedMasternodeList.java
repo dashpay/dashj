@@ -1,6 +1,8 @@
 package org.bitcoinj.evolution;
 
+import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;
+import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 
@@ -348,6 +350,15 @@ public class SimplifiedMasternodeList extends Message {
         return tree;
     }
 
+    public boolean containsMN(Sha256Hash proTxHash) {
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if (entry.getValue().getProTxHash().equals(proTxHash)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public interface ForeachMNCallback {
         void processMN(SimplifiedMasternodeListEntry mn);
     }
@@ -355,6 +366,20 @@ public class SimplifiedMasternodeList extends Message {
     public void forEachMN(boolean onlyValid, ForeachMNCallback callback) {
         lock.lock();
         try {
+            for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+                if (!onlyValid || isMNValid(entry.getValue())) {
+                    callback.processMN(entry.getValue());
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void forEachMN(boolean onlyValid, ForeachMNCallback callback, Comparator<SimplifiedMasternodeListEntry> comparator) {
+        lock.lock();
+        try {
+            // TODO: need to sort by comparator
             for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
                 if (!onlyValid || isMNValid(entry.getValue())) {
                     callback.processMN(entry.getValue());
@@ -411,7 +436,7 @@ public class SimplifiedMasternodeList extends Message {
                     UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(64);
                     bos.write(mn.getConfirmedHashWithProRegTxHash().getReversedBytes());
                     bos.write(modifier.getReversedBytes());
-                    scores.add(new Pair(Sha256Hash.of(bos.toByteArray()), mn)); //we don't reverse this, it is not for a wire message
+                    scores.add(new Pair<>(Sha256Hash.of(bos.toByteArray()), mn)); //we don't reverse this, it is not for a wire message
                 } catch (IOException x) {
                     throw new RuntimeException(x);
                 }
@@ -421,7 +446,7 @@ public class SimplifiedMasternodeList extends Message {
         return scores;
     }
 
-    class CompareScoreMN<Object> implements Comparator<Object>
+    static class CompareScoreMN<Object> implements Comparator<Object>
     {
         public int compare(Object t1, Object t2) {
             Pair<Sha256Hash, SimplifiedMasternodeListEntry> p1 = (Pair<Sha256Hash, SimplifiedMasternodeListEntry>)t1;
@@ -509,5 +534,35 @@ public class SimplifiedMasternodeList extends Message {
 
     public int countEnabled() {
         return size();
+    }
+
+    public Collection<SimplifiedMasternodeListEntry> getSortedList(Comparator<SimplifiedMasternodeListEntry> comparator) {
+        ArrayList<SimplifiedMasternodeListEntry> list = Lists.newArrayList();
+        forEachMN(true, list::add);
+        list.sort(comparator);
+        return list;
+    }
+
+    static class CompareMNProTxWithModifier<Object> implements Comparator<Object>
+    {
+        private Sha256Hash dkgBlockHash;
+        public CompareMNProTxWithModifier(Sha256Hash dkgBlockHash) {
+            this.dkgBlockHash = dkgBlockHash;
+        }
+
+        public int compare(Object t1, Object t2) {
+            Sha256Hash p1 = LLMQUtils.buildProTxDkgBlockHash(((SimplifiedMasternodeListEntry)t1).proRegTxHash, dkgBlockHash);
+            Sha256Hash p2 = LLMQUtils.buildProTxDkgBlockHash(((SimplifiedMasternodeListEntry)t2).proRegTxHash, dkgBlockHash);
+
+            if(p1.compareTo(p2) < 0)
+                return -1;
+            if(p1.equals(p2))
+                return 0;
+            else return 1;
+        }
+    }
+
+    public Collection<SimplifiedMasternodeListEntry> getListSortedByModifier(Block dkgBlockHash) {
+        return getSortedList(new CompareMNProTxWithModifier<>(dkgBlockHash.getHash()));
     }
 }
