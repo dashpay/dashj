@@ -9,7 +9,6 @@ import java.io.OutputStream;
 
 public class SimplifiedMasternodeListEntry extends Masternode {
 
-    Sha256Hash proRegTxHash;
     Sha256Hash confirmedHash;
     MasternodeAddress service;
     BLSLazyPublicKey pubKeyOperator;
@@ -26,6 +25,21 @@ public class SimplifiedMasternodeListEntry extends Masternode {
 
     public SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
+    }
+
+    public SimplifiedMasternodeListEntry(NetworkParameters params,
+        Sha256Hash proRegTxHash, Sha256Hash confirmedHash,
+        MasternodeAddress service, KeyId keyIdVoting,
+        BLSLazyPublicKey pubKeyOperator, boolean isValid) {
+        super(params);
+        this.proRegTxHash = proRegTxHash;
+        this.confirmedHash = confirmedHash;
+        this.service = service.duplicate();
+        this.keyIdVoting = keyIdVoting;
+        this.pubKeyOperator = new BLSLazyPublicKey(pubKeyOperator);
+        this.isValid = isValid;
+        updateConfirmedHashWithProRegTxHash();
+        length = MESSAGE_SIZE;
     }
 
     public SimplifiedMasternodeListEntry(NetworkParameters params, SimplifiedMasternodeListEntry other) {
@@ -82,13 +96,9 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     }
 
     public String toString() {
-        return String.format("SimplifiedMNListEntry(proRegTxHash=%s, service=%s, keyIDOperator=%s, keyIDVoting=%s, isValid="+isValid+")",
+        return String.format("SimplifiedMNListEntry{proTxHash=%s, service=%s, keyIDOperator=%s, keyIDVoting=%s, isValid="+isValid+"}",
             proRegTxHash.toString(), service.toString(),
                 pubKeyOperator, keyIdVoting);
-    }
-
-    public Sha256Hash getProRegTxHash() {
-        return proRegTxHash;
     }
 
     public Sha256Hash getConfirmedHash() {
@@ -127,4 +137,5 @@ public class SimplifiedMasternodeListEntry extends Masternode {
             throw new RuntimeException(x);
         }
     }
+
 }
