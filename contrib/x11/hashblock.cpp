@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/**
+/*
  * Created by Hash Engineering on 4/24/14 for the X11 algorithm
  */
 #include "hashblock.h"
@@ -28,9 +28,9 @@ jbyteArray JNICALL x11_native(JNIEnv *env, jclass cls, jbyteArray input, jint of
     jbyteArray byteArray = NULL;
 
     if (pInput)
-	{
-	    jbyte result[HASH256_SIZE];
-	    HashX11((uint8_t *)pInput+offset, (uint8_t *)pInput+offset+length, (uint8_t *)result);
+    {
+        jbyte result[HASH256_SIZE];
+        HashX11((uint8_t *)pInput+offset, (uint8_t *)pInput+offset+length, (uint8_t *)result);
 
         byteArray = (env)->NewByteArray(32);
         if (byteArray)
@@ -39,7 +39,7 @@ jbyteArray JNICALL x11_native(JNIEnv *env, jclass cls, jbyteArray input, jint of
         }
 
         (env)->ReleaseByteArrayElements(input, pInput, JNI_ABORT);
-	} else {
+    } else {
         jclass e = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(e, "input is null");
     }
@@ -47,7 +47,7 @@ jbyteArray JNICALL x11_native(JNIEnv *env, jclass cls, jbyteArray input, jint of
 }
 
 static const JNINativeMethod methods[] = {
-    { "x11_native", "([BII)[B", (void *) x11_native }
+        { "x11_native", "([BII)[B", (void *) x11_native }
 };
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {

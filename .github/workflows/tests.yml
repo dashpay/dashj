@@ -27,6 +27,14 @@ jobs:
           cd contrib/dashj-bls
           mvn package -DskipTests -Dmaven.javadoc.skip=true
           cd ../..
+      - name: Build X11 library
+        run: |
+          cd contrib/x11
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build .
+          cd ../../..
       - name: Build dashj with Gradle
         run: ./gradlew build
       - name: Upload Test Results and Reports
