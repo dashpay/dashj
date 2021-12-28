@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -344,6 +345,11 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
             if (blockNotify != null) {
                 // one of the listeners will handle reorgs
                 queueChainLockListeners(blockNotify);
+                ArrayList<TransactionConfidence> confidences = context.getConfidenceTable().get(blockNotify);
+                for (TransactionConfidence confidence : confidences) {
+                    confidence.setChainLock(true);
+                    confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED);
+                }
             }
         } catch (BlockStoreException x) {
             throw new RuntimeException(x);

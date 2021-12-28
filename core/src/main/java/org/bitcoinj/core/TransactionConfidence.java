@@ -218,6 +218,10 @@ public class TransactionConfidence {
              * Occurs when a pending transaction (not in the chain) was announced as rejected by another connected peer
              */
             REJECT,
+            /**
+             * Occurs when a transaction that is in the best known block chain gets locked.
+             */
+            CHAIN_LOCKED,
 
         }
         void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason);
@@ -695,5 +699,15 @@ public class TransactionConfidence {
         return confidenceType == TransactionConfidence.ConfidenceType.DEAD ||
                 confidenceType == TransactionConfidence.ConfidenceType.IN_CONFLICT ||
                     hasRejections() && confidenceType != TransactionConfidence.ConfidenceType.BUILDING;
+    }
+
+    boolean chainLocked;
+
+    public void setChainLock(boolean chainLocked) {
+        this.chainLocked = chainLocked;
+    }
+
+    public boolean isChainLocked() {
+        return chainLocked;
     }
 }
