@@ -16,35 +16,40 @@
 
 package org.bitcoinj.params;
 
-public class SchnappsDevNetParams extends DevNetParams {
+import org.bitcoinj.quorums.LLMQParameters;
 
-    private static String DEVNET_NAME = "schnapps";
+public class KrupnikDevNetParams extends DevNetParams {
+
+    private static String DEVNET_NAME = "krupnik";
 
     private static String [] MASTERNODES = new String [] {
-            "34.220.142.11",
-            "35.165.226.18",
-            "34.213.172.28",
-            "54.186.163.198",
-            "35.165.78.181",
-            "34.208.97.20",
-            "18.236.96.101",
-            "34.208.108.211",
-            "34.221.197.92"
+        "52.38.91.91",
+        "34.219.219.19",
+        "34.221.32.211",
+        "35.87.4.244",
+        "54.188.168.220",
+        "34.211.88.72",
+        "35.87.2.214",
+        "35.86.171.21",
+        "54.184.175.69",
+        "52.25.246.83",
+        "35.162.208.70",
     };
 
-    public SchnappsDevNetParams() {
-        super(DEVNET_NAME, "yTrnnUkRXADy7C3CizQ1uCu1Qtd2WAmxNH", 20001,
-                MASTERNODES, true, 70218);
+    public KrupnikDevNetParams() {
+        super(DEVNET_NAME, "yMe6YVixWJ5797yN5AY4KzgJbHmXwVVsBg", 20001,
+                MASTERNODES, true, 70219);
         dnsSeeds = MASTERNODES;
-        //TODO: Normally this is the way to set up dnsSeeds
-        //dnsSeeds = new String[] { "seed-1.schnapps.networks.dash.org" };
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET);
+        llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
+        llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET;
     }
 
-    private static SchnappsDevNetParams instance;
+    private static KrupnikDevNetParams instance;
 
-    public static SchnappsDevNetParams get() {
+    public static KrupnikDevNetParams get() {
         if(instance == null) {
-            instance = new SchnappsDevNetParams();
+            instance = new KrupnikDevNetParams();
             add(instance);
         }
         return instance;
