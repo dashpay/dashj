@@ -61,7 +61,7 @@ public class ForwardingServiceEvo {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
         BriefLogFormatter.init();
         if (args.length < 1) {
-            System.err.println("Usage: address-to-send-back-to [regtest|testnet|evonet|palinka|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
+            System.err.println("Usage: address-to-send-back-to [regtest|testnet|krupnik|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
             return;
         }
 

@@ -22,7 +22,7 @@ import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.params.SchnappsDevNetParams;
+import org.bitcoinj.params.KrupnikDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
@@ -310,9 +310,9 @@ public class WalletTool {
                 params = RegTestParams.get();
                 chainFileName = new File("regtest.chain");
                 break;
-            case SCHNAPPS:
-                params = SchnappsDevNetParams.get();
-                chainFileName = new File("schnapps.chain");
+            case KRUPNIK:
+                params = KrupnikDevNetParams.get();
+                chainFileName = new File("krupnik.chain");
                 break;
             default:
                 throw new RuntimeException("Unreachable.");

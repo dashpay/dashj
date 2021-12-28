@@ -30,13 +30,10 @@ import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.bitcoinj.utils.Pair;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -52,7 +49,7 @@ public class ForwardingService {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
         BriefLogFormatter.init();
         if (args.length < 1) {
-            System.err.println("Usage: address-to-send-back-to [regtest|testnet|evonet|palinka|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
+            System.err.println("Usage: address-to-send-back-to [regtest|testnet|krupnik|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
             return;
         }
 
@@ -67,9 +64,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
-        } else if (args.length > 1 && args[1].equals("schnapps")) {
-            params = SchnappsDevNetParams.get();
-            filePrefix = "forwarding-service-schnapps";
+        } else if (args.length > 1 && args[1].equals("krupnik")) {
+            params = KrupnikDevNetParams.get();
+            filePrefix = "forwarding-service-krupnik";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);

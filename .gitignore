@@ -20,8 +20,8 @@ checkpoints
 checkpoints-testnet
 checkpoints-testnet.txt
 checkpoints.txt
-checkpoints-schnapps
-checkpoints-schnapps.txt
+checkpoints-krupnik
+checkpoints-krupnik.txt
 *.mnlist
 *.chainlocks
 *.gobjects
