@@ -16,6 +16,7 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.collect.Lists;
 import org.bitcoinj.utils.*;
 
 import javax.annotation.*;
@@ -198,5 +199,17 @@ public class TxConfidenceTable {
         } finally {
             lock.unlock();
         }
+    }
+
+    public ArrayList<TransactionConfidence> get(StoredBlock block) {
+        ArrayList<TransactionConfidence> results = Lists.newArrayList();
+        for (Map.Entry<Sha256Hash, WeakConfidenceReference> entry: table.entrySet()) {
+            TransactionConfidence confidence = entry.getValue().get();
+            if (confidence != null && confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING &&
+                    confidence.getAppearedAtChainHeight() <= block.getHeight()) {
+                results.add(confidence);
+            }
+        }
+        return results;
     }
 }
