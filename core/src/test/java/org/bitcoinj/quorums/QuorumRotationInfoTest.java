@@ -23,6 +23,7 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
+import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.PartialMerkleTree;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
@@ -31,6 +32,7 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSLazySignature;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.MasternodeListDiffException;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
@@ -67,7 +69,7 @@ public class QuorumRotationInfoTest {
 
     @Test
     public void quorumRotationInfoTest() throws FileNotFoundException, IOException, NullPointerException,
-            BlockStoreException {
+            BlockStoreException, MasternodeListDiffException {
         QuorumRotationInfo qrinfo = new QuorumRotationInfo(PARAMS);
         qrinfo.setCreationHeight(1008);
         qrinfo.setQuorumSnapshotAtHMinusC(
@@ -80,7 +82,7 @@ public class QuorumRotationInfoTest {
                 new QuorumSnapshot(Arrays.asList(false, false, false, true, true), 0, Lists.newArrayList())
         );
         qrinfo.setMnListDiffTip(new SimplifiedMasternodeListDiff(PARAMS,
-                Sha256Hash.wrap("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"),
+                Sha256Hash.wrap("00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c"),
                 Sha256Hash.wrap("512157e793d0cf790b6e6305efebcb2745dfc279ae9ef3b8cc0c8ff1c29d978d"),
                 new PartialMerkleTree(PARAMS, HEX.decode("01000000010e45d82414995ed1c23f546c35afa316499c09b870dd0a3c15796c4ccfdc00c40101"), 0),
                 new Transaction(PARAMS, HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff050205040101ffffffff038d0cb75b0300000023210285c760cb2fd04fc7ff217cfd1c66594ba47247c29eed85949f43e80f57b53727acd94e854a030000001976a91471d69c816b5ad8718c800607fef3a47221078d6088acb0bd3111000000001976a914a73955c08d561a22a399513e1c5d3983d110701d88ac000000004602000504000042696f1f2db709cde94efa6f8de3e5c5ffda082fcb3f9d81b5929849385667bd3394b4b77e40afd081094fb55b49a94f39bc6910146b5010b9d6af082f15545a"), 0),
@@ -150,7 +152,7 @@ public class QuorumRotationInfoTest {
                 )
         ));
         qrinfo.setMnListDiffAtHMinusC(new SimplifiedMasternodeListDiff(PARAMS,
-                Sha256Hash.wrap("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"),
+                Sha256Hash.wrap("00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c"),
                 Sha256Hash.wrap("254b1bdd055a27cd8cb59572e9157ff204e6559ad31a2cb7184fab60134305ae"),
                 new PartialMerkleTree(PARAMS, HEX.decode("01000000013add9c9f92caf1812de45d1a3bba7f31a3f5cb820927023d5cf052b3310beb360101"), 0),
                 new Transaction(PARAMS, HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff0502d8030101ffffffff03652a3dbb0300000023210341e286feb673b48b7220321665363cfbbc137625c8dd5d83a3056303f60a43a7ac9a5722a8030000001976a91471d69c816b5ad8718c800607fef3a47221078d6088acc4d21a13000000001976a914a73955c08d561a22a399513e1c5d3983d110701d88ac00000000460200d803000042696f1f2db709cde94efa6f8de3e5c5ffda082fcb3f9d81b5929849385667bd0000000000000000000000000000000000000000000000000000000000000000"), 0),
@@ -191,7 +193,7 @@ public class QuorumRotationInfoTest {
                 Lists.newArrayList()
         ));
         qrinfo.setMnListDiffAtHMinus2C(new SimplifiedMasternodeListDiff(PARAMS,
-                Sha256Hash.wrap("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"),
+                Sha256Hash.wrap("00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c"),
                 Sha256Hash.wrap("443ba06eb11d60f186ba3d91ec94fb6811461276b268ac1bf41862d5461a5977"),
                 new PartialMerkleTree(PARAMS, HEX.decode("0100000001513d1ac0faec415f67b38b57e729fa5bdd9c018ec01496fcc1a37917c1a2cba00101"), 0),
                 new Transaction(PARAMS, HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff0502c0030101ffffffff03652a3dbb030000002321020fbe2d1fa5dff237073e1bd07ad058ba6ebd10178fd4b5bbc7cc243288d424a3ac38ee949e030000001976a9140cbc15d5d0979efe0f5f384cd071ef167f64b7a388ac263ca81c000000001976a914ebed2fa555deaa7bc0e9e56fd3d1fb5e7d02914b88ac00000000460200c003000042696f1f2db709cde94efa6f8de3e5c5ffda082fcb3f9d81b5929849385667bd0000000000000000000000000000000000000000000000000000000000000000"), 0),
@@ -232,7 +234,7 @@ public class QuorumRotationInfoTest {
                 Lists.newArrayList()
         ));
         qrinfo.setMnListDiffAtHMinus3C(new SimplifiedMasternodeListDiff(PARAMS,
-                Sha256Hash.wrap("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"),
+                Sha256Hash.wrap("00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c"),
                 Sha256Hash.wrap("6f5d13e68c1b2c780a4375cea00d026aba2e055e2b47f26d68ce22bdcec9cfcd"),
                 new PartialMerkleTree(PARAMS, HEX.decode("0100000001750554d572d4ba7dcabead90947d1c57f9df011cba79a2b95666d73302df926a0101"), 0),
                 new Transaction(PARAMS, HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff0502a8030101ffffffff03652a3dbb030000002321029405c90f863e8c9b4dfd0c5aded24f08ebcfd8e053d187a27f70ecd02192afaaacfcc0afb1030000001976a914c9560a0f3528e1c5e3eea83367d2647941961bb488ac62698d09000000001976a91427ce4c0695b45de4a4d6d51358804a6a78e9dda688ac00000000460200a803000042696f1f2db709cde94efa6f8de3e5c5ffda082fcb3f9d81b5929849385667bd0000000000000000000000000000000000000000000000000000000000000000"), 0),
@@ -286,5 +288,20 @@ public class QuorumRotationInfoTest {
 //        context.masternodeListManager.processQuorumRotationInfo(null, qrinfo, true);
 //        ArrayList<Masternode> list = context.masternodeListManager.getAllQuorumMembers(LLMQParameters.LLMQType.LLMQ_DEVNET, Sha256Hash.wrap("512157e793d0cf790b6e6305efebcb2745dfc279ae9ef3b8cc0c8ff1c29d978d"));
 //        System.out.println(list);
+
+        SimplifiedMasternodeList mnListTip = new SimplifiedMasternodeList(PARAMS);
+        SimplifiedMasternodeList mnListAtHMinusC = new SimplifiedMasternodeList(PARAMS);
+        SimplifiedMasternodeList mnListAtHMinus2C = new SimplifiedMasternodeList(PARAMS);
+        SimplifiedMasternodeList mnListAtHMinus3C = new SimplifiedMasternodeList(PARAMS);
+
+        SimplifiedMasternodeList newMNListTip = mnListTip.applyDiff(qrinfo.getMnListDiffTip());
+        SimplifiedMasternodeList newNMListAtHMinusC = mnListAtHMinusC.applyDiff(qrinfo.getMnListDiffAtHMinusC());
+        SimplifiedMasternodeList newNMListAtHMinus2C = mnListAtHMinus2C.applyDiff(qrinfo.getMnListDiffAtHMinus2C());
+        SimplifiedMasternodeList newNMListAtHMinus3C = mnListAtHMinus3C.applyDiff(qrinfo.getMnListDiffAtHMinus3C());
+
+        newMNListTip.verify(qrinfo.getMnListDiffTip().getCoinBaseTx(), qrinfo.getMnListDiffTip(), mnListTip);
+        newNMListAtHMinusC.verify(qrinfo.getMnListDiffAtHMinusC().getCoinBaseTx(), qrinfo.getMnListDiffAtHMinusC(), mnListAtHMinusC);
+        newNMListAtHMinus2C.verify(qrinfo.getMnListDiffAtHMinus2C().getCoinBaseTx(), qrinfo.getMnListDiffAtHMinus2C(), mnListAtHMinus2C);
+        newNMListAtHMinus3C.verify(qrinfo.getMnListDiffAtHMinus3C().getCoinBaseTx(), qrinfo.getMnListDiffAtHMinus3C(), mnListAtHMinus3C);
     }
 }
