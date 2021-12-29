@@ -109,15 +109,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     PeerGroup peerGroup;
 
-    //DIP24
-    //     static std::map<Consensus::LLMQType, unordered_lru_cache<uint256, std::vector<CDeterministicMNCPtr>, StaticSaltedHasher>> mapQuorumMembers GUARDED_BY(cs_members);
-    private ReentrantLock memberLock = Threading.lock("MemberLock");
-    @GuardedBy("memberLock")
-    HashMap<LLMQParameters.LLMQType, HashMap<Sha256Hash, ArrayList<Masternode>>> mapQuorumMembers = new HashMap<>();
-    //static std::map<Consensus::LLMQType, unordered_lru_cache<std::pair<uint256, int>, std::vector<CDeterministicMNCPtr>, StaticSaltedHasher>> mapIndexedQuorumMembers GUARDED_BY(cs_indexed_members);
-    private ReentrantLock indexedMemberLock = Threading.lock("IndexedMemberLock");
-    @GuardedBy("indexedMemberLock")
-    HashMap<LLMQParameters.LLMQType, HashMap<Pair<Sha256Hash, Integer>, ArrayList<Masternode>>> mapIndexedQuorumMembers = new HashMap<>();
     QuorumSnapshotManager quorumSnapshotManager;
     QuorumManager quorumManager;
 
@@ -170,7 +161,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         cursor += mnList.getMessageSize();
         tipBlockHash = readHash();
         tipHeight = readUint32();
-        if(getFormatVersion() >= 2) {
+        if(getFormatVersion() >= LLMQ_FORMAT_VERSION) {
             quorumList = new SimplifiedQuorumList(params, payload, cursor);
             cursor += quorumList.getMessageSize();
 
@@ -187,6 +178,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 }
                 buffer.rewind();
             }
+        } else if (getFormatVersion() == QUORUM_ROTATION_FORMAT_VERSION) {
+            quorumRotationState = new QuorumRotationState(context, payload, cursor);
+            cursor += quorumRotationState.getMessageSize();
         } else {
             quorumList = new SimplifiedQuorumList(params);
         }
@@ -200,9 +194,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             SimplifiedMasternodeList mnListToSave = null;
             SimplifiedQuorumList quorumListToSave = null;
             ArrayList<StoredBlock> otherPendingBlocks = new ArrayList<StoredBlock>(MAX_CACHE_SIZE);
-            if(mnListsCache.size() > 0) {
-                for(Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry : mnListsCache.entrySet()) {
-                    if(mnListToSave == null) {
+            if (mnListsCache.size() > 0) {
+                for (Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry : mnListsCache.entrySet()) {
+                    if (mnListToSave == null) {
                         mnListToSave = entry.getValue();
                         quorumListToSave = quorumsCache.get(entry.getKey());
                     } else {
@@ -217,9 +211,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             mnListToSave.bitcoinSerialize(stream);
             stream.write(mnListToSave.getBlockHash().getReversedBytes());
             Utils.uint32ToByteStreamLE(mnListToSave.getHeight(), stream);
-            if(getFormatVersion() >= 2) {
+
+            if (getFormatVersion() == LLMQ_FORMAT_VERSION) {
                 quorumListToSave.bitcoinSerialize(stream);
-                if(syncOptions != SyncOptions.SYNC_MINIMUM) {
+                if (syncOptions != SyncOptions.SYNC_MINIMUM) {
                     stream.write(new VarInt(pendingBlocks.size() + otherPendingBlocks.size()).encode());
                     ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
                     log.info("saving {} blocks to catch up mnList", otherPendingBlocks.size());
@@ -234,7 +229,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                         buffer.clear();
                     }
                 } else stream.write(new VarInt(0).encode());
+            } else if (getFormatVersion() == QUORUM_ROTATION_FORMAT_VERSION) {
+                quorumRotationState.bitcoinSerialize(stream);
             }
+
         } finally {
             lock.unlock();
         }
@@ -281,7 +279,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
             newMNList.setBlock(block, block == null ? false : block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
             SimplifiedQuorumList newQuorumList = quorumList;
-            if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2) {
+            if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION) {
                 watchQuorums.start();
                 newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, chain);
                 if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
@@ -306,7 +304,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
             if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, mnlistdiff);
 
-            if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= 2 && quorumList.size() > 0)
+            if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION && quorumList.size() > 0)
                 setFormatVersion(LLMQ_FORMAT_VERSION);
             if(mnlistdiff.hasChanges() || pendingBlocks.size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
@@ -389,6 +387,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         log.info("processing quorumrotationinfo between : {} & {}; {}", mnList.getHeight(), newHeight, quorumRotationInfo);
         lock.lock();
         try {
+            quorumRotationState.setBlockChain(chain);
             quorumRotationState.applyDiff(peer, headersChain, blockChain, quorumRotationInfo, isLoadingBootStrap);
 
 

@@ -5,6 +5,7 @@ import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
+import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
@@ -28,6 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.GuardedBy;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,11 +40,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class QuorumRotationState {
+public class QuorumRotationState extends Message {
     private static final Logger log = LoggerFactory.getLogger(QuorumRotationState.class);
     Context context;
     NetworkParameters params;
-    BlockChain blockChain;
+    AbstractBlockChain blockChain;
     BlockStore blockStore;
 
     QuorumSnapshot quorumSnapshotAtHMinusC;
@@ -61,11 +64,11 @@ public class QuorumRotationState {
     LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache = new LinkedHashMap<>();
     LinkedHashMap<Sha256Hash, SimplifiedQuorumList> quorumsCache = new LinkedHashMap<>();
 
-    private ReentrantLock memberLock = Threading.lock("MemberLock");
+    private ReentrantLock memberLock = Threading.lock("memberLock");
     @GuardedBy("memberLock")
     HashMap<LLMQParameters.LLMQType, HashMap<Sha256Hash, ArrayList<Masternode>>> mapQuorumMembers = new HashMap<>();
 
-    private ReentrantLock indexedMemberLock = Threading.lock("IndexedMemberLock");
+    private ReentrantLock indexedMemberLock = Threading.lock("indexedMemberLock");
     @GuardedBy("indexedMemberLock")
     HashMap<LLMQParameters.LLMQType, HashMap<Pair<Sha256Hash, Integer>, ArrayList<Masternode>>> mapIndexedQuorumMembers = new HashMap<>();
 
@@ -83,7 +86,12 @@ public class QuorumRotationState {
         quorumListAtHMinus3C = new SimplifiedQuorumList(context.getParams());
     }
 
-    public void setBlockChain(BlockChain blockChain) {
+    public QuorumRotationState(Context context, byte [] payload, int offset) {
+        super(context.getParams(), payload, offset);
+        this.context = context;
+    }
+
+    public void setBlockChain(AbstractBlockChain blockChain) {
         this.blockChain = blockChain;
         blockStore = blockChain.getBlockStore();
     }
@@ -607,5 +615,39 @@ public class QuorumRotationState {
 
     public SimplifiedMasternodeList getListForBlock(Sha256Hash blockHash) {
         return mnListsCache.get(blockHash);
+    }
+
+    @Override
+    protected void parse() throws ProtocolException {
+        mnListTip = new SimplifiedMasternodeList(params, payload, cursor);
+        cursor += mnListTip.getMessageSize();
+        mnListAtHMinusC = new SimplifiedMasternodeList(params, payload, cursor);
+        cursor += mnListAtHMinusC.getMessageSize();
+        mnListAtHMinus2C = new SimplifiedMasternodeList(params, payload, cursor);
+        cursor += mnListAtHMinus2C.getMessageSize();
+        mnListAtHMinus3C = new SimplifiedMasternodeList(params, payload, cursor);
+        cursor += mnListAtHMinus3C.getMessageSize();
+
+        quorumListTip = new SimplifiedQuorumList(params, payload, cursor);
+        cursor += quorumListTip.getMessageSize();
+        quorumListAtHMinusC = new SimplifiedQuorumList(params, payload, cursor);
+        cursor += quorumListAtHMinusC.getMessageSize();
+        quorumListAtHMinus2C = new SimplifiedQuorumList(params, payload, cursor);
+        cursor += quorumListAtHMinus2C.getMessageSize();
+        quorumListAtHMinus3C = new SimplifiedQuorumList(params, payload, cursor);
+        cursor += quorumListAtHMinus3C.getMessageSize();
+    }
+
+    @Override
+    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        mnListTip.bitcoinSerialize(stream);
+        mnListAtHMinusC.bitcoinSerialize(stream);
+        mnListAtHMinus2C.bitcoinSerialize(stream);
+        mnListAtHMinus3C.bitcoinSerialize(stream);
+
+        quorumListTip.bitcoinSerialize(stream);
+        quorumListAtHMinusC.bitcoinSerialize(stream);
+        quorumListAtHMinus2C.bitcoinSerialize(stream);
+        quorumListAtHMinus3C.bitcoinSerialize(stream);
     }
 }
