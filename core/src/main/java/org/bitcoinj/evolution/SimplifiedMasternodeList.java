@@ -122,7 +122,7 @@ public class SimplifiedMasternodeList extends Message {
         return "Simplified MN List(count:  " + size() + "height: " + height + ")";
     }
 
-    SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff) throws MasternodeListDiffException
+    public SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff) throws MasternodeListDiffException
     {
         CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
         if(!diff.prevBlockHash.equals(blockHash))
@@ -220,7 +220,7 @@ public class SimplifiedMasternodeList extends Message {
         }
     }
 
-
+    public
     boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff, SimplifiedMasternodeList prevList) throws VerificationException {
         //check mnListMerkleRoot
 
@@ -519,7 +519,7 @@ public class SimplifiedMasternodeList extends Message {
         return result;
     }
 
-    protected void setBlock(StoredBlock storedblock, boolean storedBlockMatchesRequest) {
+    public void setBlock(StoredBlock storedblock, boolean storedBlockMatchesRequest) {
         this.storedBlock = storedblock == null ? new StoredBlock(params.getGenesisBlock(), BigInteger.valueOf(0), 0) : storedblock;
         this.storedBlockMatchesRequest = storedBlockMatchesRequest;
     }
