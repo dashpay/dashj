@@ -45,7 +45,7 @@ public class BLSId extends BLSAbstractObject {
 
     @Override
     protected void parse() throws ProtocolException {
-        byte buffer[] = readBytes(BLS_CURVE_ID_SIZE);
+        byte[] buffer = readBytes(BLS_CURVE_ID_SIZE);
         internalSetBuffer(buffer);
         serializedSize = BLS_CURVE_ID_SIZE;
         length = cursor - offset;

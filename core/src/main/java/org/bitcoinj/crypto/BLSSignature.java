@@ -65,7 +65,7 @@ public class BLSSignature extends BLSAbstractObject {
 
     @Override
     protected void parse() throws ProtocolException {
-        byte buffer[] = readBytes(BLS_CURVE_SIG_SIZE);
+        byte[] buffer = readBytes(BLS_CURVE_SIG_SIZE);
         valid = internalSetBuffer(buffer);
         serializedSize = BLS_CURVE_SIG_SIZE;
         length = cursor - offset;

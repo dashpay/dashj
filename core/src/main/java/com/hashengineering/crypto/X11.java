@@ -78,7 +78,7 @@ public class X11 {
 
     static native byte [] x11_native(byte [] input, int offset, int length);
 
-    public static byte [] x11(byte input[], int offset, int length) {
+    public static byte [] x11(byte[] input, int offset, int length) {
         Digest [] algorithms = initAlgorithms();
         Digest algorithm = algorithms[0];
         algorithm.reset();

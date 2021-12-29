@@ -64,8 +64,8 @@ public class BLSExchangeKeyCrypterTest {
     @Test
     public void decryptData() {
         //Bob is receiving from Alice
-        byte initialisationVector[] = {-22, -59, -68, -42, -21, -123, 7, 71, 89, -32, 38, 20, -105, 66, -116, -101};
-        byte encryptedPrivateKey [] = {-41, 43, -44, 24, -50, -106, -26, -100, -69, 103, 102, -27, -97, -115, 31, -127, 56, -81, -80, 104, 96, 24, -69, 77, 64, 19, 105, -25, 123, -92, 115, 103, -7, 58, 73, -91, 40, -12, -52, -98, 63, 32, -102, 81, 94, 109, -40, -14};
+        byte[] initialisationVector = {-22, -59, -68, -42, -21, -123, 7, 71, 89, -32, 38, 20, -105, 66, -116, -101};
+        byte[] encryptedPrivateKey = {-41, 43, -44, 24, -50, -106, -26, -100, -69, 103, 102, -27, -97, -115, 31, -127, 56, -81, -80, 104, 96, 24, -69, 77, 64, 19, 105, -25, 123, -92, 115, 103, -7, 58, 73, -91, 40, -12, -52, -98, 63, 32, -102, 81, 94, 109, -40, -14};
 
         EncryptedData encryptedData = new EncryptedData(initialisationVector, encryptedPrivateKey);
 
