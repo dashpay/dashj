@@ -57,7 +57,7 @@ public class MalortDevNetParams extends DevNetParams {
 };
 
     public MalortDevNetParams() {
-        super(DEVNET_NAME, "yTrnnUkRXADy7C3CizQ1uCu1Qtd2WAmxNH", 20001,
+        super(DEVNET_NAME, "yZeZhBYxmxVkoKHsgGxbzj8snbU17DYeZJ", 20001,
                 MASTERNODES, true, 70220);
         dnsSeeds = MASTERNODES;
 
