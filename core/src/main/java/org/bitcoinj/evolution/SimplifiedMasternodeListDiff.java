@@ -158,4 +158,8 @@ public class SimplifiedMasternodeListDiff extends Message {
     public boolean hasMasternodeListChanges() {
         return mnList.size() + deletedMNs.size() > 0;
     }
+
+    public long getHeight() {
+        return ((CoinbaseTx)getCoinBaseTx().getExtraPayloadObject()).getHeight();
+    }
 }
