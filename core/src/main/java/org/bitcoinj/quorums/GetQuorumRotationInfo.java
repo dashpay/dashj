@@ -32,18 +32,20 @@ public class GetQuorumRotationInfo extends Message {
     private long baseBlockHashesCount;
     private ArrayList<Sha256Hash> baseBlockHashes;
     private Sha256Hash blockRequestHash;
+    private boolean extraShare;
 
     public GetQuorumRotationInfo(NetworkParameters params, byte [] payload) {
         super(params, payload, 0);
     }
 
     public GetQuorumRotationInfo(NetworkParameters params, long baseBlockHashesCount,
-                                 ArrayList<Sha256Hash> baseBlockHashes, Sha256Hash blockRequestHash) {
+                                 ArrayList<Sha256Hash> baseBlockHashes, Sha256Hash blockRequestHash, boolean extraShare) {
         super(params);
         this.baseBlockHashesCount = baseBlockHashesCount;
         this.baseBlockHashes = new ArrayList<>(baseBlockHashes.size());
         this.baseBlockHashes.addAll(baseBlockHashes);
         this.blockRequestHash = blockRequestHash;
+        this.extraShare = extraShare;
     }
 
     @Override
@@ -55,6 +57,7 @@ public class GetQuorumRotationInfo extends Message {
             baseBlockHashes.add(readHash());
         }
         blockRequestHash = readHash();
+        extraShare = readBytes(1)[0] == 1;
     }
 
     @Override
@@ -65,6 +68,7 @@ public class GetQuorumRotationInfo extends Message {
             stream.write(hash.getReversedBytes());
         }
         stream.write(blockRequestHash.getReversedBytes());
+        stream.write(extraShare ? 1 : 0);
     }
 
     @Override
@@ -73,6 +77,7 @@ public class GetQuorumRotationInfo extends Message {
                 "baseBlockHashesCount=" + baseBlockHashesCount +
                 ", baseBlockHashes=" + baseBlockHashes +
                 ", blockRequestHash=" + blockRequestHash +
+                ", extraShare=" + extraShare +
                 '}';
     }
 }

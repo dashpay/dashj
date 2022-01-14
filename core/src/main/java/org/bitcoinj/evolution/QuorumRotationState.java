@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.evolution;
 
 import com.google.common.collect.Lists;
@@ -52,11 +68,13 @@ public class QuorumRotationState extends Message {
     QuorumSnapshot quorumSnapshotAtHMinus3C;
 
     SimplifiedMasternodeList mnListTip;
+    SimplifiedMasternodeList mnListAtH;
     SimplifiedMasternodeList mnListAtHMinusC;
     SimplifiedMasternodeList mnListAtHMinus2C;
     SimplifiedMasternodeList mnListAtHMinus3C;
 
     SimplifiedQuorumList quorumListTip;
+    SimplifiedQuorumList quorumListAtH;
     SimplifiedQuorumList quorumListAtHMinusC;
     SimplifiedQuorumList quorumListAtHMinus2C;
     SimplifiedQuorumList quorumListAtHMinus3C;
@@ -77,10 +95,12 @@ public class QuorumRotationState extends Message {
         this.context = context;
         params = context.getParams();
         mnListTip = new SimplifiedMasternodeList(context.getParams());
+        mnListAtH = new SimplifiedMasternodeList(context.getParams());
         mnListAtHMinusC = new SimplifiedMasternodeList(context.getParams());
         mnListAtHMinus2C = new SimplifiedMasternodeList(context.getParams());
         mnListAtHMinus3C = new SimplifiedMasternodeList(context.getParams());
         quorumListTip = new SimplifiedQuorumList(context.getParams());
+        quorumListAtH = new SimplifiedQuorumList(context.getParams());
         quorumListAtHMinusC = new SimplifiedQuorumList(context.getParams());
         quorumListAtHMinus2C = new SimplifiedQuorumList(context.getParams());
         quorumListAtHMinus3C = new SimplifiedQuorumList(context.getParams());
@@ -99,54 +119,57 @@ public class QuorumRotationState extends Message {
     public void applyDiff(Peer peer, AbstractBlockChain headersChain, AbstractBlockChain blockChain,
                           QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap)
             throws BlockStoreException, MasternodeListDiffException {
-        StoredBlock block;
-        StoredBlock blockTip;
+        StoredBlock blockAtTip;
+        StoredBlock blockAtH;
         StoredBlock blockMinusC;
         StoredBlock blockMinus2C;
         StoredBlock blockMinus3C;
-        long newHeight = ((CoinbaseTx) quorumRotationInfo.getMnListDiffTip().coinBaseTx.getExtraPayloadObject()).getHeight();
+        long newHeight = ((CoinbaseTx) quorumRotationInfo.getMnListDiffAtH().coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null)
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffTip());
 
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
         log.info("processing quorumrotationinfo between : {} & {}; {}", mnListTip.getHeight(), newHeight, quorumRotationInfo);
-        block = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffTip().blockHash);
-        blockTip = chain.getBlockStore().get((int) quorumRotationInfo.getCreationHeight());
+        blockAtTip = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffTip().blockHash);
+        blockAtH = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtH().blockHash);
         blockMinusC = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinusC().blockHash);
         blockMinus2C = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinus2C().blockHash);
         blockMinus3C = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinus3C().blockHash);
 
-        if (!isLoadingBootStrap && block.getHeight() != newHeight)
-            throw new ProtocolException("qrinfo blockhash (height=" + block.getHeight() + " doesn't match coinbase block height: " + newHeight);
+        if (!isLoadingBootStrap && blockAtH.getHeight() != newHeight)
+            throw new ProtocolException("qrinfo blockhash (height=" + blockAtH.getHeight() + " doesn't match coinbase block height: " + newHeight);
 
         if (peer != null && isSyncingHeadersFirst)
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Processing, quorumRotationInfo.getMnListDiffTip());
 
         SimplifiedMasternodeList newMNListTip = mnListTip.applyDiff(quorumRotationInfo.getMnListDiffTip());
-        SimplifiedMasternodeList newNMListAtHMinusC = mnListAtHMinusC.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC());
-        SimplifiedMasternodeList newNMListAtHMinus2C = mnListAtHMinus2C.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C());
-        SimplifiedMasternodeList newNMListAtHMinus3C = mnListAtHMinus3C.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C());
+        SimplifiedMasternodeList newMNListAtH = mnListAtH.applyDiff(quorumRotationInfo.getMnListDiffAtH());
+        SimplifiedMasternodeList newMNListAtHMinusC = mnListAtHMinusC.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC());
+        SimplifiedMasternodeList newMNListAtHMinus2C = mnListAtHMinus2C.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C());
+        SimplifiedMasternodeList newMNListAtHMinus3C = mnListAtHMinus3C.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C());
         if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST)) {
             newMNListTip.verify(quorumRotationInfo.getMnListDiffTip().coinBaseTx, quorumRotationInfo.getMnListDiffTip(), mnListTip);
-            newNMListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), mnListAtHMinusC);
-            newNMListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), mnListAtHMinus2C);
-            newNMListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), mnListAtHMinus3C);
+            newMNListAtH.verify(quorumRotationInfo.getMnListDiffAtH().coinBaseTx, quorumRotationInfo.getMnListDiffAtH(), mnListAtH);
+            newMNListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), mnListAtHMinusC);
+            newMNListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), mnListAtHMinus2C);
+            newMNListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), mnListAtHMinus3C);
         }
 
         if (peer != null && isSyncingHeadersFirst)
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, quorumRotationInfo.getMnListDiffTip());
 
-        newMNListTip.setBlock(blockTip, block != null && block.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffTip().prevBlockHash));
-        newNMListAtHMinusC.setBlock(blockMinusC, block != null && blockMinusC.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash));
-        newNMListAtHMinus2C.setBlock(blockMinus2C, block != null && blockMinus2C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash));
-        newNMListAtHMinus3C.setBlock(blockMinus3C, block != null && blockMinus3C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash));
+        newMNListTip.setBlock(blockAtTip, blockAtTip != null && blockAtTip.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffTip().prevBlockHash));
+        newMNListAtH.setBlock(blockAtH, blockAtH != null && blockAtH.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash));
+        newMNListAtHMinusC.setBlock(blockMinusC, blockMinusC != null && blockMinusC.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash));
+        newMNListAtHMinus2C.setBlock(blockMinus2C, blockMinus2C != null && blockMinus2C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash));
+        newMNListAtHMinus3C.setBlock(blockMinus3C, blockMinus3C != null && blockMinus3C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash));
 
         mnListsCache.clear();
-        mnListsCache.put(blockTip.getHeader().getHash(), newMNListTip);
-        mnListsCache.put(newNMListAtHMinusC.getBlockHash(), newNMListAtHMinusC);
-        mnListsCache.put(newNMListAtHMinus2C.getBlockHash(), newNMListAtHMinus2C);
-        mnListsCache.put(newNMListAtHMinus3C.getBlockHash(), newNMListAtHMinus3C);
+        mnListsCache.put(newMNListAtH.getBlockHash(), newMNListAtH);
+        mnListsCache.put(newMNListAtHMinusC.getBlockHash(), newMNListAtHMinusC);
+        mnListsCache.put(newMNListAtHMinus2C.getBlockHash(), newMNListAtHMinus2C);
+        mnListsCache.put(newMNListAtHMinus3C.getBlockHash(), newMNListAtHMinus3C);
 
         quorumSnapshotAtHMinusC = quorumRotationInfo.getQuorumSnapshotAtHMinusC();
         quorumSnapshotAtHMinus2C = quorumRotationInfo.getQuorumSnapshotAtHMinus2C();
@@ -154,34 +177,39 @@ public class QuorumRotationState extends Message {
 
         // now calculate quorums
         SimplifiedQuorumList newQuorumListTip = quorumListTip.applyDiff(quorumRotationInfo.getMnListDiffTip(), isLoadingBootStrap, chain);
-        SimplifiedQuorumList newQuorumListTipAtHMinusC = quorumListAtHMinusC.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC(), isLoadingBootStrap, chain);
-        SimplifiedQuorumList newQuorumListTipAtHMinus2C = quorumListAtHMinus2C.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C(), isLoadingBootStrap, chain);
-        SimplifiedQuorumList newQuorumListTipAtHMinus3C = quorumListAtHMinus3C.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C(), isLoadingBootStrap, chain);
+        SimplifiedQuorumList newQuorumListAtH = quorumListAtH.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, chain);
+        SimplifiedQuorumList newQuorumListAtHMinusC = quorumListAtHMinusC.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC(), isLoadingBootStrap, chain);
+        SimplifiedQuorumList newQuorumListAtHMinus2C = quorumListAtHMinus2C.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C(), isLoadingBootStrap, chain);
+        SimplifiedQuorumList newQuorumListAtHMinus3C = quorumListAtHMinus3C.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C(), isLoadingBootStrap, chain);
         if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM)) {
             newQuorumListTip.verify(quorumRotationInfo.getMnListDiffTip().coinBaseTx, quorumRotationInfo.getMnListDiffTip(), quorumListTip, newMNListTip);
-            newQuorumListTipAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), quorumListAtHMinusC, newNMListAtHMinusC);
-            newQuorumListTipAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), quorumListAtHMinus2C, newNMListAtHMinus2C);
-            newQuorumListTipAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), quorumListAtHMinus3C, newNMListAtHMinus3C);
+            newQuorumListAtH.verify(quorumRotationInfo.getMnListDiffAtH().coinBaseTx, quorumRotationInfo.getMnListDiffAtH(), quorumListAtH, newMNListAtH);
+            newQuorumListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), quorumListAtHMinusC, newMNListAtHMinusC);
+            newQuorumListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), quorumListAtHMinus2C, newMNListAtHMinus2C);
+            newQuorumListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), quorumListAtHMinus3C, newMNListAtHMinus3C);
         }
 
         if (peer != null && isSyncingHeadersFirst)
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedQuorums, quorumRotationInfo.getMnListDiffTip());
 
         quorumsCache.clear();
-        quorumsCache.put(blockTip.getHeader().getHash(), newQuorumListTip);
-        quorumsCache.put(newQuorumListTipAtHMinusC.getBlockHash(), newQuorumListTipAtHMinusC);
-        quorumsCache.put(newQuorumListTipAtHMinus2C.getBlockHash(), newQuorumListTipAtHMinus2C);
-        quorumsCache.put(newQuorumListTipAtHMinus3C.getBlockHash(), newQuorumListTipAtHMinus3C);
+        quorumsCache.put(newQuorumListTip.getBlockHash(), newQuorumListTip);
+        quorumsCache.put(newQuorumListAtH.getBlockHash(), newQuorumListAtH);
+        quorumsCache.put(newQuorumListAtHMinusC.getBlockHash(), newQuorumListAtHMinusC);
+        quorumsCache.put(newQuorumListAtHMinus2C.getBlockHash(), newQuorumListAtHMinus2C);
+        quorumsCache.put(newQuorumListAtHMinus3C.getBlockHash(), newQuorumListAtHMinus3C);
 
         mnListTip = newMNListTip;
-        mnListAtHMinusC = newNMListAtHMinusC;
-        mnListAtHMinus2C = newNMListAtHMinus2C;
-        mnListAtHMinus3C = newNMListAtHMinus3C;
+        mnListAtH = newMNListAtH;
+        mnListAtHMinusC = newMNListAtHMinusC;
+        mnListAtHMinus2C = newMNListAtHMinus2C;
+        mnListAtHMinus3C = newMNListAtHMinus3C;
 
         quorumListTip = newQuorumListTip;
-        quorumListAtHMinusC = newQuorumListTipAtHMinusC;
-        quorumListAtHMinus2C = newQuorumListTipAtHMinus2C;
-        quorumListAtHMinus3C = newQuorumListTipAtHMinus3C;
+        quorumListAtH = newQuorumListAtH;
+        quorumListAtHMinusC = newQuorumListAtHMinusC;
+        quorumListAtHMinus2C = newQuorumListAtHMinus2C;
+        quorumListAtHMinus3C = newQuorumListAtHMinus3C;
     }
 
     public SimplifiedMasternodeList getMnListTip() {
@@ -189,13 +217,15 @@ public class QuorumRotationState extends Message {
     }
 
     public GetQuorumRotationInfo getQuorumRotationInfoRequest(StoredBlock nextBlock) {
-        return new GetQuorumRotationInfo(context.getParams(), 4,
+        return new GetQuorumRotationInfo(context.getParams(), 5,
                 Lists.newArrayList(
                         mnListTip.getBlockHash(),
+                        mnListAtH.getBlockHash(),
                         mnListAtHMinusC.getBlockHash(),
                         mnListAtHMinus2C.getBlockHash(),
                         mnListAtHMinus3C.getBlockHash()),
-                nextBlock.getHeader().getHash());
+                nextBlock.getHeader().getHash(),
+                true);
     }
 
     public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
@@ -641,13 +671,31 @@ public class QuorumRotationState extends Message {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         mnListTip.bitcoinSerialize(stream);
+        mnListAtH.bitcoinSerialize(stream);
         mnListAtHMinusC.bitcoinSerialize(stream);
         mnListAtHMinus2C.bitcoinSerialize(stream);
         mnListAtHMinus3C.bitcoinSerialize(stream);
 
         quorumListTip.bitcoinSerialize(stream);
+        quorumListAtH.bitcoinSerialize(stream);
         quorumListAtHMinusC.bitcoinSerialize(stream);
         quorumListAtHMinus2C.bitcoinSerialize(stream);
         quorumListAtHMinus3C.bitcoinSerialize(stream);
+    }
+
+    public SimplifiedMasternodeList getMnListAtH() {
+        return mnListAtH;
+    }
+
+    public SimplifiedQuorumList getQuorumListAtTip() {
+        return quorumListTip;
+    }
+
+    public LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache() {
+        return mnListsCache;
+    }
+
+    public LinkedHashMap<Sha256Hash, SimplifiedQuorumList> getQuorumsCache() {
+        return quorumsCache;
     }
 }
