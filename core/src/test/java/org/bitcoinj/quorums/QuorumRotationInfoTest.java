@@ -71,7 +71,6 @@ public class QuorumRotationInfoTest {
     public void quorumRotationInfoTest() throws FileNotFoundException, IOException, NullPointerException,
             BlockStoreException, MasternodeListDiffException {
         QuorumRotationInfo qrinfo = new QuorumRotationInfo(PARAMS);
-        qrinfo.setCreationHeight(1008);
         qrinfo.setQuorumSnapshotAtHMinusC(
                 new QuorumSnapshot(Arrays.asList(true, true, true, true, true), 1, Arrays.asList(1,1))
         );

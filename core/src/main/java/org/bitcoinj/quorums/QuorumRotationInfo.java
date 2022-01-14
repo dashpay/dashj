@@ -27,14 +27,18 @@ import java.io.OutputStream;
 
 public class QuorumRotationInfo extends Message {
 
-    private long creationHeight;
     QuorumSnapshot quorumSnapshotAtHMinusC;
     QuorumSnapshot quorumSnapshotAtHMinus2C;
     QuorumSnapshot quorumSnapshotAtHMinus3C;
     SimplifiedMasternodeListDiff mnListDiffTip;
+    SimplifiedMasternodeListDiff mnListDiffAtH;
     SimplifiedMasternodeListDiff mnListDiffAtHMinusC;
     SimplifiedMasternodeListDiff mnListDiffAtHMinus2C;
     SimplifiedMasternodeListDiff mnListDiffAtHMinus3C;
+    boolean extraShare;
+    QuorumSnapshot quorumSnapshotAtHMinus4C;
+    SimplifiedMasternodeListDiff mnListDiffAtHMinus4C;
+
 
     QuorumRotationInfo(NetworkParameters params) {
         super(params);
@@ -47,8 +51,6 @@ public class QuorumRotationInfo extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
-        creationHeight = readUint32();
-
         quorumSnapshotAtHMinusC = new QuorumSnapshot(params, payload, cursor);
         cursor += quorumSnapshotAtHMinusC.getMessageSize();
         quorumSnapshotAtHMinus2C = new QuorumSnapshot(params, payload, cursor);
@@ -58,6 +60,8 @@ public class QuorumRotationInfo extends Message {
 
         mnListDiffTip = new SimplifiedMasternodeListDiff(params, payload, cursor);
         cursor += mnListDiffTip.getMessageSize();
+        mnListDiffAtH = new SimplifiedMasternodeListDiff(params, payload, cursor);
+        cursor += mnListDiffAtH.getMessageSize();
         mnListDiffAtHMinusC = new SimplifiedMasternodeListDiff(params, payload, cursor);
         cursor += mnListDiffAtHMinusC.getMessageSize();
         mnListDiffAtHMinus2C = new SimplifiedMasternodeListDiff(params, payload, cursor);
@@ -65,29 +69,44 @@ public class QuorumRotationInfo extends Message {
         mnListDiffAtHMinus3C = new SimplifiedMasternodeListDiff(params, payload, cursor);
         cursor += mnListDiffAtHMinus3C.getMessageSize();
 
+        // extra share?
+        extraShare = readBytes(1)[0] == 1;
+        if (extraShare) {
+            quorumSnapshotAtHMinus4C = new QuorumSnapshot(params, payload, cursor);
+            cursor += quorumSnapshotAtHMinus4C.getMessageSize();
+            mnListDiffAtHMinus4C = new SimplifiedMasternodeListDiff(params, payload, cursor);
+            cursor += mnListDiffAtHMinus4C.getMessageSize();
+        }
         length = cursor - offset;
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        Utils.uint32ToByteStreamLE(creationHeight, stream);
 
         quorumSnapshotAtHMinusC.bitcoinSerialize(stream);
         quorumSnapshotAtHMinus2C.bitcoinSerialize(stream);
         quorumSnapshotAtHMinus3C.bitcoinSerialize(stream);
 
         mnListDiffTip.bitcoinSerialize(stream);
+        mnListDiffAtH.bitcoinSerialize(stream);
         mnListDiffAtHMinusC.bitcoinSerialize(stream);
         mnListDiffAtHMinus2C.bitcoinSerialize(stream);
         mnListDiffAtHMinus3C.bitcoinSerialize(stream);
-    }
 
-    public long getCreationHeight() {
-        return creationHeight;
+        // extra share?
+        stream.write(extraShare ? 1 : 0);
+        if (extraShare) {
+            quorumSnapshotAtHMinus4C.bitcoinSerialize(stream);
+            mnListDiffAtHMinus4C.bitcoinSerialize(stream);
+        }
     }
 
     public SimplifiedMasternodeListDiff getMnListDiffTip() {
         return mnListDiffTip;
+    }
+
+    public SimplifiedMasternodeListDiff getMnListDiffAtH() {
+        return mnListDiffAtH;
     }
 
     public SimplifiedMasternodeListDiff getMnListDiffAtHMinusC() {
@@ -100,6 +119,10 @@ public class QuorumRotationInfo extends Message {
 
     public SimplifiedMasternodeListDiff getMnListDiffAtHMinus3C() {
         return mnListDiffAtHMinus3C;
+    }
+
+    public QuorumSnapshot getQuorumSnapshotAtHMinus4C() {
+        return quorumSnapshotAtHMinus4C;
     }
 
     public QuorumSnapshot getQuorumSnapshotAtHMinusC() {
@@ -117,19 +140,15 @@ public class QuorumRotationInfo extends Message {
     @Override
     public String toString() {
         return "QuorumRotationInfo{" +
-                "creationHeight=" + creationHeight +
                 ", quorumSnapshotAtHMinusC=" + quorumSnapshotAtHMinusC +
                 ", quorumSnapshotAtHMinus2C=" + quorumSnapshotAtHMinus2C +
                 ", quorumSnapshotAtHMinus3C=" + quorumSnapshotAtHMinus3C +
                 ", mnListDiffTip=" + mnListDiffTip +
+                ", mnListDiffAtH=" + mnListDiffAtH +
                 ", mnListDiffAtHMinusC=" + mnListDiffAtHMinusC +
                 ", mnListDiffAtHMinus2C=" + mnListDiffAtHMinus2C +
                 ", mnListDiffAtHMinus3C=" + mnListDiffAtHMinus3C +
                 '}';
-    }
-
-    void setCreationHeight(long creationHeight) {
-        this.creationHeight = creationHeight;
     }
 
     void setQuorumSnapshotAtHMinusC(QuorumSnapshot quorumSnapshotAtHMinusC) {
