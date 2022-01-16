@@ -130,9 +130,9 @@ public class SimplifiedQuorumList extends Message {
                     LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(entry.getLlmqType()));
                     if(llmqParameters == null)
                         throw new ProtocolException("Quorum llmqType is invalid: " + entry.llmqType);
-                    //int dkgInterval = llmqParameters.dkgInterval;
-                    //if (block.getHeight() % dkgInterval != 0)
-                    //    throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
+                    int dkgInterval = llmqParameters.dkgInterval;
+                    if (block.getHeight() % dkgInterval != 0)
+                        throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
                     checkCommitment(entry, chain.getChainHead(), Context.get().masternodeListManager, chain);
                     isFirstQuorumCheck = false;
                 } else {
@@ -240,7 +240,7 @@ public class SimplifiedQuorumList extends Message {
                 commitmentHashes.add(commitment.getHash());
             }
 
-            Collections.sort(commitmentHashes, new Comparator<Sha256Hash>() {
+            commitmentHashes.sort(new Comparator<Sha256Hash>() {
                 @Override
                 public int compare(Sha256Hash o1, Sha256Hash o2) {
                     return o1.compareTo(o2);
@@ -418,7 +418,7 @@ public class SimplifiedQuorumList extends Message {
         }
 
         //This if statement should be removed
-        if (!LLMQUtils.isQuorumRotationEnabled(Context.get(), params, llmqParameters.type)) {
+        //if (!LLMQUtils.isQuorumRotationEnabled(Context.get(), params, llmqParameters.type)) {
 
             ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
             if(members == null) {
@@ -430,6 +430,6 @@ public class SimplifiedQuorumList extends Message {
             if (!commitment.verify(members, true)) {
                 throw new VerificationException("invalid quorum commitment: " + commitment);
             }
-        }
+        //}
     }
 }
