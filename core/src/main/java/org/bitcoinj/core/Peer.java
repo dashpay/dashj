@@ -57,7 +57,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.math.BigInteger;
 import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -898,12 +897,13 @@ public class Peer extends PeerSocketHandler {
             StoredBlock masternodeListBlock = headerChain.getChainHead().getHeight() != 0 ?
                     headerChain.getBlockStore().get(headerChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET) :
                     blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
+
             if (context.masternodeListManager.getListAtChainTip().getHeight() < masternodeListBlock.getHeight()) {
-                if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+                if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
                     GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
                     sendMessage(msg);
                 } else {
-                    GetQuorumRotationInfo msg = new GetQuorumRotationInfo(params, 0, Lists.newArrayList(), headerChain.getChainHead().getHeader().getHash());
+                    GetQuorumRotationInfo msg = context.masternodeListManager.getQuorumRotationInfoRequest(headerChain.getChainHead());
                     log.info("message = {}, {}", msg, this);
                     sendMessage(msg);
                 }
