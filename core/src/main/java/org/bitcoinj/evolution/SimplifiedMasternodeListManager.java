@@ -25,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -62,30 +61,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public SyncOptions syncOptions;
     public int syncInterval;
 
-    LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache = new LinkedHashMap<Sha256Hash, SimplifiedMasternodeList>() {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<Sha256Hash, SimplifiedMasternodeList> eldest) {
-            if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
-                return size() > (syncOptions == SyncOptions.SYNC_MINIMUM ? MIN_CACHE_SIZE : MAX_CACHE_SIZE);
-            } else {
-                return size() > 4;
-            }
-        }
-    };
 
-    LinkedHashMap<Sha256Hash, SimplifiedQuorumList> quorumsCache = new LinkedHashMap<Sha256Hash, SimplifiedQuorumList>() {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<Sha256Hash, SimplifiedQuorumList> eldest) {
-            if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
-                return size() > (syncOptions == SyncOptions.SYNC_MINIMUM ? MIN_CACHE_SIZE : MAX_CACHE_SIZE);
-            } else {
-                return size() > 4;
-            }
-        }
-    };
 
-    SimplifiedMasternodeList mnList;
-    SimplifiedQuorumList quorumList;
     long tipHeight;
     Sha256Hash tipBlockHash;
 
@@ -112,13 +89,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     QuorumSnapshotManager quorumSnapshotManager;
     QuorumManager quorumManager;
 
-    QuorumRotationState quorumRotationState;
+    QuorumState quorumState; //before DIP24
+    QuorumRotationState quorumRotationState; //DIP24
 
     public SimplifiedMasternodeListManager(Context context) {
         super(context);
         tipBlockHash = params.getGenesisBlock().getHash();
-        mnList = new SimplifiedMasternodeList(context.getParams());
-        quorumList = new SimplifiedQuorumList(context.getParams());
 
         lastRequestTime = 0;
         waitingForMNListDiff = false;
@@ -131,7 +107,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         requiresLoadingFromFile = true;
         lastRequestMessage = new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH);
         initChainTipSyncComplete = !context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-
+        quorumState = new QuorumState(context, syncOptions);
         quorumRotationState = new QuorumRotationState(context);
     }
 
@@ -157,13 +133,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     @Override
     protected void parse() throws ProtocolException {
-        mnList = new SimplifiedMasternodeList(params, payload, cursor);
-        cursor += mnList.getMessageSize();
+        quorumState = new QuorumState(context, syncOptions, payload, cursor);
+        cursor += quorumState.getMessageSize();
         tipBlockHash = readHash();
         tipHeight = readUint32();
         if(getFormatVersion() >= LLMQ_FORMAT_VERSION) {
-            quorumList = new SimplifiedQuorumList(params, payload, cursor);
-            cursor += quorumList.getMessageSize();
+            quorumState.parseQuorums(payload, cursor);
 
             //read pending blocks
             int size = (int)readVarInt();
@@ -181,8 +156,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         } else if (getFormatVersion() == QUORUM_ROTATION_FORMAT_VERSION) {
             quorumRotationState = new QuorumRotationState(context, payload, cursor);
             cursor += quorumRotationState.getMessageSize();
-        } else {
-            quorumList = new SimplifiedQuorumList(params);
         }
         length = cursor - offset;
     }
@@ -194,26 +167,26 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             SimplifiedMasternodeList mnListToSave = null;
             SimplifiedQuorumList quorumListToSave = null;
             ArrayList<StoredBlock> otherPendingBlocks = new ArrayList<StoredBlock>(MAX_CACHE_SIZE);
-            if (mnListsCache.size() > 0) {
-                for (Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry : mnListsCache.entrySet()) {
+            if (getMasternodeListCache().size() > 0) {
+                for (Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry : getMasternodeListCache().entrySet()) {
                     if (mnListToSave == null) {
-                        mnListToSave = entry.getValue();
-                        quorumListToSave = quorumsCache.get(entry.getKey());
+                        //mnListToSave = entry.getValue();
+                        //quorumListToSave = quorumsCache.get(entry.getKey());
                     } else {
                         otherPendingBlocks.add(entry.getValue().getStoredBlock());
                     }
                 }
             } else {
-                mnListToSave = mnList;
-                quorumListToSave = quorumList;
+                //mnListToSave = mnList;
+                //quorumListToSave = quorumList;
             }
 
-            mnListToSave.bitcoinSerialize(stream);
+            quorumState.bitcoinSerialize(stream);
             stream.write(mnListToSave.getBlockHash().getReversedBytes());
             Utils.uint32ToByteStreamLE(mnListToSave.getHeight(), stream);
 
             if (getFormatVersion() == LLMQ_FORMAT_VERSION) {
-                quorumListToSave.bitcoinSerialize(stream);
+                quorumState.serializeQuorumsToStream(stream);
                 if (syncOptions != SyncOptions.SYNC_MINIMUM) {
                     stream.write(new VarInt(pendingBlocks.size() + otherPendingBlocks.size()).encode());
                     ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
@@ -263,35 +236,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
         boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
-        log.info("processing mnlistdiff between : " + mnList.getHeight() + " & " + newHeight + "; " + mnlistdiff);
+        log.info("processing mnlistdiff between : " + quorumState.getMnList().getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
-            block = chain.getBlockStore().get(mnlistdiff.blockHash);
-            if(!isLoadingBootStrap && block.getHeight() != newHeight)
-                throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
+            quorumState.applyDiff(peer, headersChain, blockChain, mnlistdiff, isLoadedFromFile());
 
-            watchMNList.start();
-            if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Processing, mnlistdiff);
-
-            SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
-            if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST))
-                newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
-            if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
-            newMNList.setBlock(block, block == null ? false : block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
-            SimplifiedQuorumList newQuorumList = quorumList;
-            if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION) {
-                watchQuorums.start();
-                newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, chain);
-                if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
-                    newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
-            } else {
-                quorumList.syncWithMasternodeList(newMNList);
-            }
-            if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedQuorums, mnlistdiff);
-            mnListsCache.put(newMNList.getBlockHash(), newMNList);
-            quorumsCache.put(newQuorumList.getBlockHash(), newQuorumList);
-            mnList = newMNList;
-            quorumList = newQuorumList;
             log.info(this.toString());
             unCache();
             failedAttempts = 0;
@@ -304,15 +253,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
             if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, mnlistdiff);
 
-            if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION && quorumList.size() > 0)
+            if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION && quorumState.quorumList.size() > 0)
                 setFormatVersion(LLMQ_FORMAT_VERSION);
-            if(mnlistdiff.hasChanges() || pendingBlocks.size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
+            if (mnlistdiff.hasChanges() || pendingBlocks.size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
         } catch(MasternodeListDiffException x) {
             //we already have this mnlistdiff or doesn't match our current tipBlockHash
-            if(mnList.getBlockHash().equals(mnlistdiff.blockHash)) {
+            if(quorumState.getMnList().getBlockHash().equals(mnlistdiff.blockHash)) {
                 log.info("heights are the same:  " + x.getMessage());
-                log.info("mnList = {} vs mnlistdiff {}", mnList.getBlockHash(), mnlistdiff.prevBlockHash);
+                log.info("mnList = {} vs mnlistdiff {}", quorumState.getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
                 log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
                 //remove this block from the list
@@ -326,8 +275,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 }
             } else {
                 log.info("heights are different " + x.getMessage());
-                log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, mnList.getHeight(), quorumList.getHeight());
-                log.info("mnList = {} vs mnlistdiff = {}", mnList.getBlockHash(), mnlistdiff.prevBlockHash);
+                log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, quorumState.getMnList().getHeight(), getQuorumListAtTip().getHeight());
+                log.info("mnList = {} vs mnlistdiff = {}", quorumState.getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
                 log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
                 failedAttempts++;
@@ -370,13 +319,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         }
     }
 
+    public GetQuorumRotationInfo getQuorumRotationInfoRequest(StoredBlock nextBlock) {
+        return quorumRotationState.getQuorumRotationInfoRequest(nextBlock);
+    }
+
     public void processQuorumRotationInfo(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap) {
 
-        StoredBlock block;
-        StoredBlock blockTip;
-        StoredBlock blockMinusC;
-        StoredBlock blockMinus2C;
-        StoredBlock blockMinus3C;
         long newHeight = ((CoinbaseTx) quorumRotationInfo.getMnListDiffTip().coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffTip());
         Stopwatch watch = Stopwatch.createStarted();
@@ -384,7 +332,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
-        log.info("processing quorumrotationinfo between : {} & {}; {}", mnList.getHeight(), newHeight, quorumRotationInfo);
+        log.info("processing quorumrotationinfo between : {} & {}; {}", quorumRotationInfo.getMnListDiffAtH().getHeight(), newHeight, quorumRotationInfo);
         lock.lock();
         try {
             quorumRotationState.setBlockChain(chain);
@@ -407,14 +355,16 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(quorumRotationInfo.getMnListDiffTip().hasChanges() || pendingBlocks.size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
 
-            // log.info("getAllQuorums: {}", getAllQuorumMembers(params.getLlmqForInstantSend(), blockTip.getHeader().getHash()).size());
+            log.info("getAllQuorums: {}", getAllQuorumMembers(params.getLlmqForInstantSend(), quorumRotationState.mnListAtH.getBlockHash()));
+            log.info("getAllQuorums: {}", getAllQuorumMembers(params.getLlmqForInstantSend(), quorumRotationState.mnListAtH.getBlockHash()));
+
             // ArrayList<Quorum> list = context.quorumManager.scanQuorums(params.getLlmqForInstantSend(), LLMQParameters.fromType(params.getLlmqForInstantSend()).getSigningActiveQuorumCount());
             // log.info("quorum list: {}", list.toString());
         } catch(MasternodeListDiffException x) {
             //we already have this mnlistdiff or doesn't match our current tipBlockHash
-            if(mnList.getBlockHash().equals(quorumRotationInfo.getMnListDiffTip().blockHash)) {
+            if(quorumRotationState.mnListTip.getBlockHash().equals(quorumRotationInfo.getMnListDiffTip().blockHash)) {
                 log.info("heights are the same:  " + x.getMessage());
-                log.info("mnList = {} vs mnlistdiff {}", mnList.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
+                log.info("mnList = {} vs mnlistdiff {}", quorumRotationState.mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
                 log.info("mnlistdiff {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
                 log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
                 //remove this block from the list
@@ -428,8 +378,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 }
             } else {
                 log.info("heights are different " + x.getMessage());
-                log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, mnList.getHeight(), quorumList.getHeight());
-                log.info("mnList = {} vs mnlistdiff = {}", mnList.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
+                log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, quorumRotationState.mnListTip.getHeight(), quorumState.quorumList.getHeight());
+                log.info("mnList = {} vs mnlistdiff = {}", quorumRotationState.mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
                 log.info("mnlistdiff {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
                 log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
                 failedAttempts++;
@@ -497,6 +447,30 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         }
     };
 
+    SimplifiedMasternodeList getMasternodeList() {
+        if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+            return quorumRotationState.getMnListTip();
+        } else {
+            return quorumState.getMnList();
+        }
+    }
+
+    Map<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache() {
+        if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+            return quorumRotationState.getMasternodeListCache();
+        } else {
+            return quorumState.getMasternodeListCache();
+        }
+    }
+
+    public Map<Sha256Hash, SimplifiedQuorumList> getQuorumListCache() {
+        if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+            return quorumRotationState.getQuorumsCache();
+        } else {
+            return quorumState.getQuorumsCache();
+        }
+    }
+
     public PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
@@ -507,7 +481,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 boolean value = initChainTipSyncComplete;
                 if (value && getListAtChainTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && isLoadedFromFile()) {
                     maybeGetMNListDiffFresh();
-                    if (!waitingForMNListDiff && mnList.getBlockHash().equals(params.getGenesisBlock().getHash()) || mnList.getHeight() < blockChain.getBestChainHeight()) {
+                    if (!waitingForMNListDiff && getMasternodeList().getBlockHash().equals(params.getGenesisBlock().getHash()) || getMasternodeList().getHeight() < blockChain.getBestChainHeight()) {
                         long timePeriod = syncOptions == SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60L;
                         if (Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < timePeriod) {
                             StoredBlock block = blockChain.getChainHead();
@@ -553,9 +527,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
             lock.lock();
             try {
-                SimplifiedMasternodeList mnlistAtSplitPoint = mnListsCache.get(splitPoint.getHeader().getHash());
+                SimplifiedMasternodeList mnlistAtSplitPoint = getMasternodeListCache().get(splitPoint.getHeader().getHash());
                 if (mnlistAtSplitPoint != null) {
-                    Iterator<Map.Entry<Sha256Hash, SimplifiedMasternodeList>> iterator = mnListsCache.entrySet().iterator();
+                    Iterator<Map.Entry<Sha256Hash, SimplifiedMasternodeList>> iterator = getMasternodeListCache().entrySet().iterator();
                     boolean foundSplitPoint = false;
                     while (iterator.hasNext()) {
                         Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry = iterator.next();
@@ -628,11 +602,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
 
             //Should we reset our masternode/quorum list
-            if (mnList.size() == 0 || mnList.getBlockHash().equals(params.getGenesisBlock().getHash())) {
-                mnList = new SimplifiedMasternodeList(params);
-                quorumList = new SimplifiedQuorumList(params);
+            if (getMasternodeList().size() == 0 || getMasternodeList().getBlockHash().equals(params.getGenesisBlock().getHash())) {
+                resetQuorumState();
             } else {
-                if (mnList.getBlockHash().equals(blockChain.getChainHead().getHeader().getHash()))
+                if (getMasternodeList().getBlockHash().equals(blockChain.getChainHead().getHeader().getHash()))
                     return;
             }
 
@@ -641,15 +614,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
 
             StoredBlock block = blockChain.getChainHead();
-            log.info("maybe requesting mnlistdiff from {} to {}; \n  From {}\n  To {}", mnList.getHeight(), block.getHeight(), mnList.getBlockHash(), block.getHeader().getHash());
-            if (mnList.getBlockHash().equals(params.getGenesisBlock().getHash())) {
+            log.info("maybe requesting mnlistdiff from {} to {}; \n  From {}\n  To {}", getMasternodeList().getHeight(), block.getHeight(), getMasternodeList().getBlockHash(), block.getHeader().getHash());
+            if (getMasternodeList().getBlockHash().equals(params.getGenesisBlock().getHash())) {
                 resetMNList(true);
                 return;
             }
 
-            if (!blockChain.getChainHead().getHeader().getPrevBlockHash().equals(mnList.getBlockHash())) {
+            if (!blockChain.getChainHead().getHeader().getPrevBlockHash().equals(getMasternodeList().getBlockHash())) {
                 if (syncOptions != SyncOptions.SYNC_MINIMUM)
-                    fillPendingBlocksList(mnList.getBlockHash(), blockChain.getChainHead().getHeader().getHash(), pendingBlocks.size());
+                    fillPendingBlocksList(getMasternodeList().getBlockHash(), blockChain.getChainHead().getHeader().getHash(), pendingBlocks.size());
                 requestNextMNListDiff();
                 return;
             }
@@ -658,33 +631,35 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             try {
                 if (syncOptions == SyncOptions.SYNC_MINIMUM)
                     endBlock = blockChain.getBlockStore().get(endBlock.getHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
-                if (mnListsCache.containsKey(endBlock.getHeader().getHash()))
+                if (getMasternodeListCache().containsKey(endBlock.getHeader().getHash()))
                     endBlock = blockChain.getBlockStore().get((int) getListAtChainTip().getHeight() + 1);
                 if (endBlock == null)
                     endBlock = blockChain.getChainHead();
             } catch (BlockStoreException x) {
                 // do nothing
             }
-            if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
-                lastRequestMessage = new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), endBlock.getHeader().getHash());
+            if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+                lastRequestMessage = new GetSimplifiedMasternodeListDiff(getMasternodeList().getBlockHash(), endBlock.getHeader().getHash());
                 downloadPeer.sendMessage(lastRequestMessage);
-                lastRequestHash = mnList.getBlockHash();
+                lastRequestHash = getMasternodeList().getBlockHash();
             } else {
                 GetQuorumRotationInfo msg;
-                //if (mnListTip.getBlockHash().equals(params.getGenesisBlock().getHash())) {
-                    // get from the beginning
-                    msg = new GetQuorumRotationInfo(params, 0, Lists.newArrayList(), endBlock.getHeader().getHash());
-                //} else {
-                    // get from the last one
-                //    msg = new GetQuorumRotationInfo(params, 4, Lists.newArrayList(mnListTip.getBlockHash(), mnListAtHMinusC.getBlockHash(), mnListAtHMinus2C.getBlockHash(), mnListAtHMinus3C.getBlockHash()),endBlock.getHeader().getHash());
-                //}
-                lastRequestHash = quorumRotationState.getMnListTip().getBlockHash();
+                msg = new GetQuorumRotationInfo(params, 0, Lists.newArrayList(), endBlock.getHeader().getHash(), true);
+                lastRequestHash = quorumRotationState.getMnListAtH().getBlockHash();
                 downloadPeer.sendMessage(msg);
             }
             lastRequestTime = Utils.currentTimeMillis();
             waitingForMNListDiff = true;
         } finally {
             lock.unlock();
+        }
+    }
+
+    private void resetQuorumState() {
+        if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+            quorumState = new QuorumState(context, syncOptions);
+        } else {
+            quorumRotationState = new QuorumRotationState(context);
         }
     }
 
@@ -703,7 +678,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(syncOptions != SyncOptions.SYNC_MINIMUM) {
                 Sha256Hash tipHash = blockChain.getChainHead().getHeader().getHash();
                 ArrayList<StoredBlock> blocksToAdd = new ArrayList<StoredBlock>();
-                if (!mnListsCache.containsKey(tipHash) && !pendingBlocksMap.containsKey(tipHash)) {
+                if (!getMasternodeListCache().containsKey(tipHash) && !pendingBlocksMap.containsKey(tipHash)) {
                     StoredBlock cursor = blockChain.getChainHead();
                     do {
                         if (!pendingBlocksMap.containsKey(cursor.getHeader().getHash())) {
@@ -735,7 +710,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 StoredBlock nextBlock;
                 while(blockIterator.hasNext()) {
                     nextBlock = blockIterator.next();
-                    if(nextBlock.getHeight() <= mnList.getHeight()) {
+                    if(nextBlock.getHeight() <= getMasternodeList().getHeight()) {
                         blockIterator.remove();
                         pendingBlocksMap.remove(nextBlock.getHeader().getHash());
                     }
@@ -752,8 +727,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                             blockIterator.remove();
                         }
                     }
-                    log.info("requesting mnlistdiff from {} to {}; \n  From {}\n To {}", mnList.getHeight(), nextBlock.getHeight(), mnList.getBlockHash(), nextBlock.getHeader().getHash());
-                    GetSimplifiedMasternodeListDiff requestMessage = new GetSimplifiedMasternodeListDiff(mnList.getBlockHash(), nextBlock.getHeader().getHash());
+                    log.info("requesting mnlistdiff from {} to {}; \n  From {}\n To {}", getMasternodeList().getHeight(), nextBlock.getHeight(), getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
+                    GetSimplifiedMasternodeListDiff requestMessage = new GetSimplifiedMasternodeListDiff(getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
 
                     GetQuorumRotationInfo requestMessage2 = quorumRotationState.getQuorumRotationInfoRequest(nextBlock);
 
@@ -764,7 +739,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
                         downloadPeer.sendMessage(requestMessage);
                     } else {
-                        log.info("message = {}, {}", requestMessage2, downloadPeer);
+                        log.info("message = {}, {}, {}", requestMessage2, downloadPeer, nextBlock);
                         downloadPeer.sendMessage(requestMessage2);
                     }
 
@@ -849,7 +824,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     @Override
     public String toString() {
-        return "SimplifiedMNListManager:  {tip:" + mnList + ", " + quorumList + ", pending blocks: " + pendingBlocks.size() + "}";
+        return "SimplifiedMNListManager:  {tip:" + getMasternodeList() + ", " + getQuorumListAtTip() + ", pending blocks: " + pendingBlocks.size() + "}";
     }
 
     @Deprecated
@@ -859,7 +834,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public boolean isDeterministicMNsSporkActive(long height) {
         if(height == -1) {
-            height = mnList.getHeight();
+            height = getMasternodeList().getHeight();
         }
 
         return height > params.getDeterministicMasternodesEnabledHeight();
@@ -870,16 +845,20 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public SimplifiedMasternodeList getListAtChainTip() {
-        return mnList;
+        return getMasternodeList();
     }
 
     public SimplifiedQuorumList getQuorumListAtTip() {
-        return quorumList;
+        if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+            return quorumState.quorumList;
+        } else {
+            return quorumRotationState.getQuorumListAtTip();
+        }
     }
 
     @Override
     public int getCurrentFormatVersion() {
-        return quorumList.size() != 0 ? LLMQ_FORMAT_VERSION : DMN_FORMAT_VERSION;
+        return getQuorumListAtTip().size() != 0 ? LLMQ_FORMAT_VERSION : DMN_FORMAT_VERSION;
     }
 
     public void resetMNList() {
@@ -895,10 +874,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         try {
             if(force || getFormatVersion() < LLMQ_FORMAT_VERSION) {
                 log.info("resetting masternode list");
-                mnList = new SimplifiedMasternodeList(context.getParams());
-                quorumList = new SimplifiedQuorumList(context.getParams());
-                mnListsCache.clear();
-                quorumsCache.clear();
+                resetQuorumState();
+                getMasternodeListCache().clear();
+                getQuorumListCache().clear();
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
@@ -943,7 +921,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public SimplifiedMasternodeList getListForBlock(Sha256Hash blockHash) {
         lock.lock();
         try {
-            return mnListsCache.get(blockHash);
+            return getMasternodeListCache().get(blockHash);
         } finally {
             lock.unlock();
         }
@@ -952,7 +930,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public SimplifiedQuorumList getQuorumListForBlock(Sha256Hash blockHash) {
         lock.lock();
         try {
-            return quorumsCache.get(blockHash);
+            return getQuorumListCache().get(blockHash);
         } finally {
             lock.unlock();
         }
@@ -960,18 +938,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
     {
-
+        lock.lock();
         try {
             if (LLMQUtils.isQuorumRotationEnabled(context, params, llmqType)) {
                 return quorumRotationState.getAllQuorumMembers(llmqType, blockHash);
             } else {
-                LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
-                SimplifiedMasternodeList allMns = getListForBlock(blockHash);
-                if (allMns != null) {
-                    Sha256Hash modifier = LLMQUtils.buildLLMQBlockHash(llmqType, blockHash);
-                    return allMns.calculateQuorum(llmqParameters.getSize(), modifier);
-                }
-                return null;
+                return quorumState.getAllQuorumMembers(llmqType, blockHash);
             }
         } finally {
             lock.unlock();
@@ -1054,10 +1026,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     protected void loadBootstrapAndSync() {
         Preconditions.checkState(bootStrapFilePath != null || bootStrapStream != null);
-        Preconditions.checkState(mnList.size() == 0);
-        Preconditions.checkState(quorumList.size() == 0);
-        Preconditions.checkState(mnListsCache.size() == 0);
-        Preconditions.checkState(quorumsCache.size() == 0);
+        Preconditions.checkState(getMasternodeList().size() == 0);
+        Preconditions.checkState(getQuorumListAtTip().size() == 0);
+        Preconditions.checkState(getMasternodeListCache().size() == 0);
+        Preconditions.checkState(getQuorumListCache().size() == 0);
 
         new Thread(new Runnable() {
             @Override
