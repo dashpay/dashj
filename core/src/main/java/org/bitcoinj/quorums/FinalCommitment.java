@@ -250,7 +250,7 @@ public class FinalCommitment extends SpecialTxPayload {
             return false;
         }
         if (quorumPublicKey.isValid() ||
-                !quorumVvecHash.equals(Sha256Hash.ZERO_HASH) ||
+                !quorumVvecHash.isZero() ||
                 membersSignature.isValid() ||
                 quorumSignature.isValid()) {
             return false;

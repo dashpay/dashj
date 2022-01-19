@@ -422,7 +422,7 @@ public class SimplifiedMasternodeList extends Message {
         forEachMN(true, new ForeachMNCallback() {
             @Override
             public void processMN(SimplifiedMasternodeListEntry mn) {
-                if(mn.getConfirmedHash().equals(Sha256Hash.ZERO_HASH)) {
+                if(mn.getConfirmedHash().isZero()) {
                     // we only take confirmed MNs into account to avoid hash grinding on the ProRegTxHash to sneak MNs into a
                     // future quorums
                     return;

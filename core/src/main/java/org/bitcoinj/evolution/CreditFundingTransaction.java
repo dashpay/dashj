@@ -162,7 +162,7 @@ public class CreditFundingTransaction extends Transaction {
      * Returns the credit burn identifier, which is the sha256(sha256(outpoint))
      */
     public Sha256Hash getCreditBurnIdentityIdentifier() {
-        if(creditBurnIdentityIdentifier == null || creditBurnIdentityIdentifier.equals(Sha256Hash.ZERO_HASH)) {
+        if(creditBurnIdentityIdentifier == null || creditBurnIdentityIdentifier.isZero()) {
             try {
                 ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(36);
                 getLockedOutpoint().bitcoinSerialize(bos);

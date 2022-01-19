@@ -247,7 +247,9 @@ public class SimplifiedQuorumList extends Message {
                 }
             });
 
-            if (!cbtx.getMerkleRootQuorums().equals(ZERO_HASH) && !cbtx.getMerkleRootQuorums().equals(calculateMerkleRoot(commitmentHashes)))
+            if (!cbtx.getMerkleRootQuorums().isZero() &&
+                    !commitmentHashes.isEmpty() &&
+                    !cbtx.getMerkleRootQuorums().equals(calculateMerkleRoot(commitmentHashes)))
                 throw new VerificationException("MerkleRoot of quorum list does not match coinbaseTx - " + commitmentHashes.size());
 
             return true;

@@ -166,7 +166,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
     private boolean preVerifyInstantSendLock(InstantSendLock islock)
     {
 
-        if (islock.txid.equals(Sha256Hash.ZERO_HASH) || islock.inputs.isEmpty()) {
+        if (islock.txid.isZero() || islock.inputs.isEmpty()) {
             return false;
         }
 
@@ -644,7 +644,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             islockHash = db.getInstantSendLockHashByTxid(tx.getTxId());
 
             // update DB about when an IS lock was mined
-            if (islockHash != null && !islockHash.equals(Sha256Hash.ZERO_HASH) && block != null) {
+            if (islockHash != null && !islockHash.isZero() && block != null) {
                 if (isDisconnect) {
                     db.removeInstantSendLockMined(islockHash, block.getHeight());
                 } else {

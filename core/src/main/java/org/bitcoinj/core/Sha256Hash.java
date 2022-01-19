@@ -308,4 +308,8 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
         }
         throw new IllegalArgumentException("bytes does not have length 32 or 33 ");
     }
+
+    public boolean isZero() {
+        return equals(ZERO_HASH);
+    }
 }
