@@ -428,7 +428,7 @@ public class TransactionTest {
                                     Transaction.SigHash.ALL.byteValue())
                                     .toString());
                 }
-            };
+            }.start();
         }
     }
 
