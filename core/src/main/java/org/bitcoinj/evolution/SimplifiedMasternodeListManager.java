@@ -448,7 +448,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     };
 
     SimplifiedMasternodeList getMasternodeList() {
-        if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+        if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
             return quorumRotationState.getMnListTip();
         } else {
             return quorumState.getMnList();
@@ -456,7 +456,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     Map<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache() {
-        if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+        if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
             return quorumRotationState.getMasternodeListCache();
         } else {
             return quorumState.getMasternodeListCache();
@@ -464,7 +464,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public Map<Sha256Hash, SimplifiedQuorumList> getQuorumListCache() {
-        if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+        if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
             return quorumRotationState.getQuorumsCache();
         } else {
             return quorumState.getQuorumsCache();
@@ -638,7 +638,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             } catch (BlockStoreException x) {
                 // do nothing
             }
-            if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+            if (!isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
                 lastRequestMessage = new GetSimplifiedMasternodeListDiff(getMasternodeList().getBlockHash(), endBlock.getHeader().getHash());
                 downloadPeer.sendMessage(lastRequestMessage);
                 lastRequestHash = getMasternodeList().getBlockHash();
@@ -656,7 +656,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     private void resetQuorumState() {
-        if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+        if (!isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
             quorumState = new QuorumState(context, syncOptions);
         } else {
             quorumRotationState = new QuorumRotationState(context);
@@ -727,18 +727,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                             blockIterator.remove();
                         }
                     }
-                    log.info("requesting mnlistdiff from {} to {}; \n  From {}\n To {}", getMasternodeList().getHeight(), nextBlock.getHeight(), getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
-                    GetSimplifiedMasternodeListDiff requestMessage = new GetSimplifiedMasternodeListDiff(getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
 
-                    GetQuorumRotationInfo requestMessage2 = quorumRotationState.getQuorumRotationInfoRequest(nextBlock);
-
-                    if(requestMessage.equals(lastRequestMessage)) {
-                        log.info("request for mnlistdiff is the same as the last request");
-                    }
-
-                    if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+                    if (!isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+                        log.info("requesting mnlistdiff from {} to {}; \n  From {}\n To {}", getMasternodeList().getHeight(), nextBlock.getHeight(), getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
+                        GetSimplifiedMasternodeListDiff requestMessage = new GetSimplifiedMasternodeListDiff(getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
+                        if(requestMessage.equals(lastRequestMessage)) {
+                            log.info("request for mnlistdiff is the same as the last request");
+                        }
                         downloadPeer.sendMessage(requestMessage);
+                        lastRequestMessage = requestMessage;
                     } else {
+                        log.info("requesting qrinfo from {} to {}; \n  From {}\n To {}", getMasternodeList().getHeight(), nextBlock.getHeight(), getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
+                        GetQuorumRotationInfo requestMessage2 = quorumRotationState.getQuorumRotationInfoRequest(nextBlock);
                         log.info("message = {}, {}, {}", requestMessage2, downloadPeer, nextBlock);
                         downloadPeer.sendMessage(requestMessage2);
                     }
@@ -844,12 +844,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         return isDeterministicMNsSporkActive(-1) || params.isDeterministicMasternodesEnabled();
     }
 
+    public boolean isQuorumRotationEnabled(LLMQParameters.LLMQType type) {
+        boolean quorumRotationActive = blockChain.getBestChainHeight() >= params.getDIP0024BlockHeight() ||
+                headersChain.getBestChainHeight() >= params.getDIP0024BlockHeight();
+        return params.getLlmqForInstantSend() == type && quorumRotationActive;
+    }
+
     public SimplifiedMasternodeList getListAtChainTip() {
         return getMasternodeList();
     }
 
     public SimplifiedQuorumList getQuorumListAtTip() {
-        if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+        if (!isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
             return quorumState.quorumList;
         } else {
             return quorumRotationState.getQuorumListAtTip();
@@ -940,7 +946,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     {
         lock.lock();
         try {
-            if (LLMQUtils.isQuorumRotationEnabled(context, params, llmqType)) {
+            if (isQuorumRotationEnabled(llmqType)) {
                 return quorumRotationState.getAllQuorumMembers(llmqType, blockHash);
             } else {
                 return quorumState.getAllQuorumMembers(llmqType, blockHash);

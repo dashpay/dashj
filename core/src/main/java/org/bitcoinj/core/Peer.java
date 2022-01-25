@@ -899,7 +899,7 @@ public class Peer extends PeerSocketHandler {
                     blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
 
             if (context.masternodeListManager.getListAtChainTip().getHeight() < masternodeListBlock.getHeight()) {
-                if (!LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqForInstantSend())) {
+                if (!LLMQUtils.isQuorumRotationEnabled(headerChain, params, params.getLlmqForInstantSend())) {
                     GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
                     sendMessage(msg);
                 } else {
