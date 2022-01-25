@@ -1,5 +1,6 @@
 package org.bitcoinj.quorums;
 
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
@@ -87,6 +88,11 @@ public class LLMQUtils {
 
     public static boolean isQuorumRotationEnabled(Context context, NetworkParameters params, LLMQParameters.LLMQType type) {
         boolean quorumRotationActive = context.blockChain.getBestChainHeight() >= params.getDIP0024BlockHeight();
+        return params.getLlmqForInstantSend() == type && quorumRotationActive;
+    }
+
+    public static boolean isQuorumRotationEnabled(AbstractBlockChain blockChain, NetworkParameters params, LLMQParameters.LLMQType type) {
+        boolean quorumRotationActive = blockChain.getBestChainHeight() >= params.getDIP0024BlockHeight();
         return params.getLlmqForInstantSend() == type && quorumRotationActive;
     }
 
