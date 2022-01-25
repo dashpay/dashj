@@ -119,7 +119,7 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     public String toString() {
-        return "Simplified MN List(count:  " + size() + "height: " + height + ")";
+        return "Simplified MN List(count:  " + size() + "height: " + height + "/" + storedBlock.getHeight() +  ")";
     }
 
     public SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff) throws MasternodeListDiffException

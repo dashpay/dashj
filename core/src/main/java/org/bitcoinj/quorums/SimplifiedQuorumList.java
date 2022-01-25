@@ -105,7 +105,14 @@ public class SimplifiedQuorumList extends Message {
 
     @Override
     public String toString() {
-        return "SimplifiedQuorumList(count: " + size() + ")";
+        StringBuilder builder = new StringBuilder();
+        builder.append("SimplifiedQuorumList(count: ").append(size()).append("; ").append(height).append("/").append(")");
+
+        for (Map.Entry<Sha256Hash, FinalCommitment> entry : minableCommitments.entrySet()) {
+            builder.append("\n ").append(entry.getValue().llmqType).append(": ").append(entry.getValue().quorumHash);
+        }
+
+        return builder.toString();
     }
 
     public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, AbstractBlockChain chain) throws MasternodeListDiffException{
