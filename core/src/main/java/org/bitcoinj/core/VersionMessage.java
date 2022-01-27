@@ -125,8 +125,10 @@ public class VersionMessage extends Message {
         fromAddr = new PeerAddress(params, localhost, params.getPort(), clientVersion, BigInteger.ZERO);
         fromAddr.setParent(this);
         subVer = LIBRARY_SUBVER;
-        if(params.getDevNetGenesisBlock() != null)
-            subVer = "/DashJ:" + BITCOINJ_VERSION + "(devnet." + params.getDevNetName() +")/";
+        if(params.getDevNetGenesisBlock() != null) {
+            char separator = clientVersion < 70220 ? '=' : '.';
+            subVer = "/DashJ:" + BITCOINJ_VERSION + "(devnet" + separator + params.getDevNetName() + ")/";
+        }
         bestHeight = newBestHeight;
         relayTxesBeforeFilter = true;
 
