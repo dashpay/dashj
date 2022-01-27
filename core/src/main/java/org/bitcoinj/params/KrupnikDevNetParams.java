@@ -20,24 +20,24 @@ import org.bitcoinj.quorums.LLMQParameters;
 
 public class KrupnikDevNetParams extends DevNetParams {
 
-    private static String DEVNET_NAME = "krupnik";
+    private static final String DEVNET_NAME = "krupnik";
 
-    private static String [] MASTERNODES = new String [] {
-        "52.38.91.91",
-        "34.219.219.19",
-        "34.221.32.211",
-        "35.87.4.244",
-        "54.188.168.220",
-        "34.211.88.72",
-        "35.87.2.214",
-        "35.86.171.21",
-        "54.184.175.69",
-        "52.25.246.83",
-        "35.162.208.70",
+    private static final String[] MASTERNODES = new String[]{
+            "34.210.237.116",
+            "54.69.65.231",
+            "54.185.90.95",
+            "54.186.234.0",
+            "35.87.212.139",
+            "34.212.52.44",
+            "34.217.47.197",
+            "34.220.79.131",
+            "18.237.212.176",
+            "54.188.17.188",
+            "34.210.1.159",
     };
 
     public KrupnikDevNetParams() {
-        super(DEVNET_NAME, "yMe6YVixWJ5797yN5AY4KzgJbHmXwVVsBg", 20001,
+        super(DEVNET_NAME, "yPBtLENPQ6Ri1R7SyjevvvyMdopdFJUsRo", 20001,
                 MASTERNODES, true, 70219);
         dnsSeeds = MASTERNODES;
         addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET);
@@ -48,7 +48,7 @@ public class KrupnikDevNetParams extends DevNetParams {
     private static KrupnikDevNetParams instance;
 
     public static KrupnikDevNetParams get() {
-        if(instance == null) {
+        if (instance == null) {
             instance = new KrupnikDevNetParams();
             add(instance);
         }
