@@ -441,7 +441,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         } else {
             this.headerChain = headerChain;
         }
-        context.setPeerGroupAndBlockChain(this, chain);
+        context.setPeerGroupAndBlockChain(this, chain, this.headerChain);
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);
