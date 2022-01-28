@@ -124,7 +124,7 @@ public class SimplifiedMasternodesTest {
         assertEquals(db2.load(managerSpecific), true);
 
         //check to make sure that they have the same number of masternodes
-        assertEquals(managerDefaultNames.mnList.size(), managerSpecific.mnList.size());
+        assertEquals(managerDefaultNames.getMasternodeList().size(), managerSpecific.getMasternodeList().size());
 
         //load a file with version 1, expecting version 2
         SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(Context.get());
