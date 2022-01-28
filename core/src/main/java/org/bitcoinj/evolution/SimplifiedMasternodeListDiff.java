@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.FinalCommitment;
+import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.utils.Pair;
 
 import java.io.IOException;
@@ -137,6 +138,22 @@ public class SimplifiedMasternodeListDiff extends Message {
     public String toString() {
         return "Simplified MNList Diff:  adding " + mnList.size() + " and removing " + deletedMNs.size() + " masternodes" +
                 (coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "");
+    }
+
+    public String toString(BlockStore blockStore) {
+        int height = -1;
+        try {
+            height = blockStore.get(blockHash).getHeight();
+        } catch (Exception x) {
+            // swallow
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append("Simplified MNList Diff: ").append(height).append("/").append(getHeight())
+                .append(" [adding ").append(mnList.size()).append(" and removing ").append(deletedMNs.size()).append(" masternodes")
+                .append(coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "")
+                .append("]");
+
+        return builder.toString();
     }
 
     public Transaction getCoinBaseTx() {
