@@ -143,6 +143,7 @@ public class QuorumRotationState extends Message {
         blockMinus3C = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinus3C().blockHash);
         blockMinus4C = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinus4C().blockHash);
 
+        log.info(quorumRotationInfo.toString(chain));
         if (!isLoadingBootStrap && blockAtH.getHeight() != newHeight)
             throw new ProtocolException("qrinfo blockhash (height=" + blockAtH.getHeight() + " doesn't match coinbase block height: " + newHeight);
 
@@ -320,6 +321,9 @@ public class QuorumRotationState extends Message {
         } catch (BlockStoreException x) {
             // we are in deep trouble
             throw new RuntimeException(x);
+        } catch (NullPointerException x) {
+            log.warn("missing masternode list for this quorum:" + x);
+            return null;
         } finally {
             //lock.unlock();
         }
@@ -334,6 +338,8 @@ public class QuorumRotationState extends Message {
         final StoredBlock pBlockHMinus2C = quorumBaseBlock.getAncestor(blockChain.getBlockStore(),quorumBaseBlock.getHeight() - 2 * cycleLength);
         final StoredBlock pBlockHMinus3C = quorumBaseBlock.getAncestor(blockChain.getBlockStore(),quorumBaseBlock.getHeight() - 3 * cycleLength);
 
+        log.info("computeQuorumMembersByQuarterRotation llmqType[{}] nHeight[{}]", llmqType, quorumBaseBlock.getHeight());
+
         PreviousQuorumQuarters previousQuarters = getPreviousQuorumQuarterMembers(llmqParameters, blockHMinusC, pBlockHMinus2C, pBlockHMinus3C);
 
         ArrayList<ArrayList<Masternode>> quorumMembers = Lists.newArrayListWithCapacity(llmqParameters.getSigningActiveQuorumCount());
@@ -343,42 +349,66 @@ public class QuorumRotationState extends Message {
 
         ArrayList<ArrayList<SimplifiedMasternodeListEntry>> newQuarterMembers = buildNewQuorumQuarterMembers(llmqParameters, quorumBaseBlock, previousQuarters);
 
+        // logging
+        for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
+            StringBuilder builder = new StringBuilder();
+
+            builder.append(" 3Cmns[");
+            for (SimplifiedMasternodeListEntry m: previousQuarters.quarterHMinus3C.get(i)) {
+                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+            }
+            builder.append(" ] 2Cmns[");
+            for (SimplifiedMasternodeListEntry m: previousQuarters.quarterHMinus2C.get(i)) {
+                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+            }
+            builder.append(" ] 1Cmns[");
+            for (SimplifiedMasternodeListEntry m: previousQuarters.quarterHMinusC.get(i)) {
+                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+            }
+            builder.append(" ] mew[");
+            for (SimplifiedMasternodeListEntry m: newQuarterMembers.get(i)) {
+                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+            }
+            builder.append(" ]");
+            log.info("QuarterComposition h[{}] i[{}]:{}", quorumBaseBlock.getHeight(), i, builder.toString());
+        }
+
         for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
             for (SimplifiedMasternodeListEntry m: previousQuarters.quarterHMinus3C.get(i)) {
-                for (int j = 0; j < quorumMembers.get(i).size(); ++j) {
-                    if (m.equals(quorumMembers.get(i).get(j))) {
-                        log.info("{} is already in the list", m);
-                    }
-                }
+                checkDuplicates(quorumMembers, i, m);
                 quorumMembers.get(i).add(m);
             }
             for (SimplifiedMasternodeListEntry m: previousQuarters.quarterHMinus2C.get(i)) {
-                for (int j = 0; j < quorumMembers.get(i).size(); ++j) {
-                    if (m.equals(quorumMembers.get(i).get(j))) {
-                        log.info("{} is already in the list", m);
-                    }
-                }
+                checkDuplicates(quorumMembers, i, m);
                 quorumMembers.get(i).add(m);
             }
             for (SimplifiedMasternodeListEntry m: previousQuarters.quarterHMinusC.get(i)) {
-                for (int j = 0; j < quorumMembers.get(i).size(); ++j) {
-                    if (m.equals(quorumMembers.get(i).get(j))) {
-                        log.info("{} is already in the list", m);
-                    }
-                }
+                checkDuplicates(quorumMembers, i, m);
                 quorumMembers.get(i).add(m);
             }
             for (SimplifiedMasternodeListEntry m: newQuarterMembers.get(i)) {
-                for (int j = 0; j < quorumMembers.get(i).size(); ++j) {
-                    if (m.equals(quorumMembers.get(i).get(j))) {
-                        log.info("{} is already in the list", m);
-                    }
-                }
+                checkDuplicates(quorumMembers, i, m);
                 quorumMembers.get(i).add(m);
             }
+
+            StringBuilder ss = new StringBuilder();
+            ss.append(" [");
+            for (Masternode m: quorumMembers.get(i)) {
+                ss.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+            }
+            ss.append("]");
+            log.info("QuorumComposition h[{}] i[{}]:{}\n", quorumBaseBlock.getHeight(), i, ss);
         }
 
         return quorumMembers;
+    }
+
+    private void checkDuplicates(ArrayList<ArrayList<Masternode>> quorumMembers, int i, SimplifiedMasternodeListEntry m) {
+        for (Masternode masternode : quorumMembers.get(i)) {
+            if (m.equals(masternode)) {
+                log.info("{} is already in the list", m);
+            }
+        }
     }
 
     private ArrayList<ArrayList<SimplifiedMasternodeListEntry>> buildNewQuorumQuarterMembers(LLMQParameters llmqParameters, StoredBlock quorumBaseBlock, PreviousQuorumQuarters previousQuarters)
@@ -429,6 +459,14 @@ public class QuorumRotationState extends Message {
         ArrayList<Masternode> sortedMnsNotUsedAtH = MnsNotUsedAtH.calculateQuorum(MnsNotUsedAtH.getAllMNsCount(), modifier);
         ArrayList<Masternode> sortedCombinedMnsList = new ArrayList<>(sortedMnsNotUsedAtH);
         sortedCombinedMnsList.addAll(sortedMnsUsedAtH);
+
+        StringBuilder ss = new StringBuilder();
+        ss.append(" [");
+        for (Masternode m: sortedCombinedMnsList) {
+            ss.append(m.getProTxHash().toString(), 0, 4).append(" | ");
+        }
+        ss.append("]");
+        log.info("BuildNewQuorumQuarterMembers h[{}] {}\n", quorumBaseBlock.getHeight(), ss);
 
         ArrayList<Integer> skipList = Lists.newArrayList();
         int firstSkippedIndex = 0;
@@ -642,6 +680,9 @@ public class QuorumRotationState extends Message {
         SimplifiedMasternodeList nonUsedMNs = new SimplifiedMasternodeList(params);
 
         SimplifiedMasternodeList mns = getListForBlock(quorumBaseBlock.getHeader().getHash());
+        if (mns == null) {
+            throw new NullPointerException("missing masternode list for height: " + quorumBaseBlock.getHeight());
+        }
         ArrayList<Masternode> list = mns.calculateQuorum(mns.getValidMNsCount(), quorumBaseBlock.getHeader().getHash());
 
         AtomicInteger i = new AtomicInteger();
@@ -769,5 +810,28 @@ public class QuorumRotationState extends Message {
 
     public LinkedHashMap<Sha256Hash, SimplifiedQuorumList> getQuorumsCache() {
         return quorumsCache;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("QuorumRotationState{")
+                .append("\n -----------Masternode Lists ------------")
+                .append("\n  Tip: ").append(mnListTip)
+                .append("\n  H:   ").append(mnListAtH)
+                .append("\n  H-C: ").append(mnListAtHMinusC)
+                .append("\n  H-2C:").append(mnListAtHMinus2C)
+                .append("\n  H-3C:").append(mnListAtHMinus3C)
+                .append("\n  H-4C:").append(mnListAtHMinus4C)
+                .append("\n -----------Quorum Lists ------------")
+                .append("\n  Tip: ").append(quorumListTip)
+                .append("\n  H:   ").append(quorumListAtH)
+                .append("\n  H-C: ").append(quorumListAtHMinusC)
+                .append("\n  H-2C:").append(quorumListAtHMinus2C)
+                .append("\n  H-3C:").append(quorumListAtHMinus3C)
+                .append("\n  H-4C:").append(quorumListAtHMinus4C)
+                .append("}");
+
+        return builder.toString();
     }
 }
