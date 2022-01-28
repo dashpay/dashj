@@ -44,7 +44,6 @@ import java.util.Map;
 public class QuorumState extends Message {
     private static final Logger log = LoggerFactory.getLogger(QuorumState.class);
     Context context;
-    NetworkParameters params;
     AbstractBlockChain blockChain;
     BlockStore blockStore;
 

@@ -59,7 +59,6 @@ import java.util.concurrent.locks.ReentrantLock;
 public class QuorumRotationState extends Message {
     private static final Logger log = LoggerFactory.getLogger(QuorumRotationState.class);
     Context context;
-    NetworkParameters params;
     AbstractBlockChain blockChain;
     BlockStore blockStore;
 
