@@ -432,16 +432,26 @@ public class SimplifiedQuorumList extends Message {
         //This if statement should be removed
         //if (!LLMQUtils.isQuorumRotationEnabled(Context.get(), params, llmqParameters.type)) {
 
-            ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
-            if(members == null) {
-                //no information about this quorum because it is before we were downloading
-                log.warn("masternode list is missing to verify quorum");
-                return;
-            }
+        ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
 
-            if (!commitment.verify(members, true)) {
-                throw new VerificationException("invalid quorum commitment: " + commitment);
-            }
-        //}
+        if (members == null) {
+            //no information about this quorum because it is before we were downloading
+            log.warn("masternode list is missing to verify quorum: {}", commitment.quorumHash);
+            return;
+        }
+
+        log.info("Quorum: {}", commitment.quorumHash);
+        StringBuilder builder = new StringBuilder();
+        for (Masternode mn : members) {
+            builder.append("\n ").append(mn.getProTxHash());
+        }
+        log.info(builder.toString());
+
+        if (!commitment.verify(members, true)) {
+            //throw new VerificationException("invalid quorum commitment: " + commitment);
+            log.warn("invalid quorum commitment: {}", commitment);
+        } else {
+            log.info("valid quorum commitment");
+        }
     }
 }
