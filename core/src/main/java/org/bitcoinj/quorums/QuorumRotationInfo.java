@@ -16,11 +16,12 @@
 
 package org.bitcoinj.quorums;
 
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Utils;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
+import org.bitcoinj.store.BlockStore;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -35,14 +36,13 @@ public class QuorumRotationInfo extends Message {
     SimplifiedMasternodeListDiff mnListDiffAtHMinusC;
     SimplifiedMasternodeListDiff mnListDiffAtHMinus2C;
     SimplifiedMasternodeListDiff mnListDiffAtHMinus3C;
+
     boolean extraShare;
     QuorumSnapshot quorumSnapshotAtHMinus4C;
     SimplifiedMasternodeListDiff mnListDiffAtHMinus4C;
 
-
     QuorumRotationInfo(NetworkParameters params) {
         super(params);
-
     }
 
     public QuorumRotationInfo(NetworkParameters params, byte [] payload) {
@@ -82,7 +82,6 @@ public class QuorumRotationInfo extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-
         quorumSnapshotAtHMinusC.bitcoinSerialize(stream);
         quorumSnapshotAtHMinus2C.bitcoinSerialize(stream);
         quorumSnapshotAtHMinus3C.bitcoinSerialize(stream);
@@ -121,8 +120,8 @@ public class QuorumRotationInfo extends Message {
         return mnListDiffAtHMinus3C;
     }
 
-    public QuorumSnapshot getQuorumSnapshotAtHMinus4C() {
-        return quorumSnapshotAtHMinus4C;
+    public SimplifiedMasternodeListDiff getMnListDiffAtHMinus4C() {
+        return mnListDiffAtHMinus4C;
     }
 
     public QuorumSnapshot getQuorumSnapshotAtHMinusC() {
@@ -135,6 +134,10 @@ public class QuorumRotationInfo extends Message {
 
     public QuorumSnapshot getQuorumSnapshotAtHMinus3C() {
         return quorumSnapshotAtHMinus3C;
+    }
+
+    public QuorumSnapshot getQuorumSnapshotAtHMinus4C() {
+        return quorumSnapshotAtHMinus4C;
     }
 
     @Override
@@ -151,6 +154,22 @@ public class QuorumRotationInfo extends Message {
                 '}';
     }
 
+    public String toString(AbstractBlockChain chain) {
+        BlockStore blockStore = chain.getBlockStore();
+        return "QuorumRotationInfo{" +
+                ",\n quorumSnapshotAtHMinusC=" + quorumSnapshotAtHMinusC +
+                ",\n quorumSnapshotAtHMinus2C=" + quorumSnapshotAtHMinus2C +
+                ",\n quorumSnapshotAtHMinus3C=" + quorumSnapshotAtHMinus3C +
+                ",\n mnListDiffTip=" + mnListDiffTip.toString(blockStore) +
+                ",\n mnListDiffAtH=" + mnListDiffAtH.toString(blockStore) +
+                ",\n mnListDiffAtHMinusC=" + mnListDiffAtHMinusC.toString(blockStore) +
+                ",\n mnListDiffAtHMinus2C=" + mnListDiffAtHMinus2C.toString(blockStore) +
+                ",\n mnListDiffAtHMinus3C=" + mnListDiffAtHMinus3C.toString(blockStore) +
+                ",\n mnListDiffAtHMinus4C=" + mnListDiffAtHMinus4C.toString(blockStore) +
+                '}';
+    }
+
+    // these are for tests so they have package level access
     void setQuorumSnapshotAtHMinusC(QuorumSnapshot quorumSnapshotAtHMinusC) {
         this.quorumSnapshotAtHMinusC = quorumSnapshotAtHMinusC;
     }
@@ -161,6 +180,10 @@ public class QuorumRotationInfo extends Message {
 
     public void setQuorumSnapshotAtHMinus3C(QuorumSnapshot quorumSnapshotAtHMinus3C) {
         this.quorumSnapshotAtHMinus3C = quorumSnapshotAtHMinus3C;
+    }
+
+    public void setQuorumSnapshotAtHMinus34(QuorumSnapshot quorumSnapshotAtHMinus4C) {
+        this.quorumSnapshotAtHMinus4C = quorumSnapshotAtHMinus4C;
     }
 
     public void setMnListDiffTip(SimplifiedMasternodeListDiff mnListDiffTip) {
@@ -177,5 +200,14 @@ public class QuorumRotationInfo extends Message {
 
     public void setMnListDiffAtHMinus3C(SimplifiedMasternodeListDiff mnListDiffAtHMinus3C) {
         this.mnListDiffAtHMinus3C = mnListDiffAtHMinus3C;
+    }
+
+    public void setMnListDiffAtHMinus4C(SimplifiedMasternodeListDiff mnListDiffAtHMinus4C) {
+        this.mnListDiffAtHMinus4C = mnListDiffAtHMinus4C;
+    }
+
+    public boolean hasChanges() {
+        return mnListDiffTip.hasChanges() || mnListDiffAtH.hasChanges() || mnListDiffAtHMinusC.hasChanges() ||
+                mnListDiffAtHMinus2C.hasChanges() || mnListDiffAtHMinus3C.hasChanges() || mnListDiffAtHMinus4C.hasChanges();
     }
 }
