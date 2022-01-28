@@ -12,6 +12,7 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.lang.Math.max;
 
 public class SigningManager {
     static final long DEFAULT_MAX_RECOVERED_SIGS_AGE = 60 * 60 * 24 * 7; // keep them for a week
@@ -44,6 +46,7 @@ public class SigningManager {
 
     QuorumManager quorumManager;
     AbstractBlockChain blockChain;
+    AbstractBlockChain headerChain;
 
     long lastCleanupTime;
 
@@ -60,8 +63,9 @@ public class SigningManager {
         this.pendingRecoveredSigs = new HashMap<Integer, ArrayList<RecoveredSignature>>();
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain) {
+    public void setBlockChain(AbstractBlockChain blockChain, @Nullable AbstractBlockChain headerChain) {
         this.blockChain = blockChain;
+        this.headerChain = headerChain;
     }
 
     public void close() {
@@ -157,18 +161,26 @@ public class SigningManager {
         return db.getVoteForId(llmqType, id);
     }
 
+    private int getBestChainHeight() {
+        if (headerChain != null) {
+            return max(blockChain.getBestChainHeight(), headerChain.getBestChainHeight());
+        } else {
+            return blockChain.getBestChainHeight();
+        }
+    }
+
     Quorum selectQuorumForSigning(LLMQParameters.LLMQType llmqType, long signHeight, Sha256Hash selectionHash) throws BlockStoreException
     {
         LLMQParameters llmqParams = context.getParams().getLlmqs().get(llmqType);
         int poolSize = (int)llmqParams.signingActiveQuorumCount;
 
         if (signHeight == -1) {
-            signHeight = blockChain.getBestChainHeight();
+            signHeight = getBestChainHeight();
         }
 
         StoredBlock startBlock = null;
         long startBlockHeight = signHeight - SIGN_HEIGHT_OFFSET;
-        if(startBlockHeight > blockChain.getBestChainHeight() || startBlockHeight < 0)
+        if(startBlockHeight > getBestChainHeight() || startBlockHeight < 0)
             return null;
 
 
@@ -195,7 +207,7 @@ public class SigningManager {
                 throw new RuntimeException(x);
             }
         }
-        Collections.sort(scores, new Comparator<Pair<Sha256Hash, Integer>>() {
+        scores.sort(new Comparator<Pair<Sha256Hash, Integer>>() {
             @Override
             public int compare(Pair<Sha256Hash, Integer> o1, Pair<Sha256Hash, Integer> o2) {
                 int firstResult = o1.getFirst().compareTo(o2.getFirst());
@@ -421,7 +433,7 @@ public class SigningManager {
 
         Quorum quorum = selectQuorumForSigning(llmqParams.type, signedAtHeight, id);
         if (quorum == null) {
-            boolean missingBlockAtTip = blockChain.getBestChainHeight() < signedAtHeight;
+            boolean missingBlockAtTip = getBestChainHeight() < signedAtHeight;
             throw new QuorumNotFoundException(missingBlockAtTip ?
                     QuorumNotFoundException.Reason.BLOCKCHAIN_NOT_SYNCED :
                     QuorumNotFoundException.Reason.MISSING_QUORUM);
