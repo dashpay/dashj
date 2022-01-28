@@ -137,7 +137,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         cursor += quorumState.getMessageSize();
         tipBlockHash = readHash();
         tipHeight = readUint32();
-        if(getFormatVersion() >= LLMQ_FORMAT_VERSION) {
+        if(getFormatVersion() == LLMQ_FORMAT_VERSION) {
             quorumState.parseQuorums(payload, cursor);
 
             //read pending blocks
@@ -153,7 +153,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 }
                 buffer.rewind();
             }
-        } else if (getFormatVersion() == QUORUM_ROTATION_FORMAT_VERSION) {
+        } else if (getFormatVersion() >= QUORUM_ROTATION_FORMAT_VERSION) {
             quorumRotationState = new QuorumRotationState(context, payload, cursor);
             cursor += quorumRotationState.getMessageSize();
         }
@@ -170,15 +170,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if (getMasternodeListCache().size() > 0) {
                 for (Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry : getMasternodeListCache().entrySet()) {
                     if (mnListToSave == null) {
-                        //mnListToSave = entry.getValue();
-                        //quorumListToSave = quorumsCache.get(entry.getKey());
+                        mnListToSave = entry.getValue();
+                        quorumListToSave = getQuorumListCache().get(entry.getKey());
                     } else {
                         otherPendingBlocks.add(entry.getValue().getStoredBlock());
                     }
                 }
             } else {
-                //mnListToSave = mnList;
-                //quorumListToSave = quorumList;
+                mnListToSave = quorumState.mnList;
+                quorumListToSave = quorumState.quorumList;
             }
 
             quorumState.bitcoinSerialize(stream);

@@ -41,7 +41,7 @@ public class SPVQuorumManager extends QuorumManager {
         if(start != null && start.getHeight() > masternodeListManager.getQuorumListAtTip().getHeight())
             log.warn("quorum list is old, the quorums may not match");
         final ArrayList<Quorum> result = new ArrayList<Quorum>();
-        SimplifiedQuorumList list = masternodeListManager.getQuorumListForBlock(start.getHeader().getHash());
+        SimplifiedQuorumList list = masternodeListManager.getQuorumListForBlock(start.getHeader().getHash(), llmqType);
         if (list == null) {
             // if the list isn't found, use the most recent list
             list = masternodeListManager.getQuorumListAtTip();
