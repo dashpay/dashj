@@ -137,10 +137,13 @@ public class SimplifiedQuorumList extends Message {
                     LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(entry.getLlmqType()));
                     if(llmqParameters == null)
                         throw new ProtocolException("Quorum llmqType is invalid: " + entry.llmqType);
-                    int dkgInterval = llmqParameters.dkgInterval;
-                    if (block.getHeight() % dkgInterval != 0)
-                        throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
-                    checkCommitment(entry, chain.getChainHead(), Context.get().masternodeListManager, chain);
+                    // only check the dgkInterval on pre DIP24 blocks
+                    if (!LLMQUtils.isQuorumRotationEnabled(Context.get(), params, llmqParameters.type)) {
+                        int dkgInterval = llmqParameters.dkgInterval;
+                        if (block.getHeight() % dkgInterval != 0)
+                            throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
+                    }
+                    checkCommitment(entry, block, Context.get().masternodeListManager, chain);
                     isFirstQuorumCheck = false;
                 } else {
                     int chainHeight = chain.getBestChainHeight();
