@@ -12,6 +12,7 @@ import org.bitcoinj.crypto.BLSPublicKey;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import static java.lang.Math.max;
 import static org.bitcoinj.core.SporkId.SPORK_21_QUORUM_ALL_CONNECTED;
 import static org.bitcoinj.core.SporkId.SPORK_23_QUORUM_POSE;
 import static org.bitcoinj.quorums.LLMQParameters.LLMQType.LLMQ_100_67;
@@ -87,7 +88,8 @@ public class LLMQUtils {
     }
 
     public static boolean isQuorumRotationEnabled(Context context, NetworkParameters params, LLMQParameters.LLMQType type) {
-        boolean quorumRotationActive = context.blockChain.getBestChainHeight() >= params.getDIP0024BlockHeight();
+        int bestHeight = max(context.headerChain != null ? context.headerChain.getBestChainHeight() : 0, context.blockChain.getBestChainHeight());
+        boolean quorumRotationActive = bestHeight >= params.getDIP0024BlockHeight();
         return params.getLlmqForInstantSend() == type && quorumRotationActive;
     }
 

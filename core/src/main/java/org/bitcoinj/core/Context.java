@@ -76,6 +76,7 @@ public class Context {
     private boolean allowInstantX = true; //allow InstantX in litemode
     public PeerGroup peerGroup;
     public AbstractBlockChain blockChain;
+    @Nullable public AbstractBlockChain headerChain;
     public SporkManager sporkManager;
     public MasternodePayments masternodePayments;
     public MasternodeSync masternodeSync;
@@ -375,24 +376,25 @@ public class Context {
         }
     }
 
-    public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)
+    public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain blockChain, @Nullable AbstractBlockChain headerChain)
     {
         this.peerGroup = peerGroup;
-        this.blockChain = chain;
-        hashStore = new HashStore(chain.getBlockStore());
-        chain.addNewBestBlockListener(newBestBlockListener);
+        this.blockChain = blockChain;
+        this.headerChain = headerChain;
+        hashStore = new HashStore(blockChain.getBlockStore());
+        blockChain.addNewBestBlockListener(newBestBlockListener);
         if(initializedDash) {
-            sporkManager.setBlockChain(chain, peerGroup);
-            masternodeSync.setBlockChain(chain, netFullfilledRequestManager);
-            masternodeListManager.setBlockChain(chain, peerGroup != null ? peerGroup.headerChain : null, peerGroup, quorumManager, quorumSnapshotManager);
-            instantSendManager.setBlockChain(chain, peerGroup);
-            signingManager.setBlockChain(chain);
-            chainLockHandler.setBlockChain(chain);
+            sporkManager.setBlockChain(blockChain, peerGroup);
+            masternodeSync.setBlockChain(blockChain, netFullfilledRequestManager);
+            masternodeListManager.setBlockChain(blockChain, peerGroup != null ? peerGroup.headerChain : null, peerGroup, quorumManager, quorumSnapshotManager);
+            instantSendManager.setBlockChain(blockChain, peerGroup);
+            signingManager.setBlockChain(blockChain, headerChain);
+            chainLockHandler.setBlockChain(blockChain);
             blockChain.setChainLocksHandler(chainLockHandler);
-            quorumManager.setBlockChain(chain);
-            updatedChainHead(chain.getChainHead());
+            quorumManager.setBlockChain(blockChain);
+            updatedChainHead(blockChain.getChainHead());
         }
-        params.setDIPActiveAtTip(chain.getBestChainHeight() >= params.getDIP0001BlockHeight());
+        params.setDIPActiveAtTip(blockChain.getBestChainHeight() >= params.getDIP0001BlockHeight());
     }
 
     public boolean isLiteMode() {
