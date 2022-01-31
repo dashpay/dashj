@@ -22,11 +22,18 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.store.BlockStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
 public class QuorumRotationInfo extends Message {
+
+    private static final Logger log = LoggerFactory.getLogger(QuorumRotationInfo.class);
 
     QuorumSnapshot quorumSnapshotAtHMinusC;
     QuorumSnapshot quorumSnapshotAtHMinus2C;
@@ -209,5 +216,20 @@ public class QuorumRotationInfo extends Message {
     public boolean hasChanges() {
         return mnListDiffTip.hasChanges() || mnListDiffAtH.hasChanges() || mnListDiffAtHMinusC.hasChanges() ||
                 mnListDiffAtHMinus2C.hasChanges() || mnListDiffAtHMinus3C.hasChanges() || mnListDiffAtHMinus4C.hasChanges();
+    }
+
+    public void dump(long startHeight, long endHeight) {
+        try {
+            File dumpFile = new File("qrinfo-" + startHeight + "-" + endHeight + ".dat");
+            OutputStream stream = new FileOutputStream(dumpFile);
+            stream.write(bitcoinSerialize());
+            stream.close();
+            log.info("dump successful");
+        } catch (FileNotFoundException x) {
+            log.warn("could not dump qrinfo - file not found.");
+        } catch (IOException x) {
+            // nothing
+            log.warn("could not dump qrinfo", x);
+        }
     }
 }
