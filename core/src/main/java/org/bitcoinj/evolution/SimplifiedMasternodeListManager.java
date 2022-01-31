@@ -329,14 +329,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
         log.info("processing quorumrotationinfo between : {} & {}; {}",
-                quorumRotationInfo.getMnListDiffAtH().getHeight(),
+                quorumRotationState.getMnListTip().getHeight(),
                 newHeight, quorumRotationInfo);
+
+        quorumRotationInfo.dump(quorumRotationState.getMnListTip().getHeight(), newHeight);
 
         lock.lock();
         try {
             log.info(quorumRotationInfo.toString(chain));
             quorumRotationState.setBlockChain(chain);
             quorumRotationState.applyDiff(peer, headersChain, blockChain, quorumRotationInfo, isLoadingBootStrap);
+
+
 
             log.info(this.toString());
             unCache();
