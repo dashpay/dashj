@@ -80,6 +80,9 @@ public class MasternodeSync {
 
     public static final EnumSet<SYNC_FLAGS> SYNC_DEFAULT_SPV = EnumSet.of(SYNC_MASTERNODE_LIST,
             SYNC_QUORUM_LIST, SYNC_CHAINLOCKS, SYNC_INSTANTSENDLOCKS, SYNC_SPORKS);
+
+    public static final EnumSet<SYNC_FLAGS> SYNC_DEFAULT_SPV_HEADERS_FIRST = EnumSet.of(SYNC_MASTERNODE_LIST,
+            SYNC_QUORUM_LIST, SYNC_CHAINLOCKS, SYNC_INSTANTSENDLOCKS, SYNC_SPORKS, SYNC_HEADERS_MN_LIST_FIRST);
     public static final EnumSet<VERIFY_FLAGS> VERIFY_DEFAULT_SPV = EnumSet.of(VERIFY_FLAGS.BLS_SIGNATURES,
             VERIFY_FLAGS.MNLISTDIFF_MNLIST,
             VERIFY_FLAGS.MNLISTDIFF_QUORUM,
@@ -556,6 +559,10 @@ public class MasternodeSync {
 
     public void doMaintenance() {
         processTick();
+    }
+
+    public void addSyncFlag(SYNC_FLAGS flag) {
+        syncFlags.add(flag);
     }
 
     public boolean hasSyncFlag(SYNC_FLAGS flag) {
