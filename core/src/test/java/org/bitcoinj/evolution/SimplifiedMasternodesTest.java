@@ -2,22 +2,18 @@ package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
-import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
-import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.params.MainNetParams;
 import static org.junit.Assert.*;
 
-import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.MalortDevNetParams;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.MemoryBlockStore;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -29,15 +25,21 @@ import java.util.ArrayList;
 public class SimplifiedMasternodesTest {
 
     Context context;
-    TestNet3Params PARAMS;
+    NetworkParameters PARAMS;
     MainNetParams MAINPARAMS;
     byte[] txdata;
+    BlockChain blockChain;
 
     @Before
-    public void startup() {
+    public void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
-        PARAMS = TestNet3Params.get();
+        PARAMS = MalortDevNetParams.get();
         context = new Context(PARAMS);
+        blockChain = new BlockChain(context, new MemoryBlockStore(PARAMS));
+        context.initDash(true, true);
+        context.setPeerGroupAndBlockChain(null, blockChain, blockChain);
+
+        //PeerGroup peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         txdata = Utils.HEX.decode("0300090001d4ad073ec40da120d28a47164753f4f5ad80d0dc3b918b39223d36ebdfacdef6000000006b483045022100a65429d4f2ab2df58cafdaaffe874ef260f610e068e89a4455fbf92261156bb7022015733ae5aef3006fd5781b91f97ca1102edf09e9383ca761e407c619d13db7660121034c1f31446c5971558b9027499c3678483b0deb06af5b5ccd41e1f536af1e34cafeffffff0200e1f50500000000016ad2d327cc050000001976a9141eccbe2508c7741d2e4c517f87565e7d477cfbbc88ac000000002201002369fced72076b33e25c5ca31efb605037e3377c8e1989eb9ec968224d5e22b4");         //"01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84";
     }
 
@@ -103,10 +105,27 @@ public class SimplifiedMasternodesTest {
         URL datafile = getClass().getResource("ML1088640.dat");
 
         SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
+        manager.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
         SimplifiedMasternodeListManager.setBootStrapFilePath(datafile.getPath());
 
         for (int i = 0; i < 10; ++i)
             manager.resetMNList(true, true);
+
+    }
+
+    // this is not supported yet
+    @Test @Ignore
+    public void loadFromBootStrapFileV3() {
+        URL datafile = getClass().getResource("qrinfo--1-5078.dat");
+
+        SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
+        manager.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        SimplifiedMasternodeListManager.setBootStrapFilePath(datafile.getPath());
+
+        for (int i = 0; i < 10; ++i)
+            manager.resetMNList(true, true);
+
+        assertEquals(3838, manager.quorumRotationState.getMnListTip().getHeight());
 
     }
 
@@ -130,5 +149,30 @@ public class SimplifiedMasternodesTest {
         SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(Context.get());
         FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 2);
         assertEquals(db3.load(managerSpecificFail), false);
+    }
+
+    // not supported yet, due to problems with Context.masternodeListManager dependencies
+    @Test @Ignore
+    public void loadQuorumRotationStateFromFile() throws Exception {
+        URL datafile = getClass().getResource("malort-mnlist.dat");
+        FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true);
+
+        SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(Context.get());
+        managerDefaultNames.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        assertTrue(db.load(managerDefaultNames));
+
+        SimplifiedMasternodeListManager managerSpecific = new SimplifiedMasternodeListManager(Context.get());
+        managerSpecific.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 3);
+        assertTrue(db2.load(managerSpecific));
+
+        //check to make sure that they have the same number of masternodes
+        assertEquals(managerDefaultNames.getMasternodeList().size(), managerSpecific.getMasternodeList().size());
+
+        //load a file with version 3, expecting version 2
+        SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(Context.get());
+        managerSpecificFail.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 2);
+        assertFalse(db3.load(managerSpecificFail));
     }
 }
