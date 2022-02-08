@@ -194,15 +194,38 @@ public class FlatDB<Type extends AbstractManager> {
                 magicMessageTmp = new String(vchData, 0, magicMessage.length());
 
                 log.info("file magic message: {}",magicMessageTmp);
+                int fileVersion = 1;
+                try {
+                    String fileVersionString = magicMessageTmp.substring(magicMessageTmp.lastIndexOf('-') + 1);
+                    fileVersion = Integer.parseInt(fileVersionString);
+                } catch (NumberFormatException x) {
+                    //swallow
+                }
+
+
                 // ... verify the message matches predefined one
                 if (!magicMessage.equals(magicMessageTmp)) {
                     String startStrMagicMessageTmp = magicMessageTmp.substring(0, magicMessageTmp.lastIndexOf('-'));
 
-                    String startMagicMessage = magicMessageTmp.substring(0, magicMessageTmp.lastIndexOf('-'));
+                    String startMagicMessage = magicMessageTmp.substring(0, magicMessage.lastIndexOf('-'));
 
                     if(!startMagicMessage.equals(startStrMagicMessageTmp)) {
                         log.error("Invalid cache magic message");
                         return ReadResult.IncorrectMagicMessage;
+                    }
+
+                    try {
+                        String expectedVersionString = magicMessage.substring(magicMessageTmp.lastIndexOf('-') + 1);
+
+                        int expectedVersion = Integer.parseInt(expectedVersionString);
+
+                        if (expectedVersion > fileVersion) {
+                            log.error("expected version {} but was {}", expectedVersion, fileVersion);
+                            return ReadResult.IncorrectMagicMessage;
+                        }
+
+                    } catch (IndexOutOfBoundsException | NumberFormatException x) {
+                        //swallow
                     }
                 }
 
@@ -215,14 +238,8 @@ public class FlatDB<Type extends AbstractManager> {
                     return ReadResult.IncorrectMagicNumber;
                 }
                 // de-serialize data into CMasternodeMan object
-                int version = 1;
-                try {
-                    String fileVersionString = magicMessageTmp.substring(magicMessageTmp.lastIndexOf('-') + 1);
-                    version = Integer.parseInt(fileVersionString);
-                } catch (IndexOutOfBoundsException | NumberFormatException x) {
-                    //swallow
-                }
-                object.load(vchData, magicMessage.length()+ 4, version);
+
+                object.load(vchData, magicMessage.length()+ 4, fileVersion);
 
             } catch (Exception e){
                 object.clear();

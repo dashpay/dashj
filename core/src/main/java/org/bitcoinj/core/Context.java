@@ -279,6 +279,11 @@ public class Context {
         BLS.Init();
     }
 
+    public void setMasternodeListManager(SimplifiedMasternodeListManager masternodeListManager) {
+        this.masternodeListManager = masternodeListManager;
+        masternodeListManager.setBlockChain(blockChain, headerChain, peerGroup, quorumManager, quorumSnapshotManager);
+    }
+
     public void closeDash() {
         //Dash Specific
         close();
