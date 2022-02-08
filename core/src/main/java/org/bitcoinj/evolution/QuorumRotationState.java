@@ -195,10 +195,10 @@ public class QuorumRotationState extends Message {
         quorumSnapshotAtHMinus3C = quorumRotationInfo.getQuorumSnapshotAtHMinus3C();
         quorumSnapshotAtHMinus4C = quorumRotationInfo.getQuorumSnapshotAtHMinus4C();
 
-        quorumSnapshotCache.put(blockMinusC.getHeader().getHash(), quorumSnapshotAtHMinusC);
-        quorumSnapshotCache.put(blockMinus2C.getHeader().getHash(), quorumSnapshotAtHMinus2C);
-        quorumSnapshotCache.put(blockMinus3C.getHeader().getHash(), quorumSnapshotAtHMinus3C);
-        quorumSnapshotCache.put(blockMinus4C.getHeader().getHash(), quorumSnapshotAtHMinus4C);
+        quorumSnapshotCache.put(newMNListAtHMinusC.getBlockHash(), quorumSnapshotAtHMinusC);
+        quorumSnapshotCache.put(newMNListAtHMinus2C.getBlockHash(), quorumSnapshotAtHMinus2C);
+        quorumSnapshotCache.put(newMNListAtHMinus3C.getBlockHash(), quorumSnapshotAtHMinus3C);
+        quorumSnapshotCache.put(newMNListAtHMinus4C.getBlockHash(), quorumSnapshotAtHMinus4C);
 
         // now calculate quorums
         SimplifiedQuorumList newQuorumListAtHMinus4C = quorumListAtHMinus4C.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C(), isLoadingBootStrap, chain);

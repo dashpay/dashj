@@ -3,6 +3,7 @@ package org.bitcoinj.evolution;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.ChainDownloadStartedEventListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
@@ -32,9 +33,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     private static final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeListManager.class);
     private ReentrantLock lock = Threading.lock("SimplifiedMasternodeListManager");
 
-    static final int DMN_FORMAT_VERSION = 1;
-    static final int LLMQ_FORMAT_VERSION = 2;
-    static final int QUORUM_ROTATION_FORMAT_VERSION = 3;
+    public static final int DMN_FORMAT_VERSION = 1;
+    public static final int LLMQ_FORMAT_VERSION = 2;
+    public static final int QUORUM_ROTATION_FORMAT_VERSION = 3;
 
     public static final int SNAPSHOT_LIST_PERIOD = 576; // once per day
     public static final int LISTS_CACHE_SIZE = 576;
@@ -236,7 +237,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         log.info("processing mnlistdiff between : " + quorumState.getMnList().getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
-            quorumState.applyDiff(peer, headersChain, blockChain, mnlistdiff, isLoadedFromFile());
+            quorumState.applyDiff(peer, headersChain, blockChain, mnlistdiff, isLoadingBootStrap);
 
             log.info(this.toString());
             unCache();
@@ -458,7 +459,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         }
     };
 
-    SimplifiedMasternodeList getMasternodeList() {
+    public SimplifiedMasternodeList getMasternodeList() {
         if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
             return quorumRotationState.getMnListTip();
         } else {
@@ -1044,14 +1045,19 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
 
     static String bootStrapFilePath = null;
     static InputStream bootStrapStream = null;
+    static int bootStrapFileFormat = 0;
+    public static SettableFuture<Boolean> bootStrapLoaded = SettableFuture.create();
+
     boolean isLoadingBootStrap = false;
 
-    public static void setBootStrapFilePath(String bootStrapFilePath) {
+    public static void setBootStrapFilePath(String bootStrapFilePath, int format) {
         SimplifiedMasternodeListManager.bootStrapFilePath = bootStrapFilePath;
+        bootStrapFileFormat = format;
     }
 
-    public static void setBootStrapStream(InputStream bootStrapStream) {
+    public static void setBootStrapStream(InputStream bootStrapStream, int format) {
         SimplifiedMasternodeListManager.bootStrapStream = bootStrapStream;
+        bootStrapFileFormat = format;
     }
 
     protected void loadBootstrapAndSync() {
@@ -1077,16 +1083,22 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     stream.read(buffer);
 
                     isLoadingBootStrap = true;
-                    SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, buffer);
-                    processMasternodeListDiff(null, mnlistdiff, true);
+                    switch (bootStrapFileFormat) {
+                        case LLMQ_FORMAT_VERSION:
+                            SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, buffer);
+                            processMasternodeListDiff(null, mnlistdiff, true);
+                            break;
+                        case QUORUM_ROTATION_FORMAT_VERSION:
+                            QuorumRotationInfo qrinfo = new QuorumRotationInfo(params, buffer);
+                            processQuorumRotationInfo(null, qrinfo, true);
+                            break;
+                        default:
+                            throw new IllegalArgumentException("file format " + bootStrapFileFormat + " is not supported");
+                    }
+                    bootStrapLoaded.set(true);
                     log.info("finished loading mnlist bootstrap file");
-                } catch (VerificationException | FileNotFoundException x) {
-                    log.info("failed loading mnlist bootstrap file" + x.getMessage());
-                } catch (IOException x) {
-                    log.info("failed loading mnlist bootstrap file" + x.getMessage());
-                } catch (IllegalStateException x) {
-                    log.info("failed loading mnlist bootstrap file" + x.getMessage());
-                } catch (NullPointerException x) {
+                } catch (VerificationException | IOException | IllegalStateException | NullPointerException x) {
+                    bootStrapLoaded.setException(x);
                     log.info("failed loading mnlist bootstrap file" + x.getMessage());
                 } finally {
                     isLoadingBootStrap = false;
