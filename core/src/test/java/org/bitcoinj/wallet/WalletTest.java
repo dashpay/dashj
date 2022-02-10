@@ -33,7 +33,6 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.TransactionWitness;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
@@ -3602,8 +3601,8 @@ public class WalletTest extends TestWithWallet {
 
     @Test
     public void oneTxTwoWallets() {
-        Wallet wallet1 = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2WPKH);
-        Wallet wallet2 = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2WPKH);
+        Wallet wallet1 = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2PKH);
+        Wallet wallet2 = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2PKH);
         Address address1 = wallet1.freshReceiveAddress(Script.ScriptType.P2PKH);
         Address address2 = wallet2.freshReceiveAddress(Script.ScriptType.P2PKH);
 
@@ -3632,21 +3631,21 @@ public class WalletTest extends TestWithWallet {
 
         // Wallet1 sign input 0
         TransactionInput inputW1 = sendReq.tx.getInput(0);
-        ECKey sigKey1 = inputW1.getOutpoint().getConnectedKey(wallet1);
-        Script scriptCode1 = ScriptBuilder.createP2PKHOutputScript(sigKey1);
-        TransactionSignature txSig1 = sendReq.tx.calculateWitnessSignature(0, sigKey1, scriptCode1,
-                inputW1.getValue(), Transaction.SigHash.ALL, false);
-        inputW1.setScriptSig(ScriptBuilder.createEmpty());
-        inputW1.setWitness(TransactionWitness.redeemP2WPKH(txSig1, sigKey1));
+        //ECKey sigKey1 = inputW1.getOutpoint().getConnectedKey(wallet1);
+        //Script scriptCode1 = ScriptBuilder.createP2PKHOutputScript(sigKey1);
+        //TransactionSignature txSig1 = sendReq.tx.calculateWitnessSignature(0, sigKey1, scriptCode1,
+        //        inputW1.getValue(), Transaction.SigHash.ALL, false);
+        //inputW1.setScriptSig(ScriptBuilder.createEmpty());
+        //inputW1.setWitness(TransactionWitness.redeemP2WPKH(txSig1, sigKey1));
 
         // Wallet2 sign input 1
-        TransactionInput inputW2 = sendReq.tx.getInput(1);
-        ECKey sigKey2 = inputW2.getOutpoint().getConnectedKey(wallet2);
-        Script scriptCode2 = ScriptBuilder.createP2PKHOutputScript(sigKey2);
-        TransactionSignature txSig2 = sendReq.tx.calculateWitnessSignature(0, sigKey2, scriptCode2,
-                inputW2.getValue(), Transaction.SigHash.ALL, false);
-        inputW2.setScriptSig(ScriptBuilder.createEmpty());
-        inputW2.setWitness(TransactionWitness.redeemP2WPKH(txSig2, sigKey2));
+//        TransactionInput inputW2 = sendReq.tx.getInput(1);
+//        ECKey sigKey2 = inputW2.getOutpoint().getConnectedKey(wallet2);
+//        Script scriptCode2 = ScriptBuilder.createP2PKHOutputScript(sigKey2);
+//        TransactionSignature txSig2 = sendReq.tx.calculateWitnessSignature(0, sigKey2, scriptCode2,
+//                inputW2.getValue(), Transaction.SigHash.ALL, false);
+//        inputW2.setScriptSig(ScriptBuilder.createEmpty());
+//        inputW2.setWitness(TransactionWitness.redeemP2WPKH(txSig2, sigKey2));
 
         wallet1.commitTx(sendReq.tx);
         wallet2.commitTx(sendReq.tx);

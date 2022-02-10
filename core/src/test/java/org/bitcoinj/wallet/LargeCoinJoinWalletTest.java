@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -202,7 +203,7 @@ public class LargeCoinJoinWalletTest {
                 Stopwatch watch = Stopwatch.createStarted();
                 serializer.writeWallet(wallet, stream);
                 watch.stop();
-                times[i] = watch.elapsed().toMillis();
+                times[i] = watch.elapsed(TimeUnit.MILLISECONDS);
             }
 
             long avgTime = java.util.Arrays.stream(times).sum() / times.length;
@@ -232,7 +233,7 @@ public class LargeCoinJoinWalletTest {
             Stopwatch adaptiveWatch = Stopwatch.createStarted();
             adaptiveSerializer.writeWallet(wallet, adaptiveStream);
             adaptiveWatch.stop();
-            adaptiveTimes[i] = adaptiveWatch.elapsed().toMillis();
+            adaptiveTimes[i] = adaptiveWatch.elapsed(TimeUnit.MILLISECONDS);
         }
 
         long adaptiveAvg = java.util.Arrays.stream(adaptiveTimes).sum() / adaptiveTimes.length;
@@ -318,11 +319,11 @@ public class LargeCoinJoinWalletTest {
             }
             adaptiveFileWatch.stop();
 
-            info("Original 4KB file save: {} ms", originalFileWatch.elapsed().toMillis());
-            info("Adaptive file save: {} ms", adaptiveFileWatch.elapsed().toMillis());
+            info("Original 4KB file save: {} ms", originalFileWatch.elapsed(TimeUnit.MILLISECONDS));
+            info("Adaptive file save: {} ms", adaptiveFileWatch.elapsed(TimeUnit.MILLISECONDS));
             info("File sizes - Original: {} bytes, Adaptive: {} bytes", originalFile.length(), adaptiveFile.length());
 
-            double fileImprovementPercent = ((double) (originalFileWatch.elapsed().toMillis() - adaptiveFileWatch.elapsed().toMillis()) / originalFileWatch.elapsed().toMillis()) * 100;
+            double fileImprovementPercent = ((double) (originalFileWatch.elapsed(TimeUnit.MILLISECONDS) - adaptiveFileWatch.elapsed(TimeUnit.MILLISECONDS)) / originalFileWatch.elapsed(TimeUnit.MILLISECONDS)) * 100;
             info("File I/O improvement: {:.1f}%", fileImprovementPercent);
         } finally {
             // Clean up temp files
@@ -440,7 +441,7 @@ public class LargeCoinJoinWalletTest {
         originalSaveWatch.stop();
         byte[] originalBytes = originalStream.toByteArray();
 
-        info("Original wallet save: {} ms, size: {} bytes", originalSaveWatch.elapsed().toMillis(), originalBytes.length);
+        info("Original wallet save: {} ms, size: {} bytes", originalSaveWatch.elapsed(TimeUnit.MILLISECONDS), originalBytes.length);
 
         // Load the wallet from the saved bytes
         WalletProtobufSerializer loader = new WalletProtobufSerializer();
@@ -448,7 +449,7 @@ public class LargeCoinJoinWalletTest {
         WalletEx loadedWallet = (WalletEx) loader.readWallet(new ByteArrayInputStream(originalBytes));
         loadWatch.stop();
 
-        info("Wallet load: {} ms", loadWatch.elapsed().toMillis());
+        info("Wallet load: {} ms", loadWatch.elapsed(TimeUnit.MILLISECONDS));
 
         // Verify basic properties match
         assertEquals("Transaction count should match", wallet.getTransactionCount(true), loadedWallet.getTransactionCount(true));
@@ -465,7 +466,7 @@ public class LargeCoinJoinWalletTest {
             serializer.writeWallet(loadedWallet, saveStream);
             saveWatch.stop();
 
-            saveTimes[i] = saveWatch.elapsed().toMillis();
+            saveTimes[i] = saveWatch.elapsed(TimeUnit.MILLISECONDS);
             byte[] savedBytes = saveStream.toByteArray();
 
             // Immediately reload the wallet to verify consistency
