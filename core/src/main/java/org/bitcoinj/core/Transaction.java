@@ -150,7 +150,8 @@ public class Transaction extends ChildMessage {
         }
     }
 
-    public static final int CURRENT_VERSION = 1;
+    public static final int MIN_STANDARD_VERSION = 1;
+    public static final int CURRENT_VERSION = MIN_STANDARD_VERSION;
     public static final int TIMELOCK_VERSION = 2;
     public static final int MAX_STANDARD_VERSION = 3;
 

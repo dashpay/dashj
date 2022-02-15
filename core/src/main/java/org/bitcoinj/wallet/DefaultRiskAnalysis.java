@@ -135,7 +135,7 @@ public class DefaultRiskAnalysis implements RiskAnalysis {
      */
     public static RuleViolation isStandard(Transaction tx) {
         // TODO: Finish this function off.
-        if (tx.getVersion() > Transaction.TIMELOCK_VERSION || tx.getVersion() < Transaction.CURRENT_VERSION) {
+        if (tx.getVersion() > Transaction.MAX_STANDARD_VERSION || tx.getVersion() < Transaction.MIN_STANDARD_VERSION) {
             log.warn("TX considered non-standard due to unknown version number {}", tx.getVersion());
             return RuleViolation.VERSION;
         }
