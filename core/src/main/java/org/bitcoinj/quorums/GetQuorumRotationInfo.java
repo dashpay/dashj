@@ -80,4 +80,12 @@ public class GetQuorumRotationInfo extends Message {
                 ", extraShare=" + extraShare +
                 '}';
     }
+
+    public Sha256Hash getBlockRequestHash() {
+        return blockRequestHash;
+    }
+
+    public ArrayList<Sha256Hash> getBaseBlockHashes() {
+        return baseBlockHashes;
+    }
 }
