@@ -151,9 +151,11 @@ public class Transaction extends ChildMessage {
     }
 
     public static final int MIN_STANDARD_VERSION = 1;
-    public static final int CURRENT_VERSION = MIN_STANDARD_VERSION;
     public static final int TIMELOCK_VERSION = 2;
-    public static final int MAX_STANDARD_VERSION = 3;
+    public static final int SPECIAL_VERSION = 3;
+
+    public static final int CURRENT_VERSION = MIN_STANDARD_VERSION;
+    public static final int MAX_STANDARD_VERSION = SPECIAL_VERSION;
 
     /** Threshold for lockTime: below this value it is interpreted as block number, otherwise as timestamp. **/
     public static final int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
@@ -277,7 +279,7 @@ public class Transaction extends ChildMessage {
 
     public Transaction(NetworkParameters params, SpecialTxPayload specialTxPayload) {
         this(params);
-        setVersionAndType(MAX_STANDARD_VERSION, specialTxPayload.getType());
+        setVersionAndType(SPECIAL_VERSION, specialTxPayload.getType());
         setExtraPayload(specialTxPayload, false);
     }
 
@@ -660,7 +662,7 @@ public class Transaction extends ChildMessage {
         lockTime = readUint32();
         optimalEncodingMessageSize += 4;
 
-        if(getVersionShort() >= MAX_STANDARD_VERSION && getType() != Type.TRANSACTION_NORMAL) {
+        if(getVersionShort() >= SPECIAL_VERSION && getType() != Type.TRANSACTION_NORMAL) {
             extraPayload = readByteArray();
             setExtraPayloadObject();
             optimalEncodingMessageSize += extraPayload.length;
@@ -761,9 +763,9 @@ public class Transaction extends ChildMessage {
         s.append('\n');
         if (updatedAt != null)
             s.append(indent).append("updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
-        if (version != CURRENT_VERSION)
+        if (version != MIN_STANDARD_VERSION)
             s.append(indent).append("version ").append(version).append('\n');
-        Type type = (getVersionShort() == MAX_STANDARD_VERSION) ? getType() : Type.TRANSACTION_NORMAL;
+        Type type = (getVersionShort() == SPECIAL_VERSION) ? getType() : Type.TRANSACTION_NORMAL;
         s.append("  type ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
         if (isTimeLocked()) {
             s.append(indent).append("time locked until ");
@@ -799,7 +801,7 @@ public class Transaction extends ChildMessage {
         }
         if (!requiresInputs()) {
             // no ins, no outs
-            if (getVersionShort() == MAX_STANDARD_VERSION && type.isSpecial())
+            if (getVersionShort() == SPECIAL_VERSION && type.isSpecial())
                 s.append(indent).append("payload ").append(getExtraPayloadObject()).append('\n');
 
             return s.toString();
@@ -881,7 +883,7 @@ public class Transaction extends ChildMessage {
             s.append(indent).append("   fee  ").append(fee.multiply(1000).divide(size).toFriendlyString()).append("/kB, ")
                     .append(fee.toFriendlyString()).append(" for ").append(size).append(" bytes\n");
         }
-        if (getVersionShort() == MAX_STANDARD_VERSION && type.isSpecial())
+        if (getVersionShort() == SPECIAL_VERSION && type.isSpecial())
             s.append(indent).append("  payload ").append(getExtraPayloadObject()).append('\n');
         return s.toString();
     }
@@ -1272,7 +1274,7 @@ public class Transaction extends ChildMessage {
         for (TransactionOutput out : outputs)
             out.bitcoinSerialize(stream);
         uint32ToByteStreamLE(lockTime, stream);
-        if(getVersionShort() >= MAX_STANDARD_VERSION && getType() != Type.TRANSACTION_NORMAL) {
+        if(getVersionShort() >= SPECIAL_VERSION && getType() != Type.TRANSACTION_NORMAL) {
             stream.write(new VarInt(extraPayload.length).encode());
             stream.write(extraPayload);
         }
@@ -1341,7 +1343,7 @@ public class Transaction extends ChildMessage {
     }
 
     public Type getType() {
-        return versionFromLegacyVersion(version) >= MAX_STANDARD_VERSION ?
+        return versionFromLegacyVersion(version) >= SPECIAL_VERSION ?
             Type.fromValue(typeFromLegacyVersion(version)) :
                 Type.TRANSACTION_NORMAL;
     }
@@ -1694,7 +1696,7 @@ public class Transaction extends ChildMessage {
 
     public void setExtraPayload(SpecialTxPayload specialTxPayload) {
         setExtraPayload(specialTxPayload.getPayload());
-        setVersionAndType(MAX_STANDARD_VERSION, specialTxPayload.getType());
+        setVersionAndType(SPECIAL_VERSION, specialTxPayload.getType());
         unCache();
     }
 
