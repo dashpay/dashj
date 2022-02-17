@@ -48,7 +48,7 @@ public class SimplifiedMasternodesTest {
     private static void initContext(NetworkParameters params) throws BlockStoreException {
         context = new Context(params);
         if (blockChain == null) {
-            blockChain = new BlockChain(context, new SPVBlockStore(params, new File(SimplifiedMasternodesTest.class.getResource("malort-blockchain.dat").getFile())));
+            blockChain = new BlockChain(context, new MemoryBlockStore(params));
         }
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         context.initDash(true, true);
