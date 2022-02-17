@@ -108,6 +108,10 @@ public class QuorumRotationState extends Message {
         quorumListAtHMinus2C = new SimplifiedQuorumList(context.getParams());
         quorumListAtHMinus3C = new SimplifiedQuorumList(context.getParams());
         quorumListAtHMinus4C = new SimplifiedQuorumList(context.getParams());
+        quorumSnapshotAtHMinusC = new QuorumSnapshot(0);
+        quorumSnapshotAtHMinus2C = new QuorumSnapshot(0);
+        quorumSnapshotAtHMinus3C = new QuorumSnapshot(0);
+        quorumSnapshotAtHMinus4C = new QuorumSnapshot(0);
     }
 
     public QuorumRotationState(Context context, byte [] payload, int offset) {
