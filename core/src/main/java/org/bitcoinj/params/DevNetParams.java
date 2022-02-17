@@ -43,7 +43,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
     private static final int DEFAULT_PROTOCOL_VERSION = ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
     private final int protocolVersion;
     private static final int devnetVersion = 1;
-    private static String devnetVersionName;
+    private final String devnetVersionName;
 
 
     public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds) {
@@ -197,12 +197,15 @@ public class DevNetParams extends AbstractBitcoinNetParams {
     @Override
     public void checkDifficultyTransitions_BTC(final StoredBlock storedPrev, final Block nextBlock,
                                                final BlockStore blockStore) throws VerificationException, BlockStoreException {
-
+        // This is empty, because on devnets we don't check difficulty transitions
+        // changes were made recently such that the BTC method is no longer used
     }
 
     public void DarkGravityWave(StoredBlock storedPrev, Block nextBlock,
                                 final BlockStore blockStore) throws VerificationException {
-
+        // This is empty, because on devnets we don't check difficulty transitions
+        // Having a working difficulty algorithm on devnets requires knowing the mininumDifficultyBlocks
+        // which is not currently implemented in NetworkParameters or AbstractBitcoinNetParams
     }
 
     @Override
