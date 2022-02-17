@@ -27,10 +27,10 @@ public class LLMQParametersTest {
         LLMQParameters llmq_test = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_TEST, "llmq_test",
                 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 3, 3);
-        // TODO: signingActiveQuorumCount is set to 2 for the malort devnet, the original value is 3
+        // TODO: signingActiveQuorumCount is set to 4 for the malort devnet, the original value is 3
         LLMQParameters llmq_devnet = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_DEVNET, "llmq_devnet",
                 12, 7, 6, 24, 2, 10,
-                18, 7, 2, 4, 6);
+                18, 7, 4, 4, 6);
         LLMQParameters llmq50_60 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_50_60, "llmq_50_60",
                 50, 40, 30, 24, 2, 10,
                 18,40, 24, 25, 25);
