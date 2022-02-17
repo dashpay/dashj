@@ -1,12 +1,14 @@
 package org.bitcoinj.core;
 
 
+import com.google.common.base.Stopwatch;
 import org.bitcoinj.store.FlatDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -205,13 +207,12 @@ public abstract class AbstractManager extends Message {
                 @Override
                 public void run() {
                     try {
-                        long start = Utils.currentTimeMillis();
+                        Stopwatch watch = Stopwatch.createStarted();
                         FlatDB<AbstractManager> flatDB = new FlatDB<>(context, filename, true, magicMessage, getFormatVersion());
                         flatDB.dump(AbstractManager.this);
-                        long end = Utils.currentTimeMillis();
-                        log.info(AbstractManager.class.getCanonicalName() + " Save time:  " + (end - start) + "ms");
+                        log.info("{} Save time: {}", filename, watch.elapsed(TimeUnit.MICROSECONDS));
                     } catch (Exception x) {
-                        log.warn("Saving failed for " + getDefaultFileName());
+                        log.warn("Saving failed for {}", filename, x);
                     }
                 }
             }).start();
