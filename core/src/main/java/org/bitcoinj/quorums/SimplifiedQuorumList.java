@@ -109,7 +109,8 @@ public class SimplifiedQuorumList extends Message {
         builder.append("SimplifiedQuorumList(count: ").append(size()).append("; ").append(height).append("/").append(")");
 
         for (Map.Entry<Sha256Hash, FinalCommitment> entry : minableCommitments.entrySet()) {
-            builder.append("\n ").append(entry.getValue().llmqType).append(": ").append(entry.getValue().quorumHash);
+            builder.append("\n ").append(entry.getValue().llmqType).append(": ").append(entry.getValue().quorumHash)
+                    .append(":").append(entry.getValue().quorumIndex);
         }
 
         return builder.toString();
@@ -449,9 +450,9 @@ public class SimplifiedQuorumList extends Message {
 
         if (!commitment.verify(members, true)) {
             //throw new VerificationException("invalid quorum commitment: " + commitment);
-            log.warn("invalid quorum commitment: {}", commitment);
+            log.warn("invalid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
         } else {
-            log.info("valid quorum commitment");
+            log.info("valid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
         }
     }
 }
