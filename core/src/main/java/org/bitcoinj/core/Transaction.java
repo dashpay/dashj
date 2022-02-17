@@ -145,6 +145,13 @@ public class Transaction extends ChildMessage {
         }
     }
 
+    public static final int MIN_STANDARD_VERSION = 1;
+    public static final int TIMELOCK_VERSION = 2;
+    public static final int SPECIAL_VERSION = 3;
+
+    public static final int CURRENT_VERSION = MIN_STANDARD_VERSION;
+    public static final int MAX_STANDARD_VERSION = SPECIAL_VERSION;
+
     /** Threshold for lockTime: below this value it is interpreted as block number, otherwise as timestamp. **/
     public static final int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
     /** Same but as a BigInteger for CHECKLOCKTIMEVERIFY */
@@ -258,7 +265,7 @@ public class Transaction extends ChildMessage {
 
     public Transaction(NetworkParameters params) {
         super(params);
-        version = 1;
+        version = CURRENT_VERSION;
         inputs = new ArrayList<>();
         outputs = new ArrayList<>();
         // We don't initialize appearsIn deliberately as it's only useful for transactions stored in the wallet.
@@ -267,7 +274,7 @@ public class Transaction extends ChildMessage {
 
     public Transaction(NetworkParameters params, SpecialTxPayload specialTxPayload) {
         this(params);
-        setVersionAndType(3, specialTxPayload.getType());
+        setVersionAndType(SPECIAL_VERSION, specialTxPayload.getType());
         setExtraPayload(specialTxPayload, false);
     }
 
@@ -650,7 +657,7 @@ public class Transaction extends ChildMessage {
         lockTime = readUint32();
         optimalEncodingMessageSize += 4;
 
-        if(getVersionShort() >= 3 && getType() != Type.TRANSACTION_NORMAL) {
+        if(getVersionShort() >= SPECIAL_VERSION && getType() != Type.TRANSACTION_NORMAL) {
             extraPayload = readByteArray();
             setExtraPayloadObject();
             optimalEncodingMessageSize += extraPayload.length;
@@ -751,9 +758,9 @@ public class Transaction extends ChildMessage {
         s.append('\n');
         if (updatedAt != null)
             s.append(indent).append("updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
-        if (version != 1)
+        if (version != MIN_STANDARD_VERSION)
             s.append(indent).append("version ").append(version).append('\n');
-        Type type = (getVersionShort() == 3) ? getType() : Type.TRANSACTION_NORMAL;
+        Type type = (getVersionShort() == SPECIAL_VERSION) ? getType() : Type.TRANSACTION_NORMAL;
         s.append("  type ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
         if (isTimeLocked()) {
             s.append(indent).append("time locked until ");
@@ -804,7 +811,7 @@ public class Transaction extends ChildMessage {
                     s.append("  outpoint:").append(outpoint).append('\n');
                     if (in.hasSequence()) {
                         s.append(indent).append("        sequence:").append(Long.toHexString(in.getSequenceNumber()));
-                        if (version >= 2 && in.hasRelativeLockTime())
+                        if (version >= TIMELOCK_VERSION && in.hasRelativeLockTime())
                             s.append(", has RLT");
                         s.append('\n');
                     }
@@ -857,7 +864,7 @@ public class Transaction extends ChildMessage {
             s.append(indent).append("   fee  ").append(fee.multiply(1000).divide(size).toFriendlyString()).append("/kB, ")
                     .append(fee.toFriendlyString()).append(" for ").append(size).append(" bytes\n");
         }
-        if (getVersionShort() == 3 && type.isSpecial())
+        if (getVersionShort() == SPECIAL_VERSION && type.isSpecial())
             s.append(indent).append("  payload ").append(getExtraPayloadObject()).append('\n');
         return s.toString();
     }
@@ -1248,7 +1255,7 @@ public class Transaction extends ChildMessage {
         for (TransactionOutput out : outputs)
             out.bitcoinSerialize(stream);
         uint32ToByteStreamLE(lockTime, stream);
-        if(getVersionShort() >= 3 && getType() != Type.TRANSACTION_NORMAL) {
+        if(getVersionShort() >= SPECIAL_VERSION && getType() != Type.TRANSACTION_NORMAL) {
             stream.write(new VarInt(extraPayload.length).encode());
             stream.write(extraPayload);
         }
@@ -1317,7 +1324,7 @@ public class Transaction extends ChildMessage {
     }
 
     public Type getType() {
-        return versionFromLegacyVersion(version) >= 3 ?
+        return versionFromLegacyVersion(version) >= SPECIAL_VERSION ?
             Type.fromValue(typeFromLegacyVersion(version)) :
                 Type.TRANSACTION_NORMAL;
     }
@@ -1566,7 +1573,7 @@ public class Transaction extends ChildMessage {
      * higher and at least one of its inputs has its {@link TransactionInput#SEQUENCE_LOCKTIME_DISABLE_FLAG} cleared.
      */
     public boolean hasRelativeLockTime() {
-        if (version < 2)
+        if (version < TIMELOCK_VERSION)
             return false;
         for (TransactionInput input : getInputs())
             if (input.hasRelativeLockTime())
@@ -1670,7 +1677,7 @@ public class Transaction extends ChildMessage {
 
     public void setExtraPayload(SpecialTxPayload specialTxPayload) {
         setExtraPayload(specialTxPayload.getPayload());
-        setVersionAndType(3, specialTxPayload.getType());
+        setVersionAndType(SPECIAL_VERSION, specialTxPayload.getType());
         unCache();
     }
 
