@@ -142,13 +142,15 @@ public class SimplifiedMasternodeListDiff extends Message {
 
     public String toString(BlockStore blockStore) {
         int height = -1;
+        int prevHeight = -1;
         try {
             height = blockStore.get(blockHash).getHeight();
+            prevHeight = blockStore.get(prevBlockHash).getHeight();
         } catch (Exception x) {
             // swallow
         }
         StringBuilder builder = new StringBuilder();
-        builder.append("Simplified MNList Diff: ").append(height).append("/").append(getHeight())
+        builder.append("Simplified MNList Diff: ").append(prevHeight).append(" -> ").append(height).append("/").append(getHeight())
                 .append(" [adding ").append(mnList.size()).append(" and removing ").append(deletedMNs.size()).append(" masternodes")
                 .append(coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "")
                 .append("]");
