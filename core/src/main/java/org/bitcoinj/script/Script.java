@@ -1359,7 +1359,7 @@ public class Script {
 
         // Fail if the transaction's version number is not set high
         // enough to trigger BIP 68 rules.
-        if (txContainingThis.getVersion() < 2)
+        if (txContainingThis.getVersion() < Transaction.TIMELOCK_VERSION)
             throw new ScriptException(ScriptError.SCRIPT_ERR_UNSATISFIED_LOCKTIME, "Transaction version is < 2");
 
         // Sequence numbers with their most significant bit set are not
