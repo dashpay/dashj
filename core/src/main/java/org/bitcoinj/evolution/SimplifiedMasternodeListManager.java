@@ -69,7 +69,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     AbstractBlockChain headersChain;
 
     Sha256Hash lastRequestHash = Sha256Hash.ZERO_HASH;
-    GetSimplifiedMasternodeListDiff lastRequestMessage;
+    GetSimplifiedMasternodeListDiff lastRequestMnListDiff;
+    GetQuorumRotationInfo lastRequestQrInfo;
     long lastRequestTime;
     static final long WAIT_GETMNLISTDIFF = 5000;
     Peer downloadPeer;
@@ -104,7 +105,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
         syncInterval = 8;
         loadedFromFile = false;
         requiresLoadingFromFile = true;
-        lastRequestMessage = new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH);
+        lastRequestMnListDiff = new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH);
+        lastRequestQrInfo = new GetQuorumRotationInfo(params, 0, Lists.newArrayList(), Sha256Hash.ZERO_HASH, false);
         initChainTipSyncComplete = !context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
         quorumState = new QuorumState(context, syncOptions);
         quorumRotationState = new QuorumRotationState(context);
@@ -261,7 +263,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 log.info("heights are the same:  " + x.getMessage());
                 log.info("mnList = {} vs mnlistdiff {}", quorumState.getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
-                log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
+                log.info("lastRequest {} -> {}", lastRequestMnListDiff.baseBlockHash, lastRequestMnListDiff.blockHash);
                 //remove this block from the list
                 if(pendingBlocks.size() > 0) {
                     StoredBlock thisBlock = pendingBlocks.get(0);
@@ -276,8 +278,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, quorumState.getMnList().getHeight(), getQuorumListAtTip().getHeight());
                 log.info("mnList = {} vs mnlistdiff = {}", quorumState.getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
-                log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
+                log.info("lastRequest {} -> {}", lastRequestMnListDiff.baseBlockHash, lastRequestMnListDiff.blockHash);
                 failedAttempts++;
+                log.info("failed attempts {}", failedAttempts);
                 if(failedAttempts > MAX_ATTEMPTS)
                     resetMNList(true);
             }
@@ -378,7 +381,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 log.info("heights are the same: " +  x.getMessage(), x);
                 log.info("mnList = {} vs mnlistdiff {}", quorumRotationState.mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
                 log.info("mnlistdiff {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
-                log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
+                log.info("lastRequest {} -> {}", lastRequestMnListDiff.baseBlockHash, lastRequestMnListDiff.blockHash);
                 //remove this block from the list
                 if (pendingBlocks.size() > 0) {
                     StoredBlock thisBlock = pendingBlocks.get(0);
@@ -389,12 +392,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     }
                 }
             } else {
-                log.info("heights are different " + x.getMessage());
-                log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, getMasternodeList().getHeight(), getQuorumListAtTip().getHeight());
-                log.info("mnList = {} vs mnlistdiff = {}", quorumRotationState.mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
-                log.info("mnlistdiff {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
-                log.info("lastRequest {} -> {}", lastRequestMessage.baseBlockHash, lastRequestMessage.blockHash);
+                log.info("heights are different", x);
+                log.info("qrinfo height = {}; mnListAtTip: {}; mnListAtH: {}; quorumListAtH: {}", newHeight, quorumRotationState.getMnListTip().getHeight(),
+                        getMasternodeList().getHeight(), getQuorumListAtTip().getHeight());
+                log.info("mnList = {} vs qrinfo = {}", quorumRotationState.mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
+                log.info("qrinfo {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
+                log.info("lastRequest {} -> {}", lastRequestQrInfo.getBaseBlockHashes(), lastRequestQrInfo.getBlockRequestHash());
                 failedAttempts++;
+                log.info("failed attempts {}", failedAttempts);
                 if(failedAttempts > MAX_ATTEMPTS)
                     resetMNList(true);
             }
@@ -626,7 +631,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             }
 
             StoredBlock block = blockChain.getChainHead();
-            log.info("maybe requesting mnlistdiff from {} to {}; \n  From {}\n  To {}", getMasternodeList().getHeight(), block.getHeight(), getMasternodeList().getBlockHash(), block.getHeader().getHash());
+            log.info("maybe requesting mnlistdiff/qrinfo from {} to {}; \n  From {}\n  To {}", getMasternodeList().getHeight(), block.getHeight(), getMasternodeList().getBlockHash(), block.getHeader().getHash());
             if (getMasternodeList().getBlockHash().equals(params.getGenesisBlock().getHash())) {
                 resetMNList(true);
                 return;
@@ -651,14 +656,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 // do nothing
             }
             if (!isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
-                lastRequestMessage = new GetSimplifiedMasternodeListDiff(getMasternodeList().getBlockHash(), endBlock.getHeader().getHash());
-                downloadPeer.sendMessage(lastRequestMessage);
+                lastRequestMnListDiff = new GetSimplifiedMasternodeListDiff(getMasternodeList().getBlockHash(), endBlock.getHeader().getHash());
+                downloadPeer.sendMessage(lastRequestMnListDiff);
                 lastRequestHash = getMasternodeList().getBlockHash();
             } else {
-                GetQuorumRotationInfo msg;
-                msg = new GetQuorumRotationInfo(params, 0, Lists.newArrayList(), endBlock.getHeader().getHash(), true);
+                //do we already have this qr info?
+                lastRequestQrInfo = new GetQuorumRotationInfo(params, 0, Lists.newArrayList(), endBlock.getHeader().getHash(), true);
                 lastRequestHash = quorumRotationState.getMnListAtH().getBlockHash();
-                downloadPeer.sendMessage(msg);
+                downloadPeer.sendMessage(lastRequestQrInfo);
             }
             lastRequestTime = Utils.currentTimeMillis();
             waitingForMNListDiff = true;
@@ -743,16 +748,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     if (!isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
                         log.info("requesting mnlistdiff from {} to {}; \n  From {}\n To {}", getMasternodeList().getHeight(), nextBlock.getHeight(), getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
                         GetSimplifiedMasternodeListDiff requestMessage = new GetSimplifiedMasternodeListDiff(getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
-                        if(requestMessage.equals(lastRequestMessage)) {
+                        if(requestMessage.equals(lastRequestMnListDiff)) {
                             log.info("request for mnlistdiff is the same as the last request");
                         }
                         downloadPeer.sendMessage(requestMessage);
-                        lastRequestMessage = requestMessage;
+                        lastRequestMnListDiff = requestMessage;
                     } else {
                         log.info("requesting qrinfo from {} to {}; \n  From {}\n To {}", getMasternodeList().getHeight(), nextBlock.getHeight(), getMasternodeList().getBlockHash(), nextBlock.getHeader().getHash());
-                        GetQuorumRotationInfo requestMessage2 = quorumRotationState.getQuorumRotationInfoRequest(nextBlock);
-                        log.info("message = {}, {}, {}", requestMessage2, downloadPeer, nextBlock);
-                        downloadPeer.sendMessage(requestMessage2);
+                        GetQuorumRotationInfo requestMessage = quorumRotationState.getQuorumRotationInfoRequest(nextBlock);
+                        log.info("message = {}, {}", requestMessage, nextBlock);
+                        downloadPeer.sendMessage(requestMessage);
+                        lastRequestQrInfo = requestMessage;
                     }
 
                     lastRequestTime = Utils.currentTimeMillis();
