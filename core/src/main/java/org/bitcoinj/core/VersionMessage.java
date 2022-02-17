@@ -127,7 +127,7 @@ public class VersionMessage extends Message {
         subVer = LIBRARY_SUBVER;
         if(params.getDevNetGenesisBlock() != null) {
             char separator = clientVersion < 70220 ? '=' : '.';
-            subVer = "/DashJ:" + BITCOINJ_VERSION + "(devnet" + separator + params.getDevNetName() + ")/";
+            subVer = "/DashJ:" + BITCOINJ_VERSION + "(devnet" + separator + params.getDevnetVersionName() + ")/";
         }
         bestHeight = newBestHeight;
         relayTxesBeforeFilter = true;

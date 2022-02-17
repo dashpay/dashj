@@ -18,9 +18,6 @@
 package org.bitcoinj.core;
 
 import com.google.common.base.Objects;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.*;
 import org.bitcoinj.script.*;
@@ -80,7 +77,7 @@ public abstract class NetworkParameters {
 
     protected Block genesisBlock;
     protected Block devnetGenesisBlock;
-    protected String devNetName;
+    protected String devnetName;
     protected BigInteger maxTarget;
     protected int port;
     protected long packetMagic;  // Indicates message origin network and is used to seek to the next message when stream state is unknown.
@@ -215,16 +212,18 @@ public abstract class NetworkParameters {
         return genesisBlock;
     }
 
-    protected static Block findDevnetGenesis(NetworkParameters n, String devNetName, Block genesisBlock, Coin reward) {
+    protected static Block findDevnetGenesis(NetworkParameters n, String devNetName, int devnetVersion, Block genesisBlock, Coin reward) {
         assert (!devNetName.isEmpty());
 
-        Block devNetGenesisBlock = createDevNetGenesisBlock(n, genesisBlock.getHash(), devNetName, genesisBlock.getTimeSeconds() + 1, 0, genesisBlock.getDifficultyTarget(), reward);
+        Block devNetGenesisBlock = createDevNetGenesisBlock(n, genesisBlock.getHash(), devNetName, devnetVersion,
+                genesisBlock.getTimeSeconds() + 1, 0, genesisBlock.getDifficultyTarget(), reward);
         devNetGenesisBlock.solve();
 
         return devNetGenesisBlock;
     }
 
-    private static Block createDevNetGenesisBlock(NetworkParameters n, Sha256Hash prevHash, String devNetName, long time, int nonce, long diffTarget, Coin reward) {
+    private static Block createDevNetGenesisBlock(NetworkParameters n, Sha256Hash prevHash, String devNetName,
+                                                  int version, long time, int nonce, long diffTarget, Coin reward) {
         assert (!devNetName.isEmpty());
         Transaction t = new Transaction(n);
         Block devNetGenesis = new Block(n, 4);
@@ -233,7 +232,7 @@ public abstract class NetworkParameters {
             //
             //   coin dependent
             ScriptBuilder builder = new ScriptBuilder();
-            Script inputScript = builder.number(1).data(devNetName.getBytes()).build();
+            Script inputScript = builder.number(1).data(devNetName.getBytes()).number(version).build();
             t.addInput(new TransactionInput(n, t, inputScript.getProgram()));
 
             builder = new ScriptBuilder();
@@ -417,8 +416,17 @@ public abstract class NetworkParameters {
      *
      * @return the name of the devnet
      */
-    public String getDevNetName() {
-        return devNetName;
+    public String getDevnetName() {
+        return devnetName;
+    }
+
+    /**
+     * Gets the fully qualified name of the devnet.  It should never be called for non-devnets.
+     *
+     * @return the name of the devnet and version
+     */
+    public String getDevnetVersionName() {
+        return devnetName;
     }
 
     /** Default TCP port on which to connect to nodes. */
@@ -806,7 +814,7 @@ public abstract class NetworkParameters {
                 return "unittest";
             default:
                 if (id.startsWith(NetworkParameters.ID_DEVNET)) {
-                    return getDevNetName();
+                    return getDevnetName();
                 }
                 return "invalid";
         }

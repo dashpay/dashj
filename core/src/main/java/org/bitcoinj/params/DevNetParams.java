@@ -40,9 +40,10 @@ public class DevNetParams extends AbstractBitcoinNetParams {
     private static final BigInteger MAX_TARGET = Utils.decodeCompactBits(0x207fffff);
     BigInteger maxUint256 = new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
 
-
-    private static int DEFAULT_PROTOCOL_VERSION = 70211;
-    private int protocolVersion;
+    private static final int DEFAULT_PROTOCOL_VERSION = ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
+    private final int protocolVersion;
+    private static final int devnetVersion = 1;
+    private static String devnetVersionName;
 
 
     public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds) {
@@ -53,10 +54,11 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         this(devNetName, sporkAddress, defaultPort, dnsSeeds, supportsV18, DEFAULT_PROTOCOL_VERSION);
     }
 
-    public DevNetParams(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsV18, int protocolVersion) {
+    public DevNetParams(String devnetName, String sporkAddress, int defaultPort, String [] dnsSeeds, boolean supportsV18, int protocolVersion) {
         super();
-        this.devNetName = "devnet-" + devNetName;
-        id = ID_DEVNET + "." + devNetName;
+        this.devnetName = getDevnetName(devnetName);
+        devnetVersionName = getDevnetVersionName(devnetName);
+        id = getDevnetId(devnetName);
 
         packetMagic = 0xe2caffce;
         interval = INTERVAL;
@@ -75,7 +77,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals("000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
 
-        devnetGenesisBlock = findDevnetGenesis(this, this.devNetName, getGenesisBlock(), Coin.valueOf(50, 0));
+
+        devnetGenesisBlock = findDevnetGenesis(this, this.devnetName, devnetVersion, getGenesisBlock(), Coin.valueOf(50, 0));
         alertSigningKey = HEX.decode("04517d8a699cb43d3938d7b24faaff7cda448ca4ea267723ba614784de661949bf632d6304316b244646dea079735b9a6fc4af804efb4752075b9fe2245e14e412");
 
         this.dnsSeeds = dnsSeeds;
@@ -106,8 +109,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         nGovernanceMinQuorum = 1;
         nGovernanceFilterElements = 500;
 
-        powDGWHeight = 4001;
-        powKGWHeight = 4001;
+        powDGWHeight = 0;
+        powKGWHeight = 0;
         powAllowMinimumDifficulty = true;
         powNoRetargeting = false;
         this.supportsV18 = supportsV18;
@@ -137,21 +140,33 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         minSporkKeys = 1;
     }
 
+    private static String getDevnetName(String devnetName) {
+        return String.format("devnet-%s", devnetName);
+    }
+    private static String getDevnetVersionName(String devnetName) {
+        return String.format("devnet.%d.devnet-%s", devnetVersion, devnetName);
+    }
+
+    private static String getDevnetId(String devnetName) {
+        return String.format("%s.%d.%s", ID_DEVNET, devnetVersion, devnetName);
+    }
+
     //support more than one DevNet
     private static HashMap<String, DevNetParams> instances;
 
     //get the devnet by name or create it if it doesn't exist.
     public static synchronized DevNetParams get(String devNetName, String sporkAddress, int defaultPort, String [] dnsSeeds) {
         if (instances == null) {
-            instances = new HashMap<String, DevNetParams>(1);
+            instances = new HashMap<>(1);
         }
 
-        if(!instances.containsKey("devnet-" + devNetName)) {
+        String devnetId = getDevnetName(devNetName);
+        if(!instances.containsKey(devnetId)) {
             DevNetParams instance = new DevNetParams(devNetName, sporkAddress, defaultPort, dnsSeeds);
-            instances.put("devnet-" + devNetName, instance);
+            instances.put(devnetId, instance);
             return instance;
         } else {
-            return instances.get("devnet-" + devNetName);
+            return instances.get(devnetId);
         }
     }
 
@@ -160,17 +175,18 @@ public class DevNetParams extends AbstractBitcoinNetParams {
             instances = new HashMap<>(1);
         }
 
-        if(!instances.containsKey("devnet-" + devNetName)) {
+        String devnetId = getDevnetName(devNetName);
+        if(!instances.containsKey(devnetId)) {
             return null;
         } else {
-            return instances.get("devnet-" + devNetName);
+            return instances.get(devnetId);
         }
     }
 
     public static synchronized void add(DevNetParams params) {
         if (instances == null)
             instances = new HashMap<>(1);
-        instances.put(params.devNetName, params);
+        instances.put(params.devnetName, params);
     }
 
     @Override
@@ -220,4 +236,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         llmqParameters.setDkgBadVotesThreshold(threshold);
     }
 
+    @Override
+    public String getDevnetVersionName() {
+        return devnetVersionName;
+    }
 }
