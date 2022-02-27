@@ -29,7 +29,6 @@ import java.util.ArrayList;
 
 public class GetQuorumRotationInfo extends Message {
 
-    private long baseBlockHashesCount;
     private ArrayList<Sha256Hash> baseBlockHashes;
     private Sha256Hash blockRequestHash;
     private boolean extraShare;
@@ -41,7 +40,6 @@ public class GetQuorumRotationInfo extends Message {
     public GetQuorumRotationInfo(NetworkParameters params, long baseBlockHashesCount,
                                  ArrayList<Sha256Hash> baseBlockHashes, Sha256Hash blockRequestHash, boolean extraShare) {
         super(params);
-        this.baseBlockHashesCount = baseBlockHashesCount;
         this.baseBlockHashes = new ArrayList<>(baseBlockHashes.size());
         this.baseBlockHashes.addAll(baseBlockHashes);
         this.blockRequestHash = blockRequestHash;
@@ -50,7 +48,6 @@ public class GetQuorumRotationInfo extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
-        baseBlockHashesCount = readUint32();
         int count = (int)readVarInt();
         baseBlockHashes = new ArrayList<>(count);
         for (int i = 0; i < count; ++i) {
@@ -62,7 +59,6 @@ public class GetQuorumRotationInfo extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        Utils.uint32ToByteStreamLE(baseBlockHashesCount, stream);
         stream.write(new VarInt(baseBlockHashes.size()).encode());
         for (Sha256Hash hash : baseBlockHashes) {
             stream.write(hash.getReversedBytes());
@@ -74,7 +70,6 @@ public class GetQuorumRotationInfo extends Message {
     @Override
     public String toString() {
         return "GetQuorumRotationInfo{" +
-                "baseBlockHashesCount=" + baseBlockHashesCount +
                 ", baseBlockHashes=" + baseBlockHashes +
                 ", blockRequestHash=" + blockRequestHash +
                 ", extraShare=" + extraShare +
