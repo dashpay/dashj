@@ -344,8 +344,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             quorumRotationState.setBlockChain(chain);
             quorumRotationState.applyDiff(peer, headersChain, blockChain, quorumRotationInfo, isLoadingBootStrap);
 
-
-
             log.info(this.toString());
             unCache();
             failedAttempts = 0;
@@ -362,19 +360,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             if(quorumRotationInfo.hasChanges() || pendingBlocks.size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
 
-            ArrayList<Masternode> list = getAllQuorumMembers(params.getLlmqForInstantSend(), quorumRotationState.mnListAtH.getBlockHash());
-            log.info("Quorum: {}:{}", quorumRotationState.mnListAtH.getHeight(), quorumRotationState.mnListAtH.getBlockHash());
-            if (list != null) {
-                StringBuilder builder = new StringBuilder();
-                for (Masternode mn : list) {
-                    builder.append("\n ").append(mn.getProTxHash());
-                }
-                log.info(builder.toString());
-
-                log.info("quorum list: {}", quorumRotationState.getQuorumListAtH());
-            } else {
-                log.info("no members found in the quorum");
-            }
         } catch(MasternodeListDiffException x) {
             //we already have this mnlistdiff or doesn't match our current tipBlockHash
             if (quorumRotationState.mnListTip.getBlockHash().equals(quorumRotationInfo.getMnListDiffTip().blockHash)) {
@@ -425,6 +410,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             log.info(quorumRotationState.toString());
             waitingForMNListDiff = false;
             if (isSyncingHeadersFirst) {
+                initChainTipSyncComplete = true;
                 if (downloadPeer != null) {
                     log.info("initChainTipSync=false");
                     context.peerGroup.triggerMnListDownloadComplete();
@@ -432,7 +418,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 } else {
                     context.peerGroup.triggerMnListDownloadComplete();
                 }
-                initChainTipSyncComplete = true;
             }
             requestNextMNListDiff();
             lock.unlock();
@@ -458,9 +443,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                             //do nothing
                         }
                     }
+                    log.info("new best block: requesting {}", block.getHeight());
                     requestMNListDiff(block);
+                    return;
                 }
             }
+            log.info("new best block: not requesting {}, {}, {}", block.getHeight(), value, isLoadedFromFile());
         }
     };
 
@@ -862,6 +850,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     }
 
     public boolean isQuorumRotationEnabled(LLMQParameters.LLMQType type) {
+        if (blockChain == null) {
+            return formatVersion == QUORUM_ROTATION_FORMAT_VERSION;
+        }
         boolean quorumRotationActive = blockChain.getBestChainHeight() >= params.getDIP0024BlockHeight() ||
                 (headersChain != null && headersChain.getBestChainHeight() >= params.getDIP0024BlockHeight());
         return params.getLlmqForInstantSend() == type && quorumRotationActive;
@@ -903,7 +894,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
-                initChainTipSyncComplete = false;
+                //initChainTipSyncComplete = false;
                 unCache();
                 try {
                     if(bootStrapFilePath == null)
@@ -1115,7 +1106,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
                     } catch (IOException x) {
 
                     } catch (BlockStoreException x) {
-
+                        throw new RuntimeException(x);
                     }
                 }
             }
