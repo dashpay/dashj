@@ -4,7 +4,6 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.Utils;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.evolution.SimplifiedMasternodesTest;
 import org.bitcoinj.params.MainNetParams;
@@ -13,7 +12,6 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.SPVBlockStore;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -54,7 +52,7 @@ public class QuorumRotationStateTest {
     // this is not supported yet
     @Test
     public void loadFromBootStrapFileV3() throws BlockStoreException {
-        URL datafile = getClass().getResource("qrinfo--1-2096.dat");
+        URL datafile = getClass().getResource("qrinfo--1-3345.dat");
         initContext(PARAMS);
 
         SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
@@ -65,7 +63,7 @@ public class QuorumRotationStateTest {
 
         try {
             SimplifiedMasternodeListManager.bootStrapLoaded.get();
-            assertEquals(2096, manager.getMasternodeList().getHeight());
+            assertEquals(3345, manager.getMasternodeList().getHeight());
         } catch (InterruptedException | ExecutionException x) {
             fail("unable to load bootstrap file");
         }

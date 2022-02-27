@@ -52,7 +52,7 @@ public class QuorumRotationInfoTest {
 
     @Before
     public void startUp() throws IOException {
-        InputStream inputStream = Objects.requireNonNull(getClass().getResourceAsStream("qrinfo--1-2096.dat"));
+        InputStream inputStream = Objects.requireNonNull(getClass().getResourceAsStream("qrinfo--1-3345.dat"));
         payloadOne = new byte [inputStream.available()];
         inputStream.read(payloadOne);
     }
