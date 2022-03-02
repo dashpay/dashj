@@ -16,18 +16,21 @@
 
 package org.bitcoinj.quorums;
 
-import org.bitcoinj.core.Message;
+import com.google.common.collect.Lists;
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VarInt;
+import org.bitcoinj.evolution.AbstractQuorumRequest;
+import org.bitcoinj.store.BlockStoreException;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.List;
 
-public class GetQuorumRotationInfo extends Message {
+public class GetQuorumRotationInfo extends AbstractQuorumRequest {
 
     private ArrayList<Sha256Hash> baseBlockHashes;
     private Sha256Hash blockRequestHash;
@@ -37,7 +40,7 @@ public class GetQuorumRotationInfo extends Message {
         super(params, payload, 0);
     }
 
-    public GetQuorumRotationInfo(NetworkParameters params, long baseBlockHashesCount,
+    public GetQuorumRotationInfo(NetworkParameters params,
                                  ArrayList<Sha256Hash> baseBlockHashes, Sha256Hash blockRequestHash, boolean extraShare) {
         super(params);
         this.baseBlockHashes = new ArrayList<>(baseBlockHashes.size());
@@ -67,6 +70,14 @@ public class GetQuorumRotationInfo extends Message {
         stream.write(extraShare ? 1 : 0);
     }
 
+    public Sha256Hash getBlockRequestHash() {
+        return blockRequestHash;
+    }
+
+    public ArrayList<Sha256Hash> getBaseBlockHashes() {
+        return baseBlockHashes;
+    }
+
     @Override
     public String toString() {
         return "GetQuorumRotationInfo{" +
@@ -76,11 +87,25 @@ public class GetQuorumRotationInfo extends Message {
                 '}';
     }
 
-    public Sha256Hash getBlockRequestHash() {
-        return blockRequestHash;
-    }
+    @Override
+    public String toString(AbstractBlockChain blockChain) {
+        List<Integer> baseHeights = Lists.newArrayList();
+        int blockHeight = -1;
+        try {
+            for (Sha256Hash baseBlockHash : baseBlockHashes) {
+                baseHeights.add(blockChain.getBlockStore().get(baseBlockHash).getHeight());
+            }
+            blockHeight = blockChain.getBlockStore().get(blockRequestHash).getHeight();
+        } catch (BlockStoreException x) {
+            throw new RuntimeException(x);
+        } catch (NullPointerException x) {
+            // swallow
+        }
 
-    public ArrayList<Sha256Hash> getBaseBlockHashes() {
-        return baseBlockHashes;
+        return "GetQuorumRotationInfo{" +
+                ", baseBlockHashes=" + baseHeights + " / " + baseBlockHashes +
+                ", blockRequestHash=" + blockHeight + " / " + blockRequestHash +
+                ", extraShare=" + extraShare +
+                '}';
     }
 }

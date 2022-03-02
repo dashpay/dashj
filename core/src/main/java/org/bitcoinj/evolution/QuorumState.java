@@ -19,8 +19,6 @@ package org.bitcoinj.evolution;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
-import org.bitcoinj.core.Message;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.ProtocolException;
@@ -30,7 +28,6 @@ import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,11 +38,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class QuorumState extends Message {
+public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeListDiff> {
     private static final Logger log = LoggerFactory.getLogger(QuorumState.class);
-    Context context;
-    AbstractBlockChain blockChain;
-    BlockStore blockStore;
 
     SimplifiedMasternodeList mnList;
     SimplifiedQuorumList quorumList;
@@ -65,22 +59,33 @@ public class QuorumState extends Message {
         }
     };
     public QuorumState(Context context, SimplifiedMasternodeListManager.SyncOptions syncOptions) {
+        super(context);
         this.context = context;
         params = context.getParams();
         mnList = new SimplifiedMasternodeList(context.getParams());
         quorumList = new SimplifiedQuorumList(context.getParams());
         this.syncOptions = syncOptions;
+        this.lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH));
     }
 
     public QuorumState(Context context, SimplifiedMasternodeListManager.SyncOptions syncOptions, byte [] payload, int offset) {
         super(context.getParams(), payload, offset);
         this.context = context;
         this.syncOptions = syncOptions;
+        this.lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH));
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain) {
-        this.blockChain = blockChain;
-        blockStore = blockChain.getBlockStore();
+    @Override
+    public void requestReset(Peer peer, StoredBlock nextBlock) {
+        lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH,
+                nextBlock.getHeader().getHash()));
+        peer.sendMessage(lastRequest.getRequestMessage());
+    }
+
+    @Override
+    public void requestUpdate(Peer peer, StoredBlock nextBlock) {
+        lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock));
+        peer.sendMessage(lastRequest.getRequestMessage());
     }
 
     public void applyDiff(Peer peer, AbstractBlockChain headersChain, AbstractBlockChain blockChain,

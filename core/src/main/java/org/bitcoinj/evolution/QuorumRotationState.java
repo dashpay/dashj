@@ -21,7 +21,6 @@ import com.google.common.collect.Sets;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
-import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.ProtocolException;
@@ -36,7 +35,6 @@ import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.QuorumSnapshot;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.quorums.SnapshotSkipMode;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -48,18 +46,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class QuorumRotationState extends Message {
+public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationInfo> {
     private static final Logger log = LoggerFactory.getLogger(QuorumRotationState.class);
-    Context context;
-    AbstractBlockChain blockChain;
-    BlockStore blockStore;
 
     QuorumSnapshot quorumSnapshotAtHMinusC;
     QuorumSnapshot quorumSnapshotAtHMinus2C;
@@ -93,8 +87,7 @@ public class QuorumRotationState extends Message {
     HashMap<LLMQParameters.LLMQType, HashMap<Pair<Sha256Hash, Integer>, ArrayList<Masternode>>> mapIndexedQuorumMembers = new HashMap<>();
 
     public QuorumRotationState(Context context) {
-        this.context = context;
-        params = context.getParams();
+        super(context);
         mnListTip = new SimplifiedMasternodeList(context.getParams());
         mnListAtH = new SimplifiedMasternodeList(context.getParams());
         mnListAtHMinusC = new SimplifiedMasternodeList(context.getParams());
@@ -111,16 +104,13 @@ public class QuorumRotationState extends Message {
         quorumSnapshotAtHMinus2C = new QuorumSnapshot(0);
         quorumSnapshotAtHMinus3C = new QuorumSnapshot(0);
         quorumSnapshotAtHMinus4C = new QuorumSnapshot(0);
+        this.lastRequest = new QuorumUpdateRequest<>(new GetQuorumRotationInfo(params, Lists.newArrayList(), Sha256Hash.ZERO_HASH, false));
     }
 
     public QuorumRotationState(Context context, byte [] payload, int offset) {
         super(context.getParams(), payload, offset);
         this.context = context;
-    }
-
-    public void setBlockChain(AbstractBlockChain blockChain) {
-        this.blockChain = blockChain;
-        blockStore = blockChain.getBlockStore();
+        this.lastRequest = new QuorumUpdateRequest<>(new GetQuorumRotationInfo(params, Lists.newArrayList(), Sha256Hash.ZERO_HASH, false));
     }
 
     public void applyDiff(Peer peer, AbstractBlockChain headersChain, AbstractBlockChain blockChain,
@@ -245,6 +235,22 @@ public class QuorumRotationState extends Message {
         return mnListTip;
     }
 
+    @Override
+    public void requestReset(Peer peer, StoredBlock block) {
+        lastRequest = new QuorumUpdateRequest<>(getQuorumRotationInfoRequestFromGenesis(block));
+        peer.sendMessage(lastRequest.getRequestMessage());
+    }
+
+    public GetQuorumRotationInfo getQuorumRotationInfoRequestFromGenesis(StoredBlock block) {
+        return new GetQuorumRotationInfo(params, Lists.newArrayList(), block.getHeader().getHash(), true);
+    }
+
+    @Override
+    public void requestUpdate(Peer peer, StoredBlock nextBlock) {
+        lastRequest = new QuorumUpdateRequest<>(getQuorumRotationInfoRequest(nextBlock));
+        peer.sendMessage(lastRequest.getRequestMessage());
+    }
+
     public GetQuorumRotationInfo getQuorumRotationInfoRequest(StoredBlock nextBlock) {
         ArrayList<Sha256Hash> baseBlockHashes = Lists.newArrayList(
             Sets.newHashSet(
@@ -256,9 +262,7 @@ public class QuorumRotationState extends Message {
                 mnListAtHMinus4C.getBlockHash()
             )
         );
-        return new GetQuorumRotationInfo(context.getParams(), baseBlockHashes.size(), baseBlockHashes,
-                nextBlock.getHeader().getHash(),
-                true);
+        return new GetQuorumRotationInfo(context.getParams(), baseBlockHashes, nextBlock.getHeader().getHash(), true);
     }
 
     public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
@@ -834,10 +838,12 @@ public class QuorumRotationState extends Message {
         return quorumListTip;
     }
 
+    @Override
     public LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache() {
         return mnListsCache;
     }
 
+    @Override
     public LinkedHashMap<Sha256Hash, SimplifiedQuorumList> getQuorumsCache() {
         return quorumsCache;
     }
