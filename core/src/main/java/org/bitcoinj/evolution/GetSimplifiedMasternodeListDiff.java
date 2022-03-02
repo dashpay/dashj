@@ -1,15 +1,16 @@
 package org.bitcoinj.evolution;
 
-import org.bitcoinj.core.Message;
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.store.BlockStoreException;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
 
-public class GetSimplifiedMasternodeListDiff extends Message {
+public class GetSimplifiedMasternodeListDiff extends AbstractQuorumRequest {
 
     Sha256Hash baseBlockHash;
     Sha256Hash blockHash;
@@ -17,6 +18,7 @@ public class GetSimplifiedMasternodeListDiff extends Message {
     public static int MESSAGE_SIZE = 64;
 
     public GetSimplifiedMasternodeListDiff(Sha256Hash baseBlockHash, Sha256Hash blockHash) {
+        super();
         this.baseBlockHash = baseBlockHash;
         this.blockHash = blockHash;
         length = MESSAGE_SIZE;
@@ -51,5 +53,32 @@ public class GetSimplifiedMasternodeListDiff extends Message {
     @Override
     public int hashCode() {
         return new BigInteger(baseBlockHash.getBytes()).add(new BigInteger(blockHash.getBytes())).hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "GetSimplifiedMasternodeListDiff{" +
+                "baseBlockHash=" + baseBlockHash +
+                ", blockHash=" + blockHash +
+                '}';
+    }
+
+    @Override
+    public String toString(AbstractBlockChain blockChain) {
+        int baseHeight = -1;
+        int blockHeight = -1;
+        try {
+            baseHeight = blockChain.getBlockStore().get(baseBlockHash).getHeight();
+            blockHeight = blockChain.getBlockStore().get(blockHash).getHeight();
+        } catch (BlockStoreException x) {
+            throw new RuntimeException(x);
+        } catch (NullPointerException x) {
+            // swallow
+        }
+
+        return "GetSimplifiedMasternodeListDiff{" +
+                "baseBlockHash=" + baseHeight + " / " + baseBlockHash +
+                ", blockHash=" + blockHeight + " / " + blockHash +
+                '}';
     }
 }
