@@ -430,9 +430,6 @@ public class SimplifiedQuorumList extends Message {
             }
         }
 
-        //This if statement should be removed
-        //if (!LLMQUtils.isQuorumRotationEnabled(Context.get(), params, llmqParameters.type)) {
-
         ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
 
         if (members == null) {
@@ -449,7 +446,8 @@ public class SimplifiedQuorumList extends Message {
         log.info(builder.toString());
 
         if (!commitment.verify(members, true)) {
-            //throw new VerificationException("invalid quorum commitment: " + commitment);
+            // TODO: originally, the exception was thrown here.  For now, report the error to the logs
+            // throw new VerificationException("invalid quorum commitment: " + commitment);
             log.warn("invalid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
         } else {
             log.info("valid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
