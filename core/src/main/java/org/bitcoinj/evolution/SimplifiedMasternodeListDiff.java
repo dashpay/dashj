@@ -11,9 +11,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
 
-import static org.bitcoinj.core.Sha256Hash.hashTwice;
-
-public class SimplifiedMasternodeListDiff extends Message {
+public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
     public Sha256Hash prevBlockHash;
     public Sha256Hash blockHash;
     PartialMerkleTree cbTxMerkleTree;
