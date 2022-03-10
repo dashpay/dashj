@@ -17,9 +17,9 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.AbstractBlockChain;
-import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
+import org.bitcoinj.evolution.AbstractDiffMessage;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.store.BlockStore;
 import org.slf4j.Logger;
@@ -31,7 +31,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class QuorumRotationInfo extends Message {
+public class QuorumRotationInfo extends AbstractDiffMessage {
 
     private static final Logger log = LoggerFactory.getLogger(QuorumRotationInfo.class);
 
