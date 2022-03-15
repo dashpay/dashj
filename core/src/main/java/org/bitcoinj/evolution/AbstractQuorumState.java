@@ -203,7 +203,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
-                //initChainTipSyncComplete = false;
                 unCache();
                 try {
                     if (stateManager.notUsingBootstrapFile())
@@ -237,7 +236,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         if (syncOptions == SimplifiedMasternodeListManager.SyncOptions.SYNC_MINIMUM) {
             height = currentHeight - getBlockHeightOffset();
         } else {
-            //currentHeight -= 3 * (currentHeight % getUpdateInterval());
             height = currentHeight;
         }
         StoredBlock resetBlock = blockChain.getBlockStore().get(height);
@@ -252,7 +250,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     public void requestMNListDiff(Peer peer, StoredBlock block) {
         Sha256Hash hash = block.getHeader().getHash();
-        //log.info("getmnlistdiff:  current block:  " + tipHeight + " requested block " + block.getHeight());
 
         if (block.getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - SNAPSHOT_TIME_PERIOD)
             return;
@@ -354,7 +351,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                             getMasternodeListAtTip().getHeight(), nextBlock.getHeight(), getMasternodeListAtTip().getBlockHash(), nextBlock.getHeader().getHash());
                     requestUpdate(downloadPeer, nextBlock);
                     log.info("message = {}", lastRequest.getRequestMessage().toString(blockChain));
-                    //new Exception().printStackTrace();
 
                     waitingForMNListDiff = true;
                 }
@@ -438,7 +434,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
             boolean value = initChainTipSyncComplete || !context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-            boolean needsUpdate = needsUpdate(block); //block.getHeight() % getUpdateInterval() == 0;
+            boolean needsUpdate = needsUpdate(block);
             if (needsUpdate && value && getMasternodeListAtTip().getHeight() < block.getHeight() && isDeterministicMNsSporkActive() && stateManager.isLoadedFromFile()) {
                 long timePeriod = syncOptions == SimplifiedMasternodeListManager.SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 600L;
                 if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {

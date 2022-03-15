@@ -684,16 +684,16 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             StoredBlock snapshotBlockHMinus2C = blockHMinusC.getAncestor(blockStore, blockHMinus2C.getHeight() - 8);
             StoredBlock snapshotBlockHMinus3C = blockHMinusC.getAncestor(blockStore, blockHMinus3C.getHeight() - 8);
 
-            QuorumSnapshot quSnapshotHMinusC = quorumSnapshotCache.get(snapshotBlockHMinusC.getHeader().getHash()); //quorumSnapshotAtHMinusC;
+            QuorumSnapshot quSnapshotHMinusC = quorumSnapshotCache.get(snapshotBlockHMinusC.getHeader().getHash());
             if (quSnapshotHMinusC != null) {
 
                 quarters.quarterHMinusC = getQuorumQuarterMembersBySnapshot(llmqParameters, blockHMinusC, quSnapshotHMinusC);
 
-                QuorumSnapshot quSnapshotHMinus2C = quorumSnapshotCache.get(snapshotBlockHMinus2C.getHeader().getHash()); //quorumSnapshotAtHMinus2C;
+                QuorumSnapshot quSnapshotHMinus2C = quorumSnapshotCache.get(snapshotBlockHMinus2C.getHeader().getHash());
                 if (quSnapshotHMinus2C != null) {
                     quarters.quarterHMinus2C = getQuorumQuarterMembersBySnapshot(llmqParameters, blockHMinus2C, quSnapshotHMinus2C);
 
-                    QuorumSnapshot quSnapshotHMinus3C = quorumSnapshotCache.get(snapshotBlockHMinus3C.getHeader().getHash()); //quorumSnapshotAtHMinus3C;
+                    QuorumSnapshot quSnapshotHMinus3C = quorumSnapshotCache.get(snapshotBlockHMinus3C.getHeader().getHash());
                     if (quSnapshotHMinus3C != null) {
                         quarters.quarterHMinus3C = getQuorumQuarterMembersBySnapshot(llmqParameters, blockHMinus3C, quSnapshotHMinus3C);
                     }
@@ -996,10 +996,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             if (peer != null && isSyncingHeadersFirst)
                 peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, quorumRotationInfo.getMnListDiffTip());
 
-            //setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
-            //if(quorumRotationInfo.hasChanges() || pendingBlocks.size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
-            //    save();
-
         } catch (MasternodeListDiffException x) {
             //we already have this mnlistdiff or doesn't match our current tipBlockHash
             if (mnListTip.getBlockHash().equals(quorumRotationInfo.getMnListDiffTip().blockHash)) {
@@ -1007,7 +1003,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 log.info("mnList = {} vs mnlistdiff {}", mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
                 log.info("mnlistdiff {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
                 log.info("lastRequest: {} -> {}", lastRequest.request.getBaseBlockHashes(), lastRequest.request.getBlockRequestHash());
-                //remove this block from the list
+                // remove this block from the list
                 if (pendingBlocks.size() > 0) {
                     StoredBlock thisBlock = pendingBlocks.get(0);
                     if (thisBlock.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffTip().prevBlockHash) &&
@@ -1060,18 +1056,4 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             lock.unlock();
         }
     }
-
-    /*@Override
-    public void requestMNListDiff(Peer peer, StoredBlock block) {
-        try {
-            int requestHeight = block.getHeight() - block.getHeight() % getUpdateInterval();
-            //if (!initChainTipSyncComplete) {
-            //    requestHeight = requestHeight - 3 * (block.getHeight() % getUpdateInterval());
-            //}
-            StoredBlock requestBlock = blockStore.get(requestHeight);
-            super.requestMNListDiff(peer, requestBlock);
-        } catch (BlockStoreException x) {
-            throw new RuntimeException(x);
-        }
-    }*/
 }
