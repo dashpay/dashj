@@ -245,27 +245,22 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 popPendingBlock();
             } else log.warn("pendingBlocks is empty");
 
-            if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, mnlistdiff);
+            if (peer != null && isSyncingHeadersFirst)
+                peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, mnlistdiff);
 
-            //if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION && quorumState.quorumList.size() > 0)
-            //    setFormatVersion(LLMQ_FORMAT_VERSION);
-            //if (mnlistdiff.hasChanges() || quorumState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
-            //    save();
         } catch(MasternodeListDiffException x) {
-            //we already have this mnlistdiff or doesn't match our current tipBlockHash
+            // we already have this mnlistdiff or doesn't match our current tipBlockHash
             if(getMnList().getBlockHash().equals(mnlistdiff.blockHash)) {
                 log.info("heights are the same:  " + x.getMessage());
                 log.info("mnList = {} vs mnlistdiff {}", getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
-                //remove this block from the list
+                // remove this block from the list
                 if(getPendingBlocks().size() > 0) {
                     StoredBlock thisBlock = getPendingBlocks().get(0);
                     if(thisBlock.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash) &&
                             thisBlock.getHeader().getHash().equals(mnlistdiff.prevBlockHash)) {
                         popPendingBlock();
-                        //pendingBlocks.remove(0);
-                        //pendingBlocksMap.remove(thisBlock.getHeader().getHash());
                     }
                 }
             } else {
@@ -275,7 +270,6 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
                 incrementFailedAttempts();
-                //failedAttempts++;
                 log.info("failed attempts {}", getFailedAttempts());
                 if(reachedMaxFailedAttempts())
                     resetMNList(true);
