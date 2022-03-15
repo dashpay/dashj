@@ -16,6 +16,7 @@
 
 package org.bitcoinj.evolution;
 
+import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
@@ -24,26 +25,28 @@ import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.LLMQUtils;
+import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeListDiff> {
+public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeListDiff, SimplifiedMasternodeListDiff> {
     private static final Logger log = LoggerFactory.getLogger(QuorumState.class);
 
     SimplifiedMasternodeList mnList;
     SimplifiedQuorumList quorumList;
-    SimplifiedMasternodeListManager.SyncOptions syncOptions;
 
     LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache = new LinkedHashMap<Sha256Hash, SimplifiedMasternodeList>() {
         @Override
@@ -62,17 +65,31 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         super(context);
         this.context = context;
         params = context.getParams();
-        mnList = new SimplifiedMasternodeList(context.getParams());
-        quorumList = new SimplifiedQuorumList(context.getParams());
         this.syncOptions = syncOptions;
-        this.lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH));
+        init();
     }
 
     public QuorumState(Context context, SimplifiedMasternodeListManager.SyncOptions syncOptions, byte [] payload, int offset) {
         super(context.getParams(), payload, offset);
         this.context = context;
         this.syncOptions = syncOptions;
+        finishInitialization();
+    }
+
+    void init() {
+        mnList = new SimplifiedMasternodeList(context.getParams());
+        quorumList = new SimplifiedQuorumList(context.getParams());
+        finishInitialization();
+    }
+
+    void finishInitialization() {
         this.lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH, Sha256Hash.ZERO_HASH));
+    }
+
+    @Override
+    protected void clearState() {
+        super.clearState();
+        init();
     }
 
     @Override
@@ -84,8 +101,9 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
     @Override
     public void requestUpdate(Peer peer, StoredBlock nextBlock) {
-        lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock));
-        peer.sendMessage(lastRequest.getRequestMessage());
+        // in malort, don't do this for now
+        //lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock));
+        //peer.sendMessage(lastRequest.getRequestMessage());
     }
 
     public void applyDiff(Peer peer, AbstractBlockChain headersChain, AbstractBlockChain blockChain,
@@ -107,6 +125,9 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
         newMNList.setBlock(block, block != null && block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
+        mnListsCache.put(newMNList.getBlockHash(), newMNList);
+        mnList = newMNList;
+
         SimplifiedQuorumList newQuorumList = quorumList;
         if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
             newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, chain);
@@ -116,10 +137,23 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             quorumList.syncWithMasternodeList(newMNList);
         }
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedQuorums, mnlistdiff);
-        mnListsCache.put(newMNList.getBlockHash(), newMNList);
         quorumsCache.put(newQuorumList.getBlockHash(), newQuorumList);
-        mnList = newMNList;
         quorumList = newQuorumList;
+    }
+
+    @Override
+    int getBlockHeightOffset() {
+        return SigningManager.SIGN_HEIGHT_OFFSET;
+    }
+
+    @Override
+    public int getUpdateInterval() {
+        return 1;
+    }
+
+    @Override
+    boolean needsUpdate(StoredBlock nextBlock) {
+        return nextBlock.getHeight() > mnList.getHeight();
     }
 
     public SimplifiedMasternodeList getMnList() {
@@ -153,8 +187,9 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         length = cursor - offset;
     }
 
-    public void parseQuorums(byte [] payload, int offset) {
+    public int parseQuorums(byte [] payload, int offset) {
         quorumList = new SimplifiedQuorumList(params, payload, offset);
+        return quorumList.getMessageSize();
     }
 
     @Override
@@ -166,11 +201,122 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         quorumList.bitcoinSerialize(stream);
     }
 
+    @Override
+    public SimplifiedMasternodeList getMasternodeList() {
+        return mnList;
+    }
+
+    @Override
+    public SimplifiedMasternodeList getMasternodeListAtTip() {
+        return mnList;
+    }
+
     public LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache() {
         return mnListsCache;
     }
 
     public LinkedHashMap<Sha256Hash, SimplifiedQuorumList> getQuorumsCache() {
         return quorumsCache;
+    }
+
+    @Override
+    public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap) {
+        StoredBlock block = null;
+        long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
+        if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);
+        Stopwatch watch = Stopwatch.createStarted();
+        Stopwatch watchMNList = Stopwatch.createUnstarted();
+        Stopwatch watchQuorums = Stopwatch.createUnstarted();
+        boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
+        log.info("processing mnlistdiff between : " + getMnList().getHeight() + " & " + newHeight + "; " + mnlistdiff);
+        lock.lock();
+        try {
+            applyDiff(peer, headersChain, blockChain, mnlistdiff, isLoadingBootStrap);
+
+            log.info(this.toString());
+            unCache();
+            clearFailedAttempts();
+
+            if(!pendingBlocks.isEmpty()) {
+                // remove the first pending block
+                popPendingBlock();
+            } else log.warn("pendingBlocks is empty");
+
+            if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, mnlistdiff);
+
+            //if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION && quorumState.quorumList.size() > 0)
+            //    setFormatVersion(LLMQ_FORMAT_VERSION);
+            //if (mnlistdiff.hasChanges() || quorumState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
+            //    save();
+        } catch(MasternodeListDiffException x) {
+            //we already have this mnlistdiff or doesn't match our current tipBlockHash
+            if(getMnList().getBlockHash().equals(mnlistdiff.blockHash)) {
+                log.info("heights are the same:  " + x.getMessage());
+                log.info("mnList = {} vs mnlistdiff {}", getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
+                log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
+                log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
+                //remove this block from the list
+                if(getPendingBlocks().size() > 0) {
+                    StoredBlock thisBlock = getPendingBlocks().get(0);
+                    if(thisBlock.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash) &&
+                            thisBlock.getHeader().getHash().equals(mnlistdiff.prevBlockHash)) {
+                        popPendingBlock();
+                        //pendingBlocks.remove(0);
+                        //pendingBlocksMap.remove(thisBlock.getHeader().getHash());
+                    }
+                }
+            } else {
+                log.info("heights are different " + x.getMessage());
+                log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, getMnList().getHeight(), quorumList.getHeight());
+                log.info("mnList = {} vs mnlistdiff = {}", getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
+                log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
+                log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
+                incrementFailedAttempts();
+                //failedAttempts++;
+                log.info("failed attempts {}", getFailedAttempts());
+                if(reachedMaxFailedAttempts())
+                    resetMNList(true);
+            }
+        } catch(VerificationException x) {
+            //request this block again and close this peer
+            log.info("verification error: close this peer" + x.getMessage());
+            incrementFailedAttempts();
+            throw x;
+        } catch(NullPointerException x) {
+            log.info("NPE: close this peer" + x.getMessage());
+            incrementFailedAttempts();
+            throw new VerificationException("verification error: " + x.getMessage());
+        } catch(BlockStoreException x) {
+            log.info(x.getMessage());
+            incrementFailedAttempts();
+            throw new ProtocolException(x);
+        } finally {
+            watch.stop();
+            log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
+            waitingForMNListDiff = false;
+            if (isSyncingHeadersFirst) {
+                if (downloadPeer != null) {
+                    log.info("initChainTipSync=false");
+                    context.peerGroup.triggerMnListDownloadComplete();
+                    log.info("initChainTipSync=true");
+                    initChainTipSyncComplete = true;
+                } else {
+                    context.peerGroup.triggerMnListDownloadComplete();
+                    initChainTipSyncComplete = true;
+                }
+            }
+            requestNextMNListDiff();
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "QuorumState{" +
+                "mnList=" + mnList +
+                ", quorumList=" + quorumList +
+                ", mnListsCacheSize=" + mnListsCache.size() +
+                ", quorumsCacheSize=" + quorumsCache.size() +
+                '}';
     }
 }
