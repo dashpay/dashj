@@ -63,6 +63,7 @@ public class MalortDevNetParams extends DevNetParams {
 
         // minimumDifficultyBlocks = 1000;
         DIP0024BlockHeight = 300;
+        isDIP24Only = true;
 
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET;

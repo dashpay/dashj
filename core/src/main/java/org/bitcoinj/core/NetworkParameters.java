@@ -128,6 +128,8 @@ public abstract class NetworkParameters {
     /** Used to check for DIP0008 upgrade */
     protected int DIP0024BlockHeight;
 
+    protected boolean isDIP24Only = false;
+
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
      * by looking at the port number.
@@ -778,6 +780,10 @@ public abstract class NetworkParameters {
 
     public int getDIP0024BlockHeight() {
         return DIP0024BlockHeight;
+    }
+
+    public boolean isDIP24Only() {
+        return isDIP24Only;
     }
 
     public int getBIP65Height() {

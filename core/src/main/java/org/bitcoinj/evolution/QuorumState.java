@@ -102,8 +102,11 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     @Override
     public void requestUpdate(Peer peer, StoredBlock nextBlock) {
         // in malort, don't do this for now
-        //lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock));
-        //peer.sendMessage(lastRequest.getRequestMessage());
+        // TODO: reactivate for testnet
+        if (!params.isDIP24Only()) {
+            lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock));
+            peer.sendMessage(lastRequest.getRequestMessage());
+        }
     }
 
     public void applyDiff(Peer peer, AbstractBlockChain headersChain, AbstractBlockChain blockChain,
