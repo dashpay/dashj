@@ -223,8 +223,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public void requestQuorumStateUpdate(Peer downloadPeer, StoredBlock requestBlock) {
         // TODO: reactivate for testnet
-        // quorumState.requestMNListDiff(downloadPeer, requestBlock);
-        quorumRotationState.requestMNListDiff(downloadPeer, requestBlock);
+        if (!params.isDIP24Only()) {
+            quorumState.requestMNListDiff(downloadPeer, requestBlock);
+        }
+        if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+            quorumRotationState.requestMNListDiff(downloadPeer, requestBlock);
+        }
     }
 
     public void processQuorumRotationInfo(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap) {
@@ -286,8 +290,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         quorumRotationState.setBlockChain(activeChain);
         if(shouldProcessMNListDiff()) {
             // TODO: reactivate for testnet
-            // quorumState.addEventListeners(blockChain, peerGroup);
-            quorumRotationState.addEventListeners(blockChain, peerGroup);
+            if (!params.isDIP24Only()) {
+                quorumState.addEventListeners(blockChain, peerGroup);
+            }
+            if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+                quorumRotationState.addEventListeners(blockChain, peerGroup);
+            }
         }
     }
 
@@ -295,8 +303,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public void close() {
         if(shouldProcessMNListDiff()) {
             // TODO: reactivate for testnet
-            //quorumState.removeEventListeners(blockChain, peerGroup);
-            quorumRotationState.removeEventListeners(blockChain, peerGroup);
+            if (!params.isDIP24Only()) {
+                quorumState.removeEventListeners(blockChain, peerGroup);
+            }
+            if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+                quorumRotationState.removeEventListeners(blockChain, peerGroup);
+            }
 
             try {
                 save();
