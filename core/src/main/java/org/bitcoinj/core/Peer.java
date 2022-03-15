@@ -19,7 +19,6 @@ package org.bitcoinj.core;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.listeners.*;
-import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.governance.GovernanceObject;
@@ -31,9 +30,7 @@ import org.bitcoinj.net.NioClient;
 import org.bitcoinj.net.NioClientManager;
 import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.quorums.ChainLockSignature;
-import org.bitcoinj.quorums.GetQuorumRotationInfo;
 import org.bitcoinj.quorums.InstantSendLock;
-import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.store.BlockStore;
@@ -899,14 +896,7 @@ public class Peer extends PeerSocketHandler {
                     blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
 
             if (context.masternodeListManager.getListAtChainTip().getHeight() < masternodeListBlock.getHeight()) {
-                if (!LLMQUtils.isQuorumRotationEnabled(headerChain, params, params.getLlmqForInstantSend())) {
-                    GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
-                    sendMessage(msg);
-                } else {
-                    GetQuorumRotationInfo msg = context.masternodeListManager.getQuorumRotationInfoRequest(headerChain.getChainHead());
-                    log.info("message = {}, {}", msg, this);
-                    sendMessage(msg);
-                }
+                context.masternodeListManager.requestQuorumStateUpdate(this, headerChain.getChainHead());
                 queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Requesting, null);
             } else {
                 context.peerGroup.triggerMnListDownloadComplete();

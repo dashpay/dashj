@@ -126,7 +126,7 @@ public class SimplifiedMasternodeList extends Message {
     {
         CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
         if(!diff.prevBlockHash.equals(blockHash))
-            throw new MasternodeListDiffException("The mnlistdiff does not connect to this list.  height: " + height + " vs " + cbtx.getHeight(), false, false);
+            throw new MasternodeListDiffException("The mnlistdiff does not connect to this list.  height: " + height + " -> " + cbtx.getHeight(), false, false);
 
         lock.lock();
         try {
