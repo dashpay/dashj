@@ -30,6 +30,14 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * This class manages the state of the masternode lists and quorums.  It does so with help from
+ * {@link QuorumState} for DIP4 quorums and {@link QuorumRotationState} for DIP24 quorums
+ *
+ * Additionally, this class manages the bootstrap system and the persistence of data through its base
+ * class {@link AbstractManager}
+ */
+
 public class SimplifiedMasternodeListManager extends AbstractManager implements QuorumStateManager {
     private static final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeListManager.class);
     private final ReentrantLock lock = Threading.lock("SimplifiedMasternodeListManager");
