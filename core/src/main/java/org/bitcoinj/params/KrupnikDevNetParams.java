@@ -38,7 +38,7 @@ public class KrupnikDevNetParams extends DevNetParams {
 
     public KrupnikDevNetParams() {
         super(DEVNET_NAME, "yPBtLENPQ6Ri1R7SyjevvvyMdopdFJUsRo", 20001,
-                MASTERNODES, true, 70219);
+                MASTERNODES, true, -1);
         dnsSeeds = MASTERNODES;
         addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;

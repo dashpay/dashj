@@ -195,7 +195,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
             case MINIMUM:
             case CURRENT:
             case BLOOM_FILTER:
-                return protocolVersion;
+                return protocolVersion != -1 ? protocolVersion : super.getProtocolVersionNum(version);
         }
         return super.getProtocolVersionNum(version);
     }
