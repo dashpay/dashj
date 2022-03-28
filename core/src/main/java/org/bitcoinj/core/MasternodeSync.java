@@ -183,10 +183,9 @@ public class MasternodeSync {
 
     public void bumpAssetLastTime(@Nullable String strFuncName)
     {
-        if (isSynced()) return;
+        if (isSynced())
+            return;
         timeLastBumped.set(Utils.currentTimeSeconds());
-        if (strFuncName != null)
-            log.info("bumpAssetLastTime -- "+ strFuncName);
     }
 
     public boolean isBlockchainSynced() {
