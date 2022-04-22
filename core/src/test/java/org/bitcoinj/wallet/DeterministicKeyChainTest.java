@@ -626,6 +626,32 @@ public class DeterministicKeyChainTest {
     }
 
     @Test
+    public void xpubsMatchAfterEncryption() {
+        NetworkParameters params = MainNetParams.get();
+
+        String expectedBip32xpub = "xpub69KR9epSNBM59KLuasxMU5CyKytMJjBP5HEZ5p8YoGUCpM6cM9hqxB9DDPCpUUtqmw5duTckvPfwpoWGQUFPmRLpxs5jYiTf2u6xRMcdhDf";
+        String expectedBip44xpub = "xpub6CXm7VK4bt5DCa6rYeV5mAcajGHWeUaRwkiAsYRqhgG7QK1urieMywT2S49CncqBbBXQvf8wLmeayPtmjsYN1o5uMz9esQeNWqarhxthYiR";
+
+        // Check the BIP32 keychain
+        DeterministicKey watchingKey = chain.getWatchingKey(); //m/0'
+        final String pub58 = watchingKey.serializePubB58(params);
+        assertEquals(expectedBip32xpub, pub58);
+        // Make sure that the xpub remains the same after encrypting the keychain
+        DeterministicKeyChain chainEncrypted = chain.toEncrypted("hello");
+        final String pub58encrypted = chainEncrypted.getWatchingKey().serializePubB58(params);
+        assertEquals(expectedBip32xpub, pub58encrypted);
+
+        // Check the BIP44 keychain
+        DeterministicKey watchingKeyBip44 = bip44chain.getWatchingKey(); //m/44'/1'/0'
+        final String pub58Bip44 = watchingKeyBip44.serializePubB58(params);
+        assertEquals(expectedBip44xpub, pub58Bip44);
+        // Make sure that the xpub remains the same after encrypting the keychain
+        DeterministicKeyChain bip44chainEncrypted = bip44chain.toEncrypted("hello");
+        final String pub58encryptedBip44 = bip44chainEncrypted.getWatchingKey().serializePubB58(params);
+        assertEquals(expectedBip44xpub, pub58encryptedBip44);
+    }
+
+    @Test
     public void bloom1() {
         DeterministicKey key2 = chain.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         DeterministicKey key1 = chain.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
