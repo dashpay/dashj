@@ -5,6 +5,8 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.utils.Threading;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -12,6 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class BLSLazySignature extends ChildMessage {
     ReentrantLock lock = Threading.lock("BLSLazySignature");
+    Logger log = LoggerFactory.getLogger(BLSLazySignature.class);
 
     byte [] buffer;
     BLSSignature signature;
@@ -46,7 +49,8 @@ public class BLSLazySignature extends ChildMessage {
         lock.lock();
         try {
             if (!isSingatureInitialized && buffer == null) {
-                throw new IOException("singature and buffer are not initialized");
+                log.warn("signature and buffer are not initialized");
+                buffer = invalidSignature.getBuffer();
             }
             if (buffer == null) {
                 buffer = signature.getBuffer(BLSSignature.BLS_CURVE_SIG_SIZE);
