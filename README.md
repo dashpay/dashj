@@ -3,7 +3,7 @@
 > A Java library for working with Dash
 > 
 [![License](https://img.shields.io/github/license/dashevo/dashj)](https://github.com/dashevo/dashj/blob/master/COPYING)
-[![Github Build Status](https://github.com/dashpay/dashj/workflows/Java%20CI/badge.svg)](https://github.com/dashpay/dashj/actions)
+[![GitHub Build Status](https://github.com/dashpay/dashj/workflows/Java%20CI/badge.svg)](https://github.com/dashpay/dashj/actions)
 
 | Branch | Tests                                                                                                                              | Coverage | Linting |
 |--------|------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
