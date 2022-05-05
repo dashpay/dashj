@@ -42,7 +42,7 @@ public class FinalCommitment extends SpecialTxPayload {
 
     int llmqType; //short
     Sha256Hash quorumHash;
-    long quorumIndex; //int
+    int quorumIndex; //uint16
     ArrayList<Boolean> signers;
     ArrayList<Boolean> validMembers;
 
@@ -89,7 +89,7 @@ public class FinalCommitment extends SpecialTxPayload {
         llmqType = readBytes(1)[0];
         quorumHash = readHash();
         if (version >= INDEXED_QUORUM_VERSION) {
-            quorumIndex = readUint32();
+            quorumIndex = readUint16();
         } else {
             quorumIndex = 0;
         }
@@ -116,7 +116,7 @@ public class FinalCommitment extends SpecialTxPayload {
 
         stream.write(quorumHash.getReversedBytes());
         if (version >= INDEXED_QUORUM_VERSION) {
-            Utils.uint32ToByteStreamLE(quorumIndex, stream);
+            Utils.uint16ToByteStreamLE(quorumIndex, stream);
         }
         Utils.booleanArrayListToStream(signers, stream);
         Utils.booleanArrayListToStream(validMembers, stream);
