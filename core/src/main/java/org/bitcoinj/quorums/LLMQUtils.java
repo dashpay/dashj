@@ -88,14 +88,21 @@ public class LLMQUtils {
     }
 
     public static boolean isQuorumRotationEnabled(Context context, NetworkParameters params, LLMQParameters.LLMQType type) {
+        if (type != params.getLlmqDIP0024InstantSend()) {
+            return false;
+        }
+
         int bestHeight = max(context.headerChain != null ? context.headerChain.getBestChainHeight() : 0, context.blockChain.getBestChainHeight());
         boolean quorumRotationActive = bestHeight >= params.getDIP0024BlockHeight();
-        return params.getLlmqForInstantSend() == type && quorumRotationActive;
+        return params.getLlmqDIP0024InstantSend() == type && quorumRotationActive;
     }
 
     public static boolean isQuorumRotationEnabled(AbstractBlockChain blockChain, NetworkParameters params, LLMQParameters.LLMQType type) {
+        if (type != params.getLlmqDIP0024InstantSend()) {
+            return false;
+        }
         boolean quorumRotationActive = blockChain.getBestChainHeight() >= params.getDIP0024BlockHeight();
-        return params.getLlmqForInstantSend() == type && quorumRotationActive;
+        return params.getLlmqDIP0024InstantSend() == type && quorumRotationActive;
     }
 
     public static Sha256Hash calculateModifier(LLMQParameters llmqParameters, StoredBlock quorumBaseBlock) {
