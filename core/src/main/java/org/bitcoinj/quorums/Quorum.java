@@ -36,4 +36,8 @@ public class Quorum {
     public Sha256Hash getQuorumHash() {
         return commitment.quorumHash;
     }
+
+    public int getQuorumIndex() {
+        return commitment.quorumIndex;
+    }
 }
