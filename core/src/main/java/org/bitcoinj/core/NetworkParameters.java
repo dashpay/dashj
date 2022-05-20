@@ -757,6 +757,8 @@ public abstract class NetworkParameters {
     protected LLMQParameters.LLMQType llmqChainLocks;
     protected LLMQParameters.LLMQType llmqForInstantSend;
     protected LLMQParameters.LLMQType llmqTypePlatform;
+    protected LLMQParameters.LLMQType llmqTypeDIP0024InstantSend;
+    protected LLMQParameters.LLMQType llmqTypeMnhf;
 
     public HashMap<LLMQParameters.LLMQType, LLMQParameters> getLlmqs() {
         return llmqs;
@@ -770,6 +772,10 @@ public abstract class NetworkParameters {
         return llmqForInstantSend;
     }
 
+    public LLMQParameters.LLMQType getLlmqDIP0024InstantSend() {
+        return llmqTypeDIP0024InstantSend;
+    }
+
     protected void addLLMQ(LLMQParameters.LLMQType type) {
         llmqs.put(type, LLMQParameters.fromType(type));
     }
@@ -780,6 +786,10 @@ public abstract class NetworkParameters {
 
     public int getDIP0024BlockHeight() {
         return DIP0024BlockHeight;
+    }
+
+    public boolean isDIP0024Active(StoredBlock block) {
+        return block.getHeight() > DIP0024BlockHeight;
     }
 
     public boolean isDIP24Only() {
