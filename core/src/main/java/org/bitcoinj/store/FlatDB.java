@@ -126,9 +126,9 @@ public class FlatDB<Type extends AbstractManager> {
             log.info("  {}", object);
 
             return true;
-        }
-        catch(IOException x)
-        {
+        } catch (IndexOutOfBoundsException x) {
+            return false;
+        } catch (IOException x) {
             return false;
         }
     }
