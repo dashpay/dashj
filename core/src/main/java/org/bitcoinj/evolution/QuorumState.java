@@ -94,7 +94,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
     @Override
     public void requestReset(Peer peer, StoredBlock nextBlock) {
-        lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(Sha256Hash.ZERO_HASH,
+        lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(params.getGenesisBlock().getHash(),
                 nextBlock.getHeader().getHash()));
         peer.sendMessage(lastRequest.getRequestMessage());
     }
