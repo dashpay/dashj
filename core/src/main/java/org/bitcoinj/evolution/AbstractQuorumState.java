@@ -286,6 +286,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         if (!shouldProcessMNListDiff())
             return;
 
+        log.info("download peer = {}", downloadPeer);
+        Peer downloadPeerBackup = downloadPeer == null ? context.peerGroup.getDownloadPeer() : downloadPeer;
+
         lock.lock();
         try {
             if (waitingForMNListDiff)
@@ -321,7 +324,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 return;
 
             if (downloadPeer == null) {
-                downloadPeer = context.peerGroup.getDownloadPeer();
+                downloadPeer = downloadPeerBackup;
             }
 
             if (downloadPeer != null) {
