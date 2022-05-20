@@ -896,7 +896,7 @@ public class Peer extends PeerSocketHandler {
                     blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
 
             if (context.masternodeListManager.getListAtChainTip().getHeight() < masternodeListBlock.getHeight()) {
-                context.masternodeListManager.requestQuorumStateUpdate(this, headerChain.getChainHead());
+                context.masternodeListManager.requestQuorumStateUpdate(this, headerChain.getChainHead(), masternodeListBlock);
                 queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Requesting, null);
             } else {
                 context.peerGroup.triggerMnListDownloadComplete();
