@@ -112,7 +112,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     return;
                 }
 
-                final LLMQParameters.LLMQType llmqType = context.getParams().getLlmqForInstantSend();
+                final LLMQParameters.LLMQType llmqType = context.getParams().isDIP0024Active(blockIndex) ?
+                        context.getParams().getLlmqDIP0024InstantSend() :
+                        context.getParams().getLlmqForInstantSend();
                 final int dkgInterval = LLMQParameters.fromType(llmqType).dkgInterval;
                 if (blockIndex.getHeight() % dkgInterval != 0) {
                     // TODO: Dash Core increases ban score by 100
@@ -121,6 +123,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
             } catch (BlockStoreException x) {
                 throw new RuntimeException(x);
             }
+        } else if (context.getParams().isDIP0024Active(context.blockChain.getChainHead())) {
+            // Ignore non-deterministic islocks once rotation is active
+            return;
         }
 
         context.getConfidenceTable().seen(isLock.txid, peer.getAddress());
@@ -388,23 +393,30 @@ public class InstantSendManager implements RecoveredSignatureListener {
         return true;
     }
 
-    boolean processPendingInstantSendLocks() throws BlockStoreException
-    {
-        LLMQParameters.LLMQType llmqType = context.getParams().getLlmqForInstantSend();
+    boolean processPendingInstantSendLocks() throws BlockStoreException {
+        StoredBlock blockTip = blockChain.getChainHead();
+        if (blockTip != null && context.getParams().isDIP0024Active(blockTip)) {
+            return processPendingInstantSendLocks(true);
+        } else {
+            // Don't short circuit. Try to process deterministic and not deterministic islocks
+            return processPendingInstantSendLocks(false) & processPendingInstantSendLocks(true);
+        }
+    }
 
-        HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pend; 
+    boolean processPendingInstantSendLocks(boolean isDeterministic) throws BlockStoreException {
+        HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pend;
 
         lock.lock();
-        
+
         try {
-            if(pendingInstantSendLocks.isEmpty())
+            if (pendingInstantSendLocks.isEmpty())
                 return false;
             pend = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>(pendingInstantSendLocks);
             pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
 
             //try to process the invalidInstantSendLocks again
-            for(InstantSendLock isLock : invalidInstantSendLocks.keySet())
-                pendingInstantSendLocks.put(isLock.getHash(), new Pair(Long.valueOf(0L), isLock));
+            for (InstantSendLock isLock : invalidInstantSendLocks.keySet())
+                pendingInstantSendLocks.put(isLock.getHash(), new Pair<>(Long.valueOf(0L), isLock));
 
         } finally {
             lock.unlock();
@@ -417,6 +429,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
         if (!isInstantSendEnabled()) {
             return false;
         }
+
+        LLMQParameters.LLMQType llmqType = isDeterministic ? context.getParams().getLlmqDIP0024InstantSend()
+                : context.getParams().getLlmqForInstantSend();
 
         int tipHeight;
         tipHeight = blockChain.getBestChainHeight();
@@ -465,7 +480,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     continue;
                 }
 
-                final int dkgInterval = LLMQParameters.fromType(context.getParams().getLlmqForInstantSend()).dkgInterval;
+                final int dkgInterval = LLMQParameters.fromType(llmqType).dkgInterval;
                 if (blockIndex.getHeight() + dkgInterval < blockChain.getBestChainHeight()) {
                     signHeight = blockIndex.getHeight() + dkgInterval - 1;
                 }
@@ -474,7 +489,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             Quorum quorum = quorumSigningManager.selectQuorumForSigning(llmqType, signHeight, id);
             if (quorum == null) {
                 // should not happen, but if one fails to select, all others will also fail to select
-                log.info("islock: quorum not found to verify signature [tipHeight: " + tipHeight + " vs " + context.masternodeListManager.getQuorumListAtTip().getHeight() + "]");
+                log.info("islock: quorum not found to verify signature [tipHeight: " + tipHeight + " vs " + context.masternodeListManager.getQuorumListAtTip(llmqType).getHeight() + "]");
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 return false;
             }
