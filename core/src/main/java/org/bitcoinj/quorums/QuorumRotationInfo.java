@@ -19,9 +19,12 @@ package org.bitcoinj.quorums;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.evolution.AbstractDiffMessage;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.store.BlockStore;
+import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +33,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 
 public class QuorumRotationInfo extends AbstractDiffMessage {
 
@@ -47,6 +51,10 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
     boolean extraShare;
     QuorumSnapshot quorumSnapshotAtHMinus4C;
     SimplifiedMasternodeListDiff mnListDiffAtHMinus4C;
+
+    ArrayList<Sha256Hash> lastQuorumHashPerIndex;
+    ArrayList<QuorumSnapshot> quorumSnapshotList;
+    ArrayList<SimplifiedMasternodeListDiff> mnListDiffLists;
 
     QuorumRotationInfo(NetworkParameters params) {
         super(params);
@@ -84,6 +92,29 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
             mnListDiffAtHMinus4C = new SimplifiedMasternodeListDiff(params, payload, cursor);
             cursor += mnListDiffAtHMinus4C.getMessageSize();
         }
+
+        int size = (int)readVarInt();
+        lastQuorumHashPerIndex = new ArrayList<>(size);
+        for (int i = 0; i < size; ++i) {
+            lastQuorumHashPerIndex.add(readHash());
+        }
+
+        size = (int)readVarInt();
+        quorumSnapshotList = new ArrayList<>(size);
+        for (int i = 0; i < size; ++i) {
+            QuorumSnapshot snapshot = new QuorumSnapshot(params, payload, cursor);
+            cursor += snapshot.getMessageSize();
+            quorumSnapshotList.add(snapshot);
+        }
+
+        size = (int)readVarInt();
+        mnListDiffLists = new ArrayList<>(size);
+        for (int i = 0; i < size; ++i) {
+            SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, payload, cursor);
+            cursor += mnlistdiff.getMessageSize();
+            mnListDiffLists.add(mnlistdiff);
+        }
+
         length = cursor - offset;
     }
 
@@ -147,6 +178,18 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         return quorumSnapshotAtHMinus4C;
     }
 
+    public ArrayList<Sha256Hash> getLastQuorumHashPerIndex() {
+        return lastQuorumHashPerIndex;
+    }
+
+    public ArrayList<SimplifiedMasternodeListDiff> getMnListDiffLists() {
+        return mnListDiffLists;
+    }
+
+    public ArrayList<QuorumSnapshot> getQuorumSnapshotList() {
+        return quorumSnapshotList;
+    }
+
     @Override
     public String toString() {
         return "QuorumRotationInfo{" +
@@ -161,9 +204,19 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
                 '}';
     }
 
+    private static int getHeight(Sha256Hash hash, AbstractBlockChain chain) {
+        try {
+            StoredBlock block = chain.getBlockStore().get(hash);
+            return block != null ? block.getHeight() : -1;
+        } catch (BlockStoreException x) {
+            throw new RuntimeException(x);
+        }
+    }
+
     public String toString(AbstractBlockChain chain) {
         BlockStore blockStore = chain.getBlockStore();
-        return "QuorumRotationInfo{" +
+        StringBuilder builder = new StringBuilder();
+        builder.append("QuorumRotationInfo{" +
                 ",\n quorumSnapshotAtHMinusC=" + quorumSnapshotAtHMinusC +
                 ",\n quorumSnapshotAtHMinus2C=" + quorumSnapshotAtHMinus2C +
                 ",\n quorumSnapshotAtHMinus3C=" + quorumSnapshotAtHMinus3C +
@@ -173,7 +226,20 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
                 ",\n mnListDiffAtHMinus2C=" + mnListDiffAtHMinus2C.toString(blockStore) +
                 ",\n mnListDiffAtHMinus3C=" + mnListDiffAtHMinus3C.toString(blockStore) +
                 ",\n mnListDiffAtHMinus4C=" + mnListDiffAtHMinus4C.toString(blockStore) +
-                '}';
+                "------------------------------\n" +
+                '}');
+        for (Sha256Hash hash : lastQuorumHashPerIndex) {
+            builder.append("lastQuorum: ").append(getHeight(hash, chain)).append(hash).append("\n");
+        }
+
+        for (QuorumSnapshot snapshot : quorumSnapshotList) {
+            builder.append("snapshot: ").append(snapshot).append("\n");
+        }
+
+        for (SimplifiedMasternodeListDiff mnlistdiff : mnListDiffLists) {
+            builder.append("mnlistdiff: ").append(mnlistdiff.toString(chain.getBlockStore())).append("\n");
+        }
+        return builder.toString();
     }
 
     // these are for tests so they have package level access
