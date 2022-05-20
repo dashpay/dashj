@@ -1,6 +1,7 @@
 package org.bitcoinj.evolution;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.AbstractManager;
@@ -14,13 +15,16 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VarInt;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.quorums.LLMQParameters;
+import org.bitcoinj.quorums.Quorum;
 import org.bitcoinj.quorums.QuorumManager;
 import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.QuorumSnapshotManager;
+import org.bitcoinj.quorums.SigningManager;
+import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Threading;
-import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +52,21 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public static int MAX_CACHE_SIZE = 10;
     public static int MIN_CACHE_SIZE = 1;
+
+    public List<Quorum> getAllQuorums(LLMQParameters.LLMQType llmqType) {
+        ArrayList<Quorum> list = Lists.newArrayList();
+
+        for (Map.Entry<Sha256Hash, SimplifiedQuorumList> entry: getQuorumListCache(llmqType).entrySet()) {
+            entry.getValue().forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
+                @Override
+                public void processQuorum(FinalCommitment finalCommitment) {
+                    list.add(new Quorum(LLMQParameters.fromType(llmqType), finalCommitment));
+                }
+            });
+
+        }
+        return list;
+    }
 
     public enum SaveOptions {
         SAVE_EVERY_BLOCK,
@@ -121,11 +140,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         cursor += quorumState.getMessageSize();
         tipBlockHash = readHash();
         tipHeight = readUint32();
-        if(getFormatVersion() == LLMQ_FORMAT_VERSION) {
+        if(getFormatVersion() >= LLMQ_FORMAT_VERSION) {
             cursor += quorumState.parseQuorums(payload, cursor);
             //read pending blocks
             parsePendingBlocks(quorumState);
-        } else if (getFormatVersion() >= QUORUM_ROTATION_FORMAT_VERSION) {
+        }
+        if (getFormatVersion() >= QUORUM_ROTATION_FORMAT_VERSION && (cursor < payload.length)) {
             quorumRotationState = new QuorumRotationState(context, payload, cursor);
             quorumRotationState.setStateManager(this);
             cursor += quorumRotationState.getMessageSize();
@@ -158,7 +178,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 for (Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry : getMasternodeListCache().entrySet()) {
                     if (mnListToSave == null) {
                         mnListToSave = entry.getValue();
-                        quorumListToSave = getQuorumListCache().get(entry.getKey());
+                        quorumListToSave = getQuorumListCache(params.getLlmqChainLocks()).get(entry.getKey());
                     } else {
                         otherPendingBlocks.add(entry.getValue().getStoredBlock());
                     }
@@ -172,7 +192,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             stream.write(mnListToSave.getBlockHash().getReversedBytes());
             Utils.uint32ToByteStreamLE(mnListToSave.getHeight(), stream);
 
-            if (getFormatVersion() == LLMQ_FORMAT_VERSION) {
+            if (getFormatVersion() >= LLMQ_FORMAT_VERSION) {
                 quorumState.serializeQuorumsToStream(stream);
                 if (quorumState.syncOptions != SyncOptions.SYNC_MINIMUM) {
                     stream.write(new VarInt(quorumState.getPendingBlocks().size() + otherPendingBlocks.size()).encode());
@@ -189,7 +209,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                         buffer.clear();
                     }
                 } else stream.write(new VarInt(0).encode());
-            } else if (getFormatVersion() == QUORUM_ROTATION_FORMAT_VERSION) {
+            }
+            if (getFormatVersion() >= QUORUM_ROTATION_FORMAT_VERSION) {
                 quorumRotationState.bitcoinSerialize(stream);
             }
 
@@ -229,12 +250,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         }
     }
 
-    public void requestQuorumStateUpdate(Peer downloadPeer, StoredBlock requestBlock) {
+    public void requestQuorumStateUpdate(Peer downloadPeer, StoredBlock requestBlock, StoredBlock requestBlockMinus8) {
         // TODO: reactivate for testnet
         if (!params.isDIP24Only()) {
-            quorumState.requestMNListDiff(downloadPeer, requestBlock);
+            quorumState.requestMNListDiff(downloadPeer, requestBlockMinus8);
         }
-        if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+        if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
             quorumRotationState.requestMNListDiff(downloadPeer, requestBlock);
         }
     }
@@ -256,7 +277,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     // TODO: does this need an argument for LLQMType?
     public SimplifiedMasternodeList getMasternodeList() {
-        if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+        if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
             return quorumRotationState.getMnListTip();
         } else {
             return quorumState.getMnList();
@@ -265,7 +286,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     // TODO: does this need an argument for LLQMType?
     Map<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache() {
-        if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+        if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
             return quorumRotationState.getMasternodeListCache();
         } else {
             return quorumState.getMasternodeListCache();
@@ -273,8 +294,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     // TODO: does this need an argument for LLQMType?
-    public Map<Sha256Hash, SimplifiedQuorumList> getQuorumListCache() {
-        if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+    public Map<Sha256Hash, SimplifiedQuorumList> getQuorumListCache(LLMQParameters.LLMQType llmqType) {
+        if (isQuorumRotationEnabled(llmqType)) {
             return quorumRotationState.getQuorumsCache();
         } else {
             return quorumState.getQuorumsCache();
@@ -301,9 +322,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             if (!params.isDIP24Only()) {
                 quorumState.addEventListeners(blockChain, peerGroup);
             }
-            if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+            // not sure what to do here
+            //if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
                 quorumRotationState.addEventListeners(blockChain, peerGroup);
-            }
+            //}
         }
     }
 
@@ -314,7 +336,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             if (!params.isDIP24Only()) {
                 quorumState.removeEventListeners(blockChain, peerGroup);
             }
-            if (isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+            if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
                 quorumRotationState.removeEventListeners(blockChain, peerGroup);
             }
 
@@ -329,7 +351,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     @Override
     public String toString() {
         return "SimplifiedMNListManager:  {tip:" + getMasternodeList() +
-                ", " + getQuorumListAtTip() +
+                ", " + getQuorumListAtTip(params.getLlmqChainLocks()) +
                 ", pending blocks: " + quorumState.getPendingBlocks().size() + "}";
     }
 
@@ -344,7 +366,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         }
         boolean quorumRotationActive = blockChain.getBestChainHeight() >= params.getDIP0024BlockHeight() ||
                 (headersChain != null && headersChain.getBestChainHeight() >= params.getDIP0024BlockHeight());
-        return params.getLlmqForInstantSend() == type && quorumRotationActive;
+        return params.getLlmqDIP0024InstantSend() == type && quorumRotationActive;
     }
 
     // TODO: this needs an argument for LLMQType
@@ -353,17 +375,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     // TODO: this needs an argument for LLMQType
-    public SimplifiedQuorumList getQuorumListAtTip() {
-        if (!isQuorumRotationEnabled(params.getLlmqForInstantSend())) {
+    public SimplifiedQuorumList getQuorumListAtTip(LLMQParameters.LLMQType llmqType) {
+        if (!isQuorumRotationEnabled(llmqType)) {
             return quorumState.quorumList;
         } else {
-            return quorumRotationState.getQuorumListAtTip();
+            return quorumRotationState.getQuorumListAtH();
         }
     }
 
     @Override
     public int getCurrentFormatVersion() {
-        return getQuorumListAtTip().size() != 0 ? LLMQ_FORMAT_VERSION : DMN_FORMAT_VERSION;
+        return getQuorumListAtTip(params.getLlmqDIP0024InstantSend()).size() != 0 ? LLMQ_FORMAT_VERSION : DMN_FORMAT_VERSION;
     }
 
     public void resetMNList(boolean force, boolean requestFreshList) {
@@ -384,21 +406,27 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         lock.lock();
         try {
             // TODO: Chainlocks problems are from this?
-            /*if (isQuorumRotationEnabled(llmqType)) {
+            if (isQuorumRotationEnabled(llmqType)) {
                 try {
                     LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
                     StoredBlock block = blockChain.getBlockStore().get(blockHash);
+                    if (block == null)
+                        block = headersChain.getBlockStore().get(blockHash);
                     StoredBlock lastQuorumBlock = block.getAncestor(blockChain.getBlockStore(),
-                            block.getHeight() - block.getHeight() % llmqParameters.getDkgInterval());
-                    return getQuorumListCache().get(lastQuorumBlock.getHeader().getHash());
+                            block.getHeight() - block.getHeight() % llmqParameters.getDkgInterval() - SigningManager.SIGN_HEIGHT_OFFSET);
+                    if (lastQuorumBlock == null)
+                        lastQuorumBlock = block.getAncestor(headersChain.getBlockStore(),
+                                block.getHeight() - block.getHeight() % llmqParameters.getDkgInterval() - SigningManager.SIGN_HEIGHT_OFFSET);
+
+                    //return getQuorumListCache(llmqType).get(lastQuorumBlock.getHeader().getHash());
+                    return getQuorumListAtTip(llmqType);
                 } catch (BlockStoreException x) {
                     throw new RuntimeException(x);
                 }
 
             } else {
-             */
-                return getQuorumListCache().get(blockHash);
-            //}
+                return getQuorumListCache(llmqType).get(blockHash);
+            }
         } finally {
             lock.unlock();
         }
@@ -406,7 +434,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
     {
-        lock.lock();
+        //lock.lock();
         try {
             if (isQuorumRotationEnabled(llmqType)) {
                 return quorumRotationState.getAllQuorumMembers(llmqType, blockHash);
@@ -414,7 +442,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 return quorumState.getAllQuorumMembers(llmqType, blockHash);
             }
         } finally {
-            lock.unlock();
+            //lock.unlock();
         }
     }
 
@@ -475,9 +503,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public void loadBootstrapAndSync() {
         Preconditions.checkState(bootStrapFilePath != null || bootStrapStream != null);
         Preconditions.checkState(getMasternodeList().size() == 0);
-        Preconditions.checkState(getQuorumListAtTip().size() == 0);
+        Preconditions.checkState(getQuorumListAtTip(params.getLlmqChainLocks()).size() == 0);
         Preconditions.checkState(getMasternodeListCache().size() == 0);
-        Preconditions.checkState(getQuorumListCache().size() == 0);
+        Preconditions.checkState(getQuorumListCache(params.getLlmqChainLocks()).size() == 0);
 
         new Thread(new Runnable() {
             @Override

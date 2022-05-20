@@ -38,13 +38,13 @@ public class SPVQuorumManager extends QuorumManager {
     @Override
     public ArrayList<Quorum> scanQuorums(final LLMQParameters.LLMQType llmqType, StoredBlock start, final long maxCount) {
         Preconditions.checkNotNull(start, "The start block must not be null");
-        if(start != null && start.getHeight() > masternodeListManager.getQuorumListAtTip().getHeight())
+        if(start != null && start.getHeight() > masternodeListManager.getQuorumListAtTip(llmqType).getHeight())
             log.warn("quorum list is old, the quorums may not match");
         final ArrayList<Quorum> result = new ArrayList<Quorum>();
         SimplifiedQuorumList list = masternodeListManager.getQuorumListForBlock(start.getHeader().getHash(), llmqType);
         if (list == null) {
             // if the list isn't found, use the most recent list
-            list = masternodeListManager.getQuorumListAtTip();
+            list = masternodeListManager.getQuorumListAtTip(llmqType);
             log.warn("quorum list for " + start.getHeight() + " not found, using most recent quorum list: " + list.getHeight());
             if (list == null)
                 return result;  // return empty list
