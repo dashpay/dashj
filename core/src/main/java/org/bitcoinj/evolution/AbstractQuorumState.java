@@ -172,6 +172,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     public abstract void requestUpdate(Peer peer, StoredBlock block);
 
+    public void retryLastUpdate(Peer peer) {
+        peer.sendMessage(lastRequest.getRequestMessage());
+    }
+
     public abstract SimplifiedMasternodeList getListForBlock(Sha256Hash blockHash);
 
     public abstract SimplifiedMasternodeList getMasternodeList();
