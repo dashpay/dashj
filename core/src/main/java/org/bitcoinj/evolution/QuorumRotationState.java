@@ -429,6 +429,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             }
 
             StoredBlock quorumBaseBlock = blockChain.getBlockStore().get(blockHash);
+            // TODO: There needs to be a better way to do this instead of checking each time
+            if (quorumBaseBlock == null && headerChain != null) {
+                quorumBaseBlock = headerChain.getBlockStore().get(blockHash);
+            }
             if (mapIndexedQuorumMembers.isEmpty()) {
                 initIndexedQuorumsCache(mapIndexedQuorumMembers);
             }
