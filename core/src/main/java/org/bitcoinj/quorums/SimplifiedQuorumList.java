@@ -464,25 +464,26 @@ public class SimplifiedQuorumList extends Message {
         if (validateQuorums) {
             ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
 
-        if (members == null) {
-            //no information about this quorum because it is before we were downloading
-            log.warn("masternode list is missing to verify quorum: {}", commitment.quorumHash);
-            return;
-        }
+            if (members == null) {
+                //no information about this quorum because it is before we were downloading
+                log.warn("masternode list is missing to verify quorum: {} - {}", commitment.quorumHash, manager.getBlockHeight(commitment.quorumHash));
+                return;
+            }
 
-        log.info("Quorum: {}", commitment.quorumHash);
-        StringBuilder builder = new StringBuilder();
-        for (Masternode mn : members) {
-            builder.append("\n ").append(mn.getProTxHash());
-        }
-        log.info(builder.toString());
+            log.info("Quorum: {}", commitment.quorumHash);
+            StringBuilder builder = new StringBuilder();
+            for (Masternode mn : members) {
+                builder.append("\n ").append(mn.getProTxHash());
+            }
+            log.info(builder.toString());
 
-        if (!commitment.verify(members, true)) {
-            // TODO: originally, the exception was thrown here.  For now, report the error to the logs
-            // throw new VerificationException("invalid quorum commitment: " + commitment);
-            log.warn("invalid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
-        } else {
-            log.info("valid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
+            if (!commitment.verify(members, true)) {
+                // TODO: originally, the exception was thrown here.  For now, report the error to the logs
+                // throw new VerificationException("invalid quorum commitment: " + commitment);
+                log.warn("invalid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
+            } else {
+                log.info("valid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
+            }
         }
     }
 }
