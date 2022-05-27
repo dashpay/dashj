@@ -68,6 +68,16 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         return list;
     }
 
+    public int getBlockHeight(Sha256Hash quorumHash) {
+        try {
+            if (headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight()) {
+                return headersChain.getBlockStore().get(quorumHash).getHeight();
+            } else return blockChain.getBlockStore().get(quorumHash).getHeight();
+        } catch (BlockStoreException x) {
+            return -1;
+        }
+    }
+
     public enum SaveOptions {
         SAVE_EVERY_BLOCK,
         SAVE_EVERY_CHANGE,
