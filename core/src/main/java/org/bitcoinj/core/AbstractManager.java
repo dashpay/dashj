@@ -192,7 +192,7 @@ public abstract class AbstractManager extends Message {
     }
 
     public void setFormatVersion(int formatVersion) {
-        this.formatVersion = formatVersion;
+        this.formatVersion = Math.max(formatVersion, this.formatVersion);
     }
 
     /**
