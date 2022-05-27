@@ -132,8 +132,8 @@ public class LLMQParameters {
                 18, 2, 2, 3, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_60_75, new LLMQParameters(LLMQType.LLMQ_60_75, "llmq_60_75",
-                60, 50, 45, 24 * 4, 2, 10,
-                18, 40, 32, 25, 25));
+                60, 50, 45, 24 * 12, 2, 10,
+                18, 48, 32, 33, 25));
 
     }
 
