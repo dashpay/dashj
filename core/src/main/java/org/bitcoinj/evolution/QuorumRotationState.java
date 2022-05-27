@@ -19,6 +19,7 @@ package org.bitcoinj.evolution;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
@@ -343,7 +344,15 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     @Override
     public void requestUpdate(Peer peer, StoredBlock nextBlock) {
         lastRequest = new QuorumUpdateRequest<>(getQuorumRotationInfoRequest(nextBlock));
-        peer.sendMessage(lastRequest.getRequestMessage());
+        ListenableFuture exceptionFuture = peer.sendMessage(lastRequest.getRequestMessage());
+        exceptionFuture.addListener(new Runnable() {
+            @Override
+            public void run() {
+                // we will need to request the qrinfo again from a different peer
+                Peer downloadPeer = context.peerGroup.getDownloadPeer();
+                retryLastUpdate(downloadPeer);
+            }
+        }, Threading.SAME_THREAD);
     }
 
     public GetQuorumRotationInfo getQuorumRotationInfoRequest(StoredBlock nextBlock) {
