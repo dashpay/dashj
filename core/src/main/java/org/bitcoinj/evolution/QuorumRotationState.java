@@ -59,6 +59,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+
+import static java.lang.Math.max;
 
 public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationInfo, QuorumRotationInfo> {
     private static final Logger log = LoggerFactory.getLogger(QuorumRotationState.class);
@@ -943,6 +946,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         quorumSnapshotCache.put(mnListAtHMinus2C.getBlockHash(), quorumSnapshotAtHMinus2C);
         quorumSnapshotCache.put(mnListAtHMinus3C.getBlockHash(), quorumSnapshotAtHMinus3C);
         quorumSnapshotCache.put(mnListAtHMinus4C.getBlockHash(), quorumSnapshotAtHMinus4C);
+
+        activeQuorumLists = new HashMap<>(2);
+        SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor);
+        cursor += activeQuorum.getMessageSize();
+        activeQuorumLists.put((int)mnListAtH.getHeight(), activeQuorum);
+
         length = cursor - offset;
     }
 
@@ -966,6 +975,18 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         quorumSnapshotAtHMinus2C.bitcoinSerialize(stream);
         quorumSnapshotAtHMinus3C.bitcoinSerialize(stream);
         quorumSnapshotAtHMinus4C.bitcoinSerialize(stream);
+
+        // obtain the most recent DIP24 quorum hash list
+        final int[] mostRecentListHeight = {-1};
+        activeQuorumLists.keySet().forEach(new Consumer<Integer>() {
+                                               @Override
+                                               public void accept(Integer height) {
+                                                   mostRecentListHeight[0] = max(mostRecentListHeight[0], (int)height);
+                                               }
+                                           });
+        SimplifiedQuorumList listToSave = activeQuorumLists.get(mostRecentListHeight[0]);
+        // write the most recent DIP24 quorum hash list
+        listToSave.bitcoinSerialize(stream);
     }
 
     public SimplifiedMasternodeList getMnListAtH() {
