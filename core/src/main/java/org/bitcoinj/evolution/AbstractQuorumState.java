@@ -202,8 +202,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             if (force /*|| getFormatVersion() < LLMQ_FORMAT_VERSION*/) {
                 log.info("resetting masternode list");
                 clearState();
-                getMasternodeListCache().clear();
-                getQuorumsCache().clear();
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
