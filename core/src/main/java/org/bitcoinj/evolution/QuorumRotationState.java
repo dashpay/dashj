@@ -284,10 +284,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             // newQuorumListTip.verify(quorumRotationInfo.getMnListDiffTip().coinBaseTx, quorumRotationInfo.getMnListDiffTip(), quorumListTip, newMNListTip);
             newQuorumListAtH.verify(quorumRotationInfo.getMnListDiffAtH().coinBaseTx, quorumRotationInfo.getMnListDiffAtH(), quorumListAtH, newMNListAtH);
 
-            newQuorumListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), quorumListAtHMinusC, newMNListAtHMinusC);
-            newQuorumListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), quorumListAtHMinus2C, newMNListAtHMinus2C);
-            newQuorumListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), quorumListAtHMinus3C, newMNListAtHMinus3C);
-            newQuorumListAtHMinus4C.verify(quorumRotationInfo.getMnListDiffAtHMinus4C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus4C(), quorumListAtHMinus4C, newMNListAtHMinus4C);
+            // TODO: do we need this at all?
+            // newQuorumListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), quorumListAtHMinusC, newMNListAtHMinusC);
+            // newQuorumListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), quorumListAtHMinus2C, newMNListAtHMinus2C);
+            // newQuorumListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), quorumListAtHMinus3C, newMNListAtHMinus3C);
+            // newQuorumListAtHMinus4C.verify(quorumRotationInfo.getMnListDiffAtHMinus4C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus4C(), quorumListAtHMinus4C, newMNListAtHMinus4C);
         }
 
         if (peer != null && isSyncingHeadersFirst)
