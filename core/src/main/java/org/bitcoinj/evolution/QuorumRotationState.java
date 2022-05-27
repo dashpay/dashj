@@ -138,7 +138,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     void finishInitialization() {
         lastRequest = new QuorumUpdateRequest<>(new GetQuorumRotationInfo(params, Lists.newArrayList(), Sha256Hash.ZERO_HASH, false));
-        llmqType = params.getLlmqForInstantSend();
+        llmqType = params.getLlmqDIP0024InstantSend();
         syncOptions = SimplifiedMasternodeListManager.SyncOptions.SYNC_MINIMUM;
     }
 
