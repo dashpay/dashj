@@ -133,7 +133,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
         SimplifiedQuorumList newQuorumList = quorumList;
         if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
-            newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, chain);
+            newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, chain, false, true);
             if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
                 newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
         } else {

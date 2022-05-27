@@ -116,7 +116,7 @@ public class SimplifiedQuorumList extends Message {
         return builder.toString();
     }
 
-    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, AbstractBlockChain chain) throws MasternodeListDiffException{
+    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, AbstractBlockChain chain, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
@@ -133,26 +133,28 @@ public class SimplifiedQuorumList extends Message {
                 result.removeCommitment(quorum);
             }
             for (FinalCommitment entry : diff.getNewQuorums()) {
-                StoredBlock block = chain.getBlockStore().get(entry.getQuorumHash());
-                if(block != null) {
-                    LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(entry.getLlmqType()));
-                    if(llmqParameters == null)
-                        throw new ProtocolException("Quorum llmqType is invalid: " + entry.llmqType);
-                    // only check the dgkInterval on pre DIP24 blocks
-                    if (!LLMQUtils.isQuorumRotationEnabled(Context.get(), params, llmqParameters.type)) {
-                        int dkgInterval = llmqParameters.dkgInterval;
-                        if (block.getHeight() % dkgInterval != 0)
-                            throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
-                    }
-                    checkCommitment(entry, block, Context.get().masternodeListManager, chain);
-                    isFirstQuorumCheck = false;
-                } else {
-                    int chainHeight = chain.getBestChainHeight();
-                    //if quorum was created before DIP8 activation, then allow it to be added
-                    if(chainHeight >= params.getDIP0008BlockHeight() || !isLoadingBootstrap) {
-                        //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
-                        if (!isFirstQuorumCheck && entry.llmqType != 2 && !params.getAssumeValidQuorums().contains(entry.quorumHash)) {
-                            throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
+                if ((doDIP24 && entry.llmqType == params.getLlmqDIP0024InstantSend().value) || (!doDIP24 && entry.llmqType != params.getLlmqDIP0024InstantSend().value)) {
+                    StoredBlock block = chain.getBlockStore().get(entry.getQuorumHash());
+                    if (block != null) {
+                        LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(entry.getLlmqType()));
+                        if (llmqParameters == null)
+                            throw new ProtocolException("Quorum llmqType is invalid: " + entry.llmqType);
+                        // only check the dgkInterval on pre DIP24 blocks
+                        if (!LLMQUtils.isQuorumRotationEnabled(Context.get(), params, llmqParameters.type)) {
+                            int dkgInterval = llmqParameters.dkgInterval;
+                            if (block.getHeight() % dkgInterval != 0)
+                                throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
+                        }
+                        checkCommitment(entry, block, Context.get().masternodeListManager, chain, validateOldQuorums);
+                        isFirstQuorumCheck = false;
+                    } else {
+                        int chainHeight = chain.getBestChainHeight();
+                        //if quorum was created before DIP8 activation, then allow it to be added
+                        if (chainHeight >= params.getDIP0008BlockHeight() || !isLoadingBootstrap) {
+                            //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
+                            if (!isFirstQuorumCheck && entry.llmqType != 2 && !params.getAssumeValidQuorums().contains(entry.quorumHash)) {
+                                throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
+                            }
                         }
                     }
                 }
@@ -423,7 +425,8 @@ public class SimplifiedQuorumList extends Message {
         blockHash = masternodeList.getBlockHash();
     }
 
-    void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager, AbstractBlockChain chain) throws BlockStoreException
+    void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
+                         AbstractBlockChain chain, boolean validateQuorums) throws BlockStoreException
     {
         if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitmentTxPayload.CURRENT_VERSION) {
             throw new VerificationException("invalid quorum commitment version" + commitment.getVersion());
@@ -458,7 +461,8 @@ public class SimplifiedQuorumList extends Message {
             }
         }
 
-        ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
+        if (validateQuorums) {
+            ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
 
         if (members == null) {
             //no information about this quorum because it is before we were downloading
