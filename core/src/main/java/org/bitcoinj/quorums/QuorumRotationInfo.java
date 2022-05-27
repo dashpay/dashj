@@ -21,6 +21,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.VarInt;
 import org.bitcoinj.evolution.AbstractDiffMessage;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.store.BlockStore;
@@ -136,6 +137,21 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
             quorumSnapshotAtHMinus4C.bitcoinSerialize(stream);
             mnListDiffAtHMinus4C.bitcoinSerialize(stream);
         }
+
+        stream.write(new VarInt(lastQuorumHashPerIndex.size()).encode());
+        for (Sha256Hash quorumHash : lastQuorumHashPerIndex) {
+            stream.write(quorumHash.getReversedBytes());
+        }
+
+        stream.write(new VarInt(quorumSnapshotList.size()).encode());
+        for (QuorumSnapshot snapshot : quorumSnapshotList) {
+            snapshot.bitcoinSerialize(stream);
+        }
+
+        stream.write(new VarInt(mnListDiffLists.size()).encode());
+        for (SimplifiedMasternodeListDiff mnlistdiff : mnListDiffLists) {
+            mnlistdiff.bitcoinSerialize(stream);
+        }
     }
 
     public SimplifiedMasternodeListDiff getMnListDiffTip() {
@@ -229,7 +245,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
                 "------------------------------\n" +
                 '}');
         for (Sha256Hash hash : lastQuorumHashPerIndex) {
-            builder.append("lastQuorum: ").append(getHeight(hash, chain)).append(hash).append("\n");
+            builder.append("lastQuorum: ").append(getHeight(hash, chain)).append(" ").append(hash).append(":").append("\n");
         }
 
         for (QuorumSnapshot snapshot : quorumSnapshotList) {
