@@ -358,9 +358,12 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         addLLMQ(LLMQParameters.LLMQType.LLMQ_400_60);
         addLLMQ(LLMQParameters.LLMQType.LLMQ_400_85);
         addLLMQ(LLMQParameters.LLMQType.LLMQ_100_67);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_60_75);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_400_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
+        llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_60_75;
+        llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_400_85;
 
         BIP34Height = 951;    // 000001f35e70f7c5705f64c6c5cc3dea9449e74d5b5c7cf74dad1bcca14a8012
         BIP65Height = 619382; // 00000000000076d8fcea02ec0963de4abfd01e771fec0863f960c2c64fe6f357
