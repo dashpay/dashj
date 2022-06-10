@@ -97,25 +97,14 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     public void requestReset(Peer peer, StoredBlock nextBlock) {
         lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(params.getGenesisBlock().getHash(),
                 nextBlock.getHeader().getHash()));
-
-        ListenableFuture exceptionFuture = peer.sendMessage(lastRequest.getRequestMessage());
-        exceptionFuture.addListener(new Runnable() {
-            @Override
-            public void run() {
-                // we will need to request the qrinfo again from a different peer
-                Peer downloadPeer = context.peerGroup.getDownloadPeer();
-                retryLastUpdate(downloadPeer);
-            }
-        }, Threading.SAME_THREAD);
+        sendRequestWithRetry(peer);
     }
 
     @Override
     public void requestUpdate(Peer peer, StoredBlock nextBlock) {
-        // in malort, don't do this for now
-        // TODO: reactivate for testnet
         if (!params.isDIP24Only()) {
             lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock));
-            peer.sendMessage(lastRequest.getRequestMessage());
+            sendRequestWithRetry(peer);
         }
     }
 
@@ -246,6 +235,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         Stopwatch watchMNList = Stopwatch.createUnstarted();
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
         boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
+        this.headerChain = headersChain;
         log.info("processing mnlistdiff between : " + getMnList().getHeight() + " & " + newHeight + "; " + mnlistdiff);
         lock.lock();
         try {
@@ -295,7 +285,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             incrementFailedAttempts();
             throw x;
         } catch(NullPointerException x) {
-            log.info("NPE: close this peer" + x.getMessage());
+            log.info("NPE: close this peer", x);
             incrementFailedAttempts();
             throw new VerificationException("verification error: " + x.getMessage());
         } catch(BlockStoreException x) {

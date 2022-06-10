@@ -16,6 +16,7 @@
 
 package org.bitcoinj.evolution;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
@@ -48,6 +49,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -185,6 +188,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public abstract LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache();
 
     public abstract LinkedHashMap<Sha256Hash, SimplifiedQuorumList> getQuorumsCache();
+
+    public abstract SimplifiedQuorumList getQuorumListAtTip();
 
     public abstract ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash);
 
@@ -600,6 +605,40 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         } finally {
             lock.unlock();
         }
+    }
+
+    protected void sendRequestWithRetry(Peer peer) {
+        ListenableFuture sendMessageFuture = peer.sendMessage(lastRequest.getRequestMessage());
+        sendMessageFuture.addListener(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // throws an exception if there was a problem sending
+                    sendMessageFuture.get();
+                } catch (ExecutionException e) {
+                    // send the message again
+                    try {
+                        log.info("Exception when sending {}", lastRequest.getRequestMessage().getClass().getSimpleName(), e);
+
+                        // use tryLock to avoid deadlocks
+                        boolean flag = context.peerGroup.getLock().tryLock(500, TimeUnit.MILLISECONDS);
+                        try {
+                            if (flag) {
+                                log.info(Thread.currentThread().getName() + ": lock acquired");
+                                downloadPeer = context.peerGroup.getDownloadPeer();
+                                retryLastUpdate(downloadPeer);
+                            }
+                        } finally {
+                            context.peerGroup.getLock().unlock();
+                        }
+                    } catch (InterruptedException x) {
+                        e.printStackTrace();
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, Threading.THREAD_POOL);
     }
 
 }
