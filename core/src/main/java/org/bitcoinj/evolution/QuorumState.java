@@ -233,6 +233,11 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     }
 
     @Override
+    public SimplifiedQuorumList getQuorumListAtTip() {
+        return quorumList;
+    }
+
+    @Override
     public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap) {
         StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();

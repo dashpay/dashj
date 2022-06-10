@@ -78,6 +78,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         }
     }
 
+    public StoredBlock getBlockTip() {
+        if (headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight()) {
+            return headersChain.getChainHead();
+        } else {
+            return blockChain.getChainHead();
+        }
+    }
+
     public enum SaveOptions {
         SAVE_EVERY_BLOCK,
         SAVE_EVERY_CHANGE,
@@ -152,6 +160,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         tipHeight = readUint32();
         if(getFormatVersion() >= LLMQ_FORMAT_VERSION) {
             cursor += quorumState.parseQuorums(payload, cursor);
+            quorumState.setStateManager(this);
             //read pending blocks
             parsePendingBlocks(quorumState);
         }
@@ -160,6 +169,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             quorumRotationState.setStateManager(this);
             cursor += quorumRotationState.getMessageSize();
         }
+        processQuorumList(quorumState.getQuorumListAtTip());
+        processQuorumList(quorumRotationState.getQuorumListAtH());
         length = cursor - offset;
     }
 
@@ -248,10 +259,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         try {
             quorumState.processDiff(peer, mnlistdiff, headersChain, blockChain, isLoadingBootStrap);
 
+            processQuorumList(quorumState.getQuorumListAtTip());
+
             if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION && quorumState.quorumList.size() > 0)
                 setFormatVersion(LLMQ_FORMAT_VERSION);
             if (mnlistdiff.hasChanges() || quorumState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
+
+            // if DIP24 is not activated, then trigger a getqrinfo
+            completeQuorumState(peer);
         } catch (FileNotFoundException x) {
             //file name is not set, do not save
             log.info(x.getMessage());
@@ -360,9 +376,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     @Override
     public String toString() {
+        StoredBlock firstPending = quorumRotationState.pendingBlocks.size() > 0 ? quorumRotationState.pendingBlocks.get(0) : null;
+        int height = firstPending != null ? firstPending.getHeight() : -1;
         return "SimplifiedMNListManager:  {tip:" + getMasternodeList() +
                 ", " + getQuorumListAtTip(params.getLlmqChainLocks()) +
-                ", pending blocks: " + quorumState.getPendingBlocks().size() + "}";
+                ", " + getQuorumListAtTip(params.getLlmqDIP0024InstantSend()) +
+                ", pending blocks: " + quorumState.getPendingBlocks().size() +  " / " +
+                quorumRotationState.getPendingBlocks().size() + (height != -1?  ("-->height: "+height+")") : "" ) +"}";
     }
 
     @Deprecated
@@ -565,6 +585,32 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 }
             }
         }).start();
+    }
+
+    /**
+     * Used to determine if DIP24 has been activated.  This method won't be required when the
+     * DIP24 activation height is hardcoded into NetworkParameters
+     * @param quorumList the most recent quorum list from a "mnlistdiff" message
+     */
+    public void processQuorumList(SimplifiedQuorumList quorumList) {
+        int height = (int)quorumList.getHeight();
+        if (!params.isDIP0024Active(height)) {
+            quorumList.forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
+                @Override
+                public void processQuorum(FinalCommitment finalCommitment) {
+                    if (!params.isDIP0024Active(height) && finalCommitment.getLlmqType() == params.getLlmqDIP0024InstantSend().getValue()) {
+                        params.setDIP0024Active(height);
+                        setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
+                    }
+                }
+            });
+        }
+    }
+
+    public void completeQuorumState(Peer peer) {
+        if (quorumRotationState.getQuorumListAtH().size() == 0 && isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
+            quorumRotationState.requestMNListDiff(peer, getBlockTip());
+        }
     }
 
     // TODO: this lock may not be doing much of anything since most functionality was moved to

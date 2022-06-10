@@ -789,7 +789,16 @@ public abstract class NetworkParameters {
     }
 
     public boolean isDIP0024Active(StoredBlock block) {
-        return block.getHeight() > DIP0024BlockHeight;
+        return block.getHeight() >= DIP0024BlockHeight;
+    }
+
+    public boolean isDIP0024Active(int height) {
+        return height > DIP0024BlockHeight;
+    }
+
+    public void setDIP0024Active(int height) {
+        System.out.println("DIP24 is now active");
+        DIP0024BlockHeight = height;
     }
 
     public boolean isDIP24Only() {
