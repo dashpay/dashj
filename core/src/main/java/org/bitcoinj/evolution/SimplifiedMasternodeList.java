@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static java.lang.Math.min;
 import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedMasternodeList extends Message {
@@ -340,7 +341,7 @@ public class SimplifiedMasternodeList extends Message {
             for (int left = 0; left < levelSize; left += 2) {
                 // The right hand node can be the same as the left hand, in the case where we don't have enough
                 // transactions.
-                int right = Math.min(left + 1, levelSize - 1);
+                int right = min(left + 1, levelSize - 1);
                 byte[] leftBytes = Utils.reverseBytes(tree.get(levelOffset + left));
                 byte[] rightBytes = Utils.reverseBytes(tree.get(levelOffset + right));
                 tree.add(Utils.reverseBytes(hashTwice(leftBytes, 0, 32, rightBytes, 0, 32)));
@@ -513,9 +514,10 @@ public class SimplifiedMasternodeList extends Message {
         Collections.sort(scores, Collections.reverseOrder(new CompareScoreMN()));
 
         // take top maxSize entries and return it
-        ArrayList<Masternode> result = new ArrayList<Masternode>(maxSize);
+        int size = min(scores.size(), maxSize);
+        ArrayList<Masternode> result = new ArrayList<Masternode>(size);
         if (scores.size() > 0) {
-            for (int i = 0; i < maxSize; i++) {
+            for (int i = 0; i < size; i++) {
                 result.add(scores.get(i).getSecond());
             }
         }
