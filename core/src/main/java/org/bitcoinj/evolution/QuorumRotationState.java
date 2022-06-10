@@ -602,21 +602,27 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
                 for (SimplifiedMasternodeListEntry mn : previousQuarters.quarterHMinusC.get(i)) {
-                    MnsUsedAtH.addMN(mn);
-                    MnsUsedAtHIndex.get(i).addMN(mn);
+                    if (mn.isValid()) {
+                        MnsUsedAtH.addMN(mn);
+                        MnsUsedAtHIndex.get(i).addMN(mn);
+                    }
                 }
                 for (SimplifiedMasternodeListEntry mn : previousQuarters.quarterHMinus2C.get(i)) {
-                    MnsUsedAtH.addMN(mn);
-                    MnsUsedAtHIndex.get(i).addMN(mn);
+                    if (mn.isValid()) {
+                        MnsUsedAtH.addMN(mn);
+                        MnsUsedAtHIndex.get(i).addMN(mn);
+                    }
                 }
                 for (SimplifiedMasternodeListEntry mn : previousQuarters.quarterHMinus3C.get(i)) {
-                    MnsUsedAtH.addMN(mn);
-                    MnsUsedAtHIndex.get(i).addMN(mn);
+                    if (mn.isValid()) {
+                        MnsUsedAtH.addMN(mn);
+                        MnsUsedAtHIndex.get(i).addMN(mn);
+                    }
                 }
             }
 
             allMns.forEachMN(true, mn -> {
-                if (!MnsUsedAtH.containsMN(mn.getProTxHash())) {
+                if (mn.isValid() && !MnsUsedAtH.containsMN(mn.getProTxHash())) {
                     MnsNotUsedAtH.addMN(mn);
                 }
             });
@@ -671,11 +677,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     }
 
 
-    private QuorumSnapshot buildQuorumSnapshot(LLMQParameters llmqParameters, SimplifiedMasternodeList mnAtH, SimplifiedMasternodeList mnUsedAtH, ArrayList<Masternode> sortedCombinedMns, ArrayList<Integer> skipList) {
-        QuorumSnapshot quorumSnapshot = new QuorumSnapshot(mnAtH.getAllMNsCount());
+    private QuorumSnapshot buildQuorumSnapshot(LLMQParameters llmqParameters, SimplifiedMasternodeList allMns, SimplifiedMasternodeList mnUsedAtH, ArrayList<Masternode> sortedCombinedMns, ArrayList<Integer> skipList) {
+        QuorumSnapshot quorumSnapshot = new QuorumSnapshot(allMns.getAllMNsCount());
 
         AtomicInteger index = new AtomicInteger();
-        mnAtH.forEachMN(true, mn -> {
+        allMns.forEachMN(true, mn -> {
             if (mnUsedAtH.containsMN(mn.getProTxHash())) {
                 quorumSnapshot.setActiveQuorumMember(index.get(), true);
             }
@@ -864,7 +870,18 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 throw new NullPointerException(String.format("missing masternode list for height: %d / -8:%d", quorumBaseBlock.getHeight(), workBlock.getHeight()));
             }
 
-            ArrayList<Masternode> list = mns.calculateQuorum(mns.getValidMNsCount(), modifier);
+            SimplifiedMasternodeList validMns = new SimplifiedMasternodeList(params);
+            // special fix 12
+            mns.forEachMN(true, new SimplifiedMasternodeList.ForeachMNCallback() {
+                @Override
+                public void processMN(SimplifiedMasternodeListEntry mn) {
+                    if (!validMns.containsMN(mn.getProTxHash())) {
+                        validMns.addMN(mn);
+                    }
+                }
+            });
+
+            ArrayList<Masternode> list = mns.calculateQuorum(validMns.getValidMNsCount(), modifier);
 
             AtomicInteger i = new AtomicInteger();
 
