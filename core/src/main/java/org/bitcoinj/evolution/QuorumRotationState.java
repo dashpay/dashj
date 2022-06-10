@@ -361,8 +361,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     public GetQuorumRotationInfo getQuorumRotationInfoRequest(StoredBlock nextBlock) {
         try {
-            int requestHeight = nextBlock.getHeight() - nextBlock.getHeight() % getUpdateInterval();
-            // - getUpdateInterval() + 11 + LLMQParameters.fromType(llmqType).getSigningActiveQuorumCount() + SigningManager.SIGN_HEIGHT_OFFSET;
+            // int requestHeight = nextBlock.getHeight() - nextBlock.getHeight() % getUpdateInterval();
+            int requestHeight = nextBlock.getHeight() % getUpdateInterval() < (11 + LLMQParameters.fromType(llmqType).getSigningActiveQuorumCount() /*+ SigningManager.SIGN_HEIGHT_OFFSET*/) ?
+                    nextBlock.getHeight() - nextBlock.getHeight() % getUpdateInterval() : nextBlock.getHeight();
             // TODO: only do this on an empty list - obsolete
             //if (mnListAtH.getBlockHash().equals(params.getGenesisBlock().getHash()) /*!initChainTipSyncComplete*/) {
             //    requestHeight = requestHeight - 3 * (nextBlock.getHeight() % getUpdateInterval());
@@ -372,6 +373,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                     nextBlock :
                     blockStore.get(requestHeight);
 
+            if (requestBlock == null) {
+                requestBlock = headerChain.getBlockStore().get(requestHeight);
+            }
+            log.info("requesting next qrinfo {} -> {}", nextBlock.getHeight(), requestHeight);
             ArrayList<Sha256Hash> baseBlockHashes = Lists.newArrayList(
                     Sets.newHashSet(
                             requestBlock.getHeader().getPrevBlockHash(),
@@ -400,8 +405,16 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     boolean needsUpdate(StoredBlock nextBlock) {
-        return nextBlock.getHeight() % getUpdateInterval() == 0 &&
-                nextBlock.getHeight() >= mnListAtH.getHeight() + getUpdateInterval() + SigningManager.SIGN_HEIGHT_OFFSET;
+        //log.info("determining if an update is required at block {}. {} mod {} = {}", nextBlock.getHeight(), nextBlock.getHeight(), getUpdateInterval(), nextBlock.getHeight() % getUpdateInterval());
+        //return nextBlock.getHeight() % getUpdateInterval() == 0 &&
+        //        nextBlock.getHeight() >= mnListAtH.getHeight() + getUpdateInterval() + SigningManager.SIGN_HEIGHT_OFFSET;
+        // mod 23
+        int rotationOffset = (11 + params.getLlmqs().get(llmqType).getSigningActiveQuorumCount() /*+ SigningManager.SIGN_HEIGHT_OFFSET*/);
+        boolean result = nextBlock.getHeight() % getUpdateInterval() == rotationOffset &&
+                nextBlock.getHeight() >= mnListAtH.getHeight() + rotationOffset; /*+ SigningManager.SIGN_HEIGHT_OFFSET - 1*/
+
+        log.info("needsUpdate({}): {}, {} => {}", nextBlock.getHeight(), rotationOffset, nextBlock.getHeight() % getUpdateInterval(), result);
+        return result;
     }
 
     @Override
