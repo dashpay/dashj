@@ -53,7 +53,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
     QuorumSnapshot quorumSnapshotAtHMinus4C;
     SimplifiedMasternodeListDiff mnListDiffAtHMinus4C;
 
-    ArrayList<Sha256Hash> lastQuorumHashPerIndex;
+    ArrayList<FinalCommitment> lastCommitmentPerIndex;
     ArrayList<QuorumSnapshot> quorumSnapshotList;
     ArrayList<SimplifiedMasternodeListDiff> mnListDiffLists;
 
@@ -95,9 +95,11 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         }
 
         int size = (int)readVarInt();
-        lastQuorumHashPerIndex = new ArrayList<>(size);
+        lastCommitmentPerIndex = new ArrayList<>(size);
         for (int i = 0; i < size; ++i) {
-            lastQuorumHashPerIndex.add(readHash());
+            FinalCommitment commitment = new FinalCommitment(params, payload, cursor);
+            cursor += commitment.getMessageSize();
+            lastCommitmentPerIndex.add(commitment);
         }
 
         size = (int)readVarInt();
@@ -138,9 +140,9 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
             mnListDiffAtHMinus4C.bitcoinSerialize(stream);
         }
 
-        stream.write(new VarInt(lastQuorumHashPerIndex.size()).encode());
-        for (Sha256Hash quorumHash : lastQuorumHashPerIndex) {
-            stream.write(quorumHash.getReversedBytes());
+        stream.write(new VarInt(lastCommitmentPerIndex.size()).encode());
+        for (FinalCommitment commitment : lastCommitmentPerIndex) {
+            commitment.bitcoinSerializeToStream(stream);
         }
 
         stream.write(new VarInt(quorumSnapshotList.size()).encode());
@@ -194,8 +196,8 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         return quorumSnapshotAtHMinus4C;
     }
 
-    public ArrayList<Sha256Hash> getLastQuorumHashPerIndex() {
-        return lastQuorumHashPerIndex;
+    public ArrayList<FinalCommitment> getLastCommitmentPerIndex() {
+        return lastCommitmentPerIndex;
     }
 
     public ArrayList<SimplifiedMasternodeListDiff> getMnListDiffLists() {
@@ -244,8 +246,8 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
                 ",\n mnListDiffAtHMinus4C=" + mnListDiffAtHMinus4C.toString(blockStore) +
                 "------------------------------\n" +
                 '}');
-        for (Sha256Hash hash : lastQuorumHashPerIndex) {
-            builder.append("lastQuorum: ").append(getHeight(hash, chain)).append(" ").append(hash).append(":").append("\n");
+        for (FinalCommitment commitment : lastCommitmentPerIndex) {
+            builder.append("lastQuorum: ").append(getHeight(commitment.quorumHash, chain)).append(" ").append(commitment).append(":").append("\n");
         }
 
         for (QuorumSnapshot snapshot : quorumSnapshotList) {

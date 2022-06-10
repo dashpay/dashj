@@ -395,6 +395,11 @@ public class SimplifiedQuorumList extends Message {
         addCommitment(quorum.commitment);
     }
 
+    public void setBlock(StoredBlock block) {
+        height = block.getHeight();
+        blockHash = block.getHeader().getHash();
+    }
+
     public interface ForeachQuorumCallback {
         void processQuorum(FinalCommitment finalCommitment);
     }
@@ -481,7 +486,7 @@ public class SimplifiedQuorumList extends Message {
 
             if (members == null) {
                 //no information about this quorum because it is before we were downloading
-                log.warn("masternode list is missing to verify quorum: {} - {}", commitment.quorumHash, manager.getBlockHeight(commitment.quorumHash));
+                log.warn("masternode list is missing to verify quorum: {}", commitment.quorumHash/*, manager.getBlockHeight(commitment.quorumHash)*/);
                 return;
             }
 

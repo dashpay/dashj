@@ -30,6 +30,7 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
+import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.quorums.GetQuorumRotationInfo;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.LLMQUtils;
@@ -87,7 +88,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     SimplifiedQuorumList quorumListAtHMinus3C;
     SimplifiedQuorumList quorumListAtHMinus4C;
 
-    ArrayList<Sha256Hash> lastQuorumHashes;
+    List<FinalCommitment> lastCommitments;
     HashMap<Integer, SimplifiedQuorumList> activeQuorumLists = new HashMap<>();
 
     LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache;
@@ -231,7 +232,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         mnListsCache.put(newMNListAtHMinus4C.getBlockHash(), newMNListAtHMinus4C);
 
         // process the older data
-        lastQuorumHashes = quorumRotationInfo.getLastQuorumHashPerIndex();
+        lastCommitments = quorumRotationInfo.getLastCommitmentPerIndex();
 
         List<SimplifiedMasternodeListDiff> oldDiffs = quorumRotationInfo.getMnListDiffLists();
         List<QuorumSnapshot> oldSnapshots = quorumRotationInfo.getQuorumSnapshotList();
@@ -313,11 +314,17 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
         // initialize the active quorum list for scanQuorums
         SimplifiedQuorumList newList = new SimplifiedQuorumList(params);
-        for (int i = 0; i < lastQuorumHashes.size(); ++i) {
-            Quorum quorum = findQuorumByHash(lastQuorumHashes.get(i), i);
-            if (quorum != null)
+        for (int i = 0; i < lastCommitments.size(); ++i) {
+            Quorum quorum = findQuorumByHash(lastCommitments.get(i).getQuorumHash(), i);
+            if (quorum != null) {
                 newList.addQuorum(quorum);
+            } else {
+                quorum = new Quorum(lastCommitments.get(i));
+                newList.addQuorum(quorum);
+            }
         }
+        newList.setBlock(blockAtH);
+        newList.verifyQuorums(isLoadingBootStrap, chain, true);
         activeQuorumLists.put(blockAtH.getHeight(), newList);
     }
 
@@ -985,8 +992,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         activeQuorumLists = new HashMap<>(2);
         SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor);
         cursor += activeQuorum.getMessageSize();
-        activeQuorumLists.put((int)mnListAtH.getHeight(), activeQuorum);
-
+        activeQuorumLists.put((int) mnListAtH.getHeight(), activeQuorum);
+        log.info("after loading, activeQuorumLists has {} lists", activeQuorumLists.size());
         length = cursor - offset;
     }
 
@@ -1014,11 +1021,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         // obtain the most recent DIP24 quorum hash list
         final int[] mostRecentListHeight = {-1};
         activeQuorumLists.keySet().forEach(new Consumer<Integer>() {
-                                               @Override
-                                               public void accept(Integer height) {
-                                                   mostRecentListHeight[0] = max(mostRecentListHeight[0], (int)height);
-                                               }
-                                           });
+            @Override
+            public void accept(Integer height) {
+                mostRecentListHeight[0] = max(mostRecentListHeight[0], (int) height);
+            }
+        });
         SimplifiedQuorumList listToSave = activeQuorumLists.get(mostRecentListHeight[0]);
         // write the most recent DIP24 quorum hash list
         listToSave.bitcoinSerialize(stream);
@@ -1030,14 +1037,15 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     public SimplifiedQuorumList getQuorumListAtH() {
         int max = -1;
-        SimplifiedQuorumList topList = null;
+        // create an empty list in the case that activeQuorumLists is empty
+        SimplifiedQuorumList topList = new SimplifiedQuorumList(params);
         for (Map.Entry<Integer, SimplifiedQuorumList> entry : activeQuorumLists.entrySet()) {
             if (entry.getKey() >= max) {
                 max = entry.getKey();
                 topList = entry.getValue();
             }
         }
-        System.out.println("obtaining this quorum list: " + topList);
+        log.warn("obtaining this quorum list: {} from {} quorum lists", topList, activeQuorumLists.size());
         return topList;
     }
 
@@ -1075,12 +1083,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 .append("\n  H-4C:").append(quorumListAtHMinus4C)
                 .append("\n -----------Last Quorum Hashes ------------");
 
-        if (lastQuorumHashes != null) {
-            for (int i = 0; i < lastQuorumHashes.size(); ++i) {
+        if (lastCommitments != null) {
+            for (int i = 0; i < lastCommitments.size(); ++i) {
                 builder.append("\n");
                 builder.append(i);
                 builder.append(": ");
-                builder.append(lastQuorumHashes.get(i));
+                builder.append(lastCommitments.get(i));
             }
         } else {
             builder.append("No last quorum hashes");
