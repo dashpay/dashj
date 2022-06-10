@@ -132,13 +132,17 @@ public class LLMQParameters {
                 18, 2, 2, 3, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_60_75, new LLMQParameters(LLMQType.LLMQ_60_75, "llmq_60_75",
-                60, 50, 45, 24 * 12, 2, 10,
-                18, 48, 32, 33, 25));
+                60, 50, 45, 24 * 2, 4, 20,
+                28, 48, 16, 64, 25));
 
     }
 
     public static LLMQParameters fromType(LLMQParameters.LLMQType type) {
         return availableLlmqs.get(type);
+    }
+
+    public static LLMQParameters fromType(int type) {
+        return availableLlmqs.get(LLMQType.fromValue(type));
     }
 
     // Configures a LLMQ and its DKG
