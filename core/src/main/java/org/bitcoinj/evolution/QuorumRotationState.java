@@ -170,6 +170,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
+
+        // in the event that we don't know that DIP24 is active, then isSyncingHeadersFirst is false
+        if (chain.getBestChainHeight() == 1) {
+            chain = (headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight()) ? headersChain : blockChain;
+        }
+
         log.info("processing quorumrotationinfo between (atH): {} & {}; {}", mnListAtH.getHeight(), newHeight, quorumRotationInfo.toString(chain));
         blockAtTip = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffTip().blockHash);
         blockAtH = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtH().blockHash);
@@ -345,7 +351,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     @Override
     public void requestReset(Peer peer, StoredBlock block) {
         lastRequest = new QuorumUpdateRequest<>(getQuorumRotationInfoRequestFromGenesis(block));
-        peer.sendMessage(lastRequest.getRequestMessage());
+        sendRequestWithRetry(peer);
     }
 
     public GetQuorumRotationInfo getQuorumRotationInfoRequestFromGenesis(StoredBlock block) {
@@ -355,15 +361,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     @Override
     public void requestUpdate(Peer peer, StoredBlock nextBlock) {
         lastRequest = new QuorumUpdateRequest<>(getQuorumRotationInfoRequest(nextBlock));
-        ListenableFuture exceptionFuture = peer.sendMessage(lastRequest.getRequestMessage());
-        exceptionFuture.addListener(new Runnable() {
-            @Override
-            public void run() {
-                // we will need to request the qrinfo again from a different peer
-                Peer downloadPeer = context.peerGroup.getDownloadPeer();
-                retryLastUpdate(downloadPeer);
-            }
-        }, Threading.SAME_THREAD);
+        sendRequestWithRetry(peer);
     }
 
     public GetQuorumRotationInfo getQuorumRotationInfoRequest(StoredBlock nextBlock) {
@@ -1110,6 +1108,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
+        headerChain = headersChain;
         log.info("processing quorumrotationinfo between : {} & {}; {}",
                 getMnListTip().getHeight(),
                 newHeight, quorumRotationInfo);
