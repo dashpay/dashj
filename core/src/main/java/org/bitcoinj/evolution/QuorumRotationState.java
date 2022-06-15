@@ -19,7 +19,6 @@ package org.bitcoinj.evolution;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
@@ -38,7 +37,6 @@ import org.bitcoinj.quorums.PreviousQuorumQuarters;
 import org.bitcoinj.quorums.Quorum;
 import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.QuorumSnapshot;
-import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.quorums.SnapshotSkipMode;
 import org.bitcoinj.store.BlockStoreException;
@@ -63,6 +61,16 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 import static java.lang.Math.max;
+
+/**
+ * Manages a DIP24 Quorum list
+ * - obtaining from the network
+ * - serialize/deserialize
+ * - quorum membership verification
+ *
+ * TODO: refactor to use ArrayList<> instead of individual fields for H, H-2C, etc
+ *       or use the HashMap cache members instead
+ */
 
 public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationInfo, QuorumRotationInfo> {
     private static final Logger log = LoggerFactory.getLogger(QuorumRotationState.class);
@@ -89,7 +97,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     SimplifiedQuorumList quorumListAtHMinus4C;
 
     List<FinalCommitment> lastCommitments;
-    HashMap<Integer, SimplifiedQuorumList> activeQuorumLists = new HashMap<>();
+    HashMap<Integer, SimplifiedQuorumList> activeQuorumLists;
 
     LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache;
     LinkedHashMap<Sha256Hash, SimplifiedQuorumList> quorumsCache;
@@ -134,6 +142,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         quorumSnapshotAtHMinus2C = new QuorumSnapshot(0);
         quorumSnapshotAtHMinus3C = new QuorumSnapshot(0);
         quorumSnapshotAtHMinus4C = new QuorumSnapshot(0);
+
+        activeQuorumLists = new HashMap<>(2);
         finishInitialization();
     }
 
@@ -332,6 +342,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         newList.setBlock(blockAtH);
         newList.verifyQuorums(isLoadingBootStrap, chain, true);
         activeQuorumLists.put(blockAtH.getHeight(), newList);
+        log.info("activeQuorumLists: {}", activeQuorumLists.size());
     }
 
     private Quorum findQuorumByHash(Sha256Hash quorumHash, int quorumIndex) {
@@ -410,16 +421,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     boolean needsUpdate(StoredBlock nextBlock) {
-        //log.info("determining if an update is required at block {}. {} mod {} = {}", nextBlock.getHeight(), nextBlock.getHeight(), getUpdateInterval(), nextBlock.getHeight() % getUpdateInterval());
-        //return nextBlock.getHeight() % getUpdateInterval() == 0 &&
-        //        nextBlock.getHeight() >= mnListAtH.getHeight() + getUpdateInterval() + SigningManager.SIGN_HEIGHT_OFFSET;
-        // mod 23
-        int rotationOffset = (11 + params.getLlmqs().get(llmqType).getSigningActiveQuorumCount() /*+ SigningManager.SIGN_HEIGHT_OFFSET*/);
-        boolean result = nextBlock.getHeight() % getUpdateInterval() == rotationOffset &&
-                nextBlock.getHeight() >= mnListAtH.getHeight() + rotationOffset; /*+ SigningManager.SIGN_HEIGHT_OFFSET - 1*/
+        // The idea is to get an update every dkgInterval + 11 + signingActiveQuorumCount blocks
+        int rotationOffset = (11 + params.getLlmqs().get(llmqType).getSigningActiveQuorumCount());
 
-        log.info("needsUpdate({}): {}, {} => {}", nextBlock.getHeight(), rotationOffset, nextBlock.getHeight() % getUpdateInterval(), result);
-        return result;
+        return nextBlock.getHeight() % getUpdateInterval() == rotationOffset &&
+                nextBlock.getHeight() >= mnListAtH.getHeight() + rotationOffset;
     }
 
     @Override
@@ -681,20 +687,13 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 }
             }
 
-            // maybe we don't need to do this as a client, lets check it
-            QuorumSnapshot quorumSnapshot = buildQuorumSnapshot(llmqParameters, allMns, MnsUsedAtH, sortedCombinedMnsList, skipList);
-            log.info("quorumSnapshot = {}", quorumSnapshot);
-
-            // TODO: Do we need this?
-            // quorumSnapshotManager.storeSnapshotForBlock(llmqParameters.getType(), quorumBaseBlock, quorumSnapshot);
-
             return quarterQuorumMembers;
         } catch (BlockStoreException x) {
             throw new RuntimeException(x);
         }
     }
 
-
+    @Deprecated
     private QuorumSnapshot buildQuorumSnapshot(LLMQParameters llmqParameters, SimplifiedMasternodeList allMns, SimplifiedMasternodeList mnUsedAtH, ArrayList<Masternode> sortedCombinedMns, ArrayList<Integer> skipList) {
         QuorumSnapshot quorumSnapshot = new QuorumSnapshot(allMns.getAllMNsCount());
 
@@ -883,24 +882,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             final StoredBlock workBlock = quorumBaseBlock.getAncestor(blockChain.getBlockStore(), quorumBaseBlock.getHeight() - 8);
             final Sha256Hash modifier = LLMQUtils.buildLLMQBlockHash(llmqType, workBlock.getHeader().getHash());
 
-            SimplifiedMasternodeList mns = getListForBlock(workBlock.getHeader().getHash());
-            if (mns == null) {
+            SimplifiedMasternodeList allMns = getListForBlock(workBlock.getHeader().getHash());
+            if (allMns == null) {
                 throw new NullPointerException(String.format("missing masternode list for height: %d / -8:%d", quorumBaseBlock.getHeight(), workBlock.getHeight()));
             }
 
-            SimplifiedMasternodeList validMns = new SimplifiedMasternodeList(params);
-            // special fix 12
-            mns.forEachMN(true, new SimplifiedMasternodeList.ForeachMNCallback() {
-                @Override
-                public void processMN(SimplifiedMasternodeListEntry mn) {
-                    if (!validMns.containsMN(mn.getProTxHash())) {
-                        validMns.addMN(mn);
-                    }
-                }
-            });
-
-            ArrayList<Masternode> list = mns.calculateQuorum(validMns.getValidMNsCount(), modifier);
-
+            ArrayList<Masternode> list = allMns.calculateQuorum(allMns.getValidMNsCount(), modifier);
             AtomicInteger i = new AtomicInteger();
 
             for (Masternode mn : list) {
@@ -977,9 +964,13 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         quorumsCache.put(quorumListAtHMinus4C.getBlockHash(), quorumListAtHMinus4C);
 
         quorumSnapshotAtHMinusC = new QuorumSnapshot(params, payload, cursor);
+        cursor += quorumSnapshotAtHMinusC.getMessageSize();
         quorumSnapshotAtHMinus2C = new QuorumSnapshot(params, payload, cursor);
+        cursor += quorumSnapshotAtHMinus2C.getMessageSize();
         quorumSnapshotAtHMinus3C = new QuorumSnapshot(params, payload, cursor);
+        cursor += quorumSnapshotAtHMinus3C.getMessageSize();
         quorumSnapshotAtHMinus4C = new QuorumSnapshot(params, payload, cursor);
+        cursor += quorumSnapshotAtHMinus4C.getMessageSize();
 
         quorumSnapshotCache = new LinkedHashMap<>();
         quorumSnapshotCache.put(mnListAtHMinusC.getBlockHash(), quorumSnapshotAtHMinusC);
