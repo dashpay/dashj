@@ -261,6 +261,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
             processQuorumList(quorumState.getQuorumListAtTip());
 
+            unCache();
             if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION && quorumState.quorumList.size() > 0)
                 setFormatVersion(LLMQ_FORMAT_VERSION);
             if (mnlistdiff.hasChanges() || quorumState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
@@ -291,6 +292,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
 
             setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
+            unCache();
             if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
                 save();
         } catch (FileNotFoundException x) {
@@ -464,15 +466,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
     {
-        //lock.lock();
-        try {
-            if (isQuorumRotationEnabled(llmqType)) {
-                return quorumRotationState.getAllQuorumMembers(llmqType, blockHash);
-            } else {
-                return quorumState.getAllQuorumMembers(llmqType, blockHash);
-            }
-        } finally {
-            //lock.unlock();
+        if (isQuorumRotationEnabled(llmqType)) {
+            return quorumRotationState.getAllQuorumMembers(llmqType, blockHash);
+        } else {
+            return quorumState.getAllQuorumMembers(llmqType, blockHash);
         }
     }
 
@@ -534,7 +531,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         Preconditions.checkState(bootStrapFilePath != null || bootStrapStream != null);
         Preconditions.checkState(getMasternodeList().size() == 0);
         Preconditions.checkState(getQuorumListAtTip(params.getLlmqChainLocks()).size() == 0);
-        Preconditions.checkState(getMasternodeListCache().size() == 0);
+        Preconditions.checkState(getMasternodeListCache().size() == 1);
         Preconditions.checkState(getQuorumListCache(params.getLlmqChainLocks()).size() == 0);
 
         new Thread(new Runnable() {
