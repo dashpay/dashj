@@ -29,6 +29,7 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.ChainDownloadStartedEventListener;
+import org.bitcoinj.core.listeners.HeadersDownloadStartedEventListener;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
@@ -428,6 +429,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         if (peerGroup != null) {
             peerGroup.addConnectedEventListener(peerConnectedEventListener);
             peerGroup.addChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+            peerGroup.addHeadersDownloadStartedEventListener(headersDownloadStartedEventListener);
             peerGroup.addDisconnectedEventListener(peerDisconnectedEventListener);
         }
     }
@@ -437,6 +439,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         blockChain.removeReorganizeListener(reorganizeListener);
         peerGroup.removeConnectedEventListener(peerConnectedEventListener);
         peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+        peerGroup.removeHeadersDownloadStartedEventListener(headersDownloadStartedEventListener);
         peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
     }
 
@@ -571,12 +574,26 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             lock.lock();
             try {
                 downloadPeer = peer;
+                // perhaps this is not requred with headers first sync
+                // does this need to be in the next listener?
                 if (stateManager.isLoadedFromFile())
                     maybeGetMNListDiffFresh();
             } finally {
                 lock.unlock();
             }
 
+        }
+    };
+
+    HeadersDownloadStartedEventListener headersDownloadStartedEventListener = new HeadersDownloadStartedEventListener() {
+        @Override
+        public void onHeadersDownloadStarted(Peer peer, int blocksLeft) {
+            lock.lock();
+            try {
+                downloadPeer = peer;
+            } finally {
+                lock.unlock();
+            }
         }
     };
 
