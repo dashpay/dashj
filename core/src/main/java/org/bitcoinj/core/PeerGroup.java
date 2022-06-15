@@ -754,6 +754,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         addChainDownloadStartedEventListener(Threading.USER_THREAD, listener);
     }
 
+    /** See {@link Peer#addHeadersDownloadStartedEventListener(HeadersDownloadStartedEventListener)} */
+    public void addHeadersDownloadStartedEventListener(HeadersDownloadStartedEventListener listener) {
+        addHeadersDownloadStartedEventListener(Threading.USER_THREAD, listener);
+    }
+
     /**
      * <p>Adds a listener that will be notified on the given executor when
      * chain download starts.</p>
