@@ -465,12 +465,11 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                             log.info("null pointer exception", x);
                         }
                     }
-                    log.info("new best block: requesting {}", block.getHeight());
+                    log.info("new best block: requesting {} as {}", block.getHeight(), lastRequest.getRequestMessage().getClass().getSimpleName());
                     requestMNListDiff(block);
                     return;
                 }
             }
-            log.info("new best block {}: not requesting needsUpdate: {}, {}, {}", block.getHeight(), needsUpdate, value, stateManager.isLoadedFromFile());
         }
     };
 
@@ -482,31 +481,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             try {
                 if (downloadPeer == null)
                     downloadPeer = peer;
-                // TODO: do we need this for testnet
-                //boolean value = initChainTipSyncComplete;
-                /*if (value && getMasternodeListAtTip().getHeight() < blockChain.getBestChainHeight() && isDeterministicMNsSporkActive() && stateManager.isLoadedFromFile()) {
-                    maybeGetMNListDiffFresh();
-                    if (!waitingForMNListDiff && getMasternodeListAtTip().getBlockHash().equals(params.getGenesisBlock().getHash()) || getMasternodeListAtTip().getHeight() < blockChain.getBestChainHeight()) {
-                        long timePeriod = syncOptions == SimplifiedMasternodeListManager.SyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60L;
-                        if (Utils.currentTimeSeconds() - blockChain.getChainHead().getHeader().getTimeSeconds() < timePeriod) {
-                            StoredBlock block = blockChain.getChainHead();
-                            if (syncOptions == SimplifiedMasternodeListManager.SyncOptions.SYNC_MINIMUM) {
-                                try {
-                                    StoredBlock requestBlock = blockChain.getBlockStore().get(block.getHeight() - getBlockHeightOffset());
-                                    if (getMasternodeListAtTip().getHeight() > requestBlock.getHeight())
-                                        requestBlock = blockChain.getBlockStore().get((int) getMasternodeListAtTip().getHeight() + 1);
-                                    if (requestBlock != null) {
-                                        block = requestBlock;
-                                    }
-                                } catch (BlockStoreException x) {
-                                    // do nothing
-                                }
-                            }
-                            if (!pendingBlocksMap.containsKey(block.getHeader().getHash()))
-                                requestMNListDiff(peer, block);
-                        }
-                    }
-                }*/
             } finally {
                 lock.unlock();
             }
@@ -657,5 +631,4 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             }
         }, Threading.THREAD_POOL);
     }
-
 }
