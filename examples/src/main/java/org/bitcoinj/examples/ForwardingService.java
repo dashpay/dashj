@@ -49,7 +49,7 @@ public class ForwardingService {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
         BriefLogFormatter.init();
         if (args.length < 1) {
-            System.err.println("Usage: address-to-send-back-to [regtest|testnet|krupnik|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
+            System.err.println("Usage: address-to-send-back-to [regtest|testnet|333|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
             return;
         }
 
@@ -95,6 +95,7 @@ public class ForwardingService {
             protected void onSetupCompleted() {
                 if(!kit.wallet().hasAuthenticationKeyChains())
                     kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
+                kit.peerGroup().setMaxConnections(3);
             }
         };
         kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
