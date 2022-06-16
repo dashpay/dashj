@@ -535,7 +535,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         Preconditions.checkState(getMasternodeList().size() == 0);
         Preconditions.checkState(getQuorumListAtTip(params.getLlmqChainLocks()).size() == 0);
         Preconditions.checkState(getMasternodeListCache().size() == 1);
-        Preconditions.checkState(getQuorumListCache(params.getLlmqChainLocks()).size() == 0);
+        Preconditions.checkState(getQuorumListCache(params.getLlmqChainLocks()).size() == 1);
 
         new Thread(new Runnable() {
             @Override
