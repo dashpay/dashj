@@ -8,10 +8,12 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.evolution.SimplifiedMasternodesTest;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.MalortDevNetParams;
+import org.bitcoinj.params.MekhongDevNetParams;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.SPVBlockStore;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -34,14 +36,14 @@ public class QuorumRotationStateTest {
     @BeforeClass
     public static void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
-        PARAMS = MalortDevNetParams.get();
+        PARAMS = MekhongDevNetParams.get();
         initContext(PARAMS);
     }
 
     private static void initContext(NetworkParameters params) throws BlockStoreException {
         context = new Context(params);
         if (blockChain == null) {
-            blockChain = new BlockChain(context, new SPVBlockStore(params, new File(SimplifiedMasternodesTest.class.getResource("malort-blockchain.dat").getFile())));
+            blockChain = new BlockChain(context, new SPVBlockStore(params, new File(SimplifiedMasternodesTest.class.getResource("malort.spvchain").getFile())));
         }
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         context.initDash(true, true);
@@ -52,7 +54,7 @@ public class QuorumRotationStateTest {
     // this is not supported yet
     @Test
     public void loadFromBootStrapFileV3() throws BlockStoreException {
-        URL datafile = getClass().getResource("qrinfo--1-3345.dat");
+        URL datafile = getClass().getResource("qrinfo--1-20737.dat");
         initContext(PARAMS);
 
         SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
@@ -63,7 +65,7 @@ public class QuorumRotationStateTest {
 
         try {
             SimplifiedMasternodeListManager.bootStrapLoaded.get();
-            assertEquals(3345, manager.getMasternodeList().getHeight());
+            assertEquals(20728, manager.getMasternodeList().getHeight());
         } catch (InterruptedException | ExecutionException x) {
             fail("unable to load bootstrap file");
         }
@@ -73,7 +75,7 @@ public class QuorumRotationStateTest {
     // not supported yet, due to problems with Context.masternodeListManager dependencies
     @Test
     public void loadQuorumRotationStateFromFile() throws Exception {
-        URL datafile = getClass().getResource("malort-mnlist.dat");
+        URL datafile = getClass().getResource("malort.mnlist");
         FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true);
 
         SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(Context.get());

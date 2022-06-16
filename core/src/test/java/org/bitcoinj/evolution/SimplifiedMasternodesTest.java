@@ -7,6 +7,7 @@ import org.bitcoinj.params.MainNetParams;
 import static org.junit.Assert.*;
 
 import org.bitcoinj.params.MalortDevNetParams;
+import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.MemoryBlockStore;
@@ -158,5 +159,23 @@ public class SimplifiedMasternodesTest {
         assertEquals(db3.load(managerSpecificFail), false);
     }
 
+    @Test
+    public void quorumHashTest() {
+
+        String [] hashesAsStrings = {
+                "314ed832f858399c62237bdc7d1be68e228cf3ea735d9f9f96001cf2d30ca47b",
+                "41f0423366bee938df49427492dfd664a537cf32a849b7bb83d2a652e8794fea",
+                "51b6e27b612977ddd8685c90a8c4af39654c3d2f36176d2d15c846ffe8da12c0",
+                "9e2b9bc9934937c7cb1a72232de1ab1416d6e8c4e9794698b28d6d1c88fd72ed"
+        };
+
+        ArrayList<Sha256Hash> hashes = new ArrayList<>();
+
+        for (int i = 0; i < 4; ++i) {
+            hashes.add(Sha256Hash.wrapReversed(Utils.HEX.decode(hashesAsStrings[i])));
+        }
+
+        System.out.println(SimplifiedQuorumList.calculateMerkleRoot(hashes));
+    }
 
 }

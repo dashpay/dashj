@@ -339,9 +339,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 newList.addQuorum(quorum);
             }
         }
-        newList.setBlock(blockAtH);
+        newList.setBlock(blockAtH != null ? blockAtH : chain.getChainHead());
         newList.verifyQuorums(isLoadingBootStrap, chain, true);
-        activeQuorumLists.put(blockAtH.getHeight(), newList);
+        activeQuorumLists.put((int)newList.getHeight(), newList);
         log.info("activeQuorumLists: {}", activeQuorumLists.size());
     }
 
