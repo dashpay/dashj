@@ -81,6 +81,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         mnList = new SimplifiedMasternodeList(context.getParams());
         mnListsCache.put(mnList.getBlockHash(), mnList);
         quorumList = new SimplifiedQuorumList(context.getParams());
+        quorumsCache.put(quorumList.getBlockHash(), quorumList);
         finishInitialization();
     }
 
