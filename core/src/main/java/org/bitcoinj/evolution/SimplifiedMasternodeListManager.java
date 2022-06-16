@@ -474,7 +474,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     public boolean isSynced() {
-        return quorumState.isSynced() && quorumRotationState.isSynced();
+        // TODO: there is a problem with QRS isSynced, there is often a pending block
+        // in the quorumRotationState
+        // && quorumRotationState.isSynced()
+        return quorumState.isSynced();
     }
 
     public void setRequiresLoadingFromFile(boolean requiresLoadingFromFile) {
