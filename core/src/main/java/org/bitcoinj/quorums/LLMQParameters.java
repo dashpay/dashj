@@ -36,10 +36,13 @@ public class LLMQParameters {
         // for testing activation of new quorums only
         LLMQ_TEST_V17(102), // 3 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestparams is used
 
+        // for testing only
         LLMQ_TEST_DIP0024(103), // 4 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestparams is used
+        LLMQ_TEST_INSTANTSEND(104), // 3 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestinstantsendparams is used
 
+        // for devnets only. rotated version (v2) for devnets
+        LLMQ_DEVNET_DIP0024(105); // 8 members, 4 (50%) threshold, one per hour. Params might differ when -llmqdevnetparams is used
 
-        LLMQ_DEVNET_2(104); // experimental
         final int value;
         LLMQType(int value) {
             this.value = value;
@@ -107,9 +110,9 @@ public class LLMQParameters {
                 12, 7, 6, 24, 2, 10,
                 18, 7, 4, 4, 6));
 
-        availableLlmqs.put(LLMQType.LLMQ_DEVNET_2, new LLMQParameters(LLMQType.LLMQ_DEVNET_2, "llmq_devnet_2",
-                12, 7, 6, 24, 2, 10,
-                18, 7, 4, 4, 6));
+        availableLlmqs.put(LLMQType.LLMQ_DEVNET_DIP0024, new LLMQParameters(LLMQType.LLMQ_DEVNET_DIP0024, "llmq_devnet_2",
+                8, 6, 4, 48, 2, 10,
+                18, 7, 2, 4, 4));
 
         availableLlmqs.put(LLMQType.LLMQ_50_60, new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",
                 50, 40, 30, 24, 2, 10,
