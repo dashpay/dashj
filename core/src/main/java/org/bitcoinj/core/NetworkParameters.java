@@ -843,4 +843,11 @@ public abstract class NetworkParameters {
                 return "invalid";
         }
     }
+    /** the default value for dropping peers after broadcast */
+    protected boolean dropPeersAfterBroadcast = true;
+
+    public boolean getDropPeersAfterBroadcast() {
+        return dropPeersAfterBroadcast;
+    }
+
 }

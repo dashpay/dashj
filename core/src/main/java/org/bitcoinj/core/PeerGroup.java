@@ -195,6 +195,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     SyncStage syncStage = SyncStage.OFFLINE;
 
+    // should peers be dropped after broadcast
+    private boolean dropPeersAfterBroadcast = true;
+
     // This event listener is added to every peer. It's here so when we announce transactions via an "inv", every
     // peer can fetch them.
     private final PeerListener peerListener = new PeerListener();
@@ -2458,7 +2461,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      */
     @Override
     public TransactionBroadcast broadcastTransaction(final Transaction tx) {
-        return broadcastTransaction(tx, Math.max(1, getMinBroadcastConnections()), true);
+        return broadcastTransaction(tx, Math.max(1, getMinBroadcastConnections()), dropPeersAfterBroadcast);
     }
 
     /**
@@ -2889,5 +2892,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     protected void setSyncStage(SyncStage syncStage) {
         log.info("Sync Stage change from {} to {}", this.syncStage.name(), syncStage.name());
         this.syncStage = syncStage;
+    }
+
+    public void setDropPeersAfterBroadcast(boolean dropPeersAfterBroadcast) {
+        this.dropPeersAfterBroadcast = dropPeersAfterBroadcast;
     }
 }
