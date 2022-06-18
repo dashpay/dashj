@@ -68,7 +68,7 @@ import static java.lang.Math.max;
  * - serialize/deserialize
  * - quorum membership verification
  *
- * TODO: refactor to use ArrayList<> instead of individual fields for H, H-2C, etc
+ * TODO: refactor to use ArrayList instead of individual fields for H, H-2C, etc
  *       or use the HashMap cache members instead
  */
 
