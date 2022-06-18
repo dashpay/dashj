@@ -169,18 +169,18 @@ public class FinalCommitmentTest {
     @Test
     public void finalCommitmentV2Test() throws IOException {
 
-        byte [] qfcommit = Utils.HEX.decode("0200651c81e41ae71cbe119edca7a700612225ca1c4a0d4e299c2c13bdd14095010000000000000cff0f0cff0f0b65f06fb4595acae7cd9a146c362b541799c0e0c25396fd844bd269f2d239515808d1f11abe590bce45065be35d24c51be048b090b04bd432ff24441e2d14a65c124dbaefb8efe80f088f6b7132494010e284f687da9968641cca40a73b201e96c75a28f41890e4ca26874cad99cbeb1ef28b7109f19e8a5ba380e61f3571a606c852d432c94e9d796b780f340febdc2bb652807adbd628c0072fe74b9c7b2cc21d4e73d9f87da57d2ff847531f561e973a4c9c4c0628e6b563bf5be90d2db167fbe0d306888c035aeb4c417da8df852a37f133427a0b2928a5650ff871bfbf0a566bb6f4551aa6b72756997290b2499411f7c6f467f02721b92068415f27e06e8647fbdc720d773807b42f2ca07bf4");         //"01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84";
+        byte [] qfcommit = Utils.HEX.decode("02006530fed4f6262e0fd7314cccbe94d7aba54f3cdcbe2bd3237ad2f276eb4d01000003000cfd0b0cfd0b0e22ac5b7c87076a03b1e4bee58c8404aaed183dd2c3114cea3ac1cbf85218a6196a19073789e9a12fc439b773842368b70d64f275bfc681e393286844bc565ceb51555d061c53e846bdd623e3809b5619d03a92ab89a5758598d4bef96cc398e233f04cfdfba3842098813d7532960527d76656b3cc1dbae0bd07898b2d31660824be7c8baef965d9eeaef4b8cc819e1e60b4739a5302d7bcce658d31c75c74a9245d6a44ff36d7df5ced7fca3117578e5b2bcd12e993666bdfce0c390d7b849b901b3699902a3c2c07cc269910b2f9483ab70e52d6ffbe68e1c012df67840e129b19052f6ddf1880a3c8a05b6cb9a38ca640b5fcf4fcb422b3bcc7c665c703fc258443ce0400580578af74f42ca656");         //"01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84";
 
         FinalCommitment commitment = new FinalCommitment(PARAMS, qfcommit, 0);
 
         assertEquals(2, commitment.getVersion());
         assertEquals(101, commitment.llmqType);
-        assertEquals(0, commitment.quorumIndex);
-        assertEquals(Sha256Hash.wrap("0000019540d1bd132c9c294e0d4a1cca25226100a7a7dc9e11be1ce71ae4811c"), commitment.quorumHash);
-        assertEquals(12, commitment.countSigners());
-        assertEquals(12, commitment.countValidMembers());
+        assertEquals(3, commitment.quorumIndex);
+        assertEquals(Sha256Hash.wrap("0000014deb76f2d27a23d32bbedc3c4fa5abd794becc4c31d70f2e26f6d4fe30"), commitment.quorumHash);
+        assertEquals(10, commitment.countSigners());
+        assertEquals(10, commitment.countValidMembers());
 
-        BLSPublicKey quorumPublickKey = new BLSPublicKey(PARAMS, Utils.HEX.decode("0b65f06fb4595acae7cd9a146c362b541799c0e0c25396fd844bd269f2d239515808d1f11abe590bce45065be35d24c5"), 0);
+        BLSPublicKey quorumPublickKey = new BLSPublicKey(PARAMS, Utils.HEX.decode("0e22ac5b7c87076a03b1e4bee58c8404aaed183dd2c3114cea3ac1cbf85218a6196a19073789e9a12fc439b773842368"), 0);
         assertEquals(quorumPublickKey, commitment.quorumPublicKey);
 
         // round trip
