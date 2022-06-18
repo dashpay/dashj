@@ -41,7 +41,7 @@ public class ThreeThreeThreeDevNetParams extends DevNetParams {
         super(DEVNET_NAME, "yM6zJAMWoouAZxPvqGDbuHb6BJaD6k4raQ", 20001,
                 MASTERNODES, true, 70220);
         dnsSeeds = MASTERNODES;
-
+        dropPeersAfterBroadcast = false; // this network is too small
         DIP0024BlockHeight = 300;
         isDIP24Only = false;
 
