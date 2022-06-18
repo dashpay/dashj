@@ -25,7 +25,7 @@ public class LLMQParametersTest {
     @Test
     public void verifyLLMQParameters() {
         LLMQParameters llmq_test = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_TEST, "llmq_test",
-                3, 2, 2, 24, 2, 10,
+                4, 2, 2, 24, 2, 10,
                 18, 2, 2, 3, 3);
         // TODO: signingActiveQuorumCount is set to 4 for the malort devnet, the original value is 3
         LLMQParameters llmq_devnet = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_DEVNET, "llmq_devnet",
@@ -41,7 +41,7 @@ public class LLMQParametersTest {
                 400, 350, 340, 24 * 24, 4, 20,
                 48, 300, 4, 5, 100);
         LLMQParameters llmq100_67 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_100_67, "llmq_100_67",
-                100, 800, 67, 2, 2, 10,
+                100, 80, 67, 2, 2, 10,
                 18, 80, 24, 25, 50);
 
         assertEquals(llmq50_60, LLMQParameters.fromType(LLMQParameters.LLMQType.LLMQ_50_60));
@@ -56,6 +56,7 @@ public class LLMQParametersTest {
     public void verifyAllQuorumTypes() {
         for (LLMQParameters.LLMQType type : LLMQParameters.LLMQType.values()) {
             if (type != LLMQParameters.LLMQType.LLMQ_NONE) {
+                System.out.println(type);
                 assertEquals(type, LLMQParameters.fromType(type).type);
             }
         }

@@ -134,6 +134,10 @@ public class LLMQParameters {
                 4, 3, 2, 24, 2, 10,
                 18, 2, 2, 3, 3));
 
+        availableLlmqs.put(LLMQType.LLMQ_TEST_INSTANTSEND, new LLMQParameters(LLMQType.LLMQ_TEST_INSTANTSEND, "llmq_test_instantsend",
+                3, 2, 2, 24, 2, 10,
+                18, 2, 2, 3, 3));
+
         availableLlmqs.put(LLMQType.LLMQ_60_75, new LLMQParameters(LLMQType.LLMQ_60_75, "llmq_60_75",
                 60, 50, 45, 24 * 2, 4, 20,
                 28, 48, 16, 64, 25));
