@@ -2179,12 +2179,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             public void onSuccess(@Nullable Integer listsSynced) {
                 log.info("Stage masternode list download successful: {}", listsSynced);
                 Set<MasternodeSync.SYNC_FLAGS> flags = context.getSyncFlags();
-                /*if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqDIP0024InstantSend())) {
-                    if (listsSynced == null || listsSynced < 2) {
-                        // another list must be synced
-                        return;
-                    }
-                }*/
                 if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) {
                     if(syncStage.value < SyncStage.PREBLOCKS.value) {
                         setSyncStage(SyncStage.PREBLOCKS);

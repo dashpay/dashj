@@ -301,7 +301,6 @@ public class SimplifiedQuorumList extends Message {
             }
         });
 
-        // we had this commented out, why?
         if (!merkleRootQuorums.isZero() &&
                 !commitmentHashes.isEmpty() &&
                 !merkleRootQuorums.equals(calculateMerkleRoot(commitmentHashes)))
