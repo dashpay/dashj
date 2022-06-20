@@ -205,7 +205,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     public void resetMNList(boolean force, boolean requestFreshList) {
         try {
-            if (force /*|| getFormatVersion() < LLMQ_FORMAT_VERSION*/) {
+            if (force) {
                 log.info("resetting masternode list");
                 clearState();
                 pendingBlocks.clear();

@@ -1135,12 +1135,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 // remove this block from the list
                 if (pendingBlocks.size() > 0) {
                     StoredBlock thisBlock = pendingBlocks.get(0);
-                    // TODO:  remove this if and the commented code?
-                    if (true /*thisBlock.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffTip().prevBlockHash) &&
-                            thisBlock.getHeader().getHash().equals(quorumRotationInfo.getMnListDiffTip().prevBlockHash)*/) {
-                        pendingBlocks.remove(0);
-                        pendingBlocksMap.remove(thisBlock.getHeader().getHash());
-                    }
+                    pendingBlocks.remove(0);
+                    pendingBlocksMap.remove(thisBlock.getHeader().getHash());
                 }
             } else {
                 log.info("heights are different", x);

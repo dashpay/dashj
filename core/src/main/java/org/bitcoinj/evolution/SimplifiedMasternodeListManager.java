@@ -450,7 +450,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                         lastQuorumBlock = block.getAncestor(headersChain.getBlockStore(),
                                 block.getHeight() - block.getHeight() % llmqParameters.getDkgInterval() - SigningManager.SIGN_HEIGHT_OFFSET);
 
-                    //return getQuorumListCache(llmqType).get(lastQuorumBlock.getHeader().getHash());
                     return getQuorumListAtTip(llmqType);
                 } catch (BlockStoreException x) {
                     throw new RuntimeException(x);
