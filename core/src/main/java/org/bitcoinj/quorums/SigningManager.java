@@ -169,7 +169,7 @@ public class SigningManager {
         }
     }
 
-    Quorum selectQuorumForSigning(LLMQParameters.LLMQType llmqType, long signHeight, Sha256Hash selectionHash) throws BlockStoreException
+    Quorum selectQuorumForSigning(LLMQParameters.LLMQType llmqType, long signHeight, Sha256Hash selectionHash, int signOffset)
     {
         LLMQParameters llmqParams = context.getParams().getLlmqs().get(llmqType);
         int poolSize = (int)llmqParams.signingActiveQuorumCount;
@@ -179,21 +179,25 @@ public class SigningManager {
         }
 
         StoredBlock startBlock = null;
-        long startBlockHeight = signHeight - SIGN_HEIGHT_OFFSET;
+        long startBlockHeight = signHeight - signOffset;
         if(startBlockHeight > getBestChainHeight() || startBlockHeight < 0)
             return null;
 
 
-        startBlock = blockChain.getBlockStore().get((int) startBlockHeight);
-        if(startBlock == null) {
-            if (headerChain != null) {
-                startBlock = headerChain.getBlockStore().get((int) startBlockHeight);
-                if (startBlock == null) {
+        try {
+            startBlock = blockChain.getBlockStore().get((int) startBlockHeight);
+            if (startBlock == null) {
+                if (headerChain != null) {
+                    startBlock = headerChain.getBlockStore().get((int) startBlockHeight);
+                    if (startBlock == null) {
+                        return null;
+                    }
+                } else {
                     return null;
                 }
-            } else {
-                return null;
             }
+        } catch (BlockStoreException e) {
+            throw new RuntimeException(e);
         }
 
 
@@ -465,11 +469,14 @@ public class SigningManager {
         }
     }
 
-    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig) throws BlockStoreException, QuorumNotFoundException
+    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig) throws BlockStoreException, QuorumNotFoundException {
+        return verifyRecoveredSig(llmqType, signedAtHeight, id, msgHash, sig, SIGN_HEIGHT_OFFSET);
+    }
+    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig, int signOffset) throws BlockStoreException, QuorumNotFoundException
     {
         LLMQParameters llmqParams = context.getParams().getLlmqs().get(context.getParams().getLlmqChainLocks());
 
-        Quorum quorum = selectQuorumForSigning(llmqType, signedAtHeight, id);
+        Quorum quorum = selectQuorumForSigning(llmqType, signedAtHeight, id, signOffset);
         if (quorum == null) {
             boolean missingBlockAtTip = getBestChainHeight() < signedAtHeight;
             throw new QuorumNotFoundException(missingBlockAtTip ?
