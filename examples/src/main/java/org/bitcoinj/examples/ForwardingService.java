@@ -19,6 +19,7 @@ package org.bitcoinj.examples;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.examples.debug.TransactionReport;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.*;
@@ -44,6 +45,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class ForwardingService {
     private static Address forwardingAddress;
     private static WalletAppKit kit;
+
+    private static TransactionReport txReport = new TransactionReport();
 
     public static void main(String[] args) throws Exception {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
@@ -95,7 +98,9 @@ public class ForwardingService {
             protected void onSetupCompleted() {
                 if(!kit.wallet().hasAuthenticationKeyChains())
                     kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
-                kit.peerGroup().setMaxConnections(3);
+                kit.peerGroup().setMaxConnections(6); // for small devnets
+                kit.peerGroup().setUseLocalhostPeerWhenPossible(false);
+                kit.peerGroup().setDropPeersAfterBroadcast(params.getDropPeersAfterBroadcast());
             }
         };
         kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
@@ -135,11 +140,15 @@ public class ForwardingService {
                 // to be double spent, no harm done. Wallet.allowSpendingUnconfirmedTransactions() would have to
                 // be called in onSetupCompleted() above. But we don't do that here to demonstrate the more common
                 // case of waiting for a block.
+
+                txReport.add(System.currentTimeMillis(), w.getLastBlockSeenHeight(), tx);
                 Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>() {
                     @Override
                     public void onSuccess(TransactionConfidence result) {
                         System.out.println("Confirmation received.");
                         forwardCoins(tx);
+
+                        txReport.printReport();
                     }
 
                     @Override
@@ -163,6 +172,9 @@ public class ForwardingService {
     private static void forwardCoins(Transaction tx) {
         try {
             // Now send the coins onwards.
+            if (kit.wallet().getBalance().equals(Coin.ZERO)) {
+                return;
+            }
             SendRequest sendRequest = SendRequest.emptyWallet(forwardingAddress);
             Wallet.SendResult sendResult = kit.wallet().sendCoins(sendRequest);
             checkNotNull(sendResult);  // We should never try to send more coins than we have!
