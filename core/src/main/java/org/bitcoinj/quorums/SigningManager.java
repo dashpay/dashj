@@ -207,7 +207,7 @@ public class SigningManager {
                 return null;
             }
 
-            // log2
+            // log2(x) = log10(x)/log10(2)
             int n = (int)(Math.log(LLMQParameters.fromType(llmqType).signingActiveQuorumCount) / Math.log(2));
 
             //Extract last 64 bits of selectionHash
@@ -217,6 +217,7 @@ public class SigningManager {
             log.info("selectQuorumForSigning: n={}, selectionHash={}, b={}, signer={}", n, selectionHash, b, signer);
 
             if (signer > quorums.size()) {
+                log.info("signer {} larger than quorum size {}", signer, quorums.size());
                 return null;
             }
 
@@ -225,6 +226,10 @@ public class SigningManager {
                 if (signer == quorum.commitment.quorumIndex) {
                     itQuorum = quorum;
                 }
+            }
+
+            if (itQuorum == null) {
+                log.info("quorum index {} not found", signer);
             }
 
             return itQuorum;
@@ -493,7 +498,6 @@ public class SigningManager {
             if (!result) {
                 log.info("signature not validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, id, signHash);
                 log.info("dash-cli quorum selectquorum {} {}", llmqType.value, id);
-                log.info("dash-cli quorum verify {} {} {} {} {}", llmqType.value, id, msgHash, sig, quorum.commitment.quorumHash);
 
                 StoredBlock block = blockChain.getBlockStore().get((int) (signedAtHeight - SIGN_HEIGHT_OFFSET));
                 if (block == null)
@@ -504,8 +508,6 @@ public class SigningManager {
             } else {
                 log.info("signature was validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, id, signHash);
                 log.info("dash-cli quorum selectquorum {} {}", llmqType.value, id);
-                log.info("dash-cli quorum verify {} {} {} {} {}", llmqType.value, id, signHash, sig, quorum.commitment.quorumHash);
-                log.info("dash-cli quorum verify {} {} {} {} {}", llmqType.value, id, msgHash, sig, quorum.commitment.quorumHash);
             }
 
             return result;
