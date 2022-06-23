@@ -402,7 +402,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     public GetQuorumRotationInfo getQuorumRotationInfoRequest(StoredBlock nextBlock) {
         try {
             // int requestHeight = nextBlock.getHeight() - nextBlock.getHeight() % getUpdateInterval();
-            int requestHeight = nextBlock.getHeight() % getUpdateInterval() < (11 + LLMQParameters.fromType(llmqType).getSigningActiveQuorumCount() /*+ SigningManager.SIGN_HEIGHT_OFFSET*/) ?
+            int requestHeight = nextBlock.getHeight() % getUpdateInterval() < (11 + LLMQParameters.fromType(llmqType).getSigningActiveQuorumCount() + SigningManager.SIGN_HEIGHT_OFFSET) ?
                     nextBlock.getHeight() - nextBlock.getHeight() % getUpdateInterval() : nextBlock.getHeight();
             // TODO: only do this on an empty list - obsolete
             //if (mnListAtH.getBlockHash().equals(params.getGenesisBlock().getHash()) /*!initChainTipSyncComplete*/) {
@@ -446,7 +446,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     @Override
     boolean needsUpdate(StoredBlock nextBlock) {
         // The idea is to get an update every dkgInterval + 11 + signingActiveQuorumCount blocks
-        int rotationOffset = (11 + params.getLlmqs().get(llmqType).getSigningActiveQuorumCount());
+        int rotationOffset = (11 + params.getLlmqs().get(llmqType).getSigningActiveQuorumCount() + SigningManager.SIGN_HEIGHT_OFFSET);
 
         return nextBlock.getHeight() % getUpdateInterval() == rotationOffset &&
                 nextBlock.getHeight() >= mnListAtH.getHeight() + rotationOffset;
