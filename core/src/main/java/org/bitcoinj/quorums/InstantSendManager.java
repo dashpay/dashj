@@ -1,5 +1,7 @@
 package org.bitcoinj.quorums;
 
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
@@ -404,19 +406,46 @@ public class InstantSendManager implements RecoveredSignatureListener {
     }
 
     boolean processPendingInstantSendLocks(boolean isDeterministic) throws BlockStoreException {
-        HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pend;
+        HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pend = new HashMap<>();
+        boolean moreWork = false;
+
+        if (!isInstantSendEnabled()) {
+            return false;
+        }
 
         lock.lock();
-
         try {
-            if (pendingInstantSendLocks.isEmpty())
-                return false;
-            pend = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>(pendingInstantSendLocks);
-            pendingInstantSendLocks = new HashMap<Sha256Hash, Pair<Long, InstantSendLock>>();
+            // only process a max 32 locks at a time to avoid duplicate verification of recovered signatures which have been
+            // verified by CSigningManager in parallel
+            final int maxCount = 32;
+            // The keys of the removed values are temporaily stored here to avoid invalidating an iterator
+            ArrayList<Sha256Hash> removed = Lists.newArrayListWithExpectedSize(maxCount);
+
+            //if (pendingInstantSendLocks.isEmpty())
+            //    return false;
+            for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> entry : pendingInstantSendLocks.entrySet()) {
+                Sha256Hash islockHash = entry.getKey();
+                InstantSendLock islock = entry.getValue().getSecond();
+
+                if (pend.size() >= maxCount) {
+                    moreWork = true;
+                    break;
+                }
+                // Check if we care about this islock on this run
+                if (islock.isDeterministic() != isDeterministic) {
+                    continue;
+                }
+                pend.put(islockHash, entry.getValue());
+                removed.add(islockHash);
+            }
+
+            for (Sha256Hash islockHash : removed) {
+                pendingInstantSendLocks.remove(islockHash);
+            }
 
             //try to process the invalidInstantSendLocks again
-            for (InstantSendLock isLock : invalidInstantSendLocks.keySet())
-                pendingInstantSendLocks.put(isLock.getHash(), new Pair<>(Long.valueOf(0L), isLock));
+            //for (InstantSendLock isLock : invalidInstantSendLocks.keySet())
+            //    pendingInstantSendLocks.put(isLock.getHash(), new Pair<>(Long.valueOf(0L), isLock));
 
         } finally {
             lock.unlock();
@@ -426,19 +455,38 @@ public class InstantSendManager implements RecoveredSignatureListener {
             return false;
         }
 
-        if (!isInstantSendEnabled()) {
-            return false;
-        }
-
         LLMQParameters.LLMQType llmqType = isDeterministic ? context.getParams().getLlmqDIP0024InstantSend()
                 : context.getParams().getLlmqForInstantSend();
+        int dkgInterval = LLMQParameters.fromType(llmqType).dkgInterval;
 
+        // First check against the current active set and don't ban
+        HashSet<Sha256Hash> badISLocks = processPendingInstantSendLocks(llmqType, 0, pend, false);
+        if (!badISLocks.isEmpty()) {
+            log.info("InstantSendManager -- doing verification on old active set");
+
+            // filter out valid IS locks from "pend"
+            for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> entry : pend.entrySet()) {
+                if (!badISLocks.contains(entry.getKey())) {
+                    pend.remove(entry.getKey());
+                }
+            }
+            // Now check against the previous active set and perform banning if this fails
+            processPendingInstantSendLocks(llmqType, dkgInterval, pend, true);
+        }
+
+        return moreWork;
+    }
+
+    HashSet<Sha256Hash> processPendingInstantSendLocks(LLMQParameters.LLMQType llmqType, int signOffset, HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pend, boolean ban) {
         int tipHeight;
         tipHeight = blockChain.getBestChainHeight();
+        HashSet<Sha256Hash> badISLocks = new HashSet<>(pend.size());
 
         BLSBatchVerifier<Long, Sha256Hash> batchVerifier = new BLSBatchVerifier<Long, Sha256Hash>(false, true, 8);
         HashMap<Sha256Hash, Pair<Quorum, RecoveredSignature>> recSigs = new HashMap<Sha256Hash, Pair<Quorum, RecoveredSignature>>();
 
+        int verifyCount = 0;
+        int alreadyVerified = 0;
         for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> p : pend.entrySet()) {
             Sha256Hash hash = p.getKey();
 
@@ -474,7 +522,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
             int signHeight = -1;
             if (islock.isDeterministic()) {
 
-                final StoredBlock blockIndex = blockChain.getBlockStore().get(islock.cycleHash);
+                final StoredBlock blockIndex;
+                try {
+                    blockIndex = blockChain.getBlockStore().get(islock.cycleHash);
+                } catch (BlockStoreException e) {
+                    throw new RuntimeException(e);
+                }
+
                 if (blockIndex == null) {
                     batchVerifier.getBadSources().add(nodeId);
                     continue;
@@ -486,15 +540,16 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 }
             }
 
-            Quorum quorum = quorumSigningManager.selectQuorumForSigning(llmqType, signHeight, id);
+            Quorum quorum = quorumSigningManager.selectQuorumForSigning(llmqType, signHeight, id, signOffset);
             if (quorum == null) {
                 // should not happen, but if one fails to select, all others will also fail to select
                 log.info("islock: quorum not found to verify signature [tipHeight: " + tipHeight + " vs " + context.masternodeListManager.getQuorumListAtTip(llmqType).getHeight() + "]");
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
-                return false;
+                return badISLocks;
             }
             Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.commitment.quorumHash, id, islock.txid);
             batchVerifier.pushMessage(nodeId, hash, signHash, islock.signature.getSignature(), quorum.commitment.quorumPublicKey);
+            verifyCount++;
 
             quorumSigningManager.logSignature("ISLOCK", quorum.commitment.quorumPublicKey, signHash, islock.signature.getSignature());
 
@@ -512,8 +567,12 @@ public class InstantSendManager implements RecoveredSignatureListener {
             }
         }
 
+        Stopwatch timer = Stopwatch.createStarted();
         if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
             batchVerifier.verify();
+
+        log.info("InstantSendManager -- verified locks. count={}, alreadyVerified={}, vt={}, nodes={}",
+                verifyCount, alreadyVerified, timer, batchVerifier.getUniqueSourceCount());
 
         if (!batchVerifier.getBadSources().isEmpty()) {
             log.warn("islock: bad sources: {}", batchVerifier.getBadSources());
@@ -558,7 +617,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             }
         }
 
-        return true;
+        return badISLocks;
     }
 
     void processInstantSendLock(long from, Sha256Hash hash, InstantSendLock islock)
