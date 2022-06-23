@@ -37,6 +37,7 @@ import org.bitcoinj.quorums.PreviousQuorumQuarters;
 import org.bitcoinj.quorums.Quorum;
 import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.QuorumSnapshot;
+import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.quorums.SnapshotSkipMode;
 import org.bitcoinj.store.BlockStoreException;
@@ -202,133 +203,156 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         if (peer != null && isSyncingHeadersFirst)
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Processing, quorumRotationInfo.getMnListDiffTip());
 
-        // TODO: do we actually need to keep track of the blockchain tip mnlist?
-        // SimplifiedMasternodeList newMNListTip = mnListTip.applyDiff(quorumRotationInfo.getMnListDiffTip());
-        SimplifiedMasternodeList newMNListAtH = mnListAtH.applyDiff(quorumRotationInfo.getMnListDiffAtH());
-        SimplifiedMasternodeList baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash);
-        // need to handle the case where there is only 1 masternode list, or 2 -- not enough to do all verification
-        SimplifiedMasternodeList newMNListAtHMinusC = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC());
+        if (!mnListAtH.getBlockHash().equals(quorumRotationInfo.getMnListDiffAtH().blockHash)) {
 
-        baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash);
-        SimplifiedMasternodeList newMNListAtHMinus2C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C());
+            SimplifiedMasternodeList baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus4C().prevBlockHash);
+            SimplifiedMasternodeList newMNListAtHMinus4C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C());
+            mnListsCache.put(newMNListAtHMinus4C.getBlockHash(), newMNListAtHMinus4C);
 
-        baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash);
-        SimplifiedMasternodeList newMNListAtHMinus3C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C());
+            baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash);
+            SimplifiedMasternodeList newMNListAtHMinus3C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C());
+            mnListsCache.put(newMNListAtHMinus3C.getBlockHash(), newMNListAtHMinus3C);
 
-        baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus4C().prevBlockHash);
-        SimplifiedMasternodeList newMNListAtHMinus4C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C());
+            baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash);
+            SimplifiedMasternodeList newMNListAtHMinus2C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C());
+            mnListsCache.put(newMNListAtHMinus2C.getBlockHash(), newMNListAtHMinus2C);
 
-        if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST)) {
             // TODO: do we actually need to keep track of the blockchain tip mnlist?
-            // newMNListTip.verify(quorumRotationInfo.getMnListDiffTip().coinBaseTx, quorumRotationInfo.getMnListDiffTip(), mnListTip);
-            newMNListAtH.verify(quorumRotationInfo.getMnListDiffAtH().coinBaseTx, quorumRotationInfo.getMnListDiffAtH(), mnListAtH);
-            newMNListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), mnListAtHMinusC);
-            newMNListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), mnListAtHMinus2C);
-            newMNListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), mnListAtHMinus3C);
-            newMNListAtHMinus4C.verify(quorumRotationInfo.getMnListDiffAtHMinus4C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), mnListAtHMinus4C);
-        }
+            // SimplifiedMasternodeList newMNListTip = mnListTip.applyDiff(quorumRotationInfo.getMnListDiffTip());
+            SimplifiedMasternodeList newMNListAtH = mnListAtH.applyDiff(quorumRotationInfo.getMnListDiffAtH());
+            baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash);
+            StoredBlock prevBlockHMinusC = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash);
 
-        if (peer != null && isSyncingHeadersFirst)
-            peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, quorumRotationInfo.getMnListDiffTip());
+            if (baseMNList == null) {
+                log.info("mnList missing for " + quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash + " " + (prevBlockHMinusC != null ? prevBlockHMinusC.getHeight() : -1));
+                for (Sha256Hash hash : mnListsCache.keySet()) {
+                    StoredBlock block = chain.getBlockStore().get(hash);
+                    log.info("--> {}: {}: {}", hash, block == null ? -1 : block.getHeight(), mnListsCache.get(hash).getBlockHash());
+                }
+            }
+            checkNotNull(baseMNList, "mnList missing for " + quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash + " " + (prevBlockHMinusC != null ? prevBlockHMinusC.getHeight() : -1));
 
-        // TODO: do we actually need to keep track of the blockchain tip mnlist?
-        // newMNListTip.setBlock(blockAtTip, blockAtTip != null && blockAtTip.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffTip().prevBlockHash));
-        newMNListAtH.setBlock(blockAtH, blockAtH != null && blockAtH.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash));
-        newMNListAtHMinusC.setBlock(blockMinusC, blockMinusC != null && blockMinusC.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash));
-        newMNListAtHMinus2C.setBlock(blockMinus2C, blockMinus2C != null && blockMinus2C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash));
-        newMNListAtHMinus3C.setBlock(blockMinus3C, blockMinus3C != null && blockMinus3C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash));
-        newMNListAtHMinus4C.setBlock(blockMinus4C, blockMinus4C != null && blockMinus4C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus4C().prevBlockHash));
+            SimplifiedMasternodeList newMNListAtHMinusC = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC());
+            mnListsCache.put(newMNListAtHMinusC.getBlockHash(), newMNListAtHMinusC);
 
-        mnListsCache.clear();
-        // TODO: do we actually need to keep track of the blockchain tip mnlist?
-        // mnListsCache.put(newMNListAtH.getBlockHash(), newMNListAtH);
-        mnListsCache.put(newMNListAtHMinusC.getBlockHash(), newMNListAtHMinusC);
-        mnListsCache.put(newMNListAtHMinus2C.getBlockHash(), newMNListAtHMinus2C);
-        mnListsCache.put(newMNListAtHMinus3C.getBlockHash(), newMNListAtHMinus3C);
-        mnListsCache.put(newMNListAtHMinus4C.getBlockHash(), newMNListAtHMinus4C);
+            // need to handle the case where there is only 1 masternode list, or 2 -- not enough to do all verification
 
-        // process the older data
-        lastCommitments = quorumRotationInfo.getLastCommitmentPerIndex();
 
-        List<SimplifiedMasternodeListDiff> oldDiffs = quorumRotationInfo.getMnListDiffLists();
-        List<QuorumSnapshot> oldSnapshots = quorumRotationInfo.getQuorumSnapshotList();
-        for (int i = 0; i < oldDiffs.size(); ++i) {
-            SimplifiedMasternodeList oldList = new SimplifiedMasternodeList(params);
-            oldList = oldList.applyDiff(oldDiffs.get(i));
-            mnListsCache.put(oldDiffs.get(i).blockHash, oldList);
-            quorumSnapshotCache.put(oldDiffs.get(i).blockHash, oldSnapshots.get(i));
-        }
+            if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST)) {
+                // TODO: do we actually need to keep track of the blockchain tip mnlist?
+                // newMNListTip.verify(quorumRotationInfo.getMnListDiffTip().coinBaseTx, quorumRotationInfo.getMnListDiffTip(), mnListTip);
+                newMNListAtH.verify(quorumRotationInfo.getMnListDiffAtH().coinBaseTx, quorumRotationInfo.getMnListDiffAtH(), mnListAtH);
+                newMNListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), mnListAtHMinusC);
+                newMNListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), mnListAtHMinus2C);
+                newMNListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), mnListAtHMinus3C);
+                newMNListAtHMinus4C.verify(quorumRotationInfo.getMnListDiffAtHMinus4C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), mnListAtHMinus4C);
+            }
 
-        // TODO: do we actually need to keep track of the blockchain tip mnlist?
-        mnListTip = //newMNListTip;
-        mnListAtH = newMNListAtH;
-        mnListAtHMinusC = newMNListAtHMinusC;
-        mnListAtHMinus2C = newMNListAtHMinus2C;
-        mnListAtHMinus3C = newMNListAtHMinus3C;
-        mnListAtHMinus4C = newMNListAtHMinus4C;
+            if (peer != null && isSyncingHeadersFirst)
+                peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, quorumRotationInfo.getMnListDiffTip());
 
-        quorumSnapshotAtHMinusC = quorumRotationInfo.getQuorumSnapshotAtHMinusC();
-        quorumSnapshotAtHMinus2C = quorumRotationInfo.getQuorumSnapshotAtHMinus2C();
-        quorumSnapshotAtHMinus3C = quorumRotationInfo.getQuorumSnapshotAtHMinus3C();
-        quorumSnapshotAtHMinus4C = quorumRotationInfo.getQuorumSnapshotAtHMinus4C();
+            // TODO: do we actually need to keep track of the blockchain tip mnlist?
+            // newMNListTip.setBlock(blockAtTip, blockAtTip != null && blockAtTip.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffTip().prevBlockHash));
+            newMNListAtH.setBlock(blockAtH, blockAtH != null && blockAtH.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash));
+            newMNListAtHMinusC.setBlock(blockMinusC, blockMinusC != null && blockMinusC.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash));
+            newMNListAtHMinus2C.setBlock(blockMinus2C, blockMinus2C != null && blockMinus2C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash));
+            newMNListAtHMinus3C.setBlock(blockMinus3C, blockMinus3C != null && blockMinus3C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash));
+            newMNListAtHMinus4C.setBlock(blockMinus4C, blockMinus4C != null && blockMinus4C.getHeader().getPrevBlockHash().equals(quorumRotationInfo.getMnListDiffAtHMinus4C().prevBlockHash));
 
-        quorumSnapshotCache.put(newMNListAtHMinusC.getBlockHash(), quorumSnapshotAtHMinusC);
-        quorumSnapshotCache.put(newMNListAtHMinus2C.getBlockHash(), quorumSnapshotAtHMinus2C);
-        quorumSnapshotCache.put(newMNListAtHMinus3C.getBlockHash(), quorumSnapshotAtHMinus3C);
-        quorumSnapshotCache.put(newMNListAtHMinus4C.getBlockHash(), quorumSnapshotAtHMinus4C);
+            mnListsCache.clear();
+            // TODO: do we actually need to keep track of the blockchain tip mnlist?
+            // mnListsCache.put(newMNListAtH.getBlockHash(), newMNListAtH);
+            mnListsCache.put(newMNListAtHMinusC.getBlockHash(), newMNListAtHMinusC);
+            mnListsCache.put(newMNListAtHMinus2C.getBlockHash(), newMNListAtHMinus2C);
+            mnListsCache.put(newMNListAtHMinus3C.getBlockHash(), newMNListAtHMinus3C);
+            mnListsCache.put(newMNListAtHMinus4C.getBlockHash(), newMNListAtHMinus4C);
 
-        // now calculate quorums
-        SimplifiedQuorumList baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus4C().prevBlockHash);
-        SimplifiedQuorumList newQuorumListAtHMinus4C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C(), isLoadingBootStrap, chain, true, false);
+            // process the older data
 
-        baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash);
-        SimplifiedQuorumList newQuorumListAtHMinus3C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C(), isLoadingBootStrap, chain, true, false);
+            List<SimplifiedMasternodeListDiff> oldDiffs = quorumRotationInfo.getMnListDiffLists();
+            List<QuorumSnapshot> oldSnapshots = quorumRotationInfo.getQuorumSnapshotList();
+            for (int i = 0; i < oldDiffs.size(); ++i) {
+                SimplifiedMasternodeList oldList = new SimplifiedMasternodeList(params);
+                oldList = oldList.applyDiff(oldDiffs.get(i));
+                mnListsCache.put(oldDiffs.get(i).blockHash, oldList);
+                quorumSnapshotCache.put(oldDiffs.get(i).blockHash, oldSnapshots.get(i));
+            }
 
-        baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash);
-        SimplifiedQuorumList newQuorumListAtHMinus2C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C(), isLoadingBootStrap, chain, true, false);
+            // TODO: do we actually need to keep track of the blockchain tip mnlist?
+            mnListTip = //newMNListTip;
+                    mnListAtH = newMNListAtH;
+            mnListAtHMinusC = newMNListAtHMinusC;
+            mnListAtHMinus2C = newMNListAtHMinus2C;
+            mnListAtHMinus3C = newMNListAtHMinus3C;
+            mnListAtHMinus4C = newMNListAtHMinus4C;
 
-        baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash);
-        SimplifiedQuorumList newQuorumListAtHMinusC = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC(), isLoadingBootStrap, chain, true, false);
+            quorumSnapshotAtHMinusC = quorumRotationInfo.getQuorumSnapshotAtHMinusC();
+            quorumSnapshotAtHMinus2C = quorumRotationInfo.getQuorumSnapshotAtHMinus2C();
+            quorumSnapshotAtHMinus3C = quorumRotationInfo.getQuorumSnapshotAtHMinus3C();
+            quorumSnapshotAtHMinus4C = quorumRotationInfo.getQuorumSnapshotAtHMinus4C();
 
-        baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtH().prevBlockHash);
-        SimplifiedQuorumList newQuorumListAtH = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, chain, true, true);
+            quorumSnapshotCache.put(newMNListAtHMinusC.getBlockHash(), quorumSnapshotAtHMinusC);
+            quorumSnapshotCache.put(newMNListAtHMinus2C.getBlockHash(), quorumSnapshotAtHMinus2C);
+            quorumSnapshotCache.put(newMNListAtHMinus3C.getBlockHash(), quorumSnapshotAtHMinus3C);
+            quorumSnapshotCache.put(newMNListAtHMinus4C.getBlockHash(), quorumSnapshotAtHMinus4C);
 
-        // TODO: do we actually need to keep track of the blockchain tip quorum list?
-        //SimplifiedQuorumList newQuorumListTip = quorumListTip.applyDiff(quorumRotationInfo.getMnListDiffTip(), isLoadingBootStrap, chain);
+            // now calculate quorums
+            SimplifiedQuorumList baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus4C().prevBlockHash);
+            SimplifiedQuorumList newQuorumListAtHMinus4C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C(), isLoadingBootStrap, chain, true, false);
 
-        if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM)) {
+            baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash);
+            SimplifiedQuorumList newQuorumListAtHMinus3C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C(), isLoadingBootStrap, chain, true, false);
+
+            baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash);
+            SimplifiedQuorumList newQuorumListAtHMinus2C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C(), isLoadingBootStrap, chain, true, false);
+
+            baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash);
+            SimplifiedQuorumList newQuorumListAtHMinusC = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC(), isLoadingBootStrap, chain, true, false);
+
+            baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtH().prevBlockHash);
+            SimplifiedQuorumList newQuorumListAtH = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, chain, true, true);
+
             // TODO: do we actually need to keep track of the blockchain tip quorum list?
-            // newQuorumListTip.verify(quorumRotationInfo.getMnListDiffTip().coinBaseTx, quorumRotationInfo.getMnListDiffTip(), quorumListTip, newMNListTip);
-            newQuorumListAtH.verify(quorumRotationInfo.getMnListDiffAtH().coinBaseTx, quorumRotationInfo.getMnListDiffAtH(), quorumListAtH, newMNListAtH);
+            //SimplifiedQuorumList newQuorumListTip = quorumListTip.applyDiff(quorumRotationInfo.getMnListDiffTip(), isLoadingBootStrap, chain);
 
-            // TODO: do we need this at all?
-            // newQuorumListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), quorumListAtHMinusC, newMNListAtHMinusC);
-            // newQuorumListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), quorumListAtHMinus2C, newMNListAtHMinus2C);
-            // newQuorumListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), quorumListAtHMinus3C, newMNListAtHMinus3C);
-            // newQuorumListAtHMinus4C.verify(quorumRotationInfo.getMnListDiffAtHMinus4C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus4C(), quorumListAtHMinus4C, newMNListAtHMinus4C);
+            if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM)) {
+                // TODO: do we actually need to keep track of the blockchain tip quorum list?
+                // newQuorumListTip.verify(quorumRotationInfo.getMnListDiffTip().coinBaseTx, quorumRotationInfo.getMnListDiffTip(), quorumListTip, newMNListTip);
+                newQuorumListAtH.verify(quorumRotationInfo.getMnListDiffAtH().coinBaseTx, quorumRotationInfo.getMnListDiffAtH(), quorumListAtH, newMNListAtH);
+
+                // TODO: do we need this at all?
+                // newQuorumListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), quorumListAtHMinusC, newMNListAtHMinusC);
+                // newQuorumListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), quorumListAtHMinus2C, newMNListAtHMinus2C);
+                // newQuorumListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), quorumListAtHMinus3C, newMNListAtHMinus3C);
+                // newQuorumListAtHMinus4C.verify(quorumRotationInfo.getMnListDiffAtHMinus4C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus4C(), quorumListAtHMinus4C, newMNListAtHMinus4C);
+            }
+
+            if (peer != null && isSyncingHeadersFirst)
+                peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedQuorums, quorumRotationInfo.getMnListDiffTip());
+
+            quorumsCache.clear();
+            // TODO: do we actually need to keep track of the blockchain tip quorum list?
+            // quorumsCache.put(newQuorumListTip.getBlockHash(), newQuorumListTip);
+            quorumsCache.put(newQuorumListAtH.getBlockHash(), newQuorumListAtH);
+            quorumsCache.put(newQuorumListAtHMinusC.getBlockHash(), newQuorumListAtHMinusC);
+            quorumsCache.put(newQuorumListAtHMinus2C.getBlockHash(), newQuorumListAtHMinus2C);
+            quorumsCache.put(newQuorumListAtHMinus3C.getBlockHash(), newQuorumListAtHMinus3C);
+            quorumsCache.put(newQuorumListAtHMinus4C.getBlockHash(), newQuorumListAtHMinus4C);
+
+            // TODO: do we actually need to keep track of the blockchain tip quorum list?
+            // quorumListTip = newQuorumListTip;
+            quorumListAtH = newQuorumListAtH;
+            quorumListAtHMinusC = newQuorumListAtHMinusC;
+            quorumListAtHMinus2C = newQuorumListAtHMinus2C;
+            quorumListAtHMinus3C = newQuorumListAtHMinus3C;
+            quorumListAtHMinus4C = newQuorumListAtHMinus4C;
+        } else {
+            log.info("we already have the mnlist info, just read the lastCommitments");
         }
-
-        if (peer != null && isSyncingHeadersFirst)
-            peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedQuorums, quorumRotationInfo.getMnListDiffTip());
-
-        quorumsCache.clear();
-        // TODO: do we actually need to keep track of the blockchain tip quorum list?
-        // quorumsCache.put(newQuorumListTip.getBlockHash(), newQuorumListTip);
-        quorumsCache.put(newQuorumListAtH.getBlockHash(), newQuorumListAtH);
-        quorumsCache.put(newQuorumListAtHMinusC.getBlockHash(), newQuorumListAtHMinusC);
-        quorumsCache.put(newQuorumListAtHMinus2C.getBlockHash(), newQuorumListAtHMinus2C);
-        quorumsCache.put(newQuorumListAtHMinus3C.getBlockHash(), newQuorumListAtHMinus3C);
-        quorumsCache.put(newQuorumListAtHMinus4C.getBlockHash(), newQuorumListAtHMinus4C);
-
-        // TODO: do we actually need to keep track of the blockchain tip quorum list?
-        // quorumListTip = newQuorumListTip;
-        quorumListAtH = newQuorumListAtH;
-        quorumListAtHMinusC = newQuorumListAtHMinusC;
-        quorumListAtHMinus2C = newQuorumListAtHMinus2C;
-        quorumListAtHMinus3C = newQuorumListAtHMinus3C;
-        quorumListAtHMinus4C = newQuorumListAtHMinus4C;
 
         // initialize the active quorum list for scanQuorums
+        lastCommitments = quorumRotationInfo.getLastCommitmentPerIndex();
+
         SimplifiedQuorumList newList = new SimplifiedQuorumList(params);
         for (int i = 0; i < lastCommitments.size(); ++i) {
             Quorum quorum = findQuorumByHash(lastCommitments.get(i).getQuorumHash(), i);
