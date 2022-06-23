@@ -244,8 +244,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
                 ",\n mnListDiffAtHMinus2C=" + mnListDiffAtHMinus2C.toString(blockStore) +
                 ",\n mnListDiffAtHMinus3C=" + mnListDiffAtHMinus3C.toString(blockStore) +
                 ",\n mnListDiffAtHMinus4C=" + mnListDiffAtHMinus4C.toString(blockStore) +
-                "------------------------------\n" +
-                '}');
+                "------------------------------\n");
         for (FinalCommitment commitment : lastCommitmentPerIndex) {
             builder.append("lastQuorum: ").append(getHeight(commitment.quorumHash, chain)).append(" ").append(commitment).append(":").append("\n");
         }
@@ -257,6 +256,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         for (SimplifiedMasternodeListDiff mnlistdiff : mnListDiffLists) {
             builder.append("mnlistdiff: ").append(mnlistdiff.toString(chain.getBlockStore())).append("\n");
         }
+        builder.append('}');
         return builder.toString();
     }
 

@@ -544,10 +544,22 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (quorum == null) {
                 // should not happen, but if one fails to select, all others will also fail to select
                 log.info("islock: quorum not found to verify signature [tipHeight: " + tipHeight + " vs " + context.masternodeListManager.getQuorumListAtTip(llmqType).getHeight() + "]");
+                log.info("islock: signHeight: {}, id: {}", signHeight, id);
+                log.info("islock: dash-cli quorum selectquorum {} {}", llmqType.getValue(), id);
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 return badISLocks;
             }
             Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.commitment.quorumHash, id, islock.txid);
+
+            // do a precheck
+            boolean verified = islock.getSignature().getSignature().verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
+            if (!verified) {
+                log.info("islock: validation failed: {}", islock);
+                log.info("islock:   signHeight: {}", signHeight);
+                log.info("islock:   quorum: {}", quorum.getQuorumHash());
+                log.info("islock: dash-cli quorum selectquorum {} {}", llmqType.getValue(), Sha256Hash.wrap(id.getReversedBytes()));
+            }
+
             batchVerifier.pushMessage(nodeId, hash, signHash, islock.signature.getSignature(), quorum.commitment.quorumPublicKey);
             verifyCount++;
 
@@ -590,7 +602,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (batchVerifier.getBadMessages().contains(hash)) {
                 log.info("islock: -- txid={}, islock={}: invalid sig in islock, peer={}",
                         islock.txid.toString(), hash.toString(), nodeId);
-                invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
+                badISLocks.add(hash);
+                // for now, let us not save this to be retested forever...
+                //invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 TransactionConfidence confidence = context.getConfidenceTable().get(islock.txid);
                 if(confidence != null) {
                     log.info("islock: set to IX_LOCK_FAILED for {}", islock.txid);
