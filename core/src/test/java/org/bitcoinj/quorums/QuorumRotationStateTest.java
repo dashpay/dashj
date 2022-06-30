@@ -41,7 +41,7 @@ public class QuorumRotationStateTest {
     private static void initContext(NetworkParameters params) throws BlockStoreException {
         context = new Context(params);
         if (blockChain == null) {
-            blockChain = new BlockChain(context, new SPVBlockStore(params, new File(SimplifiedMasternodesTest.class.getResource("malort.spvchain").getFile())));
+            blockChain = new BlockChain(context, new SPVBlockStore(params, new File(SimplifiedMasternodesTest.class.getResource("devnet-333.spvchain").getFile())));
         }
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         context.initDash(true, true);
@@ -52,7 +52,7 @@ public class QuorumRotationStateTest {
     // this is not supported yet
     @Test
     public void loadFromBootStrapFileV3() throws BlockStoreException {
-        URL datafile = getClass().getResource("qrinfo--1-20737.dat");
+        URL datafile = getClass().getResource("qrinfo--1-24868.dat");
         initContext(PARAMS);
 
         SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
@@ -63,7 +63,7 @@ public class QuorumRotationStateTest {
 
         try {
             SimplifiedMasternodeListManager.bootStrapLoaded.get();
-            assertEquals(20728, manager.getMasternodeList().getHeight());
+            assertEquals(24856, manager.getMasternodeList().getHeight());
         } catch (InterruptedException | ExecutionException x) {
             fail("unable to load bootstrap file");
         }
@@ -73,7 +73,7 @@ public class QuorumRotationStateTest {
     // not supported yet, due to problems with Context.masternodeListManager dependencies
     @Test
     public void loadQuorumRotationStateFromFile() throws Exception {
-        URL datafile = getClass().getResource("malort.mnlist");
+        URL datafile = getClass().getResource("devnet-333.mnlist");
         FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true);
 
         SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(Context.get());

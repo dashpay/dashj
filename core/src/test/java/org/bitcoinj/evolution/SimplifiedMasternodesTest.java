@@ -3,21 +3,20 @@ package org.bitcoinj.evolution;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
+import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import static org.junit.Assert.*;
 
-import org.bitcoinj.params.MalortDevNetParams;
+import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.ThreeThreeThreeDevNetParams;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.MemoryBlockStore;
-import org.bitcoinj.store.SPVBlockStore;
-import org.junit.Before;
+
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -32,6 +31,7 @@ public class SimplifiedMasternodesTest {
     static Context context;
     static NetworkParameters PARAMS;
     static MainNetParams MAINPARAMS;
+    static DevNetParams DEVNETPARAMS;
     static PeerGroup peerGroup;
     static byte[] txdata;
     static BlockChain blockChain;
@@ -39,7 +39,8 @@ public class SimplifiedMasternodesTest {
     @BeforeClass
     public static void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
-        PARAMS = MalortDevNetParams.get();
+        PARAMS = TestNet3Params.get();
+        DEVNETPARAMS = ThreeThreeThreeDevNetParams.get();
         initContext(PARAMS);
 
         //PeerGroup peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
@@ -114,7 +115,7 @@ public class SimplifiedMasternodesTest {
         assertEquals(expectedMerkleRoot, calculatedMerkleRoot);
     }
 
-    @Test @Ignore
+    @Test
     public void loadFromBootStrapFile() throws BlockStoreException{
         // this is for mainnet
         URL datafile = getClass().getResource("ML1088640.dat");
@@ -135,19 +136,19 @@ public class SimplifiedMasternodesTest {
         }
     }
 
-
-
-    @Ignore
     @Test
     public void loadFromFile() throws Exception {
+        initContext(PARAMS);
         URL datafile = getClass().getResource("simplifiedmasternodelistmanager.dat");
         FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true);
 
         SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(Context.get());
+        context.setMasternodeListManager(managerDefaultNames);
         assertEquals(db.load(managerDefaultNames), true);
 
         SimplifiedMasternodeListManager managerSpecific = new SimplifiedMasternodeListManager(Context.get());
-        FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 1);
+        context.setMasternodeListManager(managerSpecific);
+        FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 2);
         assertEquals(db2.load(managerSpecific), true);
 
         //check to make sure that they have the same number of masternodes
@@ -155,7 +156,8 @@ public class SimplifiedMasternodesTest {
 
         //load a file with version 1, expecting version 2
         SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(Context.get());
-        FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 2);
+        context.setMasternodeListManager(managerSpecificFail);
+        FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 3);
         assertEquals(db3.load(managerSpecificFail), false);
     }
 
