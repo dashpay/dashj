@@ -188,6 +188,9 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     protected void parse() throws ProtocolException {
         mnList = new SimplifiedMasternodeList(params, payload, cursor);
         cursor += mnList.getMessageSize();
+
+        // specify an empty quorumList for now
+        quorumList = new SimplifiedQuorumList(params);
         length = cursor - offset;
     }
 
