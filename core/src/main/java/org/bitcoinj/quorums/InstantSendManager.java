@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
@@ -465,9 +466,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
             log.info("InstantSendManager -- doing verification on old active set");
 
             // filter out valid IS locks from "pend"
-            for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> entry : pend.entrySet()) {
+            Iterator<Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>>> iterator = pend.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> entry = iterator.next();
                 if (!badISLocks.contains(entry.getKey())) {
-                    pend.remove(entry.getKey());
+                    iterator.remove();
                 }
             }
             // Now check against the previous active set and perform banning if this fails
@@ -559,7 +562,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 log.info("islock:   quorum: {}", quorum.getQuorumHash());
                 log.info("islock: dash-cli quorum selectquorum {} {}", llmqType.getValue(), Sha256Hash.wrap(id.getReversedBytes()));
             }
-
+            // debug
+            islock.setQuorum(quorum.getQuorumHash(), quorum.getQuorumIndex());
             batchVerifier.pushMessage(nodeId, hash, signHash, islock.signature.getSignature(), quorum.commitment.quorumPublicKey);
             verifyCount++;
 
