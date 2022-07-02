@@ -259,7 +259,6 @@ public class Context {
 
         masternodePayments = new MasternodePayments(this);
         masternodeSync = syncFlags != null ? new MasternodeSync(this, syncFlags, verifyFlags) : new MasternodeSync(this);
-        initializedDash = true;
         governanceManager = new GovernanceManager(this);
         triggerManager = new GovernanceTriggerManager(this);
 
@@ -277,6 +276,7 @@ public class Context {
         masternodeMetaDataManager = new MasternodeMetaDataManager(this);
 
         BLS.Init();
+        initializedDash = true;
     }
 
     public void setMasternodeListManager(SimplifiedMasternodeListManager masternodeListManager) {
@@ -366,7 +366,7 @@ public class Context {
     }
 
     public void close() {
-        if(initializedDash) {
+        if (initializedDash) {
             sporkManager.close(peerGroup);
             masternodeSync.close();
             masternodeListManager.close();
@@ -377,7 +377,11 @@ public class Context {
             if(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS))
                 llmqBackgroundThread.interrupt();
             blockChain.removeNewBestBlockListener(newBestBlockListener);
-            scheduledMasternodeSync.cancel(true);
+            if (scheduledMasternodeSync != null)
+                scheduledMasternodeSync.cancel(true);
+            blockChain.close();
+            if (headerChain != null)
+                headerChain.close();
         }
     }
 
@@ -388,7 +392,7 @@ public class Context {
         this.headerChain = headerChain;
         hashStore = new HashStore(blockChain.getBlockStore());
         blockChain.addNewBestBlockListener(newBestBlockListener);
-        if(initializedDash) {
+        if (initializedDash) {
             sporkManager.setBlockChain(blockChain, peerGroup);
             masternodeSync.setBlockChain(blockChain, netFullfilledRequestManager);
             masternodeListManager.setBlockChain(blockChain, peerGroup != null ? peerGroup.headerChain : null, peerGroup, quorumManager, quorumSnapshotManager);
