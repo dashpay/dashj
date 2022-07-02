@@ -163,4 +163,26 @@ public class InstantSendLock extends Message {
     public boolean isDeterministic() {
         return version != ISLOCK_VERSION;
     }
+
+    public Sha256Hash getCycleHash() {
+        return cycleHash;
+    }
+
+    // in memory, for debugging only
+    private Sha256Hash quorumHash;
+
+    private int quorumIndex;
+
+    public Sha256Hash getQuorumHash() {
+        return quorumHash;
+    }
+
+    public int getQuorumIndex() {
+        return quorumIndex;
+    }
+
+    public void setQuorum(Sha256Hash quorumHash, int quorumIndex) {
+        this.quorumHash = quorumHash;
+        this.quorumIndex = quorumIndex;
+    }
 }

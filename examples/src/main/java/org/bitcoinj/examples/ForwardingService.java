@@ -46,7 +46,7 @@ public class ForwardingService {
     private static Address forwardingAddress;
     private static WalletAppKit kit;
 
-    private static TransactionReport txReport = new TransactionReport();
+    private static TransactionReport txReport;
 
     public static void main(String[] args) throws Exception {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
@@ -60,6 +60,7 @@ public class ForwardingService {
         NetworkParameters params;
         String filePrefix;
         String checkpoints = null;
+        int lastArg = 2;
         if (args.length > 1 && args[1].equals("testnet")) {
             params = TestNet3Params.get();
             filePrefix = "forwarding-service-testnet";
@@ -81,11 +82,22 @@ public class ForwardingService {
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
             params = DevNetParams.get(args[2], args[3], Integer.parseInt(args[4]), dnsSeeds);
             filePrefix = "forwarding-service-devnet";
-        }else {
+        } else {
+            lastArg = 1;
             params = MainNetParams.get();
             filePrefix = "forwarding-service";
             checkpoints = "checkpoints.txt";
         }
+
+        String clientPath = "";
+        String confPath = "";
+        if (lastArg + 1 <= args.length) {
+            clientPath = args[lastArg];
+            if (lastArg + 2 >= args.length)
+                confPath = args[lastArg + 1];
+        }
+
+        txReport = new TransactionReport(clientPath, confPath);
         // Parse the address given as the first parameter.
         forwardingAddress = Address.fromBase58(params, args[0]);
 
