@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -118,18 +119,18 @@ public class SimplifiedMasternodesTest {
     @Test
     public void loadFromBootStrapFile() throws BlockStoreException{
         // this is for mainnet
-        URL datafile = getClass().getResource("ML1088640.dat");
+        URL datafile = Objects.requireNonNull(getClass().getResource("ML1088640.dat"));
 
         initContext(MAINPARAMS);
 
         SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
         context.setMasternodeListManager(manager);
-        SimplifiedMasternodeListManager.setBootStrapFilePath(datafile.getPath(), SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION);
+        manager.setBootstrap(datafile.getPath(), null, SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION);
 
-        manager.resetMNList(true, true);
+        manager.resetQuorumStateMNList(true, true);
 
         try {
-            SimplifiedMasternodeListManager.bootStrapLoaded.get();
+            manager.waitForBootstrapLoaded();
             assertEquals(1088640, manager.getMasternodeList().getHeight());
         } catch (InterruptedException | ExecutionException x) {
             fail("unable to load bootstrap file");
