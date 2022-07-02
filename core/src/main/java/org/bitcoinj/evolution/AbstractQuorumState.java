@@ -16,7 +16,9 @@
 
 package org.bitcoinj.evolution;
 
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
@@ -35,6 +37,7 @@ import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.core.listeners.ReorganizeListener;
 import org.bitcoinj.quorums.LLMQParameters;
+import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -44,6 +47,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -69,11 +76,11 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public static final int LISTS_CACHE_SIZE = 576;
     public static final int SNAPSHOT_TIME_PERIOD = 60 * 60 * 26;
 
-    public static int MAX_CACHE_SIZE = 10;
-    public static int MIN_CACHE_SIZE = 1;
+    public static final int MAX_CACHE_SIZE = 10;
+    public static final int MIN_CACHE_SIZE = 1;
 
     private static final Logger log = LoggerFactory.getLogger(AbstractQuorumState.class);
-    protected ReentrantLock lock = Threading.lock("AbstractQuorumState");
+    protected final ReentrantLock lock = Threading.lock("AbstractQuorumState");
 
     Context context;
     AbstractBlockChain headerChain;
@@ -98,6 +105,15 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     QuorumStateManager stateManager;
 
+    // bootstrap
+    String bootstrapFilePath = null;
+    InputStream bootstrapStream = null;
+    int bootStrapFileFormat = 0;
+    public SettableFuture<Boolean> bootStrapLoaded;
+
+    boolean isLoadingBootstrap = false;
+
+
     public AbstractQuorumState(Context context) {
         super(context.getParams());
         this.context = context;
@@ -117,12 +133,18 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     private void initialize() {
         waitingForMNListDiff = false;
-        pendingBlocks = new ArrayList<StoredBlock>();
-        pendingBlocksMap = new LinkedHashMap<Sha256Hash, StoredBlock>();
+        pendingBlocks = new ArrayList<>();
+        pendingBlocksMap = new LinkedHashMap<>();
     }
 
     public void setStateManager(QuorumStateManager stateManager) {
         this.stateManager = stateManager;
+    }
+
+    public void setBootstrap(String bootstrapFilePath, InputStream bootstrapStream, int bootStrapFileFormat) {
+        this.bootstrapFilePath = bootstrapFilePath;
+        this.bootstrapStream = bootstrapStream;
+        this.bootStrapFileFormat = bootStrapFileFormat;
     }
 
     // TODO: Do we need to keep track of the header chain also?
@@ -202,29 +224,28 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         resetMNList(force, true);
     }
 
-
     public void resetMNList(boolean force, boolean requestFreshList) {
         try {
             if (force) {
-                log.info("resetting masternode list");
+                log.info("resetting masternode list; force: {}, requestFreshList: {}", force, requestFreshList);
                 clearState();
                 pendingBlocks.clear();
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
                 unCache();
                 try {
-                    if (stateManager.notUsingBootstrapFile())
+                    if (notUsingBootstrapFile())
                         stateManager.save();
                 } catch (FileNotFoundException x) {
                     //swallow, the file has no name
                 }
                 if (requestFreshList) {
-                    if (stateManager.notUsingBootstrapFileAndStream()) {
+                    if (notUsingBootstrapFileAndStream()) {
                         requestAfterMNListReset();
                     } else {
                         waitingForMNListDiff = true;
-                        stateManager.setLoadingBootstrap();
-                        stateManager.loadBootstrapAndSync();
+                        setLoadingBootstrap();
+                        loadBootstrapAndSync();
                     }
                 }
             }
@@ -241,7 +262,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         if (height < params.getDIP0008BlockHeight())
             height = params.getDIP0008BlockHeight();
         int currentHeight = blockChain.getBestChainHeight();
-        if (syncOptions == SimplifiedMasternodeListManager.SyncOptions.SYNC_MINIMUM) {
+        if (syncOptions == SimplifiedMasternodeListManager.SyncOptions.SYNC_MINIMUM && currentHeight != 0) {
             height = currentHeight - getBlockHeightOffset();
         } else {
             height = currentHeight;
@@ -307,7 +328,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             //fill up the pending list with recent blocks
             if (syncOptions != SimplifiedMasternodeListManager.SyncOptions.SYNC_MINIMUM) {
                 Sha256Hash tipHash = blockChain.getChainHead().getHeader().getHash();
-                ArrayList<StoredBlock> blocksToAdd = new ArrayList<StoredBlock>();
+                ArrayList<StoredBlock> blocksToAdd = new ArrayList<>();
                 if (!getMasternodeListCache().containsKey(tipHash) && !pendingBlocksMap.containsKey(tipHash)) {
                     StoredBlock cursor = blockChain.getChainHead();
                     do {
@@ -350,7 +371,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 if (pendingBlocks.size() != 0) {
                     nextBlock = pendingBlocks.get(0);
                     if (syncInterval > 1 && nextBlock.getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - 60 * 60 && pendingBlocks.size() > syncInterval) {
-                        // lets skip up to the next syncInterval blocks
+                        // let's skip up to the next syncInterval blocks
                         while (blockIterator.hasNext()) {
                             nextBlock = blockIterator.next();
                             if (nextBlock.getHeight() % syncInterval == 0) break;
@@ -378,7 +399,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
         lock.lock();
         try {
-
+            //TODO what happened to this code?
         } finally {
             lock.unlock();
         }
@@ -443,7 +464,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
     }
 
-    public NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
+    public final NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
             boolean value = initChainTipSyncComplete || !context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
@@ -467,13 +488,12 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                     }
                     log.info("new best block: requesting {} as {}", block.getHeight(), lastRequest.getRequestMessage().getClass().getSimpleName());
                     requestMNListDiff(block);
-                    return;
                 }
             }
         }
     };
 
-    public PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
+    public final PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
             lock.lock();
@@ -487,7 +507,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         }
     };
 
-    PeerDisconnectedEventListener peerDisconnectedEventListener = new PeerDisconnectedEventListener() {
+    final PeerDisconnectedEventListener peerDisconnectedEventListener = new PeerDisconnectedEventListener() {
         @Override
         public void onPeerDisconnected(Peer peer, int peerCount) {
             log.info("Peer disconnected: " + peer.getAddress());
@@ -498,7 +518,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         }
     };
 
-    ReorganizeListener reorganizeListener = new ReorganizeListener() {
+    final ReorganizeListener reorganizeListener = new ReorganizeListener() {
         @Override
         public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks, List<StoredBlock> newBlocks) throws VerificationException {
             if (!shouldProcessMNListDiff()) {
@@ -542,13 +562,13 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         }
     }
 
-    ChainDownloadStartedEventListener chainDownloadStartedEventListener = new ChainDownloadStartedEventListener() {
+    final ChainDownloadStartedEventListener chainDownloadStartedEventListener = new ChainDownloadStartedEventListener() {
         @Override
         public void onChainDownloadStarted(Peer peer, int blocksLeft) {
             lock.lock();
             try {
                 downloadPeer = peer;
-                // perhaps this is not requred with headers first sync
+                // perhaps this is not required with headers first sync
                 // does this need to be in the next listener?
                 if (stateManager.isLoadedFromFile())
                     maybeGetMNListDiffFresh();
@@ -559,7 +579,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         }
     };
 
-    HeadersDownloadStartedEventListener headersDownloadStartedEventListener = new HeadersDownloadStartedEventListener() {
+    final HeadersDownloadStartedEventListener headersDownloadStartedEventListener = new HeadersDownloadStartedEventListener() {
         @Override
         public void onHeadersDownloadStarted(Peer peer, int blocksLeft) {
             lock.lock();
@@ -630,5 +650,82 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 }
             }
         }, Threading.THREAD_POOL);
+    }
+
+    public boolean notUsingBootstrapFile() {
+        return bootstrapFilePath == null;
+    }
+
+    public boolean notUsingBootstrapFileAndStream() {
+        return bootstrapFilePath == null && bootstrapStream == null;
+    }
+
+    abstract DiffMessage loadDiffMessageFromBuffer(byte [] buffer);
+
+    public void setLoadingBootstrap() {
+        isLoadingBootstrap = true;
+        bootStrapLoaded = null;
+    }
+
+    protected void loadBootstrapAndSync() {
+        Preconditions.checkState(!notUsingBootstrapFileAndStream(), "there must be a bootstrap file or stream specified");
+        Preconditions.checkState(getMasternodeList().size() == 0, "masternode list is not empty: " + getMasternodeList());
+        Preconditions.checkState(getQuorumListAtTip().size() == 0);
+        Preconditions.checkState(getMasternodeListCache().size() == 1);
+        Preconditions.checkState(getQuorumsCache().size() == 1);
+
+        bootStrapLoaded = SettableFuture.create();
+
+        log.info("loading bootstrap file: {}", bootstrapFilePath != null ? bootstrapFilePath : "input stream");
+
+        // load the files or streams
+        InputStream stream = bootstrapStream;
+
+        try {
+            if (stream != null)
+                stream.reset();
+            else if (bootstrapFilePath != null) {
+                stream = Files.newInputStream(Paths.get(bootstrapFilePath));
+            }
+            byte[] buffer = null;
+
+            if (stream != null) {
+                buffer = new byte[(int) stream.available()];
+                //noinspection ResultOfMethodCallIgnored
+                stream.read(buffer);
+            }
+
+            isLoadingBootstrap = true;
+            if (buffer != null) {
+                DiffMessage mnlistdiff = loadDiffMessageFromBuffer(buffer);
+                if (mnlistdiff instanceof SimplifiedMasternodeListDiff) {
+                    stateManager.processDiffMessage(null, (SimplifiedMasternodeListDiff) mnlistdiff, true);
+                } else if (mnlistdiff instanceof QuorumRotationInfo) {
+                    stateManager.processDiffMessage(null, (QuorumRotationInfo) mnlistdiff, true);
+                } else {
+                    throw new IllegalStateException("Unknown difference message: " + mnlistdiff.getShortName());
+                }
+            }
+
+            if (bootStrapFileFormat < 1) {
+                throw new IllegalArgumentException("file format " + bootStrapFileFormat + " is not supported");
+            }
+            bootStrapLoaded.set(true);
+            log.info("finished loading bootstrap files");
+        } catch (VerificationException | IOException | IllegalStateException | NullPointerException x) {
+            bootStrapLoaded.setException(x);
+            log.info("failed loading bootstrap files: ", x);
+        } finally {
+            isLoadingBootstrap = false;
+            try {
+                if (stream != null)
+                    stream.close();
+                requestAfterMNListReset();
+            } catch (IOException x) {
+                // swallow, file closure failed
+            } catch (BlockStoreException x) {
+                throw new RuntimeException(x);
+            }
+        }
     }
 }

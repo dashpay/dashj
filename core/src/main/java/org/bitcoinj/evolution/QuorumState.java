@@ -96,6 +96,11 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     }
 
     @Override
+    SimplifiedMasternodeListDiff loadDiffMessageFromBuffer(byte[] buffer) {
+        return new SimplifiedMasternodeListDiff(params, buffer);
+    }
+
+    @Override
     public void requestReset(Peer peer, StoredBlock nextBlock) {
         lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(params.getGenesisBlock().getHash(),
                 nextBlock.getHeader().getHash()));
@@ -239,9 +244,14 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         Stopwatch watch = Stopwatch.createStarted();
         Stopwatch watchMNList = Stopwatch.createUnstarted();
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
-        boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
+        boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         this.headerChain = headersChain;
-        log.info("processing mnlistdiff between : " + getMnList().getHeight() + " & " + newHeight + "; " + mnlistdiff);
+        log.info("processing {} mnlistdiff between : {} & {}; {}",
+                isLoadingBootStrap ? "bootstrap" : "requested",
+                getMnList().getHeight(), newHeight, mnlistdiff);
+
+        mnlistdiff.dump(mnList.getHeight(), newHeight);
+
         lock.lock();
         try {
             applyDiff(peer, headersChain, blockChain, mnlistdiff, isLoadingBootStrap);

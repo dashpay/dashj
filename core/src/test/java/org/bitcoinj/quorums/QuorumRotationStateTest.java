@@ -52,19 +52,21 @@ public class QuorumRotationStateTest {
     // this is not supported yet
     @Test
     public void loadFromBootStrapFileV3() throws BlockStoreException {
-        URL datafile = getClass().getResource("qrinfo--1-24868.dat");
+        URL qrinfoPath = getClass().getResource("qrinfo--1-24868.dat");
+        URL mnlistdiffPath = getClass().getResource("mnlistdiff--1-25480.dat");
         initContext(PARAMS);
 
         SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
+        manager.setBootstrap(mnlistdiffPath.getPath(), qrinfoPath.getPath(), SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION);
         context.setMasternodeListManager(manager);
-        SimplifiedMasternodeListManager.setBootStrapFilePath(datafile.getPath(), SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION);
 
         manager.resetMNList(true, true);
 
         try {
-            SimplifiedMasternodeListManager.bootStrapLoaded.get();
+            manager.waitForBootstrapLoaded();
             assertEquals(24856, manager.getMasternodeList().getHeight());
         } catch (InterruptedException | ExecutionException x) {
+            x.printStackTrace();
             fail("unable to load bootstrap file");
         }
 

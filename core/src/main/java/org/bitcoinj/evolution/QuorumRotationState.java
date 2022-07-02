@@ -146,6 +146,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         quorumSnapshotAtHMinus4C = new QuorumSnapshot(0);
 
         activeQuorumLists = new HashMap<>(2);
+        // add an empty list to prevent crashes in the event of race conditions with QuorumState
+        activeQuorumLists.put(0, new SimplifiedQuorumList(params));
         finishInitialization();
     }
 
@@ -159,6 +161,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     protected void clearState() {
         super.clearState();
         init();
+    }
+
+    @Override
+    QuorumRotationInfo loadDiffMessageFromBuffer(byte[] buffer) {
+        return new QuorumRotationInfo(params, buffer);
     }
 
     public QuorumRotationState(Context context, byte[] payload, int offset) {
@@ -188,7 +195,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             chain = (headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight()) ? headersChain : blockChain;
         }
 
-        log.info("processing quorumrotationinfo between (atH): {} & {}; {}", mnListAtH.getHeight(), newHeight, quorumRotationInfo.toString(chain));
+        log.info("processing {} qrinfo between (atH): {} & {}; {}",
+                isLoadingBootStrap ? "bootstrap" : "requested",
+                mnListAtH.getHeight(), newHeight, quorumRotationInfo.toString(chain));
+
         blockAtTip = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffTip().blockHash);
         blockAtH = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtH().blockHash);
         blockMinusC = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinusC().blockHash);
@@ -1185,7 +1195,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             failedAttempts++;
             throw new VerificationException("verification error: NPE", x);
         } catch (BlockStoreException x) {
-            log.info(x.getMessage());
+            log.info(x.getMessage(), x);
             failedAttempts++;
             throw new ProtocolException(x);
         } finally {
