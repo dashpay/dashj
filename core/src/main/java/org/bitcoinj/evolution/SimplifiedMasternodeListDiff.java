@@ -12,6 +12,8 @@ import java.io.OutputStream;
 import java.util.*;
 
 public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
+    private static final String SHORT_NAME = "mnlistdiff";
+
     public Sha256Hash prevBlockHash;
     public Sha256Hash blockHash;
     PartialMerkleTree cbTxMerkleTree;
@@ -29,6 +31,11 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
     public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
+    }
+
+    @Override
+    protected String getShortName() {
+        return SHORT_NAME;
     }
 
     public SimplifiedMasternodeListDiff(NetworkParameters params, Sha256Hash prevBlockHash, Sha256Hash blockHash,

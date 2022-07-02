@@ -39,6 +39,7 @@ import java.util.ArrayList;
 public class QuorumRotationInfo extends AbstractDiffMessage {
 
     private static final Logger log = LoggerFactory.getLogger(QuorumRotationInfo.class);
+    private static final String SHORT_NAME = "qrinfo";
 
     QuorumSnapshot quorumSnapshotAtHMinusC;
     QuorumSnapshot quorumSnapshotAtHMinus2C;
@@ -302,18 +303,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
                 mnListDiffAtHMinus2C.hasChanges() || mnListDiffAtHMinus3C.hasChanges() || mnListDiffAtHMinus4C.hasChanges();
     }
 
-    public void dump(long startHeight, long endHeight) {
-        try {
-            File dumpFile = new File("qrinfo-" + startHeight + "-" + endHeight + ".dat");
-            OutputStream stream = new FileOutputStream(dumpFile);
-            stream.write(bitcoinSerialize());
-            stream.close();
-            log.info("dump successful");
-        } catch (FileNotFoundException x) {
-            log.warn("could not dump qrinfo - file not found.");
-        } catch (IOException x) {
-            // nothing
-            log.warn("could not dump qrinfo", x);
-        }
+    public String getShortName() {
+        return SHORT_NAME;
     }
 }
