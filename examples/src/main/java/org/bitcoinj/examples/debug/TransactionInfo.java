@@ -1,11 +1,13 @@
 package org.bitcoinj.examples.debug;
 
 import org.bitcoinj.core.Transaction;
+import org.json.JSONObject;
 
 public class TransactionInfo {
     long timeReceived;
     int blockRecieved;
     Transaction tx;
+    JSONObject txCore;
 
     TransactionInfo(long timeReceived, int blockRecieved, Transaction tx) {
         this.timeReceived = timeReceived;
