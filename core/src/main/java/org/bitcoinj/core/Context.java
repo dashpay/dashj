@@ -235,10 +235,11 @@ public class Context {
     //
     // Dash Specific
     //
-    private boolean initializedDash = false;
-
+    private boolean initializedObjects = false;
+    private boolean initializedFiles = false;
+    @Deprecated
     public boolean isInitializedDash() {
-        return initializedDash;
+        return initializedObjects;
     }
 
     public void initDash(boolean liteMode, boolean allowInstantX) {
@@ -276,7 +277,7 @@ public class Context {
         masternodeMetaDataManager = new MasternodeMetaDataManager(this);
 
         BLS.Init();
-        initializedDash = true;
+        initializedObjects = true;
     }
 
     public void setMasternodeListManager(SimplifiedMasternodeListManager masternodeListManager) {
@@ -291,63 +292,68 @@ public class Context {
 
         masternodePayments = null;
         masternodeSync = null;
-        initializedDash = false;
+        initializedObjects = false;
         governanceManager = null;
         masternodeListManager = null;
     }
 
-    public void initDashSync(final String directory) {
-        initDashSync(directory, null);
+    public boolean initDashSync(final String directory) {
+        return initDashSync(directory, null);
     }
 
-    public void initDashSync(final String directory, @Nullable String filePrefix) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Context.propagate(Context.this);
-
-                // remove mncache.dat if it exists
-                File oldMnCacheFile = new File(directory, "mncache.dat");
-                if(oldMnCacheFile.exists())
-                    oldMnCacheFile.delete();
-
-                // load governance data
-                if (getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
-                    FlatDB<GovernanceManager> gmdb;
-                    if (filePrefix != null) {
-                        gmdb = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".gobjects", true);
-                    } else {
-                        gmdb = new FlatDB<>(Context.this, directory, false);
-                    }
-                    gmdb.load(governanceManager);
-                }
-
-                FlatDB<SimplifiedMasternodeListManager> smnl;
-                if (filePrefix != null) {
-                    smnl = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".mnlist", true);
-                } else {
-                    smnl = new FlatDB<>(Context.this, directory, false);
-                }
-                smnl.load(masternodeListManager);
-                masternodeListManager.setLoadedFromFile(true);
-                masternodeListManager.onFirstSaveComplete();
-
-                //
-                // Load chainlocks
-                //
-
-                FlatDB<ChainLocksHandler> clh;
-                if (filePrefix != null) {
-                    clh = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".chainlocks", true);
-                } else {
-                    clh = new FlatDB<>(Context.this, directory, false);
-                }
-                clh.load(chainLockHandler);
-
-                signingManager.initializeSignatureLog(directory);
-
+    /**
+     * Initializes objects by loading files from the specified directory
+     *
+     * @param directory location of the files
+     * @param filePrefix file prefix of the files, typically the network name
+     * @return true if the files are loaded.  false if the files were already loaded
+     */
+    public boolean initDashSync(final String directory, @Nullable String filePrefix) {
+        if (!initializedFiles) {
+            // remove mncache.dat if it exists
+            File oldMnCacheFile = new File(directory, "mncache.dat");
+            if (oldMnCacheFile.exists()) {
+                if (oldMnCacheFile.delete())
+                    log.info("removed obsolete mncache.dat");
             }
-        }).start();
+
+            // load governance data
+            if (getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+                FlatDB<GovernanceManager> gmdb;
+                if (filePrefix != null) {
+                    gmdb = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".gobjects", true);
+                } else {
+                    gmdb = new FlatDB<>(Context.this, directory, false);
+                }
+                gmdb.load(governanceManager);
+            }
+
+            // load masternode data
+            FlatDB<SimplifiedMasternodeListManager> smnl;
+            if (filePrefix != null) {
+                smnl = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".mnlist", true);
+            } else {
+                smnl = new FlatDB<>(Context.this, directory, false);
+            }
+            smnl.load(masternodeListManager);
+            masternodeListManager.setLoadedFromFile(true);
+            masternodeListManager.onFirstSaveComplete();
+
+
+            // Load chainlocks
+            FlatDB<ChainLocksHandler> clh;
+            if (filePrefix != null) {
+                clh = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".chainlocks", true);
+            } else {
+                clh = new FlatDB<>(Context.this, directory, false);
+            }
+            clh.load(chainLockHandler);
+
+            signingManager.initializeSignatureLog(directory);
+            initializedFiles = true;
+            return true;
+        }
+        return false;
     }
 
     private void startLLMQThread() {
@@ -366,7 +372,7 @@ public class Context {
     }
 
     public void close() {
-        if (initializedDash) {
+        if (initializedObjects) {
             sporkManager.close(peerGroup);
             masternodeSync.close();
             masternodeListManager.close();
@@ -392,7 +398,7 @@ public class Context {
         this.headerChain = headerChain;
         hashStore = new HashStore(blockChain.getBlockStore());
         blockChain.addNewBestBlockListener(newBestBlockListener);
-        if (initializedDash) {
+        if (initializedObjects) {
             sporkManager.setBlockChain(blockChain, peerGroup);
             masternodeSync.setBlockChain(blockChain, netFullfilledRequestManager);
             masternodeListManager.setBlockChain(blockChain, peerGroup != null ? peerGroup.headerChain : null, peerGroup, quorumManager, quorumSnapshotManager);
@@ -402,6 +408,11 @@ public class Context {
             blockChain.setChainLocksHandler(chainLockHandler);
             quorumManager.setBlockChain(blockChain);
             updatedChainHead(blockChain.getChainHead());
+
+            // trigger saving mechanisms
+            governanceManager.resume();
+            masternodeListManager.resume();
+            chainLockHandler.resume();
         }
         params.setDIPActiveAtTip(blockChain.getBestChainHeight() >= params.getDIP0001BlockHeight());
     }
@@ -454,7 +465,7 @@ public class Context {
     public void updatedChainHead(StoredBlock chainHead)
     {
         params.setDIPActiveAtTip(chainHead.getHeight() >= params.getDIP0001BlockHeight());
-        if(initializedDash) {
+        if(initializedObjects) {
             masternodeListManager.updatedBlockTip(chainHead);
         }
     }

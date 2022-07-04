@@ -86,6 +86,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     public void close() {
         this.blockChain.removeNewBestBlockListener(this.newBestBlockListener);
+        super.close();
     }
 
     @Override
@@ -171,7 +172,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                     }
                     return;
                 }
-                save();
+                saveLater();
             } catch (BlockStoreException x) {
                 return;
             } catch (QuorumNotFoundException x) {
@@ -190,8 +191,6 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                                                           }, 5, TimeUnit.SECONDS);
 
                 return;
-            } catch (FileNotFoundException e) {
-                // do nothing
             }
         }
 
