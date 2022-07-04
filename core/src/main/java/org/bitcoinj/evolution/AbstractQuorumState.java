@@ -233,12 +233,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 pendingBlocksMap.clear();
                 waitingForMNListDiff = false;
                 unCache();
-                try {
-                    if (notUsingBootstrapFile())
-                        stateManager.save();
-                } catch (FileNotFoundException x) {
-                    //swallow, the file has no name
-                }
+                if (notUsingBootstrapFile())
+                    stateManager.save();
+
                 if (requestFreshList) {
                     if (notUsingBootstrapFileAndStream()) {
                         requestAfterMNListReset();

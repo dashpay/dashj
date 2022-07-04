@@ -77,6 +77,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("333")) {
             params = ThreeThreeThreeDevNetParams.get();
             filePrefix = "forwarding-service-333";
+        } else if (args.length > 1 && args[1].equals("jack-daniels")) {
+            params = JackDanielsDevNetParams.get();
+            filePrefix = "forwarding-service-jack-daniels";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);

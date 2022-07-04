@@ -281,9 +281,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
             // if DIP24 is not activated, then trigger a getqrinfo
             completeQuorumState(peer);
-        } catch (FileNotFoundException x) {
-            //file name is not set, do not save
-            log.info(x.getMessage());
         } finally {
             // TODO: do we need this finally block?
         }
@@ -311,9 +308,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             unCache();
             if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
                 save();
-        } catch (FileNotFoundException x) {
-            //file name is not set, do not save
-            log.info(x.getMessage());
         } finally {
             // TODO: do we need a finally?
         }
@@ -375,7 +369,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     @Override
     public void close() {
-        if(shouldProcessMNListDiff()) {
+        if (shouldProcessMNListDiff()) {
             // TODO: reactivate for testnet
             if (!params.isDIP24Only()) {
                 quorumState.removeEventListeners(blockChain, peerGroup);
@@ -384,11 +378,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 quorumRotationState.removeEventListeners(blockChain, peerGroup);
             }
 
-            try {
-                save();
-            } catch (FileNotFoundException x) {
-                //do nothing
-            }
+            saveNow();
+            super.close();
         }
     }
 
@@ -506,6 +497,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public void setLoadedFromFile(boolean loadedFromFile) {
         this.loadedFromFile = loadedFromFile;
+    }
+
+    @Override
+    public void save() {
+        saveLater();
     }
 
     public boolean isLoadedFromFile() {

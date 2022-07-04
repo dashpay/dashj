@@ -6,7 +6,7 @@ import org.bitcoinj.quorums.QuorumRotationInfo;
 import java.io.FileNotFoundException;
 
 public interface QuorumStateManager {
-    void save() throws FileNotFoundException;
+    void save();
     boolean isLoadedFromFile();
 
     void processDiffMessage(Peer peer, SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap);
