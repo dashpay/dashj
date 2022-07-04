@@ -5,9 +5,18 @@ import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/*
  * Created by hashengineering on 5/1/19.
  */
+
+/**
+ * This class is a background thread that will process {@link InstantSendLock}s.  Processing locks
+ * includes verifying {@link InstantSendLock} signatures and notifying {@link org.bitcoinj.core.TransactionConfidence}
+ * listeners.
+ *
+ * ChainLocks are handled by the {@link ChainLocksHandler} class immediately after they are received.
+ */
+
 public class LLMQBackgroundThread extends Thread {
     private static final Logger log = LoggerFactory.getLogger(LLMQBackgroundThread.class);
 
