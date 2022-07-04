@@ -9,6 +9,7 @@ dependencies {
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
     implementation 'org.slf4j:slf4j-jdk14:1.7.30'
     implementation 'org.fusesource.leveldbjni:leveldbjni-all:1.8'
+    implementation 'org.json:json:20210307'
 
     // Dash Specific
     implementation 'org.dashj:dashj-bls:0.18.1'
