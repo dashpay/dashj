@@ -14,14 +14,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 public class AbstractManagerTest {
 
-    Context context = Context.getOrCreate(MainNetParams.get());
+    Context context = new Context(MainNetParams.get());
     static class TestAbstractManager extends AbstractManager {
 
         public Sha256Hash hash;
