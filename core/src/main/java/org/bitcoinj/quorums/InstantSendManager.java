@@ -422,8 +422,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
             // The keys of the removed values are temporaily stored here to avoid invalidating an iterator
             ArrayList<Sha256Hash> removed = Lists.newArrayListWithExpectedSize(maxCount);
 
-            //if (pendingInstantSendLocks.isEmpty())
-            //    return false;
             for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> entry : pendingInstantSendLocks.entrySet()) {
                 Sha256Hash islockHash = entry.getKey();
                 InstantSendLock islock = entry.getValue().getSecond();
@@ -444,9 +442,10 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 pendingInstantSendLocks.remove(islockHash);
             }
 
-            //try to process the invalidInstantSendLocks again
-            //for (InstantSendLock isLock : invalidInstantSendLocks.keySet())
-            //    pendingInstantSendLocks.put(isLock.getHash(), new Pair<>(Long.valueOf(0L), isLock));
+            // TODO: do we need to do this?  How shall we handle failed ISLock verification
+            // try to process the invalidInstantSendLocks again
+            // for (InstantSendLock isLock : invalidInstantSendLocks.keySet())
+            //     pendingInstantSendLocks.put(isLock.getHash(), new Pair<>(Long.valueOf(0L), isLock));
 
         } finally {
             lock.unlock();
@@ -607,6 +606,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 log.info("islock: -- txid={}, islock={}: invalid sig in islock, peer={}",
                         islock.txid.toString(), hash.toString(), nodeId);
                 badISLocks.add(hash);
+                // TODO: how shall we handle failed islock verification? should we test again or forget?
+                // testing again means that we might be a block behind or something
                 // for now, let us not save this to be retested forever...
                 //invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 TransactionConfidence confidence = context.getConfidenceTable().get(islock.txid);
