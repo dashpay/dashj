@@ -41,12 +41,12 @@ public class JackDanielsDevNetParams extends DevNetParams {
                 MASTERNODES, true, 70220);
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
-        DIP0024BlockHeight = 300;
-        isDIP24Only = true;
+        DIP0024BlockHeight = -1;
+        isDIP24Only = false;
 
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET;
-        llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET;
+        llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_DEVNET;
         addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024);
