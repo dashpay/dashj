@@ -164,7 +164,7 @@ public class SimplifiedQuorumList extends Message {
             if (llmqParameters == null)
                 throw new ProtocolException("Quorum llmqType is invalid: " + entry.llmqType);
             // only check the dgkInterval on pre DIP24 blocks
-            if (!LLMQUtils.isQuorumRotationEnabled(Context.get(), params, llmqParameters.type)) {
+            if (llmqParameters.type != params.getLlmqDIP0024InstantSend()) {
                 int dkgInterval = llmqParameters.dkgInterval;
                 if (block.getHeight() % dkgInterval != 0)
                     throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
