@@ -131,7 +131,7 @@ public class SimplifiedQuorumList extends Message {
                     if(llmqParameters == null)
                         throw new ProtocolException("Quorum llmqType is invalid: " + entry.llmqType);
                     int dkgInterval = llmqParameters.dkgInterval;
-                    if (block.getHeight() % dkgInterval != 0)
+                    if (block.getHeight() % dkgInterval != 0 && llmqParameters.getType() != params.getLlmqTypeInstantSendDIP24())
                         throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
                     checkCommitment(entry, Context.get().blockChain.getChainHead(), Context.get().masternodeListManager);
                     isFirstQuorumCheck = false;
@@ -366,7 +366,7 @@ public class SimplifiedQuorumList extends Message {
 
     void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager) throws BlockStoreException
     {
-        if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitmentTxPayload.CURRENT_VERSION) {
+        if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitmentTxPayload.INDEXED_QUORUM_VERSION) {
             throw new VerificationException("invalid quorum commitment version" + commitment.getVersion());
         }
 

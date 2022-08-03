@@ -708,7 +708,7 @@ public abstract class NetworkParameters {
     protected LLMQParameters.LLMQType llmqChainLocks;
     protected LLMQParameters.LLMQType llmqForInstantSend;
     protected LLMQParameters.LLMQType llmqTypePlatform;
-
+    protected LLMQParameters.LLMQType llmqTypeInstantSendDIP24;
     public HashMap<LLMQParameters.LLMQType, LLMQParameters> getLlmqs() {
         return llmqs;
     }
@@ -719,6 +719,10 @@ public abstract class NetworkParameters {
 
     public LLMQParameters.LLMQType getLlmqForInstantSend() {
         return llmqForInstantSend;
+    }
+
+    public LLMQParameters.LLMQType getLlmqTypeInstantSendDIP24() {
+        return llmqTypeInstantSendDIP24;
     }
 
     public int getDIP0008BlockHeight() {

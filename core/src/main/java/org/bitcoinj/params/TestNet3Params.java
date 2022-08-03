@@ -126,9 +126,11 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         llmqs.put(LLMQParameters.LLMQType.LLMQ_400_60, LLMQParameters.llmq400_60);
         llmqs.put(LLMQParameters.LLMQType.LLMQ_400_85, LLMQParameters.llmq400_85);
         llmqs.put(LLMQParameters.LLMQType.LLMQ_100_67, LLMQParameters.llmq100_67);
+        llmqs.put(LLMQParameters.LLMQType.LLMQ_60_75, LLMQParameters.llmq60_75);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
+        llmqTypeInstantSendDIP24 = LLMQParameters.LLMQType.LLMQ_60_75;
 
         BIP65Height = 2431; // 0000039cf01242c7f921dcb4806a5994bc003b48c1973ae0c89b67809c2bb2ab
 

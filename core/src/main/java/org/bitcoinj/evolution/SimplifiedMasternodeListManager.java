@@ -8,6 +8,7 @@ import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.core.listeners.ReorganizeListener;
+import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.quorums.SigningManager;
@@ -254,6 +255,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
             log.info(this.toString());
             unCache();
             failedAttempts = 0;
+
+            if (!isQuorumRotationEnabled) {
+                quorumList.forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
+                    @Override
+                    public void processQuorum(FinalCommitment finalCommitment) {
+                        if (finalCommitment.getLlmqType() == params.getLlmqTypeInstantSendDIP24().getValue()) {
+                            isQuorumRotationEnabled = true;
+                        }
+                    }
+                });
+            }
 
             if(!pendingBlocks.isEmpty()) {
                 StoredBlock thisBlock = pendingBlocks.get(0);
@@ -923,4 +935,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager {
     public ReentrantLock getLock() {
         return lock;
     }
+
+    private boolean isQuorumRotationEnabled = false;
+    public boolean isQuorumRotationEnabled() {
+        return isQuorumRotationEnabled;
+    }
+
 }
