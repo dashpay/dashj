@@ -18,6 +18,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.net.discovery.SeedPeers;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.TestNet3Params;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -56,6 +57,9 @@ public class PortOpen {
 
     public static void main(String[] args) {
         NetworkParameters params = MainNetParams.get();
+
+        if (args[0].equals("testnet"))
+            params = TestNet3Params.get();
 
         SeedPeers seedPeers = new SeedPeers(params);
         try {
