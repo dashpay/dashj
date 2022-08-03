@@ -18,6 +18,8 @@ package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSLazySignature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,6 +33,7 @@ import java.util.List;
  */
 public class InstantSendLock extends Message {
 
+    private static final Logger log = LoggerFactory.getLogger(InstantSendLock.class);
     static final String ISLOCK_REQUESTID_PREFIX = "islock";
     public static final int ISLOCK_VERSION = 0;
     public static final int ISDLOCK_VERSION = 1;
@@ -119,7 +122,8 @@ public class InstantSendLock extends Message {
             bitcoinSerializeToStream(bos);
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException x) {
-            throw new RuntimeException(x);
+            log.error("invalid islock object {}", this, x);
+            return Sha256Hash.ZERO_HASH;
         }
     }
 
