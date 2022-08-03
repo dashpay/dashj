@@ -19,6 +19,7 @@ package org.bitcoinj.examples.debug;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.quorums.LLMQParameters;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +57,13 @@ public class TransactionReport {
 
     JSONObject runRPCCommand(String command) {
         try {
-            Process process = Runtime.getRuntime().exec(String.format("%s -conf=%s %s", dashClientPath, confPath, command));
+            String config;
+            if (confPath.startsWith("-")) {
+                config = confPath;
+            } else {
+                config = String.format("-conf=%s", confPath);
+            }
+            Process process = Runtime.getRuntime().exec(String.format("%s %s %s", dashClientPath, config, command));
             int result = process.waitFor();
 
             BufferedReader stdInput = new BufferedReader(new
@@ -80,8 +87,12 @@ public class TransactionReport {
     public void printReport() {
         try {
             FileWriter writer = new FileWriter(outputFile);
-            writer.append("TxId, Block Received, Block Mined, In Mempool, IS Status, Core instantlock_internal, Block Rec. Mod 48, Cycle Hash, Quorum Hash:Index\n");
+            int cycleLength = -1;
+            writer.append("TxId, Block Received, Block Mined, In Mempool, IS Status, Core instantlock_internal, Block Rec. Mod, Cycle Hash, Quorum Hash:Index\n");
             for (TransactionInfo txInfo : txList) {
+                if (cycleLength == -1) {
+                    cycleLength = LLMQParameters.fromType(txInfo.tx.getParams().getLlmqDIP0024InstantSend()).getDkgInterval();
+                }
                 TransactionConfidence confidence = txInfo.tx.getConfidence();
                 int blockMined = confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING ? confidence.getAppearedAtChainHeight() : -1;
 
@@ -95,9 +106,9 @@ public class TransactionReport {
                         blockMined != -1 ? blockMined - txInfo.blockRecieved : 0,
                         confidence.getIXType(),
                         txInfo.txCore != null && txInfo.txCore.getBoolean("instantlock_internal"),
-                        txInfo.blockRecieved % 48,
-                        confidence.getIXType() != TransactionConfidence.IXType.IX_NONE ? confidence.getInstantSendlock().getCycleHash() : "",
-                        (confidence.getIXType() != TransactionConfidence.IXType.IX_NONE && confidence.getIXType() != TransactionConfidence.IXType.IX_REQUEST) ? (confidence.getInstantSendlock().getQuorumHash() + ":" + confidence.getInstantSendlock().getQuorumIndex()):"");
+                        txInfo.blockRecieved % cycleLength,
+                        confidence.getIXType() != TransactionConfidence.IXType.IX_NONE && confidence.getInstantSendlock() != null ? confidence.getInstantSendlock().getCycleHash() : "",
+                        (confidence.getIXType() != TransactionConfidence.IXType.IX_NONE && confidence.getIXType() != TransactionConfidence.IXType.IX_REQUEST && confidence.getInstantSendlock() != null) ? (confidence.getInstantSendlock().getQuorumHash() + ":" + confidence.getInstantSendlock().getQuorumIndex()):"");
                 writer.append(line);
             }
             writer.close();
