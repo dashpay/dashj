@@ -18,11 +18,13 @@ import java.util.Collections;
 
 public class FinalCommitment extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 1;
+    public static final int INDEXED_QUORUM_VERSION = 2;
 
     private static final Logger log = LoggerFactory.getLogger(FinalCommitment.class);
 
 
     int llmqType; //short
+    int quorumIndex; //uint16
     Sha256Hash quorumHash;
     ArrayList<Boolean> signers;
     ArrayList<Boolean> validMembers;
@@ -55,6 +57,11 @@ public class FinalCommitment extends SpecialTxPayload {
 
         llmqType = readBytes(1)[0];
         quorumHash = readHash();
+        if (getVersion() >= INDEXED_QUORUM_VERSION) {
+            quorumIndex = readUint16();
+        } else {
+            quorumIndex = 0;
+        }
 
         signers = readBooleanArrayList();
         validMembers = readBooleanArrayList();
@@ -78,7 +85,9 @@ public class FinalCommitment extends SpecialTxPayload {
         stream.write(llmqType);
 
         stream.write(quorumHash.getReversedBytes());
-
+        if (getVersion() >= INDEXED_QUORUM_VERSION) {
+            Utils.uint16ToByteStreamLE(quorumIndex, stream);
+        }
         Utils.booleanArrayListToStream(signers, stream);
         Utils.booleanArrayListToStream(validMembers, stream);
 
@@ -126,7 +135,7 @@ public class FinalCommitment extends SpecialTxPayload {
     }
 
     public boolean verify(ArrayList<Masternode> members, boolean checkSigs) {
-        if(getVersion() == 0 || getVersion() > CURRENT_VERSION)
+        if(getVersion() == 0 || getVersion() > INDEXED_QUORUM_VERSION)
             return false;
 
         if(!params.getLlmqs().containsKey(LLMQParameters.LLMQType.fromValue(llmqType))) {
