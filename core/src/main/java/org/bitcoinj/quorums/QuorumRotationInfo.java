@@ -209,6 +209,10 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         return quorumSnapshotList;
     }
 
+    public boolean hasExtraShare() {
+        return extraShare;
+    }
+
     @Override
     public String toString() {
         return "QuorumRotationInfo{" +
@@ -243,9 +247,12 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
                 ",\n mnListDiffAtH=" + mnListDiffAtH.toString(blockStore) +
                 ",\n mnListDiffAtHMinusC=" + mnListDiffAtHMinusC.toString(blockStore) +
                 ",\n mnListDiffAtHMinus2C=" + mnListDiffAtHMinus2C.toString(blockStore) +
-                ",\n mnListDiffAtHMinus3C=" + mnListDiffAtHMinus3C.toString(blockStore) +
-                ",\n mnListDiffAtHMinus4C=" + mnListDiffAtHMinus4C.toString(blockStore) +
-                "------------------------------\n");
+                ",\n mnListDiffAtHMinus3C=" + mnListDiffAtHMinus3C.toString(blockStore));
+        if (mnListDiffAtHMinus4C != null) {
+            builder.append(",\n mnListDiffAtHMinus4C=").append(mnListDiffAtHMinus4C.toString(blockStore));
+        }
+        builder.append("------------------------------\n");
+
         for (FinalCommitment commitment : lastCommitmentPerIndex) {
             builder.append("lastQuorum: ").append(getHeight(commitment.quorumHash, chain)).append(" ").append(commitment).append(":").append("\n");
         }
@@ -300,7 +307,8 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
 
     public boolean hasChanges() {
         return mnListDiffTip.hasChanges() || mnListDiffAtH.hasChanges() || mnListDiffAtHMinusC.hasChanges() ||
-                mnListDiffAtHMinus2C.hasChanges() || mnListDiffAtHMinus3C.hasChanges() || mnListDiffAtHMinus4C.hasChanges();
+                mnListDiffAtHMinus2C.hasChanges() || mnListDiffAtHMinus3C.hasChanges() ||
+                (mnListDiffAtHMinus4C != null && mnListDiffAtHMinus4C.hasChanges());
     }
 
     public String getShortName() {
