@@ -19,15 +19,11 @@ package org.bitcoinj.params;
 
 import static org.bitcoinj.core.Utils.HEX;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.LLMQParameters;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -81,15 +77,11 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         checkpoints.put(   1999, Sha256Hash.wrap("00000052e538d27fa53693efe6fb6892a0c1d26c0235f599171c48a3cce553b1"));
         checkpoints.put(   2999, Sha256Hash.wrap("0000024bc3f4f4cb30d29827c13d921ad77d2c6072e586c7f60d83c2722cdcc5"));
 
-        // updated with Dash Core 0.17.0.3 seed list
-        addrSeeds = new int[]{
-                0x10a8302d,
-                0x4faf4433,
-                0x05dacd3c,
-                0x939c6e8f,
-                0xf9cb3eb2,
-                0xf093bdce
-
+        // updated with Dash Core 18 seed list, made June 6, 2022
+        addrSeeds = new int[] {
+                0x31d2e40d,
+                0x2e4de52b,
+                0x6e0d448a
         };
         bip32HeaderP2PKHpub = 0x043587cf;
         bip32HeaderP2PKHpriv = 0x04358394;
