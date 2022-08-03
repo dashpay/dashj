@@ -1249,6 +1249,7 @@ public class Peer extends PeerSocketHandler {
             case GovernanceObjectVote:
                 return !context.governanceManager.confirmInventoryRequest(inv);
             case InstantSendLock:
+            case InstantSendDeterministicLock:
                 return context.instantSendManager.alreadyHave(inv);
             case ChainLockSignature:
                 return context.chainLockHandler.alreadyHave(inv);
@@ -1297,7 +1298,7 @@ public class Peer extends PeerSocketHandler {
                     goveranceObjects.add(item);
                     break;
                 case MasternodeVerify: break;
-                case InstantSendLock:
+                case InstantSendLock: case InstantSendDeterministicLock:
                     instantSendLocks.add(item);
                     break;
                 case ChainLockSignature:

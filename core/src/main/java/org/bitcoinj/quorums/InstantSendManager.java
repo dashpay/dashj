@@ -463,8 +463,10 @@ public class InstantSendManager implements RecoveredSignatureListener {
             }
         }
 
-        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
+        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES) &&
+                !context.masternodeListManager.isQuorumRotationEnabled()) {
             batchVerifier.verify();
+        }
 
         if (!batchVerifier.getBadSources().isEmpty()) {
             log.warn("islock: bad sources: " + batchVerifier.getBadSources());

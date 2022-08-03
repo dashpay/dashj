@@ -286,7 +286,9 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("qsendrecsigs")) {
             return new QuorumSendRecoveredSignatures(params);
         } else if(command.equals("islock")) {
-            return new InstantSendLock(params, payloadBytes);
+            return new InstantSendLock(params, payloadBytes, InstantSendLock.ISLOCK_VERSION);
+        } else if(command.equals("isdlock")) {
+            return new InstantSendLock(params, payloadBytes, InstantSendLock.ISDLOCK_VERSION);
         } else if(command.equals("clsig")) {
             return new ChainLockSignature(params, payloadBytes);
         } else {
