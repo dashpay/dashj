@@ -489,6 +489,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
         int verifyCount = 0;
         int alreadyVerified = 0;
+        int signHeight = -1;
+        Quorum quorum = null;
         for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> p : pend.entrySet()) {
             Sha256Hash hash = p.getKey();
 
@@ -520,8 +522,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 continue;
             }
 
-
-            int signHeight = -1;
             if (islock.isDeterministic()) {
 
                 final StoredBlock blockIndex;
@@ -542,25 +542,17 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 }
             }
 
-            Quorum quorum = quorumSigningManager.selectQuorumForSigning(llmqType, signHeight, id, signOffset);
+            quorum = quorumSigningManager.selectQuorumForSigning(llmqType, signHeight, id, signOffset);
             if (quorum == null) {
                 // should not happen, but if one fails to select, all others will also fail to select
                 log.info("islock: quorum not found to verify signature [tipHeight: " + tipHeight + " vs " + context.masternodeListManager.getQuorumListAtTip(llmqType).getHeight() + "]");
                 log.info("islock: signHeight: {}, id: {}", signHeight, id);
-                log.info("islock: dash-cli quorum selectquorum {} {}", llmqType.getValue(), id);
+                log.info("islock: dash-cli quorum selectquorum {} {}", llmqType.getValue(), Sha256Hash.wrap(id.getReversedBytes()));
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 return badISLocks;
             }
             Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.commitment.quorumHash, id, islock.txid);
 
-            // do a precheck
-            boolean verified = islock.getSignature().getSignature().verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
-            if (!verified) {
-                log.info("islock: validation failed: {}", islock);
-                log.info("islock:   signHeight: {}", signHeight);
-                log.info("islock:   quorum: {}", quorum.getQuorumHash());
-                log.info("islock: dash-cli quorum selectquorum {} {}", llmqType.getValue(), Sha256Hash.wrap(id.getReversedBytes()));
-            }
             // debug
             islock.setQuorum(quorum.getQuorumHash(), quorum.getQuorumIndex());
             batchVerifier.pushMessage(nodeId, hash, signHash, islock.signature.getSignature(), quorum.commitment.quorumPublicKey);
@@ -606,6 +598,15 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 log.info("islock: -- txid={}, islock={}: invalid sig in islock, peer={}",
                         islock.txid.toString(), hash.toString(), nodeId);
                 badISLocks.add(hash);
+
+                // report invalid signature to the logs
+                log.info("islock: validation failed: {}", islock);
+                log.info("islock:   signHeight: {}", signHeight);
+                log.info("islock:   quorum: {}", quorum.getQuorumHash());
+                Sha256Hash id = islock.getRequestId();
+                log.info("islock: dash-cli quorum selectquorum {} {}", llmqType.getValue(), Sha256Hash.wrap(id.getReversedBytes()));
+
+
                 // TODO: how shall we handle failed islock verification? should we test again or forget?
                 // testing again means that we might be a block behind or something
                 // for now, let us not save this to be retested forever...
@@ -625,7 +626,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             // double-verification of the sig.
             Pair<Quorum, RecoveredSignature> it = recSigs.get(hash);
             if (it != null) {
-                Quorum quorum = it.getFirst();
+                quorum = it.getFirst();
                 RecoveredSignature recSig = it.getSecond();
                 if (!quorumSigningManager.hasRecoveredSigForId(llmqType, recSig.id)) {
                     recSig.updateHash();
@@ -679,7 +680,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             otherIsLock = db.getInstantSendLockByTxid(islock.txid);
             if (otherIsLock != null) {
                 log.info("duplicate islock:  txid={}, islock={}: other islock={}, peer={}",
-                        islock.txid.toString(), hash.toString(),otherIsLock.getHash().toString(), from);
+                        islock.txid.toString(), hash, otherIsLock.getHash().toString(), from);
             }
             for (TransactionOutPoint in : islock.inputs) {
                 otherIsLock = db.getInstantSendLockByInput(in);
