@@ -354,8 +354,12 @@ public class FinalCommitment extends SpecialTxPayload {
         return quorumHash;
     }
 
-    public int getLlmqType() {
+    public int getLlmqTypeInt() {
         return llmqType;
+    }
+
+    public LLMQParameters.LLMQType getLlmqType() {
+        return LLMQParameters.LLMQType.fromValue(llmqType);
     }
 
     public BLSPublicKey getQuorumPublicKey() {

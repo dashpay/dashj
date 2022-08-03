@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -386,29 +387,19 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         lastCommitments = quorumRotationInfo.getLastCommitmentPerIndex();
 
         SimplifiedQuorumList newList = new SimplifiedQuorumList(params);
-        for (int i = 0; i < lastCommitments.size(); ++i) {
-            Quorum quorum = findQuorumByHash(lastCommitments.get(i).getQuorumHash(), i);
-            if (quorum != null) {
-                newList.addQuorum(quorum);
-            } else {
-                quorum = new Quorum(lastCommitments.get(i));
-                newList.addQuorum(quorum);
-            }
+        for (FinalCommitment commitment : lastCommitments) {
+            Quorum quorum = new Quorum(commitment);
+            newList.addQuorum(quorum);
         }
-        newList.setBlock(blockAtH != null ? blockAtH : chain.getChainHead());
-        newList.verifyQuorums(isLoadingBootStrap, chain, true);
-        activeQuorumLists.put((int)newList.getHeight(), newList);
-        log.info("activeQuorumLists: {}", activeQuorumLists.size());
-    }
-
-    private Quorum findQuorumByHash(Sha256Hash quorumHash, int quorumIndex) {
-        for (SimplifiedQuorumList quorumList : quorumsCache.values()) {
-            Quorum quorum = quorumList.getQuorum(quorumHash);
-            if (quorum != null && quorum.getQuorumIndex() == quorumIndex) {
-                return quorum;
-            }
+        try {
+            newList.setBlock(blockAtH != null ? blockAtH : chain.getChainHead());
+            newList.verifyQuorums(isLoadingBootStrap, chain, true);
+            activeQuorumLists.put((int) newList.getHeight(), newList);
+            log.info("activeQuorumLists: {}", activeQuorumLists.size());
+        } catch (Exception e) {
+            log.warn("there was a problem verifying the active quorum list");
+            e.printStackTrace();
         }
-        return null;
     }
 
     public SimplifiedMasternodeList getMnListTip() {
@@ -434,7 +425,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     public GetQuorumRotationInfo getQuorumRotationInfoRequest(StoredBlock nextBlock) {
         try {
             // int requestHeight = nextBlock.getHeight() - nextBlock.getHeight() % getUpdateInterval();
-            int requestHeight = nextBlock.getHeight() % getUpdateInterval() < (11 + LLMQParameters.fromType(llmqType).getSigningActiveQuorumCount() + SigningManager.SIGN_HEIGHT_OFFSET) ?
+            LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
+            int requestHeight = nextBlock.getHeight() % getUpdateInterval() < llmqParameters.getDkgMiningWindowEnd() ? //(11 + LLMQParameters.fromType(llmqType).getSigningActiveQuorumCount() + SigningManager.SIGN_HEIGHT_OFFSET) ?
                     nextBlock.getHeight() - nextBlock.getHeight() % getUpdateInterval() : nextBlock.getHeight();
             // TODO: only do this on an empty list - obsolete
             //if (mnListAtH.getBlockHash().equals(params.getGenesisBlock().getHash()) /*!initChainTipSyncComplete*/) {
@@ -449,17 +441,20 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 requestBlock = headerChain.getBlockStore().get(requestHeight);
             }
             log.info("requesting next qrinfo {} -> {}", nextBlock.getHeight(), requestHeight);
-            ArrayList<Sha256Hash> baseBlockHashes = Lists.newArrayList(
-                    Sets.newHashSet(
-                            requestBlock.getHeader().getPrevBlockHash(),
-                            mnListAtH.getBlockHash(),
-                            mnListAtHMinusC.getBlockHash(),
-                            mnListAtHMinus2C.getBlockHash(),
-                            mnListAtHMinus3C.getBlockHash(),
-                            mnListAtHMinus4C.getBlockHash()
-                    )
+
+            HashSet<Sha256Hash> set = Sets.newHashSet(
+                    requestBlock.getHeader().getPrevBlockHash(),
+                    mnListAtH.getBlockHash(),
+                    mnListAtHMinusC.getBlockHash(),
+                    mnListAtHMinus2C.getBlockHash(),
+                    mnListAtHMinus3C.getBlockHash()
             );
-            return new GetQuorumRotationInfo(context.getParams(), baseBlockHashes, requestBlock.getHeader().getHash(), true);
+            if (mnListAtHMinus4C != null) {
+                set.add(mnListAtHMinus4C.getBlockHash());
+            }
+            ArrayList<Sha256Hash> baseBlockHashes = Lists.newArrayList(set);
+
+            return new GetQuorumRotationInfo(context.getParams(), baseBlockHashes, requestBlock.getHeader().getHash(), false);
         } catch (BlockStoreException x) {
             throw new RuntimeException(x);
         }
@@ -478,7 +473,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     @Override
     boolean needsUpdate(StoredBlock nextBlock) {
         // The idea is to get an update every dkgInterval + 11 + signingActiveQuorumCount blocks
-        int rotationOffset = (11 + params.getLlmqs().get(llmqType).getSigningActiveQuorumCount() + SigningManager.SIGN_HEIGHT_OFFSET);
+        LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
+        int rotationOffset = llmqParameters.getDkgMiningWindowEnd(); //*/(11 + llmqParameters.getSigningActiveQuorumCount() + SigningManager.SIGN_HEIGHT_OFFSET);
 
         return nextBlock.getHeight() % getUpdateInterval() == rotationOffset &&
                 nextBlock.getHeight() >= mnListAtH.getHeight() + rotationOffset;
@@ -1103,6 +1099,20 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             }
         }
         log.warn("obtaining this quorum list: {} from {} quorum lists", topList, activeQuorumLists.size());
+        return topList;
+    }
+
+    public SimplifiedQuorumList getQuorumListForBlock(StoredBlock block) {
+        int max = -1;
+        // create an empty list in the case that activeQuorumLists is empty
+        SimplifiedQuorumList topList = new SimplifiedQuorumList(params);
+        for (Map.Entry<Integer, SimplifiedQuorumList> entry : activeQuorumLists.entrySet()) {
+            if (entry.getKey() >= max && entry.getKey() <= block.getHeight()) {
+                max = entry.getKey();
+                topList = entry.getValue();
+            }
+        }
+        log.warn("obtaining previous quorum list {}: {} from {} quorum lists", block.getHeight(), topList, activeQuorumLists.size());
         return topList;
     }
 

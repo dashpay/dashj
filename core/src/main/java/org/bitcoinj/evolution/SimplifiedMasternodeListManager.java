@@ -462,7 +462,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                         lastQuorumBlock = block.getAncestor(headersChain.getBlockStore(),
                                 block.getHeight() - block.getHeight() % llmqParameters.getDkgInterval() - SigningManager.SIGN_HEIGHT_OFFSET);
 
-                    return getQuorumListAtTip(llmqType);
+                    return quorumRotationState.getQuorumListForBlock(lastQuorumBlock);
                 } catch (BlockStoreException x) {
                     throw new RuntimeException(x);
                 }
@@ -560,7 +560,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             quorumList.forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
                 @Override
                 public void processQuorum(FinalCommitment finalCommitment) {
-                    if (!params.isDIP0024Active(height) && finalCommitment.getLlmqType() == params.getLlmqDIP0024InstantSend().getValue()) {
+                    if (!params.isDIP0024Active(height) && finalCommitment.getLlmqType() == params.getLlmqDIP0024InstantSend()) {
                         params.setDIP0024Active(height);
                         setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
                     }

@@ -160,7 +160,7 @@ public class SimplifiedQuorumList extends Message {
     private void verifyQuorum(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
         StoredBlock block = chain.getBlockStore().get(entry.getQuorumHash());
         if (block != null) {
-            LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(entry.getLlmqType()));
+            LLMQParameters llmqParameters = params.getLlmqs().get(entry.getLlmqType());
             if (llmqParameters == null)
                 throw new ProtocolException("Quorum llmqType is invalid: " + entry.llmqType);
             // only check the dgkInterval on pre DIP24 blocks
