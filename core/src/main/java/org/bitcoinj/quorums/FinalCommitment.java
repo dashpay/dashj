@@ -1,8 +1,25 @@
-package org.bitcoinj.quorums;
+/*
+ * Copyright 2019 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+package org.bitcoinj.quorums;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSLazyPublicKey;
+import org.bitcoinj.crypto.BLSLazySignature;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.Masternode;
@@ -11,6 +28,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -18,12 +36,14 @@ import java.util.Collections;
 
 public class FinalCommitment extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 1;
+    public static final int INDEXED_QUORUM_VERSION = 2;
 
     private static final Logger log = LoggerFactory.getLogger(FinalCommitment.class);
 
 
     int llmqType; //short
     Sha256Hash quorumHash;
+    int quorumIndex; //uint16
     ArrayList<Boolean> signers;
     ArrayList<Boolean> validMembers;
 
@@ -49,13 +69,37 @@ public class FinalCommitment extends SpecialTxPayload {
         super(params, tx);
     }
 
+    public FinalCommitment(NetworkParameters params, int version,
+                           int llmqType, Sha256Hash quorumHash,
+                           int quorumIndex, int signersCount, byte [] signers, int validMembersCount, byte [] validMembers,
+                           byte [] quorumPublicKey, Sha256Hash quorumVvecHash, BLSLazySignature signature, BLSLazySignature membersSignature) {
+        super(version);
+        this.llmqType = llmqType;
+        this.quorumHash = quorumHash;
+        this.quorumIndex = quorumIndex;
+        int quorumSize = LLMQParameters.fromType(LLMQParameters.LLMQType.fromValue(llmqType)).size;
+        this.signers = Utils.booleanArrayList(quorumSize, signers);
+        this.validMembers = Utils.booleanArrayList(quorumSize, validMembers);
+        this.quorumPublicKey = new BLSPublicKey(params, quorumPublicKey, 0);
+        this.quorumVvecHash = quorumVvecHash;
+        this.quorumSignature = signature.getSignature();
+        this.membersSignature = membersSignature.getSignature();
+        length = 1 + 32 + (version >= INDEXED_QUORUM_VERSION ? 2 : 0) + VarInt.sizeOf(quorumSize) * 2 +
+                signers.length + validMembers.length + quorumPublicKey.length + 32 + signature.getMessageSize() +
+                membersSignature.getMessageSize();
+    }
+
     @Override
     protected void parse() throws ProtocolException {
         super.parse();
 
         llmqType = readBytes(1)[0];
         quorumHash = readHash();
-
+        if (version >= INDEXED_QUORUM_VERSION) {
+            quorumIndex = readUint16();
+        } else {
+            quorumIndex = 0;
+        }
         signers = readBooleanArrayList();
         validMembers = readBooleanArrayList();
 
@@ -78,7 +122,9 @@ public class FinalCommitment extends SpecialTxPayload {
         stream.write(llmqType);
 
         stream.write(quorumHash.getReversedBytes());
-
+        if (version >= INDEXED_QUORUM_VERSION) {
+            Utils.uint16ToByteStreamLE(quorumIndex, stream);
+        }
         Utils.booleanArrayListToStream(signers, stream);
         Utils.booleanArrayListToStream(validMembers, stream);
 
@@ -108,12 +154,60 @@ public class FinalCommitment extends SpecialTxPayload {
         return "finalCommitment";
     }
 
-    @Override
+    /**
+     *
+     * @return
+     *
+     *     {
+     *       version: 1,
+     *       llmqType: 101,
+     *       quorumHash: '00000235acaad85cb429d3d3738380fdbad54a62c778243329ac0e85e9fe6246',
+     *       quorumIndex: 0,
+     *       signersCount: 11,
+     *       signers: 'df0f',
+     *       validMembersCount: 12,
+     *       validMembers: 'ff0f',
+     *       quorumPublicKey: '171454d87dbed06c1d21d015360520bf597aa0680aad9634ca26531fe7d562db1359287ec15f6aef7f95d958d1b6053f',
+     *       quorumVvecHash: 'cf1cbb60e77248fb069849bd4dae3e008c1be6bb3ef8f443e740f2bcd46e2740',
+     *       quorumSig: '0025d7a0ce8af1e9aa973b5377aa126ec64575cac9e8a76523dc8392d54a5a86ee2a2c77e76e1a3a58da7481171199b5155e700869948472dbec15c83d21386f8e975231e80edf675e47c7dbdddfb500c30e2f464156396cb1736ae6a97f67fc',
+     *       membersSig: '06cf0c148ada4f3edf7e4f6fd7c85f9583917c69ebe2623604a62a4623017d0b407af2b862c1863bcd07ae983af2876316fdf8ca089fec414db735627ca8299433d5cfcbcb381745231190009e47e2542f2038f251ad530c8f3eb7ac1d768cd8',
+     *     }
+     */
+
     public JSONObject toJson() {
         JSONObject result = new JSONObject();
+        result.put("version", getVersion());
+        result.put("llmqType", getLlmqType());
+        result.put("quorumHash", quorumHash.toString());
+        result.put("quorumIndex", quorumIndex);
+        result.put("signersCount", signers.size());
 
-        result.append("version", getVersion());
+        String signersBytes = "00";
+        try {
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            Utils.booleanArrayListToStreamWithOutSize(signers, stream);
+            signersBytes = Utils.HEX.encode(stream.toByteArray());
+        } catch (IOException x) {
+            //swallow
+        }
 
+
+        result.put("signers", signersBytes);
+        result.put("validMembersCount", validMembers.size());
+
+        String validMemberBytes = "00";
+        try {
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            Utils.booleanArrayListToStreamWithOutSize(validMembers, stream);
+            validMemberBytes = Utils.HEX.encode(stream.toByteArray());
+        } catch (IOException x) {
+            //swallow
+        }
+        result.put("validMembers", validMemberBytes);
+        result.put("quorumPublicKey", quorumPublicKey);
+        result.put("quorumVvecHash", quorumVvecHash);
+        result.put("quorumSig", quorumSignature);
+        result.put("membersSig", membersSignature);
         return result;
     }
 
@@ -126,7 +220,7 @@ public class FinalCommitment extends SpecialTxPayload {
     }
 
     public boolean verify(ArrayList<Masternode> members, boolean checkSigs) {
-        if(getVersion() == 0 || getVersion() > CURRENT_VERSION)
+        if(getVersion() == 0 || getVersion() > INDEXED_QUORUM_VERSION)
             return false;
 
         if(!params.getLlmqs().containsKey(LLMQParameters.LLMQType.fromValue(llmqType))) {
@@ -211,7 +305,7 @@ public class FinalCommitment extends SpecialTxPayload {
             return false;
         }
         if (quorumPublicKey.isValid() ||
-                !quorumVvecHash.equals(Sha256Hash.ZERO_HASH) ||
+                !quorumVvecHash.isZero() ||
                 membersSignature.isValid() ||
                 quorumSignature.isValid()) {
             return false;
@@ -260,8 +354,12 @@ public class FinalCommitment extends SpecialTxPayload {
         return quorumHash;
     }
 
-    public int getLlmqType() {
+    public int getLlmqTypeInt() {
         return llmqType;
+    }
+
+    public LLMQParameters.LLMQType getLlmqType() {
+        return LLMQParameters.LLMQType.fromValue(llmqType);
     }
 
     public BLSPublicKey getQuorumPublicKey() {
@@ -286,5 +384,28 @@ public class FinalCommitment extends SpecialTxPayload {
 
     public ArrayList<Boolean> getValidMembers() {
         return validMembers;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof FinalCommitment) {
+            FinalCommitment fc = (FinalCommitment) o;
+            if (version == fc.version &&
+                    llmqType == fc.llmqType &&
+                    quorumHash.equals(fc.quorumHash) &&
+                    quorumIndex == fc.quorumIndex &&
+                    countSigners() == fc.countSigners() &&
+                    countValidMembers() == fc.countValidMembers() &&
+                    signers.equals(fc.signers) &&
+                    validMembers.equals(fc.validMembers) &&
+                    quorumPublicKey.equals(fc.quorumPublicKey) &&
+                    quorumVvecHash.equals(fc.quorumVvecHash) &&
+                    quorumSignature.equals(fc.quorumSignature) &&
+                    membersSignature.equals(fc.membersSignature)
+            ) {
+                return true;
+            }
+        }
+        return false;
     }
 }

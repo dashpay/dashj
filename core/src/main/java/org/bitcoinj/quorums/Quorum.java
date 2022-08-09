@@ -9,6 +9,11 @@ public class Quorum {
     LLMQParameters llmqParameters;
     FinalCommitment commitment;
 
+    public Quorum(FinalCommitment commitment) {
+        this.commitment = commitment;
+        this.llmqParameters = LLMQParameters.fromType(commitment.llmqType);
+    }
+
     public Quorum(LLMQParameters llmqParameters, FinalCommitment commitment) {
         this.llmqParameters = llmqParameters;
         this.commitment = commitment;
@@ -35,5 +40,9 @@ public class Quorum {
 
     public Sha256Hash getQuorumHash() {
         return commitment.quorumHash;
+    }
+
+    public int getQuorumIndex() {
+        return commitment.quorumIndex;
     }
 }

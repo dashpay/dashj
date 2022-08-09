@@ -9,7 +9,7 @@ import java.io.OutputStream;
 
 public abstract class SpecialTxPayload extends Message {
 
-    int version;
+    protected int version;
     Transaction parentTransaction;
 
     public SpecialTxPayload(NetworkParameters params, Transaction tx) {
