@@ -1,9 +1,9 @@
 name: Java CI
 on:
   push:
-    branches: [ master, release-* ]
+    branches: [ master, release-*, feature-* ]
   pull_request:
-    branches: [ master, release-* ]
+    branches: [ master, release-*, feature-* ]
 jobs:
   build:
     runs-on: ${{ matrix.os }}
