@@ -1,12 +1,18 @@
 package org.bitcoinj.core;
 
 
+import org.bitcoinj.manager.ManagerFiles;
 import org.bitcoinj.store.FlatDB;
+import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
+import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -20,6 +26,11 @@ import static com.google.common.base.Preconditions.checkState;
 public abstract class AbstractManager extends Message {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractManager.class);
+
+    // Saving to files
+    public static final int DELAY_TIME = 100;
+    private final ReentrantLock fileManagerLock = Threading.lock("abstract-manager-save-lock");
+    protected volatile ManagerFiles vFileManager;
 
     /**
      * The Context.
@@ -190,32 +201,99 @@ public abstract class AbstractManager extends Message {
     }
 
     public void setFormatVersion(int formatVersion) {
-        this.formatVersion = formatVersion;
+        this.formatVersion = Math.max(formatVersion, this.formatVersion);
     }
 
     /**
-     * Save.
+     * <p>Sets up manager to auto-save itself to the given file, using temp files with atomic renames to ensure
+     * consistency. After connecting to a file, you no longer need to save the manager manually, it will do it
+     * whenever necessary. Manager {@link #bitcoinSerializeToStream(OutputStream)} serialization will be used.</p>
      *
-     * @throws NullPointerException the null pointer exception
+     * <p>If delayTime is set, a background thread will be created and the manager file will only be saved to
+     * disk every so many time units. If no changes have occurred for the given time period, nothing will be written.
+     * In this way disk IO can be rate limited. It's a good idea to set this as otherwise the manager can change very
+     * frequently, eg if there are a lot of transactions in it or during block sync, and there will be a lot of redundant
+     * writes. <b>You should still save the manager manually using {@link #saveToFile(File)} when your program
+     * is about to shut down as the JVM will not wait for the background thread.</b></p>
+     *
+     * <p>An event listener can be provided. If a delay greater than 0 was specified, it will be called on a background thread
+     * with the manager locked when an auto-save occurs. If delay is zero or you do something that always triggers
+     * an immediate save, like adding a key, the event listener will be invoked on the calling threads.</p>
+     *
+     * @param f The destination file to save to.
+     * @param delayTime How many time units to wait until saving the manager on a background thread.
+     * @param timeUnit the unit of measurement for delayTime.
+     * @param eventListener callback to be informed when the auto-save thread does things, or null
      */
-    public void save() throws FileNotFoundException {
-        if(filename != null) {
-            //save in a separate thread
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        long start = Utils.currentTimeMillis();
-                        FlatDB<AbstractManager> flatDB = new FlatDB<>(context, filename, true, magicMessage, getFormatVersion());
-                        flatDB.dump(AbstractManager.this);
-                        long end = Utils.currentTimeMillis();
-                        log.info(AbstractManager.class.getCanonicalName() + " Save time:  " + (end - start) + "ms");
-                    } catch (Exception x) {
-                        log.warn("Saving failed for " + getDefaultFileName());
-                    }
-                }
-            }).start();
-        } else throw new FileNotFoundException("filename is not set");
+    public ManagerFiles autosaveToFile(File f, long delayTime, TimeUnit timeUnit,
+                                      @Nullable ManagerFiles.Listener eventListener) {
+        fileManagerLock.lock();
+        try {
+            checkState(vFileManager == null, "Already auto saving this manager.");
+            filename = f.getAbsolutePath();
+            ManagerFiles manager = new ManagerFiles(this, f, delayTime, timeUnit);
+            if (eventListener != null)
+                manager.setListener(eventListener);
+            vFileManager = manager;
+            return manager;
+        } finally {
+            fileManagerLock.unlock();
+        }
+    }
+
+    /**
+     * <p>
+     * Disables auto-saving, after it had been enabled with
+     * {@link AbstractManager#autosaveToFile(File, long, TimeUnit, ManagerFiles.Listener)}
+     * before. This method blocks until finished.
+     * </p>
+     */
+    public void shutdownAutosaveAndWait() {
+        fileManagerLock.lock();
+        try {
+            ManagerFiles files = vFileManager;
+            vFileManager = null;
+            checkState(files != null, "Auto saving manager not enabled.");
+            files.shutdownAndWait();
+        } finally {
+            fileManagerLock.unlock();
+        }
+    }
+
+    /**
+     * Save
+     */
+    protected void saveNow() {
+        ManagerFiles files = vFileManager;
+        if (files != null) {
+            try {
+                files.saveNow();  // This calls back into saveToFile().
+            } catch (IOException e) {
+                // Can't really do much at this point, just let the API user know.
+                log.error("Failed to save manager to disk!", e);
+                Thread.UncaughtExceptionHandler handler = Threading.uncaughtExceptionHandler;
+                if (handler != null)
+                    handler.uncaughtException(Thread.currentThread(), e);
+            }
+        }
+    }
+
+    /** Requests an asynchronous save on a background thread */
+    protected void saveLater() {
+        ManagerFiles files = vFileManager;
+        if (files != null)
+            files.saveLater();
+    }
+
+    /**
+     * Uses manager serialization to save the manager to the given file. To learn more about this file format, see
+     * {@link #bitcoinSerializeToStream(OutputStream)}. Writes out first to a temporary file in the same directory and then renames
+     * once written.
+     */
+    public void saveToFile(File f) throws IOException {
+        File directory = f.getAbsoluteFile().getParentFile();
+        File temp = File.createTempFile("manager", null, directory);
+        saveToFile(temp, f);
     }
 
     /**
@@ -225,11 +303,48 @@ public abstract class AbstractManager extends Message {
      */
     public void setFilename(String filename) {
         this.filename = filename;
+        autosaveToFile(new File(filename), DELAY_TIME, TimeUnit.MILLISECONDS, null);
     }
 
-    public abstract void close();
+    public void close() {
+        shutdownAutosaveAndWait();
+    }
+
+    public void resume() {
+        if (filename != null && vFileManager == null) {
+            autosaveToFile(new File(filename), DELAY_TIME, TimeUnit.MILLISECONDS, null);
+        }
+    }
 
     public void onFirstSaveComplete() {
 
+    }
+
+    public void saveToFile(File temp, File destFile) throws IOException {
+        fileManagerLock.lock();
+        try {
+            FlatDB<AbstractManager> flatDB = new FlatDB<>(context, temp.getAbsolutePath(), true, magicMessage, getFormatVersion());
+            flatDB.dump(AbstractManager.this);
+
+            if (Utils.isWindows()) {
+                // Work around an issue on Windows whereby you can't rename over existing files.
+                File canonical = destFile.getCanonicalFile();
+                if (canonical.exists() && !canonical.delete())
+                    throw new IOException("Failed to delete canonical manager file for replacement with autosave");
+                if (temp.renameTo(canonical))
+                    return;  // else fall through.
+                throw new IOException("Failed to rename " + temp + " to " + canonical);
+            } else if (!temp.renameTo(destFile)) {
+                throw new IOException("Failed to rename " + temp + " to " + destFile);
+            }
+        } catch (RuntimeException e) {
+            log.error("Failed whilst saving manager file", e);
+            throw e;
+        } finally {
+            fileManagerLock.unlock();
+            if (temp.exists()) {
+                log.warn("Temp file still exists after failed save.");
+            }
+        }
     }
 }
