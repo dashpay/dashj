@@ -19,6 +19,7 @@ package org.bitcoinj.examples;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.examples.debug.TransactionReport;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.*;
@@ -45,11 +46,13 @@ public class ForwardingService {
     private static Address forwardingAddress;
     private static WalletAppKit kit;
 
+    private static TransactionReport txReport;
+
     public static void main(String[] args) throws Exception {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
         BriefLogFormatter.init();
         if (args.length < 1) {
-            System.err.println("Usage: address-to-send-back-to [regtest|testnet|krupnik|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
+            System.err.println("Usage: address-to-send-back-to [regtest|testnet|333|devnet] [devnet-name] [devnet-sporkaddress] [devnet-port] [devnet-dnsseed...]");
             return;
         }
 
@@ -57,6 +60,7 @@ public class ForwardingService {
         NetworkParameters params;
         String filePrefix;
         String checkpoints = null;
+        int lastArg = 2;
         if (args.length > 1 && args[1].equals("testnet")) {
             params = TestNet3Params.get();
             filePrefix = "forwarding-service-testnet";
@@ -67,16 +71,36 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("krupnik")) {
             params = KrupnikDevNetParams.get();
             filePrefix = "forwarding-service-krupnik";
+        } else if (args.length > 1 && args[1].equals("malort")) {
+            params = MalortDevNetParams.get();
+            filePrefix = "forwarding-service-malort";
+        } else if (args.length > 1 && args[1].equals("333")) {
+            params = ThreeThreeThreeDevNetParams.get();
+            filePrefix = "forwarding-service-333";
+        } else if (args.length > 1 && args[1].equals("jack-daniels")) {
+            params = JackDanielsDevNetParams.get();
+            filePrefix = "forwarding-service-jack-daniels";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
             params = DevNetParams.get(args[2], args[3], Integer.parseInt(args[4]), dnsSeeds);
             filePrefix = "forwarding-service-devnet";
-        }else {
+        } else {
+            lastArg = 1;
             params = MainNetParams.get();
             filePrefix = "forwarding-service";
             checkpoints = "checkpoints.txt";
         }
+
+        String clientPath = "";
+        String confPath = "";
+        if (lastArg + 1 <= args.length) {
+            clientPath = args[lastArg];
+            if (lastArg + 2 >= args.length)
+                confPath = args[lastArg + 1];
+        }
+
+        txReport = new TransactionReport(clientPath, confPath);
         // Parse the address given as the first parameter.
         forwardingAddress = Address.fromBase58(params, args[0]);
 
@@ -89,6 +113,9 @@ public class ForwardingService {
             protected void onSetupCompleted() {
                 if(!kit.wallet().hasAuthenticationKeyChains())
                     kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
+                kit.peerGroup().setMaxConnections(6); // for small devnets
+                kit.peerGroup().setUseLocalhostPeerWhenPossible(false);
+                kit.peerGroup().setDropPeersAfterBroadcast(params.getDropPeersAfterBroadcast());
             }
         };
         kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
@@ -128,11 +155,15 @@ public class ForwardingService {
                 // to be double spent, no harm done. Wallet.allowSpendingUnconfirmedTransactions() would have to
                 // be called in onSetupCompleted() above. But we don't do that here to demonstrate the more common
                 // case of waiting for a block.
+
+                txReport.add(System.currentTimeMillis(), w.getLastBlockSeenHeight(), tx);
                 Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>() {
                     @Override
                     public void onSuccess(TransactionConfidence result) {
                         System.out.println("Confirmation received.");
                         forwardCoins(tx);
+
+                        txReport.printReport();
                     }
 
                     @Override
@@ -156,6 +187,9 @@ public class ForwardingService {
     private static void forwardCoins(Transaction tx) {
         try {
             // Now send the coins onwards.
+            if (kit.wallet().getBalance().equals(Coin.ZERO)) {
+                return;
+            }
             SendRequest sendRequest = SendRequest.emptyWallet(forwardingAddress);
             Wallet.SendResult sendResult = kit.wallet().sendCoins(sendRequest);
             checkNotNull(sendResult);  // We should never try to send more coins than we have!
