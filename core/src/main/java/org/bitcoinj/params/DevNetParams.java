@@ -98,6 +98,8 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         majorityWindow = TestNet3Params.TESTNET_MAJORITY_WINDOW;
 
         DIP0001BlockHeight = 2;
+        DIP0003BlockHeight = 2;
+        DIP0008BlockHeight = 2;
 
         fulfilledRequestExpireTime = 5*60;
         masternodeMinimumConfirmations = 1;

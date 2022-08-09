@@ -125,6 +125,11 @@ public abstract class NetworkParameters {
     /** Used to check for DIP0008 upgrade */
     protected int DIP0008BlockHeight;
 
+    /** Used to check for DIP0008 upgrade */
+    protected int DIP0024BlockHeight;
+
+    protected boolean isDIP24Only = false;
+
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
      * by looking at the port number.
@@ -655,7 +660,7 @@ public abstract class NetworkParameters {
     public abstract int getProtocolVersionNum(final ProtocolVersion version);
 
     public static enum ProtocolVersion {
-        MINIMUM(70214),
+        MINIMUM(70220),
         PONG(60001),
         BLOOM_FILTER(MINIMUM.getBitcoinProtocolVersion()),
         BLOOM_FILTER_BIP111(MINIMUM.getBitcoinProtocolVersion()+1),
@@ -752,6 +757,8 @@ public abstract class NetworkParameters {
     protected LLMQParameters.LLMQType llmqChainLocks;
     protected LLMQParameters.LLMQType llmqForInstantSend;
     protected LLMQParameters.LLMQType llmqTypePlatform;
+    protected LLMQParameters.LLMQType llmqTypeDIP0024InstantSend;
+    protected LLMQParameters.LLMQType llmqTypeMnhf;
 
     public HashMap<LLMQParameters.LLMQType, LLMQParameters> getLlmqs() {
         return llmqs;
@@ -765,12 +772,37 @@ public abstract class NetworkParameters {
         return llmqForInstantSend;
     }
 
+    public LLMQParameters.LLMQType getLlmqDIP0024InstantSend() {
+        return llmqTypeDIP0024InstantSend;
+    }
+
     protected void addLLMQ(LLMQParameters.LLMQType type) {
         llmqs.put(type, LLMQParameters.fromType(type));
     }
 
     public int getDIP0008BlockHeight() {
         return DIP0008BlockHeight;
+    }
+
+    public int getDIP0024BlockHeight() {
+        return DIP0024BlockHeight;
+    }
+
+    public boolean isDIP0024Active(StoredBlock block) {
+        return block.getHeight() >= DIP0024BlockHeight;
+    }
+
+    public boolean isDIP0024Active(int height) {
+        return height > DIP0024BlockHeight;
+    }
+
+    public void setDIP0024Active(int height) {
+        System.out.println("DIP24 is now active");
+        DIP0024BlockHeight = height;
+    }
+
+    public boolean isDIP24Only() {
+        return isDIP24Only;
     }
 
     public int getBIP65Height() {
@@ -788,7 +820,7 @@ public abstract class NetworkParameters {
         return new String[0];
     }
 
-    protected List<Sha256Hash> assumeValidQuorums;
+    protected List<Sha256Hash> assumeValidQuorums = new ArrayList<>();
 
     public List<Sha256Hash> getAssumeValidQuorums() {
         return assumeValidQuorums;
@@ -811,4 +843,11 @@ public abstract class NetworkParameters {
                 return "invalid";
         }
     }
+    /** the default value for dropping peers after broadcast */
+    protected boolean dropPeersAfterBroadcast = true;
+
+    public boolean getDropPeersAfterBroadcast() {
+        return dropPeersAfterBroadcast;
+    }
+
 }
