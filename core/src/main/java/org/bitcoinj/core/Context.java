@@ -76,6 +76,7 @@ public class Context {
     private boolean allowInstantX = true; //allow InstantX in litemode
     public PeerGroup peerGroup;
     public AbstractBlockChain blockChain;
+    @Nullable public AbstractBlockChain headerChain;
     public SporkManager sporkManager;
     public MasternodePayments masternodePayments;
     public MasternodeSync masternodeSync;
@@ -89,6 +90,7 @@ public class Context {
     public InstantSendManager instantSendManager;
     public SigningManager signingManager;
     public QuorumManager quorumManager;
+    public QuorumSnapshotManager quorumSnapshotManager;
     private RecoveredSignaturesDatabase recoveredSigsDB;
     public ChainLocksHandler chainLockHandler;
     private LLMQBackgroundThread llmqBackgroundThread;
@@ -233,10 +235,11 @@ public class Context {
     //
     // Dash Specific
     //
-    private boolean initializedDash = false;
-
+    private boolean initializedObjects = false;
+    private boolean initializedFiles = false;
+    @Deprecated
     public boolean isInitializedDash() {
-        return initializedDash;
+        return initializedObjects;
     }
 
     public void initDash(boolean liteMode, boolean allowInstantX) {
@@ -257,7 +260,6 @@ public class Context {
 
         masternodePayments = new MasternodePayments(this);
         masternodeSync = syncFlags != null ? new MasternodeSync(this, syncFlags, verifyFlags) : new MasternodeSync(this);
-        initializedDash = true;
         governanceManager = new GovernanceManager(this);
         triggerManager = new GovernanceTriggerManager(this);
 
@@ -265,6 +267,7 @@ public class Context {
         masternodeListManager = new SimplifiedMasternodeListManager(this);
         recoveredSigsDB = new SPVRecoveredSignaturesDatabase(this);
         quorumManager = new SPVQuorumManager(this, masternodeListManager);
+        quorumSnapshotManager = new QuorumSnapshotManager(this);
         signingManager = new SigningManager(this, recoveredSigsDB);
 
         instantSendDB = new SPVInstantSendDatabase(this);
@@ -274,6 +277,12 @@ public class Context {
         masternodeMetaDataManager = new MasternodeMetaDataManager(this);
 
         BLS.Init();
+        initializedObjects = true;
+    }
+
+    public void setMasternodeListManager(SimplifiedMasternodeListManager masternodeListManager) {
+        this.masternodeListManager = masternodeListManager;
+        masternodeListManager.setBlockChain(blockChain, headerChain, peerGroup, quorumManager, quorumSnapshotManager);
     }
 
     public void closeDash() {
@@ -283,63 +292,68 @@ public class Context {
 
         masternodePayments = null;
         masternodeSync = null;
-        initializedDash = false;
+        initializedObjects = false;
         governanceManager = null;
         masternodeListManager = null;
     }
 
-    public void initDashSync(final String directory) {
-        initDashSync(directory, null);
+    public boolean initDashSync(final String directory) {
+        return initDashSync(directory, null);
     }
 
-    public void initDashSync(final String directory, @Nullable String filePrefix) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Context.propagate(Context.this);
-
-                // remove mncache.dat if it exists
-                File oldMnCacheFile = new File(directory, "mncache.dat");
-                if(oldMnCacheFile.exists())
-                    oldMnCacheFile.delete();
-
-                // load governance data
-                if (getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
-                    FlatDB<GovernanceManager> gmdb;
-                    if (filePrefix != null) {
-                        gmdb = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".gobjects", true);
-                    } else {
-                        gmdb = new FlatDB<>(Context.this, directory, false);
-                    }
-                    gmdb.load(governanceManager);
-                }
-
-                FlatDB<SimplifiedMasternodeListManager> smnl;
-                if (filePrefix != null) {
-                    smnl = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".mnlist", true);
-                } else {
-                    smnl = new FlatDB<>(Context.this, directory, false);
-                }
-                smnl.load(masternodeListManager);
-                masternodeListManager.setLoadedFromFile(true);
-                masternodeListManager.onFirstSaveComplete();
-
-                //
-                // Load chainlocks
-                //
-
-                FlatDB<ChainLocksHandler> clh;
-                if (filePrefix != null) {
-                    clh = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".chainlocks", true);
-                } else {
-                    clh = new FlatDB<>(Context.this, directory, false);
-                }
-                clh.load(chainLockHandler);
-
-                signingManager.initializeSignatureLog(directory);
-
+    /**
+     * Initializes objects by loading files from the specified directory
+     *
+     * @param directory location of the files
+     * @param filePrefix file prefix of the files, typically the network name
+     * @return true if the files are loaded.  false if the files were already loaded
+     */
+    public boolean initDashSync(final String directory, @Nullable String filePrefix) {
+        if (!initializedFiles) {
+            // remove mncache.dat if it exists
+            File oldMnCacheFile = new File(directory, "mncache.dat");
+            if (oldMnCacheFile.exists()) {
+                if (oldMnCacheFile.delete())
+                    log.info("removed obsolete mncache.dat");
             }
-        }).start();
+
+            // load governance data
+            if (getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+                FlatDB<GovernanceManager> gmdb;
+                if (filePrefix != null) {
+                    gmdb = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".gobjects", true);
+                } else {
+                    gmdb = new FlatDB<>(Context.this, directory, false);
+                }
+                gmdb.load(governanceManager);
+            }
+
+            // load masternode data
+            FlatDB<SimplifiedMasternodeListManager> smnl;
+            if (filePrefix != null) {
+                smnl = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".mnlist", true);
+            } else {
+                smnl = new FlatDB<>(Context.this, directory, false);
+            }
+            smnl.load(masternodeListManager);
+            masternodeListManager.setLoadedFromFile(true);
+            masternodeListManager.onFirstSaveComplete();
+
+
+            // Load chainlocks
+            FlatDB<ChainLocksHandler> clh;
+            if (filePrefix != null) {
+                clh = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".chainlocks", true);
+            } else {
+                clh = new FlatDB<>(Context.this, directory, false);
+            }
+            clh.load(chainLockHandler);
+
+            signingManager.initializeSignatureLog(directory);
+            initializedFiles = true;
+            return true;
+        }
+        return false;
     }
 
     private void startLLMQThread() {
@@ -358,7 +372,7 @@ public class Context {
     }
 
     public void close() {
-        if(initializedDash) {
+        if (initializedObjects) {
             sporkManager.close(peerGroup);
             masternodeSync.close();
             masternodeListManager.close();
@@ -369,28 +383,38 @@ public class Context {
             if(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS))
                 llmqBackgroundThread.interrupt();
             blockChain.removeNewBestBlockListener(newBestBlockListener);
-            scheduledMasternodeSync.cancel(true);
+            if (scheduledMasternodeSync != null)
+                scheduledMasternodeSync.cancel(true);
+            blockChain.close();
+            if (headerChain != null)
+                headerChain.close();
         }
     }
 
-    public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)
+    public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain blockChain, @Nullable AbstractBlockChain headerChain)
     {
         this.peerGroup = peerGroup;
-        this.blockChain = chain;
-        hashStore = new HashStore(chain.getBlockStore());
-        chain.addNewBestBlockListener(newBestBlockListener);
-        if(initializedDash) {
-            sporkManager.setBlockChain(chain, peerGroup);
-            masternodeSync.setBlockChain(chain, netFullfilledRequestManager);
-            masternodeListManager.setBlockChain(chain, peerGroup != null ? peerGroup.headerChain : null, peerGroup);
-            instantSendManager.setBlockChain(chain, peerGroup);
-            signingManager.setBlockChain(chain);
-            chainLockHandler.setBlockChain(chain);
+        this.blockChain = blockChain;
+        this.headerChain = headerChain;
+        hashStore = new HashStore(blockChain.getBlockStore());
+        blockChain.addNewBestBlockListener(newBestBlockListener);
+        if (initializedObjects) {
+            sporkManager.setBlockChain(blockChain, peerGroup);
+            masternodeSync.setBlockChain(blockChain, netFullfilledRequestManager);
+            masternodeListManager.setBlockChain(blockChain, peerGroup != null ? peerGroup.headerChain : null, peerGroup, quorumManager, quorumSnapshotManager);
+            instantSendManager.setBlockChain(blockChain, peerGroup);
+            signingManager.setBlockChain(blockChain, headerChain);
+            chainLockHandler.setBlockChain(blockChain);
             blockChain.setChainLocksHandler(chainLockHandler);
-            quorumManager.setBlockChain(chain);
-            updatedChainHead(chain.getChainHead());
+            quorumManager.setBlockChain(blockChain);
+            updatedChainHead(blockChain.getChainHead());
+
+            // trigger saving mechanisms
+            governanceManager.resume();
+            masternodeListManager.resume();
+            chainLockHandler.resume();
         }
-        params.setDIPActiveAtTip(chain.getBestChainHeight() >= params.getDIP0001BlockHeight());
+        params.setDIPActiveAtTip(blockChain.getBestChainHeight() >= params.getDIP0001BlockHeight());
     }
 
     public boolean isLiteMode() {
@@ -441,7 +465,7 @@ public class Context {
     public void updatedChainHead(StoredBlock chainHead)
     {
         params.setDIPActiveAtTip(chainHead.getHeight() >= params.getDIP0001BlockHeight());
-        if(initializedDash) {
+        if(initializedObjects) {
             masternodeListManager.updatedBlockTip(chainHead);
         }
     }
@@ -463,7 +487,7 @@ public class Context {
             startLLMQThread();
         }
 
-        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+        if (getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
             scheduledMasternodeSync = scheduledExecutorService.scheduleWithFixedDelay(
                     () -> masternodeSync.doMaintenance(), 1, 1, TimeUnit.SECONDS);
             scheduledNetFulfilled = scheduledExecutorService.scheduleWithFixedDelay(

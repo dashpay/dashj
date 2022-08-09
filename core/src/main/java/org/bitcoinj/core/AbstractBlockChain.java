@@ -1135,7 +1135,7 @@ public abstract class AbstractBlockChain {
                         handleNewBestChain(prevBlock, newTip, newTip.getHeader(), shouldVerifyTransactions());
                     }
                 } catch (BlockStoreException | PrunedException x) {
-                    log.info("handle chain lock exception: " + x);
+                    log.info("handle chain lock exception:", x);
                     // swallow
                 }
             }
@@ -1156,6 +1156,7 @@ public abstract class AbstractBlockChain {
     public void close() {
         if (hasChainlocksHandler()) {
             chainLocksHandler.removeChainLockListener(chainLockListener);
+            chainLocksHandler = null;
         }
     }
 }

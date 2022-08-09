@@ -80,6 +80,9 @@ public class MasternodeSync {
 
     public static final EnumSet<SYNC_FLAGS> SYNC_DEFAULT_SPV = EnumSet.of(SYNC_MASTERNODE_LIST,
             SYNC_QUORUM_LIST, SYNC_CHAINLOCKS, SYNC_INSTANTSENDLOCKS, SYNC_SPORKS);
+
+    public static final EnumSet<SYNC_FLAGS> SYNC_DEFAULT_SPV_HEADERS_FIRST = EnumSet.of(SYNC_MASTERNODE_LIST,
+            SYNC_QUORUM_LIST, SYNC_CHAINLOCKS, SYNC_INSTANTSENDLOCKS, SYNC_SPORKS, SYNC_HEADERS_MN_LIST_FIRST);
     public static final EnumSet<VERIFY_FLAGS> VERIFY_DEFAULT_SPV = EnumSet.of(VERIFY_FLAGS.BLS_SIGNATURES,
             VERIFY_FLAGS.MNLISTDIFF_MNLIST,
             VERIFY_FLAGS.MNLISTDIFF_QUORUM,
@@ -180,12 +183,14 @@ public class MasternodeSync {
             queueOnSyncStatusChanged(-1, 0);
         }
     }
-
-    public void bumpAssetLastTime(@Nullable String strFuncName)
-    {
-        if (isSynced())
-            return;
+    public void bumpAssetLastTime(@Nullable String strFuncName) {
+        bumpAssetLastTime(strFuncName, true);
+    }
+    public void bumpAssetLastTime(@Nullable String strFuncName, boolean debug) {
+        if (isSynced()) return;
         timeLastBumped.set(Utils.currentTimeSeconds());
+        if (strFuncName != null && debug)
+            log.info("bumpAssetLastTime -- "+ strFuncName);
     }
 
     public boolean isBlockchainSynced() {
@@ -519,7 +524,7 @@ public class MasternodeSync {
 
         if (!isBlockchainSynced()) {
             // Postpone timeout each time new block arrives while we are still syncing blockchain
-            bumpAssetLastTime("updateBlockTip");
+            bumpAssetLastTime("updateBlockTip", false);
         }
 
         if (initialDownload) {
@@ -554,6 +559,10 @@ public class MasternodeSync {
 
     public void doMaintenance() {
         processTick();
+    }
+
+    public void addSyncFlag(SYNC_FLAGS flag) {
+        syncFlags.add(flag);
     }
 
     public boolean hasSyncFlag(SYNC_FLAGS flag) {
