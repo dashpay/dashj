@@ -19,7 +19,6 @@ package org.bitcoinj.core;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.listeners.*;
-import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.governance.GovernanceObject;
@@ -32,6 +31,7 @@ import org.bitcoinj.net.NioClientManager;
 import org.bitcoinj.net.StreamConnection;
 import org.bitcoinj.quorums.ChainLockSignature;
 import org.bitcoinj.quorums.InstantSendLock;
+import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -54,7 +54,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.math.BigInteger;
 import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -605,6 +604,8 @@ public class Peer extends PeerSocketHandler {
             // We ignore this message, because we don't announce new blocks.
         } else if (m instanceof SendAddressMessageV2) {
             // We ignore this message, because we don't reply to sendaddrv2 message.
+        } else if (m instanceof QuorumRotationInfo) {
+            context.masternodeListManager.processQuorumRotationInfo(this, (QuorumRotationInfo) m, false);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
@@ -893,9 +894,9 @@ public class Peer extends PeerSocketHandler {
             StoredBlock masternodeListBlock = headerChain.getChainHead().getHeight() != 0 ?
                     headerChain.getBlockStore().get(headerChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET) :
                     blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
+
             if (context.masternodeListManager.getListAtChainTip().getHeight() < masternodeListBlock.getHeight()) {
-                GetSimplifiedMasternodeListDiff msg = new GetSimplifiedMasternodeListDiff(context.masternodeListManager.getListAtChainTip().getBlockHash(), masternodeListBlock.getHeader().getHash());
-                sendMessage(msg);
+                context.masternodeListManager.requestQuorumStateUpdate(this, headerChain.getChainHead(), masternodeListBlock);
                 queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Requesting, null);
             } else {
                 context.peerGroup.triggerMnListDownloadComplete();

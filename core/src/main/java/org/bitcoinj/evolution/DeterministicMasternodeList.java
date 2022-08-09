@@ -96,8 +96,8 @@ public class DeterministicMasternodeList extends Message {
 
     void addMN(DeterministicMasternode dmn)
     {
-        Preconditions.checkState(!mnMap.containsKey(dmn.proTxHash));
-        mnMap.put(dmn.proTxHash, dmn);
+        Preconditions.checkState(!mnMap.containsKey(dmn.proRegTxHash));
+        mnMap.put(dmn.proRegTxHash, dmn);
         addUniqueProperty(dmn, dmn.state.address);
         addUniqueProperty(dmn, dmn.state.keyIDOwner);
         addUniqueProperty(dmn, dmn.state.pubKeyOperator);
@@ -140,10 +140,10 @@ public class DeterministicMasternodeList extends Message {
         Sha256Hash hash = value.getHash();
         int i = 1;
         Pair<Sha256Hash, Integer> oldEntry = mnUniquePropertyMap.get(hash);
-        assert(oldEntry == null || oldEntry.getFirst().equals(dmn.proTxHash));
+        assert(oldEntry == null || oldEntry.getFirst().equals(dmn.proRegTxHash));
         if(oldEntry != null)
             i = oldEntry.getSecond() + 1;
-        Pair<Sha256Hash, Integer> newEntry = new Pair(dmn.proTxHash, i);
+        Pair<Sha256Hash, Integer> newEntry = new Pair(dmn.proRegTxHash, i);
 
         mnUniquePropertyMap.put(hash, newEntry);
     }
@@ -152,11 +152,11 @@ public class DeterministicMasternodeList extends Message {
     {
         Sha256Hash oldHash = oldValue.getHash();
         Pair<Sha256Hash, Integer> p = mnUniquePropertyMap.get(oldHash);
-        assert(p != null && p.getFirst() == dmn.proTxHash);
+        assert(p != null && p.getFirst() == dmn.proRegTxHash);
         if (p.getSecond() == 1) {
             mnUniquePropertyMap.remove(oldHash);
         } else {
-            mnUniquePropertyMap.put(oldHash, new Pair<Sha256Hash, Integer>(dmn.proTxHash, p.getSecond() - 1));
+            mnUniquePropertyMap.put(oldHash, new Pair<Sha256Hash, Integer>(dmn.proRegTxHash, p.getSecond() - 1));
         }
     }
     <T extends ChildMessage>

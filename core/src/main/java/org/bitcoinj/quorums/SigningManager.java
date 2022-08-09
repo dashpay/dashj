@@ -12,6 +12,7 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.lang.Math.max;
 
 public class SigningManager {
     static final long DEFAULT_MAX_RECOVERED_SIGS_AGE = 60 * 60 * 24 * 7; // keep them for a week
@@ -44,6 +46,7 @@ public class SigningManager {
 
     QuorumManager quorumManager;
     AbstractBlockChain blockChain;
+    AbstractBlockChain headerChain;
 
     long lastCleanupTime;
 
@@ -60,8 +63,9 @@ public class SigningManager {
         this.pendingRecoveredSigs = new HashMap<Integer, ArrayList<RecoveredSignature>>();
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain) {
+    public void setBlockChain(AbstractBlockChain blockChain, @Nullable AbstractBlockChain headerChain) {
         this.blockChain = blockChain;
+        this.headerChain = headerChain;
     }
 
     public void close() {
@@ -157,52 +161,107 @@ public class SigningManager {
         return db.getVoteForId(llmqType, id);
     }
 
-    Quorum selectQuorumForSigning(LLMQParameters.LLMQType llmqType, long signHeight, Sha256Hash selectionHash) throws BlockStoreException
+    private int getBestChainHeight() {
+        if (headerChain != null) {
+            return max(blockChain.getBestChainHeight(), headerChain.getBestChainHeight());
+        } else {
+            return blockChain.getBestChainHeight();
+        }
+    }
+
+    Quorum selectQuorumForSigning(LLMQParameters.LLMQType llmqType, long signHeight, Sha256Hash selectionHash, int signOffset)
     {
         LLMQParameters llmqParams = context.getParams().getLlmqs().get(llmqType);
         int poolSize = (int)llmqParams.signingActiveQuorumCount;
 
         if (signHeight == -1) {
-            signHeight = blockChain.getBestChainHeight();
+            signHeight = getBestChainHeight();
         }
 
         StoredBlock startBlock = null;
-        long startBlockHeight = signHeight - SIGN_HEIGHT_OFFSET;
-        if(startBlockHeight > blockChain.getBestChainHeight() || startBlockHeight < 0)
+        long startBlockHeight = signHeight - signOffset;
+        if(startBlockHeight > getBestChainHeight() || startBlockHeight < 0)
             return null;
 
 
-        startBlock = blockChain.getBlockStore().get((int) startBlockHeight);
-        if(startBlock == null)
-            return null;
-
-
-        ArrayList<Quorum> quorums = quorumManager.scanQuorums(llmqType, startBlock, poolSize);
-        if (quorums.isEmpty()) {
-            return null;
+        try {
+            startBlock = blockChain.getBlockStore().get((int) startBlockHeight);
+            if (startBlock == null) {
+                if (headerChain != null) {
+                    startBlock = headerChain.getBlockStore().get((int) startBlockHeight);
+                    if (startBlock == null) {
+                        return null;
+                    }
+                } else {
+                    return null;
+                }
+            }
+        } catch (BlockStoreException e) {
+            throw new RuntimeException(e);
         }
 
-        ArrayList<Pair<Sha256Hash, Integer>> scores = new ArrayList<Pair<Sha256Hash, Integer>>(quorums.size());
-        for (int i = 0; i < quorums.size(); i++) {
-            try {
-                UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(1 + 32 + 32);
-                bos.write(llmqType.getValue());
-                bos.write(quorums.get(i).commitment.quorumHash.getReversedBytes());
-                bos.write(selectionHash.getBytes());
-                Sha256Hash hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
-                scores.add(new Pair(hash, i));
-            } catch (IOException x) {
-                throw new RuntimeException(x);
+
+        if (LLMQUtils.isQuorumRotationEnabled(context, context.getParams(), llmqType)) {
+            ArrayList<Quorum> quorums = quorumManager.scanQuorums(llmqType, startBlock, poolSize);
+            if (quorums.isEmpty()) {
+                return null;
             }
+
+            // log2(x) = log10(x)/log10(2)
+            int n = (int)(Math.log(LLMQParameters.fromType(llmqType).signingActiveQuorumCount) / Math.log(2));
+
+            //Extract last 64 bits of selectionHash
+            long b = Utils.readInt64(selectionHash.getBytes()/*.getReversedBytes()*/, 24);
+            //Take last n bits of b
+            int signer = (int)((((1 << n) - 1) & (b >> (64 - n - 1))));
+            log.info("selectQuorumForSigning: n={}, selectionHash={}, b={}, signer={}", n, selectionHash, b, signer);
+
+            if (signer > quorums.size()) {
+                log.info("signer {} larger than quorum size {}", signer, quorums.size());
+                return null;
+            }
+
+            Quorum itQuorum = null;
+            for (Quorum quorum : quorums) {
+                if (signer == quorum.commitment.quorumIndex) {
+                    itQuorum = quorum;
+                }
+            }
+
+            if (itQuorum == null) {
+                log.info("quorum index {} not found", signer);
+            }
+
+            return itQuorum;
+
+        } else {
+            ArrayList<Quorum> quorums = quorumManager.scanQuorums(llmqType, startBlock, poolSize);
+            if (quorums.isEmpty()) {
+                return null;
+            }
+
+            ArrayList<Pair<Sha256Hash, Integer>> scores = new ArrayList<Pair<Sha256Hash, Integer>>(quorums.size());
+            for (int i = 0; i < quorums.size(); i++) {
+                try {
+                    UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(1 + 32 + 32);
+                    bos.write(llmqType.getValue());
+                    bos.write(quorums.get(i).commitment.quorumHash.getReversedBytes());
+                    bos.write(selectionHash.getBytes());
+                    Sha256Hash hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+                    scores.add(new Pair<>(hash, i));
+                } catch (IOException x) {
+                    throw new RuntimeException(x);
+                }
+            }
+            scores.sort(new Comparator<Pair<Sha256Hash, Integer>>() {
+                @Override
+                public int compare(Pair<Sha256Hash, Integer> o1, Pair<Sha256Hash, Integer> o2) {
+                    int firstResult = o1.getFirst().compareTo(o2.getFirst());
+                    return firstResult != 0 ? firstResult : o1.getSecond().compareTo(o2.getSecond());
+                }
+            });
+            return quorums.get(scores.get(0).getSecond());
         }
-        Collections.sort(scores, new Comparator<Pair<Sha256Hash, Integer>>() {
-            @Override
-            public int compare(Pair<Sha256Hash, Integer> o1, Pair<Sha256Hash, Integer> o2) {
-                int firstResult = o1.getFirst().compareTo(o2.getFirst());
-                return firstResult != 0 ? firstResult : o1.getSecond().compareTo(o2.getSecond());
-            }
-        });
-        return quorums.get(scores.get(0).getSecond());
     }
 
     void collectPendingRecoveredSigsToVerify(long maxUniqueSessions,
@@ -415,24 +474,44 @@ public class SigningManager {
         }
     }
 
-    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig) throws BlockStoreException, QuorumNotFoundException
+    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig) throws BlockStoreException, QuorumNotFoundException {
+        return verifyRecoveredSig(llmqType, signedAtHeight, id, msgHash, sig, SIGN_HEIGHT_OFFSET);
+    }
+    boolean verifyRecoveredSig(LLMQParameters.LLMQType llmqType, long signedAtHeight, Sha256Hash id, Sha256Hash msgHash, BLSSignature sig, int signOffset) throws BlockStoreException, QuorumNotFoundException
     {
         LLMQParameters llmqParams = context.getParams().getLlmqs().get(context.getParams().getLlmqChainLocks());
 
-        Quorum quorum = selectQuorumForSigning(llmqParams.type, signedAtHeight, id);
+        Quorum quorum = selectQuorumForSigning(llmqType, signedAtHeight, id, signOffset);
         if (quorum == null) {
-            boolean missingBlockAtTip = blockChain.getBestChainHeight() < signedAtHeight;
+            boolean missingBlockAtTip = getBestChainHeight() < signedAtHeight;
             throw new QuorumNotFoundException(missingBlockAtTip ?
                     QuorumNotFoundException.Reason.BLOCKCHAIN_NOT_SYNCED :
                     QuorumNotFoundException.Reason.MISSING_QUORUM);
         }
 
-        Sha256Hash signHash = LLMQUtils.buildSignHash(llmqParams.type, quorum.commitment.quorumHash, id, msgHash);
+        Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.commitment.quorumHash, id, msgHash);
 
         logSignature("RECSIG", quorum.commitment.quorumPublicKey, signHash, sig);
 
-        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
-            return sig.verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
+        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
+            boolean result = sig.verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
+            if (!result) {
+                log.info("signature not validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, id, signHash);
+                log.info("dash-cli quorum selectquorum {} {}", llmqType.value, id);
+
+                StoredBlock block = blockChain.getBlockStore().get((int) (signedAtHeight - SIGN_HEIGHT_OFFSET));
+                if (block == null)
+                    headerChain.getBlockStore().get((int) (signedAtHeight - SIGN_HEIGHT_OFFSET));
+                for (Quorum q : context.masternodeListManager.getAllQuorums(llmqType)) {
+                    log.info("attempting verification of {}: {} with {}", id, sig.verifyInsecure(q.commitment.quorumPublicKey, signHash), q);
+                }
+            } else {
+                log.info("signature was validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, id, signHash);
+                log.info("dash-cli quorum selectquorum {} {}", llmqType.value, id);
+            }
+
+            return result;
+        }
         else return true; //if we don't verify BLS_SIGNATUREs, then assume true
     }
 

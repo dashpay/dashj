@@ -27,15 +27,23 @@ public class LLMQParameters {
         LLMQ_400_60(2), // 400 members, 240 (60%) threshold, one every 12 hours
         LLMQ_400_85(3), // 400 members, 340 (85%) threshold, one every 24 hours
         LLMQ_100_67(4), // 100 members, 67 (67%) threshold, one per hour
+        LLMQ_60_75(5),  // 60 members, 45 (75%) threshold, one every 12 hours
 
         // for testing only
         LLMQ_TEST(100), // 3 members, 2 (66%) threshold, one per hour
         // for devnets only
         LLMQ_DEVNET(101), // 10 members, 6 (60%) threshold, one per hour
         // for testing activation of new quorums only
-        LLMQ_TEST_V17(102); // 3 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestparams is used
+        LLMQ_TEST_V17(102), // 3 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestparams is used
 
-        int value;
+        // for testing only
+        LLMQ_TEST_DIP0024(103), // 4 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestparams is used
+        LLMQ_TEST_INSTANTSEND(104), // 3 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestinstantsendparams is used
+
+        // for devnets only. rotated version (v2) for devnets
+        LLMQ_DEVNET_DIP0024(105); // 8 members, 4 (50%) threshold, one per hour. Params might differ when -llmqdevnetparams is used
+
+        final int value;
         LLMQType(int value) {
             this.value = value;
             getMappings().put(value, this);
@@ -99,8 +107,12 @@ public class LLMQParameters {
                 18, 2, 2, 3, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_DEVNET, new LLMQParameters(LLMQType.LLMQ_DEVNET, "llmq_devnet",
-                10, 7, 6, 24, 2, 10,
-                18, 7, 3, 4, 6));
+                12, 7, 6, 24, 2, 10,
+                18, 7, 4, 5, 6));
+
+        availableLlmqs.put(LLMQType.LLMQ_DEVNET_DIP0024, new LLMQParameters(LLMQType.LLMQ_DEVNET_DIP0024, "llmq_devnet_2",
+                8, 6, 4, 48, 2, 12,
+                20, 7, 2, 4, 4));
 
         availableLlmqs.put(LLMQType.LLMQ_50_60, new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",
                 50, 40, 30, 24, 2, 10,
@@ -108,19 +120,36 @@ public class LLMQParameters {
 
         availableLlmqs.put(LLMQType.LLMQ_400_60, new LLMQParameters(LLMQType.LLMQ_400_60, "llmq_400_60",
                 400, 300, 240, 24*12, 4, 20,
-                28, 300, 4, 5, 100));
+                48, 300, 4, 5, 100));
 
         availableLlmqs.put(LLMQType.LLMQ_400_85, new LLMQParameters(LLMQType.LLMQ_400_85, "llmq_400_85",
                 400, 350, 340, 24 * 24, 4, 20,
                 48, 300, 4, 5, 100));
 
         availableLlmqs.put(LLMQType.LLMQ_100_67, new LLMQParameters(LLMQType.LLMQ_100_67, "llmq_100_67",
-                100, 800, 67, 2, 2, 10,
+                100, 80, 67, 2, 2, 10,
                 18, 80, 24, 25, 50));
+
+        availableLlmqs.put(LLMQType.LLMQ_TEST_DIP0024, new LLMQParameters(LLMQType.LLMQ_TEST_DIP0024, "llmq_test_dip0024",
+                4, 3, 2, 24, 2, 12,
+                20, 2, 2, 3, 3));
+
+        availableLlmqs.put(LLMQType.LLMQ_TEST_INSTANTSEND, new LLMQParameters(LLMQType.LLMQ_TEST_INSTANTSEND, "llmq_test_instantsend",
+                3, 2, 2, 24, 2, 10,
+                18, 2, 2, 4, 3));
+
+        availableLlmqs.put(LLMQType.LLMQ_60_75, new LLMQParameters(LLMQType.LLMQ_60_75, "llmq_60_75",
+                60, 50, 45, 24 * 12, 2, 42,
+                50, 48, 32, 64, 25));
+
     }
 
     public static LLMQParameters fromType(LLMQParameters.LLMQType type) {
         return availableLlmqs.get(type);
+    }
+
+    public static LLMQParameters fromType(int type) {
+        return availableLlmqs.get(LLMQType.fromValue(type));
     }
 
     // Configures a LLMQ and its DKG

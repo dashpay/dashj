@@ -3,10 +3,13 @@ package org.bitcoinj.evolution;
 public class MasternodeListDiffException extends Exception {
     boolean requireReset;
     boolean findNewPeer;
-    public MasternodeListDiffException(String message, boolean requireReset, boolean findNewPeer) {
+
+    boolean sameHeight;
+    public MasternodeListDiffException(String message, boolean requireReset, boolean findNewPeer, boolean sameHeight) {
         super(message);
         this.requireReset = requireReset;
         this.findNewPeer = findNewPeer;
+        this.sameHeight = sameHeight;
     }
 
     public boolean isRequiringReset() {

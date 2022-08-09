@@ -32,6 +32,7 @@ import org.bitcoinj.governance.GovernanceVoteBroadcaster;
 import org.bitcoinj.governance.GovernanceVoteConfidence;
 import org.bitcoinj.net.*;
 import org.bitcoinj.net.discovery.*;
+import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.script.*;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.MemoryBlockStore;
@@ -193,6 +194,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     SyncStage syncStage = SyncStage.OFFLINE;
+
+    // should peers be dropped after broadcast
+    private boolean dropPeersAfterBroadcast = true;
 
     // This event listener is added to every peer. It's here so when we announce transactions via an "inv", every
     // peer can fetch them.
@@ -441,7 +445,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         } else {
             this.headerChain = headerChain;
         }
-        context.setPeerGroupAndBlockChain(this, chain);
+        context.setPeerGroupAndBlockChain(this, chain, this.headerChain);
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);
@@ -751,6 +755,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** See {@link Peer#addBlocksDownloadedEventListener(BlocksDownloadedEventListener)} */
     public void addChainDownloadStartedEventListener(ChainDownloadStartedEventListener listener) {
         addChainDownloadStartedEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /** See {@link Peer#addHeadersDownloadStartedEventListener(HeadersDownloadStartedEventListener)} */
+    public void addHeadersDownloadStartedEventListener(HeadersDownloadStartedEventListener listener) {
+        addHeadersDownloadStartedEventListener(Threading.USER_THREAD, listener);
     }
 
     /**
@@ -2104,7 +2113,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     @Nullable private ChainDownloadSpeedCalculator chainDownloadSpeedCalculator;
 
     private final SettableFuture<Boolean> headersDownloadedFuture = SettableFuture.create();
-    private final SettableFuture<Boolean> mnListDownloadedFuture = SettableFuture.create();
+    private final SettableFuture<Integer> mnListDownloadedFuture = SettableFuture.create();
     private final SettableFuture<Boolean> preBlockDownloadFuture = SettableFuture.create();
 
     public SettableFuture<Boolean> getHeadersDownloadedFuture() {
@@ -2123,12 +2132,24 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         preBlockDownloadFuture.set(true);
     }
 
+    private Integer masternodeListsSynced = 0;
     public void triggerMnListDownloadComplete() {
-        mnListDownloadedFuture.set(true);
+        masternodeListsSynced++;
+        int requiredListsToSync = LLMQUtils.isQuorumRotationEnabled(chain, params, params.getLlmqDIP0024InstantSend()) ? 2 : 1;
+
+        log.info("triggerMnListDownloadComplete: {}, requiredListsToSync = {}", masternodeListsSynced + 1, requiredListsToSync);
+        if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqDIP0024InstantSend())) {
+            if (masternodeListsSynced == requiredListsToSync) {
+                mnListDownloadedFuture.set(masternodeListsSynced);
+            }
+        } else {
+            mnListDownloadedFuture.set(masternodeListsSynced);
+        }
+        queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Complete, null);
     }
 
     FutureCallback<Boolean> headersDownloadedCallback;
-    FutureCallback<Boolean> mnListDownloadedCallback;
+    FutureCallback<Integer> mnListDownloadedCallback;
     FutureCallback<Boolean> preBlocksDownloadCallback;
 
 
@@ -2153,10 +2174,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             }
         };
 
-        mnListDownloadedCallback = new FutureCallback<Boolean>() {
+        mnListDownloadedCallback = new FutureCallback<Integer>() {
             @Override
-            public void onSuccess(@Nullable Boolean aBoolean) {
-                log.info("Stage masternode list download successful: {}", aBoolean);
+            public void onSuccess(@Nullable Integer listsSynced) {
+                log.info("Stage masternode list download successful: {}", listsSynced);
                 Set<MasternodeSync.SYNC_FLAGS> flags = context.getSyncFlags();
                 if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) {
                     if(syncStage.value < SyncStage.PREBLOCKS.value) {
@@ -2167,6 +2188,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     setSyncStage(SyncStage.BLOCKS);
                     peer.startBlockChainDownload();
                 }
+
+                // reset the masternode list sync count since the MNLIST stage is completed
+                masternodeListsSynced = 0;
             }
 
             @Override
@@ -2431,7 +2455,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      */
     @Override
     public TransactionBroadcast broadcastTransaction(final Transaction tx) {
-        return broadcastTransaction(tx, Math.max(1, getMinBroadcastConnections()), true);
+        return broadcastTransaction(tx, Math.max(1, getMinBroadcastConnections()), dropPeersAfterBroadcast);
     }
 
     /**
@@ -2862,5 +2886,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     protected void setSyncStage(SyncStage syncStage) {
         log.info("Sync Stage change from {} to {}", this.syncStage.name(), syncStage.name());
         this.syncStage = syncStage;
+    }
+
+    public void setDropPeersAfterBroadcast(boolean dropPeersAfterBroadcast) {
+        this.dropPeersAfterBroadcast = dropPeersAfterBroadcast;
     }
 }

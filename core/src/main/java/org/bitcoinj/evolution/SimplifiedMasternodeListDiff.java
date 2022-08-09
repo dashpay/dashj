@@ -1,16 +1,19 @@
 package org.bitcoinj.evolution;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.FinalCommitment;
+import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.utils.Pair;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
 
-import static org.bitcoinj.core.Sha256Hash.hashTwice;
+public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
+    private static final String SHORT_NAME = "mnlistdiff";
 
-public class SimplifiedMasternodeListDiff extends Message {
     public Sha256Hash prevBlockHash;
     public Sha256Hash blockHash;
     PartialMerkleTree cbTxMerkleTree;
@@ -24,6 +27,30 @@ public class SimplifiedMasternodeListDiff extends Message {
 
     public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload) {
         super(params, payload, 0);
+    }
+
+    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int offset) {
+        super(params, payload, offset);
+    }
+
+    @Override
+    protected String getShortName() {
+        return SHORT_NAME;
+    }
+
+    public SimplifiedMasternodeListDiff(NetworkParameters params, Sha256Hash prevBlockHash, Sha256Hash blockHash,
+                                        PartialMerkleTree cbTxMerkleTree, Transaction coinBaseTx,
+                                        List<SimplifiedMasternodeListEntry> mnList,
+                                        List<FinalCommitment> quorumList) {
+        super(params);
+        this.prevBlockHash = prevBlockHash;
+        this.blockHash = blockHash;
+        this.cbTxMerkleTree = cbTxMerkleTree;
+        this.coinBaseTx = coinBaseTx;
+        this.deletedMNs = Sets.newHashSet();
+        this.mnList = Lists.newArrayList(mnList);
+        this.deletedQuorums = Lists.newArrayList();
+        this.newQuorums = Lists.newArrayList(quorumList);
     }
 
     @Override
@@ -57,7 +84,7 @@ public class SimplifiedMasternodeListDiff extends Message {
             size = (int)readVarInt();
             deletedQuorums = new ArrayList<Pair<Integer, Sha256Hash>>(size);
             for(int i = 0; i < size; ++i) {
-                deletedQuorums.add(new Pair((int)readBytes(1)[0], readHash()));
+                deletedQuorums.add(new Pair<>((int)readBytes(1)[0], readHash()));
             }
 
             size = (int)readVarInt();
@@ -90,6 +117,17 @@ public class SimplifiedMasternodeListDiff extends Message {
         for(SimplifiedMasternodeListEntry entry : mnList) {
             entry.bitcoinSerializeToStream(stream);
         }
+
+        stream.write(new VarInt(deletedQuorums.size()).encode());
+        for(Pair<Integer, Sha256Hash> entry : deletedQuorums) {
+            stream.write(entry.getFirst());
+            stream.write(entry.getSecond().getReversedBytes());
+        }
+
+        stream.write(new VarInt(newQuorums.size()).encode());
+        for(FinalCommitment entry : newQuorums) {
+            entry.bitcoinSerialize(stream);
+        }
     }
 
     public boolean hasChanges() {
@@ -105,6 +143,24 @@ public class SimplifiedMasternodeListDiff extends Message {
     public String toString() {
         return "Simplified MNList Diff:  adding " + mnList.size() + " and removing " + deletedMNs.size() + " masternodes" +
                 (coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "");
+    }
+
+    public String toString(BlockStore blockStore) {
+        int height = -1;
+        int prevHeight = -1;
+        try {
+            height = blockStore.get(blockHash).getHeight();
+            prevHeight = blockStore.get(prevBlockHash).getHeight();
+        } catch (Exception x) {
+            // swallow
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append("Simplified MNList Diff: ").append(prevHeight).append(" -> ").append(height).append("/").append(getHeight())
+                .append(" [adding ").append(mnList.size()).append(" and removing ").append(deletedMNs.size()).append(" masternodes")
+                .append(coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "")
+                .append("]");
+
+        return builder.toString();
     }
 
     public Transaction getCoinBaseTx() {
@@ -125,5 +181,9 @@ public class SimplifiedMasternodeListDiff extends Message {
 
     public boolean hasMasternodeListChanges() {
         return mnList.size() + deletedMNs.size() > 0;
+    }
+
+    public long getHeight() {
+        return ((CoinbaseTx)getCoinBaseTx().getExtraPayloadObject()).getHeight();
     }
 }
