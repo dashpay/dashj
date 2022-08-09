@@ -249,4 +249,9 @@ public class BLSBatchVerifier<SourceId, MessageId>
 
         return aggSig.verifyInsecureAggregated(pubKeys, msgHashes);
     }
-};
+
+    public int getUniqueSourceCount() {
+        return messagesBySource.size();
+    }
+
+}

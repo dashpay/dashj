@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import com.google.common.primitives.UnsignedLongs;
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
@@ -769,6 +770,41 @@ public class Utils {
             vBytes[p / 8] |= (vec.get(p) ? 1 : 0) << (p % 8);
         stream.write(new VarInt(vec.size()).encode());
         stream.write(vBytes);
+    }
+
+    public static void booleanArrayListToStreamWithOutSize(ArrayList<Boolean> vec, OutputStream stream) throws IOException
+    {
+        int size = vec.size();
+        byte [] vBytes = new byte [((size + 7) / 8)];
+        int ms = min(size, vec.size());
+        for (int p = 0; p < ms; p++)
+            vBytes[p / 8] |= (vec.get(p) ? 1 : 0) << (p % 8);
+        stream.write(vBytes);
+    }
+
+    public static ArrayList<Boolean> booleanArrayList(int size, byte [] vBytes)
+    {
+        ArrayList<Boolean> vec = Lists.newArrayList();
+
+        for (int p = 0; p < size; p++)
+            vec.add((vBytes[p / 8] & (1 << (p % 8))) != 0);
+        if (vBytes.length * 8 != size) {
+            int rem = vBytes.length * 8 - size;
+            byte m = (byte)~(0xff >> rem);
+            if ((vBytes[vBytes.length - 1] & m) != 0) {
+                throw new ArrayIndexOutOfBoundsException("Out-of-range bits set");
+            }
+        }
+        return vec;
+    }
+
+    public static void intArrayListToStream(ArrayList<Integer> vec, OutputStream stream) throws IOException
+    {
+        int size = vec.size();
+        stream.write(new VarInt(vec.size()).encode());
+        for (int i = 0; i < size; ++i) {
+            Utils.uint32ToByteStreamLE(vec.get(i), stream);
+        }
     }
 
     public static String toString(List<byte[]> stack) {

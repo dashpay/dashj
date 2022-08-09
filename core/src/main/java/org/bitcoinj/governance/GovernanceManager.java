@@ -692,7 +692,7 @@ public class GovernanceManager extends AbstractManager {
 
                 if(!updateCurrentWatchdog(govobj)) {
                     // Allow wd's which are not current to be reprocessed
-                    if(pfrom != null && !nHashWatchdogCurrent.equals(Sha256Hash.ZERO_HASH)) {
+                    if(pfrom != null && !nHashWatchdogCurrent.isZero()) {
                         pfrom.pushInventory(new InventoryItem(InventoryItem.Type.GovernanceObject, nHashWatchdogCurrent));
                     }
                     log.info("gobject--CGovernanceManager::AddGovernanceObject -- Watchdog not better than current: hash = {}", nHash.toString());
@@ -753,7 +753,7 @@ public class GovernanceManager extends AbstractManager {
         long nExpirationDelay = GOVERNANCE_WATCHDOG_EXPIRATION_TIME / 2;
         long nNow = Utils.currentTimeSeconds();
 
-        if (nHashWatchdogCurrent.equals(Sha256Hash.ZERO_HASH) || ((nNow - watchdogNew.getCreationTime() < nExpirationDelay) && ((nNow - nTimeWatchdogCurrent > nExpirationDelay) || (nHashNew.compareTo(nHashCurrent) > 0))))
+        if (nHashWatchdogCurrent.isZero() || ((nNow - watchdogNew.getCreationTime() < nExpirationDelay) && ((nNow - nTimeWatchdogCurrent > nExpirationDelay) || (nHashNew.compareTo(nHashCurrent) > 0))))
         { //  (current is expired OR -  (new one is NOT expired AND -  no known current OR
             //   its hash is lower))
             lock.lock();
@@ -1369,7 +1369,7 @@ public class GovernanceManager extends AbstractManager {
         // but this is a heavy one so it's better to finish sync first.
         if (!context.masternodeSync.isSynced()) return;
 
-        if(message.prop.equals(Sha256Hash.ZERO_HASH)) {
+        if(message.prop.isZero()) {
             syncAll(peer);
         } else {
             syncSingleObjAndItsVotes(peer, message.prop, message.bloomFilter);

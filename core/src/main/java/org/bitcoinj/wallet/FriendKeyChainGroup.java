@@ -153,7 +153,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
 
     public FriendKeyChain getFriendKeyChain(Sha256Hash myBlockchainUserId, int account, Sha256Hash theirBlockchainUserId, int friendAccountReference, FriendKeyChain.KeyChainType type) {
         Preconditions.checkNotNull(theirBlockchainUserId);
-        Preconditions.checkArgument(!theirBlockchainUserId.equals(Sha256Hash.ZERO_HASH));
+        Preconditions.checkArgument(!theirBlockchainUserId.isZero());
 
         Sha256Hash to, from;
         int accountReference;
