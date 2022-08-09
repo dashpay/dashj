@@ -96,7 +96,7 @@ public abstract class ChainLockBlockChainTest {
 
         Context context = Context.getOrCreate(PARAMS);
 
-        context.setPeerGroupAndBlockChain(null, chain);
+        context.setPeerGroupAndBlockChain(null, chain, null);
         context.masternodeSync.syncFlags = EnumSet.noneOf(MasternodeSync.SYNC_FLAGS.class);
 
         ChainLocksHandler chainLocksHandler = context.chainLockHandler;

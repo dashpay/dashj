@@ -153,10 +153,8 @@ public class FinalCommitmentTest {
         assertEquals(quorumPublickKey, commitment.quorumPublicKey);
 
         assertArrayEquals(commitmentTx.getExtraPayload(), payload.getPayload());
-
-        UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(txdata.length);
-        commitmentTx.bitcoinSerialize(bos);
-        assertArrayEquals(txdata, bos.toByteArray());
+        // round trip
+        assertArrayEquals(txdata, commitmentTx.bitcoinSerialize());
     }
 
     @Test
@@ -168,4 +166,24 @@ public class FinalCommitmentTest {
         assertEquals(Sha256Hash.wrap("082f5e29385f81704ef63c886aa20c2f8d69efd87d3937d6769285e2ead9ea0f"), commitmentHash);
     }
 
+    @Test
+    public void finalCommitmentV2Test() throws IOException {
+
+        byte [] qfcommit = Utils.HEX.decode("02006530fed4f6262e0fd7314cccbe94d7aba54f3cdcbe2bd3237ad2f276eb4d01000003000cfd0b0cfd0b0e22ac5b7c87076a03b1e4bee58c8404aaed183dd2c3114cea3ac1cbf85218a6196a19073789e9a12fc439b773842368b70d64f275bfc681e393286844bc565ceb51555d061c53e846bdd623e3809b5619d03a92ab89a5758598d4bef96cc398e233f04cfdfba3842098813d7532960527d76656b3cc1dbae0bd07898b2d31660824be7c8baef965d9eeaef4b8cc819e1e60b4739a5302d7bcce658d31c75c74a9245d6a44ff36d7df5ced7fca3117578e5b2bcd12e993666bdfce0c390d7b849b901b3699902a3c2c07cc269910b2f9483ab70e52d6ffbe68e1c012df67840e129b19052f6ddf1880a3c8a05b6cb9a38ca640b5fcf4fcb422b3bcc7c665c703fc258443ce0400580578af74f42ca656");         //"01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84";
+
+        FinalCommitment commitment = new FinalCommitment(PARAMS, qfcommit, 0);
+
+        assertEquals(2, commitment.getVersion());
+        assertEquals(101, commitment.llmqType);
+        assertEquals(3, commitment.quorumIndex);
+        assertEquals(Sha256Hash.wrap("0000014deb76f2d27a23d32bbedc3c4fa5abd794becc4c31d70f2e26f6d4fe30"), commitment.quorumHash);
+        assertEquals(10, commitment.countSigners());
+        assertEquals(10, commitment.countValidMembers());
+
+        BLSPublicKey quorumPublickKey = new BLSPublicKey(PARAMS, Utils.HEX.decode("0e22ac5b7c87076a03b1e4bee58c8404aaed183dd2c3114cea3ac1cbf85218a6196a19073789e9a12fc439b773842368"), 0);
+        assertEquals(quorumPublickKey, commitment.quorumPublicKey);
+
+        // round trip
+        assertArrayEquals(qfcommit, commitment.bitcoinSerialize());
+    }
 }

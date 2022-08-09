@@ -28,20 +28,23 @@ public class LLMQParametersTest {
                 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 3, 3);
         LLMQParameters llmq_devnet = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_DEVNET, "llmq_devnet",
-                10, 7, 6, 24, 2, 10,
-                18, 7, 3, 4, 6);
+                12, 7, 6, 24, 2, 10,
+                18, 7, 4, 5, 6);
         LLMQParameters llmq50_60 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_50_60, "llmq_50_60",
                 50, 40, 30, 24, 2, 10,
                 18,40, 24, 25, 25);
-       LLMQParameters llmq400_60 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_400_60, "llmq_400_60",
+        LLMQParameters llmq400_60 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_400_60, "llmq_400_60",
                 400, 300, 240, 24*12, 4, 20,
-                28, 300, 4, 5, 100);
+                48, 300, 4, 5, 100);
         LLMQParameters llmq400_85 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_400_85, "llmq_400_85",
                 400, 350, 340, 24 * 24, 4, 20,
                 48, 300, 4, 5, 100);
         LLMQParameters llmq100_67 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_100_67, "llmq_100_67",
-                100, 800, 67, 2, 2, 10,
+                100, 80, 67, 2, 2, 10,
                 18, 80, 24, 25, 50);
+        LLMQParameters llmq60_75 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_60_75, "llmq_60_75",
+                60, 50, 45, 24 * 12, 2, 42,
+                50, 48, 32, 64, 25);
 
         assertEquals(llmq50_60, LLMQParameters.fromType(LLMQParameters.LLMQType.LLMQ_50_60));
         assertEquals(llmq400_60, LLMQParameters.fromType(LLMQParameters.LLMQType.LLMQ_400_60));
@@ -49,12 +52,14 @@ public class LLMQParametersTest {
         assertEquals(llmq_devnet, LLMQParameters.fromType(LLMQParameters.LLMQType.LLMQ_DEVNET));
         assertEquals(llmq_test, LLMQParameters.fromType(LLMQParameters.LLMQType.LLMQ_TEST));
         assertEquals(llmq100_67, LLMQParameters.fromType(LLMQParameters.LLMQType.LLMQ_100_67));
+        assertEquals(llmq60_75, LLMQParameters.fromType(LLMQParameters.LLMQType.LLMQ_60_75));
     }
 
     @Test
     public void verifyAllQuorumTypes() {
         for (LLMQParameters.LLMQType type : LLMQParameters.LLMQType.values()) {
             if (type != LLMQParameters.LLMQType.LLMQ_NONE) {
+                System.out.println(type);
                 assertEquals(type, LLMQParameters.fromType(type).type);
             }
         }
