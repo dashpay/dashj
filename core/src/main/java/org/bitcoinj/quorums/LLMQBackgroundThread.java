@@ -41,8 +41,9 @@ public class LLMQBackgroundThread extends Thread {
             while (!isInterrupted()) {
                 boolean didWork = false;
 
-                if(context.masternodeListManager.isSynced()) {
-                    didWork |= context.instantSendManager.processPendingInstantSendLocks();
+                // only the DIP24 lists need to be synced for this to work
+                if (context.masternodeListManager.isSyncedForInstantSend()) {
+                    didWork = context.instantSendManager.processPendingInstantSendLocks();
 
                     didWork |= context.signingManager.processPendingRecoveredSigs();
 

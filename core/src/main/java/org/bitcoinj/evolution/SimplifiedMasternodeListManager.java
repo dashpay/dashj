@@ -101,13 +101,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public SaveOptions saveOptions;
 
-    // TODO: move to different file
-    public enum SyncOptions {
-        SYNC_SNAPSHOT_PERIOD,
-        SYNC_CACHE_PERIOD,
-        SYNC_MINIMUM;
-    }
-
     long tipHeight;
     Sha256Hash tipBlockHash;
 
@@ -133,7 +126,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         loadedFromFile = false;
         requiresLoadingFromFile = true;
 
-        quorumState = new QuorumState(context, SyncOptions.SYNC_MINIMUM);
+        quorumState = new QuorumState(context, MasternodeListSyncOptions.SYNC_MINIMUM);
         quorumState.setStateManager(this);
         quorumRotationState = new QuorumRotationState(context);
         quorumRotationState.setStateManager(this);
@@ -161,7 +154,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     @Override
     protected void parse() throws ProtocolException {
-        quorumState = new QuorumState(context, SyncOptions.SYNC_MINIMUM, payload, cursor);
+        quorumState = new QuorumState(context, MasternodeListSyncOptions.SYNC_MINIMUM, payload, cursor);
         quorumState.setStateManager(this);
         cursor += quorumState.getMessageSize();
         tipBlockHash = readHash();
@@ -170,6 +163,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             cursor += quorumState.parseQuorums(payload, cursor);
             //read pending blocks
             parsePendingBlocks(quorumState);
+
+            if (!quorumState.isConsistent()) {
+                log.warn("QuorumState is inconsistent -- clearing state");
+                quorumState.clearState();
+            }
         }
         if (getFormatVersion() >= QUORUM_ROTATION_FORMAT_VERSION && (cursor < payload.length)) {
             quorumRotationState = new QuorumRotationState(context, payload, cursor);
@@ -188,7 +186,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
             buffer.rewind();
             StoredBlock block = StoredBlock.deserializeCompact(params, buffer);
-            if(block.getHeight() != 0 && state.syncOptions != SyncOptions.SYNC_MINIMUM) {
+            if(block.getHeight() != 0 && state.syncOptions != MasternodeListSyncOptions.SYNC_MINIMUM) {
                 state.pushPendingBlock(block);
             }
             buffer.rewind();
@@ -222,7 +220,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
             if (getFormatVersion() >= LLMQ_FORMAT_VERSION) {
                 quorumState.serializeQuorumsToStream(stream);
-                if (quorumState.syncOptions != SyncOptions.SYNC_MINIMUM) {
+                if (quorumState.syncOptions != MasternodeListSyncOptions.SYNC_MINIMUM) {
                     stream.write(new VarInt(quorumState.getPendingBlocks().size() + otherPendingBlocks.size()).encode());
                     ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
                     log.info("saving {} blocks to catch up mnList", otherPendingBlocks.size());
@@ -488,7 +486,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         // TODO: there is a problem with QRS isSynced, there is often a pending block
         // in the quorumRotationState
         // && quorumRotationState.isSynced()
-        return quorumState.isSynced();
+        return quorumState.isSynced() && quorumRotationState.isSynced();
+    }
+
+    public boolean isSyncedForInstantSend() {
+        return quorumRotationState.isSynced();
     }
 
     public void setRequiresLoadingFromFile(boolean requiresLoadingFromFile) {
