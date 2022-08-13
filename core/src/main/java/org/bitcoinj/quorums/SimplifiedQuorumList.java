@@ -505,4 +505,19 @@ public class SimplifiedQuorumList extends Message {
             }
         }
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        SimplifiedQuorumList that = (SimplifiedQuorumList) o;
+
+        return Objects.equals(minableCommitments, that.minableCommitments);
+    }
+
+    @Override
+    public int hashCode() {
+        return minableCommitments != null ? minableCommitments.hashCode() : 0;
+    }
 }

@@ -2891,4 +2891,27 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     public void setDropPeersAfterBroadcast(boolean dropPeersAfterBroadcast) {
         this.dropPeersAfterBroadcast = dropPeersAfterBroadcast;
     }
+
+    /**
+     * Get the most common height of all connected peers
+     */
+    public int getMostCommonHeight() {
+        HashMap<Long, Integer> heightMap = new HashMap<>();
+        List<Peer> connectedPeers = getConnectedPeers();
+        for (Peer peer : connectedPeers) {
+            Integer count = heightMap.get(peer.getBestHeight());
+            count = (count != null) ? count + 1 : 1;
+            heightMap.put(peer.getBestHeight(), count);
+        }
+
+        org.bitcoinj.utils.Pair<Long, Integer> mostCommonHeight = new org.bitcoinj.utils.Pair<>(-1L, 0);
+        for (Map.Entry<Long, Integer> entry : heightMap.entrySet()) {
+            long height = entry.getKey();
+            int count = entry.getValue();
+            if (count > mostCommonHeight.getSecond()) {
+                mostCommonHeight = new org.bitcoinj.utils.Pair<>(height, count);
+            }
+        }
+        return mostCommonHeight.getSecond();
+    }
 }

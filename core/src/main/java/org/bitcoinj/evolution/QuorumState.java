@@ -52,17 +52,17 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache = new LinkedHashMap<Sha256Hash, SimplifiedMasternodeList>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<Sha256Hash, SimplifiedMasternodeList> eldest) {
-            return size() > (syncOptions == SimplifiedMasternodeListManager.SyncOptions.SYNC_MINIMUM ? SimplifiedMasternodeListManager.MIN_CACHE_SIZE : SimplifiedMasternodeListManager.MAX_CACHE_SIZE);
+            return size() > (syncOptions == MasternodeListSyncOptions.SYNC_MINIMUM ? SimplifiedMasternodeListManager.MIN_CACHE_SIZE : SimplifiedMasternodeListManager.MAX_CACHE_SIZE);
         }
     };
 
     LinkedHashMap<Sha256Hash, SimplifiedQuorumList> quorumsCache = new LinkedHashMap<Sha256Hash, SimplifiedQuorumList>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<Sha256Hash, SimplifiedQuorumList> eldest) {
-            return size() > (syncOptions == SimplifiedMasternodeListManager.SyncOptions.SYNC_MINIMUM ? SimplifiedMasternodeListManager.MIN_CACHE_SIZE : SimplifiedMasternodeListManager.MAX_CACHE_SIZE);
+            return size() > (syncOptions == MasternodeListSyncOptions.SYNC_MINIMUM ? SimplifiedMasternodeListManager.MIN_CACHE_SIZE : SimplifiedMasternodeListManager.MAX_CACHE_SIZE);
         }
     };
-    public QuorumState(Context context, SimplifiedMasternodeListManager.SyncOptions syncOptions) {
+    public QuorumState(Context context, MasternodeListSyncOptions syncOptions) {
         super(context);
         this.context = context;
         params = context.getParams();
@@ -70,7 +70,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         init();
     }
 
-    public QuorumState(Context context, SimplifiedMasternodeListManager.SyncOptions syncOptions, byte [] payload, int offset) {
+    public QuorumState(Context context, MasternodeListSyncOptions syncOptions, byte [] payload, int offset) {
         super(context.getParams(), payload, offset);
         this.context = context;
         this.syncOptions = syncOptions;
@@ -134,8 +134,6 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
         newMNList.setBlock(block, block != null && block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
-        mnListsCache.put(newMNList.getBlockHash(), newMNList);
-        mnList = newMNList;
 
         SimplifiedQuorumList newQuorumList = quorumList;
         if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
@@ -146,6 +144,10 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             quorumList.syncWithMasternodeList(newMNList);
         }
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedQuorums, mnlistdiff);
+
+        // save the current state, if both mnLists and quorums are both applied
+        mnListsCache.put(newMNList.getBlockHash(), newMNList);
+        mnList = newMNList;
         quorumsCache.put(newQuorumList.getBlockHash(), newQuorumList);
         quorumList = newQuorumList;
     }
@@ -335,5 +337,10 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 ", mnListsCacheSize=" + mnListsCache.size() +
                 ", quorumsCacheSize=" + quorumsCache.size() +
                 '}';
+    }
+
+    @Override
+    public boolean isConsistent() {
+        return mnList.getBlockHash().equals(quorumList.getBlockHash());
     }
 }

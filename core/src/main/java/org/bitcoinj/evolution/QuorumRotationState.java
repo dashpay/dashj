@@ -155,7 +155,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     void finishInitialization() {
         lastRequest = new QuorumUpdateRequest<>(new GetQuorumRotationInfo(params, Lists.newArrayList(), Sha256Hash.ZERO_HASH, false));
         llmqType = params.getLlmqDIP0024InstantSend();
-        syncOptions = SimplifiedMasternodeListManager.SyncOptions.SYNC_MINIMUM;
+        syncOptions = MasternodeListSyncOptions.SYNC_MINIMUM;
     }
 
     @Override
@@ -228,10 +228,14 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             }
 
             baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash);
+            if (baseMNList == null)
+                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false);
             SimplifiedMasternodeList newMNListAtHMinus3C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C());
             mnListsCache.put(newMNListAtHMinus3C.getBlockHash(), newMNListAtHMinus3C);
 
             baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash);
+            if (baseMNList == null)
+                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false);
             SimplifiedMasternodeList newMNListAtHMinus2C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C());
             mnListsCache.put(newMNListAtHMinus2C.getBlockHash(), newMNListAtHMinus2C);
 
@@ -239,6 +243,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             // SimplifiedMasternodeList newMNListTip = mnListTip.applyDiff(quorumRotationInfo.getMnListDiffTip());
             SimplifiedMasternodeList newMNListAtH = mnListAtH.applyDiff(quorumRotationInfo.getMnListDiffAtH());
             baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash);
+            if (baseMNList == null)
+                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false);
             StoredBlock prevBlockHMinusC = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash);
 
             if (baseMNList == null) {
@@ -392,9 +398,20 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             newList.addQuorum(quorum);
         }
         try {
-            newList.setBlock(blockAtH != null ? blockAtH : chain.getChainHead());
-            newList.verifyQuorums(isLoadingBootStrap, chain, true);
-            activeQuorumLists.put((int) newList.getHeight(), newList);
+            // do we have this quorum list already?
+            boolean hasList = false;
+            for (Map.Entry<Integer, SimplifiedQuorumList> entry : activeQuorumLists.entrySet()) {
+                if (entry.getValue().equals(newList)) {
+                    log.info("this new quorum list was already found in activeQuorumLists");
+                    hasList = true;
+                    break;
+                }
+            }
+            if (!hasList) {
+                newList.setBlock(blockAtH != null ? blockAtH : chain.getChainHead());
+                newList.verifyQuorums(isLoadingBootStrap, chain, true);
+                activeQuorumLists.put((int) newList.getHeight(), newList);
+            }
             log.info("activeQuorumLists: {}", activeQuorumLists.size());
         } catch (Exception e) {
             log.warn("there was a problem verifying the active quorum list");
@@ -471,10 +488,24 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     }
 
     @Override
-    boolean needsUpdate(StoredBlock nextBlock) {
-        // The idea is to get an update every dkgInterval + 11 + signingActiveQuorumCount blocks
+    public boolean isSynced() {
+        if(mnListAtH.getHeight() == -1)
+            return  false;
+
+        int mostCommonHeight = context.peerGroup.getMostCommonHeight();
+
+        // determine when the last QR height was
         LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
-        int rotationOffset = llmqParameters.getDkgMiningWindowEnd(); //*/(11 + llmqParameters.getSigningActiveQuorumCount() + SigningManager.SIGN_HEIGHT_OFFSET);
+        int rotationOffset = llmqParameters.getDkgMiningWindowEnd();
+        int cycleLength = llmqParameters.getDkgInterval();
+
+        return mostCommonHeight < (mnListAtH.getHeight() + rotationOffset + cycleLength);
+    }
+
+    @Override
+    boolean needsUpdate(StoredBlock nextBlock) {
+        LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
+        int rotationOffset = llmqParameters.getDkgMiningWindowEnd();
 
         return nextBlock.getHeight() % getUpdateInterval() == rotationOffset &&
                 nextBlock.getHeight() >= mnListAtH.getHeight() + rotationOffset;
@@ -559,10 +590,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             // we are in deep trouble
             throw new RuntimeException(x);
         } catch (NullPointerException x) {
-            log.warn("missing masternode list for this quorum:" + x);
+            log.warn("missing masternode list for this quorum:", x);
             return null;
         } catch (NoSuchElementException x) {
-            log.warn("cannot reconstruct list for this quorum:" + x);
+            log.warn("cannot reconstruct list for this quorum:", x);
             return null;
         } finally {
             lock.unlock();
@@ -1089,6 +1120,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     }
 
     public SimplifiedQuorumList getQuorumListAtH() {
+        SimplifiedQuorumList topList = getTopActiveQuorumList();
+        log.warn("obtaining this quorum list: {} from {} quorum lists", topList, activeQuorumLists.size());
+        return topList;
+    }
+
+    private SimplifiedQuorumList getTopActiveQuorumList() {
         int max = -1;
         // create an empty list in the case that activeQuorumLists is empty
         SimplifiedQuorumList topList = new SimplifiedQuorumList(params);
@@ -1098,7 +1135,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 topList = entry.getValue();
             }
         }
-        log.warn("obtaining this quorum list: {} from {} quorum lists", topList, activeQuorumLists.size());
         return topList;
     }
 
@@ -1259,5 +1295,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             requestNextMNListDiff();
             lock.unlock();
         }
+    }
+
+    public boolean isConsistent() {
+        return mnListAtH.getBlockHash().equals(quorumListAtH.getBlockHash());
     }
 }
