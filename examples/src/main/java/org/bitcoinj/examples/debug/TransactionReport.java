@@ -16,6 +16,7 @@
 
 package org.bitcoinj.examples.debug;
 
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
@@ -33,19 +34,16 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class TransactionReport {
+public class TransactionReport extends Report {
 
     static Logger log = LoggerFactory.getLogger(TransactionReport.class);
     ArrayList<TransactionInfo> txList = new ArrayList<>();
     HashMap<Sha256Hash, TransactionInfo> txMap = new HashMap<>();
 
-    File outputFile = new File("tx-report.csv");
-    String dashClientPath;
-    String confPath;
 
-    public TransactionReport(String dashClientPath, String confPath) {
-        this.dashClientPath = dashClientPath;
-        this.confPath = confPath;
+
+    public TransactionReport(String dashClientPath, String confPath, NetworkParameters params) {
+        super("tx-report-", dashClientPath, confPath, params);
     }
 
     public void add(long timestamp, int blockReceived, Transaction tx) {
@@ -55,35 +53,9 @@ public class TransactionReport {
         txMap.put(tx.getTxId(), txInfo);
     }
 
-    JSONObject runRPCCommand(String command) {
-        try {
-            String config;
-            if (confPath.startsWith("-")) {
-                config = confPath;
-            } else {
-                config = String.format("-conf=%s", confPath);
-            }
-            Process process = Runtime.getRuntime().exec(String.format("%s %s %s", dashClientPath, config, command));
-            int result = process.waitFor();
 
-            BufferedReader stdInput = new BufferedReader(new
-                    InputStreamReader(process.getInputStream()));
 
-            String s;
-            StringBuilder output = new StringBuilder();
-            while ((s = stdInput.readLine()) != null) {
-                output.append(s);
-            }
-
-            return new JSONObject(output.toString());
-
-        } catch (IOException e) {
-            return null;
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
+    @Override
     public void printReport() {
         try {
             FileWriter writer = new FileWriter(outputFile);
@@ -96,7 +68,7 @@ public class TransactionReport {
                 TransactionConfidence confidence = txInfo.tx.getConfidence();
                 int blockMined = confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING ? confidence.getAppearedAtChainHeight() : -1;
 
-                if ((txInfo.txCore == null || blockMined == -1) && dashClientPath.length() > 0) {
+                if ((txInfo.txCore == null || blockMined == -1 || blockMined == txInfo.blockRecieved) && dashClientPath.length() > 0) {
                     txInfo.txCore = runRPCCommand(String.format("getrawtransaction %s true", txInfo.tx.getTxId()));
                 }
                 String line = String.format("%s, %d, %d, %d, %s, %s, %d, %s, %s\n",

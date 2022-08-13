@@ -18,11 +18,14 @@
 package org.bitcoinj.examples;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.examples.debug.BlockReport;
 import org.bitcoinj.examples.debug.TransactionReport;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.*;
+import org.bitcoinj.quorums.listeners.ChainLockListener;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
@@ -47,6 +50,7 @@ public class ForwardingService {
     private static WalletAppKit kit;
 
     private static TransactionReport txReport;
+    private static BlockReport blockReport;
 
     public static void main(String[] args) throws Exception {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
@@ -100,7 +104,8 @@ public class ForwardingService {
                 confPath = args[lastArg + 1];
         }
 
-        txReport = new TransactionReport(clientPath, confPath);
+        txReport = new TransactionReport(clientPath, confPath, params);
+        blockReport = new BlockReport(clientPath, confPath, params);
         // Parse the address given as the first parameter.
         forwardingAddress = Address.fromBase58(params, args[0]);
 
@@ -172,6 +177,20 @@ public class ForwardingService {
                         throw new RuntimeException(t);
                     }
                 }, MoreExecutors.directExecutor());
+            }
+        });
+
+        kit.chain().addNewBestBlockListener(new NewBestBlockListener() {
+            @Override
+            public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+                blockReport.add(block);
+                blockReport.printReport();
+            }
+        });
+        kit.wallet().getContext().chainLockHandler.addChainLockListener(new ChainLockListener() {
+            @Override
+            public void onNewChainLock(StoredBlock block) {
+                blockReport.setChainLock(block);
             }
         });
 
