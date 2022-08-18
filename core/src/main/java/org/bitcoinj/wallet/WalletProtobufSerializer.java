@@ -677,8 +677,11 @@ public class WalletProtobufSerializer {
                 if(extendedKeyChain.getKeyType() == Protos.ExtendedKeyChain.KeyType.ECDSA) {
                     if (extendedKeyChain.getKeyCount() > 0) {
                         List<DeterministicKeyChain> chains = AuthenticationKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory);
-                        if (!chains.isEmpty())
-                            wallet.setAuthenticationKeyChain((AuthenticationKeyChain)chains.get(0), type);
+                        if (!chains.isEmpty()) {
+                            AuthenticationKeyChain chain = (AuthenticationKeyChain)chains.get(0);
+                            chain.setHardenedChildren(type == AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
+                            wallet.setAuthenticationKeyChain(chain, type);
+                        }
                     }
                 }
             }

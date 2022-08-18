@@ -5753,7 +5753,7 @@ public class Wallet extends BaseTaggableObject
         blockchainIdentityKeyChain = addAuthenticationKeyChain(seed,
                 derivationPathFactory.blockchainIdentityECDSADerivationPath(),
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
-                keyParameter);
+                keyParameter, true);
         invitationFundingKeyChain = addAuthenticationKeyChain(seed,
                 derivationPathFactory.identityInvitationFundingDerivationPath(),
                 AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
@@ -5761,9 +5761,16 @@ public class Wallet extends BaseTaggableObject
     }
 
     AuthenticationKeyChain addAuthenticationKeyChain(DeterministicSeed seed,
+                                                     ImmutableList<ChildNumber> path,
+                                                     AuthenticationKeyChain.KeyChainType type,
+                                                     @Nullable KeyParameter keyParameter) {
+        return addAuthenticationKeyChain(seed, path, type, keyParameter, false);
+    }
+
+    AuthenticationKeyChain addAuthenticationKeyChain(DeterministicSeed seed,
                                    ImmutableList<ChildNumber> path,
                                    AuthenticationKeyChain.KeyChainType type,
-                                   @Nullable KeyParameter keyParameter) {
+                                   @Nullable KeyParameter keyParameter, boolean hardenedChildren) {
 
         if (authenticationGroup == null) {
             authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(params).build();
@@ -5772,7 +5779,7 @@ public class Wallet extends BaseTaggableObject
         if (chain == null) {
 
             chain = AuthenticationKeyChain.authenticationBuilder()
-                    .seed(seed).accountPath(path).type(type)
+                    .seed(seed).accountPath(path).type(type).createHardenedChildren(hardenedChildren)
                     .build();
 
             if (keyParameter != null && getKeyCrypter() != null) {

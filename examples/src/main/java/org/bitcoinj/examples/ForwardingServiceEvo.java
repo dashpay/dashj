@@ -214,7 +214,7 @@ public class ForwardingServiceEvo {
                 return;
 
             AuthenticationKeyChain blockchainIdentityFunding = kit.wallet().getBlockchainIdentityFundingKeyChain();
-            ECKey publicKey = blockchainIdentityFunding.freshAuthenticationKey();
+            ECKey publicKey = blockchainIdentityFunding.freshAuthenticationKey(true);
             Coin fundingAmount = Coin.valueOf(40000);
             SendRequest sendRequest = SendRequest.creditFundingTransaction(kit.params(), publicKey, fundingAmount);
             Wallet.SendResult sendResult = kit.wallet().sendCoins(sendRequest);
