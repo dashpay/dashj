@@ -26,6 +26,13 @@ public class BLSPublicKey extends BLSAbstractObject {
         updateHash();
     }
 
+    public BLSPublicKey(byte [] publicKey) {
+        super(BLS_CURVE_PUBKEY_SIZE);
+        publicKeyImpl = PublicKey.FromBytes(publicKey);
+        valid = true;
+        updateHash();
+    }
+
     public BLSPublicKey(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
     }
