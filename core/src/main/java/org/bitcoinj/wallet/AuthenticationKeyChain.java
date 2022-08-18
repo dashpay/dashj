@@ -18,9 +18,12 @@ package org.bitcoinj.wallet;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.ListenerRegistration;
+import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
@@ -46,6 +49,7 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         INVALID_KEY_CHAIN
     }
     KeyChainType type;
+    boolean hardenedChildren;
     int currentIndex;
     int issuedKeys;
 
@@ -60,6 +64,7 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         protected DeterministicKey spendingKey = null;
         protected ImmutableList<ChildNumber> accountPath = null;
         protected KeyChainType type = null;
+        protected boolean hardenedChildren = false;
 
         protected Builder() {
         }
@@ -132,6 +137,11 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
             return self();
         }
 
+        public T createHardenedChildren(boolean hardedChildren) {
+            this.hardenedChildren = hardedChildren;
+            return self();
+        }
+
         public AuthenticationKeyChain build() {
             checkState(passphrase == null || seed == null, "Passphrase must not be specified with seed");
 
@@ -140,19 +150,17 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
             if (type == null)
                 type = KeyChainType.INVALID_KEY_CHAIN;
 
-            AuthenticationKeyChain chain = null;
-
             if (random != null)
                 // Default passphrase to "" if not specified
                 return new AuthenticationKeyChain(new DeterministicSeed(random, bits, getPassphrase()), null,
-                        accountPath, type);
+                        accountPath, type, hardenedChildren);
             else if (entropy != null)
                 return new AuthenticationKeyChain(new DeterministicSeed(entropy, getPassphrase(), creationTimeSecs),
-                        null, accountPath, type);
+                        null, accountPath, type, hardenedChildren);
             else if (seed != null)
-                return new AuthenticationKeyChain(seed, null, accountPath, type);
+                return new AuthenticationKeyChain(seed, null, accountPath, type, hardenedChildren);
             else if (spendingKey != null)
-                return new AuthenticationKeyChain(spendingKey, type);
+                return new AuthenticationKeyChain(spendingKey, type, hardenedChildren);
             else
                 throw new IllegalStateException();
         }
@@ -178,19 +186,22 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         super(key, false);
     }
 
-    public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyChainType type) {
+    public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyChainType type, boolean hardenedChildren) {
         this(seed, path);
         this.type = type;
+        this.hardenedChildren = hardenedChildren;
     }
 
-    public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyChainType type) {
+    public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyChainType type, boolean hardenedChildren) {
         this(seed, keyCrypter, path);
         this.type = type;
+        this.hardenedChildren = hardenedChildren;
     }
 
-    public AuthenticationKeyChain(DeterministicKey key, KeyChainType type) {
+    public AuthenticationKeyChain(DeterministicKey key, KeyChainType type, boolean hardenedChildren) {
         this(key);
         this.type = type;
+        this.hardenedChildren = hardenedChildren;
     }
 
     /**
@@ -257,20 +268,24 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         }
     }
 
+    public DeterministicKey getKey(int index, boolean isHardened) {
+        return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, isHardened))).build(), true);
+    }
+
     public DeterministicKey getKey(int index) {
-        return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, false))).build(), true);
+        return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, hardenedChildren))).build(), true);
     }
 
     public int getCurrentIndex() {
         return currentIndex;
     }
 
-    public DeterministicKey freshAuthenticationKey() {
+    public DeterministicKey freshAuthenticationKey(boolean isHardened) {
         return getKey(KeyPurpose.AUTHENTICATION);
     }
 
-    public DeterministicKey currentAuthenticationKey() {
-        return getKey(currentIndex);
+    public DeterministicKey currentAuthenticationKey(boolean isHardened) {
+        return getKey(currentIndex, isHardened);
     }
 
     public DeterministicKey getKeyByPubKeyHash(byte [] hash160) {
@@ -289,7 +304,43 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         return new AuthenticationKeyChain(keyCrypter, aesKey, this);
     }
 
+    @Override
+    public AuthenticationKeyChain toDecrypted(KeyParameter aesKey) {
+        checkState(getKeyCrypter() != null, "Key chain not encrypted");
+        checkState(getSeed() != null, "Can't decrypt a watching chain");
+        checkState(getSeed().isEncrypted());
+        String passphrase = DEFAULT_PASSPHRASE_FOR_MNEMONIC; // FIXME allow non-empty passphrase
+        DeterministicSeed decSeed = getSeed().decrypt(getKeyCrypter(), passphrase, aesKey);
+        AuthenticationKeyChain chain = new AuthenticationKeyChain(decSeed, getAccountPath(), type, hardenedChildren);
+        // Now double check that the keys match to catch the case where the key is wrong but padding didn't catch it.
+        if (!chain.getWatchingKey().getPubKeyPoint().equals(getWatchingKey().getPubKeyPoint()))
+            throw new KeyCrypterException.PublicPrivateMismatch("Provided AES key is wrong");
+        chain.lookaheadSize = lookaheadSize;
+        // Now copy the (pubkey only) leaf keys across to avoid rederiving them. The private key bytes are missing
+        // anyway so there's nothing to decrypt.
+        for (ECKey eckey : basicKeyChain.getKeys()) {
+            DeterministicKey key = (DeterministicKey) eckey;
+            if (key.getPath().size() != getAccountPath().size() + 2) continue; // Not a leaf key.
+            checkState(key.isEncrypted());
+            DeterministicKey parent = chain.hierarchy.get(checkNotNull(key.getParent()).getPath(), false, false);
+            // Clone the key to the new decrypted hierarchy.
+            key = new DeterministicKey(key.dropPrivateBytes(), parent);
+            chain.hierarchy.putKey(key);
+            chain.basicKeyChain.importKey(key);
+        }
+        chain.issuedExternalKeys = issuedExternalKeys;
+        chain.issuedInternalKeys = issuedInternalKeys;
+        for (ListenerRegistration<KeyChainEventListener> listener : basicKeyChain.getListeners()) {
+            chain.basicKeyChain.addEventListener(listener);
+        }
+        return chain;
+    }
+
     public KeyChainType getType() {
         return type;
+    }
+
+    public void setHardenedChildren(boolean hardenedChildren) {
+        this.hardenedChildren = hardenedChildren;
     }
 }
