@@ -20,6 +20,7 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.*;
 
 public class BLSExchangeKeyCrypterTest {
@@ -44,12 +45,24 @@ public class BLSExchangeKeyCrypterTest {
     }
 
     @Test
+    public void verifyKeysTest() {
+        assertEquals("1790635de8740e9a6a6b15fb6b72f3a16afa0973d971979b6ba54761d6e2502c50db76f4d26143f05459a42cfd520d44",
+                aliceKey.GetPublicKey().toStringHex());
+        assertEquals("F5BjXeh0DppqaxX7a3LzoWr6CXPZcZeba6VHYdbiUCxQ23b00mFD8FRZpCz9Ug1E", aliceKey.GetPublicKey().toStringBase64());
+        assertEquals("46891c2cec49593c81921e473db7480029e0fc1eb933c6b93d81f5370eb19fbd", aliceKey.toStringHex());
+        assertEquals("RokcLOxJWTyBkh5HPbdIACng/B65M8a5PYH1Nw6xn70=", aliceKey.toStringBase64());
+    }
+
+    @Test
     public void testEncryptionAndDecryption() {
         //Alice is sending to Bob
         BLSKeyExchangeCrypter aliceKeyExchangeCrypter = new BLSKeyExchangeCrypter();
         KeyParameter aliceKeyParameter = aliceKeyExchangeCrypter.deriveKey(aliceKey, bobKey.GetPublicKey());
 
-        EncryptedData encryptedData = aliceKeyExchangeCrypter.encrypt(secret.getBytes(), aliceKeyParameter);
+        EncryptedData encryptedData = aliceKeyExchangeCrypter.encrypt(secret.getBytes(),
+                HEX.decode("eac5bcd6eb85074759e0261497428c9b"), aliceKeyParameter);
+        assertEquals("d72bd418ce96e69cbb6766e59f8d1f8138afb0686018bb4d401369e77ba47367f93a49a528f4cc9e3f209a515e6dd8f2",
+                encryptedData.encryptedBytes);
         assertNotNull(encryptedData);
 
         //Bob is receiving from Alice
