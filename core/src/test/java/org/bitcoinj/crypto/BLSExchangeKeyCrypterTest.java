@@ -62,7 +62,7 @@ public class BLSExchangeKeyCrypterTest {
         EncryptedData encryptedData = aliceKeyExchangeCrypter.encrypt(secret.getBytes(),
                 HEX.decode("eac5bcd6eb85074759e0261497428c9b"), aliceKeyParameter);
         assertEquals("d72bd418ce96e69cbb6766e59f8d1f8138afb0686018bb4d401369e77ba47367f93a49a528f4cc9e3f209a515e6dd8f2",
-                encryptedData.encryptedBytes);
+                HEX.encode(encryptedData.encryptedBytes));
         assertNotNull(encryptedData);
 
         //Bob is receiving from Alice
