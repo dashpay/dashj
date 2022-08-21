@@ -24,49 +24,50 @@ import org.bitcoinj.core.Utils;
 import java.io.IOException;
 import java.io.OutputStream;
 
-// dsa
-public class CoinJoinAccept extends Message {
-    private int denomination;
-    private Transaction txCollateral;
+// dsf
+public class CoinJoinFinalTransaction extends Message {
+    private int msgSessionID;
+    private Transaction transaction;
 
-    public CoinJoinAccept(NetworkParameters params, byte[] payload) {
+    public CoinJoinFinalTransaction(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
     }
 
-    public CoinJoinAccept(NetworkParameters params, int denomination, Transaction txCollateral) {
+    public CoinJoinFinalTransaction(NetworkParameters params, int msgSessionID, Transaction transaction) {
         super(params);
-        this.denomination = denomination;
-        this.txCollateral = txCollateral;
+        this.msgSessionID = msgSessionID;
+        this.transaction = transaction;
     }
 
     @Override
     protected void parse() throws ProtocolException {
-        denomination = (int)readUint32();
-        txCollateral = new Transaction(params, payload, cursor);
-        cursor += txCollateral.getMessageSize();
+        msgSessionID = (int)readUint32();
+        transaction = new Transaction(params, payload, cursor);
+        cursor += transaction.getMessageSize();
+
         length = cursor - offset;
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        Utils.uint32ToByteStreamLE(denomination, stream);
-        txCollateral.bitcoinSerialize(stream);
+        Utils.uint32ToByteStreamLE(msgSessionID, stream);
+        transaction.bitcoinSerialize(stream);
     }
 
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinAccept(denomination=%d, txCollateral=%s)",
-                denomination,
-                txCollateral.getTxId()
+                "CoinJoinFinalTransaction(msgSessionID=%d, transaction=%s)",
+                msgSessionID,
+                transaction.getTxId()
         );
     }
 
-    public int getDenomination() {
-        return denomination;
+    public int getMsgSessionID() {
+        return msgSessionID;
     }
 
-    public Transaction getTxCollateral() {
-        return txCollateral;
+    public Transaction getTransaction() {
+        return transaction;
     }
 }

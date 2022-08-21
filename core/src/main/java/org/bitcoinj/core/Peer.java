@@ -18,6 +18,8 @@ package org.bitcoinj.core;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
+
+import org.bitcoinj.coinjoin.CoinJoinQueue;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
@@ -578,7 +580,7 @@ public class Peer extends PeerSocketHandler {
             processUTXOMessage((UTXOsMessage) m);
         } else if (m instanceof RejectMessage) {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
-        } else if(m instanceof DarkSendQueue) {
+        } else if(m instanceof CoinJoinQueue) {
             //do nothing
         }
         else if(m instanceof SporkMessage)

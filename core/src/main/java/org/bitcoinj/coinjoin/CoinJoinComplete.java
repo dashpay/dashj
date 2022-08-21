@@ -18,55 +18,53 @@ package org.bitcoinj.coinjoin;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-// dsa
-public class CoinJoinAccept extends Message {
-    private int denomination;
-    private Transaction txCollateral;
+// dsc
+public class CoinJoinComplete extends Message {
+    private int msgSessionID;
+    private PoolMessage msgMessageID;
 
-    public CoinJoinAccept(NetworkParameters params, byte[] payload) {
+    public CoinJoinComplete(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
     }
 
-    public CoinJoinAccept(NetworkParameters params, int denomination, Transaction txCollateral) {
+    public CoinJoinComplete(NetworkParameters params, int msgSessionID, PoolMessage msgMessageID) {
         super(params);
-        this.denomination = denomination;
-        this.txCollateral = txCollateral;
+        this.msgSessionID = msgSessionID;
+        this.msgMessageID = msgMessageID;
     }
 
     @Override
     protected void parse() throws ProtocolException {
-        denomination = (int)readUint32();
-        txCollateral = new Transaction(params, payload, cursor);
-        cursor += txCollateral.getMessageSize();
+        msgSessionID = (int)readUint32();
+        msgMessageID = PoolMessage.fromValue((int)readUint32());
         length = cursor - offset;
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        Utils.uint32ToByteStreamLE(denomination, stream);
-        txCollateral.bitcoinSerialize(stream);
+        Utils.uint32ToByteStreamLE(msgSessionID, stream);
+        msgMessageID = PoolMessage.fromValue((int)readUint32());
     }
 
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinAccept(denomination=%d, txCollateral=%s)",
-                denomination,
-                txCollateral.getTxId()
+                "CoinJoinComplete(msgSessionID=%d, masternodeOutpoint=%d)",
+                msgSessionID,
+                msgMessageID.value
         );
     }
 
-    public int getDenomination() {
-        return denomination;
+    public int getMsgSessionID() {
+        return msgSessionID;
     }
 
-    public Transaction getTxCollateral() {
-        return txCollateral;
+    public PoolMessage getMsgMessageID() {
+        return msgMessageID;
     }
 }

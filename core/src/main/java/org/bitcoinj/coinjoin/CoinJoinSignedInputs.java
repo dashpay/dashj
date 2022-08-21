@@ -18,55 +18,59 @@ package org.bitcoinj.coinjoin;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.VarInt;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
-// dsa
-public class CoinJoinAccept extends Message {
-    private int denomination;
-    private Transaction txCollateral;
+// dss
+public class CoinJoinSignedInputs extends Message {
+    private List<TransactionInput> inputs;
 
-    public CoinJoinAccept(NetworkParameters params, byte[] payload) {
+    public CoinJoinSignedInputs(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
     }
 
-    public CoinJoinAccept(NetworkParameters params, int denomination, Transaction txCollateral) {
+    public CoinJoinSignedInputs(NetworkParameters params, List<TransactionInput> inputs) {
         super(params);
-        this.denomination = denomination;
-        this.txCollateral = txCollateral;
+        this.inputs = inputs;
     }
 
     @Override
     protected void parse() throws ProtocolException {
-        denomination = (int)readUint32();
-        txCollateral = new Transaction(params, payload, cursor);
-        cursor += txCollateral.getMessageSize();
+        long numInputs = readVarInt();
+        inputs = new ArrayList<>();
+
+        for (int i = 0; i < numInputs; i++) {
+            TransactionInput input = new TransactionInput(params, null, payload, cursor);
+            inputs.add(input);
+            cursor += input.getMessageSize();
+        }
+
         length = cursor - offset;
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        Utils.uint32ToByteStreamLE(denomination, stream);
-        txCollateral.bitcoinSerialize(stream);
+        stream.write(new VarInt(inputs.size()).encode());
+
+        for (TransactionInput input : inputs) {
+            input.bitcoinSerialize(stream);
+        }
     }
 
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinAccept(denomination=%d, txCollateral=%s)",
-                denomination,
-                txCollateral.getTxId()
+                "CoinJoinSignedInputs(inputs.size=%d)",
+                inputs.size()
         );
     }
 
-    public int getDenomination() {
-        return denomination;
-    }
-
-    public Transaction getTxCollateral() {
-        return txCollateral;
+    public List<TransactionInput> getInputs() {
+        return inputs;
     }
 }
