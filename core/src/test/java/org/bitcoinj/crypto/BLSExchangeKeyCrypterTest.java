@@ -52,10 +52,10 @@ public class BLSExchangeKeyCrypterTest {
         assertEquals("46891c2cec49593c81921e473db7480029e0fc1eb933c6b93d81f5370eb19fbd", aliceKey.toStringHex());
         assertEquals("RokcLOxJWTyBkh5HPbdIACng/B65M8a5PYH1Nw6xn70=", aliceKey.toStringBase64());
 
-        assertEquals("0e2f9055c17eb13221d8b41833468ab49f7d4e874ddf4b217f5126392a608fd48ccab3510548f1da4f397c1ad4f8e01a", bobKey.GetPublicKey().toStringHex(), "BLS publicKeyData is incorrect");
-        assertEquals("Di+QVcF+sTIh2LQYM0aKtJ99TodN30shf1EmOSpgj9SMyrNRBUjx2k85fBrU+OAa", bobKey.GetPublicKey().toStringBase64(), "BLS publicKeyData is incorrect");
-        assertEquals("2513a9d824e763f8b3ff4304c5d52d05154a82b4c975da965f124e5dcf915805", bobKey.toStringHex(), "BLS privateKeyData is incorrect");
-        assertEquals("JROp2CTnY/iz/0MExdUtBRVKgrTJddqWXxJOXc+RWAU=", bobKey.toStringBase64(), "BLS privateKeyData is incorrect");
+        assertEquals("0e2f9055c17eb13221d8b41833468ab49f7d4e874ddf4b217f5126392a608fd48ccab3510548f1da4f397c1ad4f8e01a", bobKey.GetPublicKey().toStringHex());
+        assertEquals("Di+QVcF+sTIh2LQYM0aKtJ99TodN30shf1EmOSpgj9SMyrNRBUjx2k85fBrU+OAa", bobKey.GetPublicKey().toStringBase64());
+        assertEquals("2513a9d824e763f8b3ff4304c5d52d05154a82b4c975da965f124e5dcf915805", bobKey.toStringHex());
+        assertEquals("JROp2CTnY/iz/0MExdUtBRVKgrTJddqWXxJOXc+RWAU=", bobKey.toStringBase64());
     }
 
     @Test
