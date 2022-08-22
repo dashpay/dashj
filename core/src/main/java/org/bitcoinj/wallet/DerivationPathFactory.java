@@ -56,20 +56,18 @@ public class DerivationPathFactory {
                 .build();
     }
 
-    /** blockchain identity keys derivation path (EC Keys)
-     * m/9'/5'/5'/0'/0'/(blockchain identity index)'/(key index)' (mainnet)
-     * m/9'/1'/5'/0'/0'/(blockchain identity index)'/(key index)' (testnet, devnets)
+    /** blockchain identity keys derivation root path (EC Keys)
+     * m/9'/5'/5'/0'/0'/(blockchain identity index)' (mainnet)
+     * m/9'/1'/5'/0'/0'/(blockchain identity index)' (testnet, devnets)
      */
-    @Deprecated
     public ImmutableList<ChildNumber> blockchainIdentityECDSADerivationPath() {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
                 .add(FEATURE_PURPOSE_IDENTITIES)
                 .add(ChildNumber.ZERO_HARDENED) //sub feature 0
-                .add(ChildNumber.ZERO_HARDENED) //key type (0 is ECDSA key)
+                .add(ChildNumber.ZERO_HARDENED) //key type (0 is EC key)
                 .add(ChildNumber.ZERO_HARDENED) //identity index (default to 0 for now)
-                //.add(ChildNumber.ZERO_HARDENED) //key index (default to 0 for now)
                 .build();
     }
 
@@ -83,15 +81,15 @@ public class DerivationPathFactory {
                 .add(coinType)
                 .add(FEATURE_PURPOSE_IDENTITIES)
                 .add(ChildNumber.ZERO_HARDENED) //sub feature 0
-                .add(ChildNumber.ZERO_HARDENED) //key type (0 is ECDSA key)
+                .add(ChildNumber.ZERO_HARDENED) //key type (0 is EC key)
                 .add(ChildNumber.ZERO_HARDENED) //identity index (default to 0 for now)
                 .add(new ChildNumber(index, true)) //key index (default to 0 for now)
                 .build();
     }
 
-    /** blockchain identity keys derivation path (BLS Keys)
-     * m/9'/5'/5'/0'/1'/(blockchain identity index)/(key index)' (mainnet)
-     * m/9'/1'/5'/0'/1'/(blockchain identity index)/(key index)' (testnet, devnets)
+    /** blockchain identity keys derivation root path (BLS Keys)
+     * m/9'/5'/5'/0'/1'/(blockchain identity index = 0) (mainnet)
+     * m/9'/1'/5'/0'/1'/(blockchain identity index = 0) (testnet, devnets)
      */
     public ImmutableList<ChildNumber> blockchainIdentityBLSDerivationPath() {
         return ImmutableList.<ChildNumber>builder()
@@ -99,9 +97,24 @@ public class DerivationPathFactory {
                 .add(coinType)
                 .add(FEATURE_PURPOSE_IDENTITIES)
                 .add(ChildNumber.ZERO_HARDENED) //sub feature 0
-                .add(ChildNumber.ONE_HARDENED) //key type (0 is ECDSA key)
+                .add(ChildNumber.ONE_HARDENED) //key type (1 is BLS key)
                 .add(ChildNumber.ZERO_HARDENED) // identity index (default to 0 for now)
-                .add(ChildNumber.ZERO_HARDENED) //key index (default to 0 for now)
+                .build();
+    }
+
+    /** blockchain identity keys derivation path (BLS Keys)
+     * m/9'/5'/5'/0'/1'/(blockchain identity index)/(key index)' (mainnet)
+     * m/9'/1'/5'/0'/1'/(blockchain identity index)/(key index)' (testnet, devnets)
+     */
+    public ImmutableList<ChildNumber> blockchainIdentityBLSDerivationPath(int index) {
+        return ImmutableList.<ChildNumber>builder()
+                .add(FEATURE_PURPOSE)
+                .add(coinType)
+                .add(FEATURE_PURPOSE_IDENTITIES)
+                .add(ChildNumber.ZERO_HARDENED) //sub feature 0
+                .add(ChildNumber.ONE_HARDENED) //key type (1 is BLS key)
+                .add(ChildNumber.ZERO_HARDENED) // identity index (default to 0 for now)
+                .add(new ChildNumber(index, true)) //key index (default to 0 for now)
                 .build();
     }
 
