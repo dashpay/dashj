@@ -40,8 +40,14 @@ public class DerivationPathFactoryTest {
 
     // m / 9' / 5' / 0' / 0' / 0' / 0'  - Blockchain Identity Path
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_PATH = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED);
+            ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED);
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED);
+
+    // m / 9' / 5' / 0' / 0' / 0' / 0'  - Blockchain Identity Path
+    public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_PATH_KEY_ZERO = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.FIVE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED);
+    public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_PATH_TESTNET_KEY_ZERO = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED, ChildNumber.ZERO_HARDENED);
 
     // Blockchain Identity Funding Path
@@ -66,6 +72,7 @@ public class DerivationPathFactoryTest {
         assertEquals(PROVIDER_OPERATOR_PATH, factory.masternodeOperatorDerivationPath());
 
         assertEquals(BLOCKCHAIN_IDENTITY_PATH, factory.blockchainIdentityECDSADerivationPath());
+        assertEquals(BLOCKCHAIN_IDENTITY_PATH_KEY_ZERO, factory.blockchainIdentityECDSADerivationPath(0));
         assertEquals(BLOCKCHAIN_IDENTITY_FUNDING_PATH, factory.blockchainIdentityRegistrationFundingDerivationPath());
     }
 
@@ -83,6 +90,7 @@ public class DerivationPathFactoryTest {
         assertEquals(PROVIDER_OPERATOR_PATH_TESTNET, factory.masternodeOperatorDerivationPath());
 
         assertEquals(BLOCKCHAIN_IDENTITY_PATH_TESTNET, factory.blockchainIdentityECDSADerivationPath());
+        assertEquals(BLOCKCHAIN_IDENTITY_PATH_TESTNET_KEY_ZERO, factory.blockchainIdentityECDSADerivationPath(0));
         assertEquals(BLOCKCHAIN_IDENTITY_FUNDING_PATH_TESTNET, factory.blockchainIdentityRegistrationFundingDerivationPath());
     }
 }
