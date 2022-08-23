@@ -94,7 +94,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(GovernanceVote.class, "govobjvote");
         names.put(GetSimplifiedMasternodeListDiff.class, "getmnlistd");
         names.put(SimplifiedMasternodeListDiff.class, "mnlistdiff");
-        names.put(SendDsq.class, "senddsq");
+        names.put(SendCoinJoinQueue.class, "senddsq");
         names.put(QuorumSendRecoveredSignatures.class, "qsendrecsigs");
         names.put(InstantSendLock.class, "isdlock");
         names.put(ChainLockSignature.class, "clsig");
@@ -287,7 +287,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("mnlistdiff")) {
             return new SimplifiedMasternodeListDiff(params, payloadBytes);
         } else if(command.equals("senddsq")) {
-            return new SendDsq(params, payloadBytes);
+            return new SendCoinJoinQueue(params, payloadBytes);
         } else if(command.equals("qsendrecsigs")) {
             return new QuorumSendRecoveredSignatures(params);
         } else if(command.equals("islock")) {

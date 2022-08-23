@@ -1,4 +1,8 @@
-package org.bitcoinj.core;
+package org.bitcoinj.coinjoin;
+
+import org.bitcoinj.core.Message;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.ProtocolException;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -6,14 +10,15 @@ import java.io.OutputStream;
 /**
  * Created by Hash Engineering on 4/12/2019.
  */
-public class SendDsq extends Message {
+// senddsq
+public class SendCoinJoinQueue extends Message {
     private boolean send;
 
-    public SendDsq(NetworkParameters params, byte[] payload) {
+    public SendCoinJoinQueue(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
     }
 
-    public SendDsq(NetworkParameters params, boolean send) {
+    public SendCoinJoinQueue(NetworkParameters params, boolean send) {
         super(params);
         this.send = send;
     }
