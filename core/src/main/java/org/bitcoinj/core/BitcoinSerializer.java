@@ -94,7 +94,6 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(GovernanceVote.class, "govobjvote");
         names.put(GetSimplifiedMasternodeListDiff.class, "getmnlistd");
         names.put(SimplifiedMasternodeListDiff.class, "mnlistdiff");
-        names.put(SendCoinJoinQueue.class, "senddsq");
         names.put(QuorumSendRecoveredSignatures.class, "qsendrecsigs");
         names.put(InstantSendLock.class, "isdlock");
         names.put(ChainLockSignature.class, "clsig");
@@ -104,6 +103,16 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(CreditFundingTransaction.class, "tx");
         names.put(GetQuorumRotationInfo.class, "getqrinfo");
         names.put(QuorumRotationInfo.class, "qrinfo");
+        // CoinJoin
+        names.put(CoinJoinAccept.class, "dsa");
+        names.put(CoinJoinBroadcastTx.class, "dstx");
+        names.put(CoinJoinComplete.class, "dsc");
+        names.put(CoinJoinEntry.class, "dsi");
+        names.put(CoinJoinFinalTransaction.class, "dsf");
+        names.put(CoinJoinQueue.class, "dsq");
+        names.put(SendCoinJoinQueue.class, "senddsq");
+        names.put(CoinJoinSignedInputs.class, "dss");
+        names.put(CoinJoinStatusUpdate.class, "dssu");
     }
 
     /**
