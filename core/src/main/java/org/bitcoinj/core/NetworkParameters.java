@@ -660,7 +660,7 @@ public abstract class NetworkParameters {
     public abstract int getProtocolVersionNum(final ProtocolVersion version);
 
     public static enum ProtocolVersion {
-        MINIMUM(70220),
+        MINIMUM(70219),
         PONG(60001),
         BLOOM_FILTER(MINIMUM.getBitcoinProtocolVersion()),
         BLOOM_FILTER_BIP111(MINIMUM.getBitcoinProtocolVersion()+1),
@@ -668,7 +668,7 @@ public abstract class NetworkParameters {
         DMN_LIST(70214),
         CORE17(70219),
         ISDLOCK(70220),
-        CURRENT(70221);
+        CURRENT(70223);
 
         private final int bitcoinProtocol;
 

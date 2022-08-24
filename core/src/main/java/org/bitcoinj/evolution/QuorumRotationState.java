@@ -19,15 +19,7 @@ package org.bitcoinj.evolution;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.bitcoinj.core.AbstractBlockChain;
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.MasternodeSync;
-import org.bitcoinj.core.Peer;
-import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.*;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.quorums.GetQuorumRotationInfo;
@@ -50,14 +42,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -1061,10 +1046,13 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         quorumSnapshotCache.put(mnListAtHMinus3C.getBlockHash(), quorumSnapshotAtHMinus3C);
         quorumSnapshotCache.put(mnListAtHMinus4C.getBlockHash(), quorumSnapshotAtHMinus4C);
 
-        activeQuorumLists = new HashMap<>(2);
-        SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor);
-        cursor += activeQuorum.getMessageSize();
-        activeQuorumLists.put((int) mnListAtH.getHeight(), activeQuorum);
+        int size = (int)readVarInt(); // generally this should be 2, but could be 1
+        activeQuorumLists = new HashMap<>(size);
+        for (int i = 0; i < size; ++i) {
+            SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor);
+            cursor += activeQuorum.getMessageSize();
+            activeQuorumLists.put((int) mnListAtH.getHeight(), activeQuorum);
+        }
         log.info("after loading, activeQuorumLists has {} lists", activeQuorumLists.size());
         length = cursor - offset;
     }
@@ -1102,17 +1090,23 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             new QuorumSnapshot(0).bitcoinSerialize(stream);
         }
 
-        // obtain the most recent DIP24 quorum hash list
+        // obtain the most recent DIP24 quorum hash lists - top 2
         final int[] mostRecentListHeight = {-1};
-        activeQuorumLists.keySet().forEach(new Consumer<Integer>() {
-            @Override
-            public void accept(Integer height) {
-                mostRecentListHeight[0] = max(mostRecentListHeight[0], (int) height);
-            }
-        });
-        SimplifiedQuorumList listToSave = activeQuorumLists.get(mostRecentListHeight[0]);
-        // write the most recent DIP24 quorum hash list
-        listToSave.bitcoinSerialize(stream);
+        List<Integer> heightList = Lists.newArrayList(activeQuorumLists.keySet().toArray(new Integer [0]));
+        Collections.sort(heightList);
+        int highestIndex = heightList.size() - 1;
+        int nextHighestIndex = highestIndex - 1;
+        ArrayList<SimplifiedQuorumList> listsToSave = Lists.newArrayListWithExpectedSize(2);
+        if (highestIndex >= 0) {
+            listsToSave.add(activeQuorumLists.get(highestIndex));
+        }
+        if (nextHighestIndex >= 0) {
+            listsToSave.add(activeQuorumLists.get(nextHighestIndex));
+        }
+        stream.write(new VarInt(listsToSave.size()).encode());
+        for (SimplifiedQuorumList listToSave : listsToSave) {
+            listToSave.bitcoinSerialize(stream);
+        }
     }
 
     public SimplifiedMasternodeList getMnListAtH() {
@@ -1209,14 +1203,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         if (peer != null)
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffTip());
         Stopwatch watch = Stopwatch.createStarted();
-        Stopwatch watchMNList = Stopwatch.createUnstarted();
-        Stopwatch watchQuorums = Stopwatch.createUnstarted();
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
         headerChain = headersChain;
-        log.info("processing quorumrotationinfo between : {} & {}; {}",
-                getMnListTip().getHeight(),
-                newHeight, quorumRotationInfo);
+        log.info("processing quorumrotationinfo between : {} & {}", getMnListTip().getHeight(), newHeight);
 
         quorumRotationInfo.dump(getMnListTip().getHeight(), newHeight);
 
@@ -1226,7 +1216,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             setBlockChain(chain);
             applyDiff(peer, headersChain, blockChain, quorumRotationInfo, isLoadingBootStrap);
 
-            log.info(this.toString());
+            log.info(this.toString()); // do we need to remove this?
             unCache();
             failedAttempts = 0;
 

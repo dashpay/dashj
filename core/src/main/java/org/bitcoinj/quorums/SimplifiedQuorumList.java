@@ -108,9 +108,11 @@ public class SimplifiedQuorumList extends Message {
         StringBuilder builder = new StringBuilder();
         builder.append("SimplifiedQuorumList(count: ").append(size()).append("; ").append(height).append("/").append(")");
 
-        for (Map.Entry<Sha256Hash, FinalCommitment> entry : minableCommitments.entrySet()) {
-            builder.append("\n ").append(entry.getValue().llmqType).append(": ").append(entry.getValue().quorumHash)
-                    .append(":").append(entry.getValue().quorumIndex);
+        if (Context.get().isDebugMode()) {
+            for (Map.Entry<Sha256Hash, FinalCommitment> entry : minableCommitments.entrySet()) {
+                builder.append("\n ").append(entry.getValue().llmqType).append(": ").append(entry.getValue().quorumHash)
+                        .append(":").append(entry.getValue().quorumIndex);
+            }
         }
 
         return builder.toString();

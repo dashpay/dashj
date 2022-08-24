@@ -74,6 +74,7 @@ public class Context {
     //Dash Specific
     private boolean liteMode = true;
     private boolean allowInstantX = true; //allow InstantX in litemode
+    private boolean debugMode = false;
     public PeerGroup peerGroup;
     public AbstractBlockChain blockChain;
     @Nullable public AbstractBlockChain headerChain;
@@ -511,5 +512,13 @@ public class Context {
             scheduledGovernance.cancel(false);
             scheduledGovernance = null;
         }
+    }
+
+    public boolean isDebugMode() {
+        return debugMode;
+    }
+
+    public void setDebugMode(boolean debugMode) {
+        this.debugMode = debugMode;
     }
 }
