@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Dash Core Group
+ * Copyright 2022 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bitcoinj.core;
+package org.bitcoinj.coinjoin;
 
-public class DarkSendQueue extends EmptyMessage {
+public enum PoolStatusUpdate {
+    STATUS_REJECTED(0),
+    STATUS_ACCEPTED(1);
 
-    public DarkSendQueue(NetworkParameters params, byte [] payload, int offset) {
+    public final int value;
+
+    PoolStatusUpdate(int value) {
+        this.value = value;
+    }
+
+    public static PoolStatusUpdate fromValue(int value) {
+        for (PoolStatusUpdate e : values()) {
+            if (e.value == value) {
+                return e;
+            }
+        }
+        return STATUS_ACCEPTED;
     }
 }

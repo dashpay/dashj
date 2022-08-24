@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.coinjoin.*;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
@@ -93,7 +94,6 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(GovernanceVote.class, "govobjvote");
         names.put(GetSimplifiedMasternodeListDiff.class, "getmnlistd");
         names.put(SimplifiedMasternodeListDiff.class, "mnlistdiff");
-        names.put(SendDsq.class, "senddsq");
         names.put(QuorumSendRecoveredSignatures.class, "qsendrecsigs");
         names.put(InstantSendLock.class, "isdlock");
         names.put(ChainLockSignature.class, "clsig");
@@ -103,6 +103,16 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(CreditFundingTransaction.class, "tx");
         names.put(GetQuorumRotationInfo.class, "getqrinfo");
         names.put(QuorumRotationInfo.class, "qrinfo");
+        // CoinJoin
+        names.put(CoinJoinAccept.class, "dsa");
+        names.put(CoinJoinBroadcastTx.class, "dstx");
+        names.put(CoinJoinComplete.class, "dsc");
+        names.put(CoinJoinEntry.class, "dsi");
+        names.put(CoinJoinFinalTransaction.class, "dsf");
+        names.put(CoinJoinQueue.class, "dsq");
+        names.put(SendCoinJoinQueue.class, "senddsq");
+        names.put(CoinJoinSignedInputs.class, "dss");
+        names.put(CoinJoinStatusUpdate.class, "dssu");
     }
 
     /**
@@ -263,8 +273,6 @@ public class BitcoinSerializer extends MessageSerializer {
             return new GetUTXOsMessage(params, payloadBytes);
         } else if (command.equals("ix")) {
             return new Transaction(params, payloadBytes); // keep ix for backward compatibility
-        } else if (command.equals("dsq")) {
-            return new DarkSendQueue(params, payloadBytes, 0);
         } else if (command.equals("spork")) {
             return new SporkMessage(params, payloadBytes, 0);
         } else if(command.equals("ssc")) {
@@ -288,7 +296,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("mnlistdiff")) {
             return new SimplifiedMasternodeListDiff(params, payloadBytes);
         } else if(command.equals("senddsq")) {
-            return new SendDsq(params);
+            return new SendCoinJoinQueue(params, payloadBytes);
         } else if(command.equals("qsendrecsigs")) {
             return new QuorumSendRecoveredSignatures(params);
         } else if(command.equals("islock")) {
@@ -299,6 +307,16 @@ public class BitcoinSerializer extends MessageSerializer {
             return new ChainLockSignature(params, payloadBytes);
         } else if(command.equals("qrinfo")) {
             return new QuorumRotationInfo(params, payloadBytes);
+        } else if(command.equals("dssu")) {
+            return new CoinJoinStatusUpdate(params, payloadBytes);
+        } else if (command.equals("dsq")) {
+            return new CoinJoinQueue(params, payloadBytes);
+        } else if (command.equals("dsf")) {
+            return new CoinJoinFinalTransaction(params, payloadBytes);
+        } else if (command.equals("dsc")) {
+            return new CoinJoinComplete(params, payloadBytes);
+        } else if (command.equals("dstx")) {
+            return new CoinJoinFinalTransaction(params, payloadBytes);
         } else {
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);
