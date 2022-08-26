@@ -6,6 +6,7 @@ import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.AbstractManager;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.ProtocolException;
@@ -565,6 +566,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                     if (!params.isDIP0024Active(height) && finalCommitment.getLlmqType() == params.getLlmqDIP0024InstantSend()) {
                         params.setDIP0024Active(height);
                         setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
+                    }
+                    if (peerGroup != null && params.isDIP0024Active(height)) {
+                        peerGroup.setMinRequiredProtocolVersion(params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));
                     }
                 }
             });
