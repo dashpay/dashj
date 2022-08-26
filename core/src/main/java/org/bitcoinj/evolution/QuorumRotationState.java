@@ -461,6 +461,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     public boolean isSynced() {
+        if (!params.isDIP0024Active(blockChain.getBestChainHeight()))
+            return true;
+
         if(mnListAtH.getHeight() == -1)
             return  false;
 
@@ -1038,7 +1041,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         for (int i = 0; i < size; ++i) {
             SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor);
             cursor += activeQuorum.getMessageSize();
-            activeQuorumLists.put((int) mnListAtH.getHeight(), activeQuorum);
+            activeQuorumLists.put((int)activeQuorum.getHeight(), activeQuorum);
         }
         log.info("after loading, activeQuorumLists has {} lists", activeQuorumLists.size());
         length = cursor - offset;
@@ -1085,10 +1088,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         int nextHighestIndex = highestIndex - 1;
         ArrayList<SimplifiedQuorumList> listsToSave = Lists.newArrayListWithExpectedSize(2);
         if (highestIndex >= 0) {
-            listsToSave.add(activeQuorumLists.get(highestIndex));
+            listsToSave.add(activeQuorumLists.get(heightList.get(highestIndex)));
         }
         if (nextHighestIndex >= 0) {
-            listsToSave.add(activeQuorumLists.get(nextHighestIndex));
+            listsToSave.add(activeQuorumLists.get(heightList.get(nextHighestIndex)));
         }
         stream.write(new VarInt(listsToSave.size()).encode());
         for (SimplifiedQuorumList listToSave : listsToSave) {
@@ -1129,7 +1132,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 topList = entry.getValue();
             }
         }
-        log.warn("obtaining previous quorum list {}: {} from {} quorum lists", block.getHeight(), topList, activeQuorumLists.size());
+        // if no list was found, use the most recent
+        if (topList.getHeight() == -1) {
+            topList = getTopActiveQuorumList();
+        }
+        log.warn("obtaining quorum list {}: {} from {} quorum lists", block.getHeight(), topList, activeQuorumLists.size());
         return topList;
     }
 
