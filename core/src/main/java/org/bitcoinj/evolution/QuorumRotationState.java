@@ -332,21 +332,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             SimplifiedQuorumList newQuorumListAtHMinusC = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC(), isLoadingBootStrap, chain, true, false);
 
             baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtH().prevBlockHash);
-            SimplifiedQuorumList newQuorumListAtH = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, chain, true, true);
-
-            // TODO: do we actually need to keep track of the blockchain tip quorum list?
-            //SimplifiedQuorumList newQuorumListTip = quorumListTip.applyDiff(quorumRotationInfo.getMnListDiffTip(), isLoadingBootStrap, chain);
+            // only verify quorums if extraShare == true, otherwise we don't have all the necessary mn lists
+            SimplifiedQuorumList newQuorumListAtH = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, chain, true, quorumRotationInfo.hasExtraShare());
 
             if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM)) {
-                // TODO: do we actually need to keep track of the blockchain tip quorum list?
-                // newQuorumListTip.verify(quorumRotationInfo.getMnListDiffTip().coinBaseTx, quorumRotationInfo.getMnListDiffTip(), quorumListTip, newMNListTip);
+                // verify the merkle root of the quorums at H
                 newQuorumListAtH.verify(quorumRotationInfo.getMnListDiffAtH().coinBaseTx, quorumRotationInfo.getMnListDiffAtH(), quorumListAtH, newMNListAtH);
-
-                // TODO: do we need this at all?
-                // newQuorumListAtHMinusC.verify(quorumRotationInfo.getMnListDiffAtHMinusC().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinusC(), quorumListAtHMinusC, newMNListAtHMinusC);
-                // newQuorumListAtHMinus2C.verify(quorumRotationInfo.getMnListDiffAtHMinus2C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus2C(), quorumListAtHMinus2C, newMNListAtHMinus2C);
-                // newQuorumListAtHMinus3C.verify(quorumRotationInfo.getMnListDiffAtHMinus3C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus3C(), quorumListAtHMinus3C, newMNListAtHMinus3C);
-                // newQuorumListAtHMinus4C.verify(quorumRotationInfo.getMnListDiffAtHMinus4C().coinBaseTx, quorumRotationInfo.getMnListDiffAtHMinus4C(), quorumListAtHMinus4C, newMNListAtHMinus4C);
             }
 
             if (peer != null && isSyncingHeadersFirst)
@@ -364,8 +355,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 quorumListAtHMinus4C = newQuorumListAtHMinus4C;
             }
 
-            // TODO: do we actually need to keep track of the blockchain tip quorum list?
-            // quorumListTip = newQuorumListTip;
             quorumListAtH = newQuorumListAtH;
             quorumListAtHMinusC = newQuorumListAtHMinusC;
             quorumListAtHMinus2C = newQuorumListAtHMinus2C;
@@ -383,7 +372,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             newList.addQuorum(quorum);
         }
         try {
-            // do we have this quorum list already?
             boolean hasList = false;
             for (Map.Entry<Integer, SimplifiedQuorumList> entry : activeQuorumLists.entrySet()) {
                 if (entry.getValue().equals(newList)) {
@@ -399,8 +387,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             }
             log.info("activeQuorumLists: {}", activeQuorumLists.size());
         } catch (Exception e) {
-            log.warn("there was a problem verifying the active quorum list");
-            e.printStackTrace();
+            log.warn("there was a problem verifying the active quorum list", e);
         }
     }
 
@@ -1206,13 +1193,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
         headerChain = headersChain;
-        log.info("processing quorumrotationinfo between : {} & {}", getMnListTip().getHeight(), newHeight);
 
         quorumRotationInfo.dump(getMnListTip().getHeight(), newHeight);
 
         lock.lock();
         try {
-            log.info(quorumRotationInfo.toString(chain));
             setBlockChain(chain);
             applyDiff(peer, headersChain, blockChain, quorumRotationInfo, isLoadingBootStrap);
 
