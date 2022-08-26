@@ -17,6 +17,7 @@
 
 package org.bitcoinj.evolution;
 
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
@@ -49,7 +50,7 @@ public abstract class AbstractDiffMessage extends Message {
     protected abstract String getShortName();
 
     public void dump(long startHeight, long endHeight) {
-        if (!Utils.isAndroidRuntime()) {
+        if (!Utils.isAndroidRuntime() && Context.get().isDebugMode()) {
             try {
                 File dumpFile = new File(getShortName() + "-" + params.getNetworkName() + "-" + startHeight + "-" + endHeight + ".dat");
                 OutputStream stream = new FileOutputStream(dumpFile);
