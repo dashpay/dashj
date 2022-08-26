@@ -668,7 +668,7 @@ public abstract class NetworkParameters {
         DMN_LIST(70214),
         CORE17(70219),
         ISDLOCK(70220),
-        CURRENT(70223);
+        CURRENT(70220);
 
         private final int bitcoinProtocol;
 
