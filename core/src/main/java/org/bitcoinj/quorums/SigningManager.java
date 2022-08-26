@@ -214,7 +214,7 @@ public class SigningManager {
             long b = Utils.readInt64(selectionHash.getBytes()/*.getReversedBytes()*/, 24);
             //Take last n bits of b
             int signer = (int)((((1 << n) - 1) & (b >> (64 - n - 1))));
-            log.info("selectQuorumForSigning: n={}, selectionHash={}, b={}, signer={}", n, selectionHash, b, signer);
+            log.debug("selectQuorumForSigning: n={}, selectionHash={}, b={}, signer={}", n, Sha256Hash.wrap(selectionHash.getReversedBytes()), b, signer);
 
             if (signer > quorums.size()) {
                 log.info("signer {} larger than quorum size {}", signer, quorums.size());
@@ -496,18 +496,18 @@ public class SigningManager {
         if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
             boolean result = sig.verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
             if (!result) {
-                log.info("signature not validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, id, signHash);
-                log.info("dash-cli quorum selectquorum {} {}", llmqType.value, id);
+                log.info("signature not validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, Sha256Hash.wrap(id.getReversedBytes()), signHash);
+                log.info("dash-cli quorum selectquorum {} {}", llmqType.value, Sha256Hash.wrap(id.getReversedBytes()));
 
                 StoredBlock block = blockChain.getBlockStore().get((int) (signedAtHeight - SIGN_HEIGHT_OFFSET));
                 if (block == null)
                     headerChain.getBlockStore().get((int) (signedAtHeight - SIGN_HEIGHT_OFFSET));
                 for (Quorum q : context.masternodeListManager.getAllQuorums(llmqType)) {
-                    log.info("attempting verification of {}: {} with {}", id, sig.verifyInsecure(q.commitment.quorumPublicKey, signHash), q);
+                    log.info("attempting verification of {}: {} with {}", Sha256Hash.wrap(id.getReversedBytes()), sig.verifyInsecure(q.commitment.quorumPublicKey, signHash), q);
                 }
             } else {
-                log.info("signature was validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, id, signHash);
-                log.info("dash-cli quorum selectquorum {} {}", llmqType.value, id);
+                log.info("signature was validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, Sha256Hash.wrap(id.getReversedBytes()), signHash);
+                log.info("dash-cli quorum selectquorum {} {}", llmqType.value, Sha256Hash.wrap(id.getReversedBytes()));
             }
 
             return result;

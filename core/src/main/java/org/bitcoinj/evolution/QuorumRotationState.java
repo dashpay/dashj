@@ -194,8 +194,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             blockMinus4C = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinus4C().blockHash);
         }
 
-        log.info(quorumRotationInfo.toString(chain));
-        // TODO: this may not bee needed
+        // TODO: this may not be needed
         // if (!isLoadingBootStrap && blockAtH.getHeight() != newHeight)
         //     throw new ProtocolException("qrinfo blockhash (height=" + blockAtH.getHeight() + " doesn't match coinbase block height: " + newHeight);
 
@@ -344,8 +343,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedQuorums, quorumRotationInfo.getMnListDiffTip());
 
             quorumsCache.clear();
-            // TODO: do we actually need to keep track of the blockchain tip quorum list?
-            // quorumsCache.put(newQuorumListTip.getBlockHash(), newQuorumListTip);
+            // we don't need to keep track of the blockchain tip quorum list
             quorumsCache.put(newQuorumListAtH.getBlockHash(), newQuorumListAtH);
             quorumsCache.put(newQuorumListAtHMinusC.getBlockHash(), newQuorumListAtHMinusC);
             quorumsCache.put(newQuorumListAtHMinus2C.getBlockHash(), newQuorumListAtHMinus2C);
@@ -465,7 +463,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             return true;
 
         if(mnListAtH.getHeight() == -1)
-            return  false;
+            return false;
 
         int mostCommonHeight = context.peerGroup.getMostCommonHeight();
 

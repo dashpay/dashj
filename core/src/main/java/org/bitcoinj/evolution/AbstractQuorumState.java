@@ -364,6 +364,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                     if (nextBlock.getHeight() <= getMasternodeListAtTip().getHeight()) {
                         blockIterator.remove();
                         pendingBlocksMap.remove(nextBlock.getHeader().getHash());
+                        log.debug("removing {}/{} from pending blocks", nextBlock.getHeight(), nextBlock.getHeader().getHash());
                     } else break;
                 }
 
@@ -552,9 +553,14 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                             log.info("null pointer exception", x);
                         }
                     }
-                    log.info("new best block: requesting {} as {}", block.getHeight(), lastRequest.getRequestMessage().getClass().getSimpleName());
+                    log.debug("new best block: requesting {} as {}", block.getHeight(), lastRequest.getRequestMessage().getClass().getSimpleName());
                     requestMNListDiff(block);
                 }
+            } else {
+                if (AbstractQuorumState.this instanceof QuorumRotationState && block.getHeight() % params.getLlmqs().get(params.getLlmqDIP0024InstantSend()).getDkgMiningWindowEnd() != 0) {
+                    return;
+                }
+                log.debug("new best block: not requesting {} (value={}, update={}) as {}", block.getHeight(), value, needsUpdate,lastRequest.getRequestMessage().getClass().getSimpleName());
             }
         }
     };
@@ -563,7 +569,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
             lock.lock();
-            log.info("Peer Connected");
             try {
                 if (downloadPeer == null)
                     downloadPeer = peer;
@@ -576,7 +581,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     final PeerDisconnectedEventListener peerDisconnectedEventListener = new PeerDisconnectedEventListener() {
         @Override
         public void onPeerDisconnected(Peer peer, int peerCount) {
-            log.info("Peer disconnected: " + peer.getAddress());
             if (downloadPeer == peer) {
                 downloadPeer = null;
                 chooseRandomDownloadPeer();
