@@ -17,6 +17,7 @@
 package org.bitcoinj.crypto;
 
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.wallet.Protos;
 import org.bouncycastle.crypto.BufferedBlockCipher;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.engines.AESEngine;
