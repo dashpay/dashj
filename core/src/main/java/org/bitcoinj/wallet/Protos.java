@@ -16488,6 +16488,10 @@ public final class Protos {
        * <code>ENCRYPTED_ECDH_KEYEXCHANGE_AES = 4;</code>
        */
       ENCRYPTED_ECDH_KEYEXCHANGE_AES(4),
+      /**
+       * <code>ENCRYPTED_AES = 5;</code>
+       */
+      ENCRYPTED_AES(5),
       ;
 
       /**
@@ -16522,6 +16526,10 @@ public final class Protos {
        * <code>ENCRYPTED_ECDH_KEYEXCHANGE_AES = 4;</code>
        */
       public static final int ENCRYPTED_ECDH_KEYEXCHANGE_AES_VALUE = 4;
+      /**
+       * <code>ENCRYPTED_AES = 5;</code>
+       */
+      public static final int ENCRYPTED_AES_VALUE = 5;
 
 
       @java.lang.Override
@@ -16545,6 +16553,7 @@ public final class Protos {
           case 2: return ENCRYPTED_SCRYPT_AES;
           case 3: return ENCRYPTED_BLS_KEYEXCHANGE_AES;
           case 4: return ENCRYPTED_ECDH_KEYEXCHANGE_AES;
+          case 5: return ENCRYPTED_AES;
           default: return null;
         }
       }

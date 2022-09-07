@@ -16,7 +16,10 @@
 
 package org.bitcoinj.crypto;
 
+import com.google.common.base.Preconditions;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.wallet.Protos;
 import org.bouncycastle.crypto.BufferedBlockCipher;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.engines.AESEngine;
@@ -30,18 +33,17 @@ import java.util.Arrays;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * <p>This class encrypts and decrypts byte arrays and strings using a ECDH Key Exchange as the
- * key derivation function and AES for the encryption.</p>
+ * <p>This class encrypts and decrypts byte arrays and strings using AES for the encryption.</p>
  *
  * <p>You can use this class to:</p>
  *
- * <p>1) Using a ECDSA private key and a public key, create an AES key that can encrypt and decrypt data.
+ * <p>1) Provide an ECKey or BLSSecretKey as the AES Key.
  * </p>
  *
- * <p>2) Using the AES Key generated above, you then can encrypt and decrypt any bytes using
+ * <p>2) Using the AES Key above, you then can encrypt and decrypt any bytes using
  * the AES symmetric cipher.</p>
  */
-public abstract class KeyCrypterAESCBC implements KeyCrypter {
+public class KeyCrypterAESCBC implements KeyCrypter {
 
     /**
      * Key length in bytes.
@@ -113,6 +115,31 @@ public abstract class KeyCrypterAESCBC implements KeyCrypter {
         } catch (Exception e) {
             throw new KeyCrypterException("Could not encrypt bytes.", e);
         }
+    }
+
+    @Override
+    public Protos.Wallet.EncryptionType getUnderstoodEncryptionType() {
+        return Protos.Wallet.EncryptionType.ENCRYPTED_AES;
+    }
+
+    @Override
+    public KeyParameter deriveKey(CharSequence password) throws KeyCrypterException {
+        throw new UnsupportedOperationException("use one other deriveKey methods instead");
+    }
+
+    public KeyParameter deriveKey(ECKey secretKey) throws KeyCrypterException {
+        Preconditions.checkArgument(secretKey.hasPrivKey(), "secretKey must have private key bytes");
+        return new KeyParameter(secretKey.getPrivKeyBytes());
+    }
+
+    public KeyParameter deriveKey(BLSSecretKey secretKey) throws KeyCrypterException {
+        Preconditions.checkArgument(secretKey.isValid(), "secretKey must be a valid BLS private key");
+        return new KeyParameter(secretKey.getBuffer(32));
+    }
+
+    public KeyParameter deriveKey(byte [] secretKey) throws KeyCrypterException {
+        Preconditions.checkArgument(secretKey.length == 32, "secretKey must be a 32 byte byte array");
+        return new KeyParameter(secretKey);
     }
 
     /**
