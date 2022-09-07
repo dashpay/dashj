@@ -119,7 +119,7 @@ public class KeyCrypterAESCBC implements KeyCrypter {
 
     @Override
     public Protos.Wallet.EncryptionType getUnderstoodEncryptionType() {
-        return Protos.Wallet.EncryptionType.ENCRYPTED_BLS_KEYEXCHANGE_AES;
+        return Protos.Wallet.EncryptionType.ENCRYPTED_AES;
     }
 
     @Override

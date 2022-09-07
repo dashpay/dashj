@@ -449,6 +449,7 @@ message Wallet {
     ENCRYPTED_SCRYPT_AES = 2;        // All keys are encrypted with a passphrase based KDF of scrypt and AES encryption
     ENCRYPTED_BLS_KEYEXCHANGE_AES = 3;           // Not used for wallet
     ENCRYPTED_ECDH_KEYEXCHANGE_AES = 4;          // Not used for wallet
+    ENCRYPTED_AES = 5; // Not used for wallet
   }
 
   required string network_identifier = 1; // the network used by this wallet
