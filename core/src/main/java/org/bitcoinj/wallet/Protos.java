@@ -16489,6 +16489,10 @@ public final class Protos {
        */
       ENCRYPTED_ECDH_KEYEXCHANGE_AES(4),
       /**
+       * <pre>
+       * Not used for wallet
+       * </pre>
+       *
        * <code>ENCRYPTED_AES = 5;</code>
        */
       ENCRYPTED_AES(5),
@@ -16527,6 +16531,10 @@ public final class Protos {
        */
       public static final int ENCRYPTED_ECDH_KEYEXCHANGE_AES_VALUE = 4;
       /**
+       * <pre>
+       * Not used for wallet
+       * </pre>
+       *
        * <code>ENCRYPTED_AES = 5;</code>
        */
       public static final int ENCRYPTED_AES_VALUE = 5;
