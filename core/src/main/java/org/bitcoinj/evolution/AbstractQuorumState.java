@@ -201,7 +201,11 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public abstract void requestUpdate(Peer peer, StoredBlock block);
 
     public void retryLastUpdate(Peer peer) {
-        peer.sendMessage(lastRequest.getRequestMessage());
+        if (peer != null) {
+            peer.sendMessage(lastRequest.getRequestMessage());
+        } else {
+            log.info("no peer supplied to retry the last update request: {}", lastRequest.request);
+        }
     }
 
     public abstract SimplifiedMasternodeList getListForBlock(Sha256Hash blockHash);
@@ -702,11 +706,14 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                         log.info("Exception when sending {}", lastRequest.getRequestMessage().getClass().getSimpleName(), e);
 
                         // use tryLock to avoid deadlocks
-                        boolean flag = context.peerGroup.getLock().tryLock(500, TimeUnit.MILLISECONDS);
+                        boolean isLocked = context.peerGroup.getLock().tryLock(500, TimeUnit.MILLISECONDS);
                         try {
                             if (flag) {
                                 log.info(Thread.currentThread().getName() + ": lock acquired");
                                 downloadPeer = context.peerGroup.getDownloadPeer();
+                                if (downloadPeer == null) {
+                                    chooseRandomDownloadPeer();
+                                }
                                 retryLastUpdate(downloadPeer);
                             }
                         } finally {
