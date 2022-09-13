@@ -119,7 +119,7 @@ public class ManagerFiles {
         // but they will serialize (using different temp files).
         if (executor.isShutdown())
             return;
-        log.info("Saving manager file: {}", file.toPath());
+        log.info("Saving manager file: {}", file.getAbsolutePath());
         saveNowInternal();
     }
 
