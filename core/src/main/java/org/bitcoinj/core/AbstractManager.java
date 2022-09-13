@@ -307,7 +307,9 @@ public abstract class AbstractManager extends Message {
     }
 
     public void close() {
-        shutdownAutosaveAndWait();
+        if (vFileManager != null) {
+            shutdownAutosaveAndWait();
+        }
     }
 
     public void resume() {
