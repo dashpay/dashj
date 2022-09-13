@@ -708,7 +708,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                         // use tryLock to avoid deadlocks
                         boolean isLocked = context.peerGroup.getLock().tryLock(500, TimeUnit.MILLISECONDS);
                         try {
-                            if (flag) {
+                            if (isLocked) {
                                 log.info(Thread.currentThread().getName() + ": lock acquired");
                                 downloadPeer = context.peerGroup.getDownloadPeer();
                                 if (downloadPeer == null) {
@@ -717,7 +717,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                                 retryLastUpdate(downloadPeer);
                             }
                         } finally {
-                            context.peerGroup.getLock().unlock();
+                            if (isLocked) {
+                                context.peerGroup.getLock().unlock();
+                            }
                         }
                     } catch (InterruptedException x) {
                         e.printStackTrace();
