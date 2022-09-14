@@ -124,6 +124,14 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         block = chain.getBlockStore().get(mnlistdiff.blockHash);
+        if (block == null) {
+            // this should be improved.  isSyncingHeadersFirst could be false, but blockChain may not be synced
+            // so we need to check the headersChain
+            block = headersChain.getBlockStore().get(mnlistdiff.blockHash);
+            if (block != null) {
+                chain = headersChain;
+            }
+        }
         if(!isLoadingBootStrap && block.getHeight() != newHeight)
             throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
 
