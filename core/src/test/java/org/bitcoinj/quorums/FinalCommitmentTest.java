@@ -7,6 +7,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 
 import static org.junit.Assert.*;
@@ -185,5 +186,19 @@ public class FinalCommitmentTest {
 
         // round trip
         assertArrayEquals(qfcommit, commitment.bitcoinSerialize());
+    }
+
+    @Test
+    public void bitVectorsTest() {
+        ArrayList<Boolean> shortBitset = Utils.booleanArrayList(50, Utils.HEX.decode("ffffffffffff03"));
+        ArrayList<Boolean> mediumBitset = Utils.booleanArrayList(60, Utils.HEX.decode("cff5bdfdffffff0f"));
+        ArrayList<Boolean> longBitset = Utils.booleanArrayList(400, Utils.HEX.decode("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3f000000000000000000000000"));
+        int shortCount = 50;
+        int mediumCount = 60;
+        int longCount = 400;
+
+        assertEquals(shortCount, shortBitset.size());
+        assertEquals(mediumCount, mediumBitset.size());
+        assertEquals(longCount, longBitset.size());
     }
 }
