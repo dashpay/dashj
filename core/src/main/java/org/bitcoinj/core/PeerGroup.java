@@ -2277,20 +2277,17 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     peer.startBlockChainHeaderDownload();
                 } else if (syncStage.value == SyncStage.MNLIST.value) {
                     peer.startMasternodeListDownload();
-                } else {
-                    if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING) && syncStage.value < SyncStage.PREBLOCKS.value) {
-                        initBlockChainDownloadFutures(peer);
-                        Futures.addCallback(preBlockDownloadFuture, preBlocksDownloadCallback, executor);
-                        log.info("startBlockChainDownloadFromPeer");
-                        setSyncStage(SyncStage.PREBLOCKS);
-                        queuePreBlockDownloadListeners(peer);
-                    } else if (syncStage.value > SyncStage.PREBLOCKS.value) {
-                        // startBlockChainDownload will setDownloadData(true) on itself automatically.
-                        log.info("startBlockChainDownloadFromPeer 3");
-                        setSyncStage(SyncStage.BLOCKS);
-                        peer.startBlockChainDownload();
-                    }
+                } else if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING) && syncStage.value < SyncStage.PREBLOCKS.value) {
+                    initBlockChainDownloadFutures(peer);
+                    Futures.addCallback(preBlockDownloadFuture, preBlocksDownloadCallback, executor);
+                    setSyncStage(SyncStage.PREBLOCKS);
+                    queuePreBlockDownloadListeners(peer);
+                } else /*if (syncStage.value > SyncStage.PREBLOCKS.value)*/ {
+                    // startBlockChainDownload will setDownloadData(true) on itself automatically.
+                    setSyncStage(SyncStage.BLOCKS);
+                    peer.startBlockChainDownload();
                 }
+
             } else {
                 if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING) && syncStage.value < SyncStage.PREBLOCKS.value) {
                     initBlockChainDownloadFutures(peer);
