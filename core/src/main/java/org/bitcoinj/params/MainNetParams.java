@@ -318,7 +318,7 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         deterministicMasternodesEnabled = true;
 
         DIP0008BlockHeight = 1088640;
-        DIP0024BlockHeight = Integer.MAX_VALUE;
+        DIP0024BlockHeight = 1737792 + 5 * 288; // DIP24 activation time + 5 cycles
 
         // long living quorum params
         addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
