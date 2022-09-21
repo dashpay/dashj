@@ -148,11 +148,11 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     }
 
     // TODO: Do we need to keep track of the header chain also?
-    public void setBlockChain(/*AbstractBlockChain headerChain, */AbstractBlockChain blockChain) {
+    public void setBlockChain(AbstractBlockChain headerChain, AbstractBlockChain blockChain) {
         this.blockChain = blockChain;
-        //this.headerChain = headerChain;
+        this.headerChain = headerChain;
         blockStore = blockChain.getBlockStore();
-        //headerStore = headerChain.getBlockStore();
+        headerStore = headerChain.getBlockStore();
     }
 
     public void pushPendingBlock(StoredBlock block) {

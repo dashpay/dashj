@@ -352,8 +352,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         this.quorumManager = quorumManager;
         this.quorumSnapshotManager = quorumSnapshotManager;
         AbstractBlockChain activeChain = headersChain != null ? headersChain : blockChain;
-        quorumState.setBlockChain(activeChain);
-        quorumRotationState.setBlockChain(activeChain);
+        quorumState.setBlockChain(headersChain, blockChain);
+        quorumRotationState.setBlockChain(headersChain, blockChain);
         if(shouldProcessMNListDiff()) {
             // TODO: reactivate for testnet
             if (!params.isDIP24Only()) {

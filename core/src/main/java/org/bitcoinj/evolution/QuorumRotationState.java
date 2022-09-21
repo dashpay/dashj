@@ -32,6 +32,7 @@ import org.bitcoinj.quorums.QuorumSnapshot;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.quorums.SnapshotSkipMode;
+import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -177,9 +178,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
 
         // in the event that we don't know that DIP24 is active, then isSyncingHeadersFirst is false
-        if (chain.getBestChainHeight() == 1) {
+        //if (chain.getBestChainHeight() <= 1 || (headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight())) {
             chain = (headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight()) ? headersChain : blockChain;
-        }
+        //}
 
         log.info("processing {} qrinfo between (atH): {} & {}; {}",
                 isLoadingBootStrap ? "bootstrap" : "requested",
@@ -273,7 +274,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             mnListsCache.clear();
             // TODO: do we actually need to keep track of the blockchain tip mnlist?
-            // mnListsCache.put(newMNListAtH.getBlockHash(), newMNListAtH);
+            mnListsCache.put(newMNListAtH.getBlockHash(), newMNListAtH);
             mnListsCache.put(newMNListAtHMinusC.getBlockHash(), newMNListAtHMinusC);
             mnListsCache.put(newMNListAtHMinus2C.getBlockHash(), newMNListAtHMinus2C);
             mnListsCache.put(newMNListAtHMinus3C.getBlockHash(), newMNListAtHMinus3C);
@@ -528,7 +529,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             int quorumIndex = quorumBaseBlock.getHeight() % LLMQParameters.fromType(llmqType).getDkgInterval();
             int cycleQuorumBaseHeight = quorumBaseBlock.getHeight() - quorumIndex;
-            final StoredBlock cycleQuorumBaseBlock = blockChain.getBlockStore().get(cycleQuorumBaseHeight);
+            StoredBlock cycleQuorumBaseBlock = blockChain.getBlockStore().get(cycleQuorumBaseHeight);
+            if (cycleQuorumBaseBlock == null && headerChain != null) {
+                cycleQuorumBaseBlock = headerChain.getBlockStore().get(cycleQuorumBaseHeight);
+            }
 
             /*
              * Since mapQuorumMembers stores Quorum members per block hash, and we don't know yet the block hashes of blocks for all quorumIndexes (since these blocks are not created yet)
@@ -578,9 +582,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
         final int cycleLength = llmqParameters.getDkgInterval();
 
-        final StoredBlock blockHMinusC = quorumBaseBlock.getAncestor(blockChain.getBlockStore(), quorumBaseBlock.getHeight() - cycleLength);
-        final StoredBlock pBlockHMinus2C = quorumBaseBlock.getAncestor(blockChain.getBlockStore(), quorumBaseBlock.getHeight() - 2 * cycleLength);
-        final StoredBlock pBlockHMinus3C = quorumBaseBlock.getAncestor(blockChain.getBlockStore(), quorumBaseBlock.getHeight() - 3 * cycleLength);
+        final BlockStore store = headerStore != null && headerStore.getChainHead().getHeight() > blockStore.getChainHead().getHeight() ? headerStore : blockStore;
+        final StoredBlock blockHMinusC = quorumBaseBlock.getAncestor(store, quorumBaseBlock.getHeight() - cycleLength);
+        final StoredBlock pBlockHMinus2C = quorumBaseBlock.getAncestor(store, quorumBaseBlock.getHeight() - 2 * cycleLength);
+        final StoredBlock pBlockHMinus3C = quorumBaseBlock.getAncestor(store, quorumBaseBlock.getHeight() - 3 * cycleLength);
 
         log.info("computeQuorumMembersByQuarterRotation llmqType[{}] nHeight[{}]", llmqType, quorumBaseBlock.getHeight());
 
@@ -666,7 +671,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             int quarterSize = quorumSize / 4;
 
             // - 8
-            final StoredBlock workBlock = quorumBaseBlock.getAncestor(blockChain.getBlockStore(), quorumBaseBlock.getHeight() - 8);
+            final BlockStore store = headerStore != null && headerStore.getChainHead().getHeight() > blockStore.getChainHead().getHeight() ? headerStore : blockStore;
+            final StoredBlock workBlock = quorumBaseBlock.getAncestor(store, quorumBaseBlock.getHeight() - 8);
 
             Sha256Hash modifier = LLMQUtils.buildLLMQBlockHash(llmqParameters.getType(), workBlock.getHeader().getHash());
             SimplifiedMasternodeList allMns = getListForBlock(workBlock.getHeader().getHash());
@@ -819,9 +825,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         PreviousQuorumQuarters quarters = new PreviousQuorumQuarters();
 
         try {
-            StoredBlock snapshotBlockHMinusC = blockHMinusC.getAncestor(blockStore, blockHMinusC.getHeight() - 8);
-            StoredBlock snapshotBlockHMinus2C = blockHMinusC.getAncestor(blockStore, blockHMinus2C.getHeight() - 8);
-            StoredBlock snapshotBlockHMinus3C = blockHMinusC.getAncestor(blockStore, blockHMinus3C.getHeight() - 8);
+            final BlockStore store = headerStore != null && headerStore.getChainHead().getHeight() > blockStore.getChainHead().getHeight() ? headerStore : blockStore;
+            StoredBlock snapshotBlockHMinusC = blockHMinusC.getAncestor(store, blockHMinusC.getHeight() - 8);
+            StoredBlock snapshotBlockHMinus2C = blockHMinusC.getAncestor(store, blockHMinus2C.getHeight() - 8);
+            StoredBlock snapshotBlockHMinus3C = blockHMinusC.getAncestor(store, blockHMinus3C.getHeight() - 8);
 
             QuorumSnapshot quSnapshotHMinusC = quorumSnapshotCache.get(snapshotBlockHMinusC.getHeader().getHash());
             if (quSnapshotHMinusC != null) {
@@ -855,7 +862,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             for (int i = 0; i < numQuorums; ++i) {
                 quarterQuorumMembers.add(Lists.newArrayList());
             }
-            final StoredBlock workBlock = quorumBaseBlock.getAncestor(blockChain.getBlockStore(), quorumBaseBlock.getHeight() - 8);
+            final BlockStore store = headerStore != null && headerStore.getChainHead().getHeight() > blockStore.getChainHead().getHeight() ? headerStore : blockStore;
+            final StoredBlock workBlock = quorumBaseBlock.getAncestor(store, quorumBaseBlock.getHeight() - 8);
 
             Sha256Hash modifier = LLMQUtils.buildLLMQBlockHash(llmqParameters.getType(), workBlock.getHeader().getHash());
 
@@ -935,7 +943,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             SimplifiedMasternodeList usedMNs = new SimplifiedMasternodeList(params);
             SimplifiedMasternodeList nonUsedMNs = new SimplifiedMasternodeList(params);
 
-            final StoredBlock workBlock = quorumBaseBlock.getAncestor(blockChain.getBlockStore(), quorumBaseBlock.getHeight() - 8);
+            final BlockStore store = headerStore != null && headerStore.getChainHead().getHeight() > blockStore.getChainHead().getHeight() ? headerStore : blockStore;
+            final StoredBlock workBlock = quorumBaseBlock.getAncestor(store, quorumBaseBlock.getHeight() - 8);
             final Sha256Hash modifier = LLMQUtils.buildLLMQBlockHash(llmqType, workBlock.getHeader().getHash());
 
             SimplifiedMasternodeList allMns = getListForBlock(workBlock.getHeader().getHash());
@@ -1203,7 +1212,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
         lock.lock();
         try {
-            setBlockChain(chain);
+            setBlockChain(headersChain, blockChain);
             applyDiff(peer, headersChain, blockChain, quorumRotationInfo, isLoadingBootStrap);
 
             log.info(this.toString()); // do we need to remove this?
