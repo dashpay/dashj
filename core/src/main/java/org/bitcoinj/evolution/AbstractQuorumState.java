@@ -152,7 +152,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         this.blockChain = blockChain;
         this.headerChain = headerChain;
         blockStore = blockChain.getBlockStore();
-        headerStore = headerChain.getBlockStore();
+        if (headerChain != null) {
+            headerStore = headerChain.getBlockStore();
+        }
     }
 
     public void pushPendingBlock(StoredBlock block) {
