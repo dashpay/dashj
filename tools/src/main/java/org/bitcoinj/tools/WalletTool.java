@@ -36,6 +36,7 @@ import org.bitcoinj.store.*;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.DerivationPathFactory;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 
@@ -1384,6 +1385,14 @@ public class WalletTool {
         } else {
             wallet = Wallet.createDeterministic(params, outputScriptType);
         }
+        // add BIP44 key chain
+        // BIP44 Chain
+        DeterministicKeyChain bip44Chain = DeterministicKeyChain.builder()
+                .seed(wallet.getKeyChainSeed())
+                .accountPath(DerivationPathFactory.get(params).bip44DerivationPath(0))
+                .build();
+        wallet.addAndActivateHDChain(bip44Chain);
+
         if (password != null)
             wallet.encrypt(password);
         wallet.saveToFile(walletFile);
