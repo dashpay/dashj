@@ -604,19 +604,19 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             builder.append(" 3Cmns[");
             for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinus3C.get(i)) {
-                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+                builder.append(m.getProTxHash().toString()/*.substring(0, 4)*/).append(" | ");
             }
             builder.append(" ] 2Cmns[");
             for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinus2C.get(i)) {
-                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+                builder.append(m.getProTxHash().toString()/*.substring(0, 4)*/).append(" | ");
             }
             builder.append(" ] 1Cmns[");
             for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinusC.get(i)) {
-                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+                builder.append(m.getProTxHash().toString()/*.substring(0, 4)*/).append(" | ");
             }
             builder.append(" ] mew[");
             for (SimplifiedMasternodeListEntry m : newQuarterMembers.get(i)) {
-                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+                builder.append(m.getProTxHash().toString()/*.substring(0, 4)*/).append(" | ");
             }
             builder.append(" ]");
             log.info("QuarterComposition h[{}] i[{}]:{}", quorumBaseBlock.getHeight(), i, builder.toString());
@@ -643,7 +643,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             StringBuilder ss = new StringBuilder();
             ss.append(" [");
             for (Masternode m : quorumMembers.get(i)) {
-                ss.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+                ss.append(m.getProTxHash().toString()/*.substring(0, 4)*/).append(" | ");
             }
             ss.append("]");
             log.info("QuorumComposition h[{}] i[{}]:{}\n", quorumBaseBlock.getHeight(), i, ss);
@@ -658,6 +658,29 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 log.info("{} is already in the list", m);
             }
         }
+    }
+
+    private void printList(SimplifiedMasternodeList list, String name) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(name).append(": \n");
+        list.forEachMN(true, new SimplifiedMasternodeList.ForeachMNCallback() {
+            @Override
+            public void processMN(SimplifiedMasternodeListEntry mn) {
+                builder.append("  ").append(mn.getProTxHash()).append("\n");
+            }
+        });
+
+        log.info(builder.toString());
+    }
+
+    private void printList(List<Masternode> list, String name) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(name).append(": \n");
+        for (Masternode mn : list) {
+            builder.append("  ").append(mn.getProTxHash()).append("\n");
+        }
+
+        log.info(builder.toString());
     }
 
     private ArrayList<ArrayList<SimplifiedMasternodeListEntry>> buildNewQuorumQuarterMembers(LLMQParameters llmqParameters, StoredBlock quorumBaseBlock, PreviousQuorumQuarters previousQuarters) {
@@ -713,10 +736,16 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 }
             });
 
+            log.info("modifier: {}", modifier);
+            printList(MnsUsedAtH, "MnsUsedAtH");
+            printList(MnsNotUsedAtH, "MnsNotUsedAtH");
             ArrayList<Masternode> sortedMnsUsedAtH = MnsUsedAtH.calculateQuorum(MnsUsedAtH.getAllMNsCount(), modifier);
+            printList(sortedMnsUsedAtH, "sortedMnsUsedAtH");
             ArrayList<Masternode> sortedMnsNotUsedAtH = MnsNotUsedAtH.calculateQuorum(MnsNotUsedAtH.getAllMNsCount(), modifier);
+            printList(sortedMnsNotUsedAtH, "sortedMnsNotUsedAtH");
             ArrayList<Masternode> sortedCombinedMnsList = new ArrayList<>(sortedMnsNotUsedAtH);
             sortedCombinedMnsList.addAll(sortedMnsUsedAtH);
+            printList(sortedCombinedMnsList, "sortedCombinedMnsList");
 
             StringBuilder ss = new StringBuilder();
             ss.append(" [");
