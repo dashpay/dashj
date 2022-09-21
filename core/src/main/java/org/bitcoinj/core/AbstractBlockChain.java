@@ -1094,7 +1094,7 @@ public abstract class AbstractBlockChain {
         return chainLocksHandler;
     }
 
-    private ChainLockListener chainLockListener = new ChainLockListener() {
+    private final ChainLockListener chainLockListener = new ChainLockListener() {
         @Override
         public void onNewChainLock(StoredBlock block) {
             // determine if this block is active chain
