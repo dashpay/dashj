@@ -213,6 +213,7 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
     protected AuthenticationKeyChain(KeyCrypter crypter, KeyParameter aesKey, AuthenticationKeyChain chain) {
         super(crypter, aesKey, chain);
         this.type = chain.type;
+        this.hardenedChildren = chain.hardenedChildren;
     }
 
     public static Builder<?> authenticationBuilder() {
