@@ -599,27 +599,29 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         ArrayList<ArrayList<SimplifiedMasternodeListEntry>> newQuarterMembers = buildNewQuorumQuarterMembers(llmqParameters, quorumBaseBlock, previousQuarters);
 
         // logging
-        for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
-            StringBuilder builder = new StringBuilder();
+        if (context.isDebugMode()) {
+            for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
+                StringBuilder builder = new StringBuilder();
 
-            builder.append(" 3Cmns[");
-            for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinus3C.get(i)) {
-                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+                builder.append(" 3Cmns[");
+                for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinus3C.get(i)) {
+                    builder.append(m.getProTxHash()).append(" | ");
+                }
+                builder.append(" ] 2Cmns[");
+                for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinus2C.get(i)) {
+                    builder.append(m.getProTxHash()).append(" | ");
+                }
+                builder.append(" ] 1Cmns[");
+                for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinusC.get(i)) {
+                    builder.append(m.getProTxHash()).append(" | ");
+                }
+                builder.append(" ] new[");
+                for (SimplifiedMasternodeListEntry m : newQuarterMembers.get(i)) {
+                    builder.append(m.getProTxHash()).append(" | ");
+                }
+                builder.append(" ]");
+                log.info("QuarterComposition h[{}] i[{}]:{}", quorumBaseBlock.getHeight(), i, builder.toString());
             }
-            builder.append(" ] 2Cmns[");
-            for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinus2C.get(i)) {
-                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
-            }
-            builder.append(" ] 1Cmns[");
-            for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinusC.get(i)) {
-                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
-            }
-            builder.append(" ] mew[");
-            for (SimplifiedMasternodeListEntry m : newQuarterMembers.get(i)) {
-                builder.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
-            }
-            builder.append(" ]");
-            log.info("QuarterComposition h[{}] i[{}]:{}", quorumBaseBlock.getHeight(), i, builder.toString());
         }
 
         for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
@@ -640,13 +642,15 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 quorumMembers.get(i).add(m);
             }
 
-            StringBuilder ss = new StringBuilder();
-            ss.append(" [");
-            for (Masternode m : quorumMembers.get(i)) {
-                ss.append(m.getProTxHash().toString().substring(0, 4)).append(" | ");
+            if (context.isDebugMode()) {
+                StringBuilder ss = new StringBuilder();
+                ss.append(" [");
+                for (Masternode m : quorumMembers.get(i)) {
+                    ss.append(m.getProTxHash().toString()/*.substring(0, 4)*/).append(" | ");
+                }
+                ss.append("]");
+                log.info("QuorumComposition h[{}] i[{}]:{}\n", quorumBaseBlock.getHeight(), i, ss);
             }
-            ss.append("]");
-            log.info("QuorumComposition h[{}] i[{}]:{}\n", quorumBaseBlock.getHeight(), i, ss);
         }
 
         return quorumMembers;
@@ -658,6 +662,29 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 log.info("{} is already in the list", m);
             }
         }
+    }
+
+    private void printList(SimplifiedMasternodeList list, String name) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(name).append(": \n");
+        list.forEachMN(true, new SimplifiedMasternodeList.ForeachMNCallback() {
+            @Override
+            public void processMN(SimplifiedMasternodeListEntry mn) {
+                builder.append("  ").append(mn.getProTxHash()).append("\n");
+            }
+        });
+
+        log.info(builder.toString());
+    }
+
+    private void printList(List<Masternode> list, String name) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(name).append(": \n");
+        for (Masternode mn : list) {
+            builder.append("  ").append(mn.getProTxHash()).append("\n");
+        }
+
+        log.info(builder.toString());
     }
 
     private ArrayList<ArrayList<SimplifiedMasternodeListEntry>> buildNewQuorumQuarterMembers(LLMQParameters llmqParameters, StoredBlock quorumBaseBlock, PreviousQuorumQuarters previousQuarters) {
@@ -713,18 +740,27 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 }
             });
 
+            if (context.isDebugMode()) {
+                log.info("modifier: {}", modifier);
+                printList(MnsUsedAtH, "MnsUsedAtH");
+                printList(MnsNotUsedAtH, "MnsNotUsedAtH");
+            }
             ArrayList<Masternode> sortedMnsUsedAtH = MnsUsedAtH.calculateQuorum(MnsUsedAtH.getAllMNsCount(), modifier);
+            if (context.isDebugMode()) printList(sortedMnsUsedAtH, "sortedMnsUsedAtH");
             ArrayList<Masternode> sortedMnsNotUsedAtH = MnsNotUsedAtH.calculateQuorum(MnsNotUsedAtH.getAllMNsCount(), modifier);
+            if (context.isDebugMode()) printList(sortedMnsNotUsedAtH, "sortedMnsNotUsedAtH");
             ArrayList<Masternode> sortedCombinedMnsList = new ArrayList<>(sortedMnsNotUsedAtH);
             sortedCombinedMnsList.addAll(sortedMnsUsedAtH);
-
-            StringBuilder ss = new StringBuilder();
-            ss.append(" [");
-            for (Masternode m : sortedCombinedMnsList) {
-                ss.append(m.getProTxHash().toString(), 0, 4).append(" | ");
+            if (context.isDebugMode()) {
+                printList(sortedCombinedMnsList, "sortedCombinedMnsList");
+                StringBuilder ss = new StringBuilder();
+                ss.append(" [");
+                for (Masternode m : sortedCombinedMnsList) {
+                    ss.append(m.getProTxHash().toString(), 0, 4).append(" | ");
+                }
+                ss.append("]");
+                log.info("BuildNewQuorumQuarterMembers h[{}] {}\n", quorumBaseBlock.getHeight(), ss);
             }
-            ss.append("]");
-            log.info("BuildNewQuorumQuarterMembers h[{}] {}\n", quorumBaseBlock.getHeight(), ss);
 
             ArrayList<Integer> skipList = Lists.newArrayList();
             int firstSkippedIndex = 0;
