@@ -87,7 +87,7 @@ public class QuorumRotationStateTest {
 
         SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
         context.setMasternodeListManager(manager);
-        context.setDebugMode(false);
+        context.setDebugMode(true);
 
         QuorumRotationInfo qrinfo = new QuorumRotationInfo(context.getParams(), buffer);
 
