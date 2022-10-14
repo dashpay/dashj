@@ -850,4 +850,15 @@ public abstract class NetworkParameters {
         return dropPeersAfterBroadcast;
     }
 
+    // CoinJoin related values
+    protected int poolMinParticipants;
+    protected int poolMaxParticipants;
+
+    public int getPoolMinParticipants() {
+        return poolMinParticipants;
+    }
+
+    public int getPoolMaxParticipants() {
+        return poolMaxParticipants;
+    }
 }
