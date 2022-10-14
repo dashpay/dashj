@@ -16,16 +16,13 @@
 
 package org.bitcoinj.coinjoin;
 
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.params.UnitTestParams;
-import org.bitcoinj.script.Script;
 import org.bitcoinj.testing.TestWithWallet;
 import org.bitcoinj.wallet.DerivationPathFactory;
-import org.bitcoinj.wallet.Wallet;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.bitcoinj.core.Coin.COIN;
@@ -33,14 +30,22 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class CoinJoinCoinSelectorTest extends TestWithWallet {
-    private static final NetworkParameters UNITTEST = UnitTestParams.get();
 
-    private static final Context context = Context.getOrCreate(UNITTEST);
+    @Before
+    @Override
+    public void setUp() throws Exception {
+        super.setUp();
+    }
+
+    @After
+    @Override
+    public void tearDown() throws Exception {
+        super.tearDown();
+    }
 
     @Test
     public void selectable() {
-        Wallet wallet = Wallet.createDeterministic(context, Script.ScriptType.P2PKH);
-        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(context.getParams()).coinJoinDerivationPath());
+        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
         DeterministicKey key = wallet.freshCoinJoinKey();
 
         CoinJoinCoinSelector coinSelector = new CoinJoinCoinSelector(wallet);

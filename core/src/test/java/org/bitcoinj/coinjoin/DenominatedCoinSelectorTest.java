@@ -17,11 +17,11 @@
 package org.bitcoinj.coinjoin;
 
 import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.testing.TestWithWallet;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.bitcoinj.core.Coin.COIN;
@@ -29,7 +29,18 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class DenominatedCoinSelectorTest extends TestWithWallet {
-    private static final NetworkParameters UNITTEST = UnitTestParams.get();
+
+    @Before
+    @Override
+    public void setUp() throws Exception {
+        super.setUp();
+    }
+
+    @After
+    @Override
+    public void tearDown() throws Exception {
+        super.tearDown();
+    }
 
     @Test
     public void selectable() {
