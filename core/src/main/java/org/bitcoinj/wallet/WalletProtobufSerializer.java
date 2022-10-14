@@ -285,6 +285,12 @@ public class WalletProtobufSerializer {
             walletBuilder.addAllKeysFromFriends(keys);
         }
 
+        //Add CoinJoin KeyChains
+        if(wallet.coinJoinKeyChainGroup != null) {
+            List<Protos.Key> keys = wallet.coinJoinKeyChainGroup.serializeToProtobuf();
+            walletBuilder.addAllKeysCoinJoin(keys);
+        }
+
         return walletBuilder.build();
     }
 
@@ -713,6 +719,19 @@ public class WalletProtobufSerializer {
                 friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysFromFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
             }
             wallet.setSendingToFriendsGroup(friendKeyChainGroup);
+        }
+
+        if (walletProto.getKeysCoinJoinCount() > 0) {
+            KeyCrypter keyCrypter = null;
+            KeyChainGroup coinJoinKeyChain = null;
+            if (walletProto.hasEncryptionParameters()) {
+                Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
+                keyCrypter = new KeyCrypterScrypt(encryptionParameters);
+                coinJoinKeyChain = KeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysCoinJoinList(), keyCrypter, keyChainFactory);
+            } else {
+                coinJoinKeyChain = KeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysCoinJoinList(), keyChainFactory);
+            }
+            wallet.coinJoinKeyChainGroup = coinJoinKeyChain;
         }
 
         wallet.addWatchedScripts(scripts);

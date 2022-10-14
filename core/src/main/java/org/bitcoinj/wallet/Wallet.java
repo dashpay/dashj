@@ -24,6 +24,9 @@ import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
+import org.bitcoinj.coinjoin.CoinJoin;
+import org.bitcoinj.coinjoin.CoinJoinCoinSelector;
+import org.bitcoinj.coinjoin.DenominatedCoinSelector;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.Address;
@@ -489,8 +492,9 @@ public class Wallet extends BaseTaggableObject
         addTransactionSigner(new LocalTransactionSigner());
         createTransientState();
         derivationPathFactory = new DerivationPathFactory(params);
-        receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
-        sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+        receivingFromFriendsGroup = null;
+        sendingToFriendsGroup = null;
+        coinJoinKeyChainGroup = null;
     }
 
     private void createTransientState() {
@@ -607,6 +611,15 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
+    public DeterministicKey currentCoinJoinKey() {
+        keyChainGroupLock.lock();
+        try {
+            return coinJoinKeyChainGroup.currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
     /**
      * An alias for calling {@link #currentKey(KeyChain.KeyPurpose)} with
      * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS} as the parameter.
@@ -647,6 +660,10 @@ public class Wallet extends BaseTaggableObject
         return freshKeys(purpose, 1).get(0);
     }
 
+    public DeterministicKey freshCoinJoinKey() {
+        return freshCoinJoinKeys(1).get(0);
+    }
+
     /**
      * Returns a key/s that has not been returned by this method before (fresh). You can think of this as being
      * a newly created key/s, although the notion of "create" is not really valid for a
@@ -660,6 +677,24 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         try {
             keys = keyChainGroup.freshKeys(purpose, numberOfKeys);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
+        // and that's not quite so important, so we could coalesce for more performance.
+        saveNow();
+        return keys;
+    }
+
+    /**
+     * Returns a key/s for coinjoin that has not been returned by this method before (fresh).
+     */
+    public List<DeterministicKey> freshCoinJoinKeys(int numberOfKeys) {
+        List<DeterministicKey> keys;
+        checkNotNull(coinJoinKeyChainGroup, "This wallet does not have any coinjoin key chains.");
+        keyChainGroupLock.lock();
+        try {
+            keys = coinJoinKeyChainGroup.freshKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, numberOfKeys);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -729,6 +764,22 @@ public class Wallet extends BaseTaggableObject
             List<ECKey> keys = new LinkedList<>();
             long keyRotationTimeSecs = vKeyRotationTimestamp;
             for (final DeterministicKeyChain chain : keyChainGroup.getActiveKeyChains(keyRotationTimeSecs))
+                keys.addAll(chain.getIssuedReceiveKeys());
+            return keys;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Returns only the keys that have been issued by {@link #freshCoinJoinKeys(int)}}.
+     */
+    public List<ECKey> getCoinJoinIssuedReceiveKeys() {
+        keyChainGroupLock.lock();
+        try {
+            List<ECKey> keys = new LinkedList<>();
+            long keyRotationTimeSecs = vKeyRotationTimestamp;
+            for (final DeterministicKeyChain chain : coinJoinKeyChainGroup.getActiveKeyChains(keyRotationTimeSecs))
                 keys.addAll(chain.getIssuedReceiveKeys());
             return keys;
         } finally {
@@ -958,6 +1009,15 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
+    public void addAndActivateCoinJoinHDChain(DeterministicKeyChain chain) {
+        keyChainGroupLock.lock();
+        try {
+            coinJoinKeyChainGroup.addAndActivateHDChain(chain);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
     /** See {@link DeterministicKeyChain#setLookaheadSize(int)} for more info on this. */
     public int getKeyChainGroupLookaheadSize() {
         keyChainGroupLock.lock();
@@ -1170,6 +1230,8 @@ public class Wallet extends BaseTaggableObject
             ECKey key = keyChainGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
             if (key == null && receivingFromFriendsGroup != null)
                 key = receivingFromFriendsGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
+            if (key == null && coinJoinKeyChainGroup != null)
+                key = coinJoinKeyChainGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
             return key;
         } finally {
             keyChainGroupLock.unlock();
@@ -1180,7 +1242,8 @@ public class Wallet extends BaseTaggableObject
     public boolean hasKey(ECKey key) {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.hasKey(key) || (receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKey(key));
+            return keyChainGroup.hasKey(key) || (receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKey(key))
+                    || (coinJoinKeyChainGroup != null && coinJoinKeyChainGroup.hasKey(key));
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1245,6 +1308,9 @@ public class Wallet extends BaseTaggableObject
             if (key == null && receivingFromFriendsGroup != null) {
                 key = receivingFromFriendsGroup.findKeyFromPubKey(pubKey);
             }
+            if (key == null && coinJoinKeyChainGroup != null) {
+                key = coinJoinKeyChainGroup.findKeyFromPubKey(pubKey);
+            }
             return key;
         } finally {
             keyChainGroupLock.unlock();
@@ -1289,19 +1355,31 @@ public class Wallet extends BaseTaggableObject
                     if (ScriptPattern.isP2PK(script)) {
                         byte[] pubkey = ScriptPattern.extractKeyFromP2PK(script);
                         keyChainGroup.markPubKeyAsUsed(pubkey);
-                        receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
-                        sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
+                        if (receivingFromFriendsGroup != null)
+                            receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
+                        if (sendingToFriendsGroup != null)
+                            sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
+                        if (coinJoinKeyChainGroup != null)
+                            coinJoinKeyChainGroup.markPubKeyAsUsed(pubkey);
                     } else if (ScriptPattern.isP2PKH(script)) {
                         byte[] pubkeyHash = ScriptPattern.extractHashFromP2PKH(script);
                         keyChainGroup.markPubKeyHashAsUsed(pubkeyHash);
-                        receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
-                        sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                        if (receivingFromFriendsGroup != null)
+                            receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                        if (sendingToFriendsGroup != null)
+                            sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                        if (coinJoinKeyChainGroup != null)
+                            coinJoinKeyChainGroup.markPubKeyHashAsUsed(pubkeyHash);
                     } else if (ScriptPattern.isP2SH(script)) {
                         Address a = Address.fromScriptHash(tx.getParams(),
                                 ScriptPattern.extractHashFromP2SH(script));
                         keyChainGroup.markP2SHAddressAsUsed(a);
-                        receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
-                        sendingToFriendsGroup.markP2SHAddressAsUsed(a);
+                        if (receivingFromFriendsGroup != null)
+                            receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
+                        if (sendingToFriendsGroup != null)
+                            sendingToFriendsGroup.markP2SHAddressAsUsed(a);
+                        if (coinJoinKeyChainGroup != null)
+                            coinJoinKeyChainGroup.markP2SHAddressAsUsed(a);
                     } else if (ScriptPattern.isCreditBurn(script)) {
                         byte [] h = ScriptPattern.extractCreditBurnKeyId(script);
                         if (authenticationGroup != null)
@@ -1355,7 +1433,12 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         try {
             final KeyCrypterScrypt scrypt = new KeyCrypterScrypt();
-            keyChainGroup.encrypt(scrypt, scrypt.deriveKey(password));
+            KeyParameter aesKey = scrypt.deriveKey(password);
+            keyChainGroup.encrypt(scrypt, aesKey);
+            if (coinJoinKeyChainGroup != null)
+                coinJoinKeyChainGroup.encrypt(scrypt, aesKey);
+            if (receivingFromFriendsGroup != null)
+                receivingFromFriendsGroup.encrypt(scrypt, aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1374,6 +1457,10 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         try {
             keyChainGroup.encrypt(keyCrypter, aesKey);
+            if (coinJoinKeyChainGroup != null)
+                coinJoinKeyChainGroup.encrypt(keyCrypter, aesKey);
+            if (receivingFromFriendsGroup != null)
+                receivingFromFriendsGroup.encrypt(keyCrypter, aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1389,7 +1476,12 @@ public class Wallet extends BaseTaggableObject
         try {
             final KeyCrypter crypter = keyChainGroup.getKeyCrypter();
             checkState(crypter != null, "Not encrypted");
-            keyChainGroup.decrypt(crypter.deriveKey(password));
+            KeyParameter aesKey = crypter.deriveKey(password);
+            keyChainGroup.decrypt(aesKey);
+            if (coinJoinKeyChainGroup != null)
+                coinJoinKeyChainGroup.decrypt(aesKey);
+            if (receivingFromFriendsGroup != null)
+                receivingFromFriendsGroup.decrypt(aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -2035,6 +2127,7 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
+    @Deprecated
     public boolean isPendingTransactionLockRelevant(Transaction tx) throws ScriptException {
         lock.lock();
         try {
@@ -2882,7 +2975,10 @@ public class Wallet extends BaseTaggableObject
      */
     public void addKeyChainEventListener(KeyChainEventListener listener) {
         keyChainGroup.addEventListener(listener, Threading.USER_THREAD);
-        receivingFromFriendsGroup.addEventListener(listener, Threading.USER_THREAD);
+        if (receivingFromFriendsGroup != null)
+            receivingFromFriendsGroup.addEventListener(listener, Threading.USER_THREAD);
+        if (coinJoinKeyChainGroup != null)
+            coinJoinKeyChainGroup.addEventListener(listener, Threading.USER_THREAD);
     }
 
     /**
@@ -2891,7 +2987,10 @@ public class Wallet extends BaseTaggableObject
      */
     public void addKeyChainEventListener(Executor executor, KeyChainEventListener listener) {
         keyChainGroup.addEventListener(listener, executor);
-        receivingFromFriendsGroup.addEventListener(listener, executor);
+        if (receivingFromFriendsGroup != null)
+            receivingFromFriendsGroup.addEventListener(listener, executor);
+        if (coinJoinKeyChainGroup != null)
+            coinJoinKeyChainGroup.addEventListener(listener, executor);
     }
 
     /**
@@ -3566,6 +3665,10 @@ public class Wallet extends BaseTaggableObject
                 builder.append("\nContacts (sending)\n");
                 builder.append(sendingToFriendsGroup.toString(includeLookahead, includePrivateKeys, aesKey));
             }
+            if(coinJoinKeyChainGroup != null) {
+                builder.append("\nCoinJoin:\n");
+                builder.append(coinJoinKeyChainGroup.toString(includeLookahead, includePrivateKeys, aesKey));
+            }
             if (!watchedScripts.isEmpty()) {
                 builder.append("\nWatched scripts:\n");
                 for (Script script : watchedScripts) {
@@ -3824,7 +3927,23 @@ public class Wallet extends BaseTaggableObject
         /** Same as ESTIMATED but only for outputs we have the private keys for and can sign ourselves. */
         ESTIMATED_SPENDABLE,
         /** Same as AVAILABLE but only for outputs we have the private keys for and can sign ourselves. */
-        AVAILABLE_SPENDABLE
+        AVAILABLE_SPENDABLE,
+
+        /**
+         * Includes only transactions that have been denominated and are ready to be mixed.
+         * Whether we <i>actually</i> have the private keys or not is irrelevant for this balance type.
+         */
+        DENOMINATED_FOR_MIXING,
+
+        DENOMINATED_FOR_MIXING_SPENDABLE,
+
+        /**
+         * Includes only transactions that have been denominated and are ready to be mixed.
+         * Whether we <i>actually</i> have the private keys or not is irrelevant for this balance type.
+         */
+        COINJOIN,
+
+        COINJOIN_SPENDABLE
     }
 
     /**
@@ -3833,6 +3952,10 @@ public class Wallet extends BaseTaggableObject
      */
     public Coin getBalance() {
         return getBalance(BalanceType.AVAILABLE);
+    }
+
+    public Coin getCoinJoinBalance() {
+        return getBalance(BalanceType.COINJOIN);
     }
 
     /**
@@ -3850,6 +3973,17 @@ public class Wallet extends BaseTaggableObject
                 Coin value = Coin.ZERO;
                 for (TransactionOutput out : all) value = value.add(out.getValue());
                 return value;
+            } else if (balanceType == BalanceType.COINJOIN|| balanceType == BalanceType.COINJOIN_SPENDABLE) {
+                List<TransactionOutput> all = calculateAllSpendCandidates(true, balanceType == BalanceType.COINJOIN_SPENDABLE, true);
+                Coin value = Coin.ZERO;
+                for (TransactionOutput out : all) value = value.add(out.getValue());
+                return value;
+                //CoinSelection selection = new CoinJoinCoinSelector(this).select(NetworkParameters.MAX_MONEY, candidates);
+                //return selection.valueGathered;
+            } else if (balanceType == BalanceType.DENOMINATED_FOR_MIXING || balanceType == BalanceType.DENOMINATED_FOR_MIXING_SPENDABLE) {
+                List<TransactionOutput> candidates = calculateAllSpendCandidates(false, balanceType == BalanceType.DENOMINATED_FOR_MIXING_SPENDABLE);
+                CoinSelection selection = DenominatedCoinSelector.get().select(NetworkParameters.MAX_MONEY, candidates);
+                return selection.valueGathered;
             } else {
                 throw new AssertionError("Unknown balance type");  // Unreachable.
             }
@@ -4468,7 +4602,11 @@ public class Wallet extends BaseTaggableObject
      * according to our knowledge of the block chain.
      */
     public List<TransactionOutput> calculateAllSpendCandidates() {
-        return calculateAllSpendCandidates(true, true);
+        return calculateAllSpendCandidates(true, true, false);
+    }
+
+    public List<TransactionOutput> calculateAllSpendCandidates(boolean excludeImmatureCoinbases, boolean excludeUnsignable) {
+        return calculateAllSpendCandidates(excludeImmatureCoinbases, excludeUnsignable, false);
     }
 
     /**
@@ -4479,7 +4617,7 @@ public class Wallet extends BaseTaggableObject
      * @param excludeImmatureCoinbases Whether to ignore coinbase outputs that we will be able to spend in future once they mature.
      * @param excludeUnsignable Whether to ignore outputs that we are tracking but don't have the keys to sign for.
      */
-    public List<TransactionOutput> calculateAllSpendCandidates(boolean excludeImmatureCoinbases, boolean excludeUnsignable) {
+    public List<TransactionOutput> calculateAllSpendCandidates(boolean excludeImmatureCoinbases, boolean excludeUnsignable, boolean isCoinJoinOnly) {
         lock.lock();
         try {
             List<TransactionOutput> candidates;
@@ -4487,9 +4625,15 @@ public class Wallet extends BaseTaggableObject
                 candidates = new ArrayList<>(myUnspents.size());
                 for (TransactionOutput output : myUnspents) {
                     if (excludeUnsignable && !canSignFor(output.getScriptPubKey())) continue;
+
+                    // exclude non coinjoin outputs if isCoinJoinOnly is true
+                    // exclude coinjoin outputs when isCoinJoinOnly is false
+                    if (output.isCoinJoin(this) != isCoinJoinOnly) continue;
+
                     Transaction transaction = checkNotNull(output.getParentTransaction());
                     if (excludeImmatureCoinbases && !transaction.isMature())
                         continue;
+
                     candidates.add(output);
                 }
             } else {
@@ -4540,17 +4684,30 @@ public class Wallet extends BaseTaggableObject
         return false;
     }
 
+    protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases) {
+        return calculateAllSpendCandidatesFromUTXOProvider(excludeImmatureCoinbases, false);
+    }
     /**
      * Returns the spendable candidates from the {@link UTXOProvider} based on keys that the wallet contains.
      * @return The list of candidates.
      */
-    protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases) {
+    protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases, boolean isCoinJoinOnly) {
         checkState(lock.isHeldByCurrentThread());
         UTXOProvider utxoProvider = checkNotNull(vUTXOProvider, "No UTXO provider has been set");
         LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
         try {
             int chainHeight = utxoProvider.getChainHeadHeight();
             for (UTXO output : getStoredOutputsFromUTXOProvider()) {
+                boolean coinjoin = false;
+                if (ScriptPattern.isP2PKH(output.getScript()))
+                    coinjoin = isCoinJoinPubKeyHashMine(ScriptPattern.extractHashFromP2PKH(output.getScript()), ScriptType.P2PKH);
+                else if (ScriptPattern.isP2PK(output.getScript()))
+                    coinjoin = isCoinJoinPubKeyMine(ScriptPattern.extractKeyFromP2PK(output.getScript()));
+                else if (ScriptPattern.isP2SH(output.getScript()))
+                    coinjoin = isCoinJoinPayToScriptHashMine(ScriptPattern.extractHashFromP2SH(output.getScript()));
+
+                if (coinjoin != isCoinJoinOnly)
+                    continue;
                 boolean coinbase = output.isCoinbase();
                 int depth = chainHeight - output.getHeight() + 1; // the current depth of the output (1 = same as head).
                 // Do not try and spend coinbases that were mined too recently, the protocol forbids it.
@@ -4571,6 +4728,52 @@ public class Wallet extends BaseTaggableObject
             }
             // Add change outputs. Do not try and spend coinbases that were mined too recently, the protocol forbids it.
             if (!excludeImmatureCoinbases || tx.isMature()) {
+                for (TransactionOutput output : tx.getOutputs()) {
+                    if (output.isAvailableForSpending() && output.isMine(this) && output.isCoinJoin(this) == isCoinJoinOnly) {
+                        candidates.add(output);
+                    }
+                }
+            }
+        }
+        return candidates;
+    }
+
+    /**
+     * Returns the spendable coinjoin candidates from the {@link UTXOProvider} based on keys that the wallet contains.
+     * @return The list of candidates.
+     */
+    protected LinkedList<TransactionOutput> calculateAllCoinJoinSpendCandidatesFromUTXOProvider(boolean mixed) {
+        checkState(lock.isHeldByCurrentThread());
+        UTXOProvider utxoProvider = checkNotNull(vUTXOProvider, "No UTXO provider has been set");
+        LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
+        try {
+            int chainHeight = utxoProvider.getChainHeadHeight();
+            for (UTXO output : getStoredOutputsFromUTXOProvider()) {
+                boolean coinbase = output.isCoinbase();
+                // Do not try and spend coinbases, they cannot be coinjoin transactions.
+                if (!coinbase) {
+                    // TODO deterimine if this item is a coinjoin transaction
+                    byte [] p2pkh = ScriptPattern.extractHashFromP2PKH(output.getScript());
+                    if (mixed && coinJoinKeyChainGroup.findKeyFromPubKey(p2pkh) != null) {
+                        candidates.add(new FreeStandingTransactionOutput(params, output, chainHeight));
+                    } else if (!mixed && CoinJoin.isDenominatedAmount(output.getValue())) {
+                        candidates.add(new FreeStandingTransactionOutput(params, output, chainHeight));
+                    }
+                }
+            }
+        } catch (UTXOProviderException e) {
+            throw new RuntimeException("UTXO provider error", e);
+        }
+        // We need to handle the pending transactions that we know about.
+        for (Transaction tx : pending.values()) {
+            // Remove the spent outputs.
+            for (TransactionInput input : tx.getInputs()) {
+                if (input.getConnectedOutput().isMine(this)) {
+                    candidates.remove(input.getConnectedOutput());
+                }
+            }
+            // Add change outputs. Do not try and spend coinbases that were mined too recently, the protocol forbids it.
+            if (tx.isMature()) {
                 for (TransactionOutput output : tx.getOutputs()) {
                     if (output.isAvailableForSpending() && output.isMine(this)) {
                         candidates.add(output);
@@ -4994,6 +5197,8 @@ public class Wallet extends BaseTaggableObject
             size += bloomSpecialTxOutpoints.size();
             if (receivingFromFriendsGroup != null)
                 size += receivingFromFriendsGroup.getBloomFilterElementCount();
+            if (coinJoinKeyChainGroup != null)
+                size += coinJoinKeyChainGroup.getBloomFilterElementCount();
             return size;
         } finally {
             endBloomFilterCalculation();
@@ -5084,6 +5289,10 @@ public class Wallet extends BaseTaggableObject
             }
             if(receivingFromFriendsGroup != null) {
                 BloomFilter friendFilter = receivingFromFriendsGroup.getBloomFilter(size, falsePositiveRate, nTweak);
+                filter.merge(friendFilter);
+            }
+            if(coinJoinKeyChainGroup != null) {
+                BloomFilter friendFilter = coinJoinKeyChainGroup.getBloomFilter(size, falsePositiveRate, nTweak);
                 filter.merge(friendFilter);
             }
             return filter;
@@ -5708,6 +5917,21 @@ public class Wallet extends BaseTaggableObject
         }
         return hasPath;
     }
+
+    public boolean hasCoinJoinKeyChain(ImmutableList<ChildNumber> path) {
+        if (coinJoinKeyChainGroup == null)
+            return false;
+        boolean hasPath = false;
+        for (DeterministicKeyChain chain : coinJoinKeyChainGroup.getDeterministicKeyChains())
+        {
+            if (chain.getAccountPath().equals(path)) {
+                hasPath = true;
+                break;
+            }
+        }
+        return hasPath;
+    }
+
     /**
      * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
      */
@@ -5718,6 +5942,25 @@ public class Wallet extends BaseTaggableObject
 
             if(!hasKeyChain(path))
                 keyChainGroup.addAndActivateHDChain(DeterministicKeyChain.builder().seed(getKeyChainSeed()).accountPath(path).build());
+        }
+        finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
+     */
+    public void addCoinJoinKeyChain(ImmutableList<ChildNumber> path)
+    {
+        try {
+            keyChainGroupLock.lock();
+
+            if(!hasCoinJoinKeyChain(path)) {
+                if (coinJoinKeyChainGroup == null)
+                    coinJoinKeyChainGroup = KeyChainGroup.builder(params).build();
+                coinJoinKeyChainGroup.addAndActivateHDChain(DeterministicKeyChain.builder().seed(getKeyChainSeed()).accountPath(path).build());
+            }
         }
         finally {
             keyChainGroupLock.unlock();
@@ -6058,6 +6301,8 @@ public class Wallet extends BaseTaggableObject
     FriendKeyChainGroup receivingFromFriendsGroup;
     FriendKeyChainGroup sendingToFriendsGroup;
 
+    KeyChainGroup coinJoinKeyChainGroup;
+
     public void addReceivingFromFriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
         boolean isMainNet = getParams().getId().equals(NetworkParameters.ID_MAINNET);
 
@@ -6383,4 +6628,44 @@ public class Wallet extends BaseTaggableObject
         return addresses;
     }
 
+    /**
+     * Locates a redeem data (redeem script and keys) from the keyChainGroup given the hash of the script.
+     * Returns RedeemData object or null if no such data was found.
+     */
+    @Nullable
+    public RedeemData findCoinJoinRedeemDataFromScriptHash(byte[] payToScriptHash) {
+        if (coinJoinKeyChainGroup == null)
+            return null;
+        keyChainGroupLock.lock();
+        try {
+            return coinJoinKeyChainGroup.findRedeemDataFromScriptHash(payToScriptHash);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    @Override
+    public boolean isCoinJoinPubKeyHashMine(byte[] pubKeyHash, @Nullable ScriptType scriptType) {
+        if (coinJoinKeyChainGroup == null)
+            return false;
+        return coinJoinKeyChainGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType) != null;
+    }
+
+    @Override
+    public boolean isCoinJoinPubKeyMine(byte[] pubKey) {
+        if (coinJoinKeyChainGroup == null)
+            return false;
+        return coinJoinKeyChainGroup.findKeyFromPubKey(pubKey) != null;
+    }
+
+    @Override
+    public boolean isCoinJoinPayToScriptHashMine(byte[] payToScriptHash) {
+        if (coinJoinKeyChainGroup == null)
+            return false;
+        return findCoinJoinRedeemDataFromScriptHash(payToScriptHash) != null;
+    }
+
+    public boolean hasCollateralInputs() {
+        return !getBalance(new CoinJoinCoinSelector(this, true)).isZero();
+    }
 }

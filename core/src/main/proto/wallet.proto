@@ -497,6 +497,7 @@ message Wallet {
 
   repeated Key keysForFriends = 30;  //spending, friends send us money
   repeated Key keysFromFriends = 31; //watching, we send money to friends
+  repeated Key keysCoinJoin = 32;    // coinjoin
   // Next tag: 18
 }
 

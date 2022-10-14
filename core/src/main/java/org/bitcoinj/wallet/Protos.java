@@ -16415,6 +16415,32 @@ public final class Protos {
      * <code>repeated .wallet.Key keysFromFriends = 31;</code>
      */
     int getKeysFromFriendsCount();
+
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    java.util.List<org.bitcoinj.wallet.Protos.Key> 
+        getKeysCoinJoinList();
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    org.bitcoinj.wallet.Protos.Key getKeysCoinJoin(int index);
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    int getKeysCoinJoinCount();
   }
   /**
    * <pre>
@@ -16442,6 +16468,7 @@ public final class Protos {
       extKeyChains_ = emptyProtobufList();
       keysForFriends_ = emptyProtobufList();
       keysFromFriends_ = emptyProtobufList();
+      keysCoinJoin_ = emptyProtobufList();
     }
     /**
      * <pre>
@@ -17929,6 +17956,144 @@ public final class Protos {
     private void removeKeysFromFriends(int index) {
       ensureKeysFromFriendsIsMutable();
       keysFromFriends_.remove(index);
+    }
+
+    public static final int KEYSCOINJOIN_FIELD_NUMBER = 32;
+    private com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Key> keysCoinJoin_;
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    @java.lang.Override
+    public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeysCoinJoinList() {
+      return keysCoinJoin_;
+    }
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    public java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
+        getKeysCoinJoinOrBuilderList() {
+      return keysCoinJoin_;
+    }
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    @java.lang.Override
+    public int getKeysCoinJoinCount() {
+      return keysCoinJoin_.size();
+    }
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    @java.lang.Override
+    public org.bitcoinj.wallet.Protos.Key getKeysCoinJoin(int index) {
+      return keysCoinJoin_.get(index);
+    }
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    public org.bitcoinj.wallet.Protos.KeyOrBuilder getKeysCoinJoinOrBuilder(
+        int index) {
+      return keysCoinJoin_.get(index);
+    }
+    private void ensureKeysCoinJoinIsMutable() {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Key> tmp = keysCoinJoin_;
+      if (!tmp.isModifiable()) {
+        keysCoinJoin_ =
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+       }
+    }
+
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    private void setKeysCoinJoin(
+        int index, org.bitcoinj.wallet.Protos.Key value) {
+      value.getClass();
+  ensureKeysCoinJoinIsMutable();
+      keysCoinJoin_.set(index, value);
+    }
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    private void addKeysCoinJoin(org.bitcoinj.wallet.Protos.Key value) {
+      value.getClass();
+  ensureKeysCoinJoinIsMutable();
+      keysCoinJoin_.add(value);
+    }
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    private void addKeysCoinJoin(
+        int index, org.bitcoinj.wallet.Protos.Key value) {
+      value.getClass();
+  ensureKeysCoinJoinIsMutable();
+      keysCoinJoin_.add(index, value);
+    }
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    private void addAllKeysCoinJoin(
+        java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.Key> values) {
+      ensureKeysCoinJoinIsMutable();
+      com.google.protobuf.AbstractMessageLite.addAll(
+          values, keysCoinJoin_);
+    }
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    private void clearKeysCoinJoin() {
+      keysCoinJoin_ = emptyProtobufList();
+    }
+    /**
+     * <pre>
+     * coinjoin
+     * </pre>
+     *
+     * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+     */
+    private void removeKeysCoinJoin(int index) {
+      ensureKeysCoinJoinIsMutable();
+      keysCoinJoin_.remove(index);
     }
 
     public static org.bitcoinj.wallet.Protos.Wallet parseFrom(
@@ -19447,6 +19612,156 @@ public final class Protos {
         return this;
       }
 
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      @java.lang.Override
+      public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeysCoinJoinList() {
+        return java.util.Collections.unmodifiableList(
+            instance.getKeysCoinJoinList());
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      @java.lang.Override
+      public int getKeysCoinJoinCount() {
+        return instance.getKeysCoinJoinCount();
+      }/**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      @java.lang.Override
+      public org.bitcoinj.wallet.Protos.Key getKeysCoinJoin(int index) {
+        return instance.getKeysCoinJoin(index);
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      public Builder setKeysCoinJoin(
+          int index, org.bitcoinj.wallet.Protos.Key value) {
+        copyOnWrite();
+        instance.setKeysCoinJoin(index, value);
+        return this;
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      public Builder setKeysCoinJoin(
+          int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
+        copyOnWrite();
+        instance.setKeysCoinJoin(index,
+            builderForValue.build());
+        return this;
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      public Builder addKeysCoinJoin(org.bitcoinj.wallet.Protos.Key value) {
+        copyOnWrite();
+        instance.addKeysCoinJoin(value);
+        return this;
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      public Builder addKeysCoinJoin(
+          int index, org.bitcoinj.wallet.Protos.Key value) {
+        copyOnWrite();
+        instance.addKeysCoinJoin(index, value);
+        return this;
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      public Builder addKeysCoinJoin(
+          org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
+        copyOnWrite();
+        instance.addKeysCoinJoin(builderForValue.build());
+        return this;
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      public Builder addKeysCoinJoin(
+          int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
+        copyOnWrite();
+        instance.addKeysCoinJoin(index,
+            builderForValue.build());
+        return this;
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      public Builder addAllKeysCoinJoin(
+          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.Key> values) {
+        copyOnWrite();
+        instance.addAllKeysCoinJoin(values);
+        return this;
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      public Builder clearKeysCoinJoin() {
+        copyOnWrite();
+        instance.clearKeysCoinJoin();
+        return this;
+      }
+      /**
+       * <pre>
+       * coinjoin
+       * </pre>
+       *
+       * <code>repeated .wallet.Key keysCoinJoin = 32;</code>
+       */
+      public Builder removeKeysCoinJoin(int index) {
+        copyOnWrite();
+        instance.removeKeysCoinJoin(index);
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:wallet.Wallet)
     }
     private byte memoizedIsInitialized = 2;
@@ -19491,12 +19806,14 @@ public final class Protos {
               org.bitcoinj.wallet.Protos.Key.class,
               "keysFromFriends_",
               org.bitcoinj.wallet.Protos.Key.class,
+              "keysCoinJoin_",
+              org.bitcoinj.wallet.Protos.Key.class,
             };
             java.lang.String info =
-                "\u0001\u0011\u0000\u0001\u0001\u001f\u0011\u0000\b\n\u0001\u1508\u0000\u0002\u100a" +
+                "\u0001\u0012\u0000\u0001\u0001 \u0012\u0000\t\u000b\u0001\u1508\u0000\u0002\u100a" +
                 "\u0001\u0003\u041b\u0004\u041b\u0005\u100c\u0004\u0006\u1409\u0005\u0007\u1004\u0006" +
                 "\n\u041b\u000b\u1008\u0007\f\u100b\u0002\r\u1003\b\u000e\u1002\u0003\u000f\u041b" +
-                "\u0010\u041b\u001d\u041b\u001e\u041b\u001f\u041b";
+                "\u0010\u041b\u001d\u041b\u001e\u041b\u001f\u041b \u041b";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through

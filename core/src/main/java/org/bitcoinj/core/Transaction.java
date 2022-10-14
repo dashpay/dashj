@@ -1353,7 +1353,7 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * <p>Returns the list of transacion outputs, whether spent or unspent, that match a wallet by address or that are
+     * <p>Returns the list of transaction outputs, whether spent or unspent, that match a wallet by address or that are
      * watched by a wallet, i.e., transaction outputs whose script's address is controlled by the wallet and transaction
      * outputs whose script is watched by the wallet.</p>
      *
