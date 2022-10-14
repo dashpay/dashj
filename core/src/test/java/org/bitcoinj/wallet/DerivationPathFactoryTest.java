@@ -58,6 +58,12 @@ public class DerivationPathFactoryTest {
     public static final ImmutableList<ChildNumber> BLOCKCHAIN_IDENTITY_FUNDING_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
             ChildNumber.ONE_HARDENED, ChildNumber.FIVE_HARDENED, ChildNumber.ONE_HARDENED);
 
+    // m / 9' / 5' / 3' / 1' - Masternode Voting Path
+    public static final ImmutableList<ChildNumber> COINJOIN_PATH = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.FIVE_HARDENED, new ChildNumber(4, true));
+    public static final ImmutableList<ChildNumber> COINJOIN_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
+            ChildNumber.ONE_HARDENED, new ChildNumber(4, true));
+
     @Test
     public void validateMainNet() {
         DerivationPathFactory factory = new DerivationPathFactory(MAINNET);
@@ -74,6 +80,9 @@ public class DerivationPathFactoryTest {
         assertEquals(BLOCKCHAIN_IDENTITY_PATH, factory.blockchainIdentityECDSADerivationPath());
         assertEquals(BLOCKCHAIN_IDENTITY_PATH_KEY_ZERO, factory.blockchainIdentityECDSADerivationPath(0));
         assertEquals(BLOCKCHAIN_IDENTITY_FUNDING_PATH, factory.blockchainIdentityRegistrationFundingDerivationPath());
+
+        // coinjoin
+        assertEquals(COINJOIN_PATH, factory.coinJoinDerivationPath());
     }
 
     @Test
@@ -92,5 +101,8 @@ public class DerivationPathFactoryTest {
         assertEquals(BLOCKCHAIN_IDENTITY_PATH_TESTNET, factory.blockchainIdentityECDSADerivationPath());
         assertEquals(BLOCKCHAIN_IDENTITY_PATH_TESTNET_KEY_ZERO, factory.blockchainIdentityECDSADerivationPath(0));
         assertEquals(BLOCKCHAIN_IDENTITY_FUNDING_PATH_TESTNET, factory.blockchainIdentityRegistrationFundingDerivationPath());
+
+        // coinjoin
+        assertEquals(COINJOIN_PATH_TESTNET, factory.coinJoinDerivationPath());
     }
 }
