@@ -44,6 +44,8 @@ public class CoinJoinQueue extends Message {
     private long time;
     private boolean ready;  // Ready to submit
     private MasternodeSignature signature;
+    // memory only
+    private boolean tried;
 
     public CoinJoinQueue(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
@@ -140,7 +142,23 @@ public class CoinJoinQueue extends Message {
         return ready;
     }
 
+    public boolean isTried() {
+        return tried;
+    }
+
+    public void setTried(boolean tried) {
+        this.tried = tried;
+    }
+
     public MasternodeSignature getSignature() {
         return signature;
+    }
+
+    public boolean isTimeOutOfBounds() {
+        return isTimeOutOfBounds(Utils.currentTimeMillis());
+    }
+    public boolean isTimeOutOfBounds(long currentTime) {
+        return currentTime - time > CoinJoinContants.COINJOIN_QUEUE_TIMEOUT ||
+                time - currentTime > CoinJoinContants.COINJOIN_QUEUE_TIMEOUT;
     }
 }

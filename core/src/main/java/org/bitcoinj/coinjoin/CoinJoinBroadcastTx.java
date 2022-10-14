@@ -15,23 +15,29 @@
  */
 package org.bitcoinj.coinjoin;
 
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSignature;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.UnsafeByteArrayOutputStream;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSignature;
+import org.bitcoinj.script.ScriptPattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+
+import static org.bitcoinj.coinjoin.CoinJoinContants.COINJOIN_ENTRY_MAX_SIZE;
 
 // dstx
 public class CoinJoinBroadcastTx extends Message {
@@ -41,6 +47,10 @@ public class CoinJoinBroadcastTx extends Message {
     private TransactionOutPoint masternodeOutpoint;
     private MasternodeSignature signature;
     private long signatureTime;
+
+    // memory only
+    // when corresponding tx is 0-confirmed or conflicted, nConfirmedHeight is -1
+    int confirmedHeight = -1;
 
     public CoinJoinBroadcastTx(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
@@ -130,5 +140,36 @@ public class CoinJoinBroadcastTx extends Message {
 
     public long getSignatureTime() {
         return signatureTime;
+    }
+
+    public void setConfirmedHeight(int confirmedHeight) {
+        this.confirmedHeight = confirmedHeight;
+    }
+
+    public boolean isExpired(StoredBlock block) {
+        // expire confirmed DSTXes after ~1h since confirmation or chainlocked confirmation
+        if (confirmedHeight == -1 || block.getHeight() < confirmedHeight) return false; // not mined yet
+        if (block.getHeight() - confirmedHeight > 24) return true; // mined more than an hour ago
+        // TODO: this may crash
+        return Context.get().chainLockHandler.hasChainLock(block.getHeight(), block.getHeader().getHash());
+    }
+
+    public boolean isValidStructure() {
+        // some trivial checks only
+        if (tx.getInputs().size() != tx.getOutputs().size()) {
+            return false;
+        }
+        if (tx.getInputs().size() < CoinJoin.getMinPoolParticipants(params)) {
+            return false;
+        }
+        if (tx.getInputs().size() > CoinJoin.getMaxPoolParticipants(params) * COINJOIN_ENTRY_MAX_SIZE) {
+            return false;
+        }
+
+        boolean allOf = true;
+        for (TransactionOutput txOut : tx.getOutputs()) {
+            allOf = allOf && CoinJoin.isDenominatedAmount(txOut.getValue()) && ScriptPattern.isP2PKH(txOut.getScriptPubKey());
+        }
+        return allOf;
     }
 }
