@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.coinjoin.CoinJoinContants.COINJOIN_ENTRY_MAX_SIZE;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 
 public class CoinJoin {
     private static final Logger log = LoggerFactory.getLogger(CoinJoin.class);

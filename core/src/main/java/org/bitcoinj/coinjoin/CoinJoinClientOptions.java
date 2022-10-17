@@ -22,13 +22,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.bitcoinj.coinjoin.CoinJoinContants.COINJOIN_RANDOM_ROUNDS;
-import static org.bitcoinj.coinjoin.CoinJoinContants.DEFAULT_COINJOIN_AMOUNT;
-import static org.bitcoinj.coinjoin.CoinJoinContants.DEFAULT_COINJOIN_DENOMS_GOAL;
-import static org.bitcoinj.coinjoin.CoinJoinContants.DEFAULT_COINJOIN_DENOMS_HARDCAP;
-import static org.bitcoinj.coinjoin.CoinJoinContants.DEFAULT_COINJOIN_MULTISESSION;
-import static org.bitcoinj.coinjoin.CoinJoinContants.DEFAULT_COINJOIN_ROUNDS;
-import static org.bitcoinj.coinjoin.CoinJoinContants.DEFAULT_COINJOIN_SESSIONS;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_RANDOM_ROUNDS;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.DEFAULT_COINJOIN_AMOUNT;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.DEFAULT_COINJOIN_DENOMS_GOAL;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.DEFAULT_COINJOIN_DENOMS_HARDCAP;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.DEFAULT_COINJOIN_MULTISESSION;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.DEFAULT_COINJOIN_ROUNDS;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.DEFAULT_COINJOIN_SESSIONS;
 
 public class CoinJoinClientOptions {
     public static int getSessions() { return get().coinJoinSessions.get(); }

@@ -37,7 +37,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static org.bitcoinj.coinjoin.CoinJoinContants.COINJOIN_ENTRY_MAX_SIZE;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 
 // dstx
 public class CoinJoinBroadcastTx extends Message {
