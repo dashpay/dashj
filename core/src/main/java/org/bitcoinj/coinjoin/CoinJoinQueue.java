@@ -158,7 +158,7 @@ public class CoinJoinQueue extends Message {
         return isTimeOutOfBounds(Utils.currentTimeMillis());
     }
     public boolean isTimeOutOfBounds(long currentTime) {
-        return currentTime - time > CoinJoinContants.COINJOIN_QUEUE_TIMEOUT ||
-                time - currentTime > CoinJoinContants.COINJOIN_QUEUE_TIMEOUT;
+        return currentTime - time > CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT ||
+                time - currentTime > CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT;
     }
 }
