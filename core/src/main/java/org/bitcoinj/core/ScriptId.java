@@ -15,6 +15,9 @@
  */
 package org.bitcoinj.core;
 
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
+
 /**
  * Created by Hash Engineering on 8/25/2018.
  */
@@ -34,7 +37,13 @@ public class ScriptId extends TransactionDestination {
         return "ScriptId(" + Utils.HEX.encode(bytes) +")";
     }
 
-    Address getAddress(NetworkParameters params) {
+    @Override
+    public Address getAddress(NetworkParameters params) {
         return Address.fromScriptHash(params, bytes);
+    }
+
+    @Override
+    public Script getScript() {
+        return ScriptBuilder.createP2SHOutputScript(bytes);
     }
 }

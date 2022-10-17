@@ -75,11 +75,6 @@ public abstract class TransactionDestination extends ChildMessage {
         stream.write(bytes);
     }
 
-    public String toString()
-    {
-        return "KeyId(" + Utils.HEX.encode(bytes) +")";
-    }
-
     public byte [] getBytes() { return bytes; }
 
     public boolean equals(Object o)
@@ -90,7 +85,9 @@ public abstract class TransactionDestination extends ChildMessage {
         return Arrays.equals(keyId.bytes, this.bytes);
     }
 
-    abstract Address getAddress(NetworkParameters params);
+    public abstract Address getAddress(NetworkParameters params);
+
+    public abstract Script getScript();
 
     @Override
     public Sha256Hash getHash() {
@@ -107,5 +104,4 @@ public abstract class TransactionDestination extends ChildMessage {
     public int hashCode() {
         return Ints.fromBytes(bytes[MESSAGE_SIZE - 4], bytes[MESSAGE_SIZE - 3], bytes[MESSAGE_SIZE - 2], bytes[MESSAGE_SIZE - 1]);
     }
-
 }
