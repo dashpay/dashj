@@ -168,8 +168,8 @@ public class CoinJoin {
 
     public static boolean isCollateralAmount(Coin nInputAmount) {
         // collateral input can be anything between 1x and "max" (including both)
-        return (nInputAmount.isGreaterThan(getCollateralAmount()) || (nInputAmount.equals(getCollateralAmount())) &&
-                (nInputAmount.isLessThan(getMaxCollateralAmount()) || (nInputAmount.equals(getMaxCollateralAmount()))));
+        return nInputAmount.isGreaterThanOrEqualTo(getCollateralAmount()) &&
+                nInputAmount.isLessThanOrEqualTo(getMaxCollateralAmount());
     }
 
     public static long calculateAmountPriority(Coin inputAmount) {
