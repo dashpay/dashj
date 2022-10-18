@@ -16,6 +16,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.evolution.MasternodeMetaDataManager;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import javax.annotation.Nullable;
@@ -33,6 +34,7 @@ import org.slf4j.*;
 
 import java.io.File;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -96,6 +98,8 @@ public class Context {
     public ChainLocksHandler chainLockHandler;
     private LLMQBackgroundThread llmqBackgroundThread;
     public MasternodeMetaDataManager masternodeMetaDataManager;
+
+    public HashMap<String, CoinJoinClientManager> coinJoinClientManagers;
     private final ScheduledExecutorService scheduledExecutorService;
     private ScheduledFuture<?> scheduledMasternodeSync;
     private ScheduledFuture<?> scheduledNetFulfilled;
@@ -276,7 +280,7 @@ public class Context {
         chainLockHandler = new ChainLocksHandler(this);
         llmqBackgroundThread = new LLMQBackgroundThread(this);
         masternodeMetaDataManager = new MasternodeMetaDataManager(this);
-
+        coinJoinClientManagers = new HashMap<>();
         BLS.Init();
         initializedObjects = true;
     }
