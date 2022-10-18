@@ -193,4 +193,7 @@ public class CoinJoinBaseSession {
         return entries.size();
     }
 
+    public int getSessionDenom() {
+        return sessionDenom;
+    }
 }
