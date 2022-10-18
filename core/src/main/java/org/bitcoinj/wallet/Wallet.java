@@ -25,9 +25,29 @@ import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
 import org.bitcoinj.coinjoin.CoinJoin;
+import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinCoinSelector;
+import org.bitcoinj.coinjoin.CoinJoinConstants;
 import org.bitcoinj.coinjoin.DenominatedCoinSelector;
+import org.bitcoinj.coinjoin.utils.CompactTallyItem;
+import org.bitcoinj.coinjoin.utils.InputCoin;
 import org.bitcoinj.core.KeyId;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionBag;
+import org.bitcoinj.core.TransactionBroadcast;
+import org.bitcoinj.core.TransactionBroadcaster;
+import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.core.TransactionDestination;
+import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.UTXO;
+import org.bitcoinj.core.UTXOProvider;
+import org.bitcoinj.core.UTXOProviderException;
+import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Base58;
@@ -47,21 +67,6 @@ import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.script.ScriptException;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionBag;
-import org.bitcoinj.core.TransactionBroadcast;
-import org.bitcoinj.core.TransactionBroadcaster;
-import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.UTXO;
-import org.bitcoinj.core.UTXOProvider;
-import org.bitcoinj.core.UTXOProviderException;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.TransactionConfidence.*;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.evolution.EvolutionContact;
@@ -3315,6 +3320,28 @@ public class Wallet extends BaseTaggableObject
     }
 
     /**
+     * Returns a set of all WalletTransactions in the wallet.
+     */
+    public WalletTransaction getWalletTransaction(Sha256Hash hash) {
+        lock.lock();
+        try {
+            Set<WalletTransaction> all = new HashSet<>();
+            addWalletTransactionsToSet(all, Pool.UNSPENT, unspent.values());
+            addWalletTransactionsToSet(all, Pool.SPENT, spent.values());
+            addWalletTransactionsToSet(all, Pool.DEAD, dead.values());
+            addWalletTransactionsToSet(all, Pool.PENDING, pending.values());
+            for (WalletTransaction wtx : all) {
+                if (wtx.getTransaction().getTxId().equals(hash))
+                    return wtx;
+            }
+        } finally {
+            lock.unlock();
+        }
+        return null;
+    }
+
+
+    /**
      * Returns all non-dead, active transactions ordered by recency.
      */
     public List<Transaction> getTransactionsByTime() {
@@ -3990,6 +4017,16 @@ public class Wallet extends BaseTaggableObject
         } finally {
             lock.unlock();
         }
+    }
+
+    public Balance getBalanceInfo() {
+        return new Balance()
+                .setMyTrusted(getBalance(BalanceType.AVAILABLE_SPENDABLE))
+                .setDenominatedTrusted(getBalance(BalanceType.DENOMINATED_FOR_MIXING_SPENDABLE))
+                .setDenominatedUntrustedPending(getBalance(BalanceType.DENOMINATED_FOR_MIXING))
+                .setAnonymized(getBalance(BalanceType.COINJOIN_SPENDABLE));
+
+        //TODO: support as many balance types as possible
     }
 
     /**
@@ -6664,8 +6701,344 @@ public class Wallet extends BaseTaggableObject
             return false;
         return findCoinJoinRedeemDataFromScriptHash(payToScriptHash) != null;
     }
-
     public boolean hasCollateralInputs() {
-        return !getBalance(new CoinJoinCoinSelector(this, true)).isZero();
+        return hasCollateralInputs(true);
+    }
+
+    public boolean hasCollateralInputs(boolean onlyConfirmed) {
+        return !getBalance(new CoinJoinCoinSelector(this, onlyConfirmed)).isZero();
+    }
+
+    public boolean isSpent(Sha256Hash hash, long index) {
+        lock.lock();
+        try {
+            // TODO: should this be spent.contains(hash)?
+            Transaction spentTx = spent.get(hash);
+            return spentTx.getOutput(index).getSpentBy() != null;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    HashSet<TransactionOutPoint> lockedCoinsSet = Sets.newHashSet();
+    public boolean isLockedCoin(Sha256Hash hash, long index) {
+        lock.lock();
+        try {
+            TransactionOutPoint outPoint = new TransactionOutPoint(params, index, hash);
+            return lockedCoinsSet.contains(outPoint);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    HashMap<TransactionOutPoint, Integer> mapOutpointRoundsCache = new HashMap<>();
+    // Recursively determine the rounds of a given input (How deep is the CoinJoin chain for a given input)
+    int getRealOutpointCoinJoinRounds(TransactionOutPoint outPoint) {
+        return getRealOutpointCoinJoinRounds(outPoint, 0);
+    }
+
+    boolean isMine(TransactionDestination dest) {
+        return isMine(dest.getScript());
+    }
+
+    boolean isMine(Script script) {
+        return canSignFor(script);
+    }
+
+    boolean isMine(TransactionOutput txout) {
+        return isMine(txout.getScriptPubKey());
+    }
+
+    boolean isMine(TransactionInput input) {
+        lock.lock();
+        try {
+            Transaction tx = getTransaction(input.getOutpoint().getHash());
+            if (tx != null) {
+                if (input.getOutpoint().getIndex() < tx.getOutputs().size()) {
+                    return tx.getOutput(input.getIndex()).isMine(this);
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+        return false;
+    }
+
+    int getRealOutpointCoinJoinRounds(TransactionOutPoint outpoint, int rounds) {
+        lock.lock();
+        try {
+
+            final int roundsMax = CoinJoinConstants.MAX_COINJOIN_ROUNDS + CoinJoinClientOptions.getRandomRounds();
+
+            if (rounds >= roundsMax) {
+                // there can only be roundsMax rounds max
+                return roundsMax - 1;
+            }
+            
+            Integer roundsRef = mapOutpointRoundsCache.get(outpoint);
+            if (roundsRef == null) {
+                roundsRef = -10;
+                mapOutpointRoundsCache.put(outpoint, roundsRef);
+            } else {
+                return roundsRef;
+            }
+
+            // TODO wtx should refer to a CWalletTx object, not a pointer, based on surrounding code
+            WalletTransaction wtx = getWalletTransaction(outpoint.getHash());
+
+            if (wtx == null || wtx.getTransaction() == null) {
+                // no such tx in this wallet
+                roundsRef = -1;
+                mapOutpointRoundsCache.put(outpoint, roundsRef);
+
+                log.info(String.format("FAILED    %-70s %3d", outpoint.toStringCpp(), -1));
+                return roundsRef;
+            }
+
+            // bounds check
+            if (outpoint.getIndex() >= wtx.getTransaction().getOutputs().size()) {
+                // should never actually hit this
+                roundsRef = -4;
+                mapOutpointRoundsCache.put(outpoint, roundsRef);
+                log.info(String.format("FAILED    %-70s %3d", outpoint.toStringCpp(), -4));
+                return roundsRef;
+            }
+
+            TransactionOutput txOut = wtx.getTransaction().getOutput(outpoint.getIndex());
+
+            if (CoinJoin.isCollateralAmount (txOut.getValue())) {
+                roundsRef = -3;
+                mapOutpointRoundsCache.put(outpoint, roundsRef);
+
+                log.info(String.format("UPDATED   %-70s %3d", outpoint.toStringCpp(), roundsRef));
+                return roundsRef;
+            }
+
+            // make sure the final output is non-denominate
+            if (!CoinJoin.isDenominatedAmount (txOut.getValue())){ //NOT DENOM
+                roundsRef = -2;
+                mapOutpointRoundsCache.put(outpoint, roundsRef);
+
+                log.info(String.format("UPDATED   %-70s %3d", outpoint.toStringCpp(), roundsRef));
+                return roundsRef;
+            }
+
+            for (TransactionOutput out :wtx.getTransaction().getOutputs()){
+                if (!CoinJoin.isDenominatedAmount (out.getValue())){
+                    // this one is denominated but there is another non-denominated output found in the same tx
+                    roundsRef = 0;
+                    mapOutpointRoundsCache.put(outpoint, roundsRef);
+
+                    log.info(String.format("UPDATED   %-70s %3d", outpoint.toStringCpp(), roundsRef));
+                    return roundsRef;
+                }
+            }
+
+            int nShortest = -10; // an initial value, should be no way to get this by calculations
+            boolean fDenomFound = false;
+            // only denoms here so let's look up
+            for (TransactionInput txinNext :wtx.getTransaction().getInputs()){
+                if (isMine(txinNext)) {
+                    int n = getRealOutpointCoinJoinRounds(txinNext.getOutpoint(), rounds + 1);
+                    // denom found, find the shortest chain or initially assign nShortest with the first found value
+                    if (n >= 0 && (n < nShortest || nShortest == -10)) {
+                        nShortest = n;
+                        fDenomFound = true;
+                    }
+                }
+            }
+            roundsRef = fDenomFound
+                    ? (nShortest >= roundsMax - 1 ? roundsMax : nShortest + 1) // good, we a +1 to the shortest one but only roundsMax rounds max allowed
+                    : 0;            // too bad, we are the fist one in that chain
+            log.info(String.format("UPDATED   %-70s %3d", outpoint.toStringCpp(), roundsRef));
+            return roundsRef;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    Sha256Hash coinJoinSalt = Sha256Hash.ZERO_HASH;
+    public boolean isFullyMixed(TransactionOutPoint outPoint) {
+        lock.lock();
+        try {
+            int rounds = getRealOutpointCoinJoinRounds(outPoint);
+            // Mix again if we don't have N rounds yet
+            if (rounds < CoinJoinClientOptions.getRounds()) return false;
+
+            // Try to mix a "random" number of rounds more than minimum.
+            // If we have already mixed N + MaxOffset rounds, don't mix again.
+            // Otherwise, we should mix again 50% of the time, this results in an exponential decay
+            // N rounds 50% N+1 25% N+2 12.5%... until we reach N + GetRandomRounds() rounds where we stop.
+            if (rounds < CoinJoinClientOptions.getRounds() + CoinJoinClientOptions.getRandomRounds()) {
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                try {
+                    outPoint.bitcoinSerialize(stream);
+                    stream.write(coinJoinSalt.getReversedBytes());
+                    Sha256Hash hash = Sha256Hash.twiceOf(stream.toByteArray());
+                    if (Utils.readInt64(hash.getBytes(), 0) % 2 == 0) {
+                        return false;
+                    }
+                } catch (IOException x) {
+                    throw new RuntimeException(x);
+                }
+            }
+
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    boolean fAnonymizableTallyCached = false;
+    ArrayList<CompactTallyItem> vecAnonymizableTallyCached = new ArrayList<>();
+    boolean fAnonymizableTallyCachedNonDenom = false;
+    ArrayList<CompactTallyItem> vecAnonymizableTallyCachedNonDenom = new ArrayList<>();
+
+
+    public List<CompactTallyItem> selectCoinsGroupedByAddresses(boolean fSkipDenominated,
+                                                                boolean fAnonymizable,
+                                                                boolean fSkipUnconfirmed,
+                                                                int nMaxOupointsPerAddress) {
+        List<TransactionOutput> candidates = calculateAllSpendCandidates(true, true, false);
+
+        CoinSelection selection = new CoinJoinCoinSelector(this).select(NetworkParameters.MAX_MONEY, candidates);
+
+        lock.lock();
+        try {
+            // Try using the cache for already confirmed mixable inputs.
+            // This should only be used if nMaxOupointsPerAddress was NOT specified.
+        if(nMaxOupointsPerAddress == -1 && fAnonymizable && fSkipUnconfirmed) {
+            if(fSkipDenominated && fAnonymizableTallyCachedNonDenom) {
+                log.info("SelectCoinsGroupedByAddresses - using cache for non-denom inputs {}", vecAnonymizableTallyCachedNonDenom.size());
+                return vecAnonymizableTallyCachedNonDenom;
+            }
+            if(!fSkipDenominated && fAnonymizableTallyCached) {
+                log.info("SelectCoinsGroupedByAddresses - using cache for all inputs {}", vecAnonymizableTallyCached.size());
+                return vecAnonymizableTallyCached;
+            }
+        }
+
+            Coin smallestDenom = CoinJoin.getSmallestDenomination();
+
+            // Tally
+            HashMap<TransactionDestination, CompactTallyItem> mapTally = new HashMap<>();
+            HashSet<Sha256Hash> setWalletTxesCounted = new HashSet<>();
+            for (TransactionOutput outpoint : selection.gathered) {
+
+                if (!setWalletTxesCounted.add(outpoint.getHash())) continue;
+
+                Transaction wtx = getTransaction(outpoint.getHash());
+                if (wtx == null) continue;
+
+                if (wtx.isCoinBase() && wtx.isMature()) continue;
+                TransactionConfidence confidence = wtx.getConfidence();
+                if (fSkipUnconfirmed && !wtx.isTrusted(this)) continue;
+                if (confidence.getConfidenceType() == ConfidenceType.BUILDING || confidence.getConfidenceType() == ConfidenceType.PENDING)
+                    continue;
+
+                for (int i = 0; i < wtx.getOutputs().size(); i++) {
+                    TransactionDestination txdest = TransactionDestination.fromScript(wtx.getOutput(i).getScriptPubKey());
+                    if (txdest == null)
+                        continue;
+
+                    boolean mine = isMine(txdest);
+                    if (!mine) continue;
+
+                    CompactTallyItem itTallyItem = mapTally.get(txdest);
+                    if (nMaxOupointsPerAddress != -1 && itTallyItem != null && (long) (itTallyItem.inputCoins.size()) >= nMaxOupointsPerAddress)
+                        continue;
+
+                    if (isSpent(outpoint.getHash(), i) || isLockedCoin(outpoint.getHash(), i))
+                        continue;
+
+                    if (fSkipDenominated && CoinJoin.isDenominatedAmount(wtx.getOutput(i).getValue()))
+                        continue;
+
+                    if (fAnonymizable) {
+                        // ignore collaterals
+                        if (CoinJoin.isCollateralAmount(wtx.getOutput(i).getValue())) continue;
+                        // ignore outputs that are 10 times smaller then the smallest denomination
+                        // otherwise they will just lead to higher fee / lower priority
+                        if (wtx.getOutput(i).getValue().isLessThan(smallestDenom.div(10)) ||
+                                wtx.getOutput(i).getValue().equals(smallestDenom.div(10))) continue;
+                        // ignore mixed
+                        if (isFullyMixed(new TransactionOutPoint(params, i, outpoint.getHash()))) continue;
+                    }
+
+                    if (itTallyItem == null) {
+                        itTallyItem = new CompactTallyItem();
+                        itTallyItem.txDestination = txdest;
+                        mapTally.put(txdest, itTallyItem);
+                    }
+                    itTallyItem.amount = itTallyItem.amount.add(wtx.getOutput(i).getValue());
+                    itTallyItem.inputCoins.add(new InputCoin(wtx, i));
+                }
+            }
+
+            // construct resulting vector
+            // NOTE: vecTallyRet is "sorted" by txdest (i.e. address), just like mapTally
+            ArrayList<CompactTallyItem> vecTallyRet = Lists.newArrayList();
+            for (Map.Entry<TransactionDestination, CompactTallyItem> item : mapTally.entrySet()) {
+                if (fAnonymizable && item.getValue().amount.isLessThan(smallestDenom)) continue;
+                vecTallyRet.add(item.getValue());
+            }
+
+            // Cache already confirmed mixable entries for later use.
+            // This should only be used if nMaxOupointsPerAddress was NOT specified.
+            if (nMaxOupointsPerAddress == -1 && fAnonymizable && fSkipUnconfirmed) {
+                if (fSkipDenominated) {
+                    vecAnonymizableTallyCachedNonDenom = vecTallyRet;
+                    fAnonymizableTallyCachedNonDenom = true;
+                } else {
+                    vecAnonymizableTallyCached = vecTallyRet;
+                    fAnonymizableTallyCached = true;
+                }
+            }
+
+            // debug
+
+            StringBuilder strMessage = new StringBuilder("SelectCoinsGroupedByAddresses - vecTallyRet:\n");
+            for (CompactTallyItem item :vecTallyRet)
+                strMessage.append(String.format("  %s %s\n", item.txDestination, item.amount.toFriendlyString()));
+            log.info(strMessage.toString()); /* Continued */
+
+            return vecTallyRet;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
+    public int countInputsWithAmount(Coin denomValue) {
+        int count = 0;
+        for (Transaction tx : getTransactionPool(Pool.UNSPENT).values()) {
+            for (TransactionOutput output : tx.getOutputs()) {
+                if (CoinJoin.isDenominatedAmount(output.getValue()) && output.isMine(this))
+                    count++;
+            }
+        }
+        return count;
+    }
+
+    // TODO: Do we need these lock functions
+    public boolean lockCoin(TransactionOutPoint outPoint) {
+        lockedCoinsSet.add(outPoint);
+        return false;
+    }
+
+    public void unlockCoin(TransactionOutPoint outPoint) {
+        lockedCoinsSet.remove(outPoint);
+    }
+
+    //TODO: need to implement these methods
+    public Coin getAnonymizableBalance() {
+        return getAnonymizableBalance(false, true);
+    }
+
+    public Coin getAnonymizableBalance(boolean skipDenominated) {
+        return getAnonymizableBalance(skipDenominated, true);
+    }
+    public Coin getAnonymizableBalance(boolean skipDenominated, boolean skipUnconfirmed) {
+        return Coin.ZERO;
     }
 }
