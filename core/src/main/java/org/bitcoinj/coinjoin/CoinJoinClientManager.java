@@ -97,7 +97,6 @@ public class CoinJoinClientManager {
     public void resetPool() {
         cachedLastSuccessBlock = 0;
         masternodesUsed.clear();
-        //AssertLockNotHeld(cs_deqsessions);
 
         lock.lock();
         try {
@@ -114,7 +113,6 @@ public class CoinJoinClientManager {
         StringBuilder status = new StringBuilder();
         boolean waitForBlock = waitForAnotherBlock();
 
-        //AssertLockNotHeld(cs_deqsessions);
         lock.lock();
         try {
             for (CoinJoinClientSession session :deqSessions){
@@ -129,7 +127,6 @@ public class CoinJoinClientManager {
     public String getSessionDenoms() {
         StringBuilder strSessionDenoms = new StringBuilder();
 
-        //AssertLockNotHeld(cs_deqsessions);
         lock.lock();
         try {
             for (CoinJoinClientSession session : deqSessions) {
@@ -143,7 +140,6 @@ public class CoinJoinClientManager {
     }
 
     public boolean getMixingMasternodesInfo(ArrayList<Masternode> vecDmnsRet) {
-        //AssertLockNotHeld(cs_deqsessions);
         vecDmnsRet.clear();
         lock.lock();
         try {
@@ -200,7 +196,7 @@ public class CoinJoinClientManager {
         }
 
         boolean fResult = true;
-        //AssertLockNotHeld(cs_deqsessions);
+
         lock.lock();
         try {
             if (deqSessions.size() < CoinJoinClientOptions.getSessions()){

@@ -3320,11 +3320,12 @@ public class Wallet extends BaseTaggableObject
     }
 
     /**
-     * Returns a set of all WalletTransactions in the wallet.
+     * Returns a WalletTransaction for the given hash.
      */
     public WalletTransaction getWalletTransaction(Sha256Hash hash) {
         lock.lock();
         try {
+            // TODO: optimize this method to loop through all tx's only once
             Set<WalletTransaction> all = new HashSet<>();
             addWalletTransactionsToSet(all, Pool.UNSPENT, unspent.values());
             addWalletTransactionsToSet(all, Pool.SPENT, spent.values());

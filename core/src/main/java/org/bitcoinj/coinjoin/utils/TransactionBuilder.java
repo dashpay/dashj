@@ -154,7 +154,6 @@ public class TransactionBuilder {
         }
 
         SendRequest req = SendRequest.to(wallet.getParams(), vecSend);
-        // TODO what is the CoinControl for?
 
         try {
             wallet.completeTx(req);
@@ -164,21 +163,21 @@ public class TransactionBuilder {
             return false;
         }
         Transaction tx = req.tx;
-            //if (!pwallet.create->CreateTransaction(vecSend, tx, feeResult, changePosRet, strResult, coinControl)) {
-            //    return false;
-           // }
+
+        // TODO: see CreateWalletTransaction to see how changePosRet is handled
+        // for now it is -1, which will cause failure below (return false)
 
 
         Coin amountLeft = getAmountLeft();
         boolean hasDust = isDust(amountLeft);
         // If there is a either remainder which is considered to be dust (will be added to fee in this case) or no amount left there should be no change output, return if there is a change output.
-        if (/*changePosRet != -1 && */hasDust) {
+        if (changePosRet != -1 && hasDust) {
             strResult.append(String.format("Unexpected change output %s at position %d", tx.getOutput(changePosRet).toString(), changePosRet));
             return false;
         }
 
         // If there is a remainder which is not considered to be dust it should end up in a change output, return if not.
-        if (/*changePosRet == -1 &&*/ !hasDust) {
+        if (changePosRet == -1 && !hasDust) {
             strResult.append(String.format("Change output missing: %s", amountLeft));
             return false;
         }
@@ -189,7 +188,7 @@ public class TransactionBuilder {
         if (hasDust) {
             feeAdditional = amountLeft;
         } else {
-            // Add a change output and GetSizeOfCompactSizeDiff(1) as another output can changes the serialized size of the vout size in CTransaction
+            // Add a change output and GetSizeOfCompactSizeDiff(1) as another output can change the serialized size of the outputs size in Transaction
             bytesAdditional = bytesOutput + getSizeOfCompactSizeDiff(1);
         }
 

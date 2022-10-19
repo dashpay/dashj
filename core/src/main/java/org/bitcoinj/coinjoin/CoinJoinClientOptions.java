@@ -53,9 +53,6 @@ public class CoinJoinClientOptions {
 
     public static boolean isEnabled() { return CoinJoinClientOptions.get().enableCoinJoin.get(); }
     public static boolean isMultiSessionEnabled() { return CoinJoinClientOptions.get().isCoinJoinMultiSession.get(); }
-
-    // static void getJsonInfo(UniValue& obj);
-
     private static CoinJoinClientOptions instance;
     private static boolean onceFlag;
 

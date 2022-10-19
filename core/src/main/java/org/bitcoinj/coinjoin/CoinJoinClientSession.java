@@ -75,8 +75,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         if (!CoinJoinClientOptions.isEnabled()) return false;
 
-        // LOCK2(cs_main, mixingWallet.cs_wallet);
-
         // NOTE: We do not allow txes larger than 100 kB, so we have to limit number of inputs here.
         // We still want to consume a lot of inputs to avoid creating only smaller denoms though.
         // Knowing that each CTxIn is at least 148 B big, 400 inputs should take 400 x ~148 B = ~60 kB.
@@ -365,10 +363,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         return fDryRun;
     }
     /// step 2: send denominated inputs and outputs prepared in step 1
-//    private boolean sendDenominate(List<Pair<CoinJoinTransactionInput, TransactionOutput>> vecPSInOutPairsIn, CConnman& connman) {
-//
-//        return false;
-//    }
+    private boolean sendDenominate(List<Pair<CoinJoinTransactionInput, TransactionOutput>> vecPSInOutPairs) {
+
+        return false;
+    }
 
     /// Process Masternode updates about the progress of mixing
     private void processPoolStateUpdate(CoinJoinStatusUpdate statusUpdate) {
@@ -431,7 +429,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     @GuardedBy("lock")
     private void SetNull() {
-        //AssertLockHeld(cs_coinjoin);
         // Client side
         mixingMasternode = null;
         pendingDsaRequest = new PendingDsaRequest();
@@ -442,11 +439,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     public CoinJoinClientSession(Wallet mixingWallet) {
         this.mixingWallet = mixingWallet;
     }
-
-    // break this up by message:
-//    public void ProcessMessage(Peer from, String msg_type, CDataStream& vRecv, CConnman& connman, bool enable_bip61) {
-//
-//    }
 
     public void processStatusUpdate(Peer peer, CoinJoinStatusUpdate statusUpdate) {
         if (mixingMasternode == null)
@@ -752,20 +744,15 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     }
 
     /// As a client, submit part of a future mixing transaction to a Masternode to start the process
-//    public boolean submitDenominate(CConnman& connman) {
-//
-//    }
-//
-//    public boolean processPendingDsaRequest(CConnman& connman) {
-//
-//    }
-
-    public boolean checkTimeout() {
-
+    public boolean submitDenominate() {
         return false;
     }
 
-//    public void getJsonInfo(UniValue& obj) {
-//
-//    }
+    public boolean processPendingDsaRequest() {
+        return false;
+    }
+
+    public boolean checkTimeout() {
+        return false;
+    }
 }
