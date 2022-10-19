@@ -147,18 +147,18 @@ public class CoinJoin {
             nValueOut = nValueOut.add(txout.getValue());
 
             if (!ScriptPattern.isP2PKH(txout.getScriptPubKey()) && !txout.getScriptPubKey().isUnspendable()) {
-                log.info("CCoinJoin::IsCollateralValid -- Invalid Script, txCollateral={}", txCollateral); /* Continued */
+                log.info("coinjoin: Invalid Script, txCollateral={}", txCollateral); /* Continued */
                 return false;
             }
         }
 
         //collateral transactions are required to pay out a small fee to the miners
         if (nValueIn.minus(nValueOut).isLessThan(getCollateralAmount())) {
-            log.info("CCoinJoin::IsCollateralValid -- did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut.minus(nValueIn), txCollateral); /* Continued */
+            log.info("coinjoin:  did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut.minus(nValueIn), txCollateral); /* Continued */
             return false;
         }
 
-        log.info("CCoinJoin::IsCollateralValid -- {}", txCollateral); /* Continued */
+        log.info("coinjoin: -- {}", txCollateral); /* Continued */
 
         return true;
     }

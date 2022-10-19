@@ -83,7 +83,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // This still leaves more than enough room for another data of typical CreateDenominated tx.
         List<CompactTallyItem> vecTally = mixingWallet.selectCoinsGroupedByAddresses(true, true, true, 400);
         if (vecTally.isEmpty()) {
-            log.info( "CCoinJoinClientSession::CreateDenominated -- SelectCoinsGroupedByAddresses can't find any inputs!");
+            log.info( "coinjoin: selectCoinsGroupedByAddresses can't find any inputs!");
             return false;
         }
 
@@ -106,7 +106,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return true;
         }
 
-        log.info( "CCoinJoinClientSession::CreateDenominated -- failed!");
+        log.info( "coinjoin: createDenominated -- failed!");
         return false;
     }
 
@@ -603,7 +603,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 if (context.masternodeListManager.getListAtChainTip().getValidMNsCount() == 0 &&
                         context.getParams().getId() != NetworkParameters.ID_REGTEST) {
                     strAutoDenomResult = "No Masternodes detected.";
-                    log.info("CCoinJoinClientSession::DoAutomaticDenominating -- {}", strAutoDenomResult);
+                    log.info("coinjoin: {}", strAutoDenomResult);
                     return false;
                 }
 
@@ -614,7 +614,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 nBalanceNeedsAnonymized = CoinJoinClientOptions.getAmount().subtract(nBalanceAnonymized);
 
                 if (nBalanceNeedsAnonymized.isLessThanOrEqualTo(Coin.ZERO)) {
-                    log.info("CCoinJoinClientSession::DoAutomaticDenominating -- Nothing to do\n");
+                    log.info("coinjoin: Nothing to do\n");
                     // nothing to do, just keep it in idle mode
                     return false;
                 }
@@ -633,7 +633,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 // mixable balance is way too small
                 if (nBalanceAnonymizable.isLessThan(nValueMin)) {
                     strAutoDenomResult = "Not enough funds to mix.";
-                    log.info("CoinJoinClientSession::DoAutomaticDenominating -- {}", strAutoDenomResult);
+                    log.info("CoinJoin{}", strAutoDenomResult);
                     return false;
                 }
 
@@ -659,7 +659,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     nBalanceNeedsAnonymized = nBalanceNeedsAnonymized.add(nAdditionalDenom);
                 }
 
-                log.info("CCoinJoinClientSession::DoAutomaticDenominating -- current stats:\n" +
+                log.info("coinjoin: current stats:\n" +
                         "    nValueMin: {}\n" +
                         "    nBalanceAnonymizable: {}\n" +
                         "    nBalanceAnonymized: {}\n" +
@@ -708,7 +708,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 // should be no unconfirmed denoms in non-multi-session mode
                 if (!CoinJoinClientOptions.isMultiSessionEnabled () && nBalanceDenominatedUnconf.isGreaterThan(Coin.ZERO)){
                     strAutoDenomResult = "Found unconfirmed denominated outputs, will wait till they confirm to continue.";
-                    log.info("CCoinJoinClientSession::DoAutomaticDenominating -- {}", strAutoDenomResult);
+                    log.info("coinjoin: {}", strAutoDenomResult);
                     return false;
                 }
 
@@ -716,14 +716,14 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 StringBuilder strReason = new StringBuilder();
                 if (txMyCollateral.isEmpty()) {
                     if (!createCollateralTransaction(txMyCollateral, strReason)) {
-                        log.info("CCoinJoinClientSession::DoAutomaticDenominating -- create collateral error: {}", strReason);
+                        log.info("coinjoin: create collateral error: {}", strReason);
                         return false;
                     }
                 } else {
                     if (!CoinJoin.isCollateralValid(txMyCollateral)) {
-                        log.info("CCoinJoinClientSession::DoAutomaticDenominating -- invalid collateral, recreating...");
+                        log.info("coinjoin: invalid collateral, recreating...");
                         if (!createCollateralTransaction(txMyCollateral, strReason)) {
-                            log.info("CCoinJoinClientSession::DoAutomaticDenominating -- create collateral error: {}", strReason);
+                            log.info("coinjoin: create collateral error: {}", strReason);
                             return false;
                         }
                     }

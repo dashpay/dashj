@@ -142,7 +142,7 @@ public class CoinJoinBaseSession {
             log.info(" txin={}", txin);
 
             if (txin.getOutpoint() == null) {
-                log.info("CCoinJoinBaseSession::%s -- ERROR: invalid input!");
+                log.info("coinjoin: ERROR: invalid input!");
                 result.setMessageId(ERR_INVALID_INPUT);
                 if (consumeCollateral)
                     result.consumeCollateral = true;

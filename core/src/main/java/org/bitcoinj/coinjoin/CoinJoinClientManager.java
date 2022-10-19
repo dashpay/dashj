@@ -39,8 +39,8 @@ public class CoinJoinClientManager {
     private final ArrayList<TransactionOutPoint> masternodesUsed = new ArrayList<>();
 
     private final ReentrantLock lock = Threading.lock("deqsessions");
-    // TODO: or map<denom, CCoinJoinClientSession> ??
-    
+
+    // TODO: or map<denom, CoinJoinClientSession> ??
     @GuardedBy("lock")
     private final Deque<CoinJoinClientSession> deqSessions = new ArrayDeque<>();
 
