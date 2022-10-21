@@ -25,9 +25,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-/**
- * Created by Hash Engineering on 8/25/2018.
- */
 public abstract class TransactionDestination extends ChildMessage {
     public static final int MESSAGE_SIZE = 20;
 

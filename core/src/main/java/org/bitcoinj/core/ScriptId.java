@@ -18,9 +18,6 @@ package org.bitcoinj.core;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 
-/**
- * Created by Hash Engineering on 8/25/2018.
- */
 public class ScriptId extends TransactionDestination {
     public static final ScriptId SCRIPT_ID_ZERO = new ScriptId(new byte[20]);
 
