@@ -78,9 +78,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("malort")) {
             params = MalortDevNetParams.get();
             filePrefix = "forwarding-service-malort";
-        } else if (args.length > 1 && args[1].equals("333")) {
-            params = ThreeThreeThreeDevNetParams.get();
-            filePrefix = "forwarding-service-333";
+        } else if (args.length > 1 && args[1].equals("cha-cha")) {
+            params = ChaChaDevNetParams.get();
+            filePrefix = "forwarding-service-cha-cha";
         } else if (args.length > 1 && args[1].equals("jack-daniels")) {
             params = JackDanielsDevNetParams.get();
             filePrefix = "forwarding-service-jack-daniels";

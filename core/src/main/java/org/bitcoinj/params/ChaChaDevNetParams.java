@@ -18,27 +18,32 @@ package org.bitcoinj.params;
 
 import org.bitcoinj.quorums.LLMQParameters;
 
-public class ThreeThreeThreeDevNetParams extends DevNetParams {
+public class ChaChaDevNetParams extends DevNetParams {
 
-    private static final String DEVNET_NAME = "333";
+    private static final String DEVNET_NAME = "chacha";
 
     private static final String[] MASTERNODES = new String[]{
-        "34.220.100.153",
-        "52.12.210.34",
-        "54.71.255.176",
-        "54.187.123.197",
-        "34.217.195.49",
-        "35.89.69.137",
-        "34.210.15.156",
-        "52.39.39.40",
-        "54.245.132.133",
-        "18.236.89.14",
-        "35.163.60.183",
-        "18.237.244.153",
-        "35.89.54.219"
+        "52.12.83.1",
+        "54.185.181.2",
+        "35.93.63.215",
+        "34.220.179.132",
+        "54.70.61.128",
+        "35.90.125.129",
+        "35.86.106.137",
+        "54.191.116.254",
+        "54.149.139.205",
+        "52.34.56.84",
+        "35.88.184.140",
+        "18.237.62.240",
+        "54.212.6.77",
+        "34.221.87.100",
+        "35.161.109.67",
+        "35.91.172.122",
+        "54.202.33.84",
+        "35.89.126.233",
     };
 
-    public ThreeThreeThreeDevNetParams() {
+    public ChaChaDevNetParams() {
         super(DEVNET_NAME, "yM6zJAMWoouAZxPvqGDbuHb6BJaD6k4raQ", 20001,
                 MASTERNODES, true, 70220);
         dnsSeeds = MASTERNODES;
@@ -54,11 +59,11 @@ public class ThreeThreeThreeDevNetParams extends DevNetParams {
         addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024);
     }
 
-    private static ThreeThreeThreeDevNetParams instance;
+    private static ChaChaDevNetParams instance;
 
-    public static ThreeThreeThreeDevNetParams get() {
+    public static ChaChaDevNetParams get() {
         if (instance == null) {
-            instance = new ThreeThreeThreeDevNetParams();
+            instance = new ChaChaDevNetParams();
             add(instance);
         }
         return instance;

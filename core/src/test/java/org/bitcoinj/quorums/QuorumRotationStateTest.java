@@ -7,7 +7,7 @@ import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.evolution.SimplifiedMasternodesTest;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.ThreeThreeThreeDevNetParams;
+import org.bitcoinj.params.ChaChaDevNetParams;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.SPVBlockStore;
@@ -34,7 +34,7 @@ public class QuorumRotationStateTest {
     @BeforeClass
     public static void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
-        PARAMS = ThreeThreeThreeDevNetParams.get();
+        PARAMS = ChaChaDevNetParams.get();
         initContext(PARAMS);
     }
 

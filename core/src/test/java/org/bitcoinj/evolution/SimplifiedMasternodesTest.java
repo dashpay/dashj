@@ -8,7 +8,7 @@ import org.bitcoinj.params.MainNetParams;
 import static org.junit.Assert.*;
 
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.ThreeThreeThreeDevNetParams;
+import org.bitcoinj.params.ChaChaDevNetParams;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
@@ -41,7 +41,7 @@ public class SimplifiedMasternodesTest {
     public static void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
         PARAMS = TestNet3Params.get();
-        DEVNETPARAMS = ThreeThreeThreeDevNetParams.get();
+        DEVNETPARAMS = ChaChaDevNetParams.get();
         initContext(PARAMS);
 
         //PeerGroup peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
