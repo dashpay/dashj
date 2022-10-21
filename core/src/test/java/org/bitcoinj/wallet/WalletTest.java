@@ -65,7 +65,6 @@ import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,7 +80,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.Assert;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.bitcoinj.core.Coin.*;
 import static org.bitcoinj.core.Utils.HEX;
@@ -191,6 +189,24 @@ public class WalletTest extends TestWithWallet {
         Wallet encryptedWallet = new Wallet(UNITTEST, keyChainGroup);
         encryptedWallet.encrypt(PASSWORD1);
         encryptedWallet.decrypt(PASSWORD1);
+    }
+
+    @Test
+    public void encryptDecryptWalletWithArbitraryPathAndScriptTypeWithCoinJoin() throws Exception {
+        final byte[] ENTROPY = Sha256Hash.hash("don't use a string seed like this in real life".getBytes());
+        KeyChainGroup keyChainGroup = KeyChainGroup.builder(UNITTEST)
+                .addChain(DeterministicKeyChain.builder().seed(new DeterministicSeed(ENTROPY, "", 1389353062L))
+                        .outputScriptType(Script.ScriptType.P2PKH)
+                        .accountPath(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH).build())
+                .build();
+        Wallet encryptedWallet = new Wallet(UNITTEST, keyChainGroup);
+        DeterministicKey keyBip44 = encryptedWallet.currentKey(KeyPurpose.RECEIVE_FUNDS);
+        encryptedWallet.addCoinJoinKeyChain(DerivationPathFactory.get(UNITTEST).coinJoinDerivationPath());
+        DeterministicKey coinJoinKey = encryptedWallet.currentCoinJoinKey();
+        encryptedWallet.encrypt(PASSWORD1);
+        encryptedWallet.decrypt(PASSWORD1);
+        assertEquals(keyBip44, encryptedWallet.currentKey(KeyPurpose.RECEIVE_FUNDS));
+        assertEquals(coinJoinKey, encryptedWallet.currentCoinJoinKey());
     }
 
     @Test

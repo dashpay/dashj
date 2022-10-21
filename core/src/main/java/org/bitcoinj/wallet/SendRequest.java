@@ -19,12 +19,13 @@ package org.bitcoinj.wallet;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.bitcoinj.script.ScriptOpCodes.OP_RETURN;
 
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.List;
 
 import org.bitcoin.protocols.payments.Protos.PaymentDetails;
+import org.bitcoinj.coinjoin.utils.Recipient;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
@@ -35,7 +36,6 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.script.ScriptChunk;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.Wallet.MissingSigsMode;
@@ -194,6 +194,21 @@ public class SendRequest {
         SendRequest req = new SendRequest();
         req.tx = new Transaction(params);
         req.tx.addOutput(value, destination);
+        return req;
+    }
+
+    /**
+     * <p>Creates a new SendRequest to the given Recipients which specify an output script and values.</p>
+     *
+     * <p>Be very careful when value is smaller than {@link Transaction#MIN_NONDUST_OUTPUT} as the transaction will
+     * likely be rejected by the network in this case.</p>
+     */
+    public static SendRequest to(NetworkParameters params, List<Recipient> recipients) {
+        SendRequest req = new SendRequest();
+        req.tx = new Transaction(params);
+        for (Recipient recipient: recipients) {
+            req.tx.addOutput(new TransactionOutput(params, null, recipient.getAmount(), recipient.getScriptPubKey().getProgram()));
+        }
         return req;
     }
 

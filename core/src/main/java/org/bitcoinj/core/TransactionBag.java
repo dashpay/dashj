@@ -46,6 +46,15 @@ public interface TransactionBag {
     /** Returns true if this wallet knows the script corresponding to the given hash. */
     boolean isPayToScriptHashMine(byte[] payToScriptHash);
 
+    /** Returns true if this wallet knows the script corresponding to the given hash. */
+    boolean isCoinJoinPubKeyHashMine(byte[] pubKeyHash, @Nullable Script.ScriptType scriptType);
+
+    /** Returns true if this wallet contains a coinjoin keypair with the given public key. */
+    boolean isCoinJoinPubKeyMine(byte[] pubKey);
+
+    /** Returns true if this wallet knows the coinjoin script corresponding to the given hash. */
+    boolean isCoinJoinPayToScriptHashMine(byte[] payToScriptHash);
+
     /** Returns transactions from a specific pool. */
     Map<Sha256Hash, Transaction> getTransactionPool(WalletTransaction.Pool pool);
 }

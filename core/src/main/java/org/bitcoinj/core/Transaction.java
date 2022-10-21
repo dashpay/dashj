@@ -1353,7 +1353,7 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * <p>Returns the list of transacion outputs, whether spent or unspent, that match a wallet by address or that are
+     * <p>Returns the list of transaction outputs, whether spent or unspent, that match a wallet by address or that are
      * watched by a wallet, i.e., transaction outputs whose script's address is controlled by the wallet and transaction
      * outputs whose script is watched by the wallet.</p>
      *
@@ -1754,5 +1754,35 @@ public class Transaction extends ChildMessage {
             throw new RuntimeException(x.getMessage());
         }
     }
+    public boolean isTrusted(TransactionBag bag) {
+        //if (isFinal(wallet.getLastBlockSeenHeight(), wallet.getLastBlockSeenTimeSecs()))
+        //    return false;
+        TransactionConfidence confidence = getConfidence();
+        if (confidence != null) {
+            if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)
+                return true;
+            if (confidence.getIXType() == TransactionConfidence.IXType.IX_LOCKED)
+                return true;
+            // Don't trust unconfirmed transactions from us unless they are in the mempool.
+            if (confidence.getConfidenceType() == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0)
+                return false;
+        }
 
+        // Trusted if all inputs are from us and are in the mempool:
+        for (TransactionInput txin : getInputs()) {
+            // Transactions not sent by us: not trusted
+            Transaction parent = bag.getTransactionPool(Pool.PENDING).get(txin.getOutpoint().getHash());
+            if (parent == null)
+                return false;
+            TransactionOutput parentOut = parent.getOutput(txin.getOutpoint().getIndex());
+            if (!parentOut.isMine(bag))
+                return false;
+        }
+
+        return true;
+    }
+
+    public boolean isEmpty() {
+        return inputs.isEmpty() && outputs.isEmpty();
+    }
 }

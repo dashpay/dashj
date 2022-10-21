@@ -18,6 +18,7 @@
 package org.bitcoinj.core;
 
 import com.google.common.base.Objects;
+import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.script.*;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.*;
@@ -316,6 +317,36 @@ public class TransactionOutput extends ChildMessage {
                     parent != null ? ((Transaction) parent).getTxId() : "(no parent)", e.toString());
             return false;
         }
+    }
+
+    /**
+     * Returns true if this output is to a coinjoin related key
+     */
+    public boolean isCoinJoin(TransactionBag transactionBag) {
+        try {
+            if(!isDenominated())
+                return false;
+
+            Script script = getScriptPubKey();
+            if (ScriptPattern.isP2PK(script))
+                return transactionBag.isCoinJoinPubKeyMine(ScriptPattern.extractKeyFromP2PK(script));
+            else if (ScriptPattern.isP2SH(script))
+                return transactionBag.isCoinJoinPayToScriptHashMine(ScriptPattern.extractHashFromP2SH(script));
+            else if (ScriptPattern.isP2PKH(script))
+                return transactionBag.isCoinJoinPubKeyHashMine(ScriptPattern.extractHashFromP2PKH(script),
+                        Script.ScriptType.P2PKH);
+            else
+                return false;
+        } catch (ScriptException e) {
+            // Just means we didn't understand the output of this transaction: ignore it.
+            log.debug("Could not parse tx {} output script: {}",
+                    parent != null ? ((Transaction) parent).getTxId() : "(no parent)", e.toString());
+            return false;
+        }
+    }
+
+    public boolean isDenominated() {
+        return CoinJoin.isDenominatedAmount(getValue());
     }
 
     /**

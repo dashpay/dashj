@@ -99,6 +99,10 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         BIP66Height = 1251;
 
         coinType = 1;
+
+        // coinjoin
+        poolMinParticipants = 2;
+        poolMaxParticipants = 20;
     }
 
     @Override

@@ -18,32 +18,29 @@ package org.bitcoinj.core;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 
-/**
- * Created by Hash Engineering on 8/25/2018.
- */
-public class KeyId extends TransactionDestination {
-    public static final KeyId KEYID_ZERO = new KeyId(new byte[20]);
+public class ScriptId extends TransactionDestination {
+    public static final ScriptId SCRIPT_ID_ZERO = new ScriptId(new byte[20]);
 
-    public KeyId(NetworkParameters params, byte[] payload, int offset) throws ProtocolException {
+    public ScriptId(NetworkParameters params, byte[] payload, int offset) throws ProtocolException {
         super(params, payload, offset);
     }
 
-    public KeyId(byte [] keyId) {
+    public ScriptId(byte [] keyId) {
         super(keyId);
     }
 
     public String toString()
     {
-        return "KeyId(" + Utils.HEX.encode(bytes) +")";
+        return "ScriptId(" + Utils.HEX.encode(bytes) +")";
     }
 
     @Override
     public Address getAddress(NetworkParameters params) {
-        return Address.fromPubKeyHash(params, bytes);
+        return Address.fromScriptHash(params, bytes);
     }
 
     @Override
     public Script getScript() {
-        return ScriptBuilder.createP2PKHOutputScript(bytes);
+        return ScriptBuilder.createP2SHOutputScript(bytes);
     }
 }
