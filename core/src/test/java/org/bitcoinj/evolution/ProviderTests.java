@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Dash Core Group.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.evolution;
 
 
@@ -9,10 +25,9 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.wallet.*;
-import org.dashj.bls.BLS;
-import org.dashj.bls.BLSException;
+import org.dashj.bls.BLSJniLibrary;
 import org.dashj.bls.ExtendedPrivateKey;
-import org.dashj.bls.JNI;
+import org.dashj.bls.G1Element;
 import org.dashj.bls.PrivateKey;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -50,12 +65,7 @@ public class ProviderTests {
     BLSPublicKey operatorKey;
     BLSSecretKey operatorSecret;
     static {
-        try {
-            System.loadLibrary(JNI.LIBRARY_NAME);
-            BLS.Init();
-        } catch (UnsatisfiedLinkError x) {
-            fail(x.getMessage());
-        }
+        BLSJniLibrary.init();
     }
 
     @Before
@@ -86,21 +96,21 @@ public class ProviderTests {
         votingKey = HDKeyDerivation.deriveChildKey(votingKeyMaster, ChildNumber.ZERO);
         votingKeyId = new KeyId(votingKey.getPubKeyHash());
 
-        blsExtendedPrivateKey = ExtendedPrivateKey.FromSeed(seed.getSeedBytes(), seed.getSeedBytes().length);
-        /*operatorKey = new BLSPublicKey(blsExtendedPrivateKey.PrivateChild(new ChildNumber(9, true).getI())
-                .PrivateChild(new ChildNumber(1, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(0)
+        blsExtendedPrivateKey = ExtendedPrivateKey.fromSeed(seed.getSeedBytes());
+        /*operatorKey = new BLSPublicKey(blsExtendedPrivateKey.privateChild(new ChildNumber(9, true).getI())
+                .privateChild(new ChildNumber(1, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(0)
                 .GetPublicKey());
 */
-        PrivateKey operatorPrivateKey = blsExtendedPrivateKey.PrivateChild(new ChildNumber(9, true).getI())
-                .PrivateChild(new ChildNumber(1, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(0)
-                .GetPrivateKey();
-        operatorKey = new BLSPublicKey(operatorPrivateKey.GetPublicKey());
+        PrivateKey operatorPrivateKey = blsExtendedPrivateKey.privateChild(new ChildNumber(9, true).getI())
+                .privateChild(new ChildNumber(1, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(0)
+                .getPrivateKey();
+        operatorKey = new BLSPublicKey(operatorPrivateKey.getG1Element());
         operatorSecret = new BLSSecretKey(operatorPrivateKey);
 
         String inputAddress0 = "yRdHYt6nG1ooGaXK7GEbwVMteLY3m4FbVT";
@@ -225,7 +235,7 @@ public class ProviderTests {
     public void testPublicBytes() {
         String bytes = "157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfa";
         try {
-            org.dashj.bls.PublicKey.FromBytes(org.dashj.bls.Utils.HEX.decode(bytes));
+            G1Element.fromBytes(Utils.HEX.decode(bytes));
         } catch (Exception x) {
             // this call is expected to fail the first time it is called
         }
@@ -341,7 +351,7 @@ public class ProviderTests {
 
         Sha256Hash payloadHash = ((ProviderUpdateServiceTx)providerUpdateServiceTransactionFromMessage.getExtraPayloadObject()).getSignatureHash();
 
-        BLSSignature signatureFromDigest = operatorSecret.Sign(payloadHash);
+        BLSSignature signatureFromDigest = operatorSecret.sign(payloadHash);
 
 
 
@@ -412,7 +422,7 @@ public class ProviderTests {
         Script scriptPayout = ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, payoutAddress));
 
         proUpRegTx = new ProviderUpdateRegistarTx(PARAMS, 1, providerTransactionHash, 0,
-                operatorKey.GetPublicKey(), new KeyId(Address.fromBase58(PARAMS, votingAddress).getHash()),
+                operatorKey.getPublicKey(), new KeyId(Address.fromBase58(PARAMS, votingAddress).getHash()),
                 scriptPayout, Transaction.calculateInputsHash(input), ownerPrivateKey);
         Transaction providerUpdateRegistrarTransaction = new Transaction(PARAMS, proUpRegTx);
 

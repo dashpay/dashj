@@ -47,13 +47,13 @@ public class BLSExchangeKeyCrypterTest {
     @Test
     public void verifyKeysTest() {
         assertEquals("1790635de8740e9a6a6b15fb6b72f3a16afa0973d971979b6ba54761d6e2502c50db76f4d26143f05459a42cfd520d44",
-                aliceKey.GetPublicKey().toStringHex());
-        assertEquals("F5BjXeh0DppqaxX7a3LzoWr6CXPZcZeba6VHYdbiUCxQ23b00mFD8FRZpCz9Ug1E", aliceKey.GetPublicKey().toStringBase64());
+                aliceKey.getPublicKey().toStringHex());
+        assertEquals("F5BjXeh0DppqaxX7a3LzoWr6CXPZcZeba6VHYdbiUCxQ23b00mFD8FRZpCz9Ug1E", aliceKey.getPublicKey().toStringBase64());
         assertEquals("46891c2cec49593c81921e473db7480029e0fc1eb933c6b93d81f5370eb19fbd", aliceKey.toStringHex());
         assertEquals("RokcLOxJWTyBkh5HPbdIACng/B65M8a5PYH1Nw6xn70=", aliceKey.toStringBase64());
 
-        assertEquals("0e2f9055c17eb13221d8b41833468ab49f7d4e874ddf4b217f5126392a608fd48ccab3510548f1da4f397c1ad4f8e01a", bobKey.GetPublicKey().toStringHex());
-        assertEquals("Di+QVcF+sTIh2LQYM0aKtJ99TodN30shf1EmOSpgj9SMyrNRBUjx2k85fBrU+OAa", bobKey.GetPublicKey().toStringBase64());
+        assertEquals("0e2f9055c17eb13221d8b41833468ab49f7d4e874ddf4b217f5126392a608fd48ccab3510548f1da4f397c1ad4f8e01a", bobKey.getPublicKey().toStringHex());
+        assertEquals("Di+QVcF+sTIh2LQYM0aKtJ99TodN30shf1EmOSpgj9SMyrNRBUjx2k85fBrU+OAa", bobKey.getPublicKey().toStringBase64());
         assertEquals("2513a9d824e763f8b3ff4304c5d52d05154a82b4c975da965f124e5dcf915805", bobKey.toStringHex());
         assertEquals("JROp2CTnY/iz/0MExdUtBRVKgrTJddqWXxJOXc+RWAU=", bobKey.toStringBase64());
     }
@@ -62,7 +62,7 @@ public class BLSExchangeKeyCrypterTest {
     public void testEncryptionAndDecryption() {
         //Alice is sending to Bob
         BLSKeyExchangeCrypter aliceKeyExchangeCrypter = new BLSKeyExchangeCrypter();
-        KeyParameter aliceKeyParameter = aliceKeyExchangeCrypter.deriveKey(aliceKey, bobKey.GetPublicKey());
+        KeyParameter aliceKeyParameter = aliceKeyExchangeCrypter.deriveKey(aliceKey, bobKey.getPublicKey());
 
         EncryptedData encryptedData = aliceKeyExchangeCrypter.encrypt(secret.getBytes(),
                 HEX.decode("eac5bcd6eb85074759e0261497428c9b"), aliceKeyParameter);
@@ -71,7 +71,7 @@ public class BLSExchangeKeyCrypterTest {
 
         //Bob is receiving from Alice
         BLSKeyExchangeCrypter bobKeyExchangeCrypter = new BLSKeyExchangeCrypter();
-        KeyParameter bobKeyParameter = bobKeyExchangeCrypter.deriveKey(bobKey, aliceKey.GetPublicKey());
+        KeyParameter bobKeyParameter = bobKeyExchangeCrypter.deriveKey(bobKey, aliceKey.getPublicKey());
         byte [] decryptedData = bobKeyExchangeCrypter.decrypt(encryptedData, bobKeyParameter);
         assertNotNull(decryptedData);
 
@@ -87,7 +87,7 @@ public class BLSExchangeKeyCrypterTest {
         EncryptedData encryptedData = new EncryptedData(initialisationVector, encryptedPrivateKey);
 
         BLSKeyExchangeCrypter bobKeyExchangeCrypter = new BLSKeyExchangeCrypter();
-        KeyParameter bobKeyParameter = bobKeyExchangeCrypter.deriveKey(bobKey, aliceKey.GetPublicKey());
+        KeyParameter bobKeyParameter = bobKeyExchangeCrypter.deriveKey(bobKey, aliceKey.getPublicKey());
         byte [] decryptedData = bobKeyExchangeCrypter.decrypt(encryptedData, bobKeyParameter);
         assertNotNull(decryptedData);
 
