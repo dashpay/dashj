@@ -1,25 +1,46 @@
+/*
+ * Copyright 2019 Dash Core Group.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.crypto;
 
 import com.google.common.base.Preconditions;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
-import org.dashj.bls.BLS;
-import org.dashj.bls.PublicKey;
-import org.dashj.bls.PublicKeyVector;
+import org.bitcoinj.core.Sha256Hash;
+import org.dashj.bls.DASHJBLS;
+import org.dashj.bls.G1Element;
+import org.dashj.bls.G1ElementVector;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 
+/**
+ * This class wraps a G1Element in the BLS library
+ */
+
 public class BLSPublicKey extends BLSAbstractObject {
     public static int BLS_CURVE_PUBKEY_SIZE  = 48;
-    PublicKey publicKeyImpl;
+    G1Element publicKeyImpl;
 
     public BLSPublicKey() {
         super(BLS_CURVE_PUBKEY_SIZE);
     }
 
-    public BLSPublicKey(PublicKey sk) {
+    public BLSPublicKey(G1Element sk) {
         super(BLS_CURVE_PUBKEY_SIZE);
         valid = true;
         publicKeyImpl = sk;
@@ -28,7 +49,7 @@ public class BLSPublicKey extends BLSAbstractObject {
 
     public BLSPublicKey(byte [] publicKey) {
         super(BLS_CURVE_PUBKEY_SIZE);
-        publicKeyImpl = PublicKey.FromBytes(publicKey);
+        publicKeyImpl = G1Element.fromBytes(publicKey);
         valid = true;
         updateHash();
     }
@@ -44,7 +65,7 @@ public class BLSPublicKey extends BLSAbstractObject {
     @Override
     boolean internalSetBuffer(byte[] buffer) {
         try {
-            publicKeyImpl = publicKeyImpl.FromBytes(buffer);
+            publicKeyImpl = G1Element.fromBytes(buffer, BLSScheme.legacyDefault);
             return true;
         } catch (Exception x) {
             return false;
@@ -53,7 +74,8 @@ public class BLSPublicKey extends BLSAbstractObject {
 
     @Override
     boolean internalGetBuffer(byte[] buffer) {
-        publicKeyImpl.Serialize(buffer);
+        byte [] serialized = publicKeyImpl.serialize(legacy);
+        System.arraycopy(serialized, 0, buffer, 0, buffer.length);
         return true;
     }
 
@@ -72,29 +94,29 @@ public class BLSPublicKey extends BLSAbstractObject {
 
     public void aggregateInsecure(BLSPublicKey sk) {
         Preconditions.checkState(valid && sk.valid);
-        PublicKeyVector publicKeys = new PublicKeyVector();
-        publicKeys.push_back(publicKeyImpl);
-        publicKeys.push_back(sk.publicKeyImpl);
-        publicKeyImpl = publicKeyImpl.AggregateInsecure(publicKeys);
+        publicKeyImpl = BLSScheme.get(legacy).aggregate(
+                new G1ElementVector(
+                        new G1Element[]{publicKeyImpl, sk.publicKeyImpl}
+                )
+        );
         updateHash();
     }
 
-    public static BLSPublicKey aggregateInsecure(ArrayList<BLSPublicKey> sks) {
-        if(sks.isEmpty()) {
+    public static BLSPublicKey aggregateInsecure(ArrayList<BLSPublicKey> pks, boolean legacy) {
+        if(pks.isEmpty()) {
             return new BLSPublicKey();
         }
 
-        PublicKeyVector publicKeys = new PublicKeyVector();
-        for(BLSPublicKey sk : sks) {
-            publicKeys.push_back(sk.publicKeyImpl);
+        G1ElementVector publicKeys = new G1ElementVector();
+        for(BLSPublicKey sk : pks) {
+            publicKeys.add(sk.publicKeyImpl);
         }
 
-        PublicKey agg = PublicKey.AggregateInsecure(publicKeys);
-        BLSPublicKey result = new BLSPublicKey(agg);
+        G1Element agg = BLSScheme.get(legacy).aggregate(publicKeys);
 
-        return result;
+        return new BLSPublicKey(agg);
     }
-    /* Dash Core only
+
     public boolean publicKeyShare(ArrayList<BLSPublicKey> mpk, BLSId id) {
         valid = false;
         updateHash();
@@ -102,15 +124,15 @@ public class BLSPublicKey extends BLSAbstractObject {
         if(!id.valid)
             return false;
 
-        PublicKeyVector mpkVec = new PublicKeyVector();
+        G1ElementVector mpkVec = new G1ElementVector();
         for(BLSPublicKey pk : mpk) {
             if(!pk.valid)
                 return false;
-            mpkVec.push_back(pk.publicKeyImpl);
+            mpkVec.add(pk.publicKeyImpl);
         }
 
         try {
-            publicKeyImpl = BLS.PublicKeyShare(mpkVec, id.hash.getBytes());
+            publicKeyImpl = DASHJBLS.publicKeyShare(mpkVec, id.hash.getBytes());
         } catch (Exception x) {
             return false;
         }
@@ -120,18 +142,17 @@ public class BLSPublicKey extends BLSAbstractObject {
         return true;
     }
 
-    boolean DHKeyExchange(BLSSecretKey sk, BLSPublicKey pk)
+    public boolean setDHKeyExchange(BLSSecretKey sk, BLSPublicKey pk)
     {
         valid = false;
-        updateHash();
+        hash = Sha256Hash.ZERO_HASH;
 
         if (!sk.valid || !pk.valid) {
             return false;
         }
-        publicKeyImpl = BLS.DHKeyExchange(sk.privateKey, pk.publicKeyImpl);
+        publicKeyImpl = DASHJBLS.multiply(sk.privateKey, pk.publicKeyImpl);
         valid = true;
         updateHash();
         return true;
     }
-    */
 }

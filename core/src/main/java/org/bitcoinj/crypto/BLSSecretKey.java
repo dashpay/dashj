@@ -1,12 +1,34 @@
+/*
+ * Copyright 2019 Dash Core Group.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.crypto;
 
 import com.google.common.base.Preconditions;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Utils;
+import org.dashj.bls.DASHJBLS;
 import org.dashj.bls.PrivateKey;
 import org.dashj.bls.PrivateKeyVector;
 
 import java.util.ArrayList;
+
+/**
+ * This class wraps a PrivateKey in the BLS library
+ */
 
 public class BLSSecretKey extends BLSAbstractObject
 {
@@ -32,14 +54,18 @@ public class BLSSecretKey extends BLSAbstractObject
         super(secretKey.getBuffer(), BLS_CURVE_SECKEY_SIZE);
     }
 
+    public BLSSecretKey(String hex) {
+        this(Utils.HEX.decode(hex));
+    }
+
     public static BLSSecretKey fromSeed(byte [] seed) {
-        return new BLSSecretKey(PrivateKey.FromSeed(seed, seed.length));
+        return new BLSSecretKey(PrivateKey.fromSeedBIP32(seed));
     }
 
     @Override
     boolean internalSetBuffer(byte[] buffer) {
         try {
-            privateKey = PrivateKey.FromBytes(buffer);
+            privateKey = PrivateKey.fromBytes(buffer, BLSScheme.legacyDefault);
             return true;
         } catch (Exception x) {
             return false;
@@ -48,7 +74,8 @@ public class BLSSecretKey extends BLSAbstractObject
 
     @Override
     boolean internalGetBuffer(byte[] buffer) {
-        privateKey.Serialize(buffer);
+        byte [] serialized = privateKey.serialize(legacy);
+        System.arraycopy(serialized, 0, buffer, 0, buffer.length);
         return true;
     }
 
@@ -60,48 +87,40 @@ public class BLSSecretKey extends BLSAbstractObject
         length = cursor - offset;
     }
 
-    public void AggregateInsecure(BLSSecretKey sk) {
+    public void aggregateInsecure(BLSSecretKey sk) {
         Preconditions.checkState(valid && sk.valid);
-        PrivateKeyVector privateKeys = new PrivateKeyVector();
-        privateKeys.push_back(privateKey);
-        privateKeys.push_back(sk.privateKey);
-        privateKey = PrivateKey.AggregateInsecure(privateKeys);
+        privateKey = PrivateKey.aggregate(new PrivateKeyVector(new PrivateKey[]{privateKey, sk.privateKey}));
         updateHash();
     }
 
-    public static BLSSecretKey AggregateInsecure(ArrayList<BLSSecretKey> sks) {
+    public static BLSSecretKey aggregateInsecure(ArrayList<BLSSecretKey> sks) {
         if(sks.isEmpty()) {
             return new BLSSecretKey();
         }
 
         PrivateKeyVector privateKeys = new PrivateKeyVector();
+        privateKeys.reserve(sks.size());
         for(BLSSecretKey sk : sks) {
-            privateKeys.push_back(sk.privateKey);
+            privateKeys.add(sk.privateKey);
         }
 
-        PrivateKey agg = PrivateKey.AggregateInsecure(privateKeys);
-        BLSSecretKey result = new BLSSecretKey(agg);
-
-        return result;
+        PrivateKey agg = PrivateKey.aggregate(privateKeys);
+        return new BLSSecretKey(agg);
     }
 
-    public void makeNewKey()
+    static public BLSSecretKey makeNewKey()
     {
         byte [] buf = new byte[32];
         while (true) {
             new LinuxSecureRandom().engineNextBytes(buf);
             try {
-                privateKey = PrivateKey.FromBytes(buf);
-                break;
+                return new BLSSecretKey(PrivateKey.fromBytes(buf));
             } catch (Exception x) {
-
+                // swallow
             }
         }
-        valid = true;
-        updateHash();
     }
 
-    /* Dash Core Only
     boolean secretKeyShare(ArrayList<BLSSecretKey> msk, BLSId id)
     {
         valid = false;
@@ -117,11 +136,11 @@ public class BLSSecretKey extends BLSAbstractObject
             if (!sk.valid) {
                 return false;
             }
-            mskVec.push_back(sk.privateKey);
+            mskVec.add(sk.privateKey);
         }
 
         try {
-            privateKey = BLS.PrivateKeyShare(mskVec, id.hash.getBytes());
+            privateKey = DASHJBLS.privateKeyShare(mskVec, id.hash.getBytes());
         } catch (Exception x) {
             return false;
         }
@@ -129,18 +148,32 @@ public class BLSSecretKey extends BLSAbstractObject
         valid = true;
         updateHash();
         return true;
-    }*/
-
-    public BLSPublicKey GetPublicKey() {
-        return new BLSPublicKey(privateKey.GetPublicKey());
     }
 
-    public BLSSignature Sign(Sha256Hash hash) {
-        if(!valid) {
-            return null;
+    @Deprecated
+    public BLSPublicKey GetPublicKey() {
+        return getPublicKey();
+    }
+
+
+    public BLSPublicKey getPublicKey() {
+        if (!valid) {
+            return new BLSPublicKey();
         }
 
-        BLSSignature signature = new BLSSignature(privateKey.SignInsecurePrehashed(hash.getBytes()));
-        return signature;
+        return new BLSPublicKey(privateKey.getG1Element());
+    }
+
+    @Deprecated
+    public BLSSignature Sign(Sha256Hash hash) {
+        return sign(hash);
+    }
+
+    public BLSSignature sign(Sha256Hash hash) {
+        if(!valid) {
+            return new BLSSignature();
+        }
+
+        return new BLSSignature(BLSScheme.get(legacy).sign(privateKey, hash.getBytes()));
     }
 }
