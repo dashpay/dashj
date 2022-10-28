@@ -29,6 +29,7 @@ import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.dashj.bls.BLS;
 import org.bitcoinj.wallet.SendRequest;
+import org.dashj.bls.BLSJniLibrary;
 import org.slf4j.*;
 
 import java.io.File;
@@ -131,6 +132,7 @@ public class Context {
         lastConstructed = this;
         scheduledExecutorService = Executors.newScheduledThreadPool(1);
         slot.set(this);
+        BLSJniLibrary.init();
     }
 
     private static volatile Context lastConstructed;
@@ -202,7 +204,7 @@ public class Context {
      */
     public static void propagate(Context context) {
         slot.set(checkNotNull(context));
-        BLS.Init();
+        BLS.init();
     }
 
     /**
@@ -277,7 +279,6 @@ public class Context {
         llmqBackgroundThread = new LLMQBackgroundThread(this);
         masternodeMetaDataManager = new MasternodeMetaDataManager(this);
 
-        BLS.Init();
         initializedObjects = true;
     }
 
