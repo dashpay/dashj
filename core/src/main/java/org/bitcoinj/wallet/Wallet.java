@@ -1943,6 +1943,7 @@ public class Wallet extends BaseTaggableObject
         // in that function for an explanation of why).
     }
 
+    @Deprecated
     public void receiveLock(Transaction tx) throws VerificationException {
         // Can run in a peer thread. This method will only be called if a prior call to isPendingTransactionLockRelevant
         // returned true, so we already know by this point that it sends coins to or from our wallet, or is a double
@@ -3367,7 +3368,7 @@ public class Wallet extends BaseTaggableObject
 
     /**
      * Clean up the wallet. Currently, it only removes risky pending transaction from the wallet and only if their
-     * outputs have not been spent.
+     * outputs have not been spent and if tx has no instantsend lock.
      */
     public void cleanup() {
         lock.lock();
@@ -3377,7 +3378,9 @@ public class Wallet extends BaseTaggableObject
                 Transaction tx = i.next();
                 if (isTransactionRisky(tx, null) && !acceptRiskyTransactions) {
                     log.debug("Found risky transaction {} in wallet during cleanup.", tx.getTxId());
-                    if (!tx.isAnyOutputSpent()) {
+                    boolean isISLocked = tx.isInstantSendLocked();
+                    boolean isAnyOutputSpent = tx.isAnyOutputSpent();
+                    if (!isAnyOutputSpent && !isISLocked) {
                         // Sync myUnspents with the change.
                         for (TransactionInput input : tx.getInputs()) {
                             TransactionOutput output = input.getConnectedOutput();
@@ -3394,9 +3397,12 @@ public class Wallet extends BaseTaggableObject
                         dirty = true;
                         log.info("Removed transaction {} from pending pool during cleanup.", tx.getTxId());
                     } else {
+                        String reason = String.format("%s%s%s", isAnyOutputSpent ? "spent partially" :"",
+                                isAnyOutputSpent && isISLocked ? " and " : "",
+                                isISLocked ? "instant send locked" : "");
                         log.info(
-                                "Cannot remove transaction {} from pending pool during cleanup, as it's already spent partially.",
-                                tx.getTxId());
+                                "Cannot remove transaction {} from pending pool during cleanup, as it's already {}.",
+                                tx.getTxId(), reason);
                     }
                 }
             }
@@ -5414,6 +5420,7 @@ public class Wallet extends BaseTaggableObject
         // is no inversion.
         for (Transaction tx : toBroadcast) {
             ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
+            // Dash Specific, probably added to skip invalid transactions years ago
             if(confidenceType == ConfidenceType.UNKNOWN /*&& tx.getConfidence().getSource() == Source.SELF*/)
             {
                 log.error("A pending transaction of type UNKNOWN {}\nDeleting", tx.toString());

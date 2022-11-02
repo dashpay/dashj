@@ -738,6 +738,10 @@ public class Transaction extends ChildMessage {
         return getConfidence().getDepthInBlocks() >= params.getSpendableCoinbaseDepth();
     }
 
+    public boolean isInstantSendLocked() {
+        return getConfidence().isTransactionLocked();
+    }
+
     @Override
     public String toString() {
         MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this);
