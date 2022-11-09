@@ -45,7 +45,7 @@ public class QuorumRotationInfoTest {
 
     @Test
     public void roundTripTest() {
-        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne);
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70220);
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());

@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class SimplifiedMasternodeListEntry extends Masternode {
-
+    public static final short LEGACY_BLS_VERSION = 1;
+    public static final short BASIC_BLS_VERSION = 2;
+    short version;
     Sha256Hash confirmedHash;
     MasternodeAddress service;
     BLSLazyPublicKey pubKeyOperator;
@@ -23,8 +25,8 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         length = MESSAGE_SIZE;
     }
 
-    public SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+    public SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
     }
 
     public SimplifiedMasternodeListEntry(NetworkParameters params,
@@ -55,11 +57,16 @@ public class SimplifiedMasternodeListEntry extends Masternode {
 
     @Override
     protected void parse() throws ProtocolException {
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_BASIC)) {
+            version = BASIC_BLS_VERSION;
+        } else {
+            version = LEGACY_BLS_VERSION;
+        }
         proRegTxHash = readHash();
         confirmedHash = readHash();
         service = new MasternodeAddress(params, payload, cursor, 0);
         cursor += service.getMessageSize();
-        pubKeyOperator = new BLSLazyPublicKey(params, payload, cursor);
+        pubKeyOperator = new BLSLazyPublicKey(params, payload, cursor, version == LEGACY_BLS_VERSION);
         cursor += pubKeyOperator.getMessageSize();
         keyIdVoting = new KeyId(params, payload, cursor);
         cursor += keyIdVoting.getMessageSize();

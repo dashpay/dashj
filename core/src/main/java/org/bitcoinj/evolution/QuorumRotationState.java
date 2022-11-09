@@ -20,6 +20,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.quorums.GetQuorumRotationInfo;
@@ -151,12 +152,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     }
 
     @Override
-    QuorumRotationInfo loadDiffMessageFromBuffer(byte[] buffer) {
-        return new QuorumRotationInfo(params, buffer);
+    QuorumRotationInfo loadDiffMessageFromBuffer(byte[] buffer, int protocolVersion) {
+        return new QuorumRotationInfo(params, buffer, protocolVersion);
     }
 
-    public QuorumRotationState(Context context, byte[] payload, int offset) {
-        super(context.getParams(), payload, offset);
+    public QuorumRotationState(Context context, byte[] payload, int offset, int protocolVersion) {
+        super(context.getParams(), payload, offset, protocolVersion);
         this.context = context;
         finishInitialization();
     }
@@ -164,6 +165,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     public void applyDiff(Peer peer, AbstractBlockChain headersChain, AbstractBlockChain blockChain,
                           QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap)
             throws BlockStoreException, MasternodeListDiffException {
+        if (quorumRotationInfo.getMnListDiffAtH().getVersion() != SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION) {
+            BLSScheme.setLegacyDefault(false);
+        }
         StoredBlock blockAtTip;
         StoredBlock blockAtH;
         StoredBlock blockMinusC;
@@ -1023,17 +1027,17 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     protected void parse() throws ProtocolException {
-        mnListTip = new SimplifiedMasternodeList(params, payload, cursor);
+        mnListTip = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
         cursor += mnListTip.getMessageSize();
-        mnListAtH = new SimplifiedMasternodeList(params, payload, cursor);
+        mnListAtH = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
         cursor += mnListAtH.getMessageSize();
-        mnListAtHMinusC = new SimplifiedMasternodeList(params, payload, cursor);
+        mnListAtHMinusC = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
         cursor += mnListAtHMinusC.getMessageSize();
-        mnListAtHMinus2C = new SimplifiedMasternodeList(params, payload, cursor);
+        mnListAtHMinus2C = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
         cursor += mnListAtHMinus2C.getMessageSize();
-        mnListAtHMinus3C = new SimplifiedMasternodeList(params, payload, cursor);
+        mnListAtHMinus3C = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
         cursor += mnListAtHMinus3C.getMessageSize();
-        mnListAtHMinus4C = new SimplifiedMasternodeList(params, payload, cursor);
+        mnListAtHMinus4C = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
         cursor += mnListAtHMinus4C.getMessageSize();
 
         mnListsCache = new LinkedHashMap<>();
@@ -1043,17 +1047,17 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         mnListsCache.put(mnListAtHMinus3C.getBlockHash(), mnListAtHMinus3C);
         mnListsCache.put(mnListAtHMinus4C.getBlockHash(), mnListAtHMinus4C);
 
-        quorumListTip = new SimplifiedQuorumList(params, payload, cursor);
+        quorumListTip = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
         cursor += quorumListTip.getMessageSize();
-        quorumListAtH = new SimplifiedQuorumList(params, payload, cursor);
+        quorumListAtH = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
         cursor += quorumListAtH.getMessageSize();
-        quorumListAtHMinusC = new SimplifiedQuorumList(params, payload, cursor);
+        quorumListAtHMinusC = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
         cursor += quorumListAtHMinusC.getMessageSize();
-        quorumListAtHMinus2C = new SimplifiedQuorumList(params, payload, cursor);
+        quorumListAtHMinus2C = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
         cursor += quorumListAtHMinus2C.getMessageSize();
-        quorumListAtHMinus3C = new SimplifiedQuorumList(params, payload, cursor);
+        quorumListAtHMinus3C = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
         cursor += quorumListAtHMinus3C.getMessageSize();
-        quorumListAtHMinus4C = new SimplifiedQuorumList(params, payload, cursor);
+        quorumListAtHMinus4C = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
         cursor += quorumListAtHMinus4C.getMessageSize();
 
         quorumsCache = new LinkedHashMap<>();
@@ -1082,7 +1086,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         int size = (int)readVarInt(); // generally this should be 2, but could be 1
         activeQuorumLists = new HashMap<>(size);
         for (int i = 0; i < size; ++i) {
-            SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor);
+            SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
             cursor += activeQuorum.getMessageSize();
             activeQuorumLists.put((int)activeQuorum.getHeight(), activeQuorum);
         }

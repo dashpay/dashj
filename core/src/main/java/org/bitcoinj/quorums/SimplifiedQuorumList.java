@@ -41,8 +41,8 @@ public class SimplifiedQuorumList extends Message {
         isFirstQuorumCheck = true;
     }
 
-    public SimplifiedQuorumList(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+    public SimplifiedQuorumList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
     }
 
     public SimplifiedQuorumList(SimplifiedQuorumList other) {
@@ -449,7 +449,7 @@ public class SimplifiedQuorumList extends Message {
     void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
                          AbstractBlockChain chain, boolean validateQuorums) throws BlockStoreException
     {
-        if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitmentTxPayload.CURRENT_VERSION) {
+        if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitment.MAX_VERSION) {
             throw new VerificationException("invalid quorum commitment version" + commitment.getVersion());
         }
 
@@ -498,12 +498,12 @@ public class SimplifiedQuorumList extends Message {
             }
             log.info(builder.toString());
 
-            if (!commitment.verify(members, true)) {
+            if (!commitment.verify(quorumBlock, members, true)) {
                 // TODO: originally, the exception was thrown here.  For now, report the error to the logs
                 // throw new VerificationException("invalid quorum commitment: " + commitment);
-                log.warn("invalid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
+                log.info("invalid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
             } else {
-                log.info("valid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
+                log.info("valid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
             }
         }
     }

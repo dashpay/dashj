@@ -50,6 +50,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public static final int LLMQ_FORMAT_VERSION = 2;
     public static final int QUORUM_ROTATION_FORMAT_VERSION = 3;
 
+    public static final int BLS_SCHEME_FORMAT_VERSION = 4;
+
     public static int MAX_CACHE_SIZE = 10;
     public static int MIN_CACHE_SIZE = 1;
 
@@ -155,7 +157,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     @Override
     protected void parse() throws ProtocolException {
-        quorumState = new QuorumState(context, MasternodeListSyncOptions.SYNC_MINIMUM, payload, cursor);
+        protocolVersion = getProtocolVersion();
+        quorumState = new QuorumState(context, MasternodeListSyncOptions.SYNC_MINIMUM, payload, cursor, protocolVersion);
         quorumState.setStateManager(this);
         cursor += quorumState.getMessageSize();
         tipBlockHash = readHash();
@@ -171,13 +174,21 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             }
         }
         if (getFormatVersion() >= QUORUM_ROTATION_FORMAT_VERSION && (cursor < payload.length)) {
-            quorumRotationState = new QuorumRotationState(context, payload, cursor);
+            quorumRotationState = new QuorumRotationState(context, payload, cursor, protocolVersion);
             quorumRotationState.setStateManager(this);
             cursor += quorumRotationState.getMessageSize();
         }
         processQuorumList(quorumState.getQuorumListAtTip());
         processQuorumList(quorumRotationState.getQuorumListAtH());
         length = cursor - offset;
+    }
+
+    private int getProtocolVersion() {
+        if (formatVersion >= 4) {
+            return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME);
+        } else {
+            return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK);
+        }
     }
 
     private <T extends AbstractQuorumRequest, D extends AbstractDiffMessage> void parsePendingBlocks(AbstractQuorumState<T, D> state) {
@@ -303,7 +314,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         try {
             quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
 
-            setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
+            setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
             unCache();
             if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
                 save();
@@ -565,7 +576,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 public void processQuorum(FinalCommitment finalCommitment) {
                     if (!params.isDIP0024Active(height) && finalCommitment.getLlmqType() == params.getLlmqDIP0024InstantSend()) {
                         params.setDIP0024Active(height);
-                        setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
+                        setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
                     }
                     if (peerGroup != null && params.isDIP0024Active(height)) {
                         peerGroup.setMinRequiredProtocolVersion(params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));

@@ -121,8 +121,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         initialize();
     }
 
-    public AbstractQuorumState(NetworkParameters params, byte[] payload, int offset) {
-        super(params, payload, offset);
+    public AbstractQuorumState(NetworkParameters params, byte[] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
         initialize();
     }
 
@@ -741,7 +741,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         return bootstrapFilePath == null && bootstrapStream == null;
     }
 
-    abstract DiffMessage loadDiffMessageFromBuffer(byte [] buffer);
+    abstract DiffMessage loadDiffMessageFromBuffer(byte [] buffer, int protocolVersion);
 
     public void setLoadingBootstrap() {
         isLoadingBootstrap = true;
@@ -778,7 +778,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
             isLoadingBootstrap = true;
             if (buffer != null) {
-                DiffMessage mnlistdiff = loadDiffMessageFromBuffer(buffer);
+                DiffMessage mnlistdiff = loadDiffMessageFromBuffer(buffer, protocolVersion);
                 if (mnlistdiff instanceof SimplifiedMasternodeListDiff) {
                     stateManager.processDiffMessage(null, (SimplifiedMasternodeListDiff) mnlistdiff, true);
                 } else if (mnlistdiff instanceof QuorumRotationInfo) {

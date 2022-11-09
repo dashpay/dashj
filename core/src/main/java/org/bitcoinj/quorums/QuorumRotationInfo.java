@@ -62,8 +62,8 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         super(params);
     }
 
-    public QuorumRotationInfo(NetworkParameters params, byte [] payload) {
-        super(params, payload, 0);
+    public QuorumRotationInfo(NetworkParameters params, byte [] payload, int protocolVersion) {
+        super(params, payload, 0, protocolVersion);
     }
 
     @Override
@@ -75,15 +75,15 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         quorumSnapshotAtHMinus3C = new QuorumSnapshot(params, payload, cursor);
         cursor += quorumSnapshotAtHMinus3C.getMessageSize();
 
-        mnListDiffTip = new SimplifiedMasternodeListDiff(params, payload, cursor);
+        mnListDiffTip = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
         cursor += mnListDiffTip.getMessageSize();
-        mnListDiffAtH = new SimplifiedMasternodeListDiff(params, payload, cursor);
+        mnListDiffAtH = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
         cursor += mnListDiffAtH.getMessageSize();
-        mnListDiffAtHMinusC = new SimplifiedMasternodeListDiff(params, payload, cursor);
+        mnListDiffAtHMinusC = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
         cursor += mnListDiffAtHMinusC.getMessageSize();
-        mnListDiffAtHMinus2C = new SimplifiedMasternodeListDiff(params, payload, cursor);
+        mnListDiffAtHMinus2C = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
         cursor += mnListDiffAtHMinus2C.getMessageSize();
-        mnListDiffAtHMinus3C = new SimplifiedMasternodeListDiff(params, payload, cursor);
+        mnListDiffAtHMinus3C = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
         cursor += mnListDiffAtHMinus3C.getMessageSize();
 
         // extra share?
@@ -114,7 +114,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         size = (int)readVarInt();
         mnListDiffLists = new ArrayList<>(size);
         for (int i = 0; i < size; ++i) {
-            SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, payload, cursor);
+            SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
             cursor += mnlistdiff.getMessageSize();
             mnListDiffLists.add(mnlistdiff);
         }
