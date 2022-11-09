@@ -30,6 +30,8 @@ import java.io.OutputStream;
 
 public class ProviderUpdateServiceTx extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 1;
+    public static final int LEGACY_BLS_VERSION = 1;
+    public static final int BASIC_BLS_VERSION = 2;
     public static final int MESSAGE_SIZE = 181;
     public static final int MESSAGE_SIZE_WITHOUT_SIGNATURE = MESSAGE_SIZE - 96;
 
@@ -78,7 +80,7 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
         cursor += address.getMessageSize();
         scriptOperatorPayout = new Script(readByteArray());
         inputsHash = readHash();
-        signature = new BLSSignature(params, payload, cursor);
+        signature = new BLSSignature(params, payload, cursor, version == LEGACY_BLS_VERSION);
         cursor += signature.getMessageSize();
 
         length = cursor - offset;

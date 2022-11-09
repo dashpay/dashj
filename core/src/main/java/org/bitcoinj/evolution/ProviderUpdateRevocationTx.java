@@ -29,6 +29,8 @@ import java.io.OutputStream;
 
 public class ProviderUpdateRevocationTx extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 1;
+    public static final int LEGACY_BLS_VERSION = 1;
+    public static final int BASIC_BLS_VERSION = 2;
     public static final int MESSAGE_SIZE = 164;
     public static final int MESSAGE_SIZE_WITHOUT_SIGNATURE = MESSAGE_SIZE - 96;
 
@@ -39,7 +41,7 @@ public class ProviderUpdateRevocationTx extends SpecialTxPayload {
         REASON_CHANGE_OF_KEYS(3),
         REASON_LAST(REASON_CHANGE_OF_KEYS.value);
 
-        int value;
+        final int value;
         Reason(int value) {
             this.value = value;
         }
@@ -86,7 +88,7 @@ public class ProviderUpdateRevocationTx extends SpecialTxPayload {
         proTxHash = readHash();
         reason = readUint16();
         inputsHash = readHash();
-        signature = new BLSSignature(params, payload, cursor);
+        signature = new BLSSignature(params, payload, cursor, version == LEGACY_BLS_VERSION);
         cursor += signature.getMessageSize();
 
         length = cursor - offset;
