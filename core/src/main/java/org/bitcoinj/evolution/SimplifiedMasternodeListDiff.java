@@ -81,7 +81,6 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         }
 
         BLSScheme.setLegacyDefault(version == LEGACY_BLS_VERSION);
-        log.info("mnlistdiff: input in legacy: {}", BLSScheme.isLegacyDefault());
 
         int size = (int)readVarInt();
         deletedMNs = new HashSet<>(size);

@@ -93,7 +93,6 @@ public class BLSPublicKey extends BLSAbstractObject {
 
     @Override
     boolean internalGetBuffer(byte[] buffer, boolean legacy) {
-        log.info("publickey: input in legacy: {}, output in legacy: {}", this.legacy, legacy);
         byte [] serialized = publicKeyImpl.serialize(legacy);
         System.arraycopy(serialized, 0, buffer, 0, buffer.length);
         return true;

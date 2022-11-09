@@ -17,7 +17,9 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.params.TestNet3Params;
+import org.dashj.bls.BLSJniLibrary;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,6 +37,9 @@ public class QuorumRotationInfoTest {
     // qrinfo object
     byte [] payloadOne;
     TestNet3Params PARAMS = TestNet3Params.get();
+    static {
+        BLSJniLibrary.init();
+    }
 
     @Before
     public void startUp() throws IOException {
@@ -45,6 +50,7 @@ public class QuorumRotationInfoTest {
 
     @Test
     public void roundTripTest() {
+        BLSScheme.setLegacyDefault(true);
         QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70220);
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 

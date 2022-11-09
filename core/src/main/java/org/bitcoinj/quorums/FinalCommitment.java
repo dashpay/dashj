@@ -289,18 +289,14 @@ public class FinalCommitment extends SpecialTxPayload {
         // sigs are only checked when the block is processed
         if (checkSigs) {
             Sha256Hash commitmentHash = LLMQUtils.buildCommitmentHash(llmqParameters.type, quorumHash, validMembers, quorumPublicKey, quorumVvecHash);
-            log.info("commitmentHash = {}", commitmentHash);
 
             ArrayList<BLSPublicKey> memberPubKeys = Lists.newArrayList();
             for (int i = 0; i < members.size(); i++) {
                 if (!signers.get(i)) {
                     continue;
                 }
-                log.info("\"{}\",", members.get(i).getPubKeyOperator());
                 memberPubKeys.add(members.get(i).getPubKeyOperator());
             }
-            //BLSPublicKey agg = BLSPublicKey.aggregateInsecure(memberPubKeys, BLSScheme.isLegacyDefault());
-            //log.info("Does agg keys equal: {}", agg.equals(quorumPublicKey));
 
             if (!membersSignature.verifySecureAggregated(memberPubKeys, commitmentHash)) {
                 log.error("invalid aggregated members signature");

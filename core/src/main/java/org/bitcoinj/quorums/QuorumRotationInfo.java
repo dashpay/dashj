@@ -91,7 +91,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         if (extraShare) {
             quorumSnapshotAtHMinus4C = new QuorumSnapshot(params, payload, cursor);
             cursor += quorumSnapshotAtHMinus4C.getMessageSize();
-            mnListDiffAtHMinus4C = new SimplifiedMasternodeListDiff(params, payload, cursor);
+            mnListDiffAtHMinus4C = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
             cursor += mnListDiffAtHMinus4C.getMessageSize();
         }
 

@@ -73,7 +73,6 @@ public class BLSSignature extends BLSAbstractObject {
 
     @Override
     boolean internalGetBuffer(byte[] buffer, boolean legacy) {
-        log.info("signature: input in legacy: {}, output in legacy: {}", this.legacy, legacy);
         byte [] serialized = signatureImpl.serialize(legacy);
         System.arraycopy(serialized, 0, buffer, 0, buffer.length);
         return true;
