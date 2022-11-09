@@ -41,11 +41,14 @@ public class BLSExchangeKeyCrypterTest {
     @Before
     public void setup() {
         aliceKey = BLSSecretKey.fromSeed(aliceSeed);
+        aliceKey.setLegacy(true);
         bobKey = BLSSecretKey.fromSeed(bobSeed);
+        bobKey.setLegacy(true);
     }
 
     @Test
     public void verifyKeysTest() {
+        BLSScheme.setLegacyDefault(true);
         assertEquals("1790635de8740e9a6a6b15fb6b72f3a16afa0973d971979b6ba54761d6e2502c50db76f4d26143f05459a42cfd520d44",
                 aliceKey.getPublicKey().toStringHex());
         assertEquals("F5BjXeh0DppqaxX7a3LzoWr6CXPZcZeba6VHYdbiUCxQ23b00mFD8FRZpCz9Ug1E", aliceKey.getPublicKey().toStringBase64());
@@ -61,7 +64,7 @@ public class BLSExchangeKeyCrypterTest {
     @Test
     public void testEncryptionAndDecryption() {
         //Alice is sending to Bob
-        BLSKeyExchangeCrypter aliceKeyExchangeCrypter = new BLSKeyExchangeCrypter();
+        BLSKeyExchangeCrypter aliceKeyExchangeCrypter = new BLSKeyExchangeCrypter(true);
         KeyParameter aliceKeyParameter = aliceKeyExchangeCrypter.deriveKey(aliceKey, bobKey.getPublicKey());
 
         EncryptedData encryptedData = aliceKeyExchangeCrypter.encrypt(secret.getBytes(),
@@ -70,7 +73,7 @@ public class BLSExchangeKeyCrypterTest {
                 HEX.encode(encryptedData.encryptedBytes));
 
         //Bob is receiving from Alice
-        BLSKeyExchangeCrypter bobKeyExchangeCrypter = new BLSKeyExchangeCrypter();
+        BLSKeyExchangeCrypter bobKeyExchangeCrypter = new BLSKeyExchangeCrypter(true);
         KeyParameter bobKeyParameter = bobKeyExchangeCrypter.deriveKey(bobKey, aliceKey.getPublicKey());
         byte [] decryptedData = bobKeyExchangeCrypter.decrypt(encryptedData, bobKeyParameter);
         assertNotNull(decryptedData);
@@ -86,12 +89,13 @@ public class BLSExchangeKeyCrypterTest {
 
         EncryptedData encryptedData = new EncryptedData(initialisationVector, encryptedPrivateKey);
 
-        BLSKeyExchangeCrypter bobKeyExchangeCrypter = new BLSKeyExchangeCrypter();
+        BLSKeyExchangeCrypter bobKeyExchangeCrypter = new BLSKeyExchangeCrypter(true);
         KeyParameter bobKeyParameter = bobKeyExchangeCrypter.deriveKey(bobKey, aliceKey.getPublicKey());
         byte [] decryptedData = bobKeyExchangeCrypter.decrypt(encryptedData, bobKeyParameter);
         assertNotNull(decryptedData);
 
         assertEquals("they should be the same string", new String(decryptedData), secret );
     }
+
 
 }

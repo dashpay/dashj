@@ -25,11 +25,19 @@ import org.dashj.bls.LegacySchemeMPL;
  */
 
 public class BLSScheme {
-    static boolean legacyDefault = true;
-    static LegacySchemeMPL legacySchemeMPL = new LegacySchemeMPL();
-    static BasicSchemeMPL scheme = new BasicSchemeMPL();
+    private static boolean legacyDefault = true;
+    private static final LegacySchemeMPL legacySchemeMPL = new LegacySchemeMPL();
+    private static final BasicSchemeMPL scheme = new BasicSchemeMPL();
 
     static CoreMPL get(boolean legacy) {
         return legacy ? legacySchemeMPL : scheme;
+    }
+
+    public static boolean isLegacyDefault() {
+        return legacyDefault;
+    }
+
+    public static void setLegacyDefault(boolean legacyDefault) {
+        BLSScheme.legacyDefault = legacyDefault;
     }
 }

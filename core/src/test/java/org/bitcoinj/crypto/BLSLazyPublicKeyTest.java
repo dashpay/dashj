@@ -39,7 +39,7 @@ public class BLSLazyPublicKeyTest {
         PrivateKey sk = PrivateKey.fromSeedBIP32(seed);
         G1Element pk = sk.getG1Element();
 
-        byte [] publicKeyBytes = pk.serialize(BLSScheme.legacyDefault);
+        byte [] publicKeyBytes = pk.serialize(BLSScheme.isLegacyDefault());
         BLSPublicKey publicKey = new BLSPublicKey(PARAMS, publicKeyBytes, 0);
 
         // create a lazy public key from the bytes only

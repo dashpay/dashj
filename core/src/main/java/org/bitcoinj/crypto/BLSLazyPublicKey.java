@@ -30,44 +30,44 @@ import java.io.OutputStream;
  * Unlike BLSLazySignature, this class is Immutable
  */
 
-public class BLSLazyPublicKey extends ChildMessage {
-
-    byte [] buffer;
+public class BLSLazyPublicKey extends BLSAbstractLazyObject {
     BLSPublicKey publicKey;
-    boolean isPublicKeyInitialized;
 
+    @Deprecated
     public BLSLazyPublicKey(NetworkParameters params) {
         super(params);
     }
 
     public BLSLazyPublicKey(BLSLazyPublicKey publicKey) {
-        super(publicKey.params);
-        this.buffer = publicKey.buffer;
+        super(publicKey);
         this.publicKey = publicKey.publicKey;
-        this.isPublicKeyInitialized = publicKey.isPublicKeyInitialized;
     }
 
     public BLSLazyPublicKey(BLSPublicKey publicKey) {
         super(Context.get().getParams());
         this.buffer = null;
         this.publicKey = publicKey;
-        this.isPublicKeyInitialized = true;
+        this.initialized = true;
     }
 
     public BLSLazyPublicKey(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+        super(params, payload, offset, BLSScheme.isLegacyDefault());
+    }
+
+    public BLSLazyPublicKey(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
+        super(params, payload, offset, legacy);
     }
 
     @Override
     protected void parse() throws ProtocolException {
+        super.parse();
         buffer = readBytes(BLSPublicKey.BLS_CURVE_PUBKEY_SIZE);
-        isPublicKeyInitialized = false;
         length = cursor - offset;
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        if (!isPublicKeyInitialized && buffer == null) {
+        if (!initialized && buffer == null) {
             throw new IOException("public key and buffer are not initialized");
         }
         if (buffer == null) {
@@ -80,22 +80,23 @@ public class BLSLazyPublicKey extends ChildMessage {
     public static BLSPublicKey invalidSignature = new BLSPublicKey();
 
     public BLSPublicKey getPublicKey() {
-        if(buffer == null && !isPublicKeyInitialized)
+        if(buffer == null && !initialized)
             return invalidSignature;
-        if(!isPublicKeyInitialized) {
-            publicKey = new BLSPublicKey(params, buffer, 0);
+        if(!initialized) {
+            publicKey = new BLSPublicKey(params, buffer, 0, legacy);
             buffer = null;  //save memory
-            isPublicKeyInitialized = true;
+            initialized = true;
         }
         return publicKey;
     }
 
     @Override
     public String toString() {
-        return isPublicKeyInitialized ? publicKey.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
+        return initialized ? publicKey.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
     }
 
+    @Deprecated
     public boolean isPublicKeyInitialized() {
-        return isPublicKeyInitialized;
+        return initialized;
     }
 }

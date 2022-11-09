@@ -39,6 +39,15 @@ import org.slf4j.LoggerFactory;
 public class BLSKeyExchangeCrypter extends KeyCrypterAESCBC {
 
     private static final Logger log = LoggerFactory.getLogger(BLSKeyExchangeCrypter.class);
+    private final boolean legacy;
+
+    public BLSKeyExchangeCrypter() {
+        legacy = BLSScheme.isLegacyDefault();
+    }
+
+    public BLSKeyExchangeCrypter(boolean legacy) {
+        this.legacy = legacy;
+    }
 
     /**
      * Generate AES key.
@@ -62,7 +71,7 @@ public class BLSKeyExchangeCrypter extends KeyCrypterAESCBC {
             G1Element pk = publicKey.publicKeyImpl;
             watch.stop();
             byte [] key = new byte [32];
-            System.arraycopy(pk.serialize(BLSScheme.legacyDefault), 0, key, 0, 32);
+            System.arraycopy(pk.serialize(legacy), 0, key, 0, 32);
             log.info("Deriving key took {} for a BLS Key Exchange", watch);
             return new KeyParameter(key);
         } catch (Exception e) {

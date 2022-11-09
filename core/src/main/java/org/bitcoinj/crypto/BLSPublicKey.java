@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Utils;
 import org.dashj.bls.DASHJBLS;
 import org.dashj.bls.G1Element;
 import org.dashj.bls.G1ElementVector;
@@ -48,32 +49,51 @@ public class BLSPublicKey extends BLSAbstractObject {
     }
 
     public BLSPublicKey(byte [] publicKey) {
+        this(publicKey, BLSScheme.isLegacyDefault());
+    }
+
+    public BLSPublicKey(byte [] publicKey, boolean legacy) {
         super(BLS_CURVE_PUBKEY_SIZE);
-        publicKeyImpl = G1Element.fromBytes(publicKey);
+        publicKeyImpl = G1Element.fromBytes(publicKey, legacy);
         valid = true;
         updateHash();
     }
 
+    public BLSPublicKey(String publicKeyHex, boolean legacy) {
+        this(Utils.HEX.decode(publicKeyHex), legacy);
+    }
+
     public BLSPublicKey(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+        super(params, payload, offset, BLSScheme.isLegacyDefault());
+    }
+
+    public BLSPublicKey(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
+        super(params, payload, offset, legacy);
     }
 
     public BLSPublicKey(BLSPublicKey publicKey) {
-        super(publicKey.getBuffer(), BLS_CURVE_PUBKEY_SIZE);
+        super(publicKey.getBuffer(), BLS_CURVE_PUBKEY_SIZE, publicKey.legacy);
     }
 
     @Override
     boolean internalSetBuffer(byte[] buffer) {
         try {
-            publicKeyImpl = G1Element.fromBytes(buffer, BLSScheme.legacyDefault);
+            publicKeyImpl = G1Element.fromBytes(buffer, legacy);
             return true;
         } catch (Exception x) {
-            return false;
+            // try again
+            try {
+                publicKeyImpl = G1Element.fromBytes(buffer, legacy);
+                return true;
+            } catch (Exception x2) {
+                return false;
+            }
         }
     }
 
     @Override
-    boolean internalGetBuffer(byte[] buffer) {
+    boolean internalGetBuffer(byte[] buffer, boolean legacy) {
+        log.info("publickey: input in legacy: {}, output in legacy: {}", this.legacy, legacy);
         byte [] serialized = publicKeyImpl.serialize(legacy);
         System.arraycopy(serialized, 0, buffer, 0, buffer.length);
         return true;
@@ -81,6 +101,7 @@ public class BLSPublicKey extends BLSAbstractObject {
 
     @Override
     protected void parse() throws ProtocolException {
+        super.parse();
         byte[] buffer = readBytes(BLS_CURVE_PUBKEY_SIZE);
         valid = internalSetBuffer(buffer);
         serializedSize = BLS_CURVE_PUBKEY_SIZE;
@@ -94,7 +115,7 @@ public class BLSPublicKey extends BLSAbstractObject {
 
     public void aggregateInsecure(BLSPublicKey sk) {
         Preconditions.checkState(valid && sk.valid);
-        publicKeyImpl = BLSScheme.get(legacy).aggregate(
+        publicKeyImpl = BLSScheme.get(BLSScheme.isLegacyDefault()).aggregate(
                 new G1ElementVector(
                         new G1Element[]{publicKeyImpl, sk.publicKeyImpl}
                 )
@@ -154,5 +175,12 @@ public class BLSPublicKey extends BLSAbstractObject {
         valid = true;
         updateHash();
         return true;
+    }
+
+    public static BLSPublicKey dHKeyExchange(BLSSecretKey sk, BLSPublicKey pk) {
+        if (!sk.valid || !pk.valid) {
+            return null;
+        }
+        return new BLSPublicKey(DASHJBLS.multiply(sk.privateKey, pk.publicKeyImpl));
     }
 }

@@ -82,8 +82,8 @@ public class BLSBatchVerifierTest {
         verify(vec, true, true);
     }
 
-    @Test
-    public void batch_verifier_tests() {
+    public void batchVerifier(boolean legacy) {
+        BLSScheme.setLegacyDefault(legacy);
         ArrayList<Message> msgs = new ArrayList<>();
 
         // distinct messages from distinct sources
@@ -123,5 +123,11 @@ public class BLSBatchVerifierTest {
         // last message invalid from one source
         addMessage(msgs, 1, 7, 1, false);
         verify(msgs);
+    }
+
+    @Test
+    public void batchVerifierTest() {
+        batchVerifier(true);
+        batchVerifier(false);
     }
 }

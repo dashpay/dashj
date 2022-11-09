@@ -20,7 +20,10 @@ import org.dashj.bls.BLSJniLibrary;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class BLSSecretKeyTest {
     @BeforeClass
@@ -48,5 +51,29 @@ public class BLSSecretKeyTest {
         });
     }
 
+    void dHExchange(boolean legacy) {
+        BLSScheme.setLegacyDefault(legacy);
 
+        BLSSecretKey sk1 = BLSSecretKey.makeNewKey();
+        BLSSecretKey sk2 = BLSSecretKey.makeNewKey();
+
+        BLSPublicKey pk1 = sk1.getPublicKey();
+        BLSPublicKey pk2 = sk2.getPublicKey();
+
+        // Perform diffie-helman exchange
+        BLSPublicKey pke1 = BLSPublicKey.dHKeyExchange(sk1, pk2);
+        BLSPublicKey pke2 = BLSPublicKey.dHKeyExchange(sk2, pk1);
+
+        assertNotNull(pke1);
+        assertNotNull(pke2);
+        assertTrue(pke1.isValid());
+        assertTrue(pke2.isValid());
+        assertEquals(pke1, pke2);
+    }
+
+    @Test
+    public void keyExchangeTest() {
+        dHExchange(true);
+        dHExchange(false);
+    }
 }

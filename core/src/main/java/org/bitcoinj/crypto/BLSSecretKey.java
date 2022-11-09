@@ -46,16 +46,24 @@ public class BLSSecretKey extends BLSAbstractObject
         updateHash();
     }
 
-    public BLSSecretKey(byte [] buffer) {
-        super(buffer, BLS_CURVE_SECKEY_SIZE);
+    public BLSSecretKey(byte[] buffer) {
+        super(buffer, BLS_CURVE_SECKEY_SIZE, BLSScheme.isLegacyDefault());
+    }
+
+    public BLSSecretKey(byte [] buffer, boolean legacy) {
+        super(buffer, BLS_CURVE_SECKEY_SIZE, legacy);
     }
 
     public BLSSecretKey(BLSSecretKey secretKey) {
-        super(secretKey.getBuffer(), BLS_CURVE_SECKEY_SIZE);
+        super(secretKey.getBuffer(), BLS_CURVE_SECKEY_SIZE, secretKey.legacy);
     }
 
     public BLSSecretKey(String hex) {
-        this(Utils.HEX.decode(hex));
+        this(Utils.HEX.decode(hex), BLSScheme.isLegacyDefault());
+    }
+
+    public BLSSecretKey(String hex, boolean legacy) {
+        this(Utils.HEX.decode(hex), legacy);
     }
 
     public static BLSSecretKey fromSeed(byte [] seed) {
@@ -65,7 +73,7 @@ public class BLSSecretKey extends BLSAbstractObject
     @Override
     boolean internalSetBuffer(byte[] buffer) {
         try {
-            privateKey = PrivateKey.fromBytes(buffer, BLSScheme.legacyDefault);
+            privateKey = PrivateKey.fromBytes(buffer, legacy);
             return true;
         } catch (Exception x) {
             return false;
@@ -73,7 +81,7 @@ public class BLSSecretKey extends BLSAbstractObject
     }
 
     @Override
-    boolean internalGetBuffer(byte[] buffer) {
+    boolean internalGetBuffer(byte[] buffer, boolean legacy) {
         byte [] serialized = privateKey.serialize(legacy);
         System.arraycopy(serialized, 0, buffer, 0, buffer.length);
         return true;
@@ -81,6 +89,7 @@ public class BLSSecretKey extends BLSAbstractObject
 
     @Override
     protected void parse() throws ProtocolException {
+        super.parse();
         byte[] buffer = readBytes(BLS_CURVE_SECKEY_SIZE);
         valid = internalSetBuffer(buffer);
         serializedSize = BLS_CURVE_SECKEY_SIZE;
@@ -161,7 +170,9 @@ public class BLSSecretKey extends BLSAbstractObject
             return new BLSPublicKey();
         }
 
-        return new BLSPublicKey(privateKey.getG1Element());
+        BLSPublicKey result = new BLSPublicKey(privateKey.getG1Element());
+        result.setLegacy(legacy);
+        return result;
     }
 
     @Deprecated
@@ -174,6 +185,6 @@ public class BLSSecretKey extends BLSAbstractObject
             return new BLSSignature();
         }
 
-        return new BLSSignature(BLSScheme.get(legacy).sign(privateKey, hash.getBytes()));
+        return new BLSSignature(BLSScheme.get(BLSScheme.isLegacyDefault()).sign(privateKey, hash.getBytes()));
     }
 }

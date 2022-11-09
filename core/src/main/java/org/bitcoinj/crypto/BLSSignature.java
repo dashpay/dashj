@@ -27,16 +27,22 @@ public class BLSSignature extends BLSAbstractObject {
         super(BLS_CURVE_SIG_SIZE);
     }
 
-    public BLSSignature(byte [] signature) {
-        super(signature, BLS_CURVE_SIG_SIZE);
+    public BLSSignature(byte[] signature) {
+        super(signature, BLS_CURVE_SIG_SIZE, BLSScheme.isLegacyDefault());
+    }
+    public BLSSignature(byte [] signature, boolean legacy) {
+        super(signature, BLS_CURVE_SIG_SIZE, legacy);
     }
 
     public BLSSignature(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+        super(params, payload, offset, BLSScheme.isLegacyDefault());
+    }
+    public BLSSignature(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
+        super(params, payload, offset, legacy);
     }
 
     public BLSSignature(BLSSignature signature) {
-        super(signature.getBuffer(), BLS_CURVE_SIG_SIZE);
+        super(signature.getBuffer(), BLS_CURVE_SIG_SIZE, signature.legacy);
     }
 
     BLSSignature(G2Element sk) {
@@ -51,13 +57,13 @@ public class BLSSignature extends BLSAbstractObject {
         try {
             if(Arrays.equals(buffer, emptySignatureBytes))
                 return false;
-            signatureImpl = G2Element.fromBytes(buffer, BLSScheme.legacyDefault);
+            signatureImpl = G2Element.fromBytes(buffer, legacy);
             return true;
         } catch (Exception x) {
             //This is added in as a hack, because for some reason when all the unit
             //line above fails with an exception, but we can run it again.
             try {
-                signatureImpl = G2Element.fromBytes(buffer, BLSScheme.legacyDefault);
+                signatureImpl = G2Element.fromBytes(buffer, legacy);
                 return true;
             } catch (Exception x2) {
                 return false;
@@ -66,7 +72,8 @@ public class BLSSignature extends BLSAbstractObject {
     }
 
     @Override
-    boolean internalGetBuffer(byte[] buffer) {
+    boolean internalGetBuffer(byte[] buffer, boolean legacy) {
+        log.info("signature: input in legacy: {}, output in legacy: {}", this.legacy, legacy);
         byte [] serialized = signatureImpl.serialize(legacy);
         System.arraycopy(serialized, 0, buffer, 0, buffer.length);
         return true;
@@ -74,6 +81,7 @@ public class BLSSignature extends BLSAbstractObject {
 
     @Override
     protected void parse() throws ProtocolException {
+        super.parse(); // set version
         byte[] buffer = readBytes(BLS_CURVE_SIG_SIZE);
         valid = internalSetBuffer(buffer);
         serializedSize = BLS_CURVE_SIG_SIZE;
@@ -82,7 +90,7 @@ public class BLSSignature extends BLSAbstractObject {
 
     public void aggregateInsecure(BLSSignature o) {
         checkState(valid && o.valid);
-        signatureImpl = BLSScheme.get(legacy).aggregate(new G2ElementVector(new G2Element[]{signatureImpl, o.signatureImpl}));
+        signatureImpl = BLSScheme.get(BLSScheme.isLegacyDefault()).aggregate(new G2ElementVector(new G2Element[]{signatureImpl, o.signatureImpl}));
         updateHash();
     }
 
@@ -105,9 +113,8 @@ public class BLSSignature extends BLSAbstractObject {
     public static BLSSignature aggregateSecure(List<BLSSignature> sigs,
                                                List<BLSPublicKey> pks,
                                                Sha256Hash hash,
-                                               boolean fLegacy)
+                                               boolean legacy)
     {
-        checkState(fLegacy);
         if (sigs.size() != pks.size() || sigs.isEmpty()) {
             return new BLSSignature();
         }
@@ -124,7 +131,7 @@ public class BLSSignature extends BLSAbstractObject {
             vecSignatures.add(sig.signatureImpl);
         }
 
-        return new BLSSignature(BLSScheme.get(fLegacy).aggregateSecure(vecPublicKeys, vecSignatures, hash.getBytes()));
+        return new BLSSignature(BLSScheme.get(legacy).aggregateSecure(vecPublicKeys, vecSignatures, hash.getBytes()));
     }
 
     public void subInsecure(BLSSignature o) {
@@ -138,7 +145,7 @@ public class BLSSignature extends BLSAbstractObject {
             return false;
 
         try {
-            return BLSScheme.get(legacy).verify(pubKey.publicKeyImpl, hash.getBytes(), signatureImpl);
+            return BLSScheme.get(BLSScheme.isLegacyDefault()).verify(pubKey.publicKeyImpl, hash.getBytes(), signatureImpl);
         } catch (Exception x) {
             log.error("signature verification error: ", x);
             return false;
@@ -166,8 +173,7 @@ public class BLSSignature extends BLSAbstractObject {
         }
 
         try {
-            // we had to get around that legacy scheme doesn't follow CoreMPL abstraction "aggregateVerify"
-            return BLSScheme.get(legacy).aggregateVerify(pubKeyVec, hashes2, signatureImpl);
+            return BLSScheme.get(BLSScheme.isLegacyDefault()).aggregateVerify(pubKeyVec, hashes2, signatureImpl);
         } catch (Exception x) {
             log.error("signature verification error: ", x);
             return false;
@@ -185,9 +191,8 @@ public class BLSSignature extends BLSAbstractObject {
         for (BLSPublicKey pk : pks) {
             vecPublicKeys.add(pk.publicKeyImpl);
         }
-
-        return BLSScheme.get(legacy).verifySecure(vecPublicKeys, signatureImpl, hash.getBytes());
-
+        log.info("verify: legacy: {}, default legacy: {}", legacy, BLSScheme.isLegacyDefault());
+        return BLSScheme.get(BLSScheme.isLegacyDefault()).verifySecure(vecPublicKeys, signatureImpl, hash.getBytes());
     }
 
     boolean recover(ArrayList<BLSSignature> sigs, ArrayList<BLSId> ids)

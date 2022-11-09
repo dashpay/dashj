@@ -38,24 +38,29 @@ public abstract class BLSAbstractObject extends ChildMessage {
     }
 
     abstract boolean internalSetBuffer(final byte [] buffer);
-    abstract boolean internalGetBuffer(byte [] buffer);
+    boolean internalGetBuffer(byte [] buffer) {
+        return internalGetBuffer(buffer, BLSScheme.isLegacyDefault());
+    }
+
+    abstract boolean internalGetBuffer(byte [] buffer, boolean legacy);
 
     BLSAbstractObject(int serializedSize) {
         this.serializedSize = serializedSize;
         this.valid = false;
-        this.legacy = BLSScheme.legacyDefault;
+        this.legacy = BLSScheme.isLegacyDefault();
         updateHash();
     }
 
-    BLSAbstractObject(byte [] buffer, int serializedSize) {
+    BLSAbstractObject(byte [] buffer, int serializedSize, boolean legacy) {
         this(serializedSize);
+        this.legacy = legacy;
         Preconditions.checkArgument(buffer.length == serializedSize);
         setBuffer(buffer);
     }
 
-    BLSAbstractObject(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
-        this.legacy = BLSScheme.legacyDefault;
+    BLSAbstractObject(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
+        super(params, payload, offset, params.getProtocolVersionNum(legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC));
+        this.legacy = BLSScheme.isLegacyDefault();
         updateHash();
     }
 
@@ -64,10 +69,14 @@ public abstract class BLSAbstractObject extends ChildMessage {
     }
 
     byte [] getBuffer(int size) {
+        return getBuffer(size, BLSScheme.isLegacyDefault());
+    }
+
+    byte [] getBuffer(int size, boolean legacy) {
         Preconditions.checkArgument(size == serializedSize);
         byte [] buffer = new byte [serializedSize];
         if(valid) {
-            boolean ok = internalGetBuffer(buffer);
+            boolean ok = internalGetBuffer(buffer, legacy);
             Preconditions.checkState(ok);
         }
         return buffer;
@@ -105,8 +114,17 @@ public abstract class BLSAbstractObject extends ChildMessage {
     }
 
     @Override
+    protected void parse() throws ProtocolException {
+        legacy = protocolVersion == params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_LEGACY);
+    }
+
+    @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         stream.write(getBuffer(serializedSize));
+    }
+
+    public void bitcoinSerialize(OutputStream stream, boolean legacy) throws IOException{
+        stream.write(getBuffer(serializedSize, legacy));
     }
 
     protected void updateHash() {
@@ -142,5 +160,9 @@ public abstract class BLSAbstractObject extends ChildMessage {
     @Override
     public int hashCode() {
         return getHash().hashCode();
+    }
+
+    public void setLegacy(boolean legacy) {
+        this.legacy = legacy;
     }
 }
