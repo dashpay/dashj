@@ -294,7 +294,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("getmnlistd")) {
             return new GetSimplifiedMasternodeListDiff(params, payloadBytes);
         } else if(command.equals("mnlistdiff")) {
-            return new SimplifiedMasternodeListDiff(params, payloadBytes);
+            return new SimplifiedMasternodeListDiff(params, payloadBytes, protocolVersion);
         } else if(command.equals("senddsq")) {
             return new SendCoinJoinQueue(params, payloadBytes);
         } else if(command.equals("qsendrecsigs")) {
@@ -306,7 +306,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("clsig")) {
             return new ChainLockSignature(params, payloadBytes);
         } else if(command.equals("qrinfo")) {
-            return new QuorumRotationInfo(params, payloadBytes);
+            return new QuorumRotationInfo(params, payloadBytes, protocolVersion);
         } else if(command.equals("dssu")) {
             return new CoinJoinStatusUpdate(params, payloadBytes);
         } else if (command.equals("dsq")) {
