@@ -122,7 +122,7 @@ public class Context {
      * @param ensureMinRequiredFee Whether to ensure the minimum required fee by default when completing transactions. For details, see {@link SendRequest#ensureMinRequiredFee}.
      */
     public Context(NetworkParameters params, int eventHorizon, Coin feePerKb, boolean ensureMinRequiredFee) {
-        log.info("Creating dashj {} context.", VersionMessage.BITCOINJ_VERSION);
+        log.info("Creating dashj {} context using dashj-bls {}.", VersionMessage.BITCOINJ_VERSION, BLSJniLibrary.VERSION);
         this.confidenceTable = new TxConfidenceTable();
         this.voteConfidenceTable = new VoteConfidenceTable();
         this.params = params;
@@ -132,7 +132,7 @@ public class Context {
         lastConstructed = this;
         scheduledExecutorService = Executors.newScheduledThreadPool(1);
         slot.set(this);
-        BLSJniLibrary.init();
+        BLSJniLibrary.init(false);
     }
 
     private static volatile Context lastConstructed;
@@ -204,7 +204,7 @@ public class Context {
      */
     public static void propagate(Context context) {
         slot.set(checkNotNull(context));
-        BLS.init();
+        BLSJniLibrary.init(false);
     }
 
     /**
