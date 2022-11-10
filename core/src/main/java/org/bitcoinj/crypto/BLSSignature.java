@@ -190,7 +190,6 @@ public class BLSSignature extends BLSAbstractObject {
         for (BLSPublicKey pk : pks) {
             vecPublicKeys.add(pk.publicKeyImpl);
         }
-        log.info("verify: legacy: {}, default legacy: {}", legacy, BLSScheme.isLegacyDefault());
         return BLSScheme.get(BLSScheme.isLegacyDefault()).verifySecure(vecPublicKeys, signatureImpl, hash.getBytes());
     }
 
