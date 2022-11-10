@@ -74,8 +74,6 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         cursor += coinBaseTx.getMessageSize();
         if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
             version = (short) readUint16();
-            // Dash Core Returns the opposite so flip it for now:
-            version = version == LEGACY_BLS_VERSION ? BASIC_BLS_VERSION : LEGACY_BLS_VERSION;
         } else {
             version = LEGACY_BLS_VERSION;
         }
