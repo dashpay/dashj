@@ -129,6 +129,10 @@ public class FinalCommitment extends SpecialTxPayload {
     }
 
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException{
+        bitcoinSerializeToStream(stream, isLegacy());
+    }
+
+    protected void bitcoinSerializeToStream(OutputStream stream, boolean legacy) throws IOException{
         super.bitcoinSerializeToStream(stream);
         stream.write(llmqType);
 
@@ -139,10 +143,11 @@ public class FinalCommitment extends SpecialTxPayload {
         Utils.booleanArrayListToStream(signers, stream);
         Utils.booleanArrayListToStream(validMembers, stream);
 
-        quorumPublicKey.bitcoinSerialize(stream, BLSScheme.isLegacyDefault());
+        quorumPublicKey.bitcoinSerialize(stream, legacy);
+        log.info("quorumPublicKey: {}", quorumPublicKey.toStringHex(isLegacy()));
         stream.write(quorumVvecHash.getReversedBytes());
-        quorumSignature.bitcoinSerialize(stream, BLSScheme.isLegacyDefault());
-        membersSignature.bitcoinSerialize(stream, BLSScheme.isLegacyDefault());
+        quorumSignature.bitcoinSerialize(stream, legacy);
+        membersSignature.bitcoinSerialize(stream, legacy);
     }
 
     public int getCurrentVersion() {

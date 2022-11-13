@@ -60,7 +60,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     BLSAbstractObject(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
         super(params, payload, offset, params.getProtocolVersionNum(legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC));
-        this.legacy = BLSScheme.isLegacyDefault();
+        this.legacy = legacy;
         updateHash();
     }
 
