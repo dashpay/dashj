@@ -149,6 +149,14 @@ public abstract class BLSAbstractObject extends ChildMessage {
         return Utils.HEX.encode(getBuffer(serializedSize));
     }
 
+    public String toString(boolean legacy) {
+        return Utils.HEX.encode(getBuffer(serializedSize, legacy));
+    }
+
+    public String toStringHex(boolean legacy) {
+        return Utils.HEX.encode(getBuffer(serializedSize, legacy));
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
