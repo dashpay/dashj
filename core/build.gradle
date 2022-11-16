@@ -5,7 +5,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'jacoco'
 apply plugin: 'signing'
 
-version = '0.18.4-SNAPSHOT'
+version = '19.0-SNAPSHOT'
 archivesBaseName = 'dashj-core'
 eclipse.project.name = 'dashj-core'
 
@@ -27,7 +27,7 @@ dependencies {
 
     // Dash Specific
     implementation 'de.sfuhrm:saphir-hash-core:3.0.10'
-    implementation 'org.dashj:dashj-bls:0.18.1'
+    implementation 'org.dashj:dashj-bls:1.2.5-SNAPSHOT'
     implementation 'com.lambdaworks:scrypt:1.4.0'
     implementation 'org.json:json:20210307'
 

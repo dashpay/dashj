@@ -540,7 +540,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         // No further communication is possible until version handshake is complete.
-        if (!(m instanceof VersionMessage || m instanceof VersionAck
+        if (!(m instanceof VersionMessage || m instanceof VersionAck || m instanceof SendAddressMessageV2
                 || (versionHandshakeFuture.isDone() && !versionHandshakeFuture.isCancelled())))
             throw new ProtocolException(
                     "Received " + m.getClass().getSimpleName() + " before version handshake is complete.");
@@ -656,6 +656,7 @@ public class Peer extends PeerSocketHandler {
         if (vPeerVersionMessage != null)
             throw new ProtocolException("Got two version messages from peer");
         vPeerVersionMessage = peerVersionMessage;
+        peerAddress.protocolVersion = peerVersionMessage.clientVersion;
         // Switch to the new protocol version.
         log.info(toString());
         // bitcoinj is a client mode implementation. That means there's not much point in us talking to other client

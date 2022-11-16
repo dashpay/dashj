@@ -105,6 +105,14 @@ public class LLMQUtils {
         return params.getLlmqDIP0024InstantSend() == type && quorumRotationActive;
     }
 
+    public static boolean isQuorumRotationEnabled(StoredBlock block, NetworkParameters params, LLMQParameters.LLMQType type) {
+        if (type != params.getLlmqDIP0024InstantSend()) {
+            return false;
+        }
+        boolean quorumRotationActive = block.getHeight() >= params.getDIP0024BlockHeight();
+        return params.getLlmqDIP0024InstantSend() == type && quorumRotationActive;
+    }
+
     public static Sha256Hash calculateModifier(LLMQParameters llmqParameters, StoredBlock quorumBaseBlock) {
         UnsafeByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(33);
         try {

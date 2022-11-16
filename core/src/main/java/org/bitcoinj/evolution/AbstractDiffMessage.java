@@ -43,8 +43,8 @@ public abstract class AbstractDiffMessage extends Message {
         super(params);
     }
 
-    public AbstractDiffMessage(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+    public AbstractDiffMessage(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
     }
 
     protected abstract String getShortName();

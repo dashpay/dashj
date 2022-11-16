@@ -20,7 +20,7 @@ public class BLSId extends BLSAbstractObject {
     }
 
     public BLSId(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+        super(params, payload, offset, BLSScheme.isLegacyDefault());
     }
 
     @Override
@@ -38,7 +38,7 @@ public class BLSId extends BLSAbstractObject {
     }
 
     @Override
-    boolean internalGetBuffer(byte[] buffer) {
+    boolean internalGetBuffer(byte[] buffer, boolean legacy) {
         System.arraycopy(hash.getBytes(), 0, buffer, 0, buffer.length);
         return true;
     }

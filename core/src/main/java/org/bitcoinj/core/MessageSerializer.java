@@ -30,6 +30,23 @@ import java.nio.ByteBuffer;
 public abstract class MessageSerializer {
 
     /**
+     * The protocol version that should be used to deserialize messages
+     */
+    protected int protocolVersion;
+
+    public int getProtocolVersion() {
+        return protocolVersion;
+    }
+
+    public void setProtocolVersion(int protocolVersion) {
+        this.protocolVersion = protocolVersion;
+    }
+
+    protected MessageSerializer() {
+        protocolVersion = NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
+    }
+
+    /**
      * Reads a message from the given ByteBuffer and returns it.
      */
     public abstract Message deserialize(ByteBuffer in) throws ProtocolException, IOException, UnsupportedOperationException;

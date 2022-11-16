@@ -17,24 +17,12 @@
 package org.bitcoinj.crypto;
 
 import com.google.common.base.Stopwatch;
-import org.bitcoinj.core.Utils;
 import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
-import org.bouncycastle.crypto.BufferedBlockCipher;
-import org.bouncycastle.crypto.InvalidCipherTextException;
-import org.bouncycastle.crypto.engines.AESEngine;
-import org.bouncycastle.crypto.modes.CBCBlockCipher;
-import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.crypto.params.ParametersWithIV;
-import org.dashj.bls.BLS;
-import org.dashj.bls.PublicKey;
+
+import org.dashj.bls.G1Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.security.SecureRandom;
-import java.util.Arrays;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * <p>This class encrypts and decrypts byte arrays and strings using a BLS Key Exchange as the
@@ -51,6 +39,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class BLSKeyExchangeCrypter extends KeyCrypterAESCBC {
 
     private static final Logger log = LoggerFactory.getLogger(BLSKeyExchangeCrypter.class);
+    private final boolean legacy;
+
+    public BLSKeyExchangeCrypter() {
+        legacy = BLSScheme.isLegacyDefault();
+    }
+
+    public BLSKeyExchangeCrypter(boolean legacy) {
+        this.legacy = legacy;
+    }
 
     /**
      * Generate AES key.
@@ -69,10 +66,12 @@ public class BLSKeyExchangeCrypter extends KeyCrypterAESCBC {
     public KeyParameter deriveKey(BLSSecretKey secretKey, BLSPublicKey blsPeerPublicKey) throws KeyCrypterException {
         try {
             final Stopwatch watch = Stopwatch.createStarted();
-            PublicKey pk = BLS.DHKeyExchange(secretKey.privateKey, blsPeerPublicKey.publicKeyImpl);
+            BLSPublicKey publicKey = new BLSPublicKey();
+            publicKey.setDHKeyExchange(secretKey, blsPeerPublicKey);
+            G1Element pk = publicKey.publicKeyImpl;
             watch.stop();
             byte [] key = new byte [32];
-            System.arraycopy(pk.Serialize(), 0, key, 0, 32);
+            System.arraycopy(pk.serialize(legacy), 0, key, 0, 32);
             log.info("Deriving key took {} for a BLS Key Exchange", watch);
             return new KeyParameter(key);
         } catch (Exception e) {

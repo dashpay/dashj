@@ -13,6 +13,9 @@ import java.io.OutputStream;
 
 public class ProviderRegisterTx extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 1;
+    public static final int LEGACY_BLS_VERSION = 1;
+    public static final int BASIC_BLS_VERSION = 2;
+
     public static final int MESSAGE_SIZE = 274;
     public static final int MESSAGE_SIZE_WITHOUT_SIGNATURE = 209;
 
@@ -80,7 +83,7 @@ public class ProviderRegisterTx extends SpecialTxPayload {
 
         keyIDOwner = new KeyId(params, payload, cursor);
         cursor += keyIDOwner.getMessageSize();
-        pubkeyOperator = new BLSPublicKey(params, payload, cursor);
+        pubkeyOperator = new BLSPublicKey(params, payload, cursor, version == LEGACY_BLS_VERSION);
         cursor += pubkeyOperator.getMessageSize();
         keyIDVoting = new KeyId(params, payload, cursor);
         cursor += keyIDVoting.getMessageSize();

@@ -20,6 +20,7 @@ public class SimplifiedMasternodeList extends Message {
 
     private ReentrantLock lock = Threading.lock("SimplifiedMasternodeList");
 
+    private short version;
     private Sha256Hash blockHash;
     private long height;
     private StoredBlock storedBlock;
@@ -38,8 +39,8 @@ public class SimplifiedMasternodeList extends Message {
         storedBlock = new StoredBlock(params.getGenesisBlock(), BigInteger.ZERO, 0);
     }
 
-    SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+    SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
     }
 
     SimplifiedMasternodeList(SimplifiedMasternodeList other) {
@@ -65,14 +66,19 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+            version = (short) readUint16();
+        } else {
+            version = SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION;
+        }
         blockHash = readHash();
         height = (int)readUint32();
         int size = (int)readVarInt();
-        mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(size);
+        mnMap = new HashMap<>(size);
         for(int i = 0; i < size; ++i)
         {
             Sha256Hash hash = readHash();
-            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor);
+            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, protocolVersion);
             cursor += mn.getMessageSize();
             mnMap.put(hash, mn);
         }
@@ -100,6 +106,7 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        Utils.uint16ToByteStreamLE(version, stream);
         stream.write(blockHash.getReversedBytes());
         Utils.uint32ToByteStreamLE(height, stream);
 

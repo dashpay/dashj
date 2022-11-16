@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class FinalCommitmentTxPayload extends SpecialTxPayload {
-    public static final int CURRENT_VERSION = 2;
+    public static final int CURRENT_VERSION = 1;
 
     private static final Logger log = LoggerFactory.getLogger(FinalCommitmentTxPayload.class);
 
