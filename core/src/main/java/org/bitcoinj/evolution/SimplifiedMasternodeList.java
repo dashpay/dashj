@@ -361,6 +361,11 @@ public class SimplifiedMasternodeList extends Message {
         return false;
     }
 
+    public Masternode getValidMNByCollateral(TransactionOutPoint masternodeOutpoint) {
+        // TODO: we don't have an answer for this yet
+        return null;
+    }
+
     public interface ForeachMNCallback {
         void processMN(SimplifiedMasternodeListEntry mn);
     }

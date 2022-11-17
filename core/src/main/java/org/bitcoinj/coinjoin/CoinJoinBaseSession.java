@@ -162,7 +162,7 @@ public class CoinJoinBaseSession {
     }
 
 
-    private int sessionDenom = 0; // Users must submit a denom matching this
+    protected int sessionDenom = 0; // Users must submit a denom matching this
 
     public CoinJoinBaseSession() {
         entries = Lists.newArrayList();

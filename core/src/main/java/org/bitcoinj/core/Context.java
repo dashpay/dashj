@@ -17,6 +17,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
+import org.bitcoinj.coinjoin.CoinJoinClientQueueManager;
 import org.bitcoinj.evolution.MasternodeMetaDataManager;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import javax.annotation.Nullable;
@@ -100,6 +101,7 @@ public class Context {
     public MasternodeMetaDataManager masternodeMetaDataManager;
 
     public HashMap<String, CoinJoinClientManager> coinJoinClientManagers;
+    public CoinJoinClientQueueManager coinJoinClientQueueManager;
     private final ScheduledExecutorService scheduledExecutorService;
     private ScheduledFuture<?> scheduledMasternodeSync;
     private ScheduledFuture<?> scheduledNetFulfilled;
@@ -281,6 +283,7 @@ public class Context {
         llmqBackgroundThread = new LLMQBackgroundThread(this);
         masternodeMetaDataManager = new MasternodeMetaDataManager(this);
         coinJoinClientManagers = new HashMap<>();
+        coinJoinClientQueueManager = new CoinJoinClientQueueManager(this);
         BLS.Init();
         initializedObjects = true;
     }
@@ -353,6 +356,15 @@ public class Context {
                 clh = new FlatDB<>(Context.this, directory, false);
             }
             clh.load(chainLockHandler);
+
+            // Load Masternode Metadata
+            FlatDB<MasternodeMetaDataManager> mmdm;
+            if (filePrefix != null) {
+                mmdm = new FlatDB<>(Context.this, directory + File.separator + filePrefix + ".mnmetadata", true);
+            } else {
+                mmdm = new FlatDB<>(Context.this, directory, false);
+            }
+            mmdm.load(masternodeMetaDataManager);
 
             signingManager.initializeSignatureLog(directory);
             initializedFiles = true;

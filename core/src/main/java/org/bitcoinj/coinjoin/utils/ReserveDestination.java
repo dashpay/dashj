@@ -47,7 +47,7 @@ public class ReserveDestination extends ReserveScript {
     }
 
     //! Reserve an address
-    TransactionDestination getReservedDestination(boolean internal) {
+    public TransactionDestination getReservedDestination(boolean internal) {
         if (index == -1) {
             DeterministicKey key = wallet.freshCoinJoinKey();
             if (key == null) {
@@ -69,7 +69,7 @@ public class ReserveDestination extends ReserveScript {
         address = NoDestination.get();
     }
     //! Keep the address. Do not return it's key to the keypool when this object goes out of scope
-    void keepDestination() {
+    public void keepDestination() {
         // TODO: tell the wallt to keep the destination
         index = -1;
         vchPubKey = null;

@@ -150,12 +150,24 @@ public class CoinControl {
         this.destChange = destChange;
     }
 
+    public boolean shouldAllowOtherInputs() {
+        return allowOtherInputs;
+    }
+
     public void setAllowOtherInputs(boolean allowOtherInputs) {
         this.allowOtherInputs = allowOtherInputs;
     }
 
+    public boolean shouldAllowWatchOnly() {
+        return allowWatchOnly;
+    }
+
     public void setAllowWatchOnly(boolean allowWatchOnly) {
         this.allowWatchOnly = allowWatchOnly;
+    }
+
+    public boolean shouldAvoidAddressReuse() {
+        return avoidAddressReuse;
     }
 
     public void setAvoidAddressReuse(boolean avoidAddressReuse) {
