@@ -84,6 +84,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("jack-daniels")) {
             params = JackDanielsDevNetParams.get();
             filePrefix = "forwarding-service-jack-daniels";
+        } else if (args.length > 1 && args[1].equals("ouzo")) {
+            params = OuzoDevNetParams.get();
+            filePrefix = "forwarding-service-ouzo";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
@@ -100,8 +103,8 @@ public class ForwardingService {
         String confPath = "";
         if (lastArg + 1 <= args.length) {
             clientPath = args[lastArg];
-            if (lastArg + 2 >= args.length)
-                confPath = args[lastArg + 1];
+            if (lastArg + 2 > args.length)
+                confPath = args[lastArg];
         }
 
         txReport = new TransactionReport(clientPath, confPath, params);
