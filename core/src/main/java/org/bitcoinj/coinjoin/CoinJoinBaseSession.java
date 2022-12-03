@@ -18,6 +18,7 @@ package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
@@ -48,14 +49,15 @@ import static org.bitcoinj.coinjoin.PoolState.POOL_STATE_IDLE;
 
 public class CoinJoinBaseSession {
     private final Logger log = LoggerFactory.getLogger(CoinJoinBaseSession.class);
+    protected final Context context;
 
-    protected ReentrantLock lock = Threading.lock("coinjoin_base_session");
+    protected final ReentrantLock lock = Threading.lock("coinjoin_base_session");
     @GuardedBy("lock")
-    protected ArrayList<CoinJoinEntry> entries; // Masternode/clients entries
+    protected final ArrayList<CoinJoinEntry> entries; // Masternode/clients entries
 
-    protected AtomicReference<PoolState> state = new AtomicReference<>(POOL_STATE_IDLE); // should be one of the POOL_STATE_XXX values
-    protected AtomicLong timeLastSuccessfulStep = new AtomicLong(0); // the time when last successful mixing step was performed
-    protected AtomicInteger sessionID = new AtomicInteger(0); // 0 if no mixing session is active
+    protected final AtomicReference<PoolState> state = new AtomicReference<>(POOL_STATE_IDLE); // should be one of the POOL_STATE_XXX values
+    protected final AtomicLong timeLastSuccessfulStep = new AtomicLong(0); // the time when last successful mixing step was performed
+    protected final AtomicInteger sessionID = new AtomicInteger(0); // 0 if no mixing session is active
 
     @GuardedBy("lock")
     protected Transaction finalMutableTransaction; // the finalized transaction ready for signing

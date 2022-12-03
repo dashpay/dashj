@@ -24,7 +24,7 @@ import org.bitcoinj.wallet.Wallet;
 
 public class ReserveDestination extends ReserveScript {
     //! The wallet to reserve from
-    protected Wallet wallet;
+    protected final Wallet wallet;
     //LegacyScriptPubKeyMan* m_spk_man{nullptr};
 
     //! The index of the address's key in the keypool

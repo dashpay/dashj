@@ -26,8 +26,8 @@ import javax.annotation.Nullable;
 
 public class InputCoin implements Comparable {
     private final TransactionOutPoint outPoint;
-    private TransactionOutput output;
-    private Coin effectiveValue;
+    private final TransactionOutput output;
+    private final Coin effectiveValue;
     private int inputBytes;
 
     public InputCoin(@Nullable Transaction tx, int i) {
@@ -71,5 +71,13 @@ public class InputCoin implements Comparable {
 
     public TransactionOutput getOutput() {
         return output;
+    }
+
+    public Coin getEffectiveValue() {
+        return effectiveValue;
+    }
+
+    public int getInputBytes() {
+        return inputBytes;
     }
 }

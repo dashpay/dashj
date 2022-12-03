@@ -67,9 +67,7 @@ import static org.bitcoinj.wallet.CoinType.ONLY_COINJOIN_COLLATERAL;
 
 public class CoinJoinClientSession extends CoinJoinBaseSession {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientSession.class);
-    private Context context;
-    private ArrayList<TransactionOutPoint> outPointLocked;
-
+    private final ArrayList<TransactionOutPoint> outPointLocked = Lists.newArrayList();
     private String strLastMessage;
     private String strAutoDenomResult;
 
@@ -77,13 +75,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private Transaction txMyCollateral; // client side collateral
     private PendingDsaRequest pendingDsaRequest;
 
-    private KeyHolderStorage keyHolderStorage; // storage for keys used in PrepareDenominate
+    private final KeyHolderStorage keyHolderStorage; // storage for keys used in PrepareDenominate
 
-    private Wallet mixingWallet;
-
-    public CoinJoinClientSession(Context context) {
-        this.context = context;
-    }
+    private final Wallet mixingWallet;
 
     /// Create denominations
     private boolean createDenominated(Coin balanceToDenominate) {

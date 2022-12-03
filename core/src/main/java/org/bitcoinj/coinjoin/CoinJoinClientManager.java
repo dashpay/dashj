@@ -49,7 +49,7 @@ public class CoinJoinClientManager {
 
     private int cachedLastSuccessBlock = 0;
     private int minBlocksToWait = 1; // how many blocks to wait for after one successful mixing tx in non-multisession mode
-    private StringBuilder strAutoDenomResult = new StringBuilder();
+    private final StringBuilder strAutoDenomResult = new StringBuilder();
 
     private final Context context;
     private final Wallet mixingWallet;
