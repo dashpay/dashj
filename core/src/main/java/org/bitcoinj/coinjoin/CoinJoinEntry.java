@@ -33,7 +33,7 @@ import java.util.List;
  */
 // dsi
 public class CoinJoinEntry extends Message {
-    private List<TransactionInput> mixingInputs;
+    private List<CoinJoinTransactionInput> mixingInputs;
     private List<TransactionOutput> mixingOutputs;
     private Transaction txCollateral;
 
@@ -43,7 +43,7 @@ public class CoinJoinEntry extends Message {
 
     public CoinJoinEntry(
         NetworkParameters params,
-        List<TransactionInput> mixingInputs,
+        List<CoinJoinTransactionInput> mixingInputs,
         List<TransactionOutput> mixingOutputs,
         Transaction txCollateral
     ) {
@@ -59,7 +59,7 @@ public class CoinJoinEntry extends Message {
         mixingInputs = new ArrayList<>();
 
         for (int i = 0; i < numInputs; i++) {
-            TransactionInput input = new TransactionInput(params, null, payload, cursor);
+            CoinJoinTransactionInput input = new CoinJoinTransactionInput(params, payload, cursor);
             mixingInputs.add(input);
             cursor += input.getMessageSize();
         }
@@ -105,7 +105,7 @@ public class CoinJoinEntry extends Message {
         );
     }
 
-    public List<TransactionInput> getMixingInputs() {
+    public List<CoinJoinTransactionInput> getMixingInputs() {
         return mixingInputs;
     }
 
