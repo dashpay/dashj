@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.coinjoin;
 
+import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.MasternodeSignature;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Objects;
 
 /**
  * A currently in progress mixing merge and denomination information
@@ -41,6 +43,7 @@ public class CoinJoinQueue extends Message {
 
     private int denomination;
     private TransactionOutPoint masternodeOutpoint;
+    private Sha256Hash proTxHash;
     private long time;
     private boolean ready;  // Ready to submit
     private MasternodeSignature signature;
@@ -155,10 +158,39 @@ public class CoinJoinQueue extends Message {
     }
 
     public boolean isTimeOutOfBounds() {
-        return isTimeOutOfBounds(Utils.currentTimeMillis());
+        return isTimeOutOfBounds(Utils.currentTimeSeconds());
     }
     public boolean isTimeOutOfBounds(long currentTime) {
         return currentTime - time > CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT ||
                 time - currentTime > CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT;
+    }
+
+    public Sha256Hash getProTxHash() {
+        if (proTxHash == null) {
+            proTxHash = ProTxToOutpoint.getProTxHash(masternodeOutpoint);
+        }
+        return proTxHash;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        CoinJoinQueue that = (CoinJoinQueue) o;
+
+        if (denomination != that.denomination) return false;
+        if (time != that.time) return false;
+        if (ready != that.ready) return false;
+        if (tried != that.tried) return false;
+        if (!Objects.equals(masternodeOutpoint, that.masternodeOutpoint))
+            return false;
+        if (!Objects.equals(proTxHash, that.proTxHash)) return false;
+        return Objects.equals(signature, that.signature);
+    }
+
+    @Override
+    public int hashCode() {
+        return masternodeOutpoint.getHash().hashCode();
     }
 }

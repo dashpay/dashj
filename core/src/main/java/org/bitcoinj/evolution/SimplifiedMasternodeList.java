@@ -372,6 +372,12 @@ public class SimplifiedMasternodeList extends Message {
 
     public Masternode getValidMNByCollateral(TransactionOutPoint masternodeOutpoint) {
         // TODO: we don't have an answer for this yet
+        // masternodeOutpoint is hardcoded
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if (Objects.equals(entry.getValue().getCollateralOutpoint(), masternodeOutpoint)) {
+                return entry.getValue();
+            }
+        }
         return null;
     }
 
