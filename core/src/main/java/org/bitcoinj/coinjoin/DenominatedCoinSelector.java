@@ -16,17 +16,11 @@
 
 package org.bitcoinj.coinjoin;
 
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
 
 public class DenominatedCoinSelector extends ZeroConfCoinSelector {
-    private static final NetworkParameters UNITTEST = UnitTestParams.get();
-    private static final Context context = Context.getOrCreate(UNITTEST);
-
     private static final DenominatedCoinSelector instance = new DenominatedCoinSelector();
 
     public static DenominatedCoinSelector get() {
@@ -47,12 +41,10 @@ public class DenominatedCoinSelector extends ZeroConfCoinSelector {
     }
 
     boolean isTransactionSelectable(Transaction tx) {
-
         for (TransactionOutput output : tx.getOutputs()) {
-            if (!output.isDenominated())
-                return false;
+            if (output.isDenominated())
+                return true;
         }
-
-        return true;
+        return false;
     }
 }
