@@ -22,8 +22,8 @@ public class NoDestination extends TransactionDestination {
 
     public static NoDestination get() { return INSTANCE; }
 
-    public NoDestination() {
-        super(new byte[0]);
+    private NoDestination() {
+        super(new byte[20]);
     }
 
     public String toString()
