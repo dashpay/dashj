@@ -32,7 +32,7 @@ public class KeyHolderStorage {
     @GuardedBy("lock")
     ArrayList<KeyHolder> storage = Lists.newArrayList();
 
-    Script addKey(Wallet wallet) {
+    public Script addKey(Wallet wallet) {
         KeyHolder keyHolder = new KeyHolder(wallet);
         Script script = keyHolder.getScriptForDestination();
 
@@ -46,7 +46,7 @@ public class KeyHolderStorage {
         return script;
     }
 
-    void keepAll() {
+    public void keepAll() {
         ArrayList<KeyHolder> tmp;
         lock.lock();
         try {

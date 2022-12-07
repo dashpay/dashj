@@ -29,8 +29,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class CoinJoinBaseManager {
 
-    Logger log = LoggerFactory.getLogger(CoinJoinBaseManager.class);
-    protected ReentrantLock queueLock = Threading.lock("queueLock");
+    private final Logger log = LoggerFactory.getLogger(CoinJoinBaseManager.class);
+    protected final ReentrantLock queueLock = Threading.lock("queueLock");
 
     @GuardedBy("queueLock")
     protected final ArrayList<CoinJoinQueue> coinJoinQueue;
