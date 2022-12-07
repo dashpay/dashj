@@ -78,11 +78,11 @@ public class CoinJoinStatusUpdate extends Message {
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinStatusUpdate(sessionID=%d, state=%d, statusUpdate=%d, messageID=%d)",
+                "CoinJoinStatusUpdate(sessionID=%d, state=%s, statusUpdate=%s, messageID=%s)",
                 sessionID,
-                state.value,
-                statusUpdate.value,
-                messageID.value
+                state,
+                statusUpdate,
+                messageID
         );
     }
 
@@ -100,5 +100,27 @@ public class CoinJoinStatusUpdate extends Message {
 
     public PoolMessage getMessageID() {
         return messageID;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        CoinJoinStatusUpdate that = (CoinJoinStatusUpdate) o;
+
+        if (sessionID != that.sessionID) return false;
+        if (state != that.state) return false;
+        if (statusUpdate != that.statusUpdate) return false;
+        return messageID == that.messageID;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = sessionID;
+        result = 31 * result + (state != null ? state.hashCode() : 0);
+        result = 31 * result + (statusUpdate != null ? statusUpdate.hashCode() : 0);
+        result = 31 * result + (messageID != null ? messageID.hashCode() : 0);
+        return result;
     }
 }
