@@ -1,13 +1,37 @@
 package org.bitcoinj.coinjoin.utils;
 
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.TransactionOutPoint;
 
 import java.util.HashMap;
 
 public class ProTxToOutpoint {
-    static String [][] proTxHashOutpoints = new String[][] {
+
+    //ouzo
+    static String [][] proTxHashOutpointsOuzo = new String[][] {
+            {"9c6383ae5fc9457c0e27894ce22244d83215f1ae47c55ee15af5c1653811b649", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-9"},
+            {"ed7115646af132d697dec3af3437f840a89000ff715fde4273d394a8d4fc8df8", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-7"},
+            {"c68a8225a4f9ab71539cd58ff69469f5e4f52b3c5f4a58be2c7b9e7218ba9f50", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-8"},
+            {"62e07ab5282bed85ed838ce8dca25dca400086b3eeb192e2b6cb42f6cab49391", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-5"},
+            {"3fc39b657385a7d2e824ca2644bdcddcef0bc25775c30c4f747345ef4f1c7503", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-6"},
+            {"610b23d7591beb49c08255f1787c52901231e1a40051bc2404dbc270efaea6ff", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-3"},
+            {"fd5a2555ecfb70c986bb5af05a912a4760b7c7ac52400e07011032d452013c1c", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-4"},
+            {"aa8de588bee3e0e8b9b6ea1cebb3ddb10b125ee18a66919c3499343c23579010", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-1"},
+            {"0b1026e1c20029a3c3db9f59d0f5780e4560eb007ed425e83a529a6dff587704", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-2"},
+            {"5d53990bcd9f0e2cdb6a95af01e54fdaaccbc45495af0b3d01f913a8b1209813", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-11"},
+            {"1bd2a9718c21a0b5f7455437e47672c3604c09249a285058d1f3d3721fd2a892", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-10"},
+            {"030386a75a0435c91eaae617cc99ae34b25c1b3d2cf3f8773c300744ab7ad33d", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-13"},
+            {"961667367b6684c85fe58804d783c1f14b0fcb340855baa01ba0eb0b15ee4704", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-12"},
+            {"071fc54da8c5ce745e08b80f9546fd3c6e7362829dd0bce359c1146bcce77c01", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-15"},
+            {"5df2a00f27403bf932b794d56fdab8c9744e66c56fd6a3d8e51e2df4b4816cfd", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-14"},
+            {"34837c7e445c35d82da05e9cb9d7492d217112697a8d50c6a8e0b0e46ed5f39a", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-17"},
+            {"f9b90e04bc3f76a72ee2d87b056a7b372a4493c80ca17f12d0269e713f134164", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-16"},
+            {"979bce1a2e9769741dc2b23d851a5d75fa2daac6acb447a0be8dff012c377e3b", "0c7ba9711607862d7035fadb8d1f2a3d80e5f9db209e2b7c612d3970224f90b5-18"},
+    };
+
+    static String [][] proTxHashOutpointsTestNet = new String[][] {
             {"3a541549d161a0e134f54db0afaee615530bb6d84e353b82afc9af76a9a39329", "5bcb880b2c6159460c35749014add2d0be999e3b306758b7bfba007adc129ffd-0"},
             {"34f19e4ac7e1b2abbded7fe0d19991cde34eb7797d8e81fe01d6e73db2097180", "6f506a5dbb0e88fe83242d4f9641b6f4a2616d22c889b74f29b5bfa6291dfdca-1"},
             {"03253115037af9e1f3369db078d9f0e6ab190bf3f52ab51c0f1e2e57a9330e1b", "03253115037af9e1f3369db078d9f0e6ab190bf3f52ab51c0f1e2e57a9330e1b-1"},
@@ -411,11 +435,17 @@ public class ProTxToOutpoint {
     private static final HashMap<Sha256Hash, TransactionOutPoint> mapProTxOutpoint = new HashMap<>();
     private static final HashMap<TransactionOutPoint, Sha256Hash> mapOutpointProTxHash = new HashMap<>();
 
-    static {
+    public static void initialize(NetworkParameters params) {
+        String [][] proTxHashOutpoints;
+        if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
+            proTxHashOutpoints = proTxHashOutpointsTestNet;
+        } else {
+            proTxHashOutpoints = proTxHashOutpointsOuzo;
+        }
         for (String [] entry : proTxHashOutpoints) {
             Sha256Hash proTxHash = Sha256Hash.wrap(entry[0]);
             Sha256Hash txHash = Sha256Hash.wrap(entry[1].substring(0, 64));
-            int index = Integer.parseInt(entry[1].substring(64));
+            int index = Integer.parseInt(entry[1].substring(65));
             TransactionOutPoint outPoint = new TransactionOutPoint(Context.get().getParams(), index, txHash);
             mapProTxOutpoint.put(proTxHash, outPoint);
             mapOutpointProTxHash.put(outPoint, proTxHash);

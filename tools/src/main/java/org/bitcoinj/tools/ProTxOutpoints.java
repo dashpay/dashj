@@ -9,7 +9,11 @@ import java.util.Set;
 public class ProTxOutpoints {
     public static void main(String[] args) {
         try {
-            InputStream stream = ProTxOutpoints.class.getResourceAsStream("masternodelist.json");
+            String network = "";
+            if (args.length >= 1) {
+                network = "-" + args[0];
+            }
+            InputStream stream = ProTxOutpoints.class.getResourceAsStream("masternodelist"+network+".json");
             byte[] buffer = new byte[stream.available()];
             stream.read(buffer);
 
