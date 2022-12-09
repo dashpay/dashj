@@ -198,6 +198,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     // should peers be dropped after broadcast
     private boolean dropPeersAfterBroadcast = true;
 
+    // should send senddsq to all peers after connecting
+    private boolean shouldSendDsq = false;
+
     // This event listener is added to every peer. It's here so when we announce transactions via an "inv", every
     // peer can fetch them.
     private final PeerListener peerListener = new PeerListener();
@@ -1731,6 +1734,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 peer.addPreMessageReceivedEventListener(registration.executor, registration.listener);
             for (ListenerRegistration<MasternodeListDownloadedListener> registration : masternodeListDownloadListeners)
                 peer.addMasternodeListDownloadedListener(registration.executor, registration.listener);
+
+            // handle coinjoin related items
+            if (shouldSendDsq) {
+                peer.sendMessage(new SendCoinJoinQueue(params, true));
+            }
         } finally {
             lock.unlock();
         }
@@ -2910,5 +2918,13 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             }
         }
         return mostCommonHeight.getSecond();
+    }
+
+    public void shouldSendDsq(boolean shouldSendDsq) {
+        List<Peer> peerList = getConnectedPeers();
+        for (Peer peer : peerList) {
+            peer.sendMessage(new SendCoinJoinQueue(params, shouldSendDsq));
+        }
+        this.shouldSendDsq = shouldSendDsq;
     }
 }
