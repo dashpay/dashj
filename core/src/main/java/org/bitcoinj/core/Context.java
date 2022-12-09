@@ -16,8 +16,7 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.coinjoin.CoinJoinClientManager;
-import org.bitcoinj.coinjoin.CoinJoinClientQueueManager;
+import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.evolution.MasternodeMetaDataManager;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import javax.annotation.Nullable;
@@ -100,8 +99,7 @@ public class Context {
     private LLMQBackgroundThread llmqBackgroundThread;
     public MasternodeMetaDataManager masternodeMetaDataManager;
 
-    public HashMap<String, CoinJoinClientManager> coinJoinClientManagers;
-    public CoinJoinClientQueueManager coinJoinClientQueueManager;
+    public CoinJoinManager coinJoinManager;
     private final ScheduledExecutorService scheduledExecutorService;
     private ScheduledFuture<?> scheduledMasternodeSync;
     private ScheduledFuture<?> scheduledNetFulfilled;
@@ -135,7 +133,7 @@ public class Context {
         this.ensureMinRequiredFee = ensureMinRequiredFee;
         this.feePerKb = feePerKb;
         lastConstructed = this;
-        scheduledExecutorService = Executors.newScheduledThreadPool(1);
+        scheduledExecutorService = Executors.newScheduledThreadPool(1, new ContextPropagatingThreadFactory("context-thread-pool"));
         slot.set(this);
     }
 
@@ -282,8 +280,7 @@ public class Context {
         chainLockHandler = new ChainLocksHandler(this);
         llmqBackgroundThread = new LLMQBackgroundThread(this);
         masternodeMetaDataManager = new MasternodeMetaDataManager(this);
-        coinJoinClientManagers = new HashMap<>();
-        coinJoinClientQueueManager = new CoinJoinClientQueueManager(this);
+        coinJoinManager = new CoinJoinManager(this);
         BLS.Init();
         initializedObjects = true;
     }
@@ -410,28 +407,32 @@ public class Context {
 
     public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain blockChain, @Nullable AbstractBlockChain headerChain)
     {
-        this.peerGroup = peerGroup;
-        this.blockChain = blockChain;
-        this.headerChain = headerChain;
-        hashStore = new HashStore(blockChain.getBlockStore());
-        blockChain.addNewBestBlockListener(newBestBlockListener);
-        if (initializedObjects) {
-            sporkManager.setBlockChain(blockChain, peerGroup);
-            masternodeSync.setBlockChain(blockChain, netFullfilledRequestManager);
-            masternodeListManager.setBlockChain(blockChain, peerGroup != null ? peerGroup.headerChain : null, peerGroup, quorumManager, quorumSnapshotManager);
-            instantSendManager.setBlockChain(blockChain, peerGroup);
-            signingManager.setBlockChain(blockChain, headerChain);
-            chainLockHandler.setBlockChain(blockChain);
-            blockChain.setChainLocksHandler(chainLockHandler);
-            quorumManager.setBlockChain(blockChain);
-            updatedChainHead(blockChain.getChainHead());
+        if (this.peerGroup == null) {
+            this.peerGroup = peerGroup;
+            this.blockChain = blockChain;
+            this.headerChain = headerChain;
+            hashStore = new HashStore(blockChain.getBlockStore());
+            blockChain.addNewBestBlockListener(newBestBlockListener);
+            if (initializedObjects) {
+                sporkManager.setBlockChain(blockChain, peerGroup);
+                masternodeSync.setBlockChain(blockChain, netFullfilledRequestManager);
+                masternodeListManager.setBlockChain(blockChain, peerGroup != null ? peerGroup.headerChain : null, peerGroup, quorumManager, quorumSnapshotManager);
+                instantSendManager.setBlockChain(blockChain, peerGroup);
+                signingManager.setBlockChain(blockChain, headerChain);
+                chainLockHandler.setBlockChain(blockChain);
+                blockChain.setChainLocksHandler(chainLockHandler);
+                quorumManager.setBlockChain(blockChain);
+                updatedChainHead(blockChain.getChainHead());
+                coinJoinManager.initMasternodeGroup(blockChain);
+                coinJoinManager.setBlockchain(blockChain);
 
-            // trigger saving mechanisms
-            governanceManager.resume();
-            masternodeListManager.resume();
-            chainLockHandler.resume();
+                // trigger saving mechanisms
+                governanceManager.resume();
+                masternodeListManager.resume();
+                chainLockHandler.resume();
+            }
+            params.setDIPActiveAtTip(blockChain.getBestChainHeight() >= params.getDIP0001BlockHeight());
         }
-        params.setDIPActiveAtTip(blockChain.getBestChainHeight() >= params.getDIP0001BlockHeight());
     }
 
     public boolean isLiteMode() {
@@ -513,6 +514,7 @@ public class Context {
             scheduledGovernance = scheduledExecutorService.scheduleWithFixedDelay(
                     () -> governanceManager.doMaintenance(), 60, 5, TimeUnit.MINUTES);
         }
+        coinJoinManager.start(scheduledExecutorService);
     }
 
     public void shutdown() {
@@ -528,6 +530,7 @@ public class Context {
             scheduledGovernance.cancel(false);
             scheduledGovernance = null;
         }
+        coinJoinManager.stop();
     }
 
     public boolean isDebugMode() {
