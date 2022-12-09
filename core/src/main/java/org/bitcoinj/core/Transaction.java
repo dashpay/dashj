@@ -926,6 +926,12 @@ public class Transaction extends ChildMessage {
                                            SigHash sigHash, boolean anyoneCanPay) throws ScriptException {
         // Verify the API user didn't try to do operations out of order.
         checkState(!outputs.isEmpty(), "Attempting to sign tx without outputs.");
+        return addSignedInputNoOutputsCheck(prevOut, scriptPubKey, sigKey, sigHash, anyoneCanPay);
+    }
+
+    public TransactionInput addSignedInputNoOutputsCheck(TransactionOutPoint prevOut, Script scriptPubKey, ECKey sigKey,
+                                           SigHash sigHash, boolean anyoneCanPay) throws ScriptException {
+        // Verify the API user didn't try to do operations out of order.
         TransactionInput input = new TransactionInput(params, this, new byte[] {}, prevOut);
         addInput(input);
         int inputIndex = inputs.size() - 1;
