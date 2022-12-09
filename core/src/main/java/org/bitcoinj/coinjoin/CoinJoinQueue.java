@@ -121,11 +121,13 @@ public class CoinJoinQueue extends Message {
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinQueue(denomination=%d, masternodeOutpoint=%s, time=%d, ready=%s)",
+                "CoinJoinQueue(denomination=%s[%d], time=%d[expired=%s], ready=%s, masternodeOutpoint=%s)",
+                CoinJoin.denominationToString(denomination),
                 denomination,
-                masternodeOutpoint.toString(),
                 time,
-                ready
+                isTimeOutOfBounds(),
+                ready,
+                masternodeOutpoint
         );
     }
 
