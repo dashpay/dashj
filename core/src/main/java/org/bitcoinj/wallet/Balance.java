@@ -109,4 +109,19 @@ public class Balance {
         this.denominatedUntrustedPending = denominatedUntrustedPending;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "Balance{" +
+                "myTrusted=" + myTrusted.toFriendlyString() +
+                ", myUntrustedPending=" + myUntrustedPending.toFriendlyString() +
+                ", myImmature=" + myImmature.toFriendlyString() +
+                ", watchOnlyTrusted=" + watchOnlyTrusted.toFriendlyString() +
+                ", watchOnlyUntrustedPending=" + watchOnlyUntrustedPending.toFriendlyString() +
+                ", watchOnlyImmature=" + watchOnlyImmature.toFriendlyString() +
+                ", anonymized=" + anonymized.toFriendlyString() +
+                ", denominatedTrusted=" + denominatedTrusted.toFriendlyString() +
+                ", denominatedUntrustedPending=" + denominatedUntrustedPending.toFriendlyString() +
+                '}';
+    }
 }
