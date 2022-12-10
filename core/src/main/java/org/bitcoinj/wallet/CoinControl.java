@@ -67,11 +67,11 @@ public class CoinControl {
         avoidPartialSpends = false;
         avoidAddressReuse = false;
         setSelected.clear();
-        feeRate = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+        feeRate = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(1000);
         overrideFeeRate = false;
         confirmTarget = -1;
         requireAllInputs = true;
-        discardFeeRate = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+        discardFeeRate = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.div(1000);
         if (fResetCoinType) {
             coinType = CoinType.ALL_COINS;
         }
@@ -127,7 +127,7 @@ public class CoinControl {
     }
 
     public void setFeeRate(Coin feeRate) {
-        this.feeRate = feeRate;
+        this.feeRate = feeRate.div(1000);
     }
 
     public TransactionDestination getDestChange() {
