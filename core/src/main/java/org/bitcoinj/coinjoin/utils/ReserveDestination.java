@@ -70,7 +70,7 @@ public class ReserveDestination extends ReserveScript {
     }
     //! Keep the address. Do not return it's key to the keypool when this object goes out of scope
     public void keepDestination() {
-        // TODO: tell the wallt to keep the destination
+        // TODO: tell the wallet to keep the destination
         index = -1;
         vchPubKey = null;
         address = NoDestination.get();
