@@ -503,6 +503,10 @@ public class TransactionInput extends ChildMessage {
             && outpoint.equals(other.outpoint) && Arrays.equals(scriptBytes, other.scriptBytes);
     }
 
+    public boolean equalsWithoutParent(TransactionInput other) {
+        return sequence == other.sequence && outpoint.equals(other.outpoint);
+    }
+
     @Override
     public int hashCode() {
         return Objects.hashCode(sequence, outpoint, Arrays.hashCode(scriptBytes));

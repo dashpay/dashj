@@ -441,4 +441,8 @@ public class TransactionOutput extends ChildMessage {
     public int hashCode() {
         return Objects.hashCode(value, parent, Arrays.hashCode(scriptBytes));
     }
+
+    public boolean equalsWithoutParent(TransactionOutput output) {
+        return value == output.value && Arrays.equals(scriptBytes, output.scriptBytes);
+    }
 }
