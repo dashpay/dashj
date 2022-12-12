@@ -63,7 +63,6 @@ public class CoinJoinManager {
     void doMaintenance() {
         // report masternode group
         tick++;
-        log.info("tick: {}, tick % 10: {}", tick, tick % 60);
         if (tick % 10 == 0) {
             log.info("coinjoin: connected to {} masternodes", masternodeGroup.getConnectedPeers().size());
             for (Peer peer : masternodeGroup.getConnectedPeers()) {
@@ -77,9 +76,20 @@ public class CoinJoinManager {
         }
     }
 
+    private Runnable maintenanceRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                doMaintenance();
+            } catch (Exception x) {
+                log.info("error when running doMaintenance", x);
+            }
+        }
+    };
+
     public void start(ScheduledExecutorService scheduledExecutorService) {
         schedule = scheduledExecutorService.scheduleWithFixedDelay(
-                this::doMaintenance, 1, 1, TimeUnit.SECONDS);
+                maintenanceRunnable, 1, 1, TimeUnit.SECONDS);
     }
 
     public void stop() {
