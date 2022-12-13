@@ -11,7 +11,7 @@ public class TransactionBuilderOutput {
     /// Reserve key where the amount of this output will end up
     private final ReserveDestination dest;
     /// Amount this output will receive
-    private Coin amount = Coin.ZERO;
+    private Coin amount;
     /// ScriptPubKey of this output
     Script script;
 
