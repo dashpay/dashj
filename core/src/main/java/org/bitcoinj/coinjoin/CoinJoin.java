@@ -23,6 +23,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.utils.Threading;
@@ -48,7 +49,7 @@ public class CoinJoin {
     );
 
     private static final HashMap<Sha256Hash, CoinJoinBroadcastTx> mapDSTX = new HashMap<>();
-    private ReentrantLock mapdstx = Threading.lock("mapdstx");
+    private static final ReentrantLock mapdstxLock = Threading.lock("mapdstx");
 
     public static List<Coin> getStandardDenominations() {
         return standardDenominations;
@@ -137,8 +138,10 @@ public class CoinJoin {
 
     /// If the collateral is valid given by a client
     public static boolean isCollateralValid(Transaction txCollateral) {
-        if (txCollateral.getOutputs().isEmpty()) return false;
-        if (txCollateral.getUpdateTime().getTime() != 0) return false;
+        if (txCollateral.getOutputs().isEmpty())
+            return false;
+        if (txCollateral.getLockTime() != 0)
+            return false;
 
         Coin nValueIn = Coin.ZERO;
         Coin nValueOut = Coin.ZERO;
@@ -152,13 +155,23 @@ public class CoinJoin {
             }
         }
 
+        for (TransactionInput txin : txCollateral.getInputs()) {
+            Transaction tx = txin.getConnectedTransaction();
+            if (tx != null) {
+                nValueIn = nValueIn.add(tx.getOutput(txin.getOutpoint().getIndex()).getValue());
+            } else {
+                log.info("coinjoin: -- Unknown inputs in collateral transaction, txCollateral={}", txCollateral); /* Continued */
+                return false;
+            }
+        }
+
         //collateral transactions are required to pay out a small fee to the miners
         if (nValueIn.minus(nValueOut).isLessThan(getCollateralAmount())) {
             log.info("coinjoin:  did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut.minus(nValueIn), txCollateral); /* Continued */
             return false;
         }
 
-        log.info("coinjoin: -- {}", txCollateral); /* Continued */
+        log.info("coinjoin: collateral: {}", txCollateral); /* Continued */
 
         return true;
     }
@@ -192,8 +205,8 @@ public class CoinJoin {
         return -1L * inputAmount.div(Coin.COIN.value).value;
     }
 
-    private void checkDSTXes(StoredBlock block) {
-        mapdstx.lock();
+    private static void checkDSTXes(StoredBlock block) {
+        mapdstxLock.lock();
         try {
             Iterator<Map.Entry<Sha256Hash, CoinJoinBroadcastTx>> it = mapDSTX.entrySet().iterator();
             while (it.hasNext()) {
@@ -204,7 +217,7 @@ public class CoinJoin {
             }
             log.info("checkDSTXes -- mapDSTX.size()={}", mapDSTX.size());
         } finally {
-            mapdstx.unlock();
+            mapdstxLock.unlock();
         }
     }
 
@@ -215,24 +228,54 @@ public class CoinJoin {
         return mapDSTX.get(hash);
     }
 
-    public static void UpdatedBlockTip(StoredBlock block){
+    public static void updatedBlockTip(StoredBlock block){
+        checkDSTXes(block);
+    }
+    public static void notifyChainLock(StoredBlock block) {
+        checkDSTXes(block);
+    }
+
+    public static void updateDSTXConfirmedHeight(Transaction tx, int nHeight) {
+        CoinJoinBroadcastTx broadcastTx = mapDSTX.get(tx.getTxId());
+        if (broadcastTx == null) {
+            return;
+        }
+
+        broadcastTx.setConfirmedHeight(nHeight);
+        log.info("coinjoin: txid={}, nHeight={}", tx.getTxId(), nHeight);
 
     }
-    public static void NotifyChainLock(StoredBlock block) {
-
+    public static void transactionAddedToMempool(Transaction tx) {
+        mapdstxLock.lock();
+        try {
+            updateDSTXConfirmedHeight(tx, -1);
+        } finally {
+            mapdstxLock.unlock();
+        }
     }
+    public static void blockConnected(Block block, StoredBlock storedBlock, List<Transaction> vtxConflicted) {
+        mapdstxLock.lock();
+        try {
+            for (Transaction tx : vtxConflicted){
+                updateDSTXConfirmedHeight(tx, -1);
+            }
 
-    public static void UpdateDSTXConfirmedHeight(Transaction tx, int nHeight) {
-
+            for (Transaction tx : block.getTransactions()){
+                updateDSTXConfirmedHeight(tx, storedBlock.getHeight());
+            }
+        } finally {
+            mapdstxLock.unlock();
+        }
     }
-    public static void TransactionAddedToMempool(Transaction tx) {
-
-    }
-    public static void BlockConnected(Block block, StoredBlock storedBlock, List<Transaction> vtxConflicted) {
-
-    }
-    public static void BlockDisconnected(Block block, StoredBlock storedBlock) {
-
+    public static void blockDisconnected(Block block, StoredBlock storedBlock) {
+        mapdstxLock.lock();
+        try {
+            for (Transaction tx : block.getTransactions()){
+                updateDSTXConfirmedHeight(tx, -1);
+            }
+        } finally {
+            mapdstxLock.unlock();
+        }
     }
 
     public static String getMessageByID(PoolMessage nMessageID) {

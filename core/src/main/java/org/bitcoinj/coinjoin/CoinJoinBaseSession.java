@@ -70,8 +70,8 @@ public class CoinJoinBaseSession {
             sessionID.set(0);
             sessionDenom = 0;
             entries.clear();
-            finalMutableTransaction.getInputs().clear();
-            finalMutableTransaction.getOutputs().clear();
+            finalMutableTransaction.clearInputs();
+            finalMutableTransaction.clearOutputs();
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
         } finally {
             lock.unlock();
@@ -84,7 +84,7 @@ public class CoinJoinBaseSession {
 
     protected ValidInOuts isValidInOuts(List<TransactionInput> vin, List<TransactionOutput> vout, PoolMessage messageIDRet, boolean consumeCollateral) {
 
-        HashSet<Script> setScripPubKeys = new HashSet<Script>();
+        HashSet<Script> setScripPubKeys = new HashSet<>();
         final ValidInOuts result = new ValidInOuts();
         result.messageId = MSG_NOERR;
         if (consumeCollateral)
@@ -103,7 +103,7 @@ public class CoinJoinBaseSession {
             public ValidInOuts check(TransactionOutput txout) {
                 int denom = CoinJoin.amountToDenomination(txout.getValue());
                 if (denom != sessionDenom) {
-                    log.info("ERROR: incompatible denom {} ({}) != sessionDenom {} ({})\n",
+                    log.info("ERROR: incompatible denom {} ({}) != sessionDenom {} ({})",
                             denom, CoinJoin.denominationToString(denom), sessionDenom, CoinJoin.denominationToString(sessionDenom));
                     result.setMessageId(ERR_DENOM);
                     if (consumeCollateral)
@@ -130,6 +130,7 @@ public class CoinJoinBaseSession {
             }
         };
 
+        // Dash Core checks that the fee's are zero, but we cannot since we don't have access to all of the inputs
         Coin fees = Coin.ZERO;
 
         for (TransactionOutput txout : vout) {
@@ -137,7 +138,6 @@ public class CoinJoinBaseSession {
             if (!outputResult.result) {
                 return result.setResult(false);
             }
-            fees = fees.subtract(txout.getValue());
         }
 
         for (TransactionInput txin :vin){
@@ -166,8 +166,10 @@ public class CoinJoinBaseSession {
 
     protected int sessionDenom = 0; // Users must submit a denom matching this
 
-    public CoinJoinBaseSession() {
+    public CoinJoinBaseSession(Context context) {
+        this.context = context;
         entries = Lists.newArrayList();
+        finalMutableTransaction = new Transaction(context.getParams());
     }
 
     public AtomicReference<PoolState> getState() {

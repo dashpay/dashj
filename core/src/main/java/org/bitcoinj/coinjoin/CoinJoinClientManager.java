@@ -15,11 +15,19 @@
  */
 package org.bitcoinj.coinjoin;
 
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
+import org.bitcoinj.core.MasternodeSync;
+import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.SimplifiedMasternodeList;
+import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
@@ -28,10 +36,16 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MAX;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MIN;
 
 public class CoinJoinClientManager {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
@@ -58,7 +72,8 @@ public class CoinJoinClientManager {
     private int cachedBlockHeight = 0;
 
     private boolean waitForAnotherBlock() {
-        if (!mixingWallet.getContext().masternodeSync.isBlockchainSynced()) return true;
+        if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) &&
+                !mixingWallet.getContext().masternodeSync.isBlockchainSynced()) return true;
 
         if (CoinJoinClientOptions.isMultiSessionEnabled()) return false;
 
@@ -67,23 +82,38 @@ public class CoinJoinClientManager {
 
     // Make sure we have enough keys since last backup
     private boolean checkAutomaticBackup() {
-        if (!CoinJoinClientOptions.isEnabled() || !isMixing())
-            return false;
-
-        return true;
+        return CoinJoinClientOptions.isEnabled() && isMixing();
     }
 
     public int cachedNumBlocks = Integer.MAX_VALUE;    // used for the overview screen
-    public boolean createAutoBackups = true; // builtin support for automatic backups
 
     public CoinJoinClientManager(Wallet wallet) {
         mixingWallet = wallet;
         context = wallet.getContext();
     }
 
-    public void processMessage(Peer from, String msg_type, boolean enable_bip61) {
+    public void processMessage(Peer from, Message message, boolean enable_bip61) {
+        if (!CoinJoinClientOptions.isEnabled())
+            return;
+        if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !context.masternodeSync.isBlockchainSynced())
+            return;
 
+        if (message instanceof CoinJoinStatusUpdate ||
+                message instanceof CoinJoinFinalTransaction ||
+                message instanceof CoinJoinComplete) {
+            //AssertLockNotHeld(cs_deqsessions);
+            lock.lock();
+            try {
+                for (CoinJoinClientSession session : deqSessions) {
+                    session.processMessage(from, message, enable_bip61);
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
     }
+
+
 
     public boolean startMixing() {
         return isMixing.compareAndSet(false, true);
@@ -101,7 +131,7 @@ public class CoinJoinClientManager {
         lock.lock();
         try {
             for (CoinJoinClientSession session : deqSessions){
-                session.ResetPool();
+                session.resetPool();
             }
             deqSessions.clear();
         } finally {
@@ -139,30 +169,15 @@ public class CoinJoinClientManager {
         }
     }
 
-    public boolean getMixingMasternodesInfo(ArrayList<Masternode> vecDmnsRet) {
-        vecDmnsRet.clear();
-        lock.lock();
-        try {
-            for (CoinJoinClientSession session : deqSessions) {
-                Masternode dmn = session.getMixingMasternodeInfo();
-                if (dmn != null) {
-                    vecDmnsRet.add(dmn);
-                }
-            }
-            return !vecDmnsRet.isEmpty();
-        } finally {
-            lock.unlock();
-        }
-    }
-
     /// Passively run mixing in the background according to the configuration in settings
-    public boolean doAutomaticDenonimating() {
+    public boolean doAutomaticDenominating() {
         return doAutomaticDenominating(false);
     }
     public boolean doAutomaticDenominating(boolean dryRun) {
-        if (!CoinJoinClientOptions.isEnabled() || !isMixing()) return false;
+        if (!CoinJoinClientOptions.isEnabled() || !isMixing())
+            return false;
 
-        if (!mixingWallet.getContext().masternodeSync.isBlockchainSynced()) {
+        if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !mixingWallet.getContext().masternodeSync.isBlockchainSynced()) {
             strAutoDenomResult.append("Can't mix while sync in progress.");
             return false;
         }
@@ -199,10 +214,10 @@ public class CoinJoinClientManager {
 
         lock.lock();
         try {
-            if (deqSessions.size() < CoinJoinClientOptions.getSessions()){
+            if (deqSessions.size() < CoinJoinClientOptions.getSessions()) {
                 deqSessions.addLast(new CoinJoinClientSession(mixingWallet));
             }
-            for (CoinJoinClientSession session: deqSessions){
+            for (CoinJoinClientSession session: deqSessions) {
                 if (!checkAutomaticBackup()) return false;
 
                 if (waitForAnotherBlock()) {
@@ -221,19 +236,65 @@ public class CoinJoinClientManager {
     }
 
     public boolean trySubmitDenominate(MasternodeAddress mnAddr) {
-        return false;
+        lock.lock();
+        try {
+            for (CoinJoinClientSession session : deqSessions) {
+                Masternode mnMixing = session.getMixingMasternodeInfo();
+                if (mnMixing != null && mnMixing.getService().equals(mnAddr) && session.getState().get() == PoolState.POOL_STATE_QUEUE) {
+                    session.submitDenominate();
+                    return true;
+                } else {
+                    log.info("mixingMasternode {} != mnAddr {}", mnMixing != null ? mnMixing.getService().getSocketAddress() : "null", mnAddr.getSocketAddress());
+                }
+            }
+            return false;
+        } finally {
+            lock.unlock();
+        }
     }
 
     public boolean markAlreadyJoinedQueueAsTried(CoinJoinQueue dsq) {
-        return false;
+        lock.lock();
+        try {
+            for (CoinJoinClientSession session :deqSessions){
+                Masternode mnMixing;
+                if ((mnMixing = session.getMixingMasternodeInfo()) != null && mnMixing.getCollateralOutpoint().equals(dsq.getMasternodeOutpoint())) {
+                    dsq.setTried(true);
+                    return true;
+                }
+            }
+            return false;
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void checkTimeout() {
+        if (!CoinJoinClientOptions.isEnabled() || !isMixing()) return;
 
+        lock.lock();
+        try {
+            for (CoinJoinClientSession session :deqSessions){
+                if (session.checkTimeout()) {
+                    strAutoDenomResult.append("Session timed out.");
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void processPendingDsaRequest() {
-
+        lock.lock();
+        try {
+            for (CoinJoinClientSession session :deqSessions){
+                if (session.processPendingDsaRequest()) {
+                    strAutoDenomResult.append("Mixing in progress...");
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
     // TODO: this is not good because SPV doesn't know the outpoint
@@ -241,15 +302,81 @@ public class CoinJoinClientManager {
         masternodesUsed.add(outpointMn);
     }
     public Masternode getRandomNotUsedMasternode() {
+        SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
+
+        int nCountEnabled = mnList.getValidMNsCount();
+        int nCountNotExcluded = nCountEnabled -  masternodesUsed.size();
+
+        log.info("coinjoin:  {} enabled masternodes, {} masternodes to choose from", nCountEnabled, nCountNotExcluded);
+        if (nCountNotExcluded < 1) {
+            return null;
+        }
+
+        // fill a vector
+        ArrayList<Masternode> vpMasternodesShuffled = new ArrayList<>(nCountEnabled);
+
+        mnList.forEachMN(true, new SimplifiedMasternodeList.ForeachMNCallback() {
+            @Override
+            public void processMN(SimplifiedMasternodeListEntry mn) {
+                vpMasternodesShuffled.add(mn);
+            }
+        });
+
+        // shuffle pointers
+        Collections.shuffle(vpMasternodesShuffled);
+
+        HashSet<TransactionOutPoint> excludeSet = new HashSet<>(masternodesUsed);
+
+        // loop through
+        for (Masternode dmn : vpMasternodesShuffled) {
+            if (excludeSet.contains(dmn.getCollateralOutpoint())) {
+                continue;
+            }
+
+            log.info("coinjoin:  found, masternode={}", dmn.getProTxHash());
+            return dmn;
+        }
+
+        log.info("coinjoin: failed");
         return null;
+    }
+
+    private final NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
+        @Override
+        public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+            cachedBlockHeight = block.getHeight();
+        }
+    };
+
+    public void setBlockChain(AbstractBlockChain blockChain) {
+        blockChain.addNewBestBlockListener(newBestBlockListener);
+        cachedBlockHeight = blockChain.getBestChainHeight();
+    }
+
+    public void close(AbstractBlockChain blockChain) {
+        blockChain.removeNewBestBlockListener(newBestBlockListener);
     }
 
     public void updatedSuccessBlock() {
         cachedLastSuccessBlock = cachedBlockHeight;
     }
-
+    static int nTick = 0;
+    static int nDoAutoNextRun = nTick + COINJOIN_AUTO_TIMEOUT_MIN;
     public void doMaintenance() {
+        if (!CoinJoinClientOptions.isEnabled())
+            return;
 
+        if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)
+                &&!context.masternodeSync.isBlockchainSynced())
+            return;
+
+        nTick++;
+        checkTimeout();
+        processPendingDsaRequest();
+        if (nDoAutoNextRun >= nTick) {
+            doAutomaticDenominating();
+            nDoAutoNextRun = nTick + COINJOIN_AUTO_TIMEOUT_MIN + new Random().nextInt(COINJOIN_AUTO_TIMEOUT_MAX - COINJOIN_AUTO_TIMEOUT_MIN);
+        }
     }
 
 }
