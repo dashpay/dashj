@@ -105,6 +105,20 @@ public class CoinJoinEntry extends Message {
         );
     }
 
+    public String toString(boolean includeMore) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(this);
+        if (includeMore) {
+            for (CoinJoinTransactionInput input : mixingInputs) {
+                builder.append("\n  input:  ").append(input);
+            }
+            for (TransactionOutput output : mixingOutputs) {
+                builder.append("\n  output: ").append(output);
+            }
+        }
+        return builder.toString();
+    }
+
     public List<CoinJoinTransactionInput> getMixingInputs() {
         return mixingInputs;
     }
