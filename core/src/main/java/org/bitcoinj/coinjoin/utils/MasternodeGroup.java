@@ -129,7 +129,6 @@ public class MasternodeGroup extends PeerGroup {
     }
 
     /**
-     * See {@link #MasternodeGroup(Context, AbstractBlockChain, AbstractBlockChain, ClientConnectionManager)}
      *
      * @param params
      * @param chain
