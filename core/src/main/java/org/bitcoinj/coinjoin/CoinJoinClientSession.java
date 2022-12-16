@@ -990,16 +990,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                         return false;
                     }
 
-                    log.info("coinjoin:  Signing my input {}", nMyInputIndex);
-                    // TODO we're using amount=0 here but we should use the correct amount. This works because Dash ignores the amount while signing/verifying (only used in Bitcoin/Segwit)
-
-        /*
-                    if (!signSignature(mixingWallet.getSigningProvider(),
-                    prevPubKey, finalMutableTransaction, nMyInputIndex, 0, int(SIGHASH_ALL | SIGHASH_ANYONECANPAY))) { // changes scriptSig
-                        log.info("coinjoin:  Unable to sign my own transaction!");
-                        // not sure what to do here, it will time out...?
-                    }*/
-
                     sigs.add(finalMutableTransaction.getInput(nMyInputIndex));
                     log.info("coinjoin:  nMyInputIndex: {}, sigs.size(): {}, scriptSig={}",
                             nMyInputIndex, sigs.size(), finalMutableTransaction.getInput(nMyInputIndex).getScriptSig());
@@ -1122,12 +1112,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         if (!CoinJoinClientOptions.isEnabled())
             return;
 
-        // TODO: should we wait here?
-        //TRY_LOCK(mixingWallet.cs_wallet, lockWallet);
-        //if (!lockWallet) {
-        //    UninterruptibleSleep(std::chrono::milliseconds{50});
-        //    continue;
-        //}
+        // TODO: should we wait here? check Dash Core code
+
         for (TransactionOutPoint outpoint : outPointLocked)
             mixingWallet.unlockCoin(outpoint);
 

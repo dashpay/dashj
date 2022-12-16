@@ -101,7 +101,6 @@ public class CoinJoinClientManager {
         if (message instanceof CoinJoinStatusUpdate ||
                 message instanceof CoinJoinFinalTransaction ||
                 message instanceof CoinJoinComplete) {
-            //AssertLockNotHeld(cs_deqsessions);
             lock.lock();
             try {
                 for (CoinJoinClientSession session : deqSessions) {
