@@ -12,6 +12,7 @@ import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.evolution.Masternode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,5 +142,9 @@ public class CoinJoinManager {
             masternodeGroup.stopAsync();
             isRunning = false;
         }
+    }
+
+    public void disconnectMasternode(Masternode service) {
+        masternodeGroup.disconnectMasternode(service);
     }
 }

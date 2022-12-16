@@ -880,7 +880,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         unlockCoins();
         lock.lock();
         try {
-            setNull();
+            setNull(); // this will also disconnect the masternode
         } finally {
             lock.unlock();
         }
@@ -1047,6 +1047,11 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     @GuardedBy("lock")
     protected void setNull() {
         // Client side
+        if (mixingMasternode != null) {
+            if (context.coinJoinManager.isMasternodeOrDisconnectRequested(mixingMasternode.getService())) {
+                context.coinJoinManager.disconnectMasternode(mixingMasternode);
+            }
+        }
         mixingMasternode = null;
         pendingDsaRequest = null;
 

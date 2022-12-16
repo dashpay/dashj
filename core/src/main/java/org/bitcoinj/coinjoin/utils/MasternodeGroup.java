@@ -23,6 +23,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
 import org.bitcoinj.net.ClientConnectionManager;
@@ -159,6 +160,35 @@ public class MasternodeGroup extends PeerGroup {
                 return peer.isMasternode();
             }
         });
+    }
+
+    ArrayList<Masternode> pendingClosingMasternodes = new ArrayList<>();
+    public void disconnectMasternode(Masternode mn) {
+        forPeer(mn.getService(), new ForPeer() {
+            @Override
+            public boolean process(Peer peer) {
+                log.info("Closing masternode {}", peer.getAddress().getSocketAddress());
+                peer.close();
+                pendingClosingMasternodes.add(mn);
+                return true;
+            }
+        });
+    }
+
+    @Override
+    protected void handlePeerDeath(final Peer peer, @Nullable Throwable exception) {
+        super.handlePeerDeath(peer, exception);
+        Masternode masternode = null;
+        for (Masternode mn : pendingClosingMasternodes) {
+            if (peer.getAddress().getSocketAddress().equals(mn.getService())) {
+                masternode = mn;
+            }
+        }
+        if (masternode != null) {
+            pendingClosingMasternodes.remove(masternode);
+            pendingMasternodes.remove(masternode.getProTxHash());
+            setMaxConnections(getMaxConnections() - 1);
+        }
     }
 
     public interface ForPeer {
