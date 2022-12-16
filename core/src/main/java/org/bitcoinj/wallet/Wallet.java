@@ -26,8 +26,8 @@ import com.google.protobuf.*;
 import net.jcip.annotations.*;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
-import org.bitcoinj.coinjoin.CoinJoinCoinSelector;
 import org.bitcoinj.coinjoin.CoinJoinConstants;
+import org.bitcoinj.coinjoin.CoinJoinTransactionInput;
 import org.bitcoinj.coinjoin.DenominatedCoinSelector;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
 import org.bitcoinj.coinjoin.utils.InputCoin;
@@ -4025,7 +4025,7 @@ public class Wallet extends BaseTaggableObject
         return new Balance()
                 .setMyTrusted(getBalance(BalanceType.AVAILABLE_SPENDABLE))
                 .setDenominatedTrusted(getBalance(BalanceType.DENOMINATED_FOR_MIXING_SPENDABLE))
-                .setDenominatedUntrustedPending(getBalance(BalanceType.DENOMINATED_FOR_MIXING))
+                //.setDenominatedUntrustedPending(getBalance(BalanceType.DENOMINATED_FOR_MIXING))
                 .setAnonymized(getBalance(BalanceType.COINJOIN_SPENDABLE));
 
         //TODO: support as many balance types as possible
@@ -4667,7 +4667,10 @@ public class Wallet extends BaseTaggableObject
 
                     // exclude non coinjoin outputs if isCoinJoinOnly is true
                     // exclude coinjoin outputs when isCoinJoinOnly is false
-                    if (output.isCoinJoin(this) != isCoinJoinOnly) continue;
+                    boolean isCoinJoin = output.isCoinJoin(this) && isFullyMixed(output);
+
+                    if (isCoinJoin != isCoinJoinOnly)
+                        continue;
 
                     Transaction transaction = checkNotNull(output.getParentTransaction());
                     if (excludeImmatureCoinbases && !transaction.isMature())
@@ -5996,9 +5999,10 @@ public class Wallet extends BaseTaggableObject
             keyChainGroupLock.lock();
 
             if(!hasCoinJoinKeyChain(path)) {
-                if (coinJoinKeyChainGroup == null)
+                if (coinJoinKeyChainGroup == null) {
                     coinJoinKeyChainGroup = KeyChainGroup.builder(params).build();
-                coinJoinKeyChainGroup.addAndActivateHDChain(DeterministicKeyChain.builder().seed(getKeyChainSeed()).accountPath(path).build());
+                    coinJoinKeyChainGroup.addAndActivateHDChain(DeterministicKeyChain.builder().seed(getKeyChainSeed()).accountPath(path).build());
+                }
             }
         }
         finally {
@@ -6703,20 +6707,30 @@ public class Wallet extends BaseTaggableObject
             return false;
         return findCoinJoinRedeemDataFromScriptHash(payToScriptHash) != null;
     }
+
     public boolean hasCollateralInputs() {
         return hasCollateralInputs(true);
     }
 
     public boolean hasCollateralInputs(boolean onlyConfirmed) {
-        return !getBalance(new CoinJoinCoinSelector(this, onlyConfirmed)).isZero();
+        ArrayList<TransactionOutput> vCoins = Lists.newArrayList();
+        CoinControl coin_control = new CoinControl();
+        coin_control.setCoinType(CoinType.ONLY_COINJOIN_COLLATERAL);
+        availableCoins(vCoins, onlyConfirmed, coin_control);
+
+        return !vCoins.isEmpty();
     }
 
     public boolean isSpent(Sha256Hash hash, long index) {
         lock.lock();
         try {
             // TODO: should this be spent.contains(hash)?
-            Transaction spentTx = spent.get(hash);
-            return spentTx.getOutput(index).getSpentBy() != null;
+            Transaction tx = unspent.get(hash);
+            if (tx == null) {
+                return spent.get(hash) != null;
+            }
+
+            return tx.getOutput(index).getSpentBy() != null;
         } finally {
             lock.unlock();
         }
@@ -6757,7 +6771,7 @@ public class Wallet extends BaseTaggableObject
             Transaction tx = getTransaction(input.getOutpoint().getHash());
             if (tx != null) {
                 if (input.getOutpoint().getIndex() < tx.getOutputs().size()) {
-                    return tx.getOutput(input.getIndex()).isMine(this);
+                    return tx.getOutput(input.getOutpoint().getIndex()).isMine(this);
                 }
             }
         } finally {
@@ -6852,6 +6866,7 @@ public class Wallet extends BaseTaggableObject
             roundsRef = fDenomFound
                     ? (nShortest >= roundsMax - 1 ? roundsMax : nShortest + 1) // good, we a +1 to the shortest one but only roundsMax rounds max allowed
                     : 0;            // too bad, we are the fist one in that chain
+            mapOutpointRoundsCache.put(outpoint, roundsRef);
             log.info(String.format("UPDATED   %-70s %3d", outpoint.toStringCpp(), roundsRef));
             return roundsRef;
         } finally {
@@ -6860,6 +6875,11 @@ public class Wallet extends BaseTaggableObject
     }
 
     Sha256Hash coinJoinSalt = Sha256Hash.ZERO_HASH;
+
+    public boolean isFullyMixed(TransactionOutput output) {
+        return isFullyMixed(new TransactionOutPoint(params, output));
+    }
+
     public boolean isFullyMixed(TransactionOutPoint outPoint) {
         lock.lock();
         try {
@@ -6891,34 +6911,39 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
-    boolean fAnonymizableTallyCached = false;
+    boolean anonymizableTallyCached = false;
     ArrayList<CompactTallyItem> vecAnonymizableTallyCached = new ArrayList<>();
-    boolean fAnonymizableTallyCachedNonDenom = false;
+    boolean anonymizableTallyCachedNonDenom = false;
     ArrayList<CompactTallyItem> vecAnonymizableTallyCachedNonDenom = new ArrayList<>();
 
+    public List<CompactTallyItem> selectCoinsGroupedByAddresses(boolean skipDenominated,
+                                                                boolean anonymizable,
+                                                                boolean skipUnconfirmed) {
+        return selectCoinsGroupedByAddresses(skipDenominated, anonymizable, skipUnconfirmed, -1);
+    }
 
-    public List<CompactTallyItem> selectCoinsGroupedByAddresses(boolean fSkipDenominated,
-                                                                boolean fAnonymizable,
-                                                                boolean fSkipUnconfirmed,
+    public List<CompactTallyItem> selectCoinsGroupedByAddresses(boolean skipDenominated,
+                                                                boolean anonymizable,
+                                                                boolean skipUnconfirmed,
                                                                 int nMaxOupointsPerAddress) {
         List<TransactionOutput> candidates = calculateAllSpendCandidates(true, true, false);
 
-        CoinSelection selection = new CoinJoinCoinSelector(this).select(MAX_MONEY, candidates);
+        CoinSelection selection = DefaultCoinSelector.get().select(MAX_MONEY, candidates);
 
         lock.lock();
         try {
             // Try using the cache for already confirmed mixable inputs.
             // This should only be used if nMaxOupointsPerAddress was NOT specified.
-        if(nMaxOupointsPerAddress == -1 && fAnonymizable && fSkipUnconfirmed) {
-            if(fSkipDenominated && fAnonymizableTallyCachedNonDenom) {
-                log.info("SelectCoinsGroupedByAddresses - using cache for non-denom inputs {}", vecAnonymizableTallyCachedNonDenom.size());
-                return vecAnonymizableTallyCachedNonDenom;
+            if(nMaxOupointsPerAddress == -1 && anonymizable && skipUnconfirmed) {
+                if(skipDenominated && anonymizableTallyCachedNonDenom) {
+                    log.info("SelectCoinsGroupedByAddresses - using cache for non-denom inputs {}", vecAnonymizableTallyCachedNonDenom.size());
+                    return vecAnonymizableTallyCachedNonDenom;
+                }
+                if(!skipDenominated && anonymizableTallyCached) {
+                    log.info("SelectCoinsGroupedByAddresses - using cache for all inputs {}", vecAnonymizableTallyCached.size());
+                    return vecAnonymizableTallyCached;
+                }
             }
-            if(!fSkipDenominated && fAnonymizableTallyCached) {
-                log.info("SelectCoinsGroupedByAddresses - using cache for all inputs {}", vecAnonymizableTallyCached.size());
-                return vecAnonymizableTallyCached;
-            }
-        }
 
             Coin smallestDenom = CoinJoin.getSmallestDenomination();
 
@@ -6927,17 +6952,25 @@ public class Wallet extends BaseTaggableObject
             HashSet<Sha256Hash> setWalletTxesCounted = new HashSet<>();
             for (TransactionOutput outpoint : selection.gathered) {
 
-                if (!setWalletTxesCounted.add(outpoint.getHash())) continue;
-
-                Transaction wtx = getTransaction(outpoint.getHash());
-                if (wtx == null) continue;
-
-                if (wtx.isCoinBase() && wtx.isMature()) continue;
-                TransactionConfidence confidence = wtx.getConfidence();
-                if (fSkipUnconfirmed && !wtx.isTrusted(this)) continue;
-                if (confidence.getConfidenceType() == ConfidenceType.BUILDING || confidence.getConfidenceType() == ConfidenceType.PENDING)
+                if (!setWalletTxesCounted.add(outpoint.getParentTransactionHash()))
                     continue;
 
+                Transaction wtx = getTransaction(outpoint.getParentTransactionHash());
+                if (wtx == null)
+                    continue;
+
+                if (wtx.isCoinBase() && wtx.isMature())
+                    continue;
+
+                TransactionConfidence confidence = wtx.getConfidence();
+                if (skipUnconfirmed && !wtx.isTrusted(this))
+                    continue;
+
+                if (confidence.getConfidenceType() != ConfidenceType.BUILDING && confidence.getConfidenceType() != ConfidenceType.PENDING)
+                    continue;
+
+                // why do we need to cycle through the outputs if we have them already?
+                // it seems like this loop find a few more outputs that are not in selection.gathered
                 for (int i = 0; i < wtx.getOutputs().size(); i++) {
                     TransactionDestination txdest = TransactionDestination.fromScript(wtx.getOutput(i).getScriptPubKey());
                     if (txdest == null)
@@ -6950,21 +6983,21 @@ public class Wallet extends BaseTaggableObject
                     if (nMaxOupointsPerAddress != -1 && itTallyItem != null && (long) (itTallyItem.inputCoins.size()) >= nMaxOupointsPerAddress)
                         continue;
 
-                    if (isSpent(outpoint.getHash(), i) || isLockedCoin(outpoint.getHash(), i))
+                    if (isSpent(outpoint.getParentTransactionHash(), i) || isLockedCoin(outpoint.getParentTransactionHash(), i))
                         continue;
 
-                    if (fSkipDenominated && CoinJoin.isDenominatedAmount(wtx.getOutput(i).getValue()))
+                    if (skipDenominated && CoinJoin.isDenominatedAmount(wtx.getOutput(i).getValue()))
                         continue;
 
-                    if (fAnonymizable) {
+                    if (anonymizable) {
                         // ignore collaterals
                         if (CoinJoin.isCollateralAmount(wtx.getOutput(i).getValue())) continue;
-                        // ignore outputs that are 10 times smaller then the smallest denomination
+                        // ignore outputs that are 10 times smaller than the smallest denomination
                         // otherwise they will just lead to higher fee / lower priority
                         if (wtx.getOutput(i).getValue().isLessThan(smallestDenom.div(10)) ||
                                 wtx.getOutput(i).getValue().equals(smallestDenom.div(10))) continue;
                         // ignore mixed
-                        if (isFullyMixed(new TransactionOutPoint(params, i, outpoint.getHash()))) continue;
+                        if (isFullyMixed(new TransactionOutPoint(params, i, outpoint.getParentTransactionHash()))) continue;
                     }
 
                     if (itTallyItem == null) {
@@ -6981,25 +7014,25 @@ public class Wallet extends BaseTaggableObject
             // NOTE: vecTallyRet is "sorted" by txdest (i.e. address), just like mapTally
             ArrayList<CompactTallyItem> vecTallyRet = Lists.newArrayList();
             for (Map.Entry<TransactionDestination, CompactTallyItem> item : mapTally.entrySet()) {
-                if (fAnonymizable && item.getValue().amount.isLessThan(smallestDenom)) continue;
+                if (anonymizable && item.getValue().amount.isLessThan(smallestDenom)) continue;
                 vecTallyRet.add(item.getValue());
             }
 
             // Cache already confirmed mixable entries for later use.
             // This should only be used if nMaxOupointsPerAddress was NOT specified.
-            if (nMaxOupointsPerAddress == -1 && fAnonymizable && fSkipUnconfirmed) {
-                if (fSkipDenominated) {
+            if (nMaxOupointsPerAddress == -1 && anonymizable && skipUnconfirmed) {
+                if (skipDenominated) {
                     vecAnonymizableTallyCachedNonDenom = vecTallyRet;
-                    fAnonymizableTallyCachedNonDenom = true;
+                    anonymizableTallyCachedNonDenom = true;
                 } else {
                     vecAnonymizableTallyCached = vecTallyRet;
-                    fAnonymizableTallyCached = true;
+                    anonymizableTallyCached = true;
                 }
             }
 
             // debug
 
-            StringBuilder strMessage = new StringBuilder("SelectCoinsGroupedByAddresses - vecTallyRet:\n");
+            StringBuilder strMessage = new StringBuilder("vecTallyRet:\n");
             for (CompactTallyItem item :vecTallyRet)
                 strMessage.append(String.format("  %s %s\n", item.txDestination, item.amount.toFriendlyString()));
             log.info(strMessage.toString()); /* Continued */
@@ -7011,11 +7044,11 @@ public class Wallet extends BaseTaggableObject
     }
 
 
-    public int countInputsWithAmount(Coin denomValue) {
+    public int countInputsWithAmount(Coin inputValue) {
         int count = 0;
         for (Transaction tx : getTransactionPool(Pool.UNSPENT).values()) {
             for (TransactionOutput output : tx.getOutputs()) {
-                if (CoinJoin.isDenominatedAmount(output.getValue()) && output.isMine(this))
+                if (output.getValue().equals(inputValue) && output.isMine(this))
                     count++;
             }
         }
@@ -7041,7 +7074,27 @@ public class Wallet extends BaseTaggableObject
         return getAnonymizableBalance(skipDenominated, true);
     }
     public Coin getAnonymizableBalance(boolean skipDenominated, boolean skipUnconfirmed) {
-        return Coin.ZERO;
+        if (!CoinJoinClientOptions.isEnabled())
+            return Coin.ZERO;
+
+        List<CompactTallyItem> tallyItems = selectCoinsGroupedByAddresses(skipDenominated, true, skipUnconfirmed);
+        if (tallyItems.isEmpty())
+            return Coin.ZERO;
+
+        Coin total = Coin.ZERO;
+
+        Coin smallestDenom = CoinJoin.getSmallestDenomination();
+        Coin mixingCollateral = CoinJoin.getCollateralAmount();
+        for (CompactTallyItem item : tallyItems) {
+            boolean isDenominated = CoinJoin.isDenominatedAmount(item.amount);
+            if(skipDenominated && isDenominated)
+                continue;
+            // assume that the fee to create denoms should be mixing collateral at max
+            if(item.amount.isGreaterThanOrEqualTo(smallestDenom.add((isDenominated ? Coin.ZERO : mixingCollateral))))
+                total = total.add(item.amount);
+        }
+
+        return total;
     }
 
     boolean getDestData(TransactionDestination dest, String key, StringBuilder value) {
@@ -7073,8 +7126,7 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
-    boolean isUsedDestination(Sha256Hash hash, int index)
-    {
+    boolean isUsedDestination(Sha256Hash hash, int index) {
         TransactionDestination destination;
         WalletTransaction walletSrcTx = getWalletTransaction(hash);
         return walletSrcTx != null &&
@@ -7082,10 +7134,19 @@ public class Wallet extends BaseTaggableObject
                 isUsedDestination(destination);
     }
 
+    public void availableCoins(ArrayList<TransactionOutput> vCoins) {
+        availableCoins(vCoins, true, null, Coin.SATOSHI, MAX_MONEY, MAX_MONEY, 0, 0, 9999999);
+    }
+
+    public void availableCoins(ArrayList<TransactionOutput> vCoins,
+                               boolean onlySafe) {
+        availableCoins(vCoins, onlySafe, null, Coin.SATOSHI, MAX_MONEY, MAX_MONEY, 0, 0, 9999999);
+    }
+
     public void availableCoins(ArrayList<TransactionOutput> vCoins,
                                boolean onlySafe,
                                @Nullable CoinControl coinControl) {
-        availableCoins(vCoins, onlySafe, coinControl, Coin.COIN, MAX_MONEY, MAX_MONEY, 0, 0, 9999999);
+        availableCoins(vCoins, onlySafe, coinControl, Coin.SATOSHI, MAX_MONEY, MAX_MONEY, 0, 0, 9999999);
     }
 
     public void availableCoins(ArrayList<TransactionOutput> vCoins,
@@ -7098,7 +7159,7 @@ public class Wallet extends BaseTaggableObject
         lock.lock();
         try {
             vCoins.clear();
-            CoinType nCoinType = coinControl == null ? coinControl.getCoinType() : CoinType.ALL_COINS;
+            CoinType nCoinType = coinControl != null ? coinControl.getCoinType() : CoinType.ALL_COINS;
 
             Coin total = Coin.ZERO;
             // Either the WALLET_FLAG_AVOID_REUSE flag is not set (in which case we always allow), or we default to avoiding, and only in the case where
@@ -7177,7 +7238,7 @@ public class Wallet extends BaseTaggableObject
                     //boolean solvable = provider ? IsSolvable( * provider, pcoin->tx -> vout[i].scriptPubKey) :false;
                     //boolean spendable = (mine || (((mine & ISMINE_WATCH_ONLY) != ISMINE_NO) && (coinControl && coinControl -> fAllowWatchOnly && solvable));
 
-                    vCoins.add(new TransactionOutput(params, coin, coin.getOutput(i).getValue(), coin.getOutput(i).getScriptBytes()));
+                    vCoins.add(coin.getOutput(i));//new TransactionOutput(params, coin, coin.getOutput(i).getValue(), coin.getOutput(i).getScriptBytes()));
 
                     // Checks the sum amount of all UTXO's.
                     if (nMinimumSumAmount != MAX_MONEY) {
@@ -7197,5 +7258,84 @@ public class Wallet extends BaseTaggableObject
         } finally {
             lock.unlock();
         }
+    }
+
+
+    public boolean selectTxDSInsByDenomination(int nDenom, Coin nValueMax, List<CoinJoinTransactionInput> vecTxDSInRet) {
+
+        Coin nValueTotal = Coin.ZERO;
+
+        HashSet<Sha256Hash> setRecentTxIds = new HashSet<>();
+        ArrayList<TransactionOutput> vCoins = new ArrayList<>();
+
+        vecTxDSInRet.clear();
+
+        if (!CoinJoin.isValidDenomination(nDenom)) {
+            return false;
+        }
+
+        Coin nDenomAmount = CoinJoin.denominationToAmount(nDenom);
+
+        CoinControl coin_control = new CoinControl();
+        coin_control.setCoinType(CoinType.ONLY_READY_TO_MIX);
+        availableCoins(vCoins, true, coin_control);
+        log.info("-- vCoins.size(): {}", vCoins.size());
+
+        Collections.shuffle(vCoins);
+
+        for (final TransactionOutput out : vCoins) {
+            Sha256Hash txHash = out.getParentTransactionHash();
+            Coin nValue = out.getParentTransaction().getOutput(out.getIndex()).getValue();
+            if (setRecentTxIds.contains(txHash))
+                continue; // no duplicate txids
+            if (nValueTotal.add(nValue).isGreaterThan(nValueMax))
+                continue;
+            if (!nValue.equals(nDenomAmount))
+                continue;
+
+            TransactionInput txin = new TransactionInput(params, null, new byte[0], new TransactionOutPoint(params, out.getIndex(), txHash));
+            Script scriptPubKey = out.getParentTransaction().getOutput(out.getIndex()).getScriptPubKey();
+            int nRounds = getRealOutpointCoinJoinRounds(txin.getOutpoint());
+
+            nValueTotal = nValueTotal.add(nValue);
+            vecTxDSInRet.add(new CoinJoinTransactionInput(txin, scriptPubKey, nRounds));
+            setRecentTxIds.add(txHash);
+            log.info("coinjoin:  -- hash: {}, nValue: {}", txHash, nValue.toFriendlyString());
+        }
+
+        log.info("coinjoin:   -- setRecentTxIds.size(): {}", setRecentTxIds.size());
+
+        return nValueTotal.isPositive();
+    }
+
+    static class CompareByPriority implements Comparator<TransactionOutput> {
+
+        @Override
+        public int compare(TransactionOutput transactionOutput, TransactionOutput transactionOutputTwo) {
+            return (int)(CoinJoin.calculateAmountPriority(transactionOutput.getValue()) - CoinJoin.calculateAmountPriority(transactionOutputTwo.getValue()));
+        }
+    }
+    public boolean selectDenominatedAmounts(Coin valueMax, Set<Coin> setAmountsRet) {
+//        LOCK(cs_wallet);
+
+        Coin valueTotal = Coin.ZERO;
+        setAmountsRet.clear();
+
+        ArrayList<TransactionOutput> vCoins = new ArrayList<>();
+        CoinControl coin_control = new CoinControl();
+        coin_control.setCoinType(CoinType.ONLY_READY_TO_MIX);
+        availableCoins(vCoins, true, coin_control);
+        // larger denoms first
+        Collections.sort(vCoins, new CompareByPriority());
+
+        for (TransactionOutput out : vCoins) {
+            Coin value = out.getValue();
+            if (valueTotal.add(value).isLessThanOrEqualTo(valueMax)) {
+                valueTotal = valueTotal.add(value);
+                setAmountsRet.add(value);
+            }
+        }
+
+        return valueTotal.isGreaterThanOrEqualTo(CoinJoin.getSmallestDenomination());
     }
 }
