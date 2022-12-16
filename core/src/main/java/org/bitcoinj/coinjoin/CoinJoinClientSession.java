@@ -518,17 +518,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         try {
             SendRequest req = SendRequest.forTx(txCollateral);
             mixingWallet.signTransaction(req);
-            /*Transaction dummyTx = new Transaction(mixingWallet.getContext().getParams());
-            ECKey signingKey = mixingWallet.findKeyFromAddress(txout.getScriptPubKey().getToAddress(mixingWallet.getContext().getParams()));
-            if (signingKey == null) {
-                strReason.append("Unable to sign collateral transaction! -- no signing key");
-                return false;
-            }
-            TransactionInput input = dummyTx.addSignedInputNoOutputs(txout.getOutPointFor(), txout.getScriptPubKey(), signingKey, Transaction.SigHash.ALL, true);
-            if (input.getScriptBytes() == null) {
-                strReason.append("Unable to sign collateral transaction!");
-                return false;
-            }*/
         } catch (ScriptException x) {
             strReason.append("Unable to sign collateral transaction!");
             return false;
@@ -559,13 +548,13 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             // in order for dsq to get into veCoinJoinQueue, so we should be safe to mix already,
             // no need for additional verification here
 
-            log.info("coinjoin: CoinJoinClientSession::JoinExistingQueue -- trying queue: {}", dsq);
+            log.info("coinjoin: trying existing queue: {}", dsq);
 
             ArrayList <CoinJoinTransactionInput> vecTxDSInTmp = new ArrayList<>();
 
             // Try to match their denominations if possible, select exact number of denominations
             if (!mixingWallet.selectTxDSInsByDenomination(dsq.getDenomination(), balanceNeedsAnonymized, vecTxDSInTmp)) {
-                log.info("coinjoin: CoinJoinClientSession::JoinExistingQueue -- Couldn't match denomination {} ({})\n", dsq.getDenomination(), CoinJoin.denominationToString(dsq.getDenomination()));
+                log.info("coinjoin: couldn't match denomination {} ({})", dsq.getDenomination(), CoinJoin.denominationToString(dsq.getDenomination()));
                 continue;
             }
 
@@ -910,13 +899,15 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     TransactionOutPoint outPoint = new TransactionOutPoint(input.getParams(), input.getOutpoint().getIndex(), tx);
                     byte[] pubKeyHash = ScriptPattern.extractHashFromP2PKH(tx.getOutput(outPoint.getIndex()).getScriptPubKey());
                     ECKey key = mixingWallet.findKeyFromPubKeyHash(pubKeyHash, Script.ScriptType.P2PKH);
-                    Script inputScript = ScriptBuilder.createInputScript(null, key);
-                    TransactionInput connectedInput = new TransactionInput(input.getParams(), finalMutableTransaction, inputScript.getProgram(), outPoint);
-                    finalMutableTransaction.addInput(connectedInput);
-                } else {
-                    // this is not our input
-                    finalMutableTransaction.addInput(input);
+                    if (key != null) {
+                        Script inputScript = ScriptBuilder.createInputScript(null, key);
+                        TransactionInput connectedInput = new TransactionInput(input.getParams(), finalMutableTransaction, inputScript.getProgram(), outPoint);
+                        finalMutableTransaction.addInput(connectedInput);
+                        continue; // go to the next input
+                    }
                 }
+                // this is not our input
+                finalMutableTransaction.addInput(input);
             }
             for (TransactionOutput output : finalTransactionNew.getOutputs()) {
                 finalMutableTransaction.addOutput(output);
@@ -1407,7 +1398,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
         });
 
-        log.info("coinjoin: vecInputsByRounds for denom {}", sessionDenom);
+        log.info("coinjoin: vecInputsByRounds(size={}) for denom {}", vecInputsByRounds.size(), sessionDenom);
         for (Pair<Integer, Integer> pair : vecInputsByRounds) {
             log.info("coinjoin: vecInputsByRounds: rounds: {}, inputs: {}", pair.getFirst(), pair.getSecond());
         }
