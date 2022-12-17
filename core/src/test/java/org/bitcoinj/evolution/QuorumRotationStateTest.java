@@ -10,7 +10,6 @@ import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.JackDanielsDevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.ThreeThreeThreeDevNetParams;
 import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;

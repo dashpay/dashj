@@ -24,7 +24,7 @@ import org.bitcoinj.wallet.Wallet;
 
 public class ReserveDestination extends ReserveScript {
     //! The wallet to reserve from
-    protected Wallet wallet;
+    protected final Wallet wallet;
     //LegacyScriptPubKeyMan* m_spk_man{nullptr};
 
     //! The index of the address's key in the keypool
@@ -47,7 +47,7 @@ public class ReserveDestination extends ReserveScript {
     }
 
     //! Reserve an address
-    TransactionDestination getReservedDestination(boolean internal) {
+    public TransactionDestination getReservedDestination(boolean internal) {
         if (index == -1) {
             DeterministicKey key = wallet.freshCoinJoinKey();
             if (key == null) {
@@ -69,8 +69,8 @@ public class ReserveDestination extends ReserveScript {
         address = NoDestination.get();
     }
     //! Keep the address. Do not return it's key to the keypool when this object goes out of scope
-    void keepDestination() {
-        // TODO: tell the wallt to keep the destination
+    public void keepDestination() {
+        // TODO: tell the wallet to keep the destination
         index = -1;
         vchPubKey = null;
         address = NoDestination.get();

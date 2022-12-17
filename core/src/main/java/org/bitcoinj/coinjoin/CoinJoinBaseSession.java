@@ -18,6 +18,7 @@ package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
@@ -48,14 +49,15 @@ import static org.bitcoinj.coinjoin.PoolState.POOL_STATE_IDLE;
 
 public class CoinJoinBaseSession {
     private final Logger log = LoggerFactory.getLogger(CoinJoinBaseSession.class);
+    protected final Context context;
 
-    protected ReentrantLock lock = Threading.lock("coinjoin_base_session");
+    protected final ReentrantLock lock = Threading.lock("coinjoin_base_session");
     @GuardedBy("lock")
-    protected ArrayList<CoinJoinEntry> entries; // Masternode/clients entries
+    protected final ArrayList<CoinJoinEntry> entries; // Masternode/clients entries
 
-    protected AtomicReference<PoolState> state = new AtomicReference<>(POOL_STATE_IDLE); // should be one of the POOL_STATE_XXX values
-    protected AtomicLong timeLastSuccessfulStep = new AtomicLong(0); // the time when last successful mixing step was performed
-    protected AtomicInteger sessionID = new AtomicInteger(0); // 0 if no mixing session is active
+    protected final AtomicReference<PoolState> state = new AtomicReference<>(POOL_STATE_IDLE); // should be one of the POOL_STATE_XXX values
+    protected final AtomicLong timeLastSuccessfulStep = new AtomicLong(0); // the time when last successful mixing step was performed
+    protected final AtomicInteger sessionID = new AtomicInteger(0); // 0 if no mixing session is active
 
     @GuardedBy("lock")
     protected Transaction finalMutableTransaction; // the finalized transaction ready for signing
@@ -68,8 +70,8 @@ public class CoinJoinBaseSession {
             sessionID.set(0);
             sessionDenom = 0;
             entries.clear();
-            finalMutableTransaction.getInputs().clear();
-            finalMutableTransaction.getOutputs().clear();
+            finalMutableTransaction.clearInputs();
+            finalMutableTransaction.clearOutputs();
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
         } finally {
             lock.unlock();
@@ -82,7 +84,7 @@ public class CoinJoinBaseSession {
 
     protected ValidInOuts isValidInOuts(List<TransactionInput> vin, List<TransactionOutput> vout, PoolMessage messageIDRet, boolean consumeCollateral) {
 
-        HashSet<Script> setScripPubKeys = new HashSet<Script>();
+        HashSet<Script> setScripPubKeys = new HashSet<>();
         final ValidInOuts result = new ValidInOuts();
         result.messageId = MSG_NOERR;
         if (consumeCollateral)
@@ -101,7 +103,7 @@ public class CoinJoinBaseSession {
             public ValidInOuts check(TransactionOutput txout) {
                 int denom = CoinJoin.amountToDenomination(txout.getValue());
                 if (denom != sessionDenom) {
-                    log.info("ERROR: incompatible denom {} ({}) != sessionDenom {} ({})\n",
+                    log.info("ERROR: incompatible denom {} ({}) != sessionDenom {} ({})",
                             denom, CoinJoin.denominationToString(denom), sessionDenom, CoinJoin.denominationToString(sessionDenom));
                     result.setMessageId(ERR_DENOM);
                     if (consumeCollateral)
@@ -128,6 +130,7 @@ public class CoinJoinBaseSession {
             }
         };
 
+        // Dash Core checks that the fee's are zero, but we cannot since we don't have access to all of the inputs
         Coin fees = Coin.ZERO;
 
         for (TransactionOutput txout : vout) {
@@ -135,7 +138,6 @@ public class CoinJoinBaseSession {
             if (!outputResult.result) {
                 return result.setResult(false);
             }
-            fees = fees.subtract(txout.getValue());
         }
 
         for (TransactionInput txin :vin){
@@ -162,10 +164,12 @@ public class CoinJoinBaseSession {
     }
 
 
-    private int sessionDenom = 0; // Users must submit a denom matching this
+    protected int sessionDenom = 0; // Users must submit a denom matching this
 
-    public CoinJoinBaseSession() {
+    public CoinJoinBaseSession(Context context) {
+        this.context = context;
         entries = Lists.newArrayList();
+        finalMutableTransaction = new Transaction(context.getParams());
     }
 
     public AtomicReference<PoolState> getState() {

@@ -361,6 +361,26 @@ public class SimplifiedMasternodeList extends Message {
         return false;
     }
 
+    public boolean containsMN(PeerAddress address) {
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if (entry.getValue().getService().getAddr().equals(address.getAddr())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public Masternode getValidMNByCollateral(TransactionOutPoint masternodeOutpoint) {
+        // TODO: we don't have an answer for this yet
+        // masternodeOutpoint is hardcoded
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if (Objects.equals(entry.getValue().getCollateralOutpoint(), masternodeOutpoint)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
     public interface ForeachMNCallback {
         void processMN(SimplifiedMasternodeListEntry mn);
     }

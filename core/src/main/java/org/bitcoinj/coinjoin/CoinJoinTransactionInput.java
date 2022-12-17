@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.coinjoin;
 
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.script.Script;
 
@@ -28,6 +29,13 @@ public class CoinJoinTransactionInput extends TransactionInput {
         super(txin.getParams(), txin.getParentTransaction(), txin.getScriptBytes(), txin.getOutpoint(), txin.getValue());
         this.prevPubKey = script;
         this.rounds = rounds;
+        this.hasSignature = false;
+    }
+
+    public CoinJoinTransactionInput(NetworkParameters params, byte [] payload, int offset) {
+        super(params, null, payload, offset);
+        this.prevPubKey = null;
+        this.rounds = 0;
         this.hasSignature = false;
     }
 

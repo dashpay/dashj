@@ -207,7 +207,7 @@ public class SendRequest {
         SendRequest req = new SendRequest();
         req.tx = new Transaction(params);
         for (Recipient recipient: recipients) {
-            req.tx.addOutput(new TransactionOutput(params, null, recipient.getAmount(), recipient.getScriptPubKey().getProgram()));
+            req.tx.addOutput(new TransactionOutput(params, req.tx, recipient.getAmount(), recipient.getScriptPubKey().getProgram()));
         }
         return req;
     }

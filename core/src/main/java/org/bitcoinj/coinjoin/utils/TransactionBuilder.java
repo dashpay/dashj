@@ -1,14 +1,32 @@
+/*
+ * Copyright (c) 2022 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.bitcoinj.coinjoin.utils;
 
 import com.google.common.collect.Lists;
+import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VarInt;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.CoinControl;
 import org.bitcoinj.wallet.SendRequest;
@@ -17,7 +35,6 @@ import org.bitcoinj.wallet.Wallet;
 import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -28,7 +45,7 @@ public class TransactionBuilder {
     /// See CTransactionBuilder() for initialization
     private final CoinControl coinControl = new CoinControl();
     /// Dummy since we anyway use tallyItem's destination as change destination in coincontrol.
-    /// Its a member just to make sure ReturnKey can be called in destructor just in case it gets generated/kept
+    /// It's a member just to make sure ReturnKey can be called in destructor just in case it gets generated/kept
     /// somewhere in CWallet code.
     private ReserveDestination dummyReserveDestination;
     /// Contains all utxos available to generate this transactions. They are all from the same address.
@@ -63,16 +80,15 @@ public class TransactionBuilder {
         // Select all tallyItem outputs in the coinControl so that CreateTransaction knows what to use
         for (InputCoin coin : tallyItem.inputCoins) {
             coinControl.select(coin.getOutPoint());
-            dummyTx.addInput(new TransactionInput(wallet.getParams(), null, null, coin.getOutPoint()));
+            TransactionInput input = new TransactionInput(wallet.getParams(), dummyTx, new byte[0], coin.getOutPoint());
+            dummyTx.addInput(input);
         }
         // Get a comparable dummy scriptPubKey, avoid writing/flushing to the actual wallet db
-        Script dummyScript;
-        {
-            ECKey secret = new ECKey();
-            dummyScript = ScriptBuilder.createP2PKHOutputScript(secret);
-            // Calculate required bytes for the dummy signed tx with tallyItem's inputs only
-            bytesBase = calculateMaximumSignedTxSize(dummyTx, wallet, false);
-        }
+        ECKey secret = new ECKey();
+        Script dummyScript = ScriptBuilder.createP2PKHOutputScript(secret);
+        // Calculate required bytes for the dummy signed tx with tallyItem's inputs only
+        bytesBase = calculateMaximumSignedTxSize(dummyTx, wallet, false);
+
         // Calculate the output size
         bytesOutput = new TransactionOutput(wallet.getParams(), null, Coin.ZERO, dummyScript.getProgram()).getMessageSize();
         // Just to make sure..
@@ -142,67 +158,29 @@ public class TransactionBuilder {
 
         // Transform the outputs to the format CWallet::CreateTransaction requires
         ArrayList<Recipient> vecSend = null;
-        {
-            try {
-                vecSend = Lists.newArrayListWithExpectedSize(vecOutputs.size());
-                for (TransactionBuilderOutput out : vecOutputs) {
-                    vecSend.add(new Recipient(out.getScript(), out.getAmount(), false));
-                }
-            } finally {
-                lock.unlock();
+
+        lock.lock();
+        try {
+            vecSend = Lists.newArrayListWithExpectedSize(vecOutputs.size());
+            for (TransactionBuilderOutput out : vecOutputs) {
+                vecSend.add(new Recipient(out.getScript(), out.getAmount(), false));
             }
+        } finally {
+            lock.unlock();
         }
 
         SendRequest req = SendRequest.to(wallet.getParams(), vecSend);
+        req.ensureMinRequiredFee = false;
 
         try {
-            wallet.completeTx(req);
-            feeResult = req.tx.getFee();
-
-        } catch (Exception e) {
-            return false;
+            SendRequest request = SendRequest.forTx(req.tx);
+            wallet.sendCoins(request);
+        } catch (InsufficientMoneyException x) {
+            throw new RuntimeException(x);
         }
-        Transaction tx = req.tx;
-
-        // TODO: see CreateWalletTransaction to see how changePosRet is handled
-        // for now it is -1, which will cause failure below (return false)
-
-
-        Coin amountLeft = getAmountLeft();
-        boolean hasDust = isDust(amountLeft);
-        // If there is a either remainder which is considered to be dust (will be added to fee in this case) or no amount left there should be no change output, return if there is a change output.
-        if (changePosRet != -1 && hasDust) {
-            strResult.append(String.format("Unexpected change output %s at position %d", tx.getOutput(changePosRet).toString(), changePosRet));
-            return false;
-        }
-
-        // If there is a remainder which is not considered to be dust it should end up in a change output, return if not.
-        if (changePosRet == -1 && !hasDust) {
-            strResult.append(String.format("Change output missing: %s", amountLeft));
-            return false;
-        }
-
-        Coin feeAdditional = Coin.ZERO;
-        int bytesAdditional = 0;
-
-        if (hasDust) {
-            feeAdditional = amountLeft;
-        } else {
-            // Add a change output and GetSizeOfCompactSizeDiff(1) as another output can change the serialized size of the outputs size in Transaction
-            bytesAdditional = bytesOutput + getSizeOfCompactSizeDiff(1);
-        }
-
-        // If the calculated fee does not match the fee returned by CreateTransaction aka if this check fails something is wrong!
-        Coin feeCalc = getFee(getBytesTotal() +bytesAdditional).add(feeAdditional);
-        if (!Objects.equals(feeResult, feeCalc)) {
-            strResult.append(String.format("Fee validation failed -> feeResult: %s, feeCalc: %s, feeAdditional: %s, bytesAdditional: %d, %s", feeResult, feeCalc, feeAdditional, bytesAdditional, this));
-            return false;
-        }
-
-        wallet.commitTx(tx);
         keepKeys = true;
 
-        strResult.append(tx.getTxId());
+        strResult.append(req.tx.getTxId());
         return true;
     }
     /// Convert to a string
@@ -272,7 +250,7 @@ public class TransactionBuilder {
         if (requiredFee.isGreaterThan(feeCalc)) {
             feeCalc = requiredFee;
         }
-        if (feeCalc.isGreaterThan(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE)) {
+        if (feeCalc.isGreaterThan(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.multiply(10))) {
             feeCalc = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
         }
         return feeCalc;
@@ -280,15 +258,14 @@ public class TransactionBuilder {
     /// Helper to get getSizeOfCompactSizeDiff(vecOutputs.size(), vecOutputs.size() + aAdd)} 
     int getSizeOfCompactSizeDiff(int add) {
         lock.lock();
-        int size = 0;
+        int size;
         try {
             size = vecOutputs.size();
         } finally {
             lock.unlock();
         }
-        int ret = getSizeOfCompactSizeDiff(size, size + add);
-        
-        return (int)ret;
+
+        return getSizeOfCompactSizeDiff(size, size + add);
     }
     
     int getSizeOfCompactSizeDiff(int oldSize, int newSize) {
@@ -314,7 +291,11 @@ public class TransactionBuilder {
     static int calculateMaximumSignedTxSize(Transaction tx, Wallet wallet, List<TransactionOutput> txouts, boolean useMaxSig)
     {
         SendRequest req = SendRequest.forTx(tx);
-        wallet.signTransaction(req);
+        for (TransactionOutput output : txouts) {
+            ECKey key = wallet.findKeyFromPubKeyHash(ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey()), Script.ScriptType.P2PKH);
+            checkState(key != null, "there must be a key for this output");
+            req.tx.addSignedInputNoOutputsCheck(output.getOutPointFor(),output.getScriptPubKey(), key, Transaction.SigHash.ALL, false);
+        }
         return tx.getMessageSize();
     }
 

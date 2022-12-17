@@ -17,12 +17,17 @@
 
 package org.bitcoinj.tools;
 
+import org.bitcoinj.coinjoin.CoinJoinClientManager;
+import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
+import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
+import org.bitcoinj.params.JackDanielsDevNetParams;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.params.KrupnikDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
@@ -129,6 +134,7 @@ public class WalletTool {
     private static OptionSpec<String> seedFlag, watchFlag;
     private static OptionSpec<Script.ScriptType> outputScriptTypeFlag;
     private static OptionSpec<String> xpubkeysFlag;
+    private static OptionSpec<String> mixAmountFlag;
 
     private static NetworkParameters params;
     private static File walletFile;
@@ -218,6 +224,7 @@ public class WalletTool {
         UPGRADE,
         ROTATE,
         SET_CREATION_TIME,
+        MIX,
     }
 
     public enum WaitForEnum {
@@ -271,6 +278,9 @@ public class WalletTool {
         parser.accepts("dump-lookahead");
         OptionSpec<String> refundFlag = parser.accepts("refund-to").withRequiredArg();
         OptionSpec<String> txHashFlag = parser.accepts("txhash").withRequiredArg();
+
+        mixAmountFlag = parser.accepts("mixamount").withRequiredArg();
+
         options = parser.parse(args);
 
         if (args.length == 0 || options.has("help") ||
@@ -311,14 +321,18 @@ public class WalletTool {
                 params = RegTestParams.get();
                 chainFileName = new File("regtest.chain");
                 break;
-            case KRUPNIK:
-                params = KrupnikDevNetParams.get();
-                chainFileName = new File("krupnik.chain");
+            case DEVNET:
+                params = JackDanielsDevNetParams.get();
+                chainFileName = new File("jack-daniels.chain");
                 break;
             default:
                 throw new RuntimeException("Unreachable.");
         }
-        Context.propagate(new Context(params));
+        Context context = new Context(params);
+        Context.propagate(context);
+        context.initDash(true, true);
+        context.masternodeSync.syncFlags.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+        context.initDashSync(".", "coinjoin-ouzo");
 
         mode = modeFlag.value(options);
 
@@ -493,6 +507,7 @@ public class WalletTool {
             case UPGRADE: upgrade(); break;
             case ROTATE: rotate(); break;
             case SET_CREATION_TIME: setCreationTime(); break;
+            case MIX: mix(); break;
         }
 
         if (!wallet.isConsistent()) {
@@ -1572,6 +1587,48 @@ public class WalletTool {
             System.out.println("Setting creation time to: " + Utils.dateTimeFormat(creationTime * 1000));
         else
             System.out.println("Clearing creation time.");
+    }
+
+    private static void mix() {
+        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        syncChain();
+
+        Coin amountToMix = wallet.getBalance();
+
+        if (options.has(mixAmountFlag)) {
+            amountToMix = Coin.parseCoin(options.valueOf(mixAmountFlag));
+        }
+        CoinJoinClientOptions.setAmount(amountToMix);
+        CoinJoinClientOptions.setEnabled(true);
+        CoinJoinClientOptions.setRounds(1);
+        ProTxToOutpoint.initialize(params);
+        wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
+
+        // mix coins
+        try {
+            CoinJoinClientManager it = wallet.getContext().coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
+            it.setBlockChain(wallet.getContext().blockChain);
+
+            {
+                if (wallet.isEncrypted()) {
+                    // we need to handle encrypted wallets
+                    System.out.print("Error: Please unlock wallet for mixing with walletpassphrase first.");
+                    return;
+                }
+            }
+
+            if (!it.startMixing()) {
+                System.out.println("Mixing has been started already.");
+                return;
+            }
+
+            boolean result = it.doAutomaticDenominating();
+            System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + it.getStatuses() + ", will retry")));
+
+            wait(WaitForEnum.EVER);
+        } catch (BlockStoreException x) {
+            throw new RuntimeException(x);
+        }
     }
 
     static synchronized void onChange(final CountDownLatch latch) {

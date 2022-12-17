@@ -1,6 +1,7 @@
 package org.bitcoinj.coinjoin;
 
 import org.bitcoinj.core.Coin;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_RANDOM_ROUNDS;
@@ -15,6 +16,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class CoinJoinClientOptionsTest {
+
+    @Before
+    public void startUp() {
+        CoinJoinClientOptions.setAmount(DEFAULT_COINJOIN_AMOUNT);
+    }
     @Test
     public void getTest() {
         assertEquals(CoinJoinClientOptions.getSessions(), DEFAULT_COINJOIN_SESSIONS);

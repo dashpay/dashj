@@ -18,17 +18,22 @@ package org.bitcoinj.coinjoin;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.Utils;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public class PendingDsaRequest {
     private static final int TIMEOUT = 15;
     private MasternodeAddress addr;
     private CoinJoinAccept dsa;
     private long nTimeCreated = 0;
 
-    public PendingDsaRequest() {
+    /* package */
+    PendingDsaRequest() {
 
     }
 
     public PendingDsaRequest(MasternodeAddress addr, CoinJoinAccept dsa) {
+        checkNotNull(addr);
+        checkNotNull(dsa);
         this.addr = addr;
         this.dsa = dsa;
         nTimeCreated = Utils.currentTimeSeconds();
