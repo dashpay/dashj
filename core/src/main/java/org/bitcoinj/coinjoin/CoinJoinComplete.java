@@ -48,13 +48,13 @@ public class CoinJoinComplete extends Message {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         Utils.uint32ToByteStreamLE(msgSessionID, stream);
-        msgMessageID = PoolMessage.fromValue((int)readUint32());
+        Utils.uint32ToByteStreamLE(msgMessageID.value, stream);
     }
 
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinComplete(msgSessionID=%d, masternodeOutpoint=%d)",
+                "CoinJoinComplete(msgSessionID=%d, msgMessageID=%d)",
                 msgSessionID,
                 msgMessageID.value
         );
