@@ -47,6 +47,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -144,6 +145,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         for (int i = 0; i < 100; ++i) {
             addBlock();
         }
+
+        globalTimeout = Timeout.seconds(30);
     }
 
     @Override
