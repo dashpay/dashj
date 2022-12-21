@@ -47,7 +47,7 @@ public class CoinJoinWalletTest {
 
     Context context = new Context(DEVNET);
 
-    //@Before
+    @Before
     public void setUp() throws UnreadableWalletException {
         DeterministicSeed seed = new DeterministicSeed(
                 "behind zoo develop elder book canyon host opera gun nominee lady novel",

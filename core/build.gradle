@@ -70,13 +70,6 @@ tasks.withType(Test) {
     systemProperty "java.library.path", "../contrib/dashj-bls/bls/target/cmake:../contrib/x11/build"
 }
 
-test {
-    testLogging {
-        outputs.upToDateWhen {false}
-        showStandardStreams = true
-    }
-}
-
 task javadocJar(type: Jar, dependsOn: javadoc) {
     classifier = 'javadoc'
     from javadoc.destinationDir
