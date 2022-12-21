@@ -39,7 +39,7 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
     protected PeerGroup peerGroup;
 
     protected VersionMessage remoteVersionMessage;
-    private final ClientType clientType;
+    protected final ClientType clientType;
 
     public TestWithPeerGroup(ClientType clientType) {
         super(clientType);
@@ -66,6 +66,7 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         remoteVersionMessage.clientVersion =
                 NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
         blockJobs = false;
+        beforeInitPeerGroup();
         initPeerGroup();
     }
 
@@ -80,6 +81,10 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    protected void beforeInitPeerGroup() {
+
     }
 
     protected void initPeerGroup() {
@@ -157,7 +162,7 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         return writeTarget;
     }
 
-    private void stepThroughInit(VersionMessage versionMessage, InboundMessageQueuer writeTarget) throws InterruptedException {
+    protected void stepThroughInit(VersionMessage versionMessage, InboundMessageQueuer writeTarget) throws InterruptedException {
         checkState(writeTarget.nextMessageBlocking() instanceof VersionMessage);
         checkState(writeTarget.nextMessageBlocking() instanceof VersionAck);
         if (versionMessage.isBloomFilteringSupported()) {
