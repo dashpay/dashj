@@ -89,8 +89,6 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         super(clientType);
     }
 
-    //private static final NetworkParameters UNITTEST = UnitTestParams.get();
-
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -155,9 +153,9 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         super.tearDown();
     }
 
-    @Test
+    @Test(timeout = 30000) // Exception: test timed out after 100 milliseconds
     public void sessionTest() throws Exception {
-
+        System.out.println("Session test started...");
         wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
@@ -209,7 +207,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
             // it will reply to the messages sent by doMainenance()
             Message m = lastMasternode.nextMessage();
             log.info("received message: {}", m);
-
+            System.out.println("masternode has received message: " + m);
             if (m instanceof GetSporksMessage) {
                 m = lastMasternode.nextMessage();
             }
@@ -291,7 +289,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         } while (!breakOut);
 
-
+        System.out.println("loop complete");
         // check that the queue for the session is valid
         assertNotNull(queue);
 
