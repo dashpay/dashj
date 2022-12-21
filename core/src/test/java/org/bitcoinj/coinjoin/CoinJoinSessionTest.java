@@ -164,6 +164,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(1);
+        CoinJoinClientOptions.setSessions(1);
 
         peerGroup.start();
         masternodeGroup.start();
@@ -237,6 +238,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 coinJoinManager.processMessage(lastMasternode.peer, queue);
             } else if (m instanceof CoinJoinEntry) {
                 CoinJoinEntry entry = (CoinJoinEntry) m;
+                log.info("CoinJoinEntry received: {}", entry.toString(true));
 
                 CoinJoinStatusUpdate update = new CoinJoinStatusUpdate(m.getParams(), SESSION_ID, PoolState.POOL_STATE_ACCEPTING_ENTRIES, PoolStatusUpdate.STATUS_ACCEPTED, PoolMessage.MSG_ENTRIES_ADDED);
                 coinJoinManager.processMessage(lastMasternode.peer, update);

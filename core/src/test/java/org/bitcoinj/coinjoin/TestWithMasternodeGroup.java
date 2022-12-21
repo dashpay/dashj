@@ -81,6 +81,7 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
     @Override
     protected void initPeerGroup() {
         super.initPeerGroup();
+        peerGroup.setUseLocalhostPeerWhenPossible(false);
         if (clientType == ClientType.NIO_CLIENT_MANAGER)
             masternodeGroup = createMasternodeGroup(new NioClientManager());
         else

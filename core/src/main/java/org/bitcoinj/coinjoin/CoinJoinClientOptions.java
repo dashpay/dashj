@@ -44,6 +44,11 @@ public class CoinJoinClientOptions {
     public static void setMultiSessionEnabled(boolean enabled) {
         get().isCoinJoinMultiSession.set(enabled);
     }
+
+    public static void setSessions(int sessions) {
+        get().coinJoinSessions.set(sessions);
+    }
+
     public static void setRounds(int rounds) {
         get().coinJoinRounds.set(rounds);
     }
