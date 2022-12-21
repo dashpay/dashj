@@ -15,6 +15,8 @@
  */
 package org.bitcoinj.coinjoin.utils;
 
+import org.bitcoinj.coinjoin.CoinJoin;
+import org.bitcoinj.coinjoin.CoinJoinBroadcastTx;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientQueueManager;
 import org.bitcoinj.coinjoin.CoinJoinComplete;
@@ -58,7 +60,8 @@ public class CoinJoinManager {
         return message instanceof CoinJoinStatusUpdate ||
                 message instanceof CoinJoinFinalTransaction ||
                 message instanceof CoinJoinComplete ||
-                message instanceof CoinJoinQueue;
+                message instanceof CoinJoinQueue ||
+                message instanceof CoinJoinBroadcastTx;
     }
 
     public CoinJoinClientQueueManager getCoinJoinClientQueueManager() {
@@ -68,6 +71,8 @@ public class CoinJoinManager {
     public void processMessage(Peer from, Message message) {
         if (message instanceof CoinJoinQueue) {
             coinJoinClientQueueManager.processDSQueue(from, (CoinJoinQueue) message, false);
+        } else if(message instanceof CoinJoinBroadcastTx) {
+            processBroadcastTx((CoinJoinBroadcastTx) message);
         } else  {
             for (CoinJoinClientManager clientManager : coinJoinClientManagers.values()) {
                 clientManager.processMessage(from, message, false);
@@ -75,8 +80,13 @@ public class CoinJoinManager {
         }
     }
 
+    private void processBroadcastTx(CoinJoinBroadcastTx dstx) {
+        CoinJoin.addDSTX(dstx);
+    }
+
     int tick = 0;
-    void doMaintenance() {
+
+    public void doMaintenance() {
         // report masternode group
         tick++;
         if (tick % 10 == 0) {
@@ -109,8 +119,10 @@ public class CoinJoinManager {
     }
 
     public void stop() {
-        schedule.cancel(false);
-        schedule = null;
+        if (schedule != null) {
+            schedule.cancel(false);
+            schedule = null;
+        }
 
         for (CoinJoinClientManager clientManager: coinJoinClientManagers.values()) {
             clientManager.resetPool();
@@ -140,11 +152,10 @@ public class CoinJoinManager {
         return masternodeGroup.forPeer(address, forPeer);
     }
 
-    boolean isRunning = false;
+    //boolean isRunning = false;
 
     public void startAsync() {
-        if (!isRunning) {
-            isRunning = true;
+        if (!masternodeGroup.isRunning()) {
             log.info("coinjoin: broadcasting senddsq(true) to all peers");
             context.peerGroup.shouldSendDsq(true);
             masternodeGroup.startAsync();
@@ -152,14 +163,18 @@ public class CoinJoinManager {
     }
 
     public void stopAsync() {
-        if (!isRunning) {
+        if (masternodeGroup.isRunning()) {
             context.peerGroup.shouldSendDsq(false);
             masternodeGroup.stopAsync();
-            isRunning = false;
         }
     }
 
     public void disconnectMasternode(Masternode service) {
         masternodeGroup.disconnectMasternode(service);
+    }
+
+    @VisibleForTesting
+    public void setMasternodeGroup(MasternodeGroup masternodeGroup) {
+        this.masternodeGroup = masternodeGroup;
     }
 }
