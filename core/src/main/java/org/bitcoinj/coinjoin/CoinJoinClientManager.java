@@ -49,6 +49,7 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MIN;
 
 public class CoinJoinClientManager {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
+    private static Random random = new Random();
     // Keep track of the used Masternodes
     private final ArrayList<TransactionOutPoint> masternodesUsed = new ArrayList<>();
 
@@ -374,7 +375,7 @@ public class CoinJoinClientManager {
         processPendingDsaRequest();
         if (nDoAutoNextRun >= nTick) {
             doAutomaticDenominating();
-            nDoAutoNextRun = nTick + COINJOIN_AUTO_TIMEOUT_MIN + new Random().nextInt(COINJOIN_AUTO_TIMEOUT_MAX - COINJOIN_AUTO_TIMEOUT_MIN);
+            nDoAutoNextRun = nTick + COINJOIN_AUTO_TIMEOUT_MIN + random.nextInt(COINJOIN_AUTO_TIMEOUT_MAX - COINJOIN_AUTO_TIMEOUT_MIN);
         }
     }
 

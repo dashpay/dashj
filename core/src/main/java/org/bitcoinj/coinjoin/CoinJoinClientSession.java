@@ -82,6 +82,7 @@ import static org.bitcoinj.wallet.CoinType.ONLY_COINJOIN_COLLATERAL;
 
 public class CoinJoinClientSession extends CoinJoinBaseSession {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientSession.class);
+    private static final Random random = new Random();
     private final ArrayList<TransactionOutPoint> outPointLocked = Lists.newArrayList();
     private String strLastMessage;
     private String strAutoDenomResult;
@@ -490,7 +491,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
 
-        TransactionOutput output = vCoins.get(new Random().nextInt(vCoins.size()));
+        TransactionOutput output = vCoins.get(random.nextInt(vCoins.size()));
         final TransactionOutput txout = output.getParentTransaction().getOutput(output.getIndex());
 
         txCollateral.clearInputs();
@@ -631,7 +632,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             log.info("coinjoin: attempt {} connection to Masternode {}", nTries, dmn.getService());
 
             // try to get a single random denom out of setAmounts
-            Random random = new Random();
             while (sessionDenom == 0) {
                 for (Coin it : setAmounts) {
                     if (setAmounts.size() > 1 && random.nextInt(2) != 0)
@@ -709,7 +709,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             } else {
                 // randomly skip some inputs when we have at least one of the same denom already
                 // TODO: make it adjustable via options/cmd-line params
-                Random random = new Random();
                 if (nSteps >= 1 && random.nextInt(5) == 0) {
                     // still count it as a step to randomize number of inputs
                     // if we have more than (or exactly) COINJOIN_ENTRY_MAX_SIZE of them
