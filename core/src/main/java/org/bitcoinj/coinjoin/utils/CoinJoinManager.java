@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.coinjoin.utils;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinBroadcastTx;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
@@ -29,6 +30,9 @@ import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,8 +140,20 @@ public class CoinJoinManager {
         masternodeGroup = new MasternodeGroup(context, blockChain);
     }
 
-    public void setBlockchain(AbstractBlockChain blockChain) {
+    NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
+        @Override
+        public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+            CoinJoin.updatedBlockTip(block);
+        }
+    };
 
+    public void setBlockchain(AbstractBlockChain blockChain) {
+        this.blockChain = blockChain;
+        blockChain.addNewBestBlockListener(newBestBlockListener);
+    }
+
+    public void close() {
+        blockChain.removeNewBestBlockListener(newBestBlockListener);
     }
 
     public boolean isMasternodeOrDisconnectRequested(MasternodeAddress address) {

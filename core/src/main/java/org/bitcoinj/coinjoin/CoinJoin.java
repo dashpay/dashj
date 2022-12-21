@@ -17,6 +17,7 @@
 package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
+import net.jcip.annotations.GuardedBy;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
@@ -222,7 +223,7 @@ public class CoinJoin {
     }
 
     public static void addDSTX(CoinJoinBroadcastTx dstx) {
-        mapDSTX.put(dstx.getHash(), dstx);
+        mapDSTX.put(dstx.getTx().getTxId(), dstx);
     }
     public static CoinJoinBroadcastTx getDSTX(Sha256Hash hash) {
         return mapDSTX.get(hash);
@@ -325,5 +326,10 @@ public class CoinJoin {
             default:
                 return "Unknown response.";
         }
+    }
+
+    @GuardedBy("mapdstxLock")
+    public static boolean hasDSTX(Sha256Hash hash) {
+        return mapDSTX.containsKey(hash);
     }
 }
