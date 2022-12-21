@@ -24,6 +24,9 @@ import java.util.HashMap;
 
 public class ProTxToOutpoint {
 
+    static String [][] proTxHashOutpointsUnitTest = new String[][] {
+            { Sha256Hash.ZERO_HASH.toString(), Sha256Hash.ZERO_HASH + "-0"},
+    };
     //ouzo
     static String [][] proTxHashOutpointsOuzo = new String[][] {
             {"ca76907d52eaa05d711e0d479300dcb489a7796244d36bdd5d5a66c48817dfa3", "7cc58d7ad7770f637d8653ebab90e220a5bd56eeab0e2ec1d63854738ce1174d-18"},
@@ -454,6 +457,8 @@ public class ProTxToOutpoint {
         String [][] proTxHashOutpoints;
         if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
             proTxHashOutpoints = proTxHashOutpointsTestNet;
+        } else if (params.getId().equals(NetworkParameters.ID_UNITTESTNET)) {
+            proTxHashOutpoints = proTxHashOutpointsUnitTest;
         } else {
             proTxHashOutpoints = proTxHashOutpointsOuzo;
         }
