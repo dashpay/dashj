@@ -18,4 +18,12 @@ public class CoinJoinResult {
     public static CoinJoinResult fail(PoolMessage messageId) {
         return new CoinJoinResult(false, messageId);
     }
+
+    public String getMessage() {
+        return messageId.name();
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
 }

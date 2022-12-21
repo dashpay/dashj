@@ -1308,7 +1308,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             setNull();
 
             // should be no unconfirmed denoms in non-multi-session mode
-            if (!CoinJoinClientOptions.isMultiSessionEnabled () && nBalanceDenominatedUnconf.isGreaterThan(Coin.ZERO)){
+            if (!CoinJoinClientOptions.isMultiSessionEnabled() && nBalanceDenominatedUnconf.isGreaterThan(Coin.ZERO)){
                 strAutoDenomResult = "Found unconfirmed denominated outputs, will wait till they confirm to continue.";
                 log.info("coinjoin: {}", strAutoDenomResult);
                 return false;

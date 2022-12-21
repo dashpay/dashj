@@ -35,7 +35,8 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         }
 
         // check collateral
-        if (!CoinJoin.isCollateralValid(dsa.getTxCollateral())) {
+        // the server doesn't have full access to the inputs
+        if (!CoinJoin.isCollateralValid(dsa.getTxCollateral(), false)) {
             log.info("coinjoin: collateral not valid!");
             return CoinJoinResult.fail(ERR_INVALID_COLLATERAL);
         }

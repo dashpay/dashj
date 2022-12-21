@@ -139,6 +139,10 @@ public class CoinJoin {
 
     /// If the collateral is valid given by a client
     public static boolean isCollateralValid(Transaction txCollateral) {
+        return isCollateralValid(txCollateral, true);
+    }
+
+    public static boolean isCollateralValid(Transaction txCollateral, boolean checkInputs) {
         if (txCollateral.getOutputs().isEmpty())
             return false;
         if (txCollateral.getLockTime() != 0)
@@ -156,20 +160,23 @@ public class CoinJoin {
             }
         }
 
-        for (TransactionInput txin : txCollateral.getInputs()) {
-            Transaction tx = txin.getConnectedTransaction();
-            if (tx != null) {
-                nValueIn = nValueIn.add(tx.getOutput(txin.getOutpoint().getIndex()).getValue());
-            } else {
-                log.info("coinjoin: -- Unknown inputs in collateral transaction, txCollateral={}", txCollateral); /* Continued */
+        if (checkInputs) {
+
+            for (TransactionInput txin : txCollateral.getInputs()) {
+                Transaction tx = txin.getConnectedTransaction();
+                if (tx != null) {
+                    nValueIn = nValueIn.add(tx.getOutput(txin.getOutpoint().getIndex()).getValue());
+                } else {
+                    log.info("coinjoin: -- Unknown inputs in collateral transaction, txCollateral={}", txCollateral); /* Continued */
+                    return false;
+                }
+            }
+
+            //collateral transactions are required to pay out a small fee to the miners
+            if (nValueIn.minus(nValueOut).isLessThan(getCollateralAmount())) {
+                log.info("coinjoin:  did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut.minus(nValueIn), txCollateral); /* Continued */
                 return false;
             }
-        }
-
-        //collateral transactions are required to pay out a small fee to the miners
-        if (nValueIn.minus(nValueOut).isLessThan(getCollateralAmount())) {
-            log.info("coinjoin:  did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut.minus(nValueIn), txCollateral); /* Continued */
-            return false;
         }
 
         log.info("coinjoin: collateral: {}", txCollateral); /* Continued */

@@ -17,6 +17,7 @@ package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
+import org.bitcoinj.coinjoin.utils.CoinJoinResult;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
@@ -219,7 +220,10 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
             }
 
             if (m instanceof CoinJoinAccept) {
+                // process the dsa message
                 CoinJoinAccept dsa = (CoinJoinAccept) m;
+                CoinJoinResult acceptable = coinJoinServer.isAcceptableDSA(dsa);
+                assertTrue(acceptable.getMessage(), acceptable.isSuccess());
                 CoinJoinStatusUpdate update = new CoinJoinStatusUpdate(m.getParams(), SESSION_ID, PoolState.POOL_STATE_QUEUE, PoolStatusUpdate.STATUS_ACCEPTED, PoolMessage.MSG_NOERR);
                 coinJoinManager.processMessage(lastMasternode.peer, update);
 
@@ -233,6 +237,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 coinJoinManager.processMessage(lastMasternode.peer, queue);
             } else if (m instanceof CoinJoinEntry) {
                 CoinJoinEntry entry = (CoinJoinEntry) m;
+
                 CoinJoinStatusUpdate update = new CoinJoinStatusUpdate(m.getParams(), SESSION_ID, PoolState.POOL_STATE_ACCEPTING_ENTRIES, PoolStatusUpdate.STATUS_ACCEPTED, PoolMessage.MSG_ENTRIES_ADDED);
                 coinJoinManager.processMessage(lastMasternode.peer, update);
 
@@ -298,8 +303,6 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
                 breakOut = true;
             }
-
-
         } while (!breakOut);
 
         System.out.println("loop complete");
