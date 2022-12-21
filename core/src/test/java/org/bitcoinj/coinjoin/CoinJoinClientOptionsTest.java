@@ -19,7 +19,7 @@ public class CoinJoinClientOptionsTest {
 
     @Before
     public void startUp() {
-        CoinJoinClientOptions.setAmount(DEFAULT_COINJOIN_AMOUNT);
+        CoinJoinClientOptions.reset();
     }
     @Test
     public void getTest() {
