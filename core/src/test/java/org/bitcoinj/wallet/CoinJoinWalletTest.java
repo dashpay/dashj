@@ -18,6 +18,7 @@ import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.store.FlatDB;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.InputStream;
@@ -46,7 +47,7 @@ public class CoinJoinWalletTest {
 
     Context context = new Context(DEVNET);
 
-    @Before
+    //@Before
     public void setUp() throws UnreadableWalletException {
         DeterministicSeed seed = new DeterministicSeed(
                 "behind zoo develop elder book canyon host opera gun nominee lady novel",
@@ -127,6 +128,7 @@ public class CoinJoinWalletTest {
     }
 
     @Test
+    @Ignore
     public void balanceTest() throws UnreadableWalletException {
         InputStream stream = getClass().getResourceAsStream("coinjoin.wallet");
         Wallet coinJoinWallet = new WalletProtobufSerializer().readWallet(stream);

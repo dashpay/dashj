@@ -62,6 +62,7 @@ import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(value = Parameterized.class)
 public class CoinJoinSessionTest extends TestWithMasternodeGroup {
@@ -195,6 +196,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         boolean breakOut = false;
         CoinJoinQueue queue = null;
+        CoinJoinServer coinJoinServer = new CoinJoinServer(wallet.getContext());
 
         // this loop with a sleep of 1 second will simulate a node that is attempting to
         // mix 1 session (1 round)
@@ -216,6 +218,10 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 CoinJoinAccept dsa = (CoinJoinAccept) m;
                 CoinJoinStatusUpdate update = new CoinJoinStatusUpdate(m.getParams(), SESSION_ID, PoolState.POOL_STATE_QUEUE, PoolStatusUpdate.STATUS_ACCEPTED, PoolMessage.MSG_NOERR);
                 coinJoinManager.processMessage(lastMasternode.peer, update);
+
+                // initialize Server
+                coinJoinServer.setSession(SESSION_ID);
+                coinJoinServer.setDenomination(dsa.getDenomination());
 
                 // send the dsq message indicating the mixing session is ready
                 queue = new CoinJoinQueue(m.getParams(), dsa.getDenomination(), masternodeOutpoint, Utils.currentTimeSeconds(), true);
@@ -244,6 +250,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                     TransactionInput input = new TransactionInput(UNITTEST, null, new byte[]{}, outPoint);
                     finalTx.addInput(input);
                 }
+                ValidInOuts validState = coinJoinServer.isValidInOuts(finalTx.getInputs(), finalTx.getOutputs(), PoolMessage.MSG_NOERR, false);
+                assertTrue(validState.messageId.name(), validState.result);
                 CoinJoinFinalTransaction finalTxMessage = new CoinJoinFinalTransaction(m.getParams(), SESSION_ID, finalTx);
                 coinJoinManager.processMessage(lastMasternode.peer, finalTxMessage);
 
