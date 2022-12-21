@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.coinjoin;
 
+import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.Address;
@@ -207,6 +208,9 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
             // this section of nextMessage() and if/else blocks will simulate a mixing masternode
             // it will reply to the messages sent by doMainenance()
+            if (lastMasternode == null)
+                continue; // try again in one second
+
             Message m = lastMasternode.nextMessage();
             log.info("received message: {}", m);
             System.out.println("masternode has received message: " + m);
@@ -250,6 +254,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                     TransactionInput input = new TransactionInput(UNITTEST, null, new byte[]{}, outPoint);
                     finalTx.addInput(input);
                 }
+                assertTrue(coinJoinServer.validateFinalTransaction(Lists.newArrayList(entry), finalTx));
                 ValidInOuts validState = coinJoinServer.isValidInOuts(finalTx.getInputs(), finalTx.getOutputs(), PoolMessage.MSG_NOERR, false);
                 assertTrue(validState.messageId.name(), validState.result);
                 CoinJoinFinalTransaction finalTxMessage = new CoinJoinFinalTransaction(m.getParams(), SESSION_ID, finalTx);
