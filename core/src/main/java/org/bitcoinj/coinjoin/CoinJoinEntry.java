@@ -126,4 +126,8 @@ public class CoinJoinEntry extends Message {
     public List<TransactionOutput> getMixingOutputs() {
         return mixingOutputs;
     }
+
+    public Transaction getTxCollateral() {
+        return txCollateral;
+    }
 }

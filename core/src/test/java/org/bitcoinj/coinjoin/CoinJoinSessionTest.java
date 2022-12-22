@@ -19,6 +19,7 @@ import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.coinjoin.utils.CoinJoinResult;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
+import org.bitcoinj.coinjoin.utils.RelayTransaction;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Coin;
@@ -75,6 +76,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     private static final int SESSION_ID = 123456;
 
     // Information for a single masternode
+    CoinJoinServer coinJoinServer;
     SimplifiedMasternodeListEntry entry;
     TransactionOutPoint masternodeOutpoint;
     BLSSecretKey operatorSecretKey;
@@ -103,6 +105,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         coinbaseTo = Address.fromKey(UNITTEST, wallet.currentReceiveKey());
         operatorSecretKey = BLSSecretKey.fromSeed(Sha256Hash.ZERO_HASH.getBytes());
+        coinJoinServer = new CoinJoinServer(wallet.getContext());
+
         entry = new SimplifiedMasternodeListEntry(
                 UNITTEST,
                 Sha256Hash.ZERO_HASH,
@@ -199,7 +203,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         boolean breakOut = false;
         CoinJoinQueue queue = null;
-        CoinJoinServer coinJoinServer = new CoinJoinServer(wallet.getContext());
+        coinJoinServer.setRelayTransaction(relayTransaction);
 
         // this loop with a sleep of 1 second will simulate a node that is attempting to
         // mix 1 session (1 round)
@@ -224,6 +228,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 // process the dsa message
                 CoinJoinAccept dsa = (CoinJoinAccept) m;
                 CoinJoinResult acceptable = coinJoinServer.isAcceptableDSA(dsa);
+                coinJoinServer.processAccept(p1.peer, dsa);
                 assertTrue(acceptable.getMessage(), acceptable.isSuccess());
                 CoinJoinStatusUpdate update = new CoinJoinStatusUpdate(m.getParams(), SESSION_ID, PoolState.POOL_STATE_QUEUE, PoolStatusUpdate.STATUS_ACCEPTED, PoolMessage.MSG_NOERR);
                 coinJoinManager.processMessage(lastMasternode.peer, update);
@@ -240,12 +245,14 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 CoinJoinEntry entry = (CoinJoinEntry) m;
                 log.info("CoinJoinEntry received: {}", entry.toString(true));
 
+                coinJoinServer.processEntry(p1.peer, entry);
+
                 CoinJoinStatusUpdate update = new CoinJoinStatusUpdate(m.getParams(), SESSION_ID, PoolState.POOL_STATE_ACCEPTING_ENTRIES, PoolStatusUpdate.STATUS_ACCEPTED, PoolMessage.MSG_ENTRIES_ADDED);
                 coinJoinManager.processMessage(lastMasternode.peer, update);
 
-                finalTx = new Transaction(UNITTEST);
+                finalTx = coinJoinServer.createFinalTransaction();//new Transaction(UNITTEST);
 
-                for (TransactionInput input : entry.getMixingInputs()) {
+                /*for (TransactionInput input : entry.getMixingInputs()) {
                     finalTx.addInput(input);
                 }
 
@@ -260,9 +267,9 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                     TransactionOutPoint outPoint = new TransactionOutPoint(UNITTEST, random.nextInt(10), Sha256Hash.wrap(txId));
                     TransactionInput input = new TransactionInput(UNITTEST, null, new byte[]{}, outPoint);
                     finalTx.addInput(input);
-                }
+                }*/
                 assertTrue(coinJoinServer.validateFinalTransaction(Lists.newArrayList(entry), finalTx));
-                ValidInOuts validState = coinJoinServer.isValidInOuts(finalTx.getInputs(), finalTx.getOutputs(), PoolMessage.MSG_NOERR, false);
+                ValidInOuts validState = coinJoinServer.isValidInOuts(finalTx.getInputs(), finalTx.getOutputs());
                 assertTrue(validState.messageId.name(), validState.result);
                 CoinJoinFinalTransaction finalTxMessage = new CoinJoinFinalTransaction(m.getParams(), SESSION_ID, finalTx);
                 coinJoinManager.processMessage(lastMasternode.peer, finalTxMessage);
@@ -324,6 +331,9 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
     }
 
+    private final ArrayList<Transaction> memPool = Lists.newArrayList();
+    RelayTransaction relayTransaction = memPool::add;
+
     // performs the function of a miner
     private void addBlock() throws PrunedException {
         //log.info("Mining a new block {} with {} txes", blockChain.getBestChainHeight() + 1, wallet.getPendingTransactions());
@@ -331,6 +341,10 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         for (Transaction tx : wallet.getPendingTransactions()) {
             nextBlock.addTransaction(tx);
         }
+        for (Transaction tx : memPool) {
+            nextBlock.addTransaction(tx);
+        }
+        memPool.clear();
         nextBlock.solve();
         blockChain.add(nextBlock);
     }

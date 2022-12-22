@@ -929,10 +929,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
 
             // Make sure all inputs/outputs are valid
-            PoolMessage nMessageID = MSG_NOERR;
-
-            if (!isValidInOuts(finalMutableTransaction.getInputs(), finalMutableTransaction.getOutputs(), nMessageID, false).result) {
-                log.info("coinjoin:  ERROR! IsValidInOuts() failed: {}", CoinJoin.getMessageByID(nMessageID));
+            ValidInOuts validResult = isValidInOuts(finalMutableTransaction.getInputs(), finalMutableTransaction.getOutputs());
+            if (!validResult.result) {
+                log.info("coinjoin:  ERROR! IsValidInOuts() failed: {}", CoinJoin.getMessageByID(validResult.messageId));
                 unlockCoins();
                 keyHolderStorage.returnAll();
                 setNull();
