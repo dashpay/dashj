@@ -112,9 +112,9 @@ public class CoinJoinWalletTest {
                 }
             }
         }*/
-        context.initDash(true, true);
-        FlatDB<SimplifiedMasternodeListManager> smlm = new FlatDB<>(context, getClass().getResource("coinjoin.mnlist").getPath(), true);
-        smlm.load(context.masternodeListManager);
+        //context.initDash(true, true);
+        //FlatDB<SimplifiedMasternodeListManager> smlm = new FlatDB<>(context, getClass().getResource("coinjoin.mnlist").getPath(), true);
+        //smlm.load(context.masternodeListManager);
     }
 
     @Test
