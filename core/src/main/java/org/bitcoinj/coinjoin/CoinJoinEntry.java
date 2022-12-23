@@ -15,8 +15,10 @@
  */
 package org.bitcoinj.coinjoin;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
@@ -36,6 +38,9 @@ public class CoinJoinEntry extends Message {
     private List<CoinJoinTransactionInput> mixingInputs;
     private List<TransactionOutput> mixingOutputs;
     private Transaction txCollateral;
+
+    @VisibleForTesting
+    private Peer peer; // in memory for tests
 
     public CoinJoinEntry(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
@@ -129,5 +134,29 @@ public class CoinJoinEntry extends Message {
 
     public Transaction getTxCollateral() {
         return txCollateral;
+    }
+
+    public Peer getPeer() {
+        return peer;
+    }
+
+    public void setPeer(Peer peer) {
+        this.peer = peer;
+    }
+
+    public boolean addScriptSig(TransactionInput txin) {
+        for (CoinJoinTransactionInput txdsin : mixingInputs) {
+            if (txdsin.getOutpoint().equals(txin.getOutpoint()) && txdsin.getSequenceNumber() == txin.getSequenceNumber()) {
+                if (txdsin.hasSignature())
+                    return false;
+
+                txdsin.setScriptSig(txin.getScriptSig());
+                txdsin.setHasSignature(true);
+
+                return true;
+            }
+        }
+
+        return false;
     }
 }

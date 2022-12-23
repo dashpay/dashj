@@ -22,7 +22,7 @@ import org.bitcoinj.script.Script;
 public class CoinJoinTransactionInput extends TransactionInput {
     // memory only
     private final Script prevPubKey;
-    private final boolean hasSignature;
+    private boolean hasSignature;
     private final int rounds;
 
     public CoinJoinTransactionInput(TransactionInput txin, Script script, int rounds) {
@@ -49,5 +49,9 @@ public class CoinJoinTransactionInput extends TransactionInput {
 
     public boolean hasSignature() {
         return hasSignature;
+    }
+
+    public void setHasSignature(boolean hasSignature) {
+        this.hasSignature = hasSignature;
     }
 }

@@ -6,8 +6,11 @@ import org.bitcoinj.coinjoin.utils.RelayTransaction;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.InventoryItem;
+import org.bitcoinj.core.InventoryMessage;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
+import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
@@ -21,6 +24,8 @@ import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +49,7 @@ import static org.bitcoinj.coinjoin.PoolMessage.ERR_RECENT;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_SESSION;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_ENTRIES_ADDED;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_NOERR;
+import static org.bitcoinj.coinjoin.PoolMessage.MSG_SUCCESS;
 import static org.bitcoinj.coinjoin.PoolState.POOL_STATE_ACCEPTING_ENTRIES;
 import static org.bitcoinj.coinjoin.PoolState.POOL_STATE_ERROR;
 import static org.bitcoinj.coinjoin.PoolState.POOL_STATE_IDLE;
@@ -187,12 +193,12 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         // we only add new users to an existing session when we are in queue mode
         if (nState != POOL_STATE_QUEUE) {
             nMessageIDRet = ERR_MODE;
-            LogPrint(BCLog::COINJOIN, "CCoinJoinServer::AddUserToExistingSession -- incompatible mode: nState=%d\n", nState);
+            log.info("CoinJoinServer::AddUserToExistingSession -- incompatible mode: nState=%d\n", nState);
             return false;
         }
 
         if (dsa.nDenom != nSessionDenom) {
-            LogPrint(BCLog::COINJOIN, "CCoinJoinServer::AddUserToExistingSession -- incompatible denom %d (%s) != nSessionDenom %d (%s)\n",
+            log.info("CoinJoinServer::AddUserToExistingSession -- incompatible denom %d (%s) != nSessionDenom %d (%s)\n",
                     dsa.nDenom, CCoinJoin::DenominationToString(dsa.nDenom), nSessionDenom, CCoinJoin::DenominationToString(nSessionDenom));
             nMessageIDRet = ERR_DENOM;
             return false;
@@ -203,7 +209,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         nMessageIDRet = MSG_NOERR;
         vecSessionCollaterals.push_back(MakeTransactionRef(dsa.txCollateral));
 
-        LogPrint(BCLog::COINJOIN, "CCoinJoinServer::AddUserToExistingSession -- new user accepted, nSessionID: %d  nSessionDenom: %d (%s)  vecSessionCollaterals.size(): %d  CCoinJoin::GetMaxPoolParticipants(): %d\n",
+        log.info("CoinJoinServer::AddUserToExistingSession -- new user accepted, nSessionID: %d  nSessionDenom: %d (%s)  vecSessionCollaterals.size(): %d  CCoinJoin::GetMaxPoolParticipants(): %d\n",
                 nSessionID, nSessionDenom, CCoinJoin::DenominationToString(nSessionDenom), vecSessionCollaterals.size(), CCoinJoin::GetMaxPoolParticipants());
 
         return true;*/
@@ -313,7 +319,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
         log.info("coinjoin: DSVIN -- txCollateral {}", entry.getTxCollateral());
 
-        //entry.addr = from->addr;
+        entry.setPeer(from);
         CoinJoinResult result = addEntry(entry);
         if (result.isSuccess()) {
             pushStatus(from, STATUS_ACCEPTED, result.getMessageId());
@@ -344,7 +350,121 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
 
     void checkPool() {
-        // empty for now
+        int entries = getEntriesCount();
+        if (entries != 0) log.info("CoinJoinServer -- entries count {}", entries);
+
+        // If we have an entry for each collateral, then create final tx
+        if (state.get() == POOL_STATE_ACCEPTING_ENTRIES && getEntriesCount() >= 1/*&& getEntriesCount() == sessionCollaterals.size()*/) {
+            log.info("CCoinJoinServer::CheckPool -- FINALIZE TRANSACTIONS\n");
+            createFinalTransaction();
+            return;
+        }
+
+        // Check for Time Out
+        // If we timed out while accepting entries, then if we have more than minimum, create final tx
+        if (state.get() == POOL_STATE_ACCEPTING_ENTRIES && hasTimedOut()
+                && getEntriesCount() >= CoinJoin.getMinPoolParticipants(context.getParams())) {
+            // Punish misbehaving participants
+            //chargeFees();
+            // Try to complete this session ignoring the misbehaving ones
+            createFinalTransaction();
+            return;
+        }
+
+        // If we have all the signatures, try to compile the transaction
+        if (state.get() == POOL_STATE_SIGNING && isSignaturesComplete()) {
+            log.info("CCoinJoinServer::CheckPool -- SIGNING\n");
+            commitFinalTransaction();
+            return;
+        }
+    }
+
+
+    // Check to make sure everything is signed
+    boolean isSignaturesComplete() {
+        lock.lock();
+        try {
+            return entries.stream().allMatch(new Predicate<CoinJoinEntry>() {
+                @Override
+                public boolean test(CoinJoinEntry coinJoinEntry) {
+                    return coinJoinEntry.getMixingInputs().stream().allMatch(new Predicate<CoinJoinTransactionInput>() {
+                        @Override
+                        public boolean test(CoinJoinTransactionInput coinJoinTransactionInput) {
+                            return coinJoinTransactionInput.hasSignature();
+                        }
+                    });
+                }
+            });
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void commitFinalTransaction() {
+        
+        Transaction finalTransaction = finalMutableTransaction;
+        Sha256Hash hashTx = finalTransaction.getTxId();
+
+        log.info("CoinJoinServer::CommitFinalTransaction -- finalTransaction={}", finalTransaction.getTxId()); /* Continued */
+
+
+            // See if the transaction is valid
+            boolean anyNotSigned = finalTransaction.getInputs().stream().anyMatch(new Predicate<TransactionInput>() {
+                @Override
+                public boolean test(TransactionInput transactionInput) {
+                    return transactionInput.getScriptBytes().length == 0;
+                }
+            });
+            if (anyNotSigned) {
+                log.info("CoinJoinServer: AcceptToMemoryPool() error: Transaction not valid");
+                relayCompletedTransaction(PoolMessage.ERR_INVALID_TX);
+                return;
+            }
+
+
+
+
+        log.info("CoinJoinServer::CommitFinalTransaction -- CREATING DSTX\n");
+
+        // create and sign masternode dstx transaction
+        if (CoinJoin.getDSTX(hashTx) == null) {
+            CoinJoinBroadcastTx dstxNew = new CoinJoinBroadcastTx(context.getParams(), finalTransaction, masternodeOutpoint, Utils.currentTimeSeconds());
+            dstxNew.sign(operatorSecretKey);
+            CoinJoin.addDSTX(dstxNew);
+        }
+
+        log.info("CoinJoinServer::CommitFinalTransaction -- TRANSMITTING DSTX\n");
+
+        // Tell the clients it was successful
+        relayCompletedTransaction(MSG_SUCCESS);
+
+        InventoryItem item = new InventoryItem(InventoryItem.Type.DarkSendTransaction, hashTx);
+        InventoryMessage inv = new InventoryMessage(context.getParams());
+        inv.addItem(item);
+        relay(inv);
+
+        // Randomly charge clients
+        chargeRandomFees();
+
+        // Reset
+        log.info("CoinJoinServer::CommitFinalTransaction -- COMPLETED -- RESETTING");
+        lock.lock();
+        try {
+            setNull();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void relayCompletedTransaction(PoolMessage nMessageID) {
+        
+        log.info("CoinJoinServer: nSessionID: {}  nSessionDenom: {} ({})",
+                sessionID, sessionDenom, CoinJoin.denominationToString(sessionDenom));
+
+        // final mixing tx with empty signatures should be relayed to mixing participants only
+        for (CoinJoinEntry entry : entries) {
+            entry.getPeer().sendMessage(new CoinJoinComplete(context.getParams(), sessionID.get(), nMessageID));
+        }
     }
 
     public Transaction createFinalTransaction() {
@@ -370,6 +490,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
             finalTx.addInput(input);
         }
         setState(POOL_STATE_SIGNING);
+        relayFinalTransaction(finalTx);
         return finalTx;
     }
 
@@ -451,6 +572,114 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         return true;
     }
 
+    private boolean addScriptSig(TransactionInput txinNew)
+    {
+        
+        log.info("CoinJoinServer::AddScriptSig -- scriptSig={}", Utils.HEX.encode(txinNew.getScriptBytes()));
+
+        lock.lock();
+        try {
+            for (CoinJoinEntry entry : entries){
+                if (entry.getMixingInputs().stream().anyMatch(new Predicate<CoinJoinTransactionInput>() {
+                    @Override
+                    public boolean test(CoinJoinTransactionInput coinJoinTransactionInput) {
+                        return coinJoinTransactionInput.getScriptSig().equals(txinNew.getScriptSig());
+                    }
+                })) {
+                    log.info("CoinJoinServer::AddScriptSig -- already exists\n");
+                    return false;
+                }
+            }
+
+            if (!isInputScriptSigValid(txinNew)) {
+                log.info("CoinJoinServer::AddScriptSig -- Invalid scriptSig\n");
+                return false;
+            }
+
+            log.info("CoinJoinServer::AddScriptSig -- scriptSig={} new", txinNew.getScriptSig());
+
+            for (TransactionInput txin :finalMutableTransaction.getInputs()){
+                if (txin.getOutpoint().equals(txinNew.getOutpoint()) && txin.getSequenceNumber() == txinNew.getSequenceNumber()) {
+                    txin.setScriptSig(txinNew.getScriptSig());
+                    log.info("CoinJoinServer::AddScriptSig -- adding to finalMutableTransaction, scriptSig={}", Utils.HEX.encode(txinNew.getScriptBytes()));
+                }
+            }
+            for (CoinJoinEntry entry : entries){
+                if (entry.addScriptSig(txinNew)) {
+                    log.info("CoinJoinServer::AddScriptSig -- adding to entries, scriptSig={}", txinNew.getScriptSig());
+                    return true;
+                }
+            }
+
+            log.info("CoinJoinServer::AddScriptSig -- Couldn't set sig!\n");
+            return false;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // Check to make sure a given input matches an input in the pool and its scriptSig is valid
+    private boolean isInputScriptSigValid(TransactionInput txin) {
+        Transaction txNew = new Transaction(context.getParams());
+        int nTxInIndex = -1;
+        Script sigPubKey;
+
+        {
+            int i = 0;
+            for (CoinJoinEntry entry: entries) {
+            for (TransactionOutput txout: entry.getMixingOutputs()) {
+                txNew.addOutput(txout);
+            }
+            for (CoinJoinTransactionInput txdsin: entry.getMixingInputs()) {
+                txNew.addInput(txdsin);
+
+                if (txdsin.getOutpoint().equals(txin.getOutpoint())) {
+                    nTxInIndex = i;
+                    sigPubKey = txdsin.getPrevPubKey();
+                }
+                i++;
+            }
+        }
+        }
+        if (nTxInIndex >= 0) { //might have to do this one input at a time?
+            txNew.getInput(nTxInIndex).setScriptSig(txin.getScriptSig());
+            log.info("CoinJoinServer::IsInputScriptSigValid -- verifying scriptSig {}", txin.getScriptSig());
+           
+        } else {
+            log.info("CoinJoinServer::IsInputScriptSigValid -- Failed to find matching input in pool, {}", txin);
+            return false;
+        }
+
+        log.info("CoinJoinServer::IsInputScriptSigValid -- Successfully validated input and scriptSig");
+        return true;
+    }
+
+    public void processSignedInputs(Peer from, CoinJoinSignedInputs signedInputs) {
+        List<TransactionInput> txInputs = signedInputs.getInputs();
+
+        log.info("coinjoin server: DSSIGNFINALTX -- vecTxIn.size() {}", txInputs.size());
+
+        int nTxInIndex = 0;
+        int nTxInsCount = txInputs.size();
+
+        for (TransactionInput txin : txInputs) {
+            nTxInIndex++;
+            if (!addScriptSig(txin)) {
+                log.info("coinjoin server: DSSIGNFINALTX -- AddScriptSig() failed at {}/{}, session: {}", nTxInIndex, nTxInsCount, sessionID);
+                lock.lock();
+                try {
+                    relayStatus(STATUS_REJECTED);
+                } finally {
+                    lock.unlock();
+                }
+                return;
+            }
+            log.info("coinjoin server: DSSIGNFINALTX -- AddScriptSig() {}/{} success", nTxInIndex, nTxInsCount);
+        }
+        // all is good
+        checkPool();
+    }
+
     public void setNull() {
         sessionCollaterals.clear();
         super.setNull();
@@ -505,12 +734,39 @@ public class CoinJoinServer extends CoinJoinBaseSession {
     }
 
     protected void relayStatus(PoolStatusUpdate statusUpdate) {
-        // do nothign for now
+        relayStatus(statusUpdate, MSG_NOERR);
+    }
+    protected void relayStatus(PoolStatusUpdate statusUpdate, PoolMessage messageID) {
+        // status updates should be relayed to mixing participants only
+        for (CoinJoinEntry entry : entries) {
+            // make sure everyone is still connected
+            pushStatus(entry.getPeer(), statusUpdate, messageID);
+        }
     }
 
-    protected void relay(CoinJoinQueue dsq) {
+    protected void relayFinalTransaction(Transaction finalTx) {
+        log.info("CoinJoinServer -- nSessionID: {}  nSessionDenom: {} ({})",
+                sessionID, sessionDenom, CoinJoin.denominationToString(sessionDenom));
+
+        // final mixing tx with empty signatures should be relayed to mixing participants only
+        for (CoinJoinEntry entry : entries) {
+            entry.getPeer().sendMessage(new CoinJoinFinalTransaction(context.getParams(), sessionID.get(), finalTx));
+            /*bool fOk = connman.ForNode(entry.addr, [&txFinal, this](CNode* pnode) {
+                CNetMsgMaker msgMaker(pnode->GetSendVersion());
+                connman.PushMessage(pnode, msgMaker.Make(NetMsgType::DSFINALTX, nSessionID.load(), txFinal));
+                return true;
+            });
+            if (!fOk) {
+                // no such node? maybe this client disconnected or our own connection went down
+                RelayStatus(STATUS_REJECTED);
+                break;
+            }*/
+        }
+    }
+
+    protected void relay(Message message) {
         for (Peer peer : context.peerGroup.getConnectedPeers()) {
-            peer.sendMessage(dsq);
+            peer.sendMessage(message);
         }
     }
 }

@@ -19,8 +19,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.coinjoin.utils.MasternodeGroup;
+import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
+import org.bitcoinj.core.MemoryPoolMessage;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
@@ -42,9 +44,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 public class TestWithMasternodeGroup extends TestWithPeerGroup {
 
@@ -81,7 +85,6 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
     @Override
     protected void initPeerGroup() {
         super.initPeerGroup();
-        peerGroup.setUseLocalhostPeerWhenPossible(false);
         if (clientType == ClientType.NIO_CLIENT_MANAGER)
             masternodeGroup = createMasternodeGroup(new NioClientManager());
         else
@@ -93,11 +96,14 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
 
     InboundMessageQueuer lastMasternode;
 
+    protected boolean blockJobs = false;
+    protected final Semaphore jobBlocks = new Semaphore(0);
+
     private MasternodeGroup createMasternodeGroup(final ClientConnectionManager manager) {
         return new MasternodeGroup(UNITTEST, blockChain, manager) {
             @Override
             protected ListeningScheduledExecutorService createPrivateExecutor() {
-                return MoreExecutors.listeningDecorator(new ScheduledThreadPoolExecutor(1, new ContextPropagatingThreadFactory("PeerGroup test thread")) {
+                return MoreExecutors.listeningDecorator(new ScheduledThreadPoolExecutor(1, new ContextPropagatingThreadFactory("MasternodeGroup test thread")) {
                     @Override
                     public ScheduledFuture<?> schedule(final Runnable command, final long delay, final TimeUnit unit) {
                         if (!blockJobs)
@@ -136,26 +142,26 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
         };
     }
 
-    PreMessageReceivedEventListener preMessageReceivedEventListener = new PreMessageReceivedEventListener() {
-        @Override
-        public Message onPreMessageReceived(Peer peer, Message m) {
-            if (m instanceof CoinJoinAccept) {
-                peer.sendMessage(new CoinJoinStatusUpdate(m.getParams(), SESSION_ID, PoolState.POOL_STATE_QUEUE, PoolStatusUpdate.STATUS_ACCEPTED, PoolMessage.MSG_NOERR));
-                return null;
-            } else if (m instanceof CoinJoinEntry) {
-                return null;
-            } else if (m instanceof CoinJoinSignedInputs) {
-                return null;
-            }
-            return m;
-        }
-    };
+//    PreMessageReceivedEventListener preMessageReceivedEventListener = new PreMessageReceivedEventListener() {
+//        @Override
+//        public Message onPreMessageReceived(Peer peer, Message m) {
+//            if (m instanceof CoinJoinAccept) {
+//                peer.sendMessage(new CoinJoinStatusUpdate(m.getParams(), SESSION_ID, PoolState.POOL_STATE_QUEUE, PoolStatusUpdate.STATUS_ACCEPTED, PoolMessage.MSG_NOERR));
+//                return null;
+//            } else if (m instanceof CoinJoinEntry) {
+//                return null;
+//            } else if (m instanceof CoinJoinSignedInputs) {
+//                return null;
+//            }
+//            return m;
+//        }
+//    };
 
     protected InboundMessageQueuer connectMasternodeWithoutVersionExchange(int id) throws Exception {
         Preconditions.checkArgument(id < PEER_SERVERS);
         InetSocketAddress remoteAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), 2000 + id);
-        Peer peer = peerGroup.connectTo(remoteAddress).getConnectionOpenFuture().get();
-        peer.addPreMessageReceivedEventListener(preMessageReceivedEventListener);
+        Peer peer = masternodeGroup.connectTo(remoteAddress).getConnectionOpenFuture().get();
+        //peer.addPreMessageReceivedEventListener(preMessageReceivedEventListener);
         InboundMessageQueuer writeTarget = newPeerWriteTargetQueue.take();
         writeTarget.peer = peer;
         return writeTarget;
@@ -173,5 +179,15 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
         writeTarget.sendMessage(new VersionAck());
         stepThroughInit(versionMessage, writeTarget);
         return writeTarget;
+    }
+
+    private void stepThroughInit(VersionMessage versionMessage, InboundMessageQueuer writeTarget) throws InterruptedException {
+        checkState(writeTarget.nextMessageBlocking() instanceof VersionMessage);
+        checkState(writeTarget.nextMessageBlocking() instanceof VersionAck);
+        if (versionMessage.isBloomFilteringSupported()) {
+            checkState(writeTarget.nextMessageBlocking() instanceof SendCoinJoinQueue);
+            //checkState(writeTarget.nextMessageBlocking() instanceof BloomFilter);
+            //checkState(writeTarget.nextMessageBlocking() instanceof MemoryPoolMessage);
+        }
     }
 }

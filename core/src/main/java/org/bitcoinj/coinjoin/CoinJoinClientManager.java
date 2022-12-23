@@ -197,14 +197,19 @@ public class CoinJoinClientManager {
         if (masternodesUsed.size() > thresholdHigh) {
             // remove the first masternodesUsed.size() - thresholdLow masternodes
             // this might be a problem for SPV
-            Iterator<TransactionOutPoint> it = masternodesUsed.iterator();
-            int i = 0;
-            while (it.hasNext()) {
-                it.next();
-                if (i < masternodesUsed.size() - thresholdLow) {
-                    it.remove();
+            lock.lock();
+            try {
+                Iterator<TransactionOutPoint> it = masternodesUsed.iterator();
+                int i = 0;
+                while (it.hasNext()) {
+                    it.next();
+                    if (i < masternodesUsed.size() - thresholdLow) {
+                        it.remove();
+                    }
+                    i++;
                 }
-                i++;
+            } finally {
+                lock.unlock();
             }
 
             log.info("  masternodesUsed: new size: {}, threshold: {}", masternodesUsed.size(), thresholdHigh);

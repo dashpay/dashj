@@ -24,7 +24,9 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.GetDataMessage;
 import org.bitcoinj.core.GetSporksMessage;
+import org.bitcoinj.core.InventoryMessage;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.Message;
@@ -47,6 +49,7 @@ import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.DerivationPathFactory;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -70,7 +73,6 @@ import static org.junit.Assert.assertTrue;
 @RunWith(value = Parameterized.class)
 public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     Logger log = LoggerFactory.getLogger(CoinJoinSessionTest.class);
-    Random random = new Random();
     @Rule
     public ExpectedException thrown = ExpectedException.none();
     private static final int SESSION_ID = 123456;
@@ -82,7 +84,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     BLSSecretKey operatorSecretKey;
     private Address coinbaseTo;
     private Transaction finalTx = null;
-    private Transaction completeTx = null;
+    private Transaction mixingTx = null;
 
     @Parameterized.Parameters
     public static Collection<ClientType[]> parameters() {
@@ -160,7 +162,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         super.tearDown();
     }
 
-    @Test(timeout = 30000) // Exception: test timed out after 100 milliseconds
+    @Test//(timeout = 30000) // Exception: test timed out after 100 milliseconds
+    @Ignore
     public void sessionTest() throws Exception {
         System.out.println("Session test started...");
         wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
@@ -282,11 +285,11 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 coinJoinManager.processMessage(lastMasternode.peer, completeMessage);
 
                 // sign the rest of the inputs?
-                completeTx = new Transaction(UNITTEST);
-                completeTx.setVersion(finalTx.getVersion());
-                completeTx.setLockTime(finalTx.getLockTime());
+                mixingTx = new Transaction(UNITTEST);
+                mixingTx.setVersion(finalTx.getVersion());
+                mixingTx.setLockTime(finalTx.getLockTime());
                 for (TransactionOutput output : finalTx.getOutputs()) {
-                    completeTx.addOutput(output);
+                    mixingTx.addOutput(output);
                 }
                 for (TransactionInput input : finalTx.getInputs()) {
                     TransactionInput thisSignedInput = null;
@@ -297,15 +300,15 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                     }
 
                     if (thisSignedInput != null) {
-                        completeTx.addInput(thisSignedInput);
+                        mixingTx.addInput(thisSignedInput);
                     } else {
                         ECKey signingKey = new ECKey();
                         Address address = Address.fromKey(UNITTEST, signingKey);
-                        completeTx.addSignedInput(input, ScriptBuilder.createOutputScript(address), signingKey, Transaction.SigHash.ALL, false);
+                        mixingTx.addSignedInput(input, ScriptBuilder.createOutputScript(address), signingKey, Transaction.SigHash.ALL, false);
                     }
                 }
 
-                CoinJoinBroadcastTx broadcastTx = new CoinJoinBroadcastTx(UNITTEST, completeTx, masternodeOutpoint, Utils.currentTimeSeconds());
+                CoinJoinBroadcastTx broadcastTx = new CoinJoinBroadcastTx(UNITTEST, mixingTx, masternodeOutpoint, Utils.currentTimeSeconds());
                 broadcastTx.sign(operatorSecretKey);
 
                 coinJoinManager.processMessage(lastMasternode.peer, broadcastTx);
@@ -319,10 +322,10 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         assertNotNull(queue);
 
         // check that the mixing transaction was completed
-        assertNotNull(completeTx);
+        assertNotNull(mixingTx);
 
         // check that the broadcastTx was processed
-        CoinJoinBroadcastTx broadcastTx = CoinJoin.getDSTX(completeTx.getTxId());
+        CoinJoinBroadcastTx broadcastTx = CoinJoin.getDSTX(mixingTx.getTxId());
         assertNotNull(broadcastTx);
 
         if (clientManager.isMixing()) {
@@ -331,12 +334,169 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
     }
 
+    @Test(timeout = 30000) // Exception: test timed out after 100 milliseconds
+    public void sessionTestTwo() throws Exception {
+        System.out.println("Session test started...");
+        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        CoinJoinClientOptions.reset();
+        CoinJoinClientOptions.setAmount(Coin.COIN);
+        CoinJoinClientOptions.setEnabled(true);
+        CoinJoinClientOptions.setRounds(1);
+        CoinJoinClientOptions.setSessions(1);
+
+        peerGroup.start();
+        masternodeGroup.start();
+        InboundMessageQueuer spvClient = connectPeer(1);
+        InboundMessageQueuer someNode = connectPeer(2);
+        assertEquals(2, peerGroup.numConnectedPeers());
+        assertEquals(GetSporksMessage.class, outbound(spvClient).getClass());
+        assertEquals(GetSporksMessage.class, outbound(someNode).getClass());
+
+        CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
+
+        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
+
+        // mix coins
+        CoinJoinClientManager clientManager = coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
+        clientManager.setBlockChain(wallet.getContext().blockChain);
+
+        addBlock();
+        clientManager.updatedSuccessBlock();
+
+        if (!clientManager.startMixing()) {
+            System.out.println("Mixing has been started already.");
+            return;
+        }
+
+        boolean result = clientManager.doAutomaticDenominating();
+        System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + clientManager.getStatuses() + ", will retry")));
+
+        for (int i = 0; i < 5; ++i) {
+            addBlock();
+        }
+
+        coinJoinServer.setRelayTransaction(relayTransaction);
+
+        // step 0: client will connect to the masternode, if it hasn't yet
+        do {
+            Thread.sleep(1000);
+            wallet.getContext().coinJoinManager.doMaintenance();
+        } while (lastMasternode == null);
+
+        addBlock();
+        assertNotNull(lastMasternode);
+
+        // step 1a: masternode receives CoinJoinAccept (dsa) message
+        Message acceptMessage = outbound(lastMasternode);
+        assertEquals(CoinJoinAccept.class, acceptMessage.getClass());
+
+        // step 1b: masternode processes the dsa message
+        CoinJoinAccept dsa = (CoinJoinAccept) acceptMessage;
+        CoinJoinResult acceptable = coinJoinServer.isAcceptableDSA(dsa);
+        assertTrue(acceptable.getMessage(), acceptable.isSuccess());
+        coinJoinServer.processAccept(spvClient.peer, dsa);
+
+        // step 2: client receives the CoinJoinStatusUpdate(dssu) message
+        Message updateMessage = outbound(spvClient);
+        assertEquals(CoinJoinStatusUpdate.class, updateMessage.getClass());
+        int sessionId = ((CoinJoinStatusUpdate) updateMessage).getSessionID();
+        // step 2: client processes the dssu message
+        coinJoinManager.processMessage(lastMasternode.peer, updateMessage);
+
+        // step 3: masternode checks that there are enough users for a session
+        coinJoinServer.checkForCompleteQueue();
+        // step 3: client receives a CoinJoinQueue (dsq) message with the ready=true flag
+        Message queueMessage = outbound(spvClient);
+        assertEquals(CoinJoinQueue.class, queueMessage.getClass());
+        // step 3: client processes the dsq message
+        coinJoinManager.processMessage(lastMasternode.peer, queueMessage);
+        coinJoinManager.doMaintenance();
+
+        // step 4: masternode receives the CoinJoinEntry (dsi) message
+        Message entryMessage = outbound(lastMasternode);
+        assertEquals(CoinJoinEntry.class, entryMessage.getClass());
+        // step 4: masternode processes the dsi message
+        CoinJoinEntry entry = (CoinJoinEntry) entryMessage;
+        coinJoinServer.processEntry(spvClient.peer, entry);
+
+        // step 5: client receives a CoinJoinStatusUpdate (dssu) message
+        updateMessage = outbound(spvClient);
+        assertEquals(CoinJoinStatusUpdate.class, updateMessage.getClass());
+        // step 5: client processes the dssu message
+        coinJoinManager.processMessage(lastMasternode.peer, updateMessage);
+        coinJoinManager.doMaintenance();
+
+        // step 6: client receives the CoinJoinFinalTransaction (dsf) message
+        Message finalTxMessage = outbound(spvClient);
+        assertEquals(finalTxMessage.toString(), CoinJoinFinalTransaction.class, finalTxMessage.getClass());
+        // step 6: client processes the CoinJoinFinalTransaction (dsf) message
+        CoinJoinFinalTransaction dsf = (CoinJoinFinalTransaction) finalTxMessage;
+        Transaction finalTx = dsf.getTransaction();
+        assertEquals(sessionId, dsf.getMsgSessionID());
+        assertTrue(coinJoinServer.validateFinalTransaction(Lists.newArrayList(entry), finalTx));
+        ValidInOuts validState = coinJoinServer.isValidInOuts(finalTx.getInputs(), finalTx.getOutputs());
+        assertTrue(validState.messageId.name(), validState.result);
+        coinJoinManager.processMessage(lastMasternode.peer, finalTxMessage);
+
+        // step 7: client receives a CoinJoinStatusUpdate (dssu) message
+        updateMessage = outbound(spvClient);
+        assertEquals(CoinJoinStatusUpdate.class, updateMessage.getClass());
+        assertEquals(sessionId, ((CoinJoinStatusUpdate) updateMessage).getSessionID());
+        // step 7: client receives a CoinJoinStatusUpdate (dssu) message
+        coinJoinManager.processMessage(lastMasternode.peer, updateMessage);
+        coinJoinManager.doMaintenance();
+
+
+        // step 8: masternode receives the CoinJoinSignedInputs dss message
+        Message signedInputsMessage = outbound(lastMasternode);
+        assertEquals(CoinJoinSignedInputs.class, signedInputsMessage.getClass());
+        // step 8: masternode processes the CoinJoinSignedInputs dss message
+        CoinJoinSignedInputs signedInputs = (CoinJoinSignedInputs) signedInputsMessage;
+        coinJoinServer.processSignedInputs(spvClient.peer, signedInputs);
+
+        // step 8: client receives the CoinJoinComplete (dsc) message
+        Message completeMessage = outbound(spvClient);
+        assertEquals(CoinJoinComplete.class, completeMessage.getClass());
+        assertEquals(sessionId, ((CoinJoinComplete) completeMessage).getMsgSessionID());
+        // step 8: client processes the dsc message
+        coinJoinManager.processMessage(lastMasternode.peer, completeMessage);
+
+        // step 10: client receives inv message
+        Message invMessage = outbound(spvClient);
+        assertEquals(InventoryMessage.class, invMessage.getClass());
+        InventoryMessage inv = (InventoryMessage) invMessage;
+        assertEquals(1, inv.getItems().size());
+        // step 10: client requests the dstx
+        GetDataMessage getDataMessage = new GetDataMessage(wallet.getContext().getParams());
+        getDataMessage.addItem(inv.getItems().get(0));
+
+        // step 10: masternode processes request for getdata
+        CoinJoinBroadcastTx dstx = CoinJoin.getDSTX(getDataMessage.getItems().get(0).hash);
+        spvClient.peer.sendMessage(dstx);
+
+        // step 11: client receives the CoinJoinBroadcastTx (dstx) message
+        Message broadcastTxMessage = outbound(spvClient);
+        assertEquals(CoinJoinBroadcastTx.class, broadcastTxMessage.getClass());
+        mixingTx = ((CoinJoinBroadcastTx) broadcastTxMessage).getTx();
+
+        CoinJoinBroadcastTx broadcastTxTwo = CoinJoin.getDSTX(mixingTx.getTxId());
+        assertNotNull(broadcastTxTwo);
+
+        addBlock();
+
+        // TODO check wallet balance types here
+
+        if (clientManager.isMixing()) {
+            clientManager.stopMixing();
+        }
+    }
+
     private final ArrayList<Transaction> memPool = Lists.newArrayList();
     RelayTransaction relayTransaction = memPool::add;
 
     // performs the function of a miner
     private void addBlock() throws PrunedException {
-        //log.info("Mining a new block {} with {} txes", blockChain.getBestChainHeight() + 1, wallet.getPendingTransactions());
+        log.info("Mining a new block {} with {} txes", blockChain.getBestChainHeight() + 1, wallet.getPendingTransactions());
         Block nextBlock = blockChain.getChainHead().getHeader().createNextBlock(Address.fromKey(UNITTEST, new ECKey()), Block.BLOCK_VERSION_GENESIS, Utils.currentTimeSeconds() + blockChain.getBestChainHeight() * 2L, blockChain.getBestChainHeight() + 1);
         for (Transaction tx : wallet.getPendingTransactions()) {
             nextBlock.addTransaction(tx);

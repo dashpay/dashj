@@ -162,7 +162,7 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         return writeTarget;
     }
 
-    protected void stepThroughInit(VersionMessage versionMessage, InboundMessageQueuer writeTarget) throws InterruptedException {
+    private void stepThroughInit(VersionMessage versionMessage, InboundMessageQueuer writeTarget) throws InterruptedException {
         checkState(writeTarget.nextMessageBlocking() instanceof VersionMessage);
         checkState(writeTarget.nextMessageBlocking() instanceof VersionAck);
         if (versionMessage.isBloomFilteringSupported()) {
