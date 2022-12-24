@@ -84,6 +84,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("jack-daniels")) {
             params = JackDanielsDevNetParams.get();
             filePrefix = "forwarding-service-jack-daniels";
+        } else if (args.length > 1 && args[1].equals("mojito")) {
+            params = MojitoDevNetParams.get();
+            filePrefix = "forwarding-service-mojito";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
@@ -98,7 +101,7 @@ public class ForwardingService {
 
         String clientPath = "";
         String confPath = "";
-        if (lastArg + 1 <= args.length) {
+        if (lastArg + 1 < args.length) {
             clientPath = args[lastArg];
             if (lastArg + 2 >= args.length)
                 confPath = args[lastArg + 1];
@@ -119,7 +122,7 @@ public class ForwardingService {
                 if(!kit.wallet().hasAuthenticationKeyChains())
                     kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
                 kit.peerGroup().setMaxConnections(6); // for small devnets
-                kit.peerGroup().setUseLocalhostPeerWhenPossible(false);
+                kit.peerGroup().setUseLocalhostPeerWhenPossible(true);
                 kit.peerGroup().setDropPeersAfterBroadcast(params.getDropPeersAfterBroadcast());
             }
         };
