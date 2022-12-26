@@ -64,6 +64,7 @@ test {
         exceptionFormat "full"
     }
     finalizedBy jacocoTestReport // report is always generated after tests run
+    testLogging.showStandardStreams = true
 }
 
 tasks.withType(Test) {
