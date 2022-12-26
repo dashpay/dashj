@@ -370,10 +370,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         boolean result = clientManager.doAutomaticDenominating();
         System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + clientManager.getStatuses() + ", will retry")));
-
-        for (int i = 0; i < 5; ++i) {
-            addBlock();
-        }
+        addBlock();
 
         coinJoinServer.setRelayTransaction(relayTransaction);
 
@@ -381,9 +378,10 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         do {
             Thread.sleep(1000);
             wallet.getContext().coinJoinManager.doMaintenance();
+            addBlock();
         } while (lastMasternode == null);
 
-        addBlock();
+        //addBlock();
         assertNotNull(lastMasternode);
 
         // step 1a: masternode receives CoinJoinAccept (dsa) message
