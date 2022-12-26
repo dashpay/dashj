@@ -1,6 +1,22 @@
+/*
+ * Copyright (c) 2022 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.bitcoinj.coinjoin.utils.CoinJoinResult;
 import org.bitcoinj.coinjoin.utils.RelayTransaction;
 import org.bitcoinj.core.Address;
@@ -25,7 +41,6 @@ import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
 
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
@@ -43,6 +59,7 @@ import static org.bitcoinj.coinjoin.PoolMessage.ERR_DENOM;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_ENTRIES_FULL;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_INVALID_COLLATERAL;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_MAXIMUM;
+import static org.bitcoinj.coinjoin.PoolMessage.ERR_MN_LIST;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_MODE;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_QUEUE_FULL;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_RECENT;
@@ -58,6 +75,9 @@ import static org.bitcoinj.coinjoin.PoolState.POOL_STATE_SIGNING;
 import static org.bitcoinj.coinjoin.PoolStatusUpdate.STATUS_ACCEPTED;
 import static org.bitcoinj.coinjoin.PoolStatusUpdate.STATUS_REJECTED;
 
+/**
+ * Simulates a coinjoin server (mixing masternode)
+ */
 public class CoinJoinServer extends CoinJoinBaseSession {
 
     static final Logger log = LoggerFactory.getLogger(CoinJoinServer.class);
@@ -136,20 +156,15 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
         SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
         Masternode dmn = mnList.getValidMNByCollateral(masternodeOutpoint);
-        //if (!dmn) {
-        //    PushStatus(from, STATUS_REJECTED, ERR_MN_LIST);
-        //    return;
-        //}
+        if (dmn == null) {
+            pushStatus(from, STATUS_REJECTED, ERR_MN_LIST);
+            return;
+        }
 
         if (sessionCollaterals.isEmpty()) {
             lock.lock();
             try {
-                if (baseManager.coinJoinQueue.stream().anyMatch(new Predicate<CoinJoinQueue>() {
-                    @Override
-                    public boolean test(CoinJoinQueue q) {
-                        return q.getMasternodeOutpoint().equals(masternodeOutpoint);
-                    }
-                })) {
+                if (baseManager.coinJoinQueue.stream().anyMatch(q -> q.getMasternodeOutpoint().equals(masternodeOutpoint))) {
                     // refuse to create another queue this often
                     log.info("coinjoin server:DSACCEPT -- last dsq is still in queue, refuse to mix\n");
                     pushStatus(from, STATUS_REJECTED, ERR_RECENT);
@@ -182,37 +197,8 @@ public class CoinJoinServer extends CoinJoinBaseSession {
     }
 
     CoinJoinResult addUserToExistingSession(CoinJoinAccept dsa) {
+        // this operation is not supported
         return CoinJoinResult.fail();
-        /*
-        if (!fMasternodeMode || nSessionID == 0 || IsSessionReady()) return false;
-
-        if (!IsAcceptableDSA(dsa, nMessageIDRet)) {
-            return false;
-        }
-
-        // we only add new users to an existing session when we are in queue mode
-        if (nState != POOL_STATE_QUEUE) {
-            nMessageIDRet = ERR_MODE;
-            log.info("CoinJoinServer::AddUserToExistingSession -- incompatible mode: nState=%d\n", nState);
-            return false;
-        }
-
-        if (dsa.nDenom != nSessionDenom) {
-            log.info("CoinJoinServer::AddUserToExistingSession -- incompatible denom %d (%s) != nSessionDenom %d (%s)\n",
-                    dsa.nDenom, CCoinJoin::DenominationToString(dsa.nDenom), nSessionDenom, CCoinJoin::DenominationToString(nSessionDenom));
-            nMessageIDRet = ERR_DENOM;
-            return false;
-        }
-
-        // count new user as accepted to an existing session
-
-        nMessageIDRet = MSG_NOERR;
-        vecSessionCollaterals.push_back(MakeTransactionRef(dsa.txCollateral));
-
-        log.info("CoinJoinServer::AddUserToExistingSession -- new user accepted, nSessionID: %d  nSessionDenom: %d (%s)  vecSessionCollaterals.size(): %d  CCoinJoin::GetMaxPoolParticipants(): %d\n",
-                nSessionID, nSessionDenom, CCoinJoin::DenominationToString(nSessionDenom), vecSessionCollaterals.size(), CCoinJoin::GetMaxPoolParticipants());
-
-        return true;*/
     }
 
     void setState(PoolState newState)  {
@@ -248,15 +234,13 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
         setState(POOL_STATE_QUEUE);
 
-        /*if (!fUnitTest) {
-            //broadcast that I'm accepting entries, only if it's the first entry through
-            CoinJoinQueue dsq(nSessionDenom, WITH_LOCK(activeMasternodeInfoCs, return activeMasternodeInfo.outpoint), GetAdjustedTime(), false);
-            log.info("coinjoin server:CCoinJoinServer::CreateNewSession -- signing and relaying new queue: %s\n", dsq.ToString());
-            dsq.Sign();
-            dsq.Relay(connman);
-            LOCK(cs_vecqueue);
-            vecCoinJoinQueue.push_back(dsq);
-        }*/
+        // TODO: enable this code and adjust tests as necessary
+        // broadcast that I'm accepting entries, only if it's the first entry through
+        // CoinJoinQueue dsq = new CoinJoinQueue(context.getParams(), sessionDenom, masternodeOutpoint, Utils.currentTimeSeconds(), false);
+        // log.info("coinjoin server: signing and relaying new queue: {}", dsq);
+        // dsq.sign(operatorSecretKey);
+        // relay(dsq);
+        // coinJoinQueue.add(dsq);
 
         sessionCollaterals.add((dsa.getTxCollateral()));
         log.info("CoinJoinServer -- new session created, sessionID: {}  sessionDenom: {} ({})  sessionCollaterals.size(): {}  CoinJoin.getMaxPoolParticipants(): {}",
@@ -354,7 +338,15 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         if (entries != 0) log.info("CoinJoinServer -- entries count {}", entries);
 
         // If we have an entry for each collateral, then create final tx
-        if (state.get() == POOL_STATE_ACCEPTING_ENTRIES && getEntriesCount() >= 1/*&& getEntriesCount() == sessionCollaterals.size()*/) {
+        // if we need to support more than one user, then this will break the tests
+        if (state.get() == POOL_STATE_ACCEPTING_ENTRIES && getEntriesCount() >= 1) {
+            log.info("CCoinJoinServer::CheckPool -- FINALIZE TRANSACTIONS\n");
+            createFinalTransaction();
+            return;
+        }
+
+        // If we have an entry for each collateral, then create final tx
+        if (state.get() == POOL_STATE_ACCEPTING_ENTRIES && getEntriesCount() == sessionCollaterals.size()) {
             log.info("CCoinJoinServer::CheckPool -- FINALIZE TRANSACTIONS\n");
             createFinalTransaction();
             return;
@@ -384,17 +376,11 @@ public class CoinJoinServer extends CoinJoinBaseSession {
     boolean isSignaturesComplete() {
         lock.lock();
         try {
-            return entries.stream().allMatch(new Predicate<CoinJoinEntry>() {
-                @Override
-                public boolean test(CoinJoinEntry coinJoinEntry) {
-                    return coinJoinEntry.getMixingInputs().stream().allMatch(new Predicate<CoinJoinTransactionInput>() {
-                        @Override
-                        public boolean test(CoinJoinTransactionInput coinJoinTransactionInput) {
-                            return coinJoinTransactionInput.hasSignature();
-                        }
-                    });
-                }
-            });
+            return entries.stream().allMatch(
+                    coinJoinEntry -> coinJoinEntry.getMixingInputs().stream().allMatch(
+                            coinJoinTransactionInput -> coinJoinTransactionInput.hasSignature()
+                    )
+            );
         } finally {
             lock.unlock();
         }
@@ -409,22 +395,17 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
 
             // See if the transaction is valid
-            boolean anyNotSigned = finalTransaction.getInputs().stream().anyMatch(new Predicate<TransactionInput>() {
-                @Override
-                public boolean test(TransactionInput transactionInput) {
-                    return transactionInput.getScriptBytes().length == 0;
-                }
-            });
+            boolean anyNotSigned = finalTransaction.getInputs().stream().anyMatch(
+                    transactionInput -> transactionInput.getScriptBytes().length == 0
+            );
             if (anyNotSigned) {
-                log.info("CoinJoinServer: AcceptToMemoryPool() error: Transaction not valid");
+                log.info("CoinJoinServer: transaction not valid");
                 relayCompletedTransaction(PoolMessage.ERR_INVALID_TX);
                 return;
             }
 
 
-
-
-        log.info("CoinJoinServer::CommitFinalTransaction -- CREATING DSTX\n");
+        log.info("CoinJoinServer -- CREATING DSTX\n");
 
         // create and sign masternode dstx transaction
         if (CoinJoin.getDSTX(hashTx) == null) {
@@ -433,7 +414,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
             CoinJoin.addDSTX(dstxNew);
         }
 
-        log.info("CoinJoinServer::CommitFinalTransaction -- TRANSMITTING DSTX\n");
+        log.info("CoinJoinServer -- TRANSMITTING DSTX\n");
 
         // Tell the clients it was successful
         relayCompletedTransaction(MSG_SUCCESS);
@@ -643,14 +624,14 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         }
         if (nTxInIndex >= 0) { //might have to do this one input at a time?
             txNew.getInput(nTxInIndex).setScriptSig(txin.getScriptSig());
-            log.info("CoinJoinServer::IsInputScriptSigValid -- verifying scriptSig {}", txin.getScriptSig());
+            log.info("CoinJoinServer -- verifying scriptSig {}", txin.getScriptSig());
            
         } else {
-            log.info("CoinJoinServer::IsInputScriptSigValid -- Failed to find matching input in pool, {}", txin);
+            log.info("CoinJoinServer -- Failed to find matching input in pool, {}", txin);
             return false;
         }
 
-        log.info("CoinJoinServer::IsInputScriptSigValid -- Successfully validated input and scriptSig");
+        log.info("CoinJoinServer -- Successfully validated input and scriptSig");
         return true;
     }
 
@@ -750,17 +731,13 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
         // final mixing tx with empty signatures should be relayed to mixing participants only
         for (CoinJoinEntry entry : entries) {
-            entry.getPeer().sendMessage(new CoinJoinFinalTransaction(context.getParams(), sessionID.get(), finalTx));
-            /*bool fOk = connman.ForNode(entry.addr, [&txFinal, this](CNode* pnode) {
-                CNetMsgMaker msgMaker(pnode->GetSendVersion());
-                connman.PushMessage(pnode, msgMaker.Make(NetMsgType::DSFINALTX, nSessionID.load(), txFinal));
-                return true;
-            });
-            if (!fOk) {
-                // no such node? maybe this client disconnected or our own connection went down
-                RelayStatus(STATUS_REJECTED);
-                break;
-            }*/
+            try {
+                ListenableFuture sentFuture = entry.getPeer().sendMessage(new CoinJoinFinalTransaction(context.getParams(), sessionID.get(), finalTx));
+                sentFuture.get();
+            } catch (InterruptedException | ExecutionException x) {
+                relayStatus(STATUS_REJECTED);
+
+            }
         }
     }
 

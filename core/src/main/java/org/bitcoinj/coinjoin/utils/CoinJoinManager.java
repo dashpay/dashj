@@ -167,9 +167,7 @@ public class CoinJoinManager {
     public boolean forPeer(MasternodeAddress address, MasternodeGroup.ForPeer forPeer) {
         return masternodeGroup.forPeer(address, forPeer);
     }
-
-    //boolean isRunning = false;
-
+    
     public void startAsync() {
         if (!masternodeGroup.isRunning()) {
             log.info("coinjoin: broadcasting senddsq(true) to all peers");
