@@ -101,20 +101,6 @@ public class CoinJoinWalletTest {
             confidence.setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
             wallet.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.UNSPENT, unspentTx));
         }
-
-        // connect inputs
-        /*for (WalletTransaction wtx : wallet.getWalletTransactions()) {
-            Transaction tx = wtx.getTransaction();
-            for (TransactionInput input : tx.getInputs()) {
-                Transaction connected = wallet.getTransaction(input.getOutpoint().getHash());
-                if (connected != null) {
-                    input.getOutpoint().getConnectedOutput()
-                }
-            }
-        }*/
-        //context.initDash(true, true);
-        //FlatDB<SimplifiedMasternodeListManager> smlm = new FlatDB<>(context, getClass().getResource("coinjoin.mnlist").getPath(), true);
-        //smlm.load(context.masternodeListManager);
     }
 
     @Test
