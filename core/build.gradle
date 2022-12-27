@@ -64,6 +64,8 @@ test {
         exceptionFormat "full"
     }
     finalizedBy jacocoTestReport // report is always generated after tests run
+    // uncomment this next line to show logs in test output during CI tests
+    // testLogging.showStandardStreams = true
 }
 
 tasks.withType(Test) {

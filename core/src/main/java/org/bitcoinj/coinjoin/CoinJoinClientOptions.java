@@ -44,6 +44,11 @@ public class CoinJoinClientOptions {
     public static void setMultiSessionEnabled(boolean enabled) {
         get().isCoinJoinMultiSession.set(enabled);
     }
+
+    public static void setSessions(int sessions) {
+        get().coinJoinSessions.set(sessions);
+    }
+
     public static void setRounds(int rounds) {
         get().coinJoinRounds.set(rounds);
     }
@@ -65,7 +70,16 @@ public class CoinJoinClientOptions {
     private final AtomicBoolean enableCoinJoin = new AtomicBoolean(false);
     private final AtomicBoolean isCoinJoinMultiSession = new AtomicBoolean(DEFAULT_COINJOIN_MULTISESSION);
 
-    private CoinJoinClientOptions() {}
+    private CoinJoinClientOptions() {
+        coinJoinSessions.set(DEFAULT_COINJOIN_SESSIONS);
+        coinJoinRounds.set(DEFAULT_COINJOIN_ROUNDS);
+        coinJoinRandomRounds.set(COINJOIN_RANDOM_ROUNDS);
+        coinJoinAmount.set(DEFAULT_COINJOIN_AMOUNT);
+        coinJoinDenomsGoal.set(DEFAULT_COINJOIN_DENOMS_GOAL);
+        coinJoinDenomsHardCap.set(DEFAULT_COINJOIN_DENOMS_HARDCAP);
+        enableCoinJoin.set(false);
+        isCoinJoinMultiSession.set(DEFAULT_COINJOIN_MULTISESSION);
+    }
 
     private static CoinJoinClientOptions get() {
         if (!onceFlag) {
@@ -73,6 +87,11 @@ public class CoinJoinClientOptions {
             onceFlag = true;
         }
         return instance;
+    }
+
+    public static void reset() {
+        init();
+        onceFlag = true;
     }
     private static void init() {
         instance = new CoinJoinClientOptions();

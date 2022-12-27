@@ -82,19 +82,17 @@ public class CoinJoinBaseSession {
         ValidInOuts check(TransactionOutput txout);
     }
 
-    protected ValidInOuts isValidInOuts(List<TransactionInput> vin, List<TransactionOutput> vout, PoolMessage messageIDRet, boolean consumeCollateral) {
+    protected ValidInOuts isValidInOuts(List<TransactionInput> vin, List<TransactionOutput> vout) {
 
         HashSet<Script> setScripPubKeys = new HashSet<>();
         final ValidInOuts result = new ValidInOuts();
         result.messageId = MSG_NOERR;
-        if (consumeCollateral)
-            result.consumeCollateral = false;
+        result.consumeCollateral = false;
 
         if (vin.size() != vout.size()) {
             log.info("ERROR: inputs vs outputs size mismatch! {} vs {}", vin.size(), vout.size());
             result.setMessageId(ERR_SIZE_MISMATCH);
-            if (consumeCollateral)
-                result.consumeCollateral = true;
+            result.consumeCollateral = true;
             return result.setResult(false);
         }
 
@@ -106,22 +104,19 @@ public class CoinJoinBaseSession {
                     log.info("ERROR: incompatible denom {} ({}) != sessionDenom {} ({})",
                             denom, CoinJoin.denominationToString(denom), sessionDenom, CoinJoin.denominationToString(sessionDenom));
                     result.setMessageId(ERR_DENOM);
-                    if (consumeCollateral)
-                        result.consumeCollateral = true;
+                    result.consumeCollateral = true;
                     return result.setResult(false);
                 }
                 if (!ScriptPattern.isP2PKH(txout.getScriptPubKey())) {
                     log.info("ERROR: invalid script! scriptPubKey={}", txout.getScriptPubKey());
                     result.setMessageId(ERR_INVALID_SCRIPT);
-                    if (consumeCollateral)
-                        result.consumeCollateral = true;
+                    result.consumeCollateral = true;
                     return result.setResult(false);
                 }
                 if (!setScripPubKeys.add(txout.getScriptPubKey())) {
                     log.info("ERROR: already have this script! scriptPubKey={}", txout.getScriptPubKey());
                     result.setMessageId(ERR_ALREADY_HAVE);
-                    if (consumeCollateral)
-                        result.consumeCollateral = true;
+                    result.consumeCollateral = true;
                     return result.setResult(false);
                 }
                 // IsPayToPublicKeyHash() above already checks for scriptPubKey size,
@@ -146,8 +141,7 @@ public class CoinJoinBaseSession {
             if (txin.getOutpoint() == null) {
                 log.info("coinjoin: ERROR: invalid input!");
                 result.setMessageId(ERR_INVALID_INPUT);
-                if (consumeCollateral)
-                    result.consumeCollateral = true;
+                result.consumeCollateral = true;
                 return result.setResult(false);
             }
         }

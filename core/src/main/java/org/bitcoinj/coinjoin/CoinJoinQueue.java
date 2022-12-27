@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.coinjoin;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.MasternodeSignature;
 import org.bitcoinj.core.Message;
@@ -25,6 +26,7 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.UnsafeByteArrayOutputStream;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +70,21 @@ public class CoinJoinQueue extends Message {
         this.time = time;
         this.ready = ready;
         this.signature = signature;
+    }
+
+    public CoinJoinQueue(
+            NetworkParameters params,
+            int denomination,
+            TransactionOutPoint masternodeOutpoint,
+            long time,
+            boolean ready) {
+
+        super(params);
+        this.denomination = denomination;
+        this.masternodeOutpoint = masternodeOutpoint;
+        this.time = time;
+        this.ready = ready;
+        this.signature = null;
     }
 
     @Override
@@ -114,6 +131,18 @@ public class CoinJoinQueue extends Message {
             log.info("CoinJoinQueue-CheckSignature -- VerifyInsecure() failed\n");
             return false;
         }
+
+        return true;
+    }
+
+    @VisibleForTesting
+    public boolean sign(BLSSecretKey blsKeyOperator) {
+        Sha256Hash hash = getSignatureHash();
+        BLSSignature sig = blsKeyOperator.Sign(hash);
+        if (!sig.isValid()) {
+            return false;
+        }
+        signature = new MasternodeSignature(sig.bitcoinSerialize());
 
         return true;
     }

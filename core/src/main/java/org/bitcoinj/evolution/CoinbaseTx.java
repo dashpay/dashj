@@ -9,10 +9,19 @@ import java.io.OutputStream;
 
 public class CoinbaseTx extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 2;
+    private static final int PAYLOAD_SIZE = 2 + 4 + 32 + 32;
 
     long height;
     Sha256Hash merkleRootMasternodeList;
     Sha256Hash merkleRootQuorums; //v2
+
+    public CoinbaseTx(long height, Sha256Hash merkleRootMasternodeList, Sha256Hash merkleRootQuorums) {
+        super(CURRENT_VERSION);
+        this.height = height;
+        this.merkleRootMasternodeList = merkleRootMasternodeList;
+        this.merkleRootQuorums = merkleRootQuorums;
+        length = PAYLOAD_SIZE;
+    }
 
     public CoinbaseTx(NetworkParameters params, Transaction tx) {
         super(params, tx);

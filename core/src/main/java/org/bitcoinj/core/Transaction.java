@@ -1682,8 +1682,8 @@ public class Transaction extends ChildMessage {
     }
 
     public void setExtraPayload(SpecialTxPayload specialTxPayload) {
-        setExtraPayload(specialTxPayload.getPayload());
         setVersionAndType(SPECIAL_VERSION, specialTxPayload.getType());
+        setExtraPayload(specialTxPayload.getPayload());
         unCache();
     }
 

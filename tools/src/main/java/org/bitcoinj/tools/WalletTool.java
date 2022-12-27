@@ -24,6 +24,7 @@ import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
+import org.bitcoinj.params.BinTangDevNetParams;
 import org.bitcoinj.params.JackDanielsDevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.OuzoDevNetParams;
@@ -322,7 +323,7 @@ public class WalletTool {
                 chainFileName = new File("regtest.chain");
                 break;
             case DEVNET:
-                params = JackDanielsDevNetParams.get();
+                params = BinTangDevNetParams.get();
                 chainFileName = new File("jack-daniels.chain");
                 break;
             default:
@@ -332,7 +333,7 @@ public class WalletTool {
         Context.propagate(context);
         context.initDash(true, true);
         context.masternodeSync.syncFlags.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-        context.initDashSync(".", "coinjoin-ouzo");
+        context.initDashSync(".", "coinjoin-bintang");
 
         mode = modeFlag.value(options);
 

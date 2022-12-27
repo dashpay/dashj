@@ -153,11 +153,8 @@ public class TransactionBuilder {
     public int countOutputs() { return vecOutputs.size(); }
     /// Create and Commit the transaction to the wallet
     public boolean commit(StringBuilder strResult) {
-        Coin feeResult;
-        int changePosRet = -1;
-
-        // Transform the outputs to the format CWallet::CreateTransaction requires
-        ArrayList<Recipient> vecSend = null;
+        // Transform the outputs to the format SendRequest.to requires
+        ArrayList<Recipient> vecSend;
 
         lock.lock();
         try {

@@ -136,6 +136,7 @@ public class MasternodeGroup extends PeerGroup {
      */
     public MasternodeGroup(NetworkParameters params, @Nullable AbstractBlockChain chain, ClientConnectionManager connectionManager) {
         super(params, chain, connectionManager);
+        init();
     }
 
     public boolean addPendingMasternode(Sha256Hash proTxHash) {

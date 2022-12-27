@@ -60,7 +60,9 @@ public class CoinJoinBaseManager {
         }
     }
 
-
+    public int getQueueSize() {
+        return coinJoinQueue.size();
+    }
 
     public CoinJoinQueue getQueueItemAndTry() {
         if (queueLock.tryLock()) {

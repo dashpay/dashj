@@ -49,6 +49,7 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MIN;
 
 public class CoinJoinClientManager {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
+    private static Random random = new Random();
     // Keep track of the used Masternodes
     private final ArrayList<TransactionOutPoint> masternodesUsed = new ArrayList<>();
 
@@ -63,7 +64,7 @@ public class CoinJoinClientManager {
 
     private int cachedLastSuccessBlock = 0;
     private int minBlocksToWait = 1; // how many blocks to wait for after one successful mixing tx in non-multisession mode
-    private final StringBuilder strAutoDenomResult = new StringBuilder();
+    private String strAutoDenomResult = "";
 
     private final Context context;
     private final Wallet mixingWallet;
@@ -177,12 +178,12 @@ public class CoinJoinClientManager {
             return false;
 
         if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !mixingWallet.getContext().masternodeSync.isBlockchainSynced()) {
-            strAutoDenomResult.append("Can't mix while sync in progress.");
+            strAutoDenomResult = "Can't mix while sync in progress.";
             return false;
         }
 
         if (!dryRun && mixingWallet.isEncrypted()) {
-            strAutoDenomResult.append("Wallet is locked.");
+            strAutoDenomResult = "Wallet is locked.";
             return false;
         }
 
@@ -196,14 +197,19 @@ public class CoinJoinClientManager {
         if (masternodesUsed.size() > thresholdHigh) {
             // remove the first masternodesUsed.size() - thresholdLow masternodes
             // this might be a problem for SPV
-            Iterator<TransactionOutPoint> it = masternodesUsed.iterator();
-            int i = 0;
-            while (it.hasNext()) {
-                it.next();
-                if (i < masternodesUsed.size() - thresholdLow) {
-                    it.remove();
+            lock.lock();
+            try {
+                Iterator<TransactionOutPoint> it = masternodesUsed.iterator();
+                int i = 0;
+                while (it.hasNext()) {
+                    it.next();
+                    if (i < masternodesUsed.size() - thresholdLow) {
+                        it.remove();
+                    }
+                    i++;
                 }
-                i++;
+            } finally {
+                lock.unlock();
             }
 
             log.info("  masternodesUsed: new size: {}, threshold: {}", masternodesUsed.size(), thresholdHigh);
@@ -220,7 +226,7 @@ public class CoinJoinClientManager {
                 if (!checkAutomaticBackup()) return false;
 
                 if (waitForAnotherBlock()) {
-                    strAutoDenomResult.append("Last successful action was too recent.");
+                    strAutoDenomResult = "Last successful action was too recent.";
                     log.info("DoAutomaticDenominating -- {}", strAutoDenomResult);
                     return false;
                 }
@@ -275,7 +281,7 @@ public class CoinJoinClientManager {
         try {
             for (CoinJoinClientSession session :deqSessions){
                 if (session.checkTimeout()) {
-                    strAutoDenomResult.append("Session timed out.");
+                    strAutoDenomResult = "Session timed out.";
                 }
             }
         } finally {
@@ -288,7 +294,7 @@ public class CoinJoinClientManager {
         try {
             for (CoinJoinClientSession session :deqSessions){
                 if (session.processPendingDsaRequest()) {
-                    strAutoDenomResult.append("Mixing in progress...");
+                    strAutoDenomResult = "Mixing in progress...";
                 }
             }
         } finally {
@@ -374,7 +380,7 @@ public class CoinJoinClientManager {
         processPendingDsaRequest();
         if (nDoAutoNextRun >= nTick) {
             doAutomaticDenominating();
-            nDoAutoNextRun = nTick + COINJOIN_AUTO_TIMEOUT_MIN + new Random().nextInt(COINJOIN_AUTO_TIMEOUT_MAX - COINJOIN_AUTO_TIMEOUT_MIN);
+            nDoAutoNextRun = nTick + COINJOIN_AUTO_TIMEOUT_MIN + random.nextInt(COINJOIN_AUTO_TIMEOUT_MAX - COINJOIN_AUTO_TIMEOUT_MIN);
         }
     }
 

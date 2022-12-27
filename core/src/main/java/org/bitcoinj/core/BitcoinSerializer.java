@@ -317,6 +317,12 @@ public class BitcoinSerializer extends MessageSerializer {
             return new CoinJoinComplete(params, payloadBytes);
         } else if (command.equals("dstx")) {
             return new CoinJoinBroadcastTx(params, payloadBytes);
+        } else if(command.equals("dsa")) {
+            return new CoinJoinAccept(params, payloadBytes);
+        } else if(command.equals("dsi")) {
+            return new CoinJoinEntry(params, payloadBytes);
+        } else if(command.equals("dss")) {
+            return new CoinJoinSignedInputs(params, payloadBytes);
         } else {
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);

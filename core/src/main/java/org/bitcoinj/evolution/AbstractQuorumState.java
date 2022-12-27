@@ -72,6 +72,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest, DiffMessage extends AbstractDiffMessage> extends Message {
 
+    private static final Random random = new Random();
     public static final int SNAPSHOT_LIST_PERIOD = 576; // once per day
     public static final int LISTS_CACHE_SIZE = 576;
     public static final int SNAPSHOT_TIME_PERIOD = 60 * 60 * 26;
@@ -634,7 +635,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     void chooseRandomDownloadPeer() {
         List<Peer> peers = context.peerGroup.getConnectedPeers();
         if (peers != null && !peers.isEmpty()) {
-            downloadPeer = peers.get(new Random().nextInt(peers.size()));
+            downloadPeer = peers.get(random.nextInt(peers.size()));
         }
     }
 

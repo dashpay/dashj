@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.coinjoin;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSignature;
 import org.bitcoinj.core.Message;
@@ -28,6 +29,7 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.UnsafeByteArrayOutputStream;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.script.ScriptPattern;
 import org.slf4j.Logger;
@@ -70,6 +72,18 @@ public class CoinJoinBroadcastTx extends Message {
         this.signatureTime = signatureTime;
     }
 
+    public CoinJoinBroadcastTx(
+            NetworkParameters params,
+            Transaction tx,
+            TransactionOutPoint masternodeOutpoint,
+            long signatureTime
+    ) {
+        super(params);
+        this.tx = tx;
+        this.masternodeOutpoint = masternodeOutpoint;
+        this.signatureTime = signatureTime;
+    }
+
     @Override
     protected void parse() throws ProtocolException {
         tx = new Transaction(params, payload, cursor);
@@ -109,7 +123,7 @@ public class CoinJoinBroadcastTx extends Message {
         BLSSignature sig = new BLSSignature(signature.getBytes());
 
         if (!sig.verifyInsecure(pubKey, hash)) {
-            log.info("CoinJoinBroadcastTx-CheckSignature -- VerifyInsecure() failed\n");
+            log.info("coinjoin-checkSignature -- verifyInsecure() failed");
             return false;
         }
 
@@ -171,5 +185,17 @@ public class CoinJoinBroadcastTx extends Message {
             allOf = allOf && CoinJoin.isDenominatedAmount(txOut.getValue()) && ScriptPattern.isP2PKH(txOut.getScriptPubKey());
         }
         return allOf;
+    }
+    @VisibleForTesting
+    public boolean sign(BLSSecretKey blsKeyOperator) {
+        Sha256Hash hash = getSignatureHash();
+
+        BLSSignature sig = blsKeyOperator.Sign(hash);
+        if (!sig.isValid()) {
+            return false;
+        }
+        signature = new MasternodeSignature(sig.bitcoinSerialize());
+
+        return true;
     }
 }

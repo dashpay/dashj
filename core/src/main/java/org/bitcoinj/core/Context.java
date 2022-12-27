@@ -394,6 +394,7 @@ public class Context {
             signingManager.close();
             chainLockHandler.close();
             quorumManager.close();
+            coinJoinManager.close();
             if(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS))
                 llmqBackgroundThread.interrupt();
             blockChain.removeNewBestBlockListener(newBestBlockListener);
