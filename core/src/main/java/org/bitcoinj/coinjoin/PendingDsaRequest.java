@@ -71,4 +71,13 @@ public class PendingDsaRequest {
     public boolean bool() {
         return !equals(new PendingDsaRequest());
     }
+
+    @Override
+    public String toString() {
+        return "PendingDsaRequest{" +
+                "addr=" + addr.getSocketAddress() +
+                ", dsa=" + dsa +
+                ", nTimeCreated=" + nTimeCreated +
+                '}';
+    }
 }
