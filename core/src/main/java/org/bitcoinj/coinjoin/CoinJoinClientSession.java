@@ -1037,11 +1037,16 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         super.setNull();
     }
 
+    // internal session id
+    static int nextId = 0;
+    private final int id;
+
     public CoinJoinClientSession(Wallet mixingWallet) {
         super(mixingWallet.getContext());
         this.mixingWallet = mixingWallet;
         this.keyHolderStorage = new KeyHolderStorage();
         this.txMyCollateral = new Transaction(context.getParams());
+        this.id = nextId++;
     }
 
     public void processMessage(Peer peer, Message message, boolean enable_bip61) {
@@ -1461,5 +1466,18 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         strLastMessage = CoinJoin.getMessageByID(ERR_SESSION);
 
         return true;
+    }
+
+    @Override
+    public String toString() {
+        return "CoinJoinClientSession{id = " + id +
+                ", mixer=" + (mixingMasternode != null ? mixingMasternode.getService().getSocketAddress() : "none") +
+                ", lastMessage='" + strLastMessage + '\'' +
+                ", pendingDsa=" + pendingDsaRequest +
+                ", entries=" + entries.size() +
+                ", state=" + state +
+                ", sessionID=" + sessionID +
+                ", sessionDenom=" + sessionDenom +
+                '}';
     }
 }
