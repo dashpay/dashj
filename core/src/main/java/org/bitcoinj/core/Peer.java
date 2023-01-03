@@ -19,6 +19,7 @@ package org.bitcoinj.core;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
+import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
@@ -505,20 +506,6 @@ public class Peer extends PeerSocketHandler {
     static long count = 1;
     @Override
     protected void processMessage(Message m) throws Exception {
-        /*if(startTime == 0)
-            startTime = Utils.currentTimeMillis();
-        else
-        {
-            long current = Utils.currentTimeMillis();
-            dataReceived += m.getMessageSize();
-
-            if(count % 100 == 0)
-            {
-                log.info("[bandwidth] " + (dataReceived / 1024 / 1024) + " MiB in " +(current-startTime)/1000 + " s:" + (dataReceived / 1024)/(current-startTime)*1000 + " KB/s");
-            }
-            count++;
-        }*/
-
 
         // Allow event listeners to filter the message stream. Listeners are allowed to drop messages by
         // returning null.
@@ -1381,6 +1368,8 @@ public class Peer extends PeerSocketHandler {
                 return context.instantSendManager.alreadyHave(inv);
             case ChainLockSignature:
                 return context.chainLockHandler.alreadyHave(inv);
+            case DarkSendTransaction:
+                return CoinJoin.hasDSTX(inv.hash);
         }
         // Don't know what it is, just say we already got one
         return true;
@@ -1401,6 +1390,7 @@ public class Peer extends PeerSocketHandler {
             switch (item.type) {
                 case Transaction:
                 case TransactionLockRequest:
+                case DarkSendTransaction:
                     transactions.add(item);
                     break;
                 case Block:
@@ -1417,8 +1407,6 @@ public class Peer extends PeerSocketHandler {
                 case BudgetProposal: break;
                 case BudgetFinalized: break;
                 case BudgetFinalizedVote: break;
-                case DarkSendTransaction:
-                    break;
                 case GovernanceObject:
                     goveranceObjects.add(item);
                     break;
