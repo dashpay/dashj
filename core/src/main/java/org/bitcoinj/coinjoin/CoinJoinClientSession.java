@@ -569,7 +569,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             sessionDenom = dsq.getDenomination();
             mixingMasternode = dmn;
             pendingDsaRequest = new PendingDsaRequest(dmn.getService(), new CoinJoinAccept(mixingWallet.getContext().getParams(), sessionDenom, txMyCollateral));
-            mixingWallet.getContext().coinJoinManager.addPendingMasternode(dmn.getProTxHash());
+            mixingWallet.getContext().coinJoinManager.addPendingMasternode(this);
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: pending connection (from queue): sessionDenom: {} ({}), addr={}",
@@ -642,7 +642,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
 
             mixingMasternode = dmn;
-            context.coinJoinManager.addPendingMasternode(dmn.getProTxHash());
+            context.coinJoinManager.addPendingMasternode(this);
             pendingDsaRequest = new PendingDsaRequest(dmn.getService(), new CoinJoinAccept(context.getParams(), sessionDenom, txMyCollateral));
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
@@ -796,13 +796,15 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private void relay(CoinJoinEntry entry) {
         if (mixingMasternode != null) {
             log.info("Sending {}", entry.toString(true));
-           context.coinJoinManager.forPeer(mixingMasternode.getService(), new MasternodeGroup.ForPeer() {
+           if(!context.coinJoinManager.forPeer(mixingMasternode.getService(), new MasternodeGroup.ForPeer() {
                @Override
                public boolean process(Peer peer) {
                    peer.sendMessage(entry);
                    return true;
                }
-           });
+           })) {
+               log.info("coinjoin: failed to send to {} CoinJoinEntry: {}", mixingMasternode.getService().getSocketAddress(), entry);
+           }
         }
     }
 
@@ -1050,7 +1052,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     }
 
     public void processMessage(Peer peer, Message message, boolean enable_bip61) {
-         if (message instanceof CoinJoinStatusUpdate) {
+        if (message instanceof CoinJoinStatusUpdate) {
             processStatusUpdate(peer, (CoinJoinStatusUpdate) message);
         } else if (message instanceof CoinJoinFinalTransaction) {
             processFinalTransaction(peer, (CoinJoinFinalTransaction) message);
@@ -1479,5 +1481,20 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 ", sessionID=" + sessionID +
                 ", sessionDenom=" + sessionDenom +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        CoinJoinClientSession that = (CoinJoinClientSession) o;
+
+        return id == that.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
     }
 }

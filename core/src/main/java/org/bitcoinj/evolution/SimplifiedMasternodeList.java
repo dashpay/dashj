@@ -381,6 +381,15 @@ public class SimplifiedMasternodeList extends Message {
         return null;
     }
 
+    public Masternode getMNByAddress(InetSocketAddress socketAddress) {
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if (Objects.equals(entry.getValue().getService().getSocketAddress(), socketAddress)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
     public interface ForeachMNCallback {
         void processMN(SimplifiedMasternodeListEntry mn);
     }

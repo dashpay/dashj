@@ -20,6 +20,7 @@ import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinBroadcastTx;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientQueueManager;
+import org.bitcoinj.coinjoin.CoinJoinClientSession;
 import org.bitcoinj.coinjoin.CoinJoinComplete;
 import org.bitcoinj.coinjoin.CoinJoinFinalTransaction;
 import org.bitcoinj.coinjoin.CoinJoinQueue;
@@ -29,7 +30,6 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
@@ -94,10 +94,8 @@ public class CoinJoinManager {
         // report masternode group
         tick++;
         if (tick % 10 == 0) {
-            log.info("coinjoin: connected to {} masternodes", masternodeGroup.getConnectedPeers().size());
-            for (Peer peer : masternodeGroup.getConnectedPeers()) {
-                log.info("coinjoin: connected to masternode {}", peer);
-            }
+            log.info(masternodeGroup.toString());
+            log.info(masternodeGroup.toString());
         }
         coinJoinClientQueueManager.doMaintenance();
 
@@ -106,7 +104,7 @@ public class CoinJoinManager {
         }
     }
 
-    private Runnable maintenanceRunnable = new Runnable() {
+    private final Runnable maintenanceRunnable = new Runnable() {
         @Override
         public void run() {
             try {
@@ -160,8 +158,8 @@ public class CoinJoinManager {
         return masternodeGroup.isMasternodeOrDisconnectRequested(address);
     }
 
-    public boolean addPendingMasternode(Sha256Hash proTxHash) {
-        return masternodeGroup.addPendingMasternode(proTxHash);
+    public boolean addPendingMasternode(CoinJoinClientSession session) {
+        return masternodeGroup.addPendingMasternode(session);
     }
 
     public boolean forPeer(MasternodeAddress address, MasternodeGroup.ForPeer forPeer) {
@@ -183,8 +181,8 @@ public class CoinJoinManager {
         }
     }
 
-    public void disconnectMasternode(Masternode service) {
-        masternodeGroup.disconnectMasternode(service);
+    public boolean disconnectMasternode(Masternode service) {
+        return masternodeGroup.disconnectMasternode(service);
     }
 
     @VisibleForTesting

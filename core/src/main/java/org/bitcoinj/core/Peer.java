@@ -2325,10 +2325,14 @@ public class Peer extends PeerSocketHandler {
         vecRequestsFulfilled.add(strRequest);
     }
 
-    boolean masternode = false;
+    protected boolean masternode = false;
     public boolean isMasternode() { return masternode; }
 
-    int masternodeListCount = -1;
+    public void setMasternode(boolean masternode) {
+        this.masternode = masternode;
+    }
+
+    protected int masternodeListCount = -1;
     public int getMasternodeListCount() { return masternodeListCount; }
     public void setMasternodeListCount(int count) { masternodeListCount = count; }
 

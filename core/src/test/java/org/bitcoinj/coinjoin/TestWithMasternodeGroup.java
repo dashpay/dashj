@@ -121,9 +121,13 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
             }
 
             @Override
-            public boolean addPendingMasternode(Sha256Hash proTxHash) {
+            public boolean addPendingMasternode(CoinJoinClientSession session) {
                 try {
+                    Sha256Hash proTxHash = session.getMixingMasternodeInfo().getProTxHash();
                     Masternode mn = context.masternodeListManager.getListAtChainTip().getMN(proTxHash);
+                    pendingSessions.add(session);
+                    masternodeMap.put(proTxHash, session);
+                    addressMap.put(session.getMixingMasternodeInfo().getService(), session);
                     lastMasternode = connectMasternode(mn.getService().getPort() - 2000);
                     return true;
                 } catch (Exception x) {
