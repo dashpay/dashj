@@ -24,6 +24,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.script.ScriptPattern;
@@ -181,7 +182,8 @@ public class CoinJoin {
 
         log.info("coinjoin: collateral: {}", txCollateral); /* Continued */
 
-        return true;
+        // the collateral tx must not have been seen on the network
+        return txCollateral.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.UNKNOWN;
     }
     public static Coin getCollateralAmount() { return getSmallestDenomination().div(10); }
     public static Coin getMaxCollateralAmount() { return getCollateralAmount().multiply(4); }
