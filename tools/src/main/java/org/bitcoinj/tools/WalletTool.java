@@ -1600,7 +1600,10 @@ public class WalletTool {
     private static void mix() {
         wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
         syncChain();
-
+        // set defaults
+        CoinJoinClientOptions.setEnabled(true);
+        CoinJoinClientOptions.setRounds(4);
+        CoinJoinClientOptions.setSessions(1);
         Coin amountToMix = wallet.getBalance();
 
         // set command line arguments
