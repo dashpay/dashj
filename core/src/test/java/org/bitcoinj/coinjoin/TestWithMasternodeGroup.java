@@ -53,8 +53,6 @@ import static com.google.common.base.Preconditions.checkState;
 public class TestWithMasternodeGroup extends TestWithPeerGroup {
 
     protected MasternodeGroup masternodeGroup;
-    private static final int SESSION_ID = 123456;
-
     @Before
     public void setUp() throws Exception {
         super.setUp();
