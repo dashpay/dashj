@@ -384,8 +384,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + clientManager.getStatuses() + ", will retry")));
         addBlock();
         assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
-        Coin initialDenominatedBalance = Coin.valueOf(102101021);
-        assertEquals(initialDenominatedBalance, wallet.getBalanceInfo().getDenominatedTrusted());
+
 
         coinJoinServer.setRelayTransaction(relayTransaction);
 
@@ -396,8 +395,9 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
             addBlock();
         } while (lastMasternode == null);
         assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
+        Coin initialDenominatedBalance = Coin.valueOf(102101021);
+        assertEquals(initialDenominatedBalance, wallet.getBalanceInfo().getDenominatedTrusted());
 
-        //addBlock();
         assertNotNull(lastMasternode);
 
         // step 1a: masternode receives CoinJoinAccept (dsa) message
