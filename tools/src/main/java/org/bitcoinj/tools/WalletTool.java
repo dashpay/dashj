@@ -1630,6 +1630,7 @@ public class WalletTool {
         // mix coins
         try {
             CoinJoinClientManager it = wallet.getContext().coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
+            it.setStopOnNothingToDo(true);
             it.setBlockChain(wallet.getContext().blockChain);
 
             {
@@ -1648,8 +1649,11 @@ public class WalletTool {
             boolean result = it.doAutomaticDenominating();
             System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + it.getStatuses() + ", will retry")));
 
-            wait(WaitForEnum.EVER);
-        } catch (BlockStoreException x) {
+            // wait until finished mixing
+            SettableFuture<Boolean> mixingFinished = wallet.getContext().coinJoinManager.getMixingFinishedFuture(wallet);
+            mixingFinished.addListener(() -> System.out.println("Mixing complete."), Threading.SAME_THREAD);
+            mixingFinished.get();
+        } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);
         }
     }
