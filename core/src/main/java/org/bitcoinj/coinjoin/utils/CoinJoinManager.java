@@ -16,6 +16,7 @@
 package org.bitcoinj.coinjoin.utils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinBroadcastTx;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
@@ -34,6 +35,7 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -188,5 +190,9 @@ public class CoinJoinManager {
     @VisibleForTesting
     public void setMasternodeGroup(MasternodeGroup masternodeGroup) {
         this.masternodeGroup = masternodeGroup;
+    }
+
+    public SettableFuture<Boolean> getMixingFinishedFuture(Wallet wallet) {
+        return coinJoinClientManagers.get(wallet.getDescription()).getMixingFinishedFuture();
     }
 }

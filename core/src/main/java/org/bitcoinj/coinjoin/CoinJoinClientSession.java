@@ -60,13 +60,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_DENOM_OUTPUTS_THRESHOLD;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_SIGNING_TIMEOUT;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_SESSION;
-import static org.bitcoinj.coinjoin.PoolMessage.MSG_NOERR;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_POOL_MAX;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_POOL_MIN;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_SUCCESS;
@@ -94,6 +94,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private final KeyHolderStorage keyHolderStorage; // storage for keys used in PrepareDenominate
 
     private final Wallet mixingWallet;
+
+    private final AtomicBoolean hasNothingToDo = new AtomicBoolean(false); // is mixing finished?
 
     /// Create denominations
     private boolean createDenominated(Coin balanceToDenominate) {
@@ -1224,8 +1226,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             if (balanceNeedsAnonymized.isLessThanOrEqualTo(Coin.ZERO)) {
                 log.info("coinjoin: Nothing to do");
                 // nothing to do, just keep it in idle mode
+                hasNothingToDo.set(true);
                 return false;
             }
+            hasNothingToDo.set(false);
 
             Coin nValueMin = CoinJoin.getSmallestDenomination();
 
@@ -1496,5 +1500,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     @Override
     public int hashCode() {
         return id;
+    }
+
+    public boolean hasNothingToDo() {
+        return hasNothingToDo.get();
     }
 }

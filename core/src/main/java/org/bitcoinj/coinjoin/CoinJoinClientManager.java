@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.coinjoin;
 
+import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
@@ -61,6 +62,8 @@ public class CoinJoinClientManager {
 
 
     private final AtomicBoolean isMixing = new AtomicBoolean(false);
+    private boolean stopOnNothingToDo = false;
+    private SettableFuture<Boolean> mixingFinished;
 
     private int cachedLastSuccessBlock = 0;
     private int minBlocksToWait = 1; // how many blocks to wait for after one successful mixing tx in non-multisession mode
@@ -382,6 +385,34 @@ public class CoinJoinClientManager {
             doAutomaticDenominating();
             nDoAutoNextRun = nTick + COINJOIN_AUTO_TIMEOUT_MIN + random.nextInt(COINJOIN_AUTO_TIMEOUT_MAX - COINJOIN_AUTO_TIMEOUT_MIN);
         }
+
+        // are all sessions idle?
+        boolean isIdle = true;
+        for (CoinJoinClientSession session : deqSessions) {
+            if (!session.hasNothingToDo()) {
+                isIdle = false;
+                break;
+            }
+        }
+        // if all sessions idle, then trigger stop mixing
+        if (isIdle) {
+            triggerMixingFinished();
+        }
     }
 
+    public void setStopOnNothingToDo(boolean stopOnNothingToDo) {
+        this.stopOnNothingToDo = stopOnNothingToDo;
+        if (stopOnNothingToDo)
+            this.mixingFinished = SettableFuture.create();
+    }
+
+    protected void triggerMixingFinished() {
+        if (stopOnNothingToDo) {
+            mixingFinished.set(true);
+        }
+    }
+
+    public SettableFuture<Boolean> getMixingFinishedFuture() {
+        return mixingFinished;
+    }
 }

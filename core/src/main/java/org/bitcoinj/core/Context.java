@@ -515,7 +515,9 @@ public class Context {
             scheduledGovernance = scheduledExecutorService.scheduleWithFixedDelay(
                     () -> governanceManager.doMaintenance(), 60, 5, TimeUnit.MINUTES);
         }
-        coinJoinManager.start(scheduledExecutorService);
+        if (initializedObjects) {
+            coinJoinManager.start(scheduledExecutorService);
+        }
     }
 
     public void shutdown() {
@@ -531,7 +533,9 @@ public class Context {
             scheduledGovernance.cancel(false);
             scheduledGovernance = null;
         }
-        coinJoinManager.stop();
+        if (initializedObjects) {
+            coinJoinManager.stop();
+        }
     }
 
     public boolean isDebugMode() {
