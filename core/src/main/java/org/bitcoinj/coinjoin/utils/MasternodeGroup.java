@@ -194,7 +194,7 @@ public class MasternodeGroup extends PeerGroup {
                 return false;
 
             // do not connect to another the same peer twice
-            if (isNodeConnected(peerAddress)) {
+            if (isNodeConnected(peerAddress) || isNodeConnected(peerAddress)) {
                 log.info("attempting to connect to the same peer again: {}", peerAddress);
                 return false; // do not connect to the same p
             }
@@ -286,7 +286,7 @@ public class MasternodeGroup extends PeerGroup {
             return null;
 
         // TODO: this is considered a hack to get around the default behavior of PeerGroup
-        if (isNodeConnected(address)) {
+        if (isNodeConnected(address) || isNodePending(address)) {
             log.info("attempting to connect to the same peer again: {}", address);
             return null; // do not connect to the same peer again
         }
@@ -320,6 +320,16 @@ public class MasternodeGroup extends PeerGroup {
                 return peer.getAddress().equals(address);
             }
         });
+    }
+
+    private boolean isNodePending(PeerAddress address) {
+        List<Peer> pendingPeers = getPendingPeers();
+        for (Peer peer: pendingPeers) {
+            if (peer.getAddress().equals(address)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @GuardedBy("lock")
