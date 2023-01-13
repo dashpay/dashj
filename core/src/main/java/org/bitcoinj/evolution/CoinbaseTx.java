@@ -8,11 +8,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class CoinbaseTx extends SpecialTxPayload {
-    public static final int CURRENT_VERSION = 2;
+    public static final int MNLIST_VERSION = 1;
+    public static final int LLMQ_VERSION = 2;
+    public static final int ASSETLOCK_VERSION = 3;
+    public static final int CURRENT_VERSION = 3;
 
     long height;
     Sha256Hash merkleRootMasternodeList;
-    Sha256Hash merkleRootQuorums; //v2
+    Sha256Hash merkleRootQuorums; // v2
+    Coin assetLockedAmount; // v3
 
     public CoinbaseTx(NetworkParameters params, Transaction tx) {
         super(params, tx);
@@ -23,8 +27,10 @@ public class CoinbaseTx extends SpecialTxPayload {
         super.parse();
         height = readUint32();
         merkleRootMasternodeList = readHash();
-        if(version >= 2)
+        if (version >= LLMQ_VERSION)
             merkleRootQuorums = readHash();
+        if (version >= ASSETLOCK_VERSION)
+            assetLockedAmount = Coin.valueOf(readInt64());
         length = cursor - offset;
     }
 
@@ -33,8 +39,10 @@ public class CoinbaseTx extends SpecialTxPayload {
         super.bitcoinSerializeToStream(stream);
         Utils.uint32ToByteStreamLE(height, stream);
         stream.write(merkleRootMasternodeList.getReversedBytes());
-        if(version >= 2)
+        if (version >= LLMQ_VERSION)
             stream.write(merkleRootQuorums.getReversedBytes());
+        if (version >= ASSETLOCK_VERSION)
+            Utils.int64ToByteStreamLE(assetLockedAmount.getValue(), stream);
     }
 
     public int getCurrentVersion() {
@@ -42,8 +50,8 @@ public class CoinbaseTx extends SpecialTxPayload {
     }
 
     public String toString() {
-        return String.format("CoinbaseTx(height=%d, merkleRootMNList=%s, merkleRootQuorums=%s)",
-                height, merkleRootMasternodeList.toString(), merkleRootQuorums);
+        return String.format("CoinbaseTx(height=%d, merkleRootMNList=%s, merkleRootQuorums=%s, assetLockedAmount=%s)",
+                height, merkleRootMasternodeList, merkleRootQuorums, assetLockedAmount.toPlainString());
     }
 
     @Override
@@ -62,6 +70,7 @@ public class CoinbaseTx extends SpecialTxPayload {
         result.append("height", height);
         result.append("merkleRootMNList", merkleRootMasternodeList);
         result.append("merkleRootQuorums", merkleRootQuorums);
+        result.append("assetLockedAmount", assetLockedAmount);
         return result;
     }
 
