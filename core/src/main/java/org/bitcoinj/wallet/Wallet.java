@@ -4005,9 +4005,16 @@ public class Wallet extends BaseTaggableObject
                 for (TransactionOutput out : all) value = value.add(out.getValue());
                 return value;
             } else if (balanceType == BalanceType.COINJOIN|| balanceType == BalanceType.COINJOIN_SPENDABLE) {
-                List<TransactionOutput> all = calculateAllSpendCandidates(true, balanceType == BalanceType.COINJOIN_SPENDABLE, true);
+                List<TransactionOutput> all = calculateAllSpendCandidates(true, balanceType == BalanceType.COINJOIN_SPENDABLE);
                 Coin value = Coin.ZERO;
-                for (TransactionOutput out : all) value = value.add(out.getValue());
+                for (TransactionOutput out : all) {
+                    // exclude non coinjoin outputs if isCoinJoinOnly is true
+                    // exclude coinjoin outputs when isCoinJoinOnly is false
+                    boolean isCoinJoin = out.isDenominated() && out.isCoinJoin(this) && isFullyMixed(out);
+
+                    if (isCoinJoin)
+                        value = value.add(out.getValue());
+                }
                 return value;
                 //CoinSelection selection = new CoinJoinCoinSelector(this).select(NetworkParameters.MAX_MONEY, candidates);
                 //return selection.valueGathered;
@@ -4026,6 +4033,28 @@ public class Wallet extends BaseTaggableObject
         } finally {
             lock.unlock();
         }
+    }
+
+    List<TransactionOutput> getDenominated() {
+        ArrayList<TransactionOutput> result = Lists.newArrayList();
+        List<TransactionOutput> candidates = calculateAllSpendCandidates(false, true);
+        CoinSelection selection = DenominatedCoinSelector.get().select(MAX_MONEY, candidates);
+        for (TransactionOutput out : selection.gathered) {
+            if (out.isDenominated() && !isFullyMixed(out))
+                result.add(out);
+        }
+        return result;
+    }
+
+    List<TransactionOutput> getCoinJoin() {
+        ArrayList<TransactionOutput> result = Lists.newArrayList();
+        List<TransactionOutput> candidates = calculateAllSpendCandidates(false, true);
+        CoinSelection selection = DenominatedCoinSelector.get().select(MAX_MONEY, candidates);
+        for (TransactionOutput out : selection.gathered) {
+            if (out.isDenominated() && isFullyMixed(out))
+                result.add(out);
+        }
+        return result;
     }
 
     public Balance getBalanceInfo() {
@@ -4653,11 +4682,7 @@ public class Wallet extends BaseTaggableObject
      * according to our knowledge of the block chain.
      */
     public List<TransactionOutput> calculateAllSpendCandidates() {
-        return calculateAllSpendCandidates(true, true, false);
-    }
-
-    public List<TransactionOutput> calculateAllSpendCandidates(boolean excludeImmatureCoinbases, boolean excludeUnsignable) {
-        return calculateAllSpendCandidates(excludeImmatureCoinbases, excludeUnsignable, false);
+        return calculateAllSpendCandidates(true, true);
     }
 
     /**
@@ -4668,7 +4693,7 @@ public class Wallet extends BaseTaggableObject
      * @param excludeImmatureCoinbases Whether to ignore coinbase outputs that we will be able to spend in future once they mature.
      * @param excludeUnsignable Whether to ignore outputs that we are tracking but don't have the keys to sign for.
      */
-    public List<TransactionOutput> calculateAllSpendCandidates(boolean excludeImmatureCoinbases, boolean excludeUnsignable, boolean isCoinJoinOnly) {
+    public List<TransactionOutput> calculateAllSpendCandidates(boolean excludeImmatureCoinbases, boolean excludeUnsignable) {
         lock.lock();
         try {
             List<TransactionOutput> candidates;
@@ -4676,13 +4701,6 @@ public class Wallet extends BaseTaggableObject
                 candidates = new ArrayList<>(myUnspents.size());
                 for (TransactionOutput output : myUnspents) {
                     if (excludeUnsignable && !canSignFor(output.getScriptPubKey())) continue;
-
-                    // exclude non coinjoin outputs if isCoinJoinOnly is true
-                    // exclude coinjoin outputs when isCoinJoinOnly is false
-                    boolean isCoinJoin = output.isCoinJoin(this) && isFullyMixed(output);
-
-                    if (isCoinJoin != isCoinJoinOnly)
-                        continue;
 
                     Transaction transaction = checkNotNull(output.getParentTransaction());
                     if (excludeImmatureCoinbases && !transaction.isMature())
@@ -6943,7 +6961,7 @@ public class Wallet extends BaseTaggableObject
                                                                 boolean anonymizable,
                                                                 boolean skipUnconfirmed,
                                                                 int maxOutpointsPerAddress) {
-        List<TransactionOutput> candidates = calculateAllSpendCandidates(true, true, false);
+        List<TransactionOutput> candidates = calculateAllSpendCandidates(true, true);
 
         CoinSelection selection = skipUnconfirmed ?
                 DefaultCoinSelector.get().select(MAX_MONEY, candidates) :
