@@ -16,6 +16,7 @@
 package org.bitcoinj.coinjoin;
 
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
@@ -29,6 +30,7 @@ import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
+import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
@@ -42,6 +44,8 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -74,6 +78,9 @@ public class CoinJoinClientManager {
     
     // Keep track of current block height
     private int cachedBlockHeight = 0;
+
+    private final CopyOnWriteArrayList<ListenerRegistration<SessionCompleteListener>> sessionCompleteListeners
+            = new CopyOnWriteArrayList<>();
 
     private boolean waitForAnotherBlock() {
         if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) &&
@@ -223,7 +230,11 @@ public class CoinJoinClientManager {
         lock.lock();
         try {
             if (deqSessions.size() < CoinJoinClientOptions.getSessions()) {
-                deqSessions.addLast(new CoinJoinClientSession(mixingWallet));
+                CoinJoinClientSession newSession = new CoinJoinClientSession(mixingWallet);
+                for (ListenerRegistration<SessionCompleteListener> listener : sessionCompleteListeners) {
+                    newSession.addSessionCompleteListener(listener.executor, listener.listener);
+                }
+                deqSessions.addLast(newSession);
             }
             for (CoinJoinClientSession session: deqSessions) {
                 if (!checkAutomaticBackup()) return false;
@@ -414,5 +425,36 @@ public class CoinJoinClientManager {
 
     public SettableFuture<Boolean> getMixingFinishedFuture() {
         return mixingFinished;
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addSessionCompleteListener(SessionCompleteListener listener) {
+        addSessionCompleteListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addSessionCompleteListener(Executor executor, SessionCompleteListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        sessionCompleteListeners.add(new ListenerRegistration<>(listener, executor));
+        for (CoinJoinClientSession session: deqSessions) {
+            session.addSessionCompleteListener(executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeSessionCompleteListener(SessionCompleteListener listener) {
+        for (CoinJoinClientSession session: deqSessions) {
+            session.removeSessionCompleteListener(listener);
+        }
+        return ListenerRegistration.removeFromList(listener, sessionCompleteListeners);
     }
 }

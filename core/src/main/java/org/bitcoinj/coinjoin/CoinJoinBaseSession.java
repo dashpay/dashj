@@ -194,4 +194,8 @@ public class CoinJoinBaseSession {
     public int getSessionDenom() {
         return sessionDenom;
     }
+
+    public int getSessionID() {
+        return sessionID.get();
+    }
 }

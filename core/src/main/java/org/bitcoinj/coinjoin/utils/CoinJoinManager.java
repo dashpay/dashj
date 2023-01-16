@@ -26,6 +26,7 @@ import org.bitcoinj.coinjoin.CoinJoinComplete;
 import org.bitcoinj.coinjoin.CoinJoinFinalTransaction;
 import org.bitcoinj.coinjoin.CoinJoinQueue;
 import org.bitcoinj.coinjoin.CoinJoinStatusUpdate;
+import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
@@ -35,11 +36,13 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -194,5 +197,33 @@ public class CoinJoinManager {
 
     public SettableFuture<Boolean> getMixingFinishedFuture(Wallet wallet) {
         return coinJoinClientManagers.get(wallet.getDescription()).getMixingFinishedFuture();
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addSessionCompleteListener(SessionCompleteListener listener) {
+        addSessionCompleteListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addSessionCompleteListener(Executor executor, SessionCompleteListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.addSessionCompleteListener(executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public void removeSessionCompleteListener(SessionCompleteListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.removeSessionCompleteListener(listener);
+        }
     }
 }
