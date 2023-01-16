@@ -20,6 +20,7 @@ package org.bitcoinj.tools;
 import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
@@ -1604,6 +1605,7 @@ public class WalletTool {
         wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
         syncChain();
         // set defaults
+        CoinJoinReporter reporter = new CoinJoinReporter(wallet);
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setSessions(1);
@@ -1629,6 +1631,7 @@ public class WalletTool {
 
         ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
+        wallet.getContext().coinJoinManager.addSessionCompleteListener(reporter);
 
         // mix coins
         try {
@@ -1656,6 +1659,8 @@ public class WalletTool {
             SettableFuture<Boolean> mixingFinished = wallet.getContext().coinJoinManager.getMixingFinishedFuture(wallet);
             mixingFinished.addListener(() -> System.out.println("Mixing complete."), Threading.SAME_THREAD);
             mixingFinished.get();
+            wallet.getContext().coinJoinManager.removeSessionCompleteListener(reporter);
+            reporter.close();
         } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);
         }
