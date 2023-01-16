@@ -139,7 +139,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return true;
         }
 
-        log.info( "coinjoin: createDenominated -- failed!");
+        log.info("coinjoin: createDenominated({}) -- failed! ", balanceToDenominate.toFriendlyString());
         return false;
     }
 
@@ -606,7 +606,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         if (!mixingWallet.selectDenominatedAmounts(balanceNeedsAnonymized, setAmounts)) {
             // this should never happen
             strAutoDenomResult = "Can't mix: no compatible inputs found!";
-            log.info("coinjoin: error: {}", strAutoDenomResult);
+            log.error("coinjoin: error: {}", strAutoDenomResult);
             return false;
         }
 
@@ -639,7 +639,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 continue;
             }
 
-            log.info("coinjoin: attempt {} connection to Masternode {}", nTries, dmn.getService());
+            log.info("coinjoin: attempt {} connection to Masternode {}, {}", nTries, dmn.getService(), dmn.getProTxHash());
 
             // try to get a single random denom out of setAmounts
             while (sessionDenom == 0) {
@@ -654,6 +654,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             mixingMasternode = dmn;
             context.coinJoinManager.addPendingMasternode(this);
             pendingDsaRequest = new PendingDsaRequest(dmn.getService(), new CoinJoinAccept(context.getParams(), sessionDenom, txMyCollateral));
+            log.info("coinjoin test: {}\n  {}", pendingDsaRequest.getDsa(), pendingDsaRequest.getDsa().toStringHex());
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: start new queue -> pending connection, nSessionDenom: {} ({}), addr={}",
@@ -820,6 +821,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     /// Process Masternode updates about the progress of mixing
     private void processPoolStateUpdate(Peer peer, CoinJoinStatusUpdate statusUpdate) {
+        log.info("status update received: {} from {}", statusUpdate, peer.getAddress().getSocketAddress());
         // do not update state when mixing client state is one of these
         if (state.get() == POOL_STATE_IDLE || state.get() == POOL_STATE_ERROR) return;
 
@@ -838,11 +840,19 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         switch (statusUpdate.getStatusUpdate()) {
             case STATUS_REJECTED: {
-                log.info("coinjoin session: rejected by Masternode {}: {}", peer.getAddress().getSocketAddress(), strMessageTmp);
-                log.info("coinjoin: isCollateralValid: {}", CoinJoin.isCollateralValid(txMyCollateral));
+                log.error("coinjoin session: rejected by Masternode {}: {}", peer.getAddress().getSocketAddress(), strMessageTmp);
                 setState(POOL_STATE_ERROR);
                 unlockCoins();
                 keyHolderStorage.returnAll();
+                switch (statusUpdate.getMessageID()) {
+                    case ERR_INVALID_COLLATERAL:
+                        log.error("coinjoin: collateral valid: {}", CoinJoin.isCollateralValid(txMyCollateral));
+                        setNull(); // for now lets disconnect.  TODO: Why is the collateral invalid?
+                        break;
+                    default:
+                        log.warn("coinjoin: rejected for other reasons");
+                        break;
+                }
                 timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
                 strLastMessage = strMessageTmp;
                 break;
@@ -1041,12 +1051,16 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // Client side
         if (mixingMasternode != null) {
             if (context.coinJoinManager.isMasternodeOrDisconnectRequested(mixingMasternode.getService())) {
-                context.coinJoinManager.disconnectMasternode(mixingMasternode);
+                if (!context.coinJoinManager.disconnectMasternode(mixingMasternode)) {
+                    log.info("not closing existing masternode: {}", mixingMasternode.getService().getSocketAddress());
+                }
+            } else {
+                log.info("not closing masternode since it is not found: {}", mixingMasternode.getService().getSocketAddress());
             }
         }
         mixingMasternode = null;
         pendingDsaRequest = null;
-
+        log.info("session zeroed out");
         super.setNull();
     }
 
@@ -1073,7 +1087,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     }
 
     private void processStatusUpdate(Peer peer, CoinJoinStatusUpdate statusUpdate) {
-        log.info("status update received: {}", statusUpdate);
         if (mixingMasternode == null) {
             log.info("mixingMaster node is null, ignoring status update");
             return;
@@ -1280,8 +1293,11 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 balanceNeedsAnonymized = balanceNeedsAnonymized.add(nAdditionalDenom);
             }
 
+            log.info("coinjoin: wallet stats:\n{}", bal);
+
             log.info("coinjoin: current stats:\n" +
                     "    nValueMin: {}\n" +
+                    "    myTrusted: {}\n" +
                     "    nBalanceAnonymizable: {}\n" +
                     "    nBalanceAnonymized: {}\n" +
                     "    balanceNeedsAnonymized: {}\n" +
@@ -1291,6 +1307,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     "    nBalanceDenominated: {}\n" +
                     "    nBalanceToDenominate: {}\n",
                     nValueMin.toFriendlyString(),
+                    bal.getMyTrusted().toFriendlyString(),
                     nBalanceAnonymizable.toFriendlyString(),
                     nBalanceAnonymized.toFriendlyString(),
                     balanceNeedsAnonymized.toFriendlyString(),
@@ -1485,14 +1502,14 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     @Override
     public String toString() {
-        return "CoinJoinClientSession{id = " + id +
+        return "CoinJoinClientSession{id=" + id +
                 ", mixer=" + (mixingMasternode != null ? mixingMasternode.getService().getSocketAddress() : "none") +
-                ", lastMessage='" + strLastMessage + '\'' +
-                ", pendingDsa=" + pendingDsaRequest +
+                ", msg='" + strLastMessage + '\'' +
+                ", dsa=" + pendingDsaRequest +
                 ", entries=" + entries.size() +
                 ", state=" + state +
                 ", sessionID=" + sessionID +
-                ", sessionDenom=" + sessionDenom +
+                ", sessionDenom=" + CoinJoin.denominationToString(sessionDenom) + "[" + sessionDenom + "]" +
                 '}';
     }
 
