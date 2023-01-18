@@ -19,6 +19,7 @@ import com.google.common.collect.Lists;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +33,7 @@ public class KeyHolderStorage {
     @GuardedBy("lock")
     ArrayList<KeyHolder> storage = Lists.newArrayList();
 
-    public Script addKey(Wallet wallet) {
+    public Script addKey(WalletEx wallet) {
         KeyHolder keyHolder = new KeyHolder(wallet);
         Script script = keyHolder.getScriptForDestination();
 

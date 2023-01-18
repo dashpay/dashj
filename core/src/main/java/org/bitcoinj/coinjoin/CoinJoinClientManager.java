@@ -33,6 +33,7 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +75,7 @@ public class CoinJoinClientManager {
     private String strAutoDenomResult = "";
 
     private final Context context;
-    private final Wallet mixingWallet;
+    private final WalletEx mixingWallet;
     
     // Keep track of current block height
     private int cachedBlockHeight = 0;
@@ -98,7 +99,7 @@ public class CoinJoinClientManager {
 
     public int cachedNumBlocks = Integer.MAX_VALUE;    // used for the overview screen
 
-    public CoinJoinClientManager(Wallet wallet) {
+    public CoinJoinClientManager(WalletEx wallet) {
         mixingWallet = wallet;
         context = wallet.getContext();
     }

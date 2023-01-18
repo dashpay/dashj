@@ -19,12 +19,13 @@ package org.bitcoinj.coinjoin.utils;
 import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 
 public class KeyHolder {
     ReserveDestination reserveDestination; // TODO: use ReserveKey
     TransactionDestination destination;
 
-    public KeyHolder(Wallet wallet) {
+    public KeyHolder(WalletEx wallet) {
         // get the next CoinJoinKey?
         reserveDestination = new ReserveDestination(wallet);
         destination = reserveDestination.getReservedDestination(false);

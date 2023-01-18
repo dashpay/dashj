@@ -512,3 +512,7 @@ message ExchangeRate {
 
   // Next tag: 4
 }
+/** CoinJoin KeyChain */
+message CoinJoin {
+  repeated Key key = 3;
+}

@@ -91,6 +91,7 @@ import org.bitcoinj.wallet.MarriedKeyChain;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.Wallet.BalanceType;
@@ -146,7 +147,7 @@ public class WalletTool {
     private static BlockStore store;
     private static AbstractBlockChain chain;
     private static PeerGroup peerGroup;
-    private static Wallet wallet;
+    private static WalletEx wallet;
     private static File chainFileName;
     private static ValidationMode mode;
     private static String password;
@@ -391,7 +392,7 @@ public class WalletTool {
             if (options.has("ignore-mandatory-extensions"))
                 loader.setRequireMandatoryExtensions(false);
             walletInputStream = new BufferedInputStream(new FileInputStream(walletFile));
-            wallet = loader.readWallet(walletInputStream, forceReset, (WalletExtension[])(null));
+            wallet = (WalletEx) loader.readWallet(walletInputStream, forceReset, (WalletExtension[])(null));
             if (!wallet.getParams().equals(params)) {
                 System.err.println("Wallet does not match requested network parameters: " +
                         wallet.getParams().getId() + " vs " + params.getId());
@@ -1403,11 +1404,11 @@ public class WalletTool {
                 // not reached - all subclasses handled above
                 throw new RuntimeException(e);
             }
-            wallet = Wallet.fromSeed(params, seed, outputScriptType);
+            wallet = WalletEx.fromSeed(params, seed, outputScriptType);
         } else if (options.has(watchFlag)) {
-            wallet = Wallet.fromWatchingKeyB58(params, options.valueOf(watchFlag), creationTimeSecs);
+            wallet = WalletEx.fromWatchingKeyB58(params, options.valueOf(watchFlag), creationTimeSecs);
         } else {
-            wallet = Wallet.createDeterministic(params, outputScriptType);
+            wallet = WalletEx.createDeterministic(params, outputScriptType);
         }
         // add BIP44 key chain
         // BIP44 Chain
@@ -1602,10 +1603,10 @@ public class WalletTool {
     }
 
     private static void mix() {
-        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
         syncChain();
         // set defaults
-        CoinJoinReporter reporter = new CoinJoinReporter(wallet);
+        CoinJoinReporter reporter = new CoinJoinReporter();
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setSessions(1);
@@ -1632,6 +1633,7 @@ public class WalletTool {
         ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
         wallet.getContext().coinJoinManager.addSessionCompleteListener(reporter);
+        wallet.getContext().coinJoinManager.addMixingCompleteListener(reporter);
 
         // mix coins
         try {
@@ -1660,6 +1662,8 @@ public class WalletTool {
             mixingFinished.addListener(() -> System.out.println("Mixing complete."), Threading.SAME_THREAD);
             mixingFinished.get();
             wallet.getContext().coinJoinManager.removeSessionCompleteListener(reporter);
+            wallet.getContext().coinJoinManager.removeMixingCompleteListener(reporter);
+            wallet.getContext().coinJoinManager.stop();
             reporter.close();
         } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);

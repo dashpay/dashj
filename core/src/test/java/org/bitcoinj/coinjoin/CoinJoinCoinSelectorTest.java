@@ -21,6 +21,7 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.testing.TestWithWallet;
 import org.bitcoinj.wallet.DerivationPathFactory;
+import org.bitcoinj.wallet.WalletEx;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,6 +36,7 @@ public class CoinJoinCoinSelectorTest extends TestWithWallet {
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        wallet = WalletEx.fromSeed(wallet.getParams(), wallet.getKeyChainSeed());
     }
 
     @After
@@ -45,8 +47,8 @@ public class CoinJoinCoinSelectorTest extends TestWithWallet {
 
     @Test
     public void selectable() {
-        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
-        DeterministicKey key = wallet.freshCoinJoinKey();
+        ((WalletEx)wallet).initializeCoinJoin();
+        DeterministicKey key = ((WalletEx)wallet).getCoinJoin().freshReceiveKey();
 
         CoinJoinCoinSelector coinSelector = new CoinJoinCoinSelector(wallet);
 

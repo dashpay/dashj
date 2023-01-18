@@ -47,7 +47,9 @@ import org.bitcoinj.testing.InboundMessageQueuer;
 import org.bitcoinj.testing.MockTransactionBroadcaster;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.DerivationPathFactory;
+import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -66,7 +68,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -88,6 +89,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     private Address coinbaseTo;
     private Transaction finalTx = null;
     private Transaction mixingTx = null;
+
+    private WalletEx mixingWallet;
 
     @Parameterized.Parameters
     public static Collection<ClientType[]> parameters() {
@@ -157,6 +160,11 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         }
 
         globalTimeout = Timeout.seconds(30);
+        mixingWallet = (WalletEx) wallet;
+    }
+
+    protected Wallet createWallet(KeyChainGroup keyChainGroup) {
+        return new WalletEx(UNITTEST, keyChainGroup);
     }
 
     @Override
@@ -169,7 +177,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Ignore
     public void sessionTest() throws Exception {
         System.out.println("Session test started...");
-        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        mixingWallet.initializeCoinJoin();
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);
@@ -184,7 +192,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
 
-        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
+        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(mixingWallet));
 
         HashMap<TransactionOutPoint, ECKey> keyMap = new HashMap<>();
 
@@ -340,7 +348,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Test(timeout = 30000) // Exception: test timed out after 100 milliseconds
     public void sessionTestTwo() throws Exception {
         System.out.println("Session test started...");
-        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        mixingWallet.initializeCoinJoin();
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);
@@ -350,8 +358,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         Transaction fundingTransaction = wallet.getTransactionsByTime().get(0);
         assertEquals(Coin.FIFTY_COINS, fundingTransaction.getValue(wallet));
         //assertEquals(Coin.ZERO, wallet.getBalanceInfo().getAnonymized());
-        assertEquals(Coin.FIFTY_COINS, wallet.getAnonymizableBalance(true));
-        assertEquals(Coin.FIFTY_COINS, wallet.getAnonymizableBalance(false));
+        assertEquals(Coin.FIFTY_COINS, mixingWallet.getAnonymizableBalance(true));
+        assertEquals(Coin.FIFTY_COINS, mixingWallet.getAnonymizableBalance(false));
         //assertEquals(Coin.ZERO, wallet.getBalanceInfo().getDenominatedTrusted());
 
         peerGroup.start();
@@ -364,7 +372,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
 
-        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
+        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(mixingWallet));
 
         // mix coins
         CoinJoinClientManager clientManager = coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
@@ -528,7 +536,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
             for (TransactionOutput output: wallet.getUnspents()) {
                 if (!candidates.contains(output)) {
                     mixedOutput = output;
-                    wallet.isFullyMixed(mixedOutput);
+                    mixingWallet.isFullyMixed(mixedOutput);
                 }
             }
         }

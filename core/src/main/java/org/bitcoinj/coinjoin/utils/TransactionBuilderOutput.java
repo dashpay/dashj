@@ -18,7 +18,7 @@ package org.bitcoinj.coinjoin.utils;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 
 public class TransactionBuilderOutput {
     /// Used for amount updates
@@ -30,7 +30,7 @@ public class TransactionBuilderOutput {
     /// ScriptPubKey of this output
     Script script;
 
-    public TransactionBuilderOutput(TransactionBuilder txBuilder, Wallet wallet, Coin amount) {
+    public TransactionBuilderOutput(TransactionBuilder txBuilder, WalletEx wallet, Coin amount) {
         this.txBuilder = txBuilder;
         this.amount = amount;
         this.dest = new ReserveDestination(wallet);

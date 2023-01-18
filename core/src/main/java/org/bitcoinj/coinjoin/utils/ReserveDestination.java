@@ -21,10 +21,11 @@ import org.bitcoinj.core.NoDestination;
 import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 
 public class ReserveDestination extends ReserveScript {
     //! The wallet to reserve from
-    protected final Wallet wallet;
+    protected final WalletEx wallet;
     //LegacyScriptPubKeyMan* m_spk_man{nullptr};
 
     //! The index of the address's key in the keypool
@@ -37,7 +38,7 @@ public class ReserveDestination extends ReserveScript {
     protected boolean internal = false;
 
     //! Construct a ReserveDestination object. This does NOT reserve an address yet
-    public ReserveDestination(Wallet wallet) {
+    public ReserveDestination(WalletEx wallet) {
         this.wallet = wallet;
     }
 
@@ -49,7 +50,7 @@ public class ReserveDestination extends ReserveScript {
     //! Reserve an address
     public TransactionDestination getReservedDestination(boolean internal) {
         if (index == -1) {
-            DeterministicKey key = wallet.freshCoinJoinKey();
+            DeterministicKey key = wallet.getCoinJoin().freshReceiveKey();
             if (key == null) {
                 return null;
             }

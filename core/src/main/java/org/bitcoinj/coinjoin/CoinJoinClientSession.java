@@ -49,7 +49,7 @@ import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Balance;
 import org.bitcoinj.wallet.CoinControl;
 import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +98,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private final KeyHolderStorage keyHolderStorage; // storage for keys used in PrepareDenominate
 
-    private final Wallet mixingWallet;
+    private final WalletEx mixingWallet;
 
     private final AtomicBoolean hasNothingToDo = new AtomicBoolean(false); // is mixing finished?
 
@@ -413,7 +413,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         //const auto pwallet = GetWallet(mixingWallet.GetName());
-        final Wallet wallet = mixingWallet;
+        final WalletEx wallet = mixingWallet;
 
         if (wallet == null) {
             log.info("coinjoin: Couldn't get wallet pointer");
@@ -1068,7 +1068,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     static int nextId = 0;
     private final int id;
 
-    public CoinJoinClientSession(Wallet mixingWallet) {
+    public CoinJoinClientSession(WalletEx mixingWallet) {
         super(mixingWallet.getContext());
         this.mixingWallet = mixingWallet;
         this.keyHolderStorage = new KeyHolderStorage();
