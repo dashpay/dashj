@@ -41,6 +41,7 @@ import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,6 +107,9 @@ public class CoinJoinServer extends CoinJoinBaseSession {
     SimplifiedMasternodeListEntry entry;
     TransactionOutPoint masternodeOutpoint;
     BLSSecretKey operatorSecretKey;
+
+    boolean feeCharged = false;
+    Sha256Hash feeTxId = null;
 
     public BLSSecretKey getOperatorSecretKey() {
         return operatorSecretKey;
@@ -388,7 +392,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
     private void commitFinalTransaction() {
         
-        Transaction finalTransaction = finalMutableTransaction;
+        Transaction finalTransaction = new Transaction(finalMutableTransaction.getParams(), finalMutableTransaction.bitcoinSerialize());
         Sha256Hash hashTx = finalTransaction.getTxId();
 
         log.info("CoinJoinServer::CommitFinalTransaction -- finalTransaction={}", finalTransaction.getTxId()); /* Continued */
@@ -463,15 +467,18 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
         // fill up the rest of the TX since this class only handles a single user
         for (int i = 0; i < 10 - finalTx.getInputs().size(); i++) {
-            finalTx.addOutput(CoinJoin.denominationToAmount(getSessionDenom()), Address.fromKey(context.getParams(), new ECKey()));
+            ECKey signingKey = new ECKey();
+            Address address = Address.fromKey(context.getParams(), signingKey);
+            finalTx.addOutput(CoinJoin.denominationToAmount(getSessionDenom()), address);
             byte[] txId = new byte[32];
             random.nextBytes(txId);
             TransactionOutPoint outPoint = new TransactionOutPoint(context.getParams(), random.nextInt(10), Sha256Hash.wrap(txId));
             TransactionInput input = new TransactionInput(context.getParams(), null, new byte[]{}, outPoint);
-            finalTx.addInput(input);
+            finalTx.addSignedInput(input, ScriptBuilder.createOutputScript(address), signingKey, Transaction.SigHash.ALL, false);
         }
         setState(POOL_STATE_SIGNING);
         relayFinalTransaction(finalTx);
+        finalMutableTransaction = finalTx;
         return finalTx;
     }
 
@@ -687,6 +694,8 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         if (relayTransaction != null) {
             relayTransaction.relay(tx);
             log.info("coinjoin: Collateral was consumed {}", tx.getTxId());
+            feeCharged = true;
+            feeTxId = tx.getTxId();
         }
     }
 

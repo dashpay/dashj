@@ -47,6 +47,7 @@ import org.bitcoinj.testing.InboundMessageQueuer;
 import org.bitcoinj.testing.MockTransactionBroadcaster;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.DerivationPathFactory;
+import org.bitcoinj.wallet.Wallet;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -64,10 +65,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(value = Parameterized.class)
@@ -344,6 +347,13 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         CoinJoinClientOptions.setRounds(1);
         CoinJoinClientOptions.setSessions(1);
 
+        Transaction fundingTransaction = wallet.getTransactionsByTime().get(0);
+        assertEquals(Coin.FIFTY_COINS, fundingTransaction.getValue(wallet));
+        //assertEquals(Coin.ZERO, wallet.getBalanceInfo().getAnonymized());
+        assertEquals(Coin.FIFTY_COINS, wallet.getAnonymizableBalance(true));
+        assertEquals(Coin.FIFTY_COINS, wallet.getAnonymizableBalance(false));
+        //assertEquals(Coin.ZERO, wallet.getBalanceInfo().getDenominatedTrusted());
+
         peerGroup.start();
         masternodeGroup.start();
         InboundMessageQueuer spvClient = connectPeer(1);
@@ -360,6 +370,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         CoinJoinClientManager clientManager = coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
         clientManager.setBlockChain(wallet.getContext().blockChain);
 
+        // check balance
+        assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
         addBlock();
         clientManager.updatedSuccessBlock();
 
@@ -371,6 +383,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         boolean result = clientManager.doAutomaticDenominating();
         System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + clientManager.getStatuses() + ", will retry")));
         addBlock();
+        assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
+
 
         coinJoinServer.setRelayTransaction(relayTransaction);
 
@@ -380,8 +394,10 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
             wallet.getContext().coinJoinManager.doMaintenance();
             addBlock();
         } while (lastMasternode == null);
+        assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
+        Coin initialDenominatedBalance = Coin.valueOf(102101021);
+        assertEquals(initialDenominatedBalance, wallet.getBalanceInfo().getDenominatedTrusted());
 
-        //addBlock();
         assertNotNull(lastMasternode);
 
         // step 1a: masternode receives CoinJoinAccept (dsa) message
@@ -476,13 +492,72 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         Message broadcastTxMessage = outbound(spvClient);
         assertEquals(CoinJoinBroadcastTx.class, broadcastTxMessage.getClass());
         mixingTx = ((CoinJoinBroadcastTx) broadcastTxMessage).getTx();
+        memPool.add(mixingTx);//        wallet.receivePending(mixingTx, Lists.newArrayList());
 
         CoinJoinBroadcastTx broadcastTxTwo = CoinJoin.getDSTX(mixingTx.getTxId());
         assertNotNull(broadcastTxTwo);
 
         addBlock();
 
-        // TODO check wallet balance types here
+        List<Transaction> txes = wallet.getTransactionsByTime();
+        boolean foundDenominationTx = false;
+        boolean foundMixingTx = false;
+        Coin mixingAmount = Coin.ZERO;
+        for (Transaction tx : txes) {
+            if (tx.getOutputs().size() == 33) {
+                foundDenominationTx = true;
+                assertEquals(Coin.ZERO, tx.getValue(wallet));
+                Coin total = Coin.ZERO;
+                for (TransactionOutput output : tx.getOutputs()) {
+                    total = total.add(output.getValue());
+                }
+                assertEquals(Coin.FIFTY_COINS, total);
+            }
+            if (tx.getOutputs().size() == tx.getInputs().size() && CoinJoin.isValidDenomination(CoinJoin.amountToDenomination(tx.getOutput(0).getValue()))) {
+                foundMixingTx = true;
+                mixingAmount = tx.getOutput(0).getValue();
+                assertEquals(Coin.ZERO, tx.getValue(wallet));
+            }
+        }
+        assertTrue("denomination transaction not found", foundDenominationTx);
+        assertTrue("mixing transaction not found", foundMixingTx);
+        List<TransactionOutput> candidates = wallet.calculateAllSpendCandidates(true, true);
+        TransactionOutput mixedOutput = null;
+        if (candidates.size() == 32) {
+            // we are missing one
+            for (TransactionOutput output: wallet.getUnspents()) {
+                if (!candidates.contains(output)) {
+                    mixedOutput = output;
+                    wallet.isFullyMixed(mixedOutput);
+                }
+            }
+        }
+
+        Coin mixed = mixedOutput != null ? mixedOutput.getValue() : Coin.ZERO;
+        Coin mixingFee = Coin.ZERO;
+        // check the balances
+        if (coinJoinServer.feeCharged) {
+            assertEquals(4, txes.size());
+            Transaction feeTx = wallet.getTransaction(coinJoinServer.feeTxId);
+            assertEquals(CoinJoin.getCollateralAmount(), feeTx.getFee());
+            assertEquals(Coin.FIFTY_COINS.subtract(CoinJoin.getCollateralAmount()), wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
+            mixingFee = feeTx.getFee();
+        } else {
+            assertEquals(3, txes.size());
+            assertNull(coinJoinServer.feeTxId);
+
+            assertEquals(mixingAmount.toFriendlyString() + " -> diff: " + Coin.FIFTY_COINS.subtract(wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE)).toFriendlyString(),
+                    Coin.FIFTY_COINS.subtract(mixed), wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
+        }
+        assertEquals(Coin.FIFTY_COINS.subtract(mixed).subtract(mixingFee), wallet.getBalanceInfo().getMyTrusted());
+        assertEquals(Coin.ZERO, wallet.getBalanceInfo().getMyUntrustedPending());
+        // TODO: determine the correct calculations for these balances
+        // assertEquals(mixed, wallet.getBalanceInfo().getAnonymized());
+        // assertEquals(Coin.FIFTY_COINS.subtract(mixingFee).subtract(mixed), wallet.getAnonymizableBalance(true));
+        // assertEquals(Coin.FIFTY_COINS.subtract(mixingFee).subtract(mixed), wallet.getAnonymizableBalance(false));
+        // assertEquals(initialDenominatedBalance.subtract(mixingFee).subtract(mixed), wallet.getBalanceInfo().getDenominatedTrusted());
+
+        // TODO: check wallet balance types here
 
         if (clientManager.isMixing()) {
             clientManager.stopMixing();

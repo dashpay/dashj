@@ -113,15 +113,15 @@ public class Balance {
     @Override
     public String toString() {
         return "Balance{" +
-                "myTrusted=" + myTrusted.toFriendlyString() +
-                ", myUntrustedPending=" + myUntrustedPending.toFriendlyString() +
-                ", myImmature=" + myImmature.toFriendlyString() +
-                ", watchOnlyTrusted=" + watchOnlyTrusted.toFriendlyString() +
-                ", watchOnlyUntrustedPending=" + watchOnlyUntrustedPending.toFriendlyString() +
-                ", watchOnlyImmature=" + watchOnlyImmature.toFriendlyString() +
-                ", anonymized=" + anonymized.toFriendlyString() +
-                ", denominatedTrusted=" + denominatedTrusted.toFriendlyString() +
-                ", denominatedUntrustedPending=" + denominatedUntrustedPending.toFriendlyString() +
+                "\n myTrusted=" + myTrusted.toFriendlyString() +
+                ",\n myUntrustedPending=" + myUntrustedPending.toFriendlyString() +
+                ",\n myImmature=" + myImmature.toFriendlyString() +
+                ",\n watchOnlyTrusted=" + watchOnlyTrusted.toFriendlyString() +
+                ",\n watchOnlyUntrustedPending=" + watchOnlyUntrustedPending.toFriendlyString() +
+                ",\n watchOnlyImmature=" + watchOnlyImmature.toFriendlyString() +
+                ",\n anonymized=" + anonymized.toFriendlyString() +
+                ",\n denominatedTrusted=" + denominatedTrusted.toFriendlyString() +
+                ",\n denominatedUntrustedPending=" + denominatedUntrustedPending.toFriendlyString() +
                 '}';
     }
 }

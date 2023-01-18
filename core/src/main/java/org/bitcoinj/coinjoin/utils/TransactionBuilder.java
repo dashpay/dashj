@@ -107,7 +107,7 @@ public class TransactionBuilder {
         }
         // Adding another output can change the serialized size of the vout size hence + GetSizeOfCompactSizeDiff()
         int bytes = getBytesTotal() + bytesOutput + getSizeOfCompactSizeDiff(1);
-        return !getAmountLeft(getAmountInitial(), getAmountUsed().add(amountOutput), getFee(bytes)).isNegative();
+        return getAmountLeft(getAmountInitial(), getAmountUsed().add(amountOutput), getFee(bytes)).isGreaterThanOrEqualTo(Coin.ZERO);
 
     }
     /// Check if it's possible to add multiple outputs as vector of amounts. Returns true if its possible to add all of them and false if not.

@@ -16,48 +16,71 @@
 package org.bitcoinj.coinjoin.utils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import net.jcip.annotations.GuardedBy;
+import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.coinjoin.CoinJoinClientSession;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.evolution.Masternode;
-import org.bitcoinj.evolution.SimplifiedMasternodeList;
-import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
 import org.bitcoinj.net.ClientConnectionManager;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
+import org.bitcoinj.utils.ExponentialBackoff;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 
 public class MasternodeGroup extends PeerGroup {
     private static final Logger log = LoggerFactory.getLogger(MasternodeGroup.class);
 
     private final ReentrantLock pendingMasternodesLock = Threading.lock("pendingMasternodes");
-    private final CopyOnWriteArrayList<Sha256Hash> pendingMasternodes = new CopyOnWriteArrayList<>();
+    //@GuardedBy("pendingMasternodesLock")
+    protected final HashSet<CoinJoinClientSession> pendingSessions = Sets.newHashSet();
+    protected final HashMap<Sha256Hash, CoinJoinClientSession> masternodeMap = new HashMap<>();
+    protected final HashMap<MasternodeAddress, CoinJoinClientSession> addressMap = new HashMap<>();
+
+    private final ArrayList<Masternode> pendingClosingMasternodes = new ArrayList<>();
 
     private final PeerDiscovery masternodeDiscovery = new PeerDiscovery() {
         @Override
         public InetSocketAddress[] getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
-            log.info("getPeers called");
             ArrayList<InetSocketAddress> addresses = new ArrayList<>();
-
-            for (Sha256Hash proTxHash : pendingMasternodes) {
-                SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
-                SimplifiedMasternodeListEntry mn = mnList.getMN(proTxHash);
-                addresses.add(mn.getService().getSocketAddress());
+            pendingMasternodesLock.lock();
+            try {
+                for (CoinJoinClientSession session : pendingSessions) {
+                    if (session.getMixingMasternodeInfo() != null && !pendingClosingMasternodes.contains(session.getMixingMasternodeInfo())) {
+                        addresses.add(session.getMixingMasternodeInfo().getService().getSocketAddress());
+                        addressMap.put(session.getMixingMasternodeInfo().getService(), session);
+                        log.info("discovery: {} -> {}", session.getMixingMasternodeInfo().getService().getSocketAddress(), session);
+                    }
+                }
+            } finally {
+                pendingMasternodesLock.unlock();
             }
             return addresses.toArray(new InetSocketAddress[0]);
         }
@@ -139,17 +162,67 @@ public class MasternodeGroup extends PeerGroup {
         init();
     }
 
-    public boolean addPendingMasternode(Sha256Hash proTxHash) {
+    public boolean addPendingMasternode(CoinJoinClientSession session) {
+        int maxConnections = getMaxConnections();
         pendingMasternodesLock.lock();
         try {
-            if (pendingMasternodes.contains(proTxHash))
-                return false;
-            setMaxConnections(getMaxConnections() + 1);
-            log.info("adding masternode for mixing. maxConnections = {}", getMaxConnections());
-            pendingMasternodes.add(proTxHash);
-            return true;
+            //if (pendingSessions.containsKey(mninfo.getSession()))
+            //    return false;
+            log.info("adding masternode for mixing. maxConnections = {}, protx: {}", maxConnections, session.getMixingMasternodeInfo().getProTxHash());
+            log.info("  mixingMasternode match protxhash: {}", session.getMixingMasternodeInfo().getProTxHash().equals(session.getMixingMasternodeInfo().getProTxHash()));
+            pendingSessions.add(session);
+            masternodeMap.put(session.getMixingMasternodeInfo().getProTxHash(), session);
         } finally {
             pendingMasternodesLock.unlock();
+        }
+        updateMaxConnections();
+        checkMasternodesWithoutSessions();
+        return true;
+    }
+
+
+    private final ExponentialBackoff.Params masternodeBackoffParams = new ExponentialBackoff.Params(1000, 1.001f, 10 * 1000);
+
+    // Adds peerAddress to backoffMap map and inactives queue.
+    // Returns true if it was added, false if it was already there.
+    @Override
+    protected boolean addInactive(PeerAddress peerAddress, int priority) {
+        lock.lock();
+        try {
+            // Deduplicate, handle differently than PeerGroup
+            if (inactives.contains(peerAddress))
+                return false;
+
+            // do not connect to another the same peer twice
+            if (isNodeConnected(peerAddress) || isNodeConnected(peerAddress)) {
+                log.info("attempting to connect to the same peer again: {}", peerAddress);
+                return false; // do not connect to the same p
+            }
+
+            backoffMap.put(peerAddress, new ExponentialBackoff(masternodeBackoffParams));
+            if (priority != 0)
+                priorityMap.put(peerAddress, priority);
+            inactives.offer(peerAddress);
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void updateMaxConnections() {
+        int maxConnections;
+        pendingMasternodesLock.lock();
+        try {
+            maxConnections = pendingSessions.size();
+        } finally {
+            pendingMasternodesLock.unlock();
+        }
+        try {
+            log.info("updating max connections to min({}, {})", maxConnections, min(maxConnections, CoinJoinClientOptions.getSessions()));
+            setMaxConnections(min(maxConnections, CoinJoinClientOptions.getSessions()));
+        } catch (NoSuchElementException e) {
+            // swallow, though this is not good, which
+            log.info("caught exception", e);
         }
     }
 
@@ -157,19 +230,23 @@ public class MasternodeGroup extends PeerGroup {
         return forPeer(addr, new ForPeer() {
             @Override
             public boolean process(Peer peer) {
-                return peer.isMasternode();
+                return true;
             }
         });
     }
 
-    ArrayList<Masternode> pendingClosingMasternodes = new ArrayList<>();
-    public void disconnectMasternode(Masternode mn) {
-        forPeer(mn.getService(), new ForPeer() {
+    public boolean disconnectMasternode(Masternode mn) {
+        return forPeer(mn.getService(), new ForPeer() {
             @Override
             public boolean process(Peer peer) {
-                log.info("Closing masternode {}", peer.getAddress().getSocketAddress());
+                log.info("masternode[closing] {}", peer.getAddress().getSocketAddress());
+                lock.lock();
+                try {
+                    pendingClosingMasternodes.add(mn);
+                } finally {
+                    lock.unlock();
+                }
                 peer.close();
-                pendingClosingMasternodes.add(mn);
                 return true;
             }
         });
@@ -180,15 +257,120 @@ public class MasternodeGroup extends PeerGroup {
         super.handlePeerDeath(peer, exception);
         Masternode masternode = null;
         for (Masternode mn : pendingClosingMasternodes) {
-            if (peer.getAddress().getSocketAddress().equals(mn.getService())) {
+            if (peer.getAddress().getSocketAddress().equals(mn.getService().getSocketAddress())) {
                 masternode = mn;
             }
         }
+        log.info("handling this mn peer death: {} -> {}", peer.getAddress().getSocketAddress(),
+                masternode != null ? masternode.getService().getSocketAddress() : "not found in closing list");
         if (masternode != null) {
-            pendingClosingMasternodes.remove(masternode);
-            pendingMasternodes.remove(masternode.getProTxHash());
-            setMaxConnections(getMaxConnections() - 1);
+            pendingMasternodesLock.lock();
+            try {
+                pendingClosingMasternodes.remove(masternode);
+                pendingSessions.remove(masternodeMap.get(masternode.getProTxHash()));
+                masternodeMap.remove(masternode.getProTxHash());
+                addressMap.remove(masternode.getService());
+            } finally {
+                pendingMasternodesLock.unlock();
+            }
         }
+        //TODO: what if this disconnects the wrong one
+        updateMaxConnections();
+        checkMasternodesWithoutSessions();
+    }
+
+    @Nullable
+    @Override
+    protected Peer connectTo(PeerAddress address, boolean incrementMaxConnections, int connectTimeoutMillis) {
+        if (!isMasternodeSession(address))
+            return null;
+
+        // TODO: this is considered a hack to get around the default behavior of PeerGroup
+        if (isNodeConnected(address) || isNodePending(address)) {
+            log.info("attempting to connect to the same peer again: {}", address);
+            return null; // do not connect to the same peer again
+        }
+
+        Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByAddress(address.getSocketAddress());
+        CoinJoinClientSession session;
+
+        pendingMasternodesLock.lock();
+        try {
+            session = masternodeMap.get(mn.getProTxHash());
+        } finally {
+            pendingMasternodesLock.unlock();
+        }
+
+        // TODO: this is considered a hack to get around the default behavior of PeerGroup
+        if (session.getMixingMasternodeInfo() == null) {
+            log.warn("session is not connected to a masternode: {}", session);
+            return null;
+        }
+
+        Peer peer = super.connectTo(address, incrementMaxConnections, connectTimeoutMillis);
+        log.info("masternode[connected] {}: {}; {}", peer.getAddress().getSocketAddress(), session.getMixingMasternodeInfo().getProTxHash(), session);
+        return peer;
+
+    }
+
+    private boolean isNodeConnected(PeerAddress address) {
+        return forPeer(new MasternodeAddress(address.getSocketAddress()), new ForPeer() {
+            @Override
+            public boolean process(Peer peer) {
+                return peer.getAddress().equals(address);
+            }
+        });
+    }
+
+    private boolean isNodePending(PeerAddress address) {
+        List<Peer> pendingPeers = getPendingPeers();
+        for (Peer peer: pendingPeers) {
+            if (peer.getAddress().equals(address)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @GuardedBy("lock")
+    private void checkMasternodesWithoutSessions() {
+        List<Peer> listMasternodes = getConnectedPeers();
+        ArrayList<Peer> masternodesToDrop = Lists.newArrayList();
+        pendingMasternodesLock.lock();
+        try {
+            for (Peer masternode : listMasternodes) {
+                boolean found = false;
+                for (CoinJoinClientSession session : pendingSessions) {
+                    Masternode sessionMixingMasternode = session.getMixingMasternodeInfo();
+                    if (sessionMixingMasternode != null) {
+                        if (sessionMixingMasternode.getService().getSocketAddress().equals(masternode.getAddress().getSocketAddress())) {
+                            found = true;
+                        }
+                    } else {
+                        log.info("session is not connected to a masternode: {}", session);
+                    }
+                }
+                if (!found) {
+                    log.info("masternode is not connected to a session: {}", masternode.getAddress().getSocketAddress());
+                    masternodesToDrop.add(masternode);
+                }
+            }
+        } finally {
+            pendingMasternodesLock.unlock();
+        }
+        masternodesToDrop.forEach(new Consumer<Peer>() {
+            @Override
+            public void accept(Peer peer) {
+                Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByAddress(peer.getAddress().getSocketAddress());
+                //pendingSessions.remove(mn.getProTxHash());
+                log.info("masternode will be disconnected: {}: {}", peer, mn.getProTxHash());
+                peer.close();
+            }
+        });
+    }
+
+    public CoinJoinClientSession getMixingSession(Peer masternode) {
+        return addressMap.get(new MasternodeAddress(masternode.getAddress().getSocketAddress()));
     }
 
     public interface ForPeer {
@@ -207,5 +389,28 @@ public class MasternodeGroup extends PeerGroup {
         }
         log.info("cannot find {} in the list of connected peers: {}", service.getSocketAddress(), listOfPeers);
         return false;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(String.format("MasternodeGroup{connected=%d/max=%d, pending-mns=%d, closing-mns=%d}",
+                numConnectedPeers(), getMaxConnections(), pendingSessions.size(), pendingClosingMasternodes.size()));
+        for (Peer masternode : getConnectedPeers()) {
+            builder.append("\n  ")
+                    .append(masternode.getAddress().getSocketAddress())
+                    .append(": ")
+                    .append(getMixingSession(masternode));
+        }
+        return builder.toString();
+    }
+
+    protected boolean isMasternodeSession(PeerAddress address) {
+        pendingMasternodesLock.lock();
+        try {
+            return addressMap.containsKey(new MasternodeAddress(address.getSocketAddress()));
+        } finally {
+            pendingMasternodesLock.unlock();
+        }
     }
 }

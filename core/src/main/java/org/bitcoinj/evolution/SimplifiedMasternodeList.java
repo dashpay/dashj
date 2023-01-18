@@ -9,6 +9,7 @@ import org.bitcoinj.utils.Threading;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
@@ -375,6 +376,15 @@ public class SimplifiedMasternodeList extends Message {
         // masternodeOutpoint is hardcoded
         for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
             if (Objects.equals(entry.getValue().getCollateralOutpoint(), masternodeOutpoint)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    public Masternode getMNByAddress(InetSocketAddress socketAddress) {
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if (Objects.equals(entry.getValue().getService().getSocketAddress(), socketAddress)) {
                 return entry.getValue();
             }
         }

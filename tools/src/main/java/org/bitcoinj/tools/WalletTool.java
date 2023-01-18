@@ -17,17 +17,17 @@
 
 package org.bitcoinj.tools;
 
+import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.params.BinTangDevNetParams;
-import org.bitcoinj.params.JackDanielsDevNetParams;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
@@ -42,6 +42,7 @@ import org.bitcoinj.store.*;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DerivationPathFactory;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
@@ -136,6 +137,9 @@ public class WalletTool {
     private static OptionSpec<Script.ScriptType> outputScriptTypeFlag;
     private static OptionSpec<String> xpubkeysFlag;
     private static OptionSpec<String> mixAmountFlag;
+    private static OptionSpec<Integer> sessionsFlag;
+    private static OptionSpec<Integer> roundsFlag;
+    private static OptionSpec<Boolean> multiSessionFlag;
 
     private static NetworkParameters params;
     private static File walletFile;
@@ -280,7 +284,11 @@ public class WalletTool {
         OptionSpec<String> refundFlag = parser.accepts("refund-to").withRequiredArg();
         OptionSpec<String> txHashFlag = parser.accepts("txhash").withRequiredArg();
 
-        mixAmountFlag = parser.accepts("mixamount").withRequiredArg();
+        // coinjoin
+        mixAmountFlag = parser.accepts("amount").withRequiredArg();
+        sessionsFlag = parser.accepts("sessions").withRequiredArg().ofType(Integer.class);
+        roundsFlag = parser.accepts("rounds").withRequiredArg().ofType(Integer.class);
+        multiSessionFlag = parser.accepts("multi-session").withOptionalArg().ofType(Boolean.class);
 
         options = parser.parse(args);
 
@@ -1560,6 +1568,9 @@ public class WalletTool {
 
         final boolean dumpPrivkeys = options.has("dump-privkeys");
         final boolean dumpLookahead = options.has("dump-lookahead");
+        if (options.has(roundsFlag)) {
+            CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
+        }
         if (dumpPrivkeys && wallet.isEncrypted()) {
             if (password != null) {
                 final KeyParameter aesKey = passwordToKey(true);
@@ -1593,21 +1604,39 @@ public class WalletTool {
     private static void mix() {
         wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
         syncChain();
-
+        // set defaults
+        CoinJoinReporter reporter = new CoinJoinReporter(wallet);
+        CoinJoinClientOptions.setEnabled(true);
+        CoinJoinClientOptions.setRounds(4);
+        CoinJoinClientOptions.setSessions(1);
         Coin amountToMix = wallet.getBalance();
 
+        // set command line arguments
         if (options.has(mixAmountFlag)) {
             amountToMix = Coin.parseCoin(options.valueOf(mixAmountFlag));
         }
         CoinJoinClientOptions.setAmount(amountToMix);
-        CoinJoinClientOptions.setEnabled(true);
-        CoinJoinClientOptions.setRounds(1);
+
+        if (options.has(sessionsFlag)) {
+            CoinJoinClientOptions.setSessions(options.valueOf(sessionsFlag));
+        }
+
+        if (options.has(roundsFlag)) {
+            CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
+        }
+
+        if (options.has(multiSessionFlag)) {
+            CoinJoinClientOptions.setMultiSessionEnabled(options.valueOf(multiSessionFlag));
+        }
+
         ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
+        wallet.getContext().coinJoinManager.addSessionCompleteListener(reporter);
 
         // mix coins
         try {
             CoinJoinClientManager it = wallet.getContext().coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
+            it.setStopOnNothingToDo(true);
             it.setBlockChain(wallet.getContext().blockChain);
 
             {
@@ -1626,8 +1655,13 @@ public class WalletTool {
             boolean result = it.doAutomaticDenominating();
             System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + it.getStatuses() + ", will retry")));
 
-            wait(WaitForEnum.EVER);
-        } catch (BlockStoreException x) {
+            // wait until finished mixing
+            SettableFuture<Boolean> mixingFinished = wallet.getContext().coinJoinManager.getMixingFinishedFuture(wallet);
+            mixingFinished.addListener(() -> System.out.println("Mixing complete."), Threading.SAME_THREAD);
+            mixingFinished.get();
+            wallet.getContext().coinJoinManager.removeSessionCompleteListener(reporter);
+            reporter.close();
+        } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);
         }
     }

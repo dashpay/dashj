@@ -116,9 +116,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     private volatile boolean vUsedUp;
 
     // Addresses to try to connect to, excluding active peers.
-    @GuardedBy("lock") private final PriorityQueue<PeerAddress> inactives;
-    @GuardedBy("lock") private final Map<PeerAddress, ExponentialBackoff> backoffMap;
-    @GuardedBy("lock") private final Map<PeerAddress, Integer> priorityMap;
+    @GuardedBy("lock") protected final PriorityQueue<PeerAddress> inactives;
+    @GuardedBy("lock") protected final Map<PeerAddress, ExponentialBackoff> backoffMap;
+    @GuardedBy("lock") protected final Map<PeerAddress, Integer> priorityMap;
 
     // Currently active peers. This is an ordered list rather than a set to make unit tests predictable.
     private final CopyOnWriteArrayList<Peer> peers;
@@ -1057,7 +1057,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     // Adds peerAddress to backoffMap map and inactives queue.
     // Returns true if it was added, false if it was already there.
-    private boolean addInactive(PeerAddress peerAddress, int priority) {
+    protected boolean addInactive(PeerAddress peerAddress, int priority) {
         lock.lock();
         try {
             // Deduplicate
@@ -1598,7 +1598,17 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** You can override this to customise the creation of {@link Peer} objects. */
     @GuardedBy("lock")
     protected Peer createPeer(PeerAddress address, VersionMessage ver) {
-        return new Peer(params, ver, address, chain, headerChain, requiredServices, downloadTxDependencyDepth);
+        Peer peer = new Peer(params, ver, address, chain, headerChain, requiredServices, downloadTxDependencyDepth);
+        // mark this as a masternode if it is
+        if (context.masternodeListManager != null) {
+            SimplifiedMasternodeList mnList = context.masternodeListManager.getMasternodeList();
+            if (mnList.size() != 0) {
+                if (mnList.containsMN(address)) {
+                    peer.setMasternode(true);
+                }
+            }
+        }
+        return peer;
     }
 
     /**
