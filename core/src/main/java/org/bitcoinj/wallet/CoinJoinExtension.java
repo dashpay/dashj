@@ -34,12 +34,11 @@ import java.util.List;
 
 public class CoinJoinExtension extends AbstractKeyChainExtension {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinExtension.class);
-    protected NetworkParameters params;
 
     protected KeyChainGroup coinJoinKeyChainGroup;
 
-    public CoinJoinExtension(NetworkParameters params) {
-        this.params = params;
+    public CoinJoinExtension(Wallet wallet) {
+        super(wallet);
     }
 
     /**
@@ -123,7 +122,7 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
     public void addKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
         if (!hasKeyChain(path)) {
             if (coinJoinKeyChainGroup == null) {
-                coinJoinKeyChainGroup = KeyChainGroup.builder(params).build();
+                coinJoinKeyChainGroup = KeyChainGroup.builder(wallet.getParams()).build();
             }
             coinJoinKeyChainGroup.addAndActivateHDChain(DeterministicKeyChain.builder().seed(seed).accountPath(path).build());
         }

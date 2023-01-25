@@ -90,7 +90,7 @@ public class WalletEx extends Wallet {
 
     protected WalletEx(Context context, KeyChainGroup keyChainGroup) {
         super(context, keyChainGroup);
-        coinjoin = new CoinJoinExtension(context.getParams());
+        coinjoin = new CoinJoinExtension(this);
         addExtension(coinjoin);
     }
 

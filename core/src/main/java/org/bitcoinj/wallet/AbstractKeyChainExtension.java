@@ -35,6 +35,11 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 abstract public class AbstractKeyChainExtension implements KeyChainWalletExtension {
     protected final ReentrantLock keyChainGroupLock = Threading.lock("keychaingroup");
+    Wallet wallet;
+
+    protected AbstractKeyChainExtension(Wallet wallet) {
+        this.wallet = wallet;
+    }
 
     abstract KeyChainGroup getKeyChainGroup();
 
