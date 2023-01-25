@@ -41,13 +41,17 @@ public interface KeyChainWalletExtension extends WalletExtension {
     ECKey findKeyFromPubKey(byte[] pubKey);
     ECKey findKeyFromPubKeyHash(byte[] pubKeyHash, @Nullable Script.ScriptType scriptType);
     RedeemData findRedeemDataFromScriptHash(byte[] payToScriptHash);
+    Address freshAddress(KeyChain.KeyPurpose purpose);
     DeterministicKey freshKey(KeyChain.KeyPurpose purpose);
+    List<DeterministicKey> freshKeys(int numberOfKeys);
+    Address freshReceiveAddress();
     DeterministicKey freshReceiveKey();
     List<DeterministicKey> freshKeys(KeyChain.KeyPurpose purpose, int numberOfKeys);
     DeterministicKeyChain getActiveKeyChain();
     List<DeterministicKeyChain> getActiveKeyChains(long walletCreationTime);
     BloomFilter getBloomFilter(int size, double falsePositiveRate, long nTweak);
     int getBloomFilterElementCount();
+    List<ECKey> getIssuedReceiveKeys();
     boolean hasKey(ECKey key);
     void markPubKeyAsUsed(byte[] pubkey);
     void markPubKeyHashAsUsed(byte[] pubKeyHash);

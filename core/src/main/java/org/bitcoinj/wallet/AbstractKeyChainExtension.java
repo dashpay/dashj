@@ -26,10 +26,12 @@ import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Implements basic keychain functionality for a keychain extension
  */
@@ -120,26 +122,88 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
 
     @Override
     public DeterministicKey freshKey(KeyChain.KeyPurpose purpose) {
-        keyChainGroupLock.lock();
-        try {
-            return getKeyChainGroup().freshKey(purpose);
-        } finally {
-            keyChainGroupLock.unlock();
-        }
+        return freshKeys(purpose, 1).get(0);
     }
 
     @Override
     public List<DeterministicKey> freshKeys(KeyChain.KeyPurpose purpose, int numberOfKeys) {
+        List<DeterministicKey> keys;
         keyChainGroupLock.lock();
         try {
-            return getKeyChainGroup().freshKeys(purpose, numberOfKeys);
+            keys = getKeyChainGroup().freshKeys(purpose, numberOfKeys);
         } finally {
             keyChainGroupLock.unlock();
         }
+        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
+        // and that's not quite so important, so we could coalesce for more performance.
+        wallet.saveNow();
+        return keys;
     }
 
+    /**
+     * Returns a key/s that has not been returned by this method before (fresh).
+     */
+    @Override
+    public List<DeterministicKey> freshKeys(int numberOfKeys) {
+        List<DeterministicKey> keys;
+        checkNotNull(getKeyChainGroup(), "This wallet extension does not have any key chains.");
+        keyChainGroupLock.lock();
+        try {
+            keys = freshKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, numberOfKeys);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
+        // and that's not quite so important, so we could coalesce for more performance.
+        wallet.saveNow();
+        return keys;
+    }
+
+    @Override
     public DeterministicKey freshReceiveKey() {
         return freshKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
+    }
+
+    /**
+     * Returns address for a {@link #freshKey(KeyChain.KeyPurpose)}
+     */
+    @Override
+    public Address freshAddress(KeyChain.KeyPurpose purpose) {
+        Address key;
+        keyChainGroupLock.lock();
+        try {
+            key = getKeyChainGroup().freshAddress(purpose);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        wallet.saveNow();
+        return key;
+    }
+
+    /**
+     * An alias for calling {@link #freshAddress(KeyChain.KeyPurpose)} with
+     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS} as the parameter.
+     */
+    @Override
+    public Address freshReceiveAddress() {
+        return freshAddress(KeyChain.KeyPurpose.RECEIVE_FUNDS);
+    }
+
+    /**
+     * Returns only the keys that have been issued by {@link #freshKeys(int)}}.
+     */
+    @Override
+    public List<ECKey> getIssuedReceiveKeys() {
+        keyChainGroupLock.lock();
+        try {
+            List<ECKey> keys = new LinkedList<>();
+            long keyRotationTimeSecs = wallet.getKeyRotationTime().getTime();
+            for (final DeterministicKeyChain chain : getActiveKeyChains(keyRotationTimeSecs))
+                keys.addAll(chain.getIssuedReceiveKeys());
+            return keys;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
     }
 
     @Override
@@ -152,6 +216,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
         }
     }
 
+    @Override
     public List<DeterministicKeyChain> getActiveKeyChains(long walletCreationTime) {
         keyChainGroupLock.lock();
         try {
@@ -245,6 +310,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
         }
     }
 
+    @Override
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
         return getWalletExtensionID() + ":\n" + (isInitialized() ? getKeyChainGroup().toString(includeLookahead, includePrivateKeys, aesKey) : "No keychains");
     }

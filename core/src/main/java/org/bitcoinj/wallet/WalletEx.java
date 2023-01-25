@@ -12,7 +12,6 @@ import org.bitcoinj.coinjoin.utils.CompactTallyItem;
 import org.bitcoinj.coinjoin.utils.InputCoin;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
-import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
@@ -177,89 +176,75 @@ public class WalletEx extends Wallet {
         getCoinJoin().addKeyChain(getKeyChainSeed(), derivationPathFactory.coinJoinDerivationPath());
     }
 
-    /**
-     * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
-     */
-//    public void addCoinJoinKeyChain(ImmutableList<ChildNumber> path)
-//    {
-//        try {
-//            keyChainGroupLock.lock();
-//            coinjoin.addKeyChain(getKeyChainSeed(), path);
-//        }
-//        finally {
-//            keyChainGroupLock.unlock();
-//        }
-//    }
+    public Coin getDenominatedBalance() {
+        return getBalance(BalanceType.DENOMINATED);
+    }
 
-//    public void addAndActivateCoinJoinHDChain(DeterministicKeyChain chain) {
-//        keyChainGroupLock.lock();
-//        try {
-//            coinjoin.addAndActivateHDChain(chain);
-//        } finally {
-//            keyChainGroupLock.unlock();
-//        }
-//    }
-
-    /**
-     * Returns only the keys that have been issued by {@link #freshCoinJoinKeys(int)}}.
-     */
-    public List<ECKey> getCoinJoinIssuedReceiveKeys() {
-        keyChainGroupLock.lock();
-        try {
-            List<ECKey> keys = new LinkedList<>();
-            long keyRotationTimeSecs = getKeyRotationTime().getTime();
-            for (final DeterministicKeyChain chain : coinjoin.getActiveKeyChains(keyRotationTimeSecs))
-                keys.addAll(chain.getIssuedReceiveKeys());
-            return keys;
-        } finally {
-            keyChainGroupLock.unlock();
-        }
+    public Coin getCoinJoinBalance() {
+        return getBalance(BalanceType.COINJOIN);
     }
 
     /**
-     * Returns a key/s for coinjoin that has not been returned by this method before (fresh).
+     * Returns the balance of this wallet as calculated by the provided balanceType.
      */
-    public List<DeterministicKey> freshCoinJoinKeys(int numberOfKeys) {
-        List<DeterministicKey> keys;
-        checkNotNull(coinjoin.getKeyChainGroup(), "This wallet does not have any coinjoin key chains.");
-        keyChainGroupLock.lock();
+    @Override
+    public Coin getBalance(BalanceType balanceType) {
+        lock.lock();
         try {
-            keys = coinjoin.freshKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, numberOfKeys);
+            if (balanceType == BalanceType.AVAILABLE || balanceType == BalanceType.AVAILABLE_SPENDABLE) {
+                List<TransactionOutput> candidates = calculateAllSpendCandidates(true, balanceType == BalanceType.AVAILABLE_SPENDABLE);
+                CoinSelection selection = coinSelector.select(MAX_MONEY, candidates);
+                return selection.valueGathered;
+            } else if (balanceType == BalanceType.ESTIMATED || balanceType == BalanceType.ESTIMATED_SPENDABLE) {
+                List<TransactionOutput> all = calculateAllSpendCandidates(false, balanceType == BalanceType.ESTIMATED_SPENDABLE);
+                Coin value = Coin.ZERO;
+                for (TransactionOutput out : all) value = value.add(out.getValue());
+                return value;
+            } else if (balanceType == BalanceType.COINJOIN|| balanceType == BalanceType.COINJOIN_SPENDABLE) {
+                List<TransactionOutput> all = calculateAllSpendCandidates(true, balanceType == BalanceType.COINJOIN_SPENDABLE);
+                Coin value = Coin.ZERO;
+                for (TransactionOutput out : all) {
+                    // exclude non coinjoin outputs if isCoinJoinOnly is true
+                    // exclude coinjoin outputs when isCoinJoinOnly is false
+                    boolean isCoinJoin = out.isDenominated() && out.isCoinJoin(this) && isFullyMixed(out);
+
+                    if (isCoinJoin)
+                        value = value.add(out.getValue());
+                }
+                return value;
+                //CoinSelection selection = new CoinJoinCoinSelector(this).select(NetworkParameters.MAX_MONEY, candidates);
+                //return selection.valueGathered;
+            } else if (balanceType == BalanceType.DENOMINATED || balanceType == BalanceType.DENOMINATED_SPENDABLE) {
+                List<TransactionOutput> candidates = calculateAllSpendCandidates(false, balanceType == BalanceType.DENOMINATED_SPENDABLE);
+                CoinSelection selection = DenominatedCoinSelector.get().select(MAX_MONEY, candidates);
+                Coin value = Coin.ZERO;
+                for (TransactionOutput out : selection.gathered) {
+                    if (out.isDenominated())
+                        value = value.add(out.getValue());
+                }
+                return value;
+            } else {
+                throw new AssertionError("Unknown balance type");  // Unreachable.
+            }
         } finally {
-            keyChainGroupLock.unlock();
+            lock.unlock();
         }
-        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
-        // and that's not quite so important, so we could coalesce for more performance.
-        saveNow();
-        return keys;
     }
 
-//    public DeterministicKey freshCoinJoinKey() {
-//        return freshCoinJoinKeys(1).get(0);
-//    }
-//
-//    public DeterministicKey currentCoinJoinKey() {
-//        keyChainGroupLock.lock();
-//        try {
-//            return coinjoin.currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
-//        } finally {
-//            keyChainGroupLock.unlock();
-//        }
-//    }
+    public Balance getBalanceInfo() {
+        return new Balance()
+                .setMyTrusted(getBalance(BalanceType.AVAILABLE_SPENDABLE))
+                .setMyUntrustedPending(Coin.ZERO)
+                .setDenominatedTrusted(getBalance(BalanceType.DENOMINATED_SPENDABLE))
+                //.setDenominatedUntrustedPending(getBalance(BalanceType.DENOMINATED_FOR_MIXING))
+                .setAnonymized(getBalance(BalanceType.COINJOIN_SPENDABLE))
+                // watch only
+                .setWatchOnlyImmature(Coin.ZERO)
+                .setWatchOnlyTrusted(Coin.ZERO)
+                .setWatchOnlyUntrustedPending(Coin.ZERO);
 
-    /**
-     * Locates a redeem data (redeem script and keys) from the keyChainGroup given the hash of the script.
-     * Returns RedeemData object or null if no such data was found.
-     */
-//    @Nullable
-//    public RedeemData findCoinJoinRedeemDataFromScriptHash(byte[] payToScriptHash) {
-//        keyChainGroupLock.lock();
-//        try {
-//            return coinjoin.findRedeemDataFromScriptHash(payToScriptHash);
-//        } finally {
-//            keyChainGroupLock.unlock();
-//        }
-//    }
+        //TODO: support as many balance types as possible
+    }
 
     @Override
     public boolean isCoinJoinPubKeyHashMine(byte[] pubKeyHash, @Nullable Script.ScriptType scriptType) {
