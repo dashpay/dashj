@@ -332,6 +332,8 @@ public class CoinJoin {
                 return "Your entries added successfully.";
             case ERR_SIZE_MISMATCH:
                 return "Inputs vs outputs size mismatch.";
+            case ERR_TIMEOUT:
+                return "Session has timed out.";
             default:
                 return "Unknown response.";
         }

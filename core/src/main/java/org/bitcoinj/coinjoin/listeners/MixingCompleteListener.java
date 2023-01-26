@@ -15,9 +15,8 @@
  */
 package org.bitcoinj.coinjoin.listeners;
 
-import org.bitcoinj.coinjoin.PoolMessage;
 import org.bitcoinj.wallet.WalletEx;
 
-public interface SessionCompleteListener {
-    void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message);
+public interface MixingCompleteListener {
+    void onMixingComplete(WalletEx wallet);
 }

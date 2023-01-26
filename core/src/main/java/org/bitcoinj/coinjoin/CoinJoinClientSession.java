@@ -17,6 +17,7 @@ package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
+import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
 import org.bitcoinj.coinjoin.utils.KeyHolderStorage;
 import org.bitcoinj.coinjoin.utils.MasternodeGroup;
@@ -72,6 +73,7 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_SIGNING_TIMEOUT;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_SESSION;
+import static org.bitcoinj.coinjoin.PoolMessage.ERR_TIMEOUT;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_POOL_MAX;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_POOL_MIN;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_SUCCESS;
@@ -102,6 +104,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private final AtomicBoolean hasNothingToDo = new AtomicBoolean(false); // is mixing finished?
 
+    private final CopyOnWriteArrayList<ListenerRegistration<SessionStartedListener>> sessionStartedListeners
+            = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<SessionCompleteListener>> sessionCompleteListeners
             = new CopyOnWriteArrayList<>();
 
@@ -863,6 +867,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     sessionID.set(statusUpdate.getSessionID());
                     timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
                     strMessageTmp = strMessageTmp + " Set nSessionID to " + sessionID.get();
+                    queueSessionStartedListeners(MSG_SUCCESS);
                 }
                 log.info("coinjoin session: accepted by Masternode: {}", strMessageTmp);
                 break;
@@ -881,7 +886,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private void completedTransaction(PoolMessage messageID) {
         if (messageID == MSG_SUCCESS) {
             log.info("coinjoin: CompletedTransaction -- success");
-            queueSessionCompleteListeners();
+            queueSessionCompleteListeners(MSG_SUCCESS);
             mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
             keyHolderStorage.keepAll();
         } else {
@@ -1492,6 +1497,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         log.info("coinjoin: {} {} timed out ({})", (state.get() == POOL_STATE_SIGNING) ? "Signing at session" : "Session", sessionID.get(), nTimeout);
 
         setState(POOL_STATE_ERROR);
+        queueSessionCompleteListeners(ERR_TIMEOUT);
         unlockCoins();
         keyHolderStorage.returnAll();
         timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
@@ -1536,6 +1542,43 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
      * Adds an event listener object. Methods on this object are called when something interesting happens,
      * like receiving money. Runs the listener methods in the user thread.
      */
+    public void addSessionStartedListener(SessionStartedListener listener) {
+        addSessionStartedListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addSessionStartedListener(Executor executor, SessionStartedListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        sessionStartedListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeSessionStartedListener(SessionStartedListener listener) {
+        return ListenerRegistration.removeFromList(listener, sessionStartedListeners);
+    }
+
+    protected void queueSessionStartedListeners(PoolMessage message) {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<SessionStartedListener> registration : sessionStartedListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onSessionStarted(mixingWallet, getSessionID(), getSessionDenom(), message);
+                }
+            });
+        }
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
     public void addSessionCompleteListener(SessionCompleteListener listener) {
         addSessionCompleteListener(Threading.USER_THREAD, listener);
     }
@@ -1557,13 +1600,13 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         return ListenerRegistration.removeFromList(listener, sessionCompleteListeners);
     }
 
-    protected void queueSessionCompleteListeners() {
+    protected void queueSessionCompleteListeners(PoolMessage message) {
         //checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<SessionCompleteListener> registration : sessionCompleteListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    registration.listener.onSessionComplete(CoinJoinClientSession.this);
+                    registration.listener.onSessionComplete(mixingWallet, getSessionID(), getSessionDenom(), message);
                 }
             });
         }

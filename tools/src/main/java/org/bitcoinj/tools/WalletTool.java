@@ -20,6 +20,8 @@ package org.bitcoinj.tools;
 import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.coinjoin.CoinJoinSendRequest;
+import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.MasternodeSync;
@@ -43,6 +45,7 @@ import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Balance;
 import org.bitcoinj.wallet.DerivationPathFactory;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
@@ -275,6 +278,7 @@ public class WalletTool {
         OptionSpec<String> conditionFlag = parser.accepts("condition").withRequiredArg();
         parser.accepts("locktime").withRequiredArg();
         parser.accepts("allow-unconfirmed");
+        parser.accepts("coinjoin");
         parser.accepts("offline");
         parser.accepts("ignore-mandatory-extensions");
         OptionSpec<String> passwordFlag = parser.accepts("password").withRequiredArg();
@@ -435,7 +439,8 @@ public class WalletTool {
                         lockTime = (String) options.valueOf("locktime");
                     }
                     boolean allowUnconfirmed = options.has("allow-unconfirmed");
-                    send(outputFlag.values(options), feePerKb, lockTime, allowUnconfirmed);
+                    boolean isCoinJoin = options.has("coinjoin");
+                    send(outputFlag.values(options), feePerKb, lockTime, allowUnconfirmed, isCoinJoin);
                 } else if (options.has(paymentRequestLocation)) {
                     sendPaymentRequest(paymentRequestLocation.value(options), !options.has("no-pki"));
                 } else {
@@ -680,8 +685,11 @@ public class WalletTool {
         }
     }
 
-    private static void send(List<String> outputs, Coin feePerKb, String lockTimeStr, boolean allowUnconfirmed) throws VerificationException {
+    private static void send(List<String> outputs, Coin feePerKb, String lockTimeStr, boolean allowUnconfirmed, boolean isCoinJoin) throws VerificationException {
         try {
+            //if (options.has(roundsFlag)) {
+            //    CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
+            //}
             // Convert the input strings to outputs.
             Transaction t = new Transaction(params);
             for (String spec : outputs) {
@@ -706,8 +714,10 @@ public class WalletTool {
                     return;
                 }
             }
-            SendRequest req = SendRequest.forTx(t);
-            if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(wallet.getBalance())) {
+            SendRequest req = isCoinJoin ? CoinJoinSendRequest.forTx(wallet, t) : SendRequest.forTx(t);
+            if (isCoinJoin)
+                req.coinSelector = UnmixedZeroConfCoinSelector.get();
+            if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) :wallet.getBalance())) {
                 log.info("Emptying out wallet, recipient may get less than what you expect");
                 req.emptyWallet = true;
             }
@@ -763,7 +773,8 @@ public class WalletTool {
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         } catch (InsufficientMoneyException e) {
-            System.err.println("Insufficient funds: have " + wallet.getBalance().toFriendlyString());
+            BalanceType type = isCoinJoin ? BalanceType.COINJOIN_SPENDABLE : BalanceType.AVAILABLE_SPENDABLE;
+            System.err.println("Insufficient funds: have " + wallet.getBalance(type).toFriendlyString());
         }
     }
 
@@ -1366,6 +1377,7 @@ public class WalletTool {
                 peerGroup.stop();
             saveWallet(walletFile);
             store.close();
+            wallet.getContext().close();
             wallet = null;
         } catch (BlockStoreException e) {
             throw new RuntimeException(e);
@@ -1632,8 +1644,9 @@ public class WalletTool {
 
         ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
-        wallet.getContext().coinJoinManager.addSessionCompleteListener(reporter);
-        wallet.getContext().coinJoinManager.addMixingCompleteListener(reporter);
+        wallet.getContext().coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
+        wallet.getContext().coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);
+        wallet.getContext().coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, reporter);
 
         // mix coins
         try {
@@ -1663,8 +1676,9 @@ public class WalletTool {
             mixingFinished.get();
             wallet.getContext().coinJoinManager.removeSessionCompleteListener(reporter);
             wallet.getContext().coinJoinManager.removeMixingCompleteListener(reporter);
+            wallet.getContext().coinJoinManager.removeSessionStartedListener(reporter);
             wallet.getContext().coinJoinManager.stop();
-            reporter.close();
+            //reporter.close();
         } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);
         }

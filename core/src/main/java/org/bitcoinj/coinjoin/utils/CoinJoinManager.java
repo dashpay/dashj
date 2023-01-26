@@ -26,7 +26,9 @@ import org.bitcoinj.coinjoin.CoinJoinComplete;
 import org.bitcoinj.coinjoin.CoinJoinFinalTransaction;
 import org.bitcoinj.coinjoin.CoinJoinQueue;
 import org.bitcoinj.coinjoin.CoinJoinStatusUpdate;
+import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
+import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
@@ -203,6 +205,34 @@ public class CoinJoinManager {
      * Adds an event listener object. Methods on this object are called when something interesting happens,
      * like receiving money. Runs the listener methods in the user thread.
      */
+    public void addSessionStartedListener(SessionStartedListener listener) {
+        addSessionStartedListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addSessionStartedListener(Executor executor, SessionStartedListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.addSessionStartedListener(executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public void removeSessionStartedListener(SessionStartedListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.removeSessionStartedListener(listener);
+        }
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
     public void addSessionCompleteListener(SessionCompleteListener listener) {
         addSessionCompleteListener(Threading.USER_THREAD, listener);
     }
@@ -224,6 +254,34 @@ public class CoinJoinManager {
     public void removeSessionCompleteListener(SessionCompleteListener listener) {
         for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
             manager.removeSessionCompleteListener(listener);
+        }
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addMixingCompleteListener(MixingCompleteListener listener) {
+        addMixingCompleteListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addMixingCompleteListener(Executor executor, MixingCompleteListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.addMixingCompleteListener(executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public void removeMixingCompleteListener(MixingCompleteListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.removeMixingCompleteListener(listener);
         }
     }
 }

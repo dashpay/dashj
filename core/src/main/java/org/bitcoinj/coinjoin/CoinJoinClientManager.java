@@ -16,7 +16,9 @@
 package org.bitcoinj.coinjoin;
 
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
+import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
@@ -79,8 +81,11 @@ public class CoinJoinClientManager {
     
     // Keep track of current block height
     private int cachedBlockHeight = 0;
-
+    private final CopyOnWriteArrayList<ListenerRegistration<SessionStartedListener>> sessionStartedListeners
+            = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<SessionCompleteListener>> sessionCompleteListeners
+            = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<MixingCompleteListener>> mixingCompleteListeners
             = new CopyOnWriteArrayList<>();
 
     private boolean waitForAnotherBlock() {
@@ -235,6 +240,9 @@ public class CoinJoinClientManager {
                 for (ListenerRegistration<SessionCompleteListener> listener : sessionCompleteListeners) {
                     newSession.addSessionCompleteListener(listener.executor, listener.listener);
                 }
+                for (ListenerRegistration<SessionStartedListener> listener : sessionStartedListeners) {
+                    newSession.addSessionStartedListener(listener.executor, listener.listener);
+                }
                 deqSessions.addLast(newSession);
             }
             for (CoinJoinClientSession session: deqSessions) {
@@ -264,7 +272,8 @@ public class CoinJoinClientManager {
                     session.submitDenominate();
                     return true;
                 } else {
-                    log.info("mixingMasternode {} != mnAddr {}", mnMixing != null ? mnMixing.getService().getSocketAddress() : "null", mnAddr.getSocketAddress());
+                    log.info("mixingMasternode {} != mnAddr {} or {} != {}", mnMixing != null ? mnMixing.getService().getSocketAddress() : "null", mnAddr.getSocketAddress(),
+                            session.getState(), PoolState.POOL_STATE_QUEUE);
                 }
             }
             return false;
@@ -325,7 +334,7 @@ public class CoinJoinClientManager {
         SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
 
         int nCountEnabled = mnList.getValidMNsCount();
-        int nCountNotExcluded = nCountEnabled -  masternodesUsed.size();
+        int nCountNotExcluded = nCountEnabled - masternodesUsed.size();
 
         log.info("coinjoin:  {} enabled masternodes, {} masternodes to choose from", nCountEnabled, nCountNotExcluded);
         if (nCountNotExcluded < 1) {
@@ -421,11 +430,43 @@ public class CoinJoinClientManager {
     protected void triggerMixingFinished() {
         if (stopOnNothingToDo) {
             mixingFinished.set(true);
+            queueMixingCompleteListeners();
         }
     }
 
     public SettableFuture<Boolean> getMixingFinishedFuture() {
         return mixingFinished;
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addSessionStartedListener(SessionStartedListener listener) {
+        addSessionStartedListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addSessionStartedListener(Executor executor, SessionStartedListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        sessionStartedListeners.add(new ListenerRegistration<>(listener, executor));
+        for (CoinJoinClientSession session: deqSessions) {
+            session.addSessionStartedListener(executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeSessionStartedListener(SessionStartedListener listener) {
+        for (CoinJoinClientSession session: deqSessions) {
+            session.removeSessionStartedListener(listener);
+        }
+        return ListenerRegistration.removeFromList(listener, sessionStartedListeners);
     }
 
     /**
@@ -457,5 +498,42 @@ public class CoinJoinClientManager {
             session.removeSessionCompleteListener(listener);
         }
         return ListenerRegistration.removeFromList(listener, sessionCompleteListeners);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addSessionCompleteListener(MixingCompleteListener listener) {
+        addMixingCompleteListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addMixingCompleteListener(Executor executor, MixingCompleteListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        mixingCompleteListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeMixingCompleteListener(MixingCompleteListener listener) {
+        return ListenerRegistration.removeFromList(listener, mixingCompleteListeners);
+    }
+
+    protected void queueMixingCompleteListeners() {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<MixingCompleteListener> registration : mixingCompleteListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onMixingComplete(mixingWallet);
+                }
+            });
+        }
     }
 }
