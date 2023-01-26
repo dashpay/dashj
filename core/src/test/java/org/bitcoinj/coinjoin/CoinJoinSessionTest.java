@@ -404,7 +404,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         } while (lastMasternode == null);
         assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
         Coin initialDenominatedBalance = Coin.valueOf(102101021);
-        assertEquals(initialDenominatedBalance, wallet.getBalanceInfo().getDenominatedTrusted());
+        assertEquals(initialDenominatedBalance, mixingWallet.getBalanceInfo().getDenominatedTrusted());
 
         assertNotNull(lastMasternode);
 
@@ -557,8 +557,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
             assertEquals(mixingAmount.toFriendlyString() + " -> diff: " + Coin.FIFTY_COINS.subtract(wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE)).toFriendlyString(),
                     Coin.FIFTY_COINS.subtract(mixed), wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
         }
-        assertEquals(Coin.FIFTY_COINS.subtract(mixed).subtract(mixingFee), wallet.getBalanceInfo().getMyTrusted());
-        assertEquals(Coin.ZERO, wallet.getBalanceInfo().getMyUntrustedPending());
+        assertEquals(Coin.FIFTY_COINS.subtract(mixed).subtract(mixingFee), mixingWallet.getBalanceInfo().getMyTrusted());
+        assertEquals(Coin.ZERO, mixingWallet.getBalanceInfo().getMyUntrustedPending());
         // TODO: determine the correct calculations for these balances
         // assertEquals(mixed, wallet.getBalanceInfo().getAnonymized());
         // assertEquals(Coin.FIFTY_COINS.subtract(mixingFee).subtract(mixed), wallet.getAnonymizableBalance(true));

@@ -24,7 +24,6 @@ import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
-import org.bitcoinj.coinjoin.DenominatedCoinSelector;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
@@ -258,7 +257,7 @@ public class Wallet extends BaseTaggableObject
     @GuardedBy("lock") private volatile List<TransactionSigner> signers;
 
     // If this is set then the wallet selects spendable candidate outputs from a UTXO provider.
-    @Nullable private volatile UTXOProvider vUTXOProvider;
+    @Nullable protected volatile UTXOProvider vUTXOProvider;
 
     /**
      * Creates a new, empty wallet with a randomly chosen seed and no transactions. Make sure to provide for sufficient
@@ -3968,16 +3967,17 @@ public class Wallet extends BaseTaggableObject
          * Includes only transactions that have been denominated and are ready to be mixed.
          * Whether we <i>actually</i> have the private keys or not is irrelevant for this balance type.
          */
-        DENOMINATED_FOR_MIXING,
+        DENOMINATED,
 
-        DENOMINATED_FOR_MIXING_SPENDABLE,
+        /** Same as DENOMINATED but only for outputs we have the private keys for and can sign ourselves. */
+        DENOMINATED_SPENDABLE,
 
         /**
          * Includes only transactions that have been denominated and are ready to be mixed.
          * Whether we <i>actually</i> have the private keys or not is irrelevant for this balance type.
          */
         COINJOIN,
-
+        /** Same as COINJOIN but only for outputs we have the private keys for and can sign ourselves. */
         COINJOIN_SPENDABLE
     }
 
@@ -3987,14 +3987,6 @@ public class Wallet extends BaseTaggableObject
      */
     public Coin getBalance() {
         return getBalance(BalanceType.AVAILABLE);
-    }
-
-    public Coin getCoinJoinBalance() {
-        return getBalance(BalanceType.COINJOIN);
-    }
-
-    boolean isFullyMixed(TransactionOutput out) {
-        return false;
     }
 
     /**
@@ -4012,50 +4004,12 @@ public class Wallet extends BaseTaggableObject
                 Coin value = Coin.ZERO;
                 for (TransactionOutput out : all) value = value.add(out.getValue());
                 return value;
-            } else if (balanceType == BalanceType.COINJOIN|| balanceType == BalanceType.COINJOIN_SPENDABLE) {
-                List<TransactionOutput> all = calculateAllSpendCandidates(true, balanceType == BalanceType.COINJOIN_SPENDABLE);
-                Coin value = Coin.ZERO;
-                for (TransactionOutput out : all) {
-                    // exclude non coinjoin outputs if isCoinJoinOnly is true
-                    // exclude coinjoin outputs when isCoinJoinOnly is false
-                    boolean isCoinJoin = out.isDenominated() && out.isCoinJoin(this) && isFullyMixed(out);
-
-                    if (isCoinJoin)
-                        value = value.add(out.getValue());
-                }
-                return value;
-                //CoinSelection selection = new CoinJoinCoinSelector(this).select(NetworkParameters.MAX_MONEY, candidates);
-                //return selection.valueGathered;
-            } else if (balanceType == BalanceType.DENOMINATED_FOR_MIXING || balanceType == BalanceType.DENOMINATED_FOR_MIXING_SPENDABLE) {
-                List<TransactionOutput> candidates = calculateAllSpendCandidates(false, balanceType == BalanceType.DENOMINATED_FOR_MIXING_SPENDABLE);
-                CoinSelection selection = DenominatedCoinSelector.get().select(MAX_MONEY, candidates);
-                Coin value = Coin.ZERO;
-                for (TransactionOutput out : selection.gathered) {
-                    if (out.isDenominated())
-                        value = value.add(out.getValue());
-                }
-                return value;
             } else {
                 throw new AssertionError("Unknown balance type");  // Unreachable.
             }
         } finally {
             lock.unlock();
         }
-    }
-
-    public Balance getBalanceInfo() {
-        return new Balance()
-                .setMyTrusted(getBalance(BalanceType.AVAILABLE_SPENDABLE))
-                .setMyUntrustedPending(Coin.ZERO)
-                .setDenominatedTrusted(getBalance(BalanceType.DENOMINATED_FOR_MIXING_SPENDABLE))
-                //.setDenominatedUntrustedPending(getBalance(BalanceType.DENOMINATED_FOR_MIXING))
-                .setAnonymized(getBalance(BalanceType.COINJOIN_SPENDABLE))
-                // watch only
-                .setWatchOnlyImmature(Coin.ZERO)
-                .setWatchOnlyTrusted(Coin.ZERO)
-                .setWatchOnlyUntrustedPending(Coin.ZERO);
-
-        //TODO: support as many balance types as possible
     }
 
     /**
@@ -4741,30 +4695,17 @@ public class Wallet extends BaseTaggableObject
         return false;
     }
 
-    protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases) {
-        return calculateAllSpendCandidatesFromUTXOProvider(excludeImmatureCoinbases, false);
-    }
     /**
      * Returns the spendable candidates from the {@link UTXOProvider} based on keys that the wallet contains.
      * @return The list of candidates.
      */
-    protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases, boolean isCoinJoinOnly) {
+    protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases) {
         checkState(lock.isHeldByCurrentThread());
         UTXOProvider utxoProvider = checkNotNull(vUTXOProvider, "No UTXO provider has been set");
         LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
         try {
             int chainHeight = utxoProvider.getChainHeadHeight();
             for (UTXO output : getStoredOutputsFromUTXOProvider()) {
-                boolean coinjoin = false;
-                if (ScriptPattern.isP2PKH(output.getScript()))
-                    coinjoin = isCoinJoinPubKeyHashMine(ScriptPattern.extractHashFromP2PKH(output.getScript()), ScriptType.P2PKH);
-                else if (ScriptPattern.isP2PK(output.getScript()))
-                    coinjoin = isCoinJoinPubKeyMine(ScriptPattern.extractKeyFromP2PK(output.getScript()));
-                else if (ScriptPattern.isP2SH(output.getScript()))
-                    coinjoin = isCoinJoinPayToScriptHashMine(ScriptPattern.extractHashFromP2SH(output.getScript()));
-
-                if (coinjoin != isCoinJoinOnly)
-                    continue;
                 boolean coinbase = output.isCoinbase();
                 int depth = chainHeight - output.getHeight() + 1; // the current depth of the output (1 = same as head).
                 // Do not try and spend coinbases that were mined too recently, the protocol forbids it.
@@ -4786,7 +4727,7 @@ public class Wallet extends BaseTaggableObject
             // Add change outputs. Do not try and spend coinbases that were mined too recently, the protocol forbids it.
             if (!excludeImmatureCoinbases || tx.isMature()) {
                 for (TransactionOutput output : tx.getOutputs()) {
-                    if (output.isAvailableForSpending() && output.isMine(this) && output.isCoinJoin(this) == isCoinJoinOnly) {
+                    if (output.isAvailableForSpending() && output.isMine(this)) {
                         candidates.add(output);
                     }
                 }
@@ -6632,6 +6573,4 @@ public class Wallet extends BaseTaggableObject
             addresses.add(Address.fromKey(getParams(), key));
         return addresses;
     }
-
-
 }

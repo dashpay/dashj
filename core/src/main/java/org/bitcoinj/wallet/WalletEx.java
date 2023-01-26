@@ -21,16 +21,12 @@ import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.UTXO;
 import org.bitcoinj.core.UTXOProvider;
-import org.bitcoinj.core.UTXOProviderException;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicHierarchy;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptPattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,13 +38,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.core.NetworkParameters.MAX_MONEY;
 
 public class WalletEx extends Wallet {
@@ -63,7 +56,7 @@ public class WalletEx extends Wallet {
      * {@link #loadFromFile}.
      *
      * @param params network parameters
-     * @deprecated Use {@link #createDeterministic(NetworkParameters, ScriptType)}
+     * @deprecated Use {@link #createDeterministic(NetworkParameters, Script.ScriptType)}
      */
     @Deprecated
     public WalletEx(NetworkParameters params) {
@@ -76,7 +69,7 @@ public class WalletEx extends Wallet {
      * {@link #loadFromFile}.
      *
      * @param context
-     * @deprecated Use {@link #createDeterministic(Context, ScriptType)}
+     * @deprecated Use {@link #createDeterministic(Context, Script.ScriptType)}
      */
     @Deprecated
     public WalletEx(Context context) {
