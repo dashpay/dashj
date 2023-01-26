@@ -110,6 +110,18 @@ public class WalletEx extends Wallet {
     /**
      * @param params network parameters
      * @param seed deterministic seed
+     * @return a wallet from a deterministic seed with a
+     * {@link DeterministicKeyChain#ACCOUNT_ZERO_PATH 0 hardened path}
+     * @deprecated Use {@link #fromSeed(NetworkParameters, DeterministicSeed, Script.ScriptType, KeyChainGroupStructure)}
+     */
+    @Deprecated
+    public static WalletEx fromSeed(NetworkParameters params, DeterministicSeed seed) {
+        return fromSeed(params, seed, Script.ScriptType.P2PKH);
+    }
+
+    /**
+     * @param params network parameters
+     * @param seed deterministic seed
      * @param outputScriptType type of addresses (aka output scripts) to generate for receiving
      * @param structure structure for your wallet
      * @return a wallet from a deterministic seed with a default account path

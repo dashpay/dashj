@@ -19,6 +19,7 @@ package org.bitcoinj.coinjoin;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.testing.TestWithWallet;
 import org.bitcoinj.wallet.DerivationPathFactory;
 import org.bitcoinj.wallet.WalletEx;
@@ -32,11 +33,12 @@ import static org.junit.Assert.assertTrue;
 
 public class CoinJoinCoinSelectorTest extends TestWithWallet {
 
+    WalletEx walletEx;
     @Before
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        wallet = WalletEx.fromSeed(wallet.getParams(), wallet.getKeyChainSeed());
+        walletEx = WalletEx.fromSeed(wallet.getParams(), wallet.getKeyChainSeed(), Script.ScriptType.P2PKH);
     }
 
     @After
@@ -47,14 +49,18 @@ public class CoinJoinCoinSelectorTest extends TestWithWallet {
 
     @Test
     public void selectable() {
-        ((WalletEx)wallet).initializeCoinJoin();
-        DeterministicKey key = ((WalletEx)wallet).getCoinJoin().freshReceiveKey();
+        walletEx.initializeCoinJoin();
+        DeterministicKey key = walletEx.getCoinJoin().freshReceiveKey();
 
-        CoinJoinCoinSelector coinSelector = new CoinJoinCoinSelector(wallet);
+        CoinJoinCoinSelector coinSelector = new CoinJoinCoinSelector(walletEx);
 
         Transaction txCoinJoin;
+        Transaction txDemonination = new Transaction(UNITTEST);
+        txDemonination.addOutput(CoinJoin.getSmallestDenomination(), walletEx.getCoinJoin().freshReceiveKey());
+
         txCoinJoin = new Transaction(UNITTEST);
-        txCoinJoin.addOutput(CoinJoin.getSmallestDenomination(), key);
+        txCoinJoin.addInput(txDemonination.getOutput(0));
+        txCoinJoin.addOutput(CoinJoin.getSmallestDenomination(), walletEx.getCoinJoin().freshReceiveKey());
         txCoinJoin.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
 
         assertTrue(coinSelector.shouldSelect(txCoinJoin));

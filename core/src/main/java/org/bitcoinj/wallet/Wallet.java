@@ -4004,6 +4004,10 @@ public class Wallet extends BaseTaggableObject
                 Coin value = Coin.ZERO;
                 for (TransactionOutput out : all) value = value.add(out.getValue());
                 return value;
+            } else if (balanceType == BalanceType.COINJOIN || balanceType == BalanceType.COINJOIN_SPENDABLE) {
+                return Coin.ZERO;
+            } else if (balanceType == BalanceType.DENOMINATED || balanceType == BalanceType.DENOMINATED_SPENDABLE) {
+                return Coin.ZERO;
             } else {
                 throw new AssertionError("Unknown balance type");  // Unreachable.
             }
