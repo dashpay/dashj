@@ -19,11 +19,13 @@ package org.bitcoinj.wallet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.CodedOutputStream;
-import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -36,6 +38,8 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinExtension.class);
 
     protected KeyChainGroup coinJoinKeyChainGroup;
+
+    protected int rounds = CoinJoinClientOptions.getRounds();
 
     public CoinJoinExtension(Wallet wallet) {
         super(wallet);
@@ -78,6 +82,7 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
             Protos.CoinJoin.Builder builder = Protos.CoinJoin.newBuilder();
             List<Protos.Key> keys = coinJoinKeyChainGroup != null ? coinJoinKeyChainGroup.serializeToProtobuf() : Lists.newArrayList();
             builder.addAllKey(keys);
+            builder.setRounds(rounds);
             Protos.CoinJoin coinJoinProto = builder.build();
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             final CodedOutputStream codedOutput = CodedOutputStream.newInstance(output);
@@ -104,6 +109,8 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
         } else {
             coinJoinKeyChainGroup = KeyChainGroup.fromProtobufUnencrypted(containingWallet.params, coinJoinProto.getKeyList());
         }
+        rounds = coinJoinProto.getRounds();
+        CoinJoinClientOptions.setRounds(rounds);
     }
 
     public boolean hasKeyChain(ImmutableList<ChildNumber> path) {
@@ -131,5 +138,15 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
     @Override
     KeyChainGroup getKeyChainGroup() {
         return coinJoinKeyChainGroup;
+    }
+
+    public void setRounds(int rounds) {
+        this.rounds = rounds;
+    }
+
+    @Override
+    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
+        return "COINJOIN:\n Rounds: " + rounds + "\n" +
+                super.toString(includeLookahead, includePrivateKeys, aesKey);
     }
 }

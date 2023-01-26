@@ -514,5 +514,8 @@ message ExchangeRate {
 }
 /** CoinJoin KeyChain */
 message CoinJoin {
-  repeated Key key = 3;
+  // key chain
+  repeated Key key = 1;
+  // last value of rounds from mixing
+  required int32 rounds = 2;
 }

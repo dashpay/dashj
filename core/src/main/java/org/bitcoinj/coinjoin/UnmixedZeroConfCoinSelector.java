@@ -25,19 +25,29 @@ import org.bitcoinj.wallet.ZeroConfCoinSelector;
 import java.util.Iterator;
 import java.util.List;
 
-public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
-    private final Wallet wallet;
-    private boolean onlyConfirmed;
+public class UnmixedZeroConfCoinSelector extends ZeroConfCoinSelector {
+    //private final Wallet wallet;
+    private boolean onlyConfirmed = false;
 
-    public CoinJoinCoinSelector(Wallet wallet) {
+    private static final UnmixedZeroConfCoinSelector instance = new UnmixedZeroConfCoinSelector();
+
+    public static UnmixedZeroConfCoinSelector get() {
+        return instance;
+    }
+
+    protected UnmixedZeroConfCoinSelector() {
+        super();
+    }
+
+    /*public UnmixedZeroConfCoinSelector(Wallet wallet) {
         super();
         this.wallet = wallet;
         this.onlyConfirmed = false;
     }
-    public CoinJoinCoinSelector(Wallet wallet, boolean onlyConfirmed) {
+    public UnmixedZeroConfCoinSelector(Wallet wallet, boolean onlyConfirmed) {
         this(wallet);
         this.onlyConfirmed = onlyConfirmed;
-    }
+    }*/
 
     @Override
     public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
@@ -45,8 +55,8 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
         Iterator<TransactionOutput> iterator = selection.gathered.iterator();
         while (iterator.hasNext()) {
             TransactionOutput output = iterator.next();
-            if (!output.isCoinJoin(wallet)) {
-                // remove non-coinjoin outputs
+            if (output.isDenominated()) {
+                // remove denominated outputs
                 iterator.remove();
                 selection.valueGathered = selection.valueGathered.subtract(output.getValue());
             }
@@ -58,7 +68,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
     protected boolean shouldSelect(Transaction tx) {
         if (tx != null) {
             for (TransactionOutput output : tx.getOutputs()) {
-                if (output.isCoinJoin(wallet)) {
+                if (!output.isDenominated()) {
                     TransactionConfidence confidence = tx.getConfidence();
                     if (onlyConfirmed)
                         return confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING;

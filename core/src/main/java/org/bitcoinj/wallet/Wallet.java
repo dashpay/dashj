@@ -5527,7 +5527,7 @@ public class Wallet extends BaseTaggableObject
                 throw new InsufficientMoneyException(valueMissing);
             }
             Coin change = selection.valueGathered.subtract(valueNeeded);
-            if (change.isGreaterThan(Coin.ZERO)) {
+            if (change.isGreaterThan(Coin.ZERO) && req.returnChange) {
                 // The value of the inputs is greater than what we want to send. Just like in real life then,
                 // we need to take back some coins ... this is called "change". Add another output that sends the change
                 // back to us. The address comes either from the request or currentChangeAddress() as a default.

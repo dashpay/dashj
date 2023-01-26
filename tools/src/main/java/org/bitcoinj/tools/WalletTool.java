@@ -694,7 +694,7 @@ public class WalletTool {
             Transaction t = new Transaction(params);
             for (String spec : outputs) {
                 try {
-                    OutputSpec outputSpec = new OutputSpec(spec);
+                    OutputSpec outputSpec = new OutputSpec(spec, isCoinJoin);
                     if (outputSpec.isAddress()) {
                         t.addOutput(outputSpec.value, outputSpec.addr);
                     } else {
@@ -783,14 +783,18 @@ public class WalletTool {
         public final Address addr;
         public final ECKey key;
 
-        public OutputSpec(String spec) throws IllegalArgumentException {
+        public OutputSpec(String spec) {
+            this(spec, false);
+        }
+
+        public OutputSpec(String spec, boolean isCoinJoin) throws IllegalArgumentException {
             String[] parts = spec.split(":");
             if (parts.length != 2) {
                 throw new IllegalArgumentException("Malformed output specification, must have two parts separated by :");
             }
             String destination = parts[0];
             if ("ALL".equalsIgnoreCase(parts[1]))
-                value = wallet.getBalance(BalanceType.ESTIMATED);
+                value = isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) : wallet.getBalance(BalanceType.ESTIMATED);
             else
                 value = parseCoin(parts[1]);
             if (destination.startsWith("0")) {
@@ -1581,9 +1585,7 @@ public class WalletTool {
 
         final boolean dumpPrivkeys = options.has("dump-privkeys");
         final boolean dumpLookahead = options.has("dump-lookahead");
-        if (options.has(roundsFlag)) {
-            CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
-        }
+
         if (dumpPrivkeys && wallet.isEncrypted()) {
             if (password != null) {
                 final KeyParameter aesKey = passwordToKey(true);
@@ -1637,6 +1639,7 @@ public class WalletTool {
         if (options.has(roundsFlag)) {
             CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
         }
+        wallet.getCoinJoin().setRounds(CoinJoinClientOptions.getRounds());
 
         if (options.has(multiSessionFlag)) {
             CoinJoinClientOptions.setMultiSessionEnabled(options.valueOf(multiSessionFlag));

@@ -20503,18 +20503,49 @@ public final class Protos {
       com.google.protobuf.MessageLiteOrBuilder {
 
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     java.util.List<org.bitcoinj.wallet.Protos.Key> 
         getKeyList();
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     org.bitcoinj.wallet.Protos.Key getKey(int index);
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     int getKeyCount();
+
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @return Whether the rounds field is set.
+     */
+    boolean hasRounds();
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @return The rounds.
+     */
+    int getRounds();
   }
   /**
    * <pre>
@@ -20531,38 +20562,59 @@ public final class Protos {
     private CoinJoin() {
       key_ = emptyProtobufList();
     }
-    public static final int KEY_FIELD_NUMBER = 3;
+    private int bitField0_;
+    public static final int KEY_FIELD_NUMBER = 1;
     private com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Key> key_;
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     @java.lang.Override
     public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeyList() {
       return key_;
     }
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     public java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
         getKeyOrBuilderList() {
       return key_;
     }
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     @java.lang.Override
     public int getKeyCount() {
       return key_.size();
     }
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     @java.lang.Override
     public org.bitcoinj.wallet.Protos.Key getKey(int index) {
       return key_.get(index);
     }
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     public org.bitcoinj.wallet.Protos.KeyOrBuilder getKeyOrBuilder(
         int index) {
@@ -20577,7 +20629,11 @@ public final class Protos {
     }
 
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     private void setKey(
         int index, org.bitcoinj.wallet.Protos.Key value) {
@@ -20586,7 +20642,11 @@ public final class Protos {
       key_.set(index, value);
     }
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     private void addKey(org.bitcoinj.wallet.Protos.Key value) {
       value.getClass();
@@ -20594,7 +20654,11 @@ public final class Protos {
       key_.add(value);
     }
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     private void addKey(
         int index, org.bitcoinj.wallet.Protos.Key value) {
@@ -20603,7 +20667,11 @@ public final class Protos {
       key_.add(index, value);
     }
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     private void addAllKey(
         java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.Key> values) {
@@ -20612,17 +20680,75 @@ public final class Protos {
           values, key_);
     }
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     private void clearKey() {
       key_ = emptyProtobufList();
     }
     /**
-     * <code>repeated .wallet.Key key = 3;</code>
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
      */
     private void removeKey(int index) {
       ensureKeyIsMutable();
       key_.remove(index);
+    }
+
+    public static final int ROUNDS_FIELD_NUMBER = 2;
+    private int rounds_;
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @return Whether the rounds field is set.
+     */
+    @java.lang.Override
+    public boolean hasRounds() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @return The rounds.
+     */
+    @java.lang.Override
+    public int getRounds() {
+      return rounds_;
+    }
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @param value The rounds to set.
+     */
+    private void setRounds(int value) {
+      bitField0_ |= 0x00000001;
+      rounds_ = value;
+    }
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     */
+    private void clearRounds() {
+      bitField0_ = (bitField0_ & ~0x00000001);
+      rounds_ = 0;
     }
 
     public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(
@@ -20725,7 +20851,11 @@ public final class Protos {
 
 
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       @java.lang.Override
       public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeyList() {
@@ -20733,20 +20863,32 @@ public final class Protos {
             instance.getKeyList());
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       @java.lang.Override
       public int getKeyCount() {
         return instance.getKeyCount();
       }/**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       @java.lang.Override
       public org.bitcoinj.wallet.Protos.Key getKey(int index) {
         return instance.getKey(index);
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       public Builder setKey(
           int index, org.bitcoinj.wallet.Protos.Key value) {
@@ -20755,7 +20897,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       public Builder setKey(
           int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
@@ -20765,7 +20911,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       public Builder addKey(org.bitcoinj.wallet.Protos.Key value) {
         copyOnWrite();
@@ -20773,7 +20923,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       public Builder addKey(
           int index, org.bitcoinj.wallet.Protos.Key value) {
@@ -20782,7 +20936,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       public Builder addKey(
           org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
@@ -20791,7 +20949,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       public Builder addKey(
           int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
@@ -20801,7 +20963,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       public Builder addAllKey(
           java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.Key> values) {
@@ -20810,7 +20976,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       public Builder clearKey() {
         copyOnWrite();
@@ -20818,11 +20988,67 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .wallet.Key key = 3;</code>
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
        */
       public Builder removeKey(int index) {
         copyOnWrite();
         instance.removeKey(index);
+        return this;
+      }
+
+      /**
+       * <pre>
+       * last value of rounds from mixing
+       * </pre>
+       *
+       * <code>required int32 rounds = 2;</code>
+       * @return Whether the rounds field is set.
+       */
+      @java.lang.Override
+      public boolean hasRounds() {
+        return instance.hasRounds();
+      }
+      /**
+       * <pre>
+       * last value of rounds from mixing
+       * </pre>
+       *
+       * <code>required int32 rounds = 2;</code>
+       * @return The rounds.
+       */
+      @java.lang.Override
+      public int getRounds() {
+        return instance.getRounds();
+      }
+      /**
+       * <pre>
+       * last value of rounds from mixing
+       * </pre>
+       *
+       * <code>required int32 rounds = 2;</code>
+       * @param value The rounds to set.
+       * @return This builder for chaining.
+       */
+      public Builder setRounds(int value) {
+        copyOnWrite();
+        instance.setRounds(value);
+        return this;
+      }
+      /**
+       * <pre>
+       * last value of rounds from mixing
+       * </pre>
+       *
+       * <code>required int32 rounds = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearRounds() {
+        copyOnWrite();
+        instance.clearRounds();
         return this;
       }
 
@@ -20843,11 +21069,14 @@ public final class Protos {
         }
         case BUILD_MESSAGE_INFO: {
             java.lang.Object[] objects = new java.lang.Object[] {
+              "bitField0_",
               "key_",
               org.bitcoinj.wallet.Protos.Key.class,
+              "rounds_",
             };
             java.lang.String info =
-                "\u0001\u0001\u0000\u0000\u0003\u0003\u0001\u0000\u0001\u0001\u0003\u041b";
+                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0001\u0002\u0001\u041b\u0002\u1504" +
+                "\u0000";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
