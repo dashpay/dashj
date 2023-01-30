@@ -225,7 +225,6 @@ public class CoinJoin {
                     it.remove();
                 }
             }
-            log.info("checkDSTXes -- mapDSTX.size()={}", mapDSTX.size());
         } finally {
             mapdstxLock.unlock();
         }
