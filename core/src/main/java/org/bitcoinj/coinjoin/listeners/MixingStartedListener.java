@@ -18,5 +18,5 @@ package org.bitcoinj.coinjoin.listeners;
 import org.bitcoinj.wallet.WalletEx;
 
 public interface MixingStartedListener {
-    void onMixingComplete(WalletEx wallet);
+    void onMixingStarted(WalletEx wallet);
 }

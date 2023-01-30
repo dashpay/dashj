@@ -19,11 +19,13 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.PoolMessage;
+import org.bitcoinj.coinjoin.PoolStatus;
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
 
+import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -31,6 +33,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class CoinJoinReporter extends MixingProgressTracker {
@@ -106,7 +109,8 @@ public class CoinJoinReporter extends MixingProgressTracker {
         try {
             writeTime();
             Stopwatch watch = sessionMap.get(sessionId);
-            watch.stop();
+            if (watch != null)
+                watch.stop();
             if (message == PoolMessage.MSG_SUCCESS) {
                 writer.write("Session Complete: ");
                 writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination), denomination));
@@ -115,7 +119,7 @@ public class CoinJoinReporter extends MixingProgressTracker {
                 writeStats(wallet);
             } else {
                 writer.write("Session Failure: ");
-                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination), denomination, watch.elapsed(TimeUnit.SECONDS)));
+                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination), denomination));
                 writeWatch(watch);
                 writer.write(CoinJoin.getMessageByID(message));
             }
@@ -127,12 +131,15 @@ public class CoinJoinReporter extends MixingProgressTracker {
     }
 
     @Override
-    public void onMixingComplete(WalletEx wallet) {
-        super.onMixingComplete(wallet);
+    public void onMixingComplete(WalletEx wallet, List<PoolStatus> statusList) {
+        super.onMixingComplete(wallet, statusList);
         try {
             writeTime();
             writer.write("Mixing Complete: ");
-            writer.write(String.format("timeouts: %d, completed: %d", timedOutSessions, completedSessions));
+            writer.newLine();
+            writer.write("  status: " + Utils.listToString(statusList));
+            writer.newLine();
+            writer.write(String.format("  timeouts: %d, completed: %d", timedOutSessions, completedSessions));
             writer.newLine();
             writeBalance(wallet);
             writer.newLine();
@@ -146,10 +153,10 @@ public class CoinJoinReporter extends MixingProgressTracker {
 
     private void writeStats(WalletEx wallet) throws IOException {
         double percentComplete = 100.0 * wallet.getBalance(Wallet.BalanceType.COINJOIN_SPENDABLE).value / wallet.getBalance(Wallet.BalanceType.DENOMINATED_SPENDABLE).value;
-        writer.write(String.format(" Session Stats: %d sessions, %.02f%%", completedSessions, percentComplete));
+        writer.write(String.format("  Session Stats: %d sessions, %.02f%%", completedSessions, percentComplete));
     }
 
-    private void writeWatch(Stopwatch watch) throws IOException {
+    private void writeWatch(@Nullable Stopwatch watch) throws IOException {
         writer.write(String.format(" - %s ", watch != null ? watch : "N/A"));
     }
 }

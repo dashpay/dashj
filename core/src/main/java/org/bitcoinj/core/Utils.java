@@ -813,4 +813,8 @@ public class Utils {
             parts.add('[' + HEX.encode(push) + ']');
         return SPACE_JOINER.join(parts);
     }
+
+    public static <T> String listToString(List<T> list) {
+        return "[" + Joiner.on(",").join(list) + "]";
+    }
 }

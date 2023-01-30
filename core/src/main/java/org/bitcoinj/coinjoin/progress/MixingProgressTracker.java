@@ -19,6 +19,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 
 import org.bitcoinj.coinjoin.PoolMessage;
+import org.bitcoinj.coinjoin.PoolStatus;
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 
@@ -26,6 +27,7 @@ import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class MixingProgressTracker implements SessionStartedListener, SessionCompleteListener, MixingCompleteListener {
@@ -50,9 +52,11 @@ public class MixingProgressTracker implements SessionStartedListener, SessionCom
     }
 
     @Override
-    public void onMixingComplete(WalletEx wallet) {
+    public void onMixingComplete(WalletEx wallet, List<PoolStatus> statusList) {
         lastPercent = 100.0;
-        future.set(PoolMessage.MSG_SUCCESS);
+        if (statusList.contains(PoolStatus.FINISHED))
+            future.set(PoolMessage.MSG_SUCCESS);
+        else future.set(PoolMessage.ERR_SESSION);
     }
 
     private double calculatePercentage(WalletEx wallet) {

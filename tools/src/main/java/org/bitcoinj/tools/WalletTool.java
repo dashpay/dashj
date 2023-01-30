@@ -1681,7 +1681,6 @@ public class WalletTool {
             wallet.getContext().coinJoinManager.removeMixingCompleteListener(reporter);
             wallet.getContext().coinJoinManager.removeSessionStartedListener(reporter);
             wallet.getContext().coinJoinManager.stop();
-            //reporter.close();
         } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);
         }

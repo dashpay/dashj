@@ -339,6 +339,26 @@ public class CoinJoin {
         }
     }
 
+    private static final HashMap<PoolStatus, String> statusMessageMap = new HashMap<>();
+    static {
+        statusMessageMap.put(PoolStatus.WARMUP, "Warming up...");
+        statusMessageMap.put(PoolStatus.CONNECTING, "Trying to connect...");
+        statusMessageMap.put(PoolStatus.MIXING, "Mixing in progress...");
+        statusMessageMap.put(PoolStatus.FINISHED, "Mixing Finished");
+
+        statusMessageMap.put(PoolStatus.ERR_NO_MASTERNODES_DETECTED, "No masternodes detected");
+        statusMessageMap.put(PoolStatus.ERR_MASTERNODE_NOT_FOUND, "Can't find random Masternode");
+        statusMessageMap.put(PoolStatus.ERR_WALLET_LOCKED, "Wallet is locked");
+        statusMessageMap.put(PoolStatus.ERR_NOT_ENOUGH_FUNDS, "Not enough funds");
+        statusMessageMap.put(PoolStatus.ERR_NO_INPUTS, "Can't mix: no compatible inputs found!");
+
+        statusMessageMap.put(PoolStatus.WARN_NO_MIXING_QUEUES, "Failed to find mixing queue to join");
+        statusMessageMap.put(PoolStatus.WARN_NO_COMPATIBLE_MASTERNODE, "No compatible Masternode found");
+    }
+    public static String getStatusById(PoolStatus status) {
+        return statusMessageMap.get(status);
+    }
+
     @GuardedBy("mapdstxLock")
     public static boolean hasDSTX(Sha256Hash hash) {
         return mapDSTX.containsKey(hash);
