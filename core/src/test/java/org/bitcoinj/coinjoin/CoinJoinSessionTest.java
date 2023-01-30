@@ -50,6 +50,7 @@ import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DerivationPathFactory;
 import org.bitcoinj.wallet.KeyChainGroup;
+import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
 import org.junit.After;
@@ -590,5 +591,74 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         memPool.clear();
         nextBlock.solve();
         blockChain.add(nextBlock);
+    }
+
+    @Test
+    public void sessionAttemptWithEmptyWalletTest() throws Exception {
+        mixingWallet.initializeCoinJoin();
+        CoinJoinClientOptions.reset();
+        CoinJoinClientOptions.setAmount(Coin.COIN);
+        CoinJoinClientOptions.setEnabled(true);
+        CoinJoinClientOptions.setRounds(1);
+        CoinJoinClientOptions.setSessions(1);
+
+        Transaction fundingTransaction = wallet.getTransactionsByTime().get(0);
+        assertEquals(Coin.FIFTY_COINS, fundingTransaction.getValue(wallet));
+
+        SendRequest req = SendRequest.emptyWallet(Address.fromKey(UNITTEST, new ECKey()));
+        wallet.sendCoinsOffline(req);
+        addBlock();
+        assertEquals(Coin.ZERO, wallet.getBalance());
+
+        peerGroup.start();
+        masternodeGroup.start();
+        InboundMessageQueuer spvClient = connectPeer(1);
+        InboundMessageQueuer someNode = connectPeer(2);
+        assertEquals(2, peerGroup.numConnectedPeers());
+        assertEquals(GetSporksMessage.class, outbound(spvClient).getClass());
+        assertEquals(GetSporksMessage.class, outbound(someNode).getClass());
+
+        CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
+
+        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(mixingWallet));
+        CoinJoinClientManager clientManager = coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
+        clientManager.setStopOnNothingToDo(true);
+        clientManager.setBlockChain(wallet.getContext().blockChain);
+
+        // check balance
+        assertEquals(Coin.ZERO, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
+        addBlock();
+        clientManager.updatedSuccessBlock();
+
+        // add mixing start/complete event listeners
+        boolean[] status = new boolean[2];
+        coinJoinManager.addMixingStartedListener(Threading.SAME_THREAD, wallet -> status[0] = true);
+
+        coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, (wallet, statusList) -> {
+            assertEquals(PoolStatus.ERR_NOT_ENOUGH_FUNDS, statusList.get(0));
+            status[1] = true;
+        });
+
+        if (!clientManager.startMixing()) {
+            System.out.println("Mixing has been started already.");
+            return;
+        }
+
+        boolean result = clientManager.doAutomaticDenominating();
+        System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + clientManager.getStatuses() + ", will retry")));
+        addBlock();
+
+        wallet.getContext().coinJoinManager.doMaintenance();
+
+        assertEquals(Coin.ZERO, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
+
+        // ensure that both mixing start and complete events were received
+        clientManager.getMixingFinishedFuture().get();
+        assertTrue(status[0]);
+        assertTrue(status[1]);
+
+        if (clientManager.isMixing()) {
+            clientManager.stopMixing();
+        }
     }
 }

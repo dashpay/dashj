@@ -162,7 +162,7 @@ public class CoinJoinClientManager {
         }
     }
 
-    public StringBuilder getStatuses() {
+    public String getStatuses() {
         StringBuilder status = new StringBuilder();
         boolean waitForBlock = waitForAnotherBlock();
 
@@ -171,7 +171,7 @@ public class CoinJoinClientManager {
             for (CoinJoinClientSession session :deqSessions){
                 status.append(session.getStatus(waitForBlock)).append("; ");
             }
-            return status;
+            return status.toString();
         } finally {
             lock.unlock();
         }
