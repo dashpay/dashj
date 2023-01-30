@@ -2,7 +2,7 @@
   <configuration default="false" name="WalletTool CJ Create" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="org.bitcoinj.tools.WalletTool" />
     <module name="dashj-master-three.tools.main" />
-    <option name="PROGRAM_PARAMETERS" value="create --wallet=coinjoin.testnet.wallet --net=TEST" />
+    <option name="PROGRAM_PARAMETERS" value="create --wallet=coinjoin.testnet.wallet --net=TEST --force" />
     <option name="VM_PARAMETERS" value="-Djava.library.path=contrib/dashj-bls/bls/target/cmake" />
     <extension name="coverage">
       <pattern>

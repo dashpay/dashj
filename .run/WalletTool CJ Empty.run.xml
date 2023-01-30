@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="WalletTool CJ Mix" type="Application" factoryName="Application">
+  <configuration default="false" name="WalletTool CJ Empty" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="org.bitcoinj.tools.WalletTool" />
     <module name="dashj-master-three.tools.main" />
-    <option name="PROGRAM_PARAMETERS" value="mix --wallet=coinjoin.testnet.wallet --net=TEST --debuglog --amount=0.007 --sessions=4 --rounds=1" />
+    <option name="PROGRAM_PARAMETERS" value="send --wallet=coinjoin.testnet.wallet --net=TEST --output=yYx4NtzEwQkJk6QaowVC8jXg1JirqexcpY:ALL --coinjoin" />
     <option name="VM_PARAMETERS" value="-Djava.library.path=contrib/dashj-bls/bls/target/cmake" />
     <extension name="coverage">
       <pattern>
