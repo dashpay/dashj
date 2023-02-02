@@ -715,7 +715,7 @@ public class WalletTool {
                 }
             }
             SendRequest req = isCoinJoin ? CoinJoinSendRequest.forTx(wallet, t) : SendRequest.forTx(t);
-            if (isCoinJoin)
+            if (!isCoinJoin)
                 req.coinSelector = UnmixedZeroConfCoinSelector.get();
             if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) :wallet.getBalance())) {
                 log.info("Emptying out wallet, recipient may get less than what you expect");
