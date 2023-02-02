@@ -47,7 +47,6 @@ import static org.bitcoinj.core.NetworkParameters.MAX_MONEY;
 public class WalletEx extends Wallet {
     private static final Logger log = LoggerFactory.getLogger(WalletEx.class);
 
-    //protected KeyChainGroup coinJoinKeyChainGroup;
     protected CoinJoinExtension coinjoin;
 
     /**
@@ -218,8 +217,6 @@ public class WalletEx extends Wallet {
                         value = value.add(out.getValue());
                 }
                 return value;
-                //CoinSelection selection = new CoinJoinCoinSelector(this).select(NetworkParameters.MAX_MONEY, candidates);
-                //return selection.valueGathered;
             } else if (balanceType == BalanceType.DENOMINATED || balanceType == BalanceType.DENOMINATED_SPENDABLE) {
                 List<TransactionOutput> candidates = calculateAllSpendCandidates(false, balanceType == BalanceType.DENOMINATED_SPENDABLE);
                 CoinSelection selection = DenominatedCoinSelector.get().select(MAX_MONEY, candidates);
@@ -620,7 +617,6 @@ public class WalletEx extends Wallet {
         return count;
     }
 
-    // TODO: Do we need these lock functions
     public boolean lockCoin(TransactionOutPoint outPoint) {
         lockedCoinsSet.add(outPoint);
         clearAnonymizableCaches();
@@ -632,7 +628,6 @@ public class WalletEx extends Wallet {
         clearAnonymizableCaches();
     }
 
-    //TODO: need to implement these methods
     public Coin getAnonymizableBalance() {
         return getAnonymizableBalance(false, true);
     }
@@ -798,14 +793,7 @@ public class WalletEx extends Wallet {
                     if (!allowUsedAddresses && isUsedDestination(wtxid, i)) {
                         continue;
                     }
-
-                    // our TransactionOutput doesn't have a place to put these fields, add them?
-                    //const SigningProvider * provider = GetSigningProvider();
-
-                    //boolean solvable = provider ? IsSolvable( * provider, pcoin->tx -> vout[i].scriptPubKey) :false;
-                    //boolean spendable = (mine || (((mine & ISMINE_WATCH_ONLY) != ISMINE_NO) && (coinControl && coinControl -> fAllowWatchOnly && solvable));
-
-                    vCoins.add(coin.getOutput(i));//new TransactionOutput(params, coin, coin.getOutput(i).getValue(), coin.getOutput(i).getScriptBytes()));
+                    vCoins.add(coin.getOutput(i));
 
                     // Checks the sum amount of all UTXO's.
                     if (nMinimumSumAmount != MAX_MONEY) {
@@ -935,192 +923,6 @@ public class WalletEx extends Wallet {
         super.reorganize(splitPoint, oldBlocks, newBlocks);
         clearAnonymizableCaches();
     }
-
-    /**
-     * Returns a list of all outputs that are being tracked by this wallet either from the {@link UTXOProvider}
-     * (in this case the existence or not of private keys is ignored), or the wallets internal storage (the default)
-     * taking into account the flags.
-     *
-     * @param excludeImmatureCoinbases Whether to ignore coinbase outputs that we will be able to spend in future once they mature.
-     * @param excludeUnsignable Whether to ignore outputs that we are tracking but don't have the keys to sign for.
-     */
-//    public List<TransactionOutput> calculateAllSpendCandidates(boolean excludeImmatureCoinbases, boolean excludeUnsignable, boolean isCoinJoinOnly) {
-//        lock.lock();
-//        try {
-//            List<TransactionOutput> candidates;
-//            if (getUTXOProvider() == null) {
-//                candidates = new ArrayList<>(myUnspents.size());
-//                for (TransactionOutput output : myUnspents) {
-//                    if (excludeUnsignable && !canSignFor(output.getScriptPubKey())) continue;
-//
-//                    // exclude non coinjoin outputs if isCoinJoinOnly is true
-//                    // exclude coinjoin outputs when isCoinJoinOnly is false
-//                    boolean isCoinJoin = output.isCoinJoin(this) && isFullyMixed(output);
-//
-//                    if (isCoinJoin != isCoinJoinOnly)
-//                        continue;
-//
-//                    Transaction transaction = checkNotNull(output.getParentTransaction());
-//                    if (excludeImmatureCoinbases && !transaction.isMature())
-//                        continue;
-//
-//                    candidates.add(output);
-//                }
-//            } else {
-//                candidates = calculateAllSpendCandidatesFromUTXOProvider(excludeImmatureCoinbases);
-//            }
-//            return candidates;
-//        } finally {
-//            lock.unlock();
-//        }
-//    }
-
-    /**
-     * Returns the spendable coinjoin candidates from the {@link UTXOProvider} based on keys that the wallet contains.
-     * @return The list of candidates.
-     */
-//    protected LinkedList<TransactionOutput> calculateAllCoinJoinSpendCandidatesFromUTXOProvider(boolean mixed) {
-//        checkState(lock.isHeldByCurrentThread());
-//        UTXOProvider utxoProvider = checkNotNull(getUTXOProvider(), "No UTXO provider has been set");
-//        LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
-//        try {
-//            int chainHeight = utxoProvider.getChainHeadHeight();
-//            for (UTXO output : getStoredOutputsFromUTXOProvider()) {
-//                boolean coinbase = output.isCoinbase();
-//                // Do not try and spend coinbases, they cannot be coinjoin transactions.
-//                if (!coinbase) {
-//                    // TODO deterimine if this item is a coinjoin transaction
-//                    byte [] p2pkh = ScriptPattern.extractHashFromP2PKH(output.getScript());
-//                    if (mixed && coinjoin.findKeyFromPubKey(p2pkh) != null) {
-//                        candidates.add(new FreeStandingTransactionOutput(params, output, chainHeight));
-//                    } else if (!mixed && CoinJoin.isDenominatedAmount(output.getValue())) {
-//                        candidates.add(new FreeStandingTransactionOutput(params, output, chainHeight));
-//                    }
-//                }
-//            }
-//        } catch (UTXOProviderException e) {
-//            throw new RuntimeException("UTXO provider error", e);
-//        }
-//        // We need to handle the pending transactions that we know about.
-//        for (Transaction tx : pending.values()) {
-//            // Remove the spent outputs.
-//            for (TransactionInput input : tx.getInputs()) {
-//                if (input.getConnectedOutput().isMine(this)) {
-//                    candidates.remove(input.getConnectedOutput());
-//                }
-//            }
-//            // Add change outputs. Do not try and spend coinbases that were mined too recently, the protocol forbids it.
-//            if (tx.isMature()) {
-//                for (TransactionOutput output : tx.getOutputs()) {
-//                    if (output.isAvailableForSpending() && output.isMine(this)) {
-//                        candidates.add(output);
-//                    }
-//                }
-//            }
-//        }
-//        return candidates;
-//    }
-
-    /**
-     * Returns a list of the outputs that can potentially be spent, i.e. that we have the keys for and are unspent
-     * according to our knowledge of the block chain.
-     */
-//    public List<TransactionOutput> calculateAllSpendCandidates() {
-//        return calculateAllSpendCandidates(true, true, false);
-//    }
-
-    /**
-     * Returns a list of all outputs that are being tracked by this wallet either from the {@link UTXOProvider}
-     * (in this case the existence or not of private keys is ignored), or the wallets internal storage (the default)
-     * taking into account the flags.
-     *
-     * @param excludeImmatureCoinbases Whether to ignore coinbase outputs that we will be able to spend in future once they mature.
-     * @param excludeUnsignable Whether to ignore outputs that we are tracking but don't have the keys to sign for.
-     */
-//    public List<TransactionOutput> calculateAllSpendCandidates(boolean excludeImmatureCoinbases, boolean excludeUnsignable, boolean isCoinJoin) {
-//        lock.lock();
-//        try {
-//            List<TransactionOutput> candidates;
-//            if (vUTXOProvider == null) {
-//                candidates = new ArrayList<>(myUnspents.size());
-//                for (TransactionOutput output : myUnspents) {
-//                    if (excludeUnsignable && !canSignFor(output.getScriptPubKey())) continue;
-//                    Transaction transaction = checkNotNull(output.getParentTransaction());
-//                    if (excludeImmatureCoinbases && !transaction.isMature())
-//                        continue;
-//
-//                    // exclude non coinjoin outputs if isCoinJoinOnly is true
-//                    // exclude coinjoin outputs when isCoinJoinOnly is false
-//                    boolean isOutputCoinJoin = output.isCoinJoin(this) && isFullyMixed(output);
-//
-//                    if (isCoinJoin != isOutputCoinJoin)
-//                        continue;
-//
-//                    candidates.add(output);
-//                }
-//            } else {
-//                candidates = calculateAllSpendCandidatesFromUTXOProvider(excludeImmatureCoinbases, isCoinJoin);
-//            }
-//            return candidates;
-//        } finally {
-//            lock.unlock();
-//        }
-//    }
-//
-//    @Override
-//    protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases) {
-//        return calculateAllSpendCandidatesFromUTXOProvider(excludeImmatureCoinbases, false);
-//    }
-    /**
-     * Returns the spendable candidates from the {@link UTXOProvider} based on keys that the wallet contains.
-     * @return The list of candidates.
-     */
-//    protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases, boolean isCoinJoinOnly) {
-//        checkState(lock.isHeldByCurrentThread());
-//        UTXOProvider utxoProvider = checkNotNull(vUTXOProvider, "No UTXO provider has been set");
-//        LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
-//        try {
-//            int chainHeight = utxoProvider.getChainHeadHeight();
-//            for (UTXO output : getStoredOutputsFromUTXOProvider()) {
-//                boolean coinjoin = false;
-//                if (ScriptPattern.isP2PKH(output.getScript()))
-//                    coinjoin = isCoinJoinPubKeyHashMine(ScriptPattern.extractHashFromP2PKH(output.getScript()), Script.ScriptType.P2PKH);
-//                else if (ScriptPattern.isP2PK(output.getScript()))
-//                    coinjoin = isCoinJoinPubKeyMine(ScriptPattern.extractKeyFromP2PK(output.getScript()));
-//                else if (ScriptPattern.isP2SH(output.getScript()))
-//                    coinjoin = isCoinJoinPayToScriptHashMine(ScriptPattern.extractHashFromP2SH(output.getScript()));
-//
-//                if (coinjoin != isCoinJoinOnly)
-//                    continue;
-//                boolean coinbase = output.isCoinbase();
-//                int depth = chainHeight - output.getHeight() + 1; // the current depth of the output (1 = same as head).
-//                // Do not try and spend coinbases that were mined too recently, the protocol forbids it.
-//                if (!excludeImmatureCoinbases || !coinbase || depth >= params.getSpendableCoinbaseDepth()) {
-//                    candidates.add(new FreeStandingTransactionOutput(params, output, chainHeight));
-//                }
-//            }
-//        } catch (UTXOProviderException e) {
-//            throw new RuntimeException("UTXO provider error", e);
-//        }
-//        // We need to handle the pending transactions that we know about.
-//        for (Transaction tx : pending.values()) {
-//            // Remove the spent outputs.
-//            for (TransactionInput input : tx.getInputs()) {
-//                if (input.getConnectedOutput().isMine(this)) {
-//                    candidates.remove(input.getConnectedOutput());
-//                }
-//            }
-//            // Add change outputs. Do not try and spend coinbases that were mined too recently, the protocol forbids it.
-//            if (!excludeImmatureCoinbases || tx.isMature()) {
-//                for (TransactionOutput output : tx.getOutputs()) {
-//                    if (output.isAvailableForSpending() && output.isMine(this) && output.isCoinJoin(this) == isCoinJoinOnly) {
-//                        candidates.add(output);
-//                    }
-//                }
-//            }
-//        }
-//        return candidates;
-//    }
 
     public CoinJoinExtension getCoinJoin() {
         return coinjoin;

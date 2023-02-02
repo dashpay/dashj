@@ -67,10 +67,10 @@ public class CoinJoinWalletTest {
                 .seed(seed)
                 .accountPath(DerivationPathFactory.get(TESTNET).bip44DerivationPath(0))
                 .build();
-        //coinJoin.getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 500);
+
         wallet.addAndActivateHDChain(bip44);
         wallet.initializeCoinJoin();
-        ((WalletEx)wallet).coinjoin.getActiveKeyChain().getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 3000);
+        wallet.coinjoin.getActiveKeyChain().getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 3000);
         wallet.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.SPENT, new Transaction(TESTNET, inputTx)));
         ArrayList<Transaction> unspentTxList = Lists.newArrayList();
 

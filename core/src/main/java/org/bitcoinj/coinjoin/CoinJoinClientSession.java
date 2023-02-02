@@ -588,13 +588,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: pending connection (from queue): sessionDenom: {} ({}), addr={}",
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
-            //strAutoDenomResult = "Trying to connect...";
-            //status.set(PoolStatus.CONNECTING);
             setStatus(PoolStatus.CONNECTING);
             return true;
         }
-        //strAutoDenomResult = "Failed to find mixing queue to join";
-        //status.set(PoolStatus.WARN_NO_MIXING_QUEUES);
         setStatus(PoolStatus.WARN_NO_MIXING_QUEUES);
         return false;
     }
@@ -613,9 +609,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         HashSet<Coin> setAmounts = new HashSet<>();
         if (!mixingWallet.selectDenominatedAmounts(balanceNeedsAnonymized, setAmounts)) {
             // this should never happen
-            //strAutoDenomResult = "Can't mix: no compatible inputs found!";
-            //log.error("coinjoin: error: {}", strAutoDenomResult);
-            //status.set(PoolStatus.ERR_NO_INPUTS);
             setStatus(PoolStatus.ERR_NO_INPUTS);
             return false;
         }
@@ -625,9 +618,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             Masternode dmn = context.coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).getRandomNotUsedMasternode();
 
             if (dmn == null) {
-                //strAutoDenomResult = "Can't find random Masternode.";
-                //status.set(PoolStatus.ERR_MASTERNODE_NOT_FOUND);
-                //log.info("coinjoin: error: {}", strAutoDenomResult);
                 setStatus(PoolStatus.ERR_MASTERNODE_NOT_FOUND);
                 return false;
             }
@@ -671,8 +661,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: start new queue -> pending connection, nSessionDenom: {} ({}), addr={}",
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
-            //strAutoDenomResult = "Trying to connect...";
-            //status.set(PoolStatus.CONNECTING);
             context.coinJoinManager.startAsync();
             setStatus(PoolStatus.CONNECTING);
             return true;
@@ -1232,9 +1220,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         Coin balanceNeedsAnonymized;
 
         if (!fDryRun && mixingWallet.isEncrypted()) {
-            //strAutoDenomResult = "Wallet is locked.";
-            //status.set(PoolStatus.ERR_WALLET_LOCKED);
-            //hasNothingToDo.set(true);
             setStatus(PoolStatus.ERR_WALLET_LOCKED);
             return false;
         }
@@ -1290,10 +1275,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
             // mixable balance is way too small
             if (nBalanceAnonymizable.isLessThan(nValueMin)) {
-                //strAutoDenomResult = "Not enough funds to mix.";
-                //log.info("coinjoin: {}", strAutoDenomResult);
-                //status.set(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
-                //hasNothingToDo.set(true);
                 setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
                 queueSessionCompleteListeners(ERR_SESSION);
                 return false;
@@ -1361,8 +1342,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
 
             if (sessionID.get() != 0) {
-                //strAutoDenomResult = "Mixing in progress...";
-                //status.set(PoolStatus.MIXING);
                 setStatus(PoolStatus.MIXING);
                 return false;
             }
@@ -1414,9 +1393,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         if (startNewQueue(balanceNeedsAnonymized)) {
             return true;
         }
-        
-        //strAutoDenomResult = "No compatible Masternode found.";
-        //status.set(PoolStatus.WARN_NO_COMPATIBLE_MASTERNODE);
+
         setStatus(PoolStatus.WARN_NO_COMPATIBLE_MASTERNODE);
         return false;
     }

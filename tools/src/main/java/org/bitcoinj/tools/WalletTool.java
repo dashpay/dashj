@@ -687,9 +687,6 @@ public class WalletTool {
 
     private static void send(List<String> outputs, Coin feePerKb, String lockTimeStr, boolean allowUnconfirmed, boolean isCoinJoin) throws VerificationException {
         try {
-            //if (options.has(roundsFlag)) {
-            //    CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
-            //}
             // Convert the input strings to outputs.
             Transaction t = new Transaction(params);
             for (String spec : outputs) {

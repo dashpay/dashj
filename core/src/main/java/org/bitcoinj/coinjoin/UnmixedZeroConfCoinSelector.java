@@ -39,16 +39,6 @@ public class UnmixedZeroConfCoinSelector extends ZeroConfCoinSelector {
         super();
     }
 
-    /*public UnmixedZeroConfCoinSelector(Wallet wallet) {
-        super();
-        this.wallet = wallet;
-        this.onlyConfirmed = false;
-    }
-    public UnmixedZeroConfCoinSelector(Wallet wallet, boolean onlyConfirmed) {
-        this(wallet);
-        this.onlyConfirmed = onlyConfirmed;
-    }*/
-
     @Override
     public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
         CoinSelection selection = super.select(target, candidates);
