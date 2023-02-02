@@ -65,7 +65,6 @@ public class CoinJoinReporter extends MixingProgressTracker {
     public CoinJoinReporter() {
         try {
             File reportFile = new File("./coinjoin-report.txt");
-            //outputStream = Files.newOutputStream(reportFile.toPath());
             fileWriter = new FileWriter(reportFile);
             writer = new BufferedWriter(fileWriter);
             writer.write("CoinJoin Report:");
