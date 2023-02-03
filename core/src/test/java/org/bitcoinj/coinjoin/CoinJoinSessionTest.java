@@ -16,6 +16,7 @@
 package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
+import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.coinjoin.utils.CoinJoinResult;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
@@ -46,8 +47,12 @@ import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.testing.InboundMessageQueuer;
 import org.bitcoinj.testing.MockTransactionBroadcaster;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DerivationPathFactory;
+import org.bitcoinj.wallet.KeyChainGroup;
+import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -66,7 +71,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -88,6 +92,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     private Address coinbaseTo;
     private Transaction finalTx = null;
     private Transaction mixingTx = null;
+
+    private WalletEx mixingWallet;
 
     @Parameterized.Parameters
     public static Collection<ClientType[]> parameters() {
@@ -157,6 +163,11 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         }
 
         globalTimeout = Timeout.seconds(30);
+        mixingWallet = (WalletEx) wallet;
+    }
+
+    protected Wallet createWallet(KeyChainGroup keyChainGroup) {
+        return new WalletEx(UNITTEST, keyChainGroup);
     }
 
     @Override
@@ -169,7 +180,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Ignore
     public void sessionTest() throws Exception {
         System.out.println("Session test started...");
-        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        mixingWallet.initializeCoinJoin();
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);
@@ -184,7 +195,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
 
-        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
+        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(mixingWallet));
 
         HashMap<TransactionOutPoint, ECKey> keyMap = new HashMap<>();
 
@@ -340,7 +351,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Test(timeout = 30000) // Exception: test timed out after 100 milliseconds
     public void sessionTestTwo() throws Exception {
         System.out.println("Session test started...");
-        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        mixingWallet.initializeCoinJoin();
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);
@@ -350,8 +361,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         Transaction fundingTransaction = wallet.getTransactionsByTime().get(0);
         assertEquals(Coin.FIFTY_COINS, fundingTransaction.getValue(wallet));
         //assertEquals(Coin.ZERO, wallet.getBalanceInfo().getAnonymized());
-        assertEquals(Coin.FIFTY_COINS, wallet.getAnonymizableBalance(true));
-        assertEquals(Coin.FIFTY_COINS, wallet.getAnonymizableBalance(false));
+        assertEquals(Coin.FIFTY_COINS, mixingWallet.getAnonymizableBalance(true));
+        assertEquals(Coin.FIFTY_COINS, mixingWallet.getAnonymizableBalance(false));
         //assertEquals(Coin.ZERO, wallet.getBalanceInfo().getDenominatedTrusted());
 
         peerGroup.start();
@@ -364,7 +375,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
 
-        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
+        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(mixingWallet));
 
         // mix coins
         CoinJoinClientManager clientManager = coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
@@ -396,7 +407,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         } while (lastMasternode == null);
         assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
         Coin initialDenominatedBalance = Coin.valueOf(102101021);
-        assertEquals(initialDenominatedBalance, wallet.getBalanceInfo().getDenominatedTrusted());
+        assertEquals(initialDenominatedBalance, mixingWallet.getBalanceInfo().getDenominatedTrusted());
 
         assertNotNull(lastMasternode);
 
@@ -528,7 +539,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
             for (TransactionOutput output: wallet.getUnspents()) {
                 if (!candidates.contains(output)) {
                     mixedOutput = output;
-                    wallet.isFullyMixed(mixedOutput);
+                    mixingWallet.isFullyMixed(mixedOutput);
                 }
             }
         }
@@ -549,8 +560,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
             assertEquals(mixingAmount.toFriendlyString() + " -> diff: " + Coin.FIFTY_COINS.subtract(wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE)).toFriendlyString(),
                     Coin.FIFTY_COINS.subtract(mixed), wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
         }
-        assertEquals(Coin.FIFTY_COINS.subtract(mixed).subtract(mixingFee), wallet.getBalanceInfo().getMyTrusted());
-        assertEquals(Coin.ZERO, wallet.getBalanceInfo().getMyUntrustedPending());
+        assertEquals(Coin.FIFTY_COINS.subtract(mixed).subtract(mixingFee), mixingWallet.getBalanceInfo().getMyTrusted());
+        assertEquals(Coin.ZERO, mixingWallet.getBalanceInfo().getMyUntrustedPending());
         // TODO: determine the correct calculations for these balances
         // assertEquals(mixed, wallet.getBalanceInfo().getAnonymized());
         // assertEquals(Coin.FIFTY_COINS.subtract(mixingFee).subtract(mixed), wallet.getAnonymizableBalance(true));
@@ -580,5 +591,74 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         memPool.clear();
         nextBlock.solve();
         blockChain.add(nextBlock);
+    }
+
+    @Test
+    public void sessionAttemptWithEmptyWalletTest() throws Exception {
+        mixingWallet.initializeCoinJoin();
+        CoinJoinClientOptions.reset();
+        CoinJoinClientOptions.setAmount(Coin.COIN);
+        CoinJoinClientOptions.setEnabled(true);
+        CoinJoinClientOptions.setRounds(1);
+        CoinJoinClientOptions.setSessions(1);
+
+        Transaction fundingTransaction = wallet.getTransactionsByTime().get(0);
+        assertEquals(Coin.FIFTY_COINS, fundingTransaction.getValue(wallet));
+
+        SendRequest req = SendRequest.emptyWallet(Address.fromKey(UNITTEST, new ECKey()));
+        wallet.sendCoinsOffline(req);
+        addBlock();
+        assertEquals(Coin.ZERO, wallet.getBalance());
+
+        peerGroup.start();
+        masternodeGroup.start();
+        InboundMessageQueuer spvClient = connectPeer(1);
+        InboundMessageQueuer someNode = connectPeer(2);
+        assertEquals(2, peerGroup.numConnectedPeers());
+        assertEquals(GetSporksMessage.class, outbound(spvClient).getClass());
+        assertEquals(GetSporksMessage.class, outbound(someNode).getClass());
+
+        CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
+
+        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(mixingWallet));
+        CoinJoinClientManager clientManager = coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
+        clientManager.setStopOnNothingToDo(true);
+        clientManager.setBlockChain(wallet.getContext().blockChain);
+
+        // check balance
+        assertEquals(Coin.ZERO, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
+        addBlock();
+        clientManager.updatedSuccessBlock();
+
+        // add mixing start/complete event listeners
+        boolean[] status = new boolean[2];
+        coinJoinManager.addMixingStartedListener(Threading.SAME_THREAD, wallet -> status[0] = true);
+
+        coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, (wallet, statusList) -> {
+            assertEquals(PoolStatus.ERR_NOT_ENOUGH_FUNDS, statusList.get(0));
+            status[1] = true;
+        });
+
+        if (!clientManager.startMixing()) {
+            System.out.println("Mixing has been started already.");
+            return;
+        }
+
+        boolean result = clientManager.doAutomaticDenominating();
+        System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + clientManager.getStatuses() + ", will retry")));
+        addBlock();
+
+        wallet.getContext().coinJoinManager.doMaintenance();
+
+        assertEquals(Coin.ZERO, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
+
+        // ensure that both mixing start and complete events were received
+        clientManager.getMixingFinishedFuture().get();
+        assertTrue(status[0]);
+        assertTrue(status[1]);
+
+        if (clientManager.isMixing()) {
+            clientManager.stopMixing();
+        }
     }
 }

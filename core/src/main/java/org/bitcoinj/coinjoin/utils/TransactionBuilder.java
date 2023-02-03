@@ -31,6 +31,7 @@ import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.CoinControl;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 
 import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
@@ -41,7 +42,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 public class TransactionBuilder {
     /// Wallet the transaction will be build for
-    private final Wallet wallet;
+    private final WalletEx wallet;
     /// See CTransactionBuilder() for initialization
     private final CoinControl coinControl = new CoinControl();
     /// Dummy since we anyway use tallyItem's destination as change destination in coincontrol.
@@ -63,7 +64,7 @@ public class TransactionBuilder {
     private final ArrayList<TransactionBuilderOutput> vecOutputs = new ArrayList<>();
     /// Needed by CTransactionBuilderOutput::UpdateAmount to lock cs_outputs
 
-    public TransactionBuilder(Wallet wallet, final CompactTallyItem tallyItem) {
+    public TransactionBuilder(WalletEx wallet, final CompactTallyItem tallyItem) {
         this.wallet = wallet;
         dummyReserveDestination = new ReserveDestination(wallet);
         this.tallyItem = tallyItem;

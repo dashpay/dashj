@@ -162,10 +162,15 @@ public class SendRequest {
      */
     public boolean recipientsPayFees = false;
 
+    /**
+     * If true (default value), change is returned to the wallet. Otherwise change becomes part of the fee.
+     */
+    public boolean returnChange = true;
+
     // Tracks if this has been passed to wallet.completeTx already: just a safety check.
     boolean completed;
 
-    private SendRequest() {}
+    protected SendRequest() {}
 
     /**
      * <p>Creates a new SendRequest to the given address for the given value.</p>

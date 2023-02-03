@@ -15,9 +15,11 @@
  */
 package org.bitcoinj.coinjoin.listeners;
 
-import org.bitcoinj.coinjoin.PoolMessage;
+import org.bitcoinj.coinjoin.PoolStatus;
 import org.bitcoinj.wallet.WalletEx;
 
-public interface SessionCompleteListener {
-    void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message);
+import java.util.List;
+
+public interface MixingCompleteListener {
+    void onMixingComplete(WalletEx wallet, List<PoolStatus> statusList);
 }

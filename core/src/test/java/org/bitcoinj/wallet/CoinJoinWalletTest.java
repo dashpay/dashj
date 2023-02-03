@@ -7,12 +7,15 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.bitcoinj.params.BinTangDevNetParams;
 import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.script.Script;
@@ -25,14 +28,19 @@ import java.io.InputStream;
 import java.util.ArrayList;
 
 import static org.bitcoinj.core.Utils.HEX;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 
 public class CoinJoinWalletTest {
 
-    Wallet wallet;
+    WalletEx wallet;
+    private static final CharSequence PASSWORD1 = "my helicopter contains eels";
+    private static final CharSequence WRONG_PASSWORD = "nothing noone nobody nowhere";
     NetworkParameters TESTNET = TestNet3Params.get();
-    NetworkParameters DEVNET = OuzoDevNetParams.get();
+
+    NetworkParameters UNITTEST = TestNet3Params.get();
+    NetworkParameters DEVNET = BinTangDevNetParams.get();
     byte[] inputTx = HEX.decode("0200000002e6915fff974f5dbe72d808b70532da3a3ce6266be0981e385ca9b1135207fa2f000000006a47304402207f10a53ae96a6fe48272f8b19f3143eee0ec9c703c3b1ac91afb2f40c838e8ff022039ec84247f4c0b3cea77a9f7d649b384ab419a72f680469a793aa4078c7e0ceb01210263c1694142038da1183cb366475c02d4cbf407ba6e03554b628464b165900fdefeffffff3d086ed6cecd1559ef1536ba0fdd4f26705fac18585013cdf893ec55d455cbdb000000006a4730440220570a0cf3afffb31defbf77682c8ee1a8f66de0b7e18f409b87ea57cb8af970cf022032d765413176196147e13b3e9c7c402a2f102c1fa7113f3771ab9f2f8ca5a8ab012103ae493762b6909af5ffee2377041aa2341a90cf208ec33c8e28054002a019e337feffffff026490eb02000000001976a914bf33ff1e9ee40f041b71fb97593e0c28df4ab11988ac00ca9a3b000000001976a914de4b757aabf173cc3daffe4315d0784d0173dd8888acfc6b0000");
     byte[][] unspentTxs = new byte[][] {
             HEX.decode("0100000001bd042c105df0608102f24b69ad384cb908ca4e7a04cc1b8ea9d6688c7302933c040000006b483045022100ccd8c54fac0a065def8cba6220e8c2d54a9f2c2124ac56dd2d75d00e3c68c9f3022057d4a88a1aec1c1b737abd8c209efc99bcb6ee7ed22800d09628dd95e5afd128012102a6152c0c8c06dba62280009f51b4407accd9b635f7b1fd17ea0618c495d3282dffffffff01915f0100000000001976a9148b6bbddaffa9ccf0897974a47f9e8b5619cb521488ac00000000"),
@@ -52,17 +60,17 @@ public class CoinJoinWalletTest {
         DeterministicSeed seed = new DeterministicSeed(
                 "behind zoo develop elder book canyon host opera gun nominee lady novel",
                 null, "", Utils.currentTimeSeconds());
-        wallet = Wallet.fromSeed(
+        wallet = WalletEx.fromSeed(
                 context.getParams(),
                 seed, Script.ScriptType.P2PKH);
         DeterministicKeyChain bip44 = DeterministicKeyChain.builder()
                 .seed(seed)
                 .accountPath(DerivationPathFactory.get(TESTNET).bip44DerivationPath(0))
                 .build();
-        //coinJoin.getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 500);
+
         wallet.addAndActivateHDChain(bip44);
-        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(TESTNET).coinJoinDerivationPath());
-        wallet.coinJoinKeyChainGroup.getActiveKeyChain().getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 3000);
+        wallet.initializeCoinJoin();
+        wallet.coinjoin.getActiveKeyChain().getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 3000);
         wallet.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.SPENT, new Transaction(TESTNET, inputTx)));
         ArrayList<Transaction> unspentTxList = Lists.newArrayList();
 
@@ -106,7 +114,7 @@ public class CoinJoinWalletTest {
     @Test
     public void keyTest() {
         ECKey key661 = ECKey.fromPublicOnly(HEX.decode("034382c0cd973ee81e6bf63f9f52bf892e451a4b67ca966de4d9974bc295244f77"));
-        ECKey key = wallet.coinJoinKeyChainGroup.findKeyFromPubKey(key661.getPubKey());
+        ECKey key = wallet.coinjoin.findKeyFromPubKey(key661.getPubKey());
         assertNotNull(key);
 
         ECKey key2317 = wallet.findKeyFromPubKeyHash(HEX.decode("f6863a7856dbc547d26f03e6ebb8c3db3eb12f9d"), Script.ScriptType.P2PKH);
@@ -117,7 +125,7 @@ public class CoinJoinWalletTest {
     @Ignore
     public void balanceTest() throws UnreadableWalletException {
         InputStream stream = getClass().getResourceAsStream("coinjoin.wallet");
-        Wallet coinJoinWallet = new WalletProtobufSerializer().readWallet(stream);
+        WalletEx coinJoinWallet = (WalletEx) new WalletProtobufSerializer().readWallet(stream);
 
         Coin balance = coinJoinWallet.getBalance();
         Balance balanceInfo = coinJoinWallet.getBalanceInfo();
@@ -135,5 +143,23 @@ public class CoinJoinWalletTest {
         System.out.println(wallet.toString(false, true, false, null));
 
         assertNotEquals(Coin.ZERO, balance);
+    }
+
+    @Test
+    public void encryptDecryptWalletWithArbitraryPathAndScriptTypeWithCoinJoin() throws Exception {
+        final byte[] ENTROPY = Sha256Hash.hash("don't use a string seed like this in real life".getBytes());
+        KeyChainGroup keyChainGroup = KeyChainGroup.builder(DEVNET)
+                .addChain(DeterministicKeyChain.builder().seed(new DeterministicSeed(ENTROPY, "", 1389353062L))
+                        .outputScriptType(Script.ScriptType.P2PKH)
+                        .accountPath(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH).build())
+                .build();
+        WalletEx encryptedWallet = new WalletEx(DEVNET, keyChainGroup);
+        DeterministicKey keyBip44 = encryptedWallet.currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
+        encryptedWallet.initializeCoinJoin();
+        DeterministicKey coinJoinKey = encryptedWallet.coinjoin.currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
+        encryptedWallet.encrypt(PASSWORD1);
+        encryptedWallet.decrypt(PASSWORD1);
+        assertEquals(keyBip44, encryptedWallet.currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS));
+        assertEquals(coinJoinKey, encryptedWallet.coinjoin.currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS));
     }
 }

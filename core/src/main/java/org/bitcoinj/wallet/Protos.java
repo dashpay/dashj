@@ -20498,6 +20498,640 @@ public final class Protos {
     }
   }
 
+  public interface CoinJoinOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:wallet.CoinJoin)
+      com.google.protobuf.MessageLiteOrBuilder {
+
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    java.util.List<org.bitcoinj.wallet.Protos.Key> 
+        getKeyList();
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    org.bitcoinj.wallet.Protos.Key getKey(int index);
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    int getKeyCount();
+
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @return Whether the rounds field is set.
+     */
+    boolean hasRounds();
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @return The rounds.
+     */
+    int getRounds();
+  }
+  /**
+   * <pre>
+   ** CoinJoin KeyChain 
+   * </pre>
+   *
+   * Protobuf type {@code wallet.CoinJoin}
+   */
+  public  static final class CoinJoin extends
+      com.google.protobuf.GeneratedMessageLite<
+          CoinJoin, CoinJoin.Builder> implements
+      // @@protoc_insertion_point(message_implements:wallet.CoinJoin)
+      CoinJoinOrBuilder {
+    private CoinJoin() {
+      key_ = emptyProtobufList();
+    }
+    private int bitField0_;
+    public static final int KEY_FIELD_NUMBER = 1;
+    private com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Key> key_;
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    @java.lang.Override
+    public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeyList() {
+      return key_;
+    }
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    public java.util.List<? extends org.bitcoinj.wallet.Protos.KeyOrBuilder> 
+        getKeyOrBuilderList() {
+      return key_;
+    }
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    @java.lang.Override
+    public int getKeyCount() {
+      return key_.size();
+    }
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    @java.lang.Override
+    public org.bitcoinj.wallet.Protos.Key getKey(int index) {
+      return key_.get(index);
+    }
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    public org.bitcoinj.wallet.Protos.KeyOrBuilder getKeyOrBuilder(
+        int index) {
+      return key_.get(index);
+    }
+    private void ensureKeyIsMutable() {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.Key> tmp = key_;
+      if (!tmp.isModifiable()) {
+        key_ =
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+       }
+    }
+
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    private void setKey(
+        int index, org.bitcoinj.wallet.Protos.Key value) {
+      value.getClass();
+  ensureKeyIsMutable();
+      key_.set(index, value);
+    }
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    private void addKey(org.bitcoinj.wallet.Protos.Key value) {
+      value.getClass();
+  ensureKeyIsMutable();
+      key_.add(value);
+    }
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    private void addKey(
+        int index, org.bitcoinj.wallet.Protos.Key value) {
+      value.getClass();
+  ensureKeyIsMutable();
+      key_.add(index, value);
+    }
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    private void addAllKey(
+        java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.Key> values) {
+      ensureKeyIsMutable();
+      com.google.protobuf.AbstractMessageLite.addAll(
+          values, key_);
+    }
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    private void clearKey() {
+      key_ = emptyProtobufList();
+    }
+    /**
+     * <pre>
+     * key chain
+     * </pre>
+     *
+     * <code>repeated .wallet.Key key = 1;</code>
+     */
+    private void removeKey(int index) {
+      ensureKeyIsMutable();
+      key_.remove(index);
+    }
+
+    public static final int ROUNDS_FIELD_NUMBER = 2;
+    private int rounds_;
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @return Whether the rounds field is set.
+     */
+    @java.lang.Override
+    public boolean hasRounds() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @return The rounds.
+     */
+    @java.lang.Override
+    public int getRounds() {
+      return rounds_;
+    }
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     * @param value The rounds to set.
+     */
+    private void setRounds(int value) {
+      bitField0_ |= 0x00000001;
+      rounds_ = value;
+    }
+    /**
+     * <pre>
+     * last value of rounds from mixing
+     * </pre>
+     *
+     * <code>required int32 rounds = 2;</code>
+     */
+    private void clearRounds() {
+      bitField0_ = (bitField0_ & ~0x00000001);
+      rounds_ = 0;
+    }
+
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
+    }
+    public static org.bitcoinj.wallet.Protos.CoinJoin parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
+    public static Builder newBuilder(org.bitcoinj.wallet.Protos.CoinJoin prototype) {
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
+    }
+
+    /**
+     * <pre>
+     ** CoinJoin KeyChain 
+     * </pre>
+     *
+     * Protobuf type {@code wallet.CoinJoin}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          org.bitcoinj.wallet.Protos.CoinJoin, Builder> implements
+        // @@protoc_insertion_point(builder_implements:wallet.CoinJoin)
+        org.bitcoinj.wallet.Protos.CoinJoinOrBuilder {
+      // Construct using org.bitcoinj.wallet.Protos.CoinJoin.newBuilder()
+      private Builder() {
+        super(DEFAULT_INSTANCE);
+      }
+
+
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      @java.lang.Override
+      public java.util.List<org.bitcoinj.wallet.Protos.Key> getKeyList() {
+        return java.util.Collections.unmodifiableList(
+            instance.getKeyList());
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      @java.lang.Override
+      public int getKeyCount() {
+        return instance.getKeyCount();
+      }/**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      @java.lang.Override
+      public org.bitcoinj.wallet.Protos.Key getKey(int index) {
+        return instance.getKey(index);
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      public Builder setKey(
+          int index, org.bitcoinj.wallet.Protos.Key value) {
+        copyOnWrite();
+        instance.setKey(index, value);
+        return this;
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      public Builder setKey(
+          int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
+        copyOnWrite();
+        instance.setKey(index,
+            builderForValue.build());
+        return this;
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      public Builder addKey(org.bitcoinj.wallet.Protos.Key value) {
+        copyOnWrite();
+        instance.addKey(value);
+        return this;
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      public Builder addKey(
+          int index, org.bitcoinj.wallet.Protos.Key value) {
+        copyOnWrite();
+        instance.addKey(index, value);
+        return this;
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      public Builder addKey(
+          org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
+        copyOnWrite();
+        instance.addKey(builderForValue.build());
+        return this;
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      public Builder addKey(
+          int index, org.bitcoinj.wallet.Protos.Key.Builder builderForValue) {
+        copyOnWrite();
+        instance.addKey(index,
+            builderForValue.build());
+        return this;
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      public Builder addAllKey(
+          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.Key> values) {
+        copyOnWrite();
+        instance.addAllKey(values);
+        return this;
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      public Builder clearKey() {
+        copyOnWrite();
+        instance.clearKey();
+        return this;
+      }
+      /**
+       * <pre>
+       * key chain
+       * </pre>
+       *
+       * <code>repeated .wallet.Key key = 1;</code>
+       */
+      public Builder removeKey(int index) {
+        copyOnWrite();
+        instance.removeKey(index);
+        return this;
+      }
+
+      /**
+       * <pre>
+       * last value of rounds from mixing
+       * </pre>
+       *
+       * <code>required int32 rounds = 2;</code>
+       * @return Whether the rounds field is set.
+       */
+      @java.lang.Override
+      public boolean hasRounds() {
+        return instance.hasRounds();
+      }
+      /**
+       * <pre>
+       * last value of rounds from mixing
+       * </pre>
+       *
+       * <code>required int32 rounds = 2;</code>
+       * @return The rounds.
+       */
+      @java.lang.Override
+      public int getRounds() {
+        return instance.getRounds();
+      }
+      /**
+       * <pre>
+       * last value of rounds from mixing
+       * </pre>
+       *
+       * <code>required int32 rounds = 2;</code>
+       * @param value The rounds to set.
+       * @return This builder for chaining.
+       */
+      public Builder setRounds(int value) {
+        copyOnWrite();
+        instance.setRounds(value);
+        return this;
+      }
+      /**
+       * <pre>
+       * last value of rounds from mixing
+       * </pre>
+       *
+       * <code>required int32 rounds = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearRounds() {
+        copyOnWrite();
+        instance.clearRounds();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:wallet.CoinJoin)
+    }
+    private byte memoizedIsInitialized = 2;
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+        com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+        java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new org.bitcoinj.wallet.Protos.CoinJoin();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+            java.lang.Object[] objects = new java.lang.Object[] {
+              "bitField0_",
+              "key_",
+              org.bitcoinj.wallet.Protos.Key.class,
+              "rounds_",
+            };
+            java.lang.String info =
+                "\u0001\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0001\u0002\u0001\u041b\u0002\u1504" +
+                "\u0000";
+            return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<org.bitcoinj.wallet.Protos.CoinJoin> parser = PARSER;
+          if (parser == null) {
+            synchronized (org.bitcoinj.wallet.Protos.CoinJoin.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                    new DefaultInstanceBasedParser<org.bitcoinj.wallet.Protos.CoinJoin>(
+                        DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+      }
+      case GET_MEMOIZED_IS_INITIALIZED: {
+        return memoizedIsInitialized;
+      }
+      case SET_MEMOIZED_IS_INITIALIZED: {
+        memoizedIsInitialized = (byte) (arg0 == null ? 0 : 1);
+        return null;
+      }
+      }
+      throw new UnsupportedOperationException();
+    }
+
+
+    // @@protoc_insertion_point(class_scope:wallet.CoinJoin)
+    private static final org.bitcoinj.wallet.Protos.CoinJoin DEFAULT_INSTANCE;
+    static {
+      CoinJoin defaultInstance = new CoinJoin();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+        CoinJoin.class, defaultInstance);
+    }
+
+    public static org.bitcoinj.wallet.Protos.CoinJoin getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<CoinJoin> PARSER;
+
+    public static com.google.protobuf.Parser<CoinJoin> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
+  }
+
 
   static {
   }

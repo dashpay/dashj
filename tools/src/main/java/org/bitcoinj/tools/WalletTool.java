@@ -20,6 +20,8 @@ package org.bitcoinj.tools;
 import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.coinjoin.CoinJoinSendRequest;
+import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.MasternodeSync;
@@ -43,6 +45,7 @@ import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Balance;
 import org.bitcoinj.wallet.DerivationPathFactory;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
@@ -91,6 +94,7 @@ import org.bitcoinj.wallet.MarriedKeyChain;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.Wallet.BalanceType;
@@ -146,7 +150,7 @@ public class WalletTool {
     private static BlockStore store;
     private static AbstractBlockChain chain;
     private static PeerGroup peerGroup;
-    private static Wallet wallet;
+    private static WalletEx wallet;
     private static File chainFileName;
     private static ValidationMode mode;
     private static String password;
@@ -274,6 +278,7 @@ public class WalletTool {
         OptionSpec<String> conditionFlag = parser.accepts("condition").withRequiredArg();
         parser.accepts("locktime").withRequiredArg();
         parser.accepts("allow-unconfirmed");
+        parser.accepts("coinjoin");
         parser.accepts("offline");
         parser.accepts("ignore-mandatory-extensions");
         OptionSpec<String> passwordFlag = parser.accepts("password").withRequiredArg();
@@ -391,7 +396,7 @@ public class WalletTool {
             if (options.has("ignore-mandatory-extensions"))
                 loader.setRequireMandatoryExtensions(false);
             walletInputStream = new BufferedInputStream(new FileInputStream(walletFile));
-            wallet = loader.readWallet(walletInputStream, forceReset, (WalletExtension[])(null));
+            wallet = (WalletEx) loader.readWallet(walletInputStream, forceReset, (WalletExtension[])(null));
             if (!wallet.getParams().equals(params)) {
                 System.err.println("Wallet does not match requested network parameters: " +
                         wallet.getParams().getId() + " vs " + params.getId());
@@ -434,7 +439,8 @@ public class WalletTool {
                         lockTime = (String) options.valueOf("locktime");
                     }
                     boolean allowUnconfirmed = options.has("allow-unconfirmed");
-                    send(outputFlag.values(options), feePerKb, lockTime, allowUnconfirmed);
+                    boolean isCoinJoin = options.has("coinjoin");
+                    send(outputFlag.values(options), feePerKb, lockTime, allowUnconfirmed, isCoinJoin);
                 } else if (options.has(paymentRequestLocation)) {
                     sendPaymentRequest(paymentRequestLocation.value(options), !options.has("no-pki"));
                 } else {
@@ -679,13 +685,13 @@ public class WalletTool {
         }
     }
 
-    private static void send(List<String> outputs, Coin feePerKb, String lockTimeStr, boolean allowUnconfirmed) throws VerificationException {
+    private static void send(List<String> outputs, Coin feePerKb, String lockTimeStr, boolean allowUnconfirmed, boolean isCoinJoin) throws VerificationException {
         try {
             // Convert the input strings to outputs.
             Transaction t = new Transaction(params);
             for (String spec : outputs) {
                 try {
-                    OutputSpec outputSpec = new OutputSpec(spec);
+                    OutputSpec outputSpec = new OutputSpec(spec, isCoinJoin);
                     if (outputSpec.isAddress()) {
                         t.addOutput(outputSpec.value, outputSpec.addr);
                     } else {
@@ -705,8 +711,10 @@ public class WalletTool {
                     return;
                 }
             }
-            SendRequest req = SendRequest.forTx(t);
-            if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(wallet.getBalance())) {
+            SendRequest req = isCoinJoin ? CoinJoinSendRequest.forTx(wallet, t) : SendRequest.forTx(t);
+            if (!isCoinJoin)
+                req.coinSelector = UnmixedZeroConfCoinSelector.get();
+            if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) :wallet.getBalance())) {
                 log.info("Emptying out wallet, recipient may get less than what you expect");
                 req.emptyWallet = true;
             }
@@ -762,7 +770,8 @@ public class WalletTool {
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         } catch (InsufficientMoneyException e) {
-            System.err.println("Insufficient funds: have " + wallet.getBalance().toFriendlyString());
+            BalanceType type = isCoinJoin ? BalanceType.COINJOIN_SPENDABLE : BalanceType.AVAILABLE_SPENDABLE;
+            System.err.println("Insufficient funds: have " + wallet.getBalance(type).toFriendlyString());
         }
     }
 
@@ -771,14 +780,18 @@ public class WalletTool {
         public final Address addr;
         public final ECKey key;
 
-        public OutputSpec(String spec) throws IllegalArgumentException {
+        public OutputSpec(String spec) {
+            this(spec, false);
+        }
+
+        public OutputSpec(String spec, boolean isCoinJoin) throws IllegalArgumentException {
             String[] parts = spec.split(":");
             if (parts.length != 2) {
                 throw new IllegalArgumentException("Malformed output specification, must have two parts separated by :");
             }
             String destination = parts[0];
             if ("ALL".equalsIgnoreCase(parts[1]))
-                value = wallet.getBalance(BalanceType.ESTIMATED);
+                value = isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) : wallet.getBalance(BalanceType.ESTIMATED);
             else
                 value = parseCoin(parts[1]);
             if (destination.startsWith("0")) {
@@ -1365,6 +1378,7 @@ public class WalletTool {
                 peerGroup.stop();
             saveWallet(walletFile);
             store.close();
+            wallet.getContext().close();
             wallet = null;
         } catch (BlockStoreException e) {
             throw new RuntimeException(e);
@@ -1403,11 +1417,11 @@ public class WalletTool {
                 // not reached - all subclasses handled above
                 throw new RuntimeException(e);
             }
-            wallet = Wallet.fromSeed(params, seed, outputScriptType);
+            wallet = WalletEx.fromSeed(params, seed, outputScriptType);
         } else if (options.has(watchFlag)) {
-            wallet = Wallet.fromWatchingKeyB58(params, options.valueOf(watchFlag), creationTimeSecs);
+            wallet = WalletEx.fromWatchingKeyB58(params, options.valueOf(watchFlag), creationTimeSecs);
         } else {
-            wallet = Wallet.createDeterministic(params, outputScriptType);
+            wallet = WalletEx.createDeterministic(params, outputScriptType);
         }
         // add BIP44 key chain
         // BIP44 Chain
@@ -1568,9 +1582,7 @@ public class WalletTool {
 
         final boolean dumpPrivkeys = options.has("dump-privkeys");
         final boolean dumpLookahead = options.has("dump-lookahead");
-        if (options.has(roundsFlag)) {
-            CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
-        }
+
         if (dumpPrivkeys && wallet.isEncrypted()) {
             if (password != null) {
                 final KeyParameter aesKey = passwordToKey(true);
@@ -1602,10 +1614,10 @@ public class WalletTool {
     }
 
     private static void mix() {
-        wallet.addCoinJoinKeyChain(DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
         syncChain();
         // set defaults
-        CoinJoinReporter reporter = new CoinJoinReporter(wallet);
+        CoinJoinReporter reporter = new CoinJoinReporter();
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setSessions(1);
@@ -1624,6 +1636,7 @@ public class WalletTool {
         if (options.has(roundsFlag)) {
             CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
         }
+        wallet.getCoinJoin().setRounds(CoinJoinClientOptions.getRounds());
 
         if (options.has(multiSessionFlag)) {
             CoinJoinClientOptions.setMultiSessionEnabled(options.valueOf(multiSessionFlag));
@@ -1631,7 +1644,9 @@ public class WalletTool {
 
         ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
-        wallet.getContext().coinJoinManager.addSessionCompleteListener(reporter);
+        wallet.getContext().coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
+        wallet.getContext().coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);
+        wallet.getContext().coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, reporter);
 
         // mix coins
         try {
@@ -1660,7 +1675,9 @@ public class WalletTool {
             mixingFinished.addListener(() -> System.out.println("Mixing complete."), Threading.SAME_THREAD);
             mixingFinished.get();
             wallet.getContext().coinJoinManager.removeSessionCompleteListener(reporter);
-            reporter.close();
+            wallet.getContext().coinJoinManager.removeMixingCompleteListener(reporter);
+            wallet.getContext().coinJoinManager.removeSessionStartedListener(reporter);
+            wallet.getContext().coinJoinManager.stop();
         } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);
         }

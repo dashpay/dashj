@@ -93,7 +93,7 @@ public class TestWithNetworkConnections {
             // Reduce the number of keys we need to work with to speed up these tests.
             KeyChainGroup kcg = KeyChainGroup.builder(UNITTEST).lookaheadSize(4).lookaheadThreshold(2).
                     fromRandom(Script.ScriptType.P2PKH).build();
-            wallet = new Wallet(UNITTEST, kcg);
+            wallet = createWallet(kcg);
             key = wallet.freshReceiveKey();
             address = Address.fromKey(UNITTEST, key);
         }
@@ -106,6 +106,9 @@ public class TestWithNetworkConnections {
         }
 
         socketAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), 1111);
+    }
+    protected Wallet createWallet(KeyChainGroup keyChainGroup) {
+        return new Wallet(UNITTEST, keyChainGroup);
     }
 
     protected void startPeerServers() throws IOException {

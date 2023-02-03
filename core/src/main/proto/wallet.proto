@@ -512,3 +512,10 @@ message ExchangeRate {
 
   // Next tag: 4
 }
+/** CoinJoin KeyChain */
+message CoinJoin {
+  // key chain
+  repeated Key key = 1;
+  // last value of rounds from mixing
+  required int32 rounds = 2;
+}

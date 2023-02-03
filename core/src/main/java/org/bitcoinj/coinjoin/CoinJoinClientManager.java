@@ -15,8 +15,12 @@
  */
 package org.bitcoinj.coinjoin;
 
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
+import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
+import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
@@ -33,6 +37,7 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +46,11 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -54,7 +62,7 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MIN;
 
 public class CoinJoinClientManager {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
-    private static Random random = new Random();
+    private static final Random random = new Random();
     // Keep track of the used Masternodes
     private final ArrayList<TransactionOutPoint> masternodesUsed = new ArrayList<>();
 
@@ -63,7 +71,6 @@ public class CoinJoinClientManager {
     // TODO: or map<denom, CoinJoinClientSession> ??
     @GuardedBy("lock")
     private final Deque<CoinJoinClientSession> deqSessions = new ArrayDeque<>();
-
 
     private final AtomicBoolean isMixing = new AtomicBoolean(false);
     private boolean stopOnNothingToDo = false;
@@ -74,12 +81,17 @@ public class CoinJoinClientManager {
     private String strAutoDenomResult = "";
 
     private final Context context;
-    private final Wallet mixingWallet;
+    private final WalletEx mixingWallet;
     
     // Keep track of current block height
     private int cachedBlockHeight = 0;
-
+    private final CopyOnWriteArrayList<ListenerRegistration<SessionStartedListener>> sessionStartedListeners
+            = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<SessionCompleteListener>> sessionCompleteListeners
+            = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<MixingStartedListener>> mixingStartedListeners
+            = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<MixingCompleteListener>> mixingCompleteListeners
             = new CopyOnWriteArrayList<>();
 
     private boolean waitForAnotherBlock() {
@@ -98,7 +110,7 @@ public class CoinJoinClientManager {
 
     public int cachedNumBlocks = Integer.MAX_VALUE;    // used for the overview screen
 
-    public CoinJoinClientManager(Wallet wallet) {
+    public CoinJoinClientManager(WalletEx wallet) {
         mixingWallet = wallet;
         context = wallet.getContext();
     }
@@ -126,6 +138,7 @@ public class CoinJoinClientManager {
 
 
     public boolean startMixing() {
+        queueMixingStartedListeners();
         return isMixing.compareAndSet(false, true);
     }
     public void stopMixing() {
@@ -149,7 +162,7 @@ public class CoinJoinClientManager {
         }
     }
 
-    public StringBuilder getStatuses() {
+    public String getStatuses() {
         StringBuilder status = new StringBuilder();
         boolean waitForBlock = waitForAnotherBlock();
 
@@ -158,7 +171,7 @@ public class CoinJoinClientManager {
             for (CoinJoinClientSession session :deqSessions){
                 status.append(session.getStatus(waitForBlock)).append("; ");
             }
-            return status;
+            return status.toString();
         } finally {
             lock.unlock();
         }
@@ -234,6 +247,9 @@ public class CoinJoinClientManager {
                 for (ListenerRegistration<SessionCompleteListener> listener : sessionCompleteListeners) {
                     newSession.addSessionCompleteListener(listener.executor, listener.listener);
                 }
+                for (ListenerRegistration<SessionStartedListener> listener : sessionStartedListeners) {
+                    newSession.addSessionStartedListener(listener.executor, listener.listener);
+                }
                 deqSessions.addLast(newSession);
             }
             for (CoinJoinClientSession session: deqSessions) {
@@ -259,11 +275,12 @@ public class CoinJoinClientManager {
         try {
             for (CoinJoinClientSession session : deqSessions) {
                 Masternode mnMixing = session.getMixingMasternodeInfo();
-                if (mnMixing != null && mnMixing.getService().equals(mnAddr) && session.getState().get() == PoolState.POOL_STATE_QUEUE) {
+                if (mnMixing != null && mnMixing.getService().equals(mnAddr) && session.getState() == PoolState.POOL_STATE_QUEUE) {
                     session.submitDenominate();
                     return true;
                 } else {
-                    log.info("mixingMasternode {} != mnAddr {}", mnMixing != null ? mnMixing.getService().getSocketAddress() : "null", mnAddr.getSocketAddress());
+                    log.info("mixingMasternode {} != mnAddr {} or {} != {}", mnMixing != null ? mnMixing.getService().getSocketAddress() : "null", mnAddr.getSocketAddress(),
+                            session.getState(), PoolState.POOL_STATE_QUEUE);
                 }
             }
             return false;
@@ -324,7 +341,7 @@ public class CoinJoinClientManager {
         SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
 
         int nCountEnabled = mnList.getValidMNsCount();
-        int nCountNotExcluded = nCountEnabled -  masternodesUsed.size();
+        int nCountNotExcluded = nCountEnabled - masternodesUsed.size();
 
         log.info("coinjoin:  {} enabled masternodes, {} masternodes to choose from", nCountEnabled, nCountNotExcluded);
         if (nCountNotExcluded < 1) {
@@ -420,11 +437,43 @@ public class CoinJoinClientManager {
     protected void triggerMixingFinished() {
         if (stopOnNothingToDo) {
             mixingFinished.set(true);
+            queueMixingCompleteListeners();
         }
     }
 
     public SettableFuture<Boolean> getMixingFinishedFuture() {
         return mixingFinished;
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addSessionStartedListener(SessionStartedListener listener) {
+        addSessionStartedListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addSessionStartedListener(Executor executor, SessionStartedListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        sessionStartedListeners.add(new ListenerRegistration<>(listener, executor));
+        for (CoinJoinClientSession session: deqSessions) {
+            session.addSessionStartedListener(executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeSessionStartedListener(SessionStartedListener listener) {
+        for (CoinJoinClientSession session: deqSessions) {
+            session.removeSessionStartedListener(listener);
+        }
+        return ListenerRegistration.removeFromList(listener, sessionStartedListeners);
     }
 
     /**
@@ -456,5 +505,87 @@ public class CoinJoinClientManager {
             session.removeSessionCompleteListener(listener);
         }
         return ListenerRegistration.removeFromList(listener, sessionCompleteListeners);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addMixingStartedListener(MixingStartedListener listener) {
+        addMixingStartedListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addMixingStartedListener(Executor executor, MixingStartedListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        mixingStartedListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeMixingStartedListener(MixingStartedListener listener) {
+        return ListenerRegistration.removeFromList(listener, mixingStartedListeners);
+    }
+
+    protected void queueMixingStartedListeners() {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<MixingStartedListener> registration : mixingStartedListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onMixingStarted(mixingWallet);
+                }
+            });
+        }
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addSessionCompleteListener(MixingCompleteListener listener) {
+        addMixingCompleteListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addMixingCompleteListener(Executor executor, MixingCompleteListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        mixingCompleteListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeMixingCompleteListener(MixingCompleteListener listener) {
+        return ListenerRegistration.removeFromList(listener, mixingCompleteListeners);
+    }
+
+    protected void queueMixingCompleteListeners() {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<MixingCompleteListener> registration : mixingCompleteListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onMixingComplete(mixingWallet, getSessionsStatus());
+                }
+            });
+        }
+    }
+
+    public List<PoolStatus> getSessionsStatus() {
+        ArrayList<PoolStatus> sessionsStatus = Lists.newArrayList();
+        for (CoinJoinClientSession session : deqSessions) {
+            sessionsStatus.add(session.getStatus());
+        }
+        return sessionsStatus;
     }
 }

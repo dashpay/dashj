@@ -96,7 +96,7 @@ public class WalletProtobufSerializer {
         this(new WalletFactory() {
             @Override
             public Wallet create(NetworkParameters params, KeyChainGroup keyChainGroup) {
-                return new Wallet(params, keyChainGroup);
+                return new WalletEx(params, keyChainGroup);
             }
         });
     }
@@ -285,17 +285,18 @@ public class WalletProtobufSerializer {
             walletBuilder.addAllKeysFromFriends(keys);
         }
 
-        //Add CoinJoin KeyChains
-        if(wallet.coinJoinKeyChainGroup != null) {
-            List<Protos.Key> keys = wallet.coinJoinKeyChainGroup.serializeToProtobuf();
-            walletBuilder.addAllKeysCoinJoin(keys);
-        }
-
         return walletBuilder.build();
     }
 
     private static void populateExtensions(Wallet wallet, Protos.Wallet.Builder walletBuilder) {
         for (WalletExtension extension : wallet.getExtensions().values()) {
+            Protos.Extension.Builder proto = Protos.Extension.newBuilder();
+            proto.setId(extension.getWalletExtensionID());
+            proto.setMandatory(extension.isWalletExtensionMandatory());
+            proto.setData(ByteString.copyFrom(extension.serializeWalletExtension()));
+            walletBuilder.addExtension(proto);
+        }
+        for (KeyChainWalletExtension extension : wallet.getKeyChainExtensions().values()) {
             Protos.Extension.Builder proto = Protos.Extension.newBuilder();
             proto.setId(extension.getWalletExtensionID());
             proto.setMandatory(extension.isWalletExtensionMandatory());
@@ -721,24 +722,14 @@ public class WalletProtobufSerializer {
             wallet.setSendingToFriendsGroup(friendKeyChainGroup);
         }
 
-        if (walletProto.getKeysCoinJoinCount() > 0) {
-            KeyCrypter keyCrypter = null;
-            KeyChainGroup coinJoinKeyChain = null;
-            if (walletProto.hasEncryptionParameters()) {
-                Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
-                keyCrypter = new KeyCrypterScrypt(encryptionParameters);
-                coinJoinKeyChain = KeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysCoinJoinList(), keyCrypter, keyChainFactory);
-            } else {
-                coinJoinKeyChain = KeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysCoinJoinList(), keyChainFactory);
-            }
-            wallet.coinJoinKeyChainGroup = coinJoinKeyChain;
-        }
-
         wallet.addWatchedScripts(scripts);
 
         if (walletProto.hasDescription()) {
             wallet.setDescription(walletProto.getDescription());
         }
+
+        // load extensions before processing transactions
+        loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
 
         if (forceReset) {
             // Should mirror Wallet.reset()
@@ -776,8 +767,6 @@ public class WalletProtobufSerializer {
             }
         }
 
-        loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
-
         for (Protos.Tag tag : walletProto.getTagsList()) {
             wallet.setTag(tag.getTag(), tag.getData());
         }
@@ -799,6 +788,7 @@ public class WalletProtobufSerializer {
         // The Wallet object, if subclassed, might have added some extensions to itself already. In that case, don't
         // expect them to be passed in, just fetch them here and don't re-add.
         extensions.putAll(wallet.getExtensions());
+        extensions.putAll(wallet.getKeyChainExtensions());
         for (Protos.Extension extProto : walletProto.getExtensionList()) {
             String id = extProto.getId();
             WalletExtension extension = extensions.get(id);

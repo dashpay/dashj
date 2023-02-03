@@ -191,23 +191,7 @@ public class WalletTest extends TestWithWallet {
         encryptedWallet.decrypt(PASSWORD1);
     }
 
-    @Test
-    public void encryptDecryptWalletWithArbitraryPathAndScriptTypeWithCoinJoin() throws Exception {
-        final byte[] ENTROPY = Sha256Hash.hash("don't use a string seed like this in real life".getBytes());
-        KeyChainGroup keyChainGroup = KeyChainGroup.builder(UNITTEST)
-                .addChain(DeterministicKeyChain.builder().seed(new DeterministicSeed(ENTROPY, "", 1389353062L))
-                        .outputScriptType(Script.ScriptType.P2PKH)
-                        .accountPath(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH).build())
-                .build();
-        Wallet encryptedWallet = new Wallet(UNITTEST, keyChainGroup);
-        DeterministicKey keyBip44 = encryptedWallet.currentKey(KeyPurpose.RECEIVE_FUNDS);
-        encryptedWallet.addCoinJoinKeyChain(DerivationPathFactory.get(UNITTEST).coinJoinDerivationPath());
-        DeterministicKey coinJoinKey = encryptedWallet.currentCoinJoinKey();
-        encryptedWallet.encrypt(PASSWORD1);
-        encryptedWallet.decrypt(PASSWORD1);
-        assertEquals(keyBip44, encryptedWallet.currentKey(KeyPurpose.RECEIVE_FUNDS));
-        assertEquals(coinJoinKey, encryptedWallet.currentCoinJoinKey());
-    }
+
 
     @Test
     public void basicSpendingFromP2SH() throws Exception {

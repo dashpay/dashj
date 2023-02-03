@@ -56,6 +56,7 @@ public class CoinJoinBaseSession {
     protected final ArrayList<CoinJoinEntry> entries; // Masternode/clients entries
 
     protected final AtomicReference<PoolState> state = new AtomicReference<>(POOL_STATE_IDLE); // should be one of the POOL_STATE_XXX values
+    protected final AtomicReference<PoolStatus> status = new AtomicReference<>(PoolStatus.WARMUP);
     protected final AtomicLong timeLastSuccessfulStep = new AtomicLong(0); // the time when last successful mixing step was performed
     protected final AtomicInteger sessionID = new AtomicInteger(0); // 0 if no mixing session is active
 
@@ -166,8 +167,11 @@ public class CoinJoinBaseSession {
         finalMutableTransaction = new Transaction(context.getParams());
     }
 
-    public AtomicReference<PoolState> getState() {
-        return state;
+    public PoolState getState() {
+        return state.get();
+    }
+    public PoolStatus getStatus() {
+        return status.get();
     }
 
     String getStateString() {
