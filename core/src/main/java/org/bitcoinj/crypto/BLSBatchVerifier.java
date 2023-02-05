@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Dash Core Group.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.crypto;
 
 
@@ -64,10 +80,10 @@ public class BLSBatchVerifier<SourceId, MessageId>
         Message newMessage = new Message(msgId, msgHash, sig, pubKey);
         messages.put(msgId, newMessage);
         if(messagesBySource.containsKey(sourceId)) {
-            messagesBySource.get(sourceId).add(new Pair(msgId, newMessage));
+            messagesBySource.get(sourceId).add(new Pair<>(msgId, newMessage));
         } else {
             Vector<Pair<MessageId, Message>> vector = new Vector<Pair<MessageId, Message>>();
-            vector.add(new Pair(msgId, newMessage));
+            vector.add(new Pair<>(msgId, newMessage));
             messagesBySource.put(sourceId, vector);
         }
         if (subBatchSize != 0 && messages.size() >= subBatchSize) {
@@ -84,15 +100,15 @@ public class BLSBatchVerifier<SourceId, MessageId>
 
     public void verify()
     {
-        HashMap<Sha256Hash, Vector<Pair<MessageId, Message>>> byMessageHash = new HashMap<Sha256Hash, Vector<Pair<MessageId, Message>>>();
+        HashMap<Sha256Hash, Vector<Pair<MessageId, Message>>> byMessageHash = new HashMap<>();
 
         for (Map.Entry<MessageId, Message> entry : messages.entrySet()) {
 
             if(byMessageHash.containsKey(entry.getValue().msgHash)) {
-                byMessageHash.get(entry.getValue().msgHash).add(new Pair(entry.getValue().msgId, entry.getValue()));
+                byMessageHash.get(entry.getValue().msgHash).add(new Pair<>(entry.getValue().msgId, entry.getValue()));
             } else {
-                Vector<Pair<MessageId, Message>> vector = new Vector<Pair<MessageId, Message>>();
-                vector.add(new Pair(entry.getValue().msgId, entry.getValue()));
+                Vector<Pair<MessageId, Message>> vector = new Vector<>();
+                vector.add(new Pair<>(entry.getValue().msgId, entry.getValue()));
                 byMessageHash.put(entry.getValue().msgHash, vector);
             }
         }
@@ -110,8 +126,13 @@ public class BLSBatchVerifier<SourceId, MessageId>
             if (messagesBySource.size() != 1) {
                 byMessageHash.clear();
                 for (Pair<MessageId, Message> it : p.getValue()) {
-
-                    byMessageHash.put(it.getSecond().msgHash, p.getValue());
+                    if (byMessageHash.containsKey(it.getSecond().msgHash)) {
+                        byMessageHash.get(it.getSecond().msgHash).add(it);
+                    } else {
+                        Vector<Pair<MessageId, Message>> vector = new Vector<>();
+                        vector.add(it);
+                        byMessageHash.put(it.getSecond().msgHash, vector);
+                    }
                 }
                 batchValid = verifyBatch(byMessageHash);
             }
@@ -156,9 +177,9 @@ public class BLSBatchVerifier<SourceId, MessageId>
     private boolean verifyBatchInsecure(HashMap<Sha256Hash, Vector<Pair<MessageId, Message>>> byMessageHash)
     {
         BLSSignature aggSig = new BLSSignature();
-        ArrayList<Sha256Hash> msgHashes = new ArrayList<Sha256Hash>(messages.size());
-        ArrayList<BLSPublicKey> pubKeys = new ArrayList<BLSPublicKey>(messages.size());
-        HashSet<MessageId> dups = new HashSet<MessageId>();
+        ArrayList<Sha256Hash> msgHashes = new ArrayList<>(messages.size());
+        ArrayList<BLSPublicKey> pubKeys = new ArrayList<>(messages.size());
+        HashSet<MessageId> dups = new HashSet<>();
 
 
         for (Map.Entry<Sha256Hash, Vector<Pair<MessageId, Message>>> p : byMessageHash.entrySet()) {
@@ -174,13 +195,13 @@ public class BLSBatchVerifier<SourceId, MessageId>
                 }
 
                 if (!aggSig.isValid()) {
-                    aggSig = msg.sig;
+                    aggSig = new BLSSignature(msg.sig);
                 } else {
                     aggSig.aggregateInsecure(msg.sig);
                 }
 
                 if (!aggPubKey.isValid()) {
-                    aggPubKey = msg.pubKey;
+                    aggPubKey = new BLSPublicKey(msg.pubKey);
                 } else {
                     aggPubKey.aggregateInsecure(msg.pubKey);
                 }
@@ -223,9 +244,11 @@ public class BLSBatchVerifier<SourceId, MessageId>
         ArrayList<BLSPublicKey> pubKeys = new ArrayList<BLSPublicKey>(messages.size());
         HashSet<MessageId> dups = new HashSet<MessageId>();
 
-        for (Map.Entry<Sha256Hash, Vector<Pair<MessageId, Message>>> it : byMessageHash.entrySet()) {
-            Sha256Hash msgHash = it.getKey();
-            Vector<Pair<MessageId, Message>> messageIts = it.getValue();
+        Iterator<Map.Entry<Sha256Hash, Vector<Pair<MessageId, Message>>>> it = byMessageHash.entrySet().iterator();
+        while(it.hasNext()) {
+            Map.Entry<Sha256Hash, Vector<Pair<MessageId, Message>>> entry = it.next();
+            Sha256Hash msgHash = entry.getKey();
+            Vector<Pair<MessageId, Message>> messageIts = entry.getValue();
             Message msg = messageIts.elementAt(messageIts.size()-1).getSecond();
 
             if (dups.add(msg.msgId)) {
@@ -233,7 +256,7 @@ public class BLSBatchVerifier<SourceId, MessageId>
                 pubKeys.add(msg.pubKey);
 
                 if (!aggSig.isValid()) {
-                    aggSig = msg.sig;
+                    aggSig = new BLSSignature(msg.sig);
                 } else {
                     aggSig.aggregateInsecure(msg.sig);
                 }
@@ -241,7 +264,7 @@ public class BLSBatchVerifier<SourceId, MessageId>
 
             messageIts.removeElementAt(messageIts.size()-1);
             if (messageIts.isEmpty()) {
-                byMessageHash.remove(it.getKey());
+                it.remove();
             }
         }
 
