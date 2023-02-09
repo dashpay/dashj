@@ -6299,8 +6299,12 @@ public class Wallet extends BaseTaggableObject
     }
 
     public List<Transaction> getTransactionsWithFriend(EvolutionContact contact) {
-        FriendKeyChain fromChain = receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
-        FriendKeyChain toChain = sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN);
+        FriendKeyChain fromChain = receivingFromFriendsGroup != null  ?
+                receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN) :
+                null;
+        FriendKeyChain toChain = sendingToFriendsGroup != null ?
+                sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN) :
+                null;
 
         ArrayList<Transaction> txs = Lists.newArrayList();
         if (fromChain == null && toChain == null) {
@@ -6341,7 +6345,8 @@ public class Wallet extends BaseTaggableObject
     }
 
     public boolean hasReceivingKeyChain(EvolutionContact contact) {
-        return receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) != null;
+        return receivingFromFriendsGroup != null &&
+                receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) != null;
     }
 
     public DeterministicKey getReceivingExtendedPublicKey(EvolutionContact contact) {
@@ -6353,7 +6358,8 @@ public class Wallet extends BaseTaggableObject
     }
 
     public boolean hasSendingKeyChain(EvolutionContact contact) {
-        return sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN) != null;
+        return sendingToFriendsGroup != null &&
+                sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN) != null;
     }
 
     public boolean hasReceivingFriendKeyChains() {

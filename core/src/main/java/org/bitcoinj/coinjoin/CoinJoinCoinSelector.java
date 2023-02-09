@@ -14,7 +14,9 @@
 
 package org.bitcoinj.coinjoin;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutput;
@@ -22,6 +24,10 @@ import org.bitcoinj.wallet.CoinSelection;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
 
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -41,17 +47,30 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
 
     @Override
     public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
-        CoinSelection selection = super.select(target, candidates);
-        Iterator<TransactionOutput> iterator = selection.gathered.iterator();
-        while (iterator.hasNext()) {
-            TransactionOutput output = iterator.next();
-            if (!output.isCoinJoin(wallet)) {
-                // remove non-coinjoin outputs
-                iterator.remove();
-                selection.valueGathered = selection.valueGathered.subtract(output.getValue());
+        ArrayList<TransactionOutput> selected = new ArrayList<>();
+        // Sort the inputs by age*value so we get the highest "coindays" spent.
+        // TODO: Consider changing the wallets internal format to track just outputs and keep them ordered.
+        ArrayList<TransactionOutput> sortedOutputs = new ArrayList<>(candidates);
+        // When calculating the wallet balance, we may be asked to select all possible coins, if so, avoid sorting
+        // them in order to improve performance.
+        // TODO: Take in network parameters when instanatiated, and then test against the current network. Or just have a boolean parameter for "give me everything"
+        if (!target.equals(NetworkParameters.MAX_MONEY)) {
+            sortOutputs(sortedOutputs);
+        }
+        // Now iterate over the sorted outputs until we have got as close to the target as possible or a little
+        // bit over (excessive value will be change).
+        long total = 0;
+        for (TransactionOutput output : sortedOutputs) {
+            if (total >= target.value)
+                break;
+            // don't bother with shouldSelect, since we have to check all the outputs
+            // with isCoinJoin anyways.
+            if (output.isCoinJoin(wallet)) {
+                selected.add(output);
+                total += output.getValue().value;
             }
         }
-        return selection;
+        return new CoinSelection(Coin.valueOf(total), selected);
     }
 
     @Override
