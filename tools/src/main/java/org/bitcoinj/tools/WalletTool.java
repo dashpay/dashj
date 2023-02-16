@@ -22,8 +22,8 @@ import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.params.KrupnikDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.WhiteRussianDevNetParams;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
@@ -311,8 +311,8 @@ public class WalletTool {
                 params = RegTestParams.get();
                 chainFileName = new File("regtest.chain");
                 break;
-            case KRUPNIK:
-                params = KrupnikDevNetParams.get();
+            case DEVNET:
+                params = WhiteRussianDevNetParams.get();
                 chainFileName = new File("krupnik.chain");
                 break;
             default:

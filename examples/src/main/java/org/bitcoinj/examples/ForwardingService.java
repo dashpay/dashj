@@ -72,21 +72,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
-        } else if (args.length > 1 && args[1].equals("krupnik")) {
-            params = KrupnikDevNetParams.get();
-            filePrefix = "forwarding-service-krupnik";
-        } else if (args.length > 1 && args[1].equals("malort")) {
-            params = MalortDevNetParams.get();
-            filePrefix = "forwarding-service-malort";
-        } else if (args.length > 1 && args[1].equals("cha-cha")) {
-            params = ChaChaDevNetParams.get();
-            filePrefix = "forwarding-service-cha-cha";
-        } else if (args.length > 1 && args[1].equals("jack-daniels")) {
-            params = JackDanielsDevNetParams.get();
-            filePrefix = "forwarding-service-jack-daniels";
-        } else if (args.length > 1 && args[1].equals("mojito")) {
-            params = MojitoDevNetParams.get();
-            filePrefix = "forwarding-service-mojito";
+        } else if (args.length > 1 && args[1].equals("white-russian")) {
+            params = WhiteRussianDevNetParams.get();
+            filePrefix = "forwarding-service-white-russian";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);

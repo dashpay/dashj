@@ -18,33 +18,34 @@ package org.bitcoinj.params;
 
 import org.bitcoinj.quorums.LLMQParameters;
 
-public class ChaChaDevNetParams extends DevNetParams {
+public class WhiteRussianDevNetParams extends DevNetParams {
 
-    private static final String DEVNET_NAME = "chacha";
+    private static final String DEVNET_NAME = "white-russian";
 
     private static final String[] MASTERNODES = new String[]{
-        "34.213.73.187",
-        "35.166.223.113",
-        "34.222.70.155",
-        "54.188.28.123",
-        "52.33.126.127",
-        "34.212.132.210",
-        "54.191.175.225",
-        "54.213.218.58",
-        "34.210.252.158",
-        "34.221.203.109",
-        "52.38.9.28",
-        "34.221.123.183",
-        "35.91.217.175",
-        "34.211.90.216",
-        "35.89.101.137",
-        "52.40.174.175",
-        "34.221.153.236",
-        "54.189.17.85",
+        "35.85.152.110",
+        "34.209.13.56",
+        "52.42.93.34",
+        "35.87.154.139",
+        "35.92.216.172",
+        "34.222.169.49",
+        "52.27.159.100",
+        "35.90.131.248",
+        "34.211.144.169",
+        "35.163.17.85",
+        "52.26.67.115",
+        "35.92.6.130",
+        "54.191.109.168",
+        "52.39.100.224",
+        "54.200.39.51",
+        "54.185.210.60",
+        "35.89.197.145",
+        "18.246.65.63",
+
     };
 
-    public ChaChaDevNetParams() {
-        super(DEVNET_NAME, "ybiRzdGWFeijAgR7a8TJafeNi6Yk6h68ps", 20001,
+    public WhiteRussianDevNetParams() {
+        super(DEVNET_NAME, "yZaEFuVfaycMzvQbHH7dgbDPJ6F2AGLqzR", 20001,
                 MASTERNODES, true, -1);
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
@@ -60,11 +61,11 @@ public class ChaChaDevNetParams extends DevNetParams {
         addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024);
     }
 
-    private static ChaChaDevNetParams instance;
+    private static WhiteRussianDevNetParams instance;
 
-    public static ChaChaDevNetParams get() {
+    public static WhiteRussianDevNetParams get() {
         if (instance == null) {
-            instance = new ChaChaDevNetParams();
+            instance = new WhiteRussianDevNetParams();
             add(instance);
         }
         return instance;
