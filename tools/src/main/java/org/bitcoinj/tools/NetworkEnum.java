@@ -21,5 +21,5 @@ public enum NetworkEnum {
     PROD, // alias for MAIN
     TEST,
     REGTEST,
-    KRUPNIK
+    DEVNET
 }
