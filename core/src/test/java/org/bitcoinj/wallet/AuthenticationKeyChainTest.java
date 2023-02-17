@@ -66,15 +66,15 @@ public class AuthenticationKeyChainTest {
 
         ownerKeyMaster = owner.getWatchingKey();//(ChildNumber.ZERO);
         ownerKey = HDKeyDerivation.deriveChildKey(ownerKeyMaster, ChildNumber.ZERO);
-        ownerKeyId = new KeyId(ownerKey.getPubKeyHash());
+        ownerKeyId = KeyId.fromBytes(ownerKey.getPubKeyHash());
 
         votingKeyMaster = voting.getWatchingKey();//(ChildNumber.ZERO);
         votingKey = HDKeyDerivation.deriveChildKey(votingKeyMaster, ChildNumber.ZERO);
-        votingKeyId = new KeyId(votingKey.getPubKeyHash());
+        votingKeyId = KeyId.fromBytes(votingKey.getPubKeyHash());
 
         buKeyMaster = bu.getWatchingKey();//(ChildNumber.ZERO);
         buKey = HDKeyDerivation.deriveChildKey(buKeyMaster, ChildNumber.ZERO);
-        buKeyId = new KeyId(buKey.getPubKeyHash());
+        buKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
 
         blsExtendedPrivateKey = ExtendedPrivateKey.fromSeed(seed.getSeedBytes());
 

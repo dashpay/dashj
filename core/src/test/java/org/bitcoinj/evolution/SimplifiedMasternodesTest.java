@@ -93,7 +93,7 @@ public class SimplifiedMasternodesTest {
 
 
             smle.pubKeyOperator = new BLSLazyPublicKey(sk.getPublicKey());
-            smle.keyIdVoting = new KeyId(Utils.reverseBytes(Utils.HEX.decode(String.format("%040x", i))));
+            smle.keyIdVoting = KeyId.fromBytes(Utils.HEX.decode(String.format("%040x", i)), false);
             smle.isValid = true;
 
             entries.add(smle);
