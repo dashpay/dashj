@@ -70,6 +70,7 @@ public class ProviderTests {
 
     @Before
     public void startup() throws UnreadableWalletException {
+        BLSScheme.setLegacyDefault(true);
         PARAMS = UnitTestParams.get();
         context = new Context(PARAMS);
         txdata = Utils.HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff0502fa050105ffffffff02f4c21a3d0500000023210397181e4cc48fcba0e597bfb029d4cfc4473ae5772a0ff32223977d4e03e07fa9acf4c21a3d050000001976a91425e50daf158a83dfaacd1b77175900aa95a67d4188ac00000000260100fa050000aaaec8d6a8535a01bd844817dea1faed66f6c397b1dcaec5fe8c5af025023c35");
@@ -90,11 +91,11 @@ public class ProviderTests {
 
         ownerKeyMaster = owner.getWatchingKey();//(ChildNumber.ZERO);
         ownerKey = HDKeyDerivation.deriveChildKey(ownerKeyMaster, ChildNumber.ZERO);
-        ownerKeyId = new KeyId(ownerKey.getPubKeyHash());
+        ownerKeyId = KeyId.fromBytes(ownerKey.getPubKeyHash());
 
         votingKeyMaster = voting.getWatchingKey();//(ChildNumber.ZERO);
         votingKey = HDKeyDerivation.deriveChildKey(votingKeyMaster, ChildNumber.ZERO);
-        votingKeyId = new KeyId(votingKey.getPubKeyHash());
+        votingKeyId = KeyId.fromBytes(votingKey.getPubKeyHash());
 
         blsExtendedPrivateKey = ExtendedPrivateKey.fromSeed(seed.getSeedBytes());
         /*operatorKey = new BLSPublicKey(blsExtendedPrivateKey.privateChild(new ChildNumber(9, true).getI())
@@ -229,6 +230,66 @@ public class ProviderTests {
 
         assertEquals("Provider transaction hashes aren't correct", providerRegistrationTransactionFromMessage.getHash().toString(),txIdString);
 
+    }
+
+    @Test
+    public void providerRegistrationTestV2() throws IOException {
+        BLSScheme.setLegacyDefault(false);
+        //        "7494faf951e2d82cb353e39c53750636fd51d998f1e9f473045ab996e5dd7aa6-2": {
+        //            "proTxHash": "b23500c240c494e10aaf11ba3775a4a50bff732147a911c98ab74c3896ff6bf2",
+        //                    "address": "35.85.152.110:20001",
+        //                    "payee": "yezz6MkRVpH6SvNSDN3147EWa557Wq2dbR",
+        //                    "status": "ENABLED",
+        //                    "type": "Regular",
+        //                    "pospenaltyscore": 0,
+        //                    "consecutivePayments": 0,
+        //                    "lastpaidtime": 1676561550,
+        //                    "lastpaidblock": 4883,
+        //                    "owneraddress": "yRWWNg9vfnAJz6Ds3QUgu9Eh9CFaVbowfN",
+        //                    "votingaddress": "yRWWNg9vfnAJz6Ds3QUgu9Eh9CFaVbowfN",
+        //                    "collateraladdress": "yQBK54rJCM3rYQjkgB1qF3BJJZKJruVAVZ",
+        //                    "pubkeyoperator": "96adfce94d2bdf25b5248d316a6686bfa620def9bd19de09bac1adb61861d233ea9cf09612bf16d5e901411e0719715c"
+        //        },
+
+
+        byte [] hexData = Utils.HEX.decode("03000100016af1c4a180b768c45db79b231a01d3190ce0ab94f44bc90c4a9ab0cb8cf225b1010000006a4730440220647d64724ec6b7bee99c62c5fc6f76a34c7610f3e559bf6046634bd4ed8898a302201c3f389854f565883d78721e7339a66e7b7be3e3a59f8fcc2556e6ca204410d00121039f7ea1ecfdbe0475d3ef61f1709fb731fa10808eef18d603cde03cfc1252d80afeffffff0122dff505000000001976a9142a56aeb9cdfd17a50e67a2aad320b4475862a00a88ac00000000fd1201020000000000a67adde596b95a0473f4e9f198d951fd360675539ce353b32cd8e251f9fa94740200000000000000000000000000ffff2355986e4e2138f025b8a8b954b3f1fffea06f1e7211420d24ec96adfce94d2bdf25b5248d316a6686bfa620def9bd19de09bac1adb61861d233ea9cf09612bf16d5e901411e0719715c38f025b8a8b954b3f1fffea06f1e7211420d24ec00001976a914ccec915e5885f72ed49308e889ef7d31e7c2500c88ac72642f83ea608ebf3d5899b7254e52a20f0cbd49e132347a63222d5fc00cec1c412049c15cca750242a0e0e712fd7b9f1e79050b23fce1bc8b5185dd839f36e232fc41ad8eebaa8624c76ddf3bb2404f090d3b1427a70c963ac1b4c344f2d439ad31");
+
+        Transaction proRegTxFromMessage = new Transaction(PARAMS, hexData);
+
+        ProviderRegisterTx proRegTx = (ProviderRegisterTx) proRegTxFromMessage.getExtraPayloadObject();
+
+        assertEquals(Sha256Hash.wrap("b23500c240c494e10aaf11ba3775a4a50bff732147a911c98ab74c3896ff6bf2"), proRegTxFromMessage.getTxId());
+        assertEquals(MasternodeType.REGULAR.index, proRegTx.type);
+        assertEquals(new BLSSecretKey("039c40ee5760a1e8ca95c04abf7941b24d00f784ddb9c1804a7703fb1bc487fd", false).getPublicKey(), proRegTx.pubkeyOperator);
+
+        //        "31867e02cd4cccf250e86a1bfbb963ad2964e0f55398d9b64f71edab3b365a93-3": {
+        //            "proTxHash": "478941dbaf8e7b19bcf2edf4289a3ff8eca228f9263dfc8cdacb5f085674dbed",
+        //                    "address": "52.39.100.224:20001",
+        //                    "payee": "yezz6MkRVpH6SvNSDN3147EWa557Wq2dbR",
+        //                    "status": "ENABLED",
+        //                    "type": "HighPerformance",
+        //                    "platformNodeID": "83beba9ecea8b7a6eec4198d819ad6ac88a5b2de",
+        //                    "platformP2PPort": 26659,
+        //                    "platformHTTPPort": 3000,
+        //                    "pospenaltyscore": 0,
+        //                    "consecutivePayments": 0,
+        //                    "lastpaidtime": 1676560369,
+        //                    "lastpaidblock": 4875,
+        //                    "owneraddress": "yUiPZCLybf39dzpsuEjCsbvSs4UJbHgMuJ",
+        //                    "votingaddress": "yUiPZCLybf39dzpsuEjCsbvSs4UJbHgMuJ",
+        //                    "collateraladdress": "yWM8o4WHf3ZtvwM2fRxn344U82G9Rdq27J",
+        //                    "pubkeyoperator": "8364263c07ac8d0a23e3f4105033ab45977620154b9037eb9746644f968536e44f8d8ea26314e03a7decba266c85c994"
+        //        },
+
+        byte[] hexDataHPMN = Utils.HEX.decode("0300010001ab1cabd2444daccc662cac0f3c64f024cdf1c0e5a5570ca62313cb2f03e02b75020000006a473044022074aac6c0b9595cd4968bc8a16f27c89d9caeda1651d293e1eb0dfc5a7b951e1402200fcdff608dde89d0a686065c551e151bf16c8e547706137afa65fc968af4ac4d01210399b544309aea776ca93383676a91f93d91c01894adbf00a8bc8fc57c55d8882cfeffffff010adff505000000001976a9146e0304d6a02d1f441e64813359a3e09027284e2e88ac00000000fd2a01020001000000935a363babed714fb6d99853f5e06429ad63b9fb1b6ae850f2cc4ccd027e86310300000000000000000000000000ffff342764e04e215c17d308b161a38fd2f36bcba45963c6f489ff818364263c07ac8d0a23e3f4105033ab45977620154b9037eb9746644f968536e44f8d8ea26314e03a7decba266c85c9945c17d308b161a38fd2f36bcba45963c6f489ff8100001976a914ccec915e5885f72ed49308e889ef7d31e7c2500c88ac2e7329219be96b3ac7e04a46b23e7346cb41866745eb70c4c97c1f4232417ec8deb2a588acd69a818d19c4eea6b7a8ce9ebabe832368b80b41209ca3dad27f7dae9ad0b7759e2237711ead8fca60f36dd8c577a0fb62a09074267610540620485a02283d5d84cada8ac98e59b58a6897f5c23bfdb29ea1dcfa77");
+
+        Transaction proRegTxHPMN = new Transaction(PARAMS, hexDataHPMN);
+
+        ProviderRegisterTx proRegTxHPMNPayload = (ProviderRegisterTx) proRegTxHPMN.getExtraPayloadObject();
+
+        assertEquals(Sha256Hash.wrap("478941dbaf8e7b19bcf2edf4289a3ff8eca228f9263dfc8cdacb5f085674dbed"), proRegTxHPMN.getTxId());
+        assertEquals(MasternodeType.HIGHPERFORMANCE.index, proRegTxHPMNPayload.type);
+        assertEquals(KeyId.fromString("83beba9ecea8b7a6eec4198d819ad6ac88a5b2de"), proRegTxHPMNPayload.platformNodeID);
     }
 
     @Test
@@ -422,7 +483,7 @@ public class ProviderTests {
         Script scriptPayout = ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, payoutAddress));
 
         proUpRegTx = new ProviderUpdateRegistarTx(PARAMS, 1, providerTransactionHash, 0,
-                operatorKey.getPublicKey(), new KeyId(Address.fromBase58(PARAMS, votingAddress).getHash()),
+                operatorKey.getPublicKey(), KeyId.fromBytes(Address.fromBase58(PARAMS, votingAddress).getHash()),
                 scriptPayout, Transaction.calculateInputsHash(input), ownerPrivateKey);
         Transaction providerUpdateRegistrarTransaction = new Transaction(PARAMS, proUpRegTx);
 

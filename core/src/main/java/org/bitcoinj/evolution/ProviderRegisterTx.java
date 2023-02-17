@@ -24,6 +24,9 @@ public class ProviderRegisterTx extends SpecialTxPayload {
     int mode;  //short
     TransactionOutPoint collateralOutpoint;
     MasternodeAddress address;
+    KeyId platformNodeID;
+    int platformP2PPort;
+    int platformHTTPPort;
     KeyId keyIDOwner;
     BLSPublicKey pubkeyOperator;
     KeyId keyIDVoting;
@@ -91,6 +94,12 @@ public class ProviderRegisterTx extends SpecialTxPayload {
         operatorReward = readUint16();
         scriptPayout = new Script(readByteArray());
         inputsHash = readHash();
+        if (version == BASIC_BLS_VERSION && type == MasternodeType.HIGHPERFORMANCE.index) {
+            platformNodeID = new KeyId(params, payload, cursor);
+            cursor += platformNodeID.getMessageSize();
+            platformP2PPort = readUint16();
+            platformHTTPPort  = readUint16();
+        }
         signature = new MasternodeSignature(params, payload, cursor);
         cursor += signature.getMessageSize();
 
@@ -111,6 +120,12 @@ public class ProviderRegisterTx extends SpecialTxPayload {
         Utils.uint16ToByteStreamLE(operatorReward, stream);
         Utils.bytesToByteStream(scriptPayout.getProgram(), stream);
         stream.write(inputsHash.getReversedBytes());
+
+        if (version == BASIC_BLS_VERSION && type == MasternodeType.HIGHPERFORMANCE.index) {
+            platformNodeID.bitcoinSerialize(stream);
+            Utils.uint16ToByteStreamLE(platformP2PPort,stream);
+            Utils.uint16ToByteStreamLE(platformHTTPPort,stream);
+        }
     }
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {

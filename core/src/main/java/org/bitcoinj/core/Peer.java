@@ -481,7 +481,7 @@ public class Peer extends PeerSocketHandler {
         // Announce ourselves. This has to come first to connect to clients beyond v0.3.20.2 which wait to hear
         // from us until they send their version message back.
         PeerAddress address = getAddress();
-        log.info("Announcing to {} as: {}", address == null ? "Peer" : address.toSocketAddress(), versionMessage.subVer);
+        log.info("Announcing to {} with protocol {} as: {}", address == null ? "Peer" : address.toSocketAddress(), versionMessage.clientVersion, versionMessage.subVer);
         sendMessage(versionMessage);
         connectionOpenFuture.set(this);
         // When connecting, the remote peer sends us a version message with various bits of

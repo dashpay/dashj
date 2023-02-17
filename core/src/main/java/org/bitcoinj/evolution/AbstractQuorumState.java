@@ -145,6 +145,11 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         this.bootstrapFilePath = bootstrapFilePath;
         this.bootstrapStream = bootstrapStream;
         this.bootStrapFileFormat = bootStrapFileFormat;
+        if (bootStrapFileFormat >= SimplifiedMasternodeListManager.BLS_SCHEME_FORMAT_VERSION) {
+            protocolVersion = NetworkParameters.ProtocolVersion.BLS_BASIC.getBitcoinProtocolVersion();
+        } else {
+            protocolVersion = NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
+        }
     }
 
     // TODO: Do we need to keep track of the header chain also?
