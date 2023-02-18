@@ -2,6 +2,7 @@ package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.params.UnitTestParams;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,7 +66,7 @@ public class FinalCommitmentTest {
      */
     @Test
     public void finalCommitmentTest() throws IOException {
-
+        BLSScheme.setLegacyDefault(true);
         byte [] txdata = Utils.HEX.decode("03000600000000000000fd490101004c370100010001ae1022a3871ce8a74b958b45b88885ecea8a172f428bf535b774e7060000000032ffefffffffff0332ffefffffffff03160b120058893acc8b6622dfd210f7d00aed97a43b364da4073b791c23b1e8b4b4c7943bf5b3b4c62c0108b391351a43f421c008fe77374e79b9bbcb3e7916f063083f936585c1793d0e887c537be5d70a4014216fe9d1c8c8e92208dfe167773c0da8b6d012390b8608ec8783a6ba3a2deeb03606a7133d6b8b0f11a7d458b210f03421f3b97cfdb73fdbd24ecca58568ca637aa6dbce271fd5d49a3d6ae63410365c38bda1dc73e683c0ad03b9e28e1999c3b590e188420eb0104087a8fe58de9ebb1f1daacfdc1d1492b00287b3dd2972eb76623d6f362b220d871d46eaae00ff594ab37a5a313c436838026b0052c5ce30bd4c1668b0165f935a0fed4f9b1921de6ceb8a347ba9fff4a9cb20762a");         //"01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84";
 
         Transaction commitmentTx = new Transaction(PARAMS, txdata);
@@ -132,7 +133,7 @@ public class FinalCommitmentTest {
 
     @Test
     public void finalCommitmentTestTwo() throws IOException {
-
+        BLSScheme.setLegacyDefault(true);
         byte [] txdata = Utils.HEX.decode("03000600000000000000fda301010056190100010002f2ef5ab062b348bfcf9f5be4c07b817e176a5726fa9b799ad67f690700000000fd9001bf7fffaffedffef77fef7ffffffcbdffaffffffffffffdfffff7f7f7fff7ffefbfffffdff1fdbf7feffcffbb1f0000000000fd9001bf7fffaffedffef77fef7ffffffcbfffaffffffffffffdfffff7f7f7fff7ffefbfffffdff1fdbf7feffcffbb1f000000000003a3fbbe99d80a9be8fc59fd4fe43dfbeba9119b688e97493664716cdf15ae47fad70fea7cb93f20fba10d689f9e3c02a2263a396ef747508bf75a2dd7f891abb0fc4fb58b6773d131eb0403126bdebe9944c544e03a478b401b65cabbb24338872613f7d58ff13ab038ab86418ec70ef1734ff43e965ccb83e02da83b10d44c0f23c630752cfb29b402149a1fc3fad0760e6341a4a1031efad2983c8637d2a461e9bcaf935b7a4dfa225ed2f7771c7592eda5c13583577719bea9337b4b9b6286ac11a072de0955b0dc5a012280bb557a53f9643cee7730dabe2d3a4a19042813ef5d39ae92d0015554954011c1e12bc688d4d7672ac33c4001e0dedbfe5d0316f2ad23206d478964ca62d75f50e4d0");         //"01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84";
 
         Transaction commitmentTx = new Transaction(PARAMS, txdata);
@@ -160,6 +161,7 @@ public class FinalCommitmentTest {
 
     @Test
     public void finalCommitmentHashTest() {
+        BLSScheme.setLegacyDefault(true);
         byte [] data = Utils.HEX.decode("010002f2ef5ab062b348bfcf9f5be4c07b817e176a5726fa9b799ad67f690700000000fd9001bf7fffaffedffef77fef7ffffffcbdffaffffffffffffdfffff7f7f7fff7ffefbfffffdff1fdbf7feffcffbb1f0000000000fd9001bf7fffaffedffef77fef7ffffffcbfffaffffffffffffdfffff7f7f7fff7ffefbfffffdff1fdbf7feffcffbb1f000000000003a3fbbe99d80a9be8fc59fd4fe43dfbeba9119b688e97493664716cdf15ae47fad70fea7cb93f20fba10d689f9e3c02a2263a396ef747508bf75a2dd7f891abb0fc4fb58b6773d131eb0403126bdebe9944c544e03a478b401b65cabbb24338872613f7d58ff13ab038ab86418ec70ef1734ff43e965ccb83e02da83b10d44c0f23c630752cfb29b402149a1fc3fad0760e6341a4a1031efad2983c8637d2a461e9bcaf935b7a4dfa225ed2f7771c7592eda5c13583577719bea9337b4b9b6286ac11a072de0955b0dc5a012280bb557a53f9643cee7730dabe2d3a4a19042813ef5d39ae92d0015554954011c1e12bc688d4d7672ac33c4001e0dedbfe5d0316f2ad23206d478964ca62d75f50e4d0");
         FinalCommitment commitment = new FinalCommitment(PARAMS, data, 0);
 
@@ -169,7 +171,7 @@ public class FinalCommitmentTest {
 
     @Test
     public void finalCommitmentV2Test() throws IOException {
-
+        BLSScheme.setLegacyDefault(true);
         byte [] qfcommit = Utils.HEX.decode("02006530fed4f6262e0fd7314cccbe94d7aba54f3cdcbe2bd3237ad2f276eb4d01000003000cfd0b0cfd0b0e22ac5b7c87076a03b1e4bee58c8404aaed183dd2c3114cea3ac1cbf85218a6196a19073789e9a12fc439b773842368b70d64f275bfc681e393286844bc565ceb51555d061c53e846bdd623e3809b5619d03a92ab89a5758598d4bef96cc398e233f04cfdfba3842098813d7532960527d76656b3cc1dbae0bd07898b2d31660824be7c8baef965d9eeaef4b8cc819e1e60b4739a5302d7bcce658d31c75c74a9245d6a44ff36d7df5ced7fca3117578e5b2bcd12e993666bdfce0c390d7b849b901b3699902a3c2c07cc269910b2f9483ab70e52d6ffbe68e1c012df67840e129b19052f6ddf1880a3c8a05b6cb9a38ca640b5fcf4fcb422b3bcc7c665c703fc258443ce0400580578af74f42ca656");         //"01000873616d697366756ec3bfec8ca49279bb1375ad3461f654ff1a277d464120f19af9563ef387fef19c82bc4027152ef5642fe8158ffeb3b8a411d9a967b6af0104b95659106c8a9d7451478010abe042e58afc9cdaf006f77cab16edcb6f84";
 
         FinalCommitment commitment = new FinalCommitment(PARAMS, qfcommit, 0);

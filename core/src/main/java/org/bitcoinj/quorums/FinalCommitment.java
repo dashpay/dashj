@@ -144,7 +144,6 @@ public class FinalCommitment extends SpecialTxPayload {
         Utils.booleanArrayListToStream(validMembers, stream);
 
         quorumPublicKey.bitcoinSerialize(stream, legacy);
-        log.info("quorumPublicKey: {}", quorumPublicKey.toStringHex(isLegacy()));
         stream.write(quorumVvecHash.getReversedBytes());
         quorumSignature.bitcoinSerialize(stream, legacy);
         membersSignature.bitcoinSerialize(stream, legacy);
@@ -365,7 +364,7 @@ public class FinalCommitment extends SpecialTxPayload {
     public Sha256Hash getHash() {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getMessageSize());
-            bitcoinSerializeToStream(bos);
+            bitcoinSerializeToStream(bos, BLSScheme.isLegacyDefault());
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException x) {
             throw new RuntimeException(x);

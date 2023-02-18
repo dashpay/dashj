@@ -124,6 +124,10 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         cbTxMerkleTree.bitcoinSerializeToStream(stream);
         coinBaseTx.bitcoinSerialize(stream);
 
+        if (version == BASIC_BLS_VERSION || protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+            Utils.uint16ToByteStreamLE(version, stream);
+        }
+
         stream.write(new VarInt(deletedMNs.size()).encode());
         for(Sha256Hash entry : deletedMNs) {
             stream.write(entry.getReversedBytes());

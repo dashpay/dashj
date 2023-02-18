@@ -2,35 +2,24 @@ package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
-import org.bitcoinj.core.KeyId;
-import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.params.DevNetParams;
-import org.bitcoinj.params.JackDanielsDevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.WhiteRussianDevNetParams;
 import org.bitcoinj.quorums.QuorumRotationInfo;
-import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.FlatDB;
-import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.store.SPVBlockStore;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -53,7 +42,7 @@ public class QuorumRotationStateTest {
     public static void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
         PARAMS = TestNet3Params.get();
-        DEVNETPARAMS = JackDanielsDevNetParams.get();
+        DEVNETPARAMS = WhiteRussianDevNetParams.get();
         initContext(MAINPARAMS);
 
         //PeerGroup peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);

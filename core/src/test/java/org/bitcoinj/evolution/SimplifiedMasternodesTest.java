@@ -18,14 +18,13 @@ package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
-import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import static org.junit.Assert.*;
 
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.ChaChaDevNetParams;
+import org.bitcoinj.params.WhiteRussianDevNetParams;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
@@ -58,7 +57,7 @@ public class SimplifiedMasternodesTest {
     public static void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
         PARAMS = TestNet3Params.get();
-        DEVNETPARAMS = ChaChaDevNetParams.get();
+        DEVNETPARAMS = WhiteRussianDevNetParams.get();
         initContext(PARAMS);
 
         //PeerGroup peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
@@ -94,7 +93,7 @@ public class SimplifiedMasternodesTest {
 
 
             smle.pubKeyOperator = new BLSLazyPublicKey(sk.getPublicKey());
-            smle.keyIdVoting = new KeyId(Utils.reverseBytes(Utils.HEX.decode(String.format("%040x", i))));
+            smle.keyIdVoting = KeyId.fromBytes(Utils.HEX.decode(String.format("%040x", i)), false);
             smle.isValid = true;
 
             entries.add(smle);

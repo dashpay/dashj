@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.*;
@@ -666,7 +667,7 @@ public abstract class NetworkParameters {
         CORE17(70219),
         ISDLOCK(70220),
         BLS_LEGACY(70220),  // used internally by DashJ only
-        BLS_BASIC(70224),   // used internally by DashJ only
+        BLS_BASIC(70225),   // used internally by DashJ only
         GOVSCRIPT(70221),
         ADDRV2(70223),
         COINJOIN_SU(70224),
@@ -812,6 +813,10 @@ public abstract class NetworkParameters {
     protected int basicBLSSchemeActivationHeight = Integer.MAX_VALUE;
     public boolean isBasicBLSSchemeActive(int height) {
         return height >= basicBLSSchemeActivationHeight;
+    }
+    @VisibleForTesting
+    public void setBasicBLSSchemeActivationHeight(int basicBLSSchemeActivationHeight) {
+        this.basicBLSSchemeActivationHeight = basicBLSSchemeActivationHeight;
     }
 
     public int getBIP65Height() {

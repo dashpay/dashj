@@ -23,6 +23,7 @@ jobs:
         run: |
           git submodule update --init --recursive
           cd contrib/dashj-bls
+          git apply catch_changes.patch
           mvn package -DskipTests -Dmaven.javadoc.skip=true
           cd ../..
       - name: Build X11 library
