@@ -19,6 +19,8 @@ import org.bitcoinj.core.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * BLSPublicKey uses 152 bytes of native memory + java overhead,
@@ -98,5 +100,30 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
     @Deprecated
     public boolean isPublicKeyInitialized() {
         return initialized;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BLSLazyPublicKey that = (BLSLazyPublicKey) o;
+
+        if (isInitialized()) {
+            if (that.isInitialized())
+                return Objects.equals(publicKey, that.publicKey);
+            else
+                return Objects.equals(publicKey.getBuffer(), that.buffer);
+        } else {
+            if (that.isInitialized())
+                return Arrays.equals(buffer, that.publicKey.getBuffer());
+            else
+                return Arrays.equals(buffer, that.buffer);
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return publicKey != null ? publicKey.hashCode() : 0;
     }
 }
