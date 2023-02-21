@@ -205,7 +205,7 @@ public class CoinJoinClientManager {
             return false;
         }
 
-        if (!dryRun && mixingWallet.isEncrypted()) {
+        if (!dryRun && mixingWallet.isEncrypted() && context.coinJoinManager.requestKeyParameter(mixingWallet) == null) {
             strAutoDenomResult = "Wallet is locked.";
             return false;
         }

@@ -67,7 +67,7 @@ public class RedeemData {
      */
     public ECKey getFullKey() {
         for (ECKey key : keys)
-            if (key.hasPrivKey())
+            if (key.hasPrivKey() || key.isEncrypted())
                 return key;
         return null;
     }
