@@ -25,10 +25,14 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Handles the CoinJoin related KeyChain
@@ -127,11 +131,28 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
     }
 
     public void addKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
+        checkState(!seed.isEncrypted());
         if (!hasKeyChain(path)) {
             if (coinJoinKeyChainGroup == null) {
                 coinJoinKeyChainGroup = KeyChainGroup.builder(wallet.getParams()).build();
             }
             coinJoinKeyChainGroup.addAndActivateHDChain(DeterministicKeyChain.builder().seed(seed).accountPath(path).build());
+        }
+    }
+
+    public void addEncryptedKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, @Nonnull KeyParameter keyParameter) {
+        checkNotNull(keyParameter);
+        checkState(seed.isEncrypted());
+        if (!hasKeyChain(path)) {
+            if (coinJoinKeyChainGroup == null) {
+                coinJoinKeyChainGroup = KeyChainGroup.builder(wallet.getParams()).build();
+            }
+            if (seed.isEncrypted()) {
+                seed = seed.decrypt(wallet.getKeyCrypter(), "", keyParameter);
+            }
+            DeterministicKeyChain chain = DeterministicKeyChain.builder().seed(seed).accountPath(path).build();
+            DeterministicKeyChain encryptedChain = chain.toEncrypted(wallet.getKeyCrypter(), keyParameter);
+            coinJoinKeyChainGroup.addAndActivateHDChain(encryptedChain);
         }
     }
 
