@@ -15,9 +15,11 @@
  */
 package org.bitcoinj.wallet;
 
+import com.google.common.collect.Lists;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.script.Script;
@@ -58,6 +60,60 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
         }
     }
 
+    /**
+     *  Check whether the password can decrypt the first key in the wallet.
+     *  This can be used to check the validity of an entered password.
+     *
+     *  @return boolean true if password supplied can decrypt the first private key in the wallet, false otherwise.
+     *  @throws IllegalStateException if the wallet is not encrypted.
+     */
+    public boolean checkPassword(CharSequence password) {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() && getKeyChainGroup().checkPassword(password);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     *  Check whether the AES key can decrypt the first encrypted key in the wallet.
+     *
+     *  @return boolean true if AES key supplied can decrypt the first encrypted private key in the wallet, false otherwise.
+     */
+    public boolean checkAESKey(KeyParameter aesKey) {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() && getKeyChainGroup().checkAESKey(aesKey);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /**
+     * Get the wallet's KeyCrypter, or null if the wallet is not encrypted.
+     * (Used in encrypting/ decrypting an ECKey).
+     */
+    @Nullable
+    public KeyCrypter getKeyCrypter() {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ?  getKeyChainGroup().getKeyCrypter() : null;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    @Override
+    public Address currentAddress(KeyChain.KeyPurpose purpose) {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ? getKeyChainGroup().currentAddress(purpose) : null;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
     public DeterministicKey currentKey(KeyChain.KeyPurpose purpose) {
         keyChainGroupLock.lock();
         try {
@@ -74,7 +130,8 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     public void encrypt(KeyCrypter keyCrypter, KeyParameter aesKey) {
         keyChainGroupLock.lock();
         try {
-            getKeyChainGroup().encrypt(keyCrypter, aesKey);
+            if (isInitialized())
+                getKeyChainGroup().encrypt(keyCrypter, aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -84,7 +141,8 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     public void decrypt(KeyParameter aesKey) {
         keyChainGroupLock.lock();
         try {
-            getKeyChainGroup().decrypt(aesKey);
+            if (isInitialized())
+                getKeyChainGroup().decrypt(aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -247,10 +305,106 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
+    public long getEarliestKeyCreationTime() {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ? getKeyChainGroup().getEarliestKeyCreationTime() : Utils.currentTimeMillis();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /** See {@link DeterministicKeyChain#setLookaheadSize(int)} for more info on this. */
+    @Override
+    public int getLookaheadSize() {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ? getKeyChainGroup().getLookaheadSize() : 0;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /** See {@link DeterministicKeyChain#setLookaheadThreshold(int)} for more info on this. */
+    @Override
+    public int getLookaheadThreshold() {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ? getKeyChainGroup().getLookaheadThreshold() : 0;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    @Override
     public boolean hasKey(ECKey key) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() && getKeyChainGroup().hasKey(key);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    @Override
+    public int importKeys(List<ECKey> keys) {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ? getKeyChainGroup().importKeys(keys) : 0;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    @Override
+    public int importKeys(ECKey... keys) {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ? getKeyChainGroup().importKeys(keys) : 0;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    @Override
+    public int importKeysAndEncrypt(List<ECKey> keys, KeyParameter aesKey) {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ? getKeyChainGroup().importKeysAndEncrypt(keys, aesKey) : 0;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    @Override
+    public boolean isDeterministicUpgradeRequired(Script.ScriptType preferredScriptType, long keyRotationTimeSecs) {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() && getKeyChainGroup().isDeterministicUpgradeRequired(preferredScriptType, keyRotationTimeSecs);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    @Override
+    public boolean isEncrypted() {
+        return isInitialized() && getKeyChainGroup().isEncrypted();
+    }
+
+    /**
+     * Whether the keychain is married.  A keychain is married when it vends P2SH addresses
+     * from multiple keychains in a multisig relationship.
+     * @see org.bitcoinj.wallet.MarriedKeyChain
+     */
+    public boolean isMarried() {
+        return isInitialized() && getKeyChainGroup().isMarried();
+    }
+
+    @Override
+    public boolean isWatching() {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() && getKeyChainGroup().isWatching();
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -288,9 +442,46 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
             keyChainGroupLock.unlock();
         }
     }
+    /**
+         * Returns the number of keys in the key chain group, including lookahead keys.
+            */
+    public int numKeys() {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ? getKeyChainGroup().numKeys() : 0;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
 
     @Override
-    public void addKeyChainEventListener(Executor executor, KeyChainEventListener listener) {
+    public boolean removeImportedKey(ECKey key) {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() && getKeyChainGroup().removeImportedKey(key);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /** Internal use only. */
+    @Override
+    public List<Protos.Key> serializeToProtobuf() {
+        keyChainGroupLock.lock();
+        try {
+            return isInitialized() ? getKeyChainGroup().serializeToProtobuf() : Lists.newArrayList();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    /** Adds a listener for events that are run when keys are added, on the user thread. */
+    public void addEventListener(KeyChainEventListener listener) {
+        addEventListener(listener, Threading.USER_THREAD);
+    }
+
+    @Override
+    public void addEventListener(KeyChainEventListener listener, Executor executor) {
         keyChainGroupLock.lock();
         try {
             if (isInitialized())
@@ -301,10 +492,21 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public boolean removeKeyChainEventListener(KeyChainEventListener listener) {
+    public boolean removeEventListener(KeyChainEventListener listener) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() && getKeyChainGroup().removeEventListener(listener);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
+    @Override
+    public void upgradeToDeterministic(Script.ScriptType preferredScriptType, KeyChainGroupStructure structure, long keyRotationTimeSecs, @Nullable KeyParameter aesKey) {
+        keyChainGroupLock.lock();
+        try {
+            if(isInitialized())
+                getKeyChainGroup().upgradeToDeterministic(preferredScriptType, structure, keyRotationTimeSecs, aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
