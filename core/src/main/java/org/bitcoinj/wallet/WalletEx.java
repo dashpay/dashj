@@ -295,11 +295,15 @@ public class WalletEx extends Wallet {
         }
     }
 
-    HashSet<TransactionOutPoint> lockedCoinsSet = Sets.newHashSet();
+    protected HashSet<TransactionOutPoint> lockedCoinsSet = Sets.newHashSet();
     public boolean isLockedCoin(Sha256Hash hash, long index) {
+        TransactionOutPoint outPoint = new TransactionOutPoint(params, index, hash);
+        return isLockedCoin(outPoint);
+    }
+
+    public boolean isLockedCoin(TransactionOutPoint outPoint) {
         lock.lock();
         try {
-            TransactionOutPoint outPoint = new TransactionOutPoint(params, index, hash);
             return lockedCoinsSet.contains(outPoint);
         } finally {
             lock.unlock();
