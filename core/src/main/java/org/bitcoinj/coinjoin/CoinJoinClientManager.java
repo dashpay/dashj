@@ -57,6 +57,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MAX;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MIN;
 
@@ -109,6 +110,12 @@ public class CoinJoinClientManager {
     }
 
     public int cachedNumBlocks = Integer.MAX_VALUE;    // used for the overview screen
+
+    public CoinJoinClientManager(Wallet wallet) {
+        checkArgument(wallet instanceof WalletEx);
+        mixingWallet = (WalletEx) wallet;
+        context = wallet.getContext();
+    }
 
     public CoinJoinClientManager(WalletEx wallet) {
         mixingWallet = wallet;
