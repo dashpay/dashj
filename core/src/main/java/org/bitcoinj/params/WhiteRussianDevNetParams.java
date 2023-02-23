@@ -23,24 +23,37 @@ public class WhiteRussianDevNetParams extends DevNetParams {
     private static final String DEVNET_NAME = "white-russian";
 
     private static final String[] MASTERNODES = new String[]{
-        "35.85.152.110",
-        "34.209.13.56",
-        "52.42.93.34",
-        "35.87.154.139",
-        "35.92.216.172",
-        "34.222.169.49",
-        "52.27.159.100",
-        "35.90.131.248",
-        "34.211.144.169",
-        "35.163.17.85",
-        "52.26.67.115",
-        "35.92.6.130",
-        "54.191.109.168",
-        "52.39.100.224",
-        "54.200.39.51",
-        "54.185.210.60",
-        "35.89.197.145",
-        "18.246.65.63",
+        "34.222.50.127",
+        "54.184.88.196",
+        "34.220.160.44",
+        "35.88.208.132",
+        "54.201.94.25",
+        "35.91.0.64",
+        "34.212.225.222",
+        "35.91.107.251",
+        "18.236.108.59",
+        "18.237.168.207",
+        "52.42.161.19",
+        "34.216.240.176",
+        "34.212.169.34",
+        "34.212.20.156",
+        "34.210.76.97",
+        "34.215.99.247",
+        "35.165.211.75",
+        "35.91.200.106",
+        "35.167.103.31",
+        "54.188.68.5",
+        "35.89.166.103",
+        "52.25.73.15",
+        "54.212.27.211",
+        "54.149.165.217",
+        "35.88.194.155",
+        "34.222.123.215",
+        "35.89.113.194",
+        "35.167.24.233",
+        "35.160.143.192",
+        "54.186.59.239",
+
 
     };
 
@@ -56,9 +69,8 @@ public class WhiteRussianDevNetParams extends DevNetParams {
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024;
-        llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_DEVNET;
+        llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_DEVNET_PLATFORM;
         llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_DEVNET;
-        addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024);
     }
 
     private static WhiteRussianDevNetParams instance;

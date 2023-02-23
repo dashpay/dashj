@@ -41,8 +41,9 @@ public class LLMQParameters {
         LLMQ_TEST_INSTANTSEND(104), // 3 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestinstantsendparams is used
 
         // for devnets only. rotated version (v2) for devnets
-        LLMQ_DEVNET_DIP0024(105); // 8 members, 4 (50%) threshold, one per hour. Params might differ when -llmqdevnetparams is used
-
+        LLMQ_DEVNET_DIP0024(105), // 8 members, 4 (50%) threshold, one per hour. Params might differ when -llmqdevnetparams is used
+        LLMQ_TEST_PLATFORM(106), // 3 members, 2 (66%) threshold, one per hour.
+        LLMQ_DEVNET_PLATFORM(107); // 12 members, 8 (67%) threshold, one per hour.
         final int value;
         LLMQType(int value) {
             this.value = value;
@@ -114,6 +115,10 @@ public class LLMQParameters {
                 8, 6, 4, 48, 2, 12,
                 20, 7, 2, 4, 4));
 
+        availableLlmqs.put(LLMQType.LLMQ_DEVNET_PLATFORM, new LLMQParameters(LLMQType.LLMQ_DEVNET_DIP0024, "llmq_devnet_platform",
+                12, 9, 8, 24, 2, 10,
+                18, 7, 4, 5, 6));
+
         availableLlmqs.put(LLMQType.LLMQ_50_60, new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",
                 50, 40, 30, 24, 2, 10,
                 18,40, 24, 25, 25));
@@ -135,6 +140,10 @@ public class LLMQParameters {
                 20, 2, 2, 3, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_TEST_INSTANTSEND, new LLMQParameters(LLMQType.LLMQ_TEST_INSTANTSEND, "llmq_test_instantsend",
+                3, 2, 2, 24, 2, 10,
+                18, 2, 2, 4, 3));
+
+        availableLlmqs.put(LLMQType.LLMQ_TEST_PLATFORM, new LLMQParameters(LLMQType.LLMQ_TEST_INSTANTSEND, "llmq_test_platform",
                 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 4, 3));
 

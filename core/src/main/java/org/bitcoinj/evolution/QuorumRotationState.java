@@ -140,7 +140,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     }
 
     void finishInitialization() {
-        lastRequest = new QuorumUpdateRequest<>(new GetQuorumRotationInfo(params, Lists.newArrayList(), Sha256Hash.ZERO_HASH, false));
+        lastRequest = new QuorumUpdateRequest<>(new GetQuorumRotationInfo(params, Lists.newArrayList(), Sha256Hash.ZERO_HASH, true));
         llmqType = params.getLlmqDIP0024InstantSend();
         syncOptions = MasternodeListSyncOptions.SYNC_MINIMUM;
     }
@@ -446,7 +446,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             }
             ArrayList<Sha256Hash> baseBlockHashes = Lists.newArrayList(set);
 
-            return new GetQuorumRotationInfo(context.getParams(), baseBlockHashes, requestBlock.getHeader().getHash(), false);
+            return new GetQuorumRotationInfo(context.getParams(), baseBlockHashes, requestBlock.getHeader().getHash(), true);
         } catch (BlockStoreException x) {
             throw new RuntimeException(x);
         }
