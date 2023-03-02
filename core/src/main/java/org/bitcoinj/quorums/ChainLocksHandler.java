@@ -85,7 +85,10 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     }
 
     public void close() {
-        this.blockChain.removeNewBestBlockListener(this.newBestBlockListener);
+        if (blockChain != null) {
+            blockChain.removeNewBestBlockListener(this.newBestBlockListener);
+        }
+        blockChain = null;
         super.close();
     }
 
