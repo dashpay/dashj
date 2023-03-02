@@ -246,6 +246,8 @@ public class MasternodeGroup extends PeerGroup {
                 } finally {
                     lock.unlock();
                 }
+                //TODO: what if this disconnects the wrong one
+                updateMaxConnections();
                 peer.close();
                 return true;
             }
@@ -274,8 +276,6 @@ public class MasternodeGroup extends PeerGroup {
                 pendingMasternodesLock.unlock();
             }
         }
-        //TODO: what if this disconnects the wrong one
-        updateMaxConnections();
         checkMasternodesWithoutSessions();
     }
 
@@ -358,6 +358,7 @@ public class MasternodeGroup extends PeerGroup {
         } finally {
             pendingMasternodesLock.unlock();
         }
+        log.info("need to drop {} masternodes", masternodesToDrop.size());
         masternodesToDrop.forEach(new Consumer<Peer>() {
             @Override
             public void accept(Peer peer) {
