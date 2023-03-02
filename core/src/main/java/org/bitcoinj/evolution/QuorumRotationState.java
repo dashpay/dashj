@@ -609,19 +609,19 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
                 builder.append(" 3Cmns[");
                 for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinus3C.get(i)) {
-                    builder.append(m.getProTxHash()).append(" | ");
+                    builder.append(m.getProTxHash().toString().substring(0,4)).append("|");
                 }
                 builder.append(" ] 2Cmns[");
                 for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinus2C.get(i)) {
-                    builder.append(m.getProTxHash()).append(" | ");
+                    builder.append(m.getProTxHash().toString().substring(0,4)).append("|");
                 }
-                builder.append(" ] 1Cmns[");
+                builder.append(" ] Cmns[");
                 for (SimplifiedMasternodeListEntry m : previousQuarters.quarterHMinusC.get(i)) {
-                    builder.append(m.getProTxHash()).append(" | ");
+                    builder.append(m.getProTxHash().toString().substring(0,4)).append("|");
                 }
                 builder.append(" ] new[");
                 for (SimplifiedMasternodeListEntry m : newQuarterMembers.get(i)) {
-                    builder.append(m.getProTxHash()).append(" | ");
+                    builder.append(m.getProTxHash().toString().substring(0, 4)).append("|");
                 }
                 builder.append(" ]");
                 log.info("QuarterComposition h[{}] i[{}]:{}", quorumBaseBlock.getHeight(), i, builder.toString());
@@ -650,7 +650,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 StringBuilder ss = new StringBuilder();
                 ss.append(" [");
                 for (Masternode m : quorumMembers.get(i)) {
-                    ss.append(m.getProTxHash().toString()/*.substring(0, 4)*/).append(" | ");
+                    ss.append(m.getProTxHash().toString().substring(0,4)).append("|");
                 }
                 ss.append("]");
                 log.info("QuorumComposition h[{}] i[{}]:{}\n", quorumBaseBlock.getHeight(), i, ss);
@@ -713,25 +713,31 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             SimplifiedMasternodeList MnsUsedAtH = new SimplifiedMasternodeList(params);
             SimplifiedMasternodeList MnsNotUsedAtH = new SimplifiedMasternodeList(params);
             ArrayList<SimplifiedMasternodeList> MnsUsedAtHIndex = Lists.newArrayListWithCapacity(llmqParameters.getSigningActiveQuorumCount());
+
+            boolean skipRemovedMNs = params.isV19Active(quorumBaseBlock) || params.getId().equals(NetworkParameters.ID_TESTNET);
+
             for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
                 MnsUsedAtHIndex.add(new SimplifiedMasternodeList(params));
             }
 
             for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
                 for (SimplifiedMasternodeListEntry mn : previousQuarters.quarterHMinusC.get(i)) {
-                    if (mn.isValid()) {
+                    boolean skip = skipRemovedMNs && !allMns.containsMN(mn.proRegTxHash);
+                    if (!skip && allMns.isValid(mn.proRegTxHash)) {
                         MnsUsedAtH.addMN(mn);
                         MnsUsedAtHIndex.get(i).addMN(mn);
                     }
                 }
                 for (SimplifiedMasternodeListEntry mn : previousQuarters.quarterHMinus2C.get(i)) {
-                    if (mn.isValid()) {
+                    boolean skip = skipRemovedMNs && !allMns.containsMN(mn.proRegTxHash);
+                    if (!skip && allMns.isValid(mn.proRegTxHash)) {
                         MnsUsedAtH.addMN(mn);
                         MnsUsedAtHIndex.get(i).addMN(mn);
                     }
                 }
                 for (SimplifiedMasternodeListEntry mn : previousQuarters.quarterHMinus3C.get(i)) {
-                    if (mn.isValid()) {
+                    boolean skip = skipRemovedMNs && !allMns.containsMN(mn.proRegTxHash);
+                    if (!skip && allMns.isValid(mn.proRegTxHash)) {
                         MnsUsedAtH.addMN(mn);
                         MnsUsedAtHIndex.get(i).addMN(mn);
                     }
@@ -760,7 +766,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 StringBuilder ss = new StringBuilder();
                 ss.append(" [");
                 for (Masternode m : sortedCombinedMnsList) {
-                    ss.append(m.getProTxHash().toString(), 0, 4).append(" | ");
+                    ss.append(m.getProTxHash().toString(), 0, 4).append("|");
                 }
                 ss.append("]");
                 log.info("BuildNewQuorumQuarterMembers h[{}] {}\n", quorumBaseBlock.getHeight(), ss);
@@ -770,11 +776,19 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             int firstSkippedIndex = 0;
             int idx = 0;
             for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
+                int usedMNsCount = MnsUsedAtHIndex.get(i).getAllMNsCount();
+                boolean updated = false;
+                int initialLoopIndex = idx;
                 while (quarterQuorumMembers.get(i).size() < quarterSize) {
+                    boolean skip = true;
                     Masternode mn = sortedCombinedMnsList.get(idx);
                     if (!MnsUsedAtHIndex.get(i).containsMN(mn.getProTxHash())) {
+                        MnsUsedAtHIndex.get(i).addMN((SimplifiedMasternodeListEntry) sortedCombinedMnsList.get(idx));
                         quarterQuorumMembers.get(i).add((SimplifiedMasternodeListEntry) mn);
-                    } else {
+                        updated = true;
+                        skip = false;
+                    }
+                    if (skip) {
                         if (firstSkippedIndex == 0) {
                             firstSkippedIndex = idx;
                             skipList.add(idx);
@@ -785,6 +799,15 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                     idx++;
                     if (idx == sortedCombinedMnsList.size()) {
                         idx = 0;
+                    }
+                    if (idx == initialLoopIndex) {
+                        // we made full "while" loop
+                        if (!updated) {
+                            // there are not enough MNs, there is nothing we can do here
+                            return new ArrayList<>(nQuorums);
+                        }
+                        // reset and try again
+                        updated = false;
                     }
                 }
             }
