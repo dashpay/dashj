@@ -390,6 +390,7 @@ public class Context {
             blockChain.close();
             if (headerChain != null)
                 headerChain.close();
+            peerGroup = null;
         }
     }
 
