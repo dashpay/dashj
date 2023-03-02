@@ -111,10 +111,12 @@ public class CoinJoinManager {
     public void doMaintenance() {
         if (CoinJoinClientOptions.isEnabled()) {
             // report masternode group
-            tick++;
-            if (tick % 10 == 0) {
-                log.info(masternodeGroup.toString());
-                log.info(masternodeGroup.toString());
+            if (masternodeGroup != null) {
+                tick++;
+                if (tick % 10 == 0) {
+                    log.info(masternodeGroup.toString());
+                    log.info(masternodeGroup.toString());
+                }
             }
             coinJoinClientQueueManager.doMaintenance();
 
@@ -171,7 +173,9 @@ public class CoinJoinManager {
     }
 
     public void close() {
-        blockChain.removeNewBestBlockListener(newBestBlockListener);
+        if (blockChain != null) {
+            blockChain.removeNewBestBlockListener(newBestBlockListener);
+        }
     }
 
     public boolean isMasternodeOrDisconnectRequested(MasternodeAddress address) {

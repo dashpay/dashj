@@ -46,6 +46,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -76,6 +77,7 @@ public class CoinJoinClientManager {
     private final AtomicBoolean isMixing = new AtomicBoolean(false);
     private boolean stopOnNothingToDo = false;
     private SettableFuture<Boolean> mixingFinished;
+    private final EnumSet<PoolStatus> continueMixingOnStatus = EnumSet.noneOf(PoolStatus.class);
 
     private int cachedLastSuccessBlock = 0;
     private int minBlocksToWait = 1; // how many blocks to wait for after one successful mixing tx in non-multisession mode
@@ -422,7 +424,7 @@ public class CoinJoinClientManager {
         }
 
         // are all sessions idle?
-        boolean isIdle = true;
+        boolean isIdle = !deqSessions.isEmpty(); // false if no sessions created yet
         for (CoinJoinClientSession session : deqSessions) {
             if (!session.hasNothingToDo()) {
                 isIdle = false;
@@ -431,7 +433,12 @@ public class CoinJoinClientManager {
         }
         // if all sessions idle, then trigger stop mixing
         if (isIdle) {
-            triggerMixingFinished();
+            List<PoolStatus> statuses = getSessionsStatus();
+            for (PoolStatus status : statuses) {
+                if (status == PoolStatus.FINISHED || (status.isError() && !continueMixingOnStatus.contains(status)))
+                    triggerMixingFinished();
+            }
+
         }
     }
 
@@ -594,5 +601,13 @@ public class CoinJoinClientManager {
             sessionsStatus.add(session.getStatus());
         }
         return sessionsStatus;
+    }
+
+    public EnumSet<PoolStatus> getContinueMixingOnStatus() {
+        return continueMixingOnStatus;
+    }
+
+    public void addContinueMixingOnError(PoolStatus error) {
+        continueMixingOnStatus.add(error);
     }
 }

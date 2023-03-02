@@ -96,6 +96,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private Masternode mixingMasternode;
     private Transaction txMyCollateral; // client side collateral
+    private boolean isMyCollateralValid = false;
     private PendingDsaRequest pendingDsaRequest;
 
     private final KeyHolderStorage keyHolderStorage; // storage for keys used in PrepareDenominate
@@ -538,7 +539,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             strReason.append("Unable to sign collateral transaction!");
             return false;
         }
-
+        isMyCollateralValid = true;
         return true;
     }
 
@@ -850,6 +851,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 switch (statusUpdate.getMessageID()) {
                     case ERR_INVALID_COLLATERAL:
                         log.error("coinjoin: collateral valid: {}", CoinJoin.isCollateralValid(txMyCollateral));
+                        isMyCollateralValid = false;
                         setNull(); // for now lets disconnect.  TODO: Why is the collateral invalid?
                         break;
                     default:
@@ -1368,7 +1370,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     return false;
                 }
             } else {
-                if (!CoinJoin.isCollateralValid(txMyCollateral)) {
+                if (!isMyCollateralValid || !CoinJoin.isCollateralValid(txMyCollateral)) {
                     log.info("coinjoin: invalid collateral, recreating...");
                     if (!createCollateralTransaction(txMyCollateral, strReason)) {
                         log.info("coinjoin: create collateral error: {}", strReason);
