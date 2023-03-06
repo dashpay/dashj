@@ -17,6 +17,7 @@
 package org.bitcoinj.jni;
 
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 
 import java.util.List;
@@ -30,5 +31,5 @@ public class NativeKeyChainEventListener implements KeyChainEventListener {
     public long ptr;
 
     @Override
-    public native void onKeysAdded(List<ECKey> keys);
+    public native void onKeysAdded(List<IKey> keys);
 }

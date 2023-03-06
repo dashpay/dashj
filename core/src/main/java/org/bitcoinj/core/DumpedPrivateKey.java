@@ -23,6 +23,8 @@ import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
+import org.bitcoinj.crypto.factory.KeyFactory;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.params.Networks;
 
 /**
@@ -68,7 +70,7 @@ public class DumpedPrivateKey extends PrefixedChecksummedBytes {
     }
 
     // Used by ECKey.getPrivateKeyEncoded()
-    DumpedPrivateKey(NetworkParameters params, byte[] keyBytes, boolean compressed) {
+    public DumpedPrivateKey(NetworkParameters params, byte[] keyBytes, boolean compressed) {
         this(params, encode(keyBytes, compressed));
     }
 
@@ -99,6 +101,10 @@ public class DumpedPrivateKey extends PrefixedChecksummedBytes {
      */
     public ECKey getKey() {
         return ECKey.fromPrivate(Arrays.copyOf(bytes, 32), isPubKeyCompressed());
+    }
+
+    public IKey getKey(KeyFactory keyFactory) {
+        return keyFactory.fromPrivate(Arrays.copyOf(bytes, 32), isPubKeyCompressed());
     }
 
     /**
