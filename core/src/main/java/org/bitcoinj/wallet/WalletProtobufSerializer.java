@@ -22,6 +22,9 @@ import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.BLSLazySignature;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
+import org.bitcoinj.crypto.factory.BLSKeyFactory;
+import org.bitcoinj.crypto.factory.ECKeyFactory;
+import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.quorums.InstantSendLock;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptException;
@@ -35,6 +38,10 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.WireFormat;
 
+import org.bitcoinj.wallet.bls.AnyAuthenticationKeyChain;
+import org.bitcoinj.wallet.bls.AnyAuthenticationKeyChainFactory;
+import org.bitcoinj.wallet.bls.AnyDeterministicKeyChain;
+import org.bitcoinj.wallet.bls.AnyKeyChainFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -269,6 +276,13 @@ public class WalletProtobufSerializer {
             extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.ECDSA);
             extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.MASTERNODE_VOTING);
             extendedKeyChainBuilder.addAllKey(wallet.getProviderVoterKeyChain().serializeToProtobuf());
+            extendedKeyChains.add(extendedKeyChainBuilder.build());
+        }
+        if(wallet.getProviderOperatorKeyChain() != null) {
+            Protos.ExtendedKeyChain.Builder extendedKeyChainBuilder = Protos.ExtendedKeyChain.newBuilder();
+            extendedKeyChainBuilder.setKeyType(Protos.ExtendedKeyChain.KeyType.BLS);
+            extendedKeyChainBuilder.setType(Protos.ExtendedKeyChain.ExtendedKeyChainType.MASTERNODE_OPERATOR);
+            extendedKeyChainBuilder.addAllKey(wallet.getProviderOperatorKeyChain().serializeToProtobuf());
             extendedKeyChains.add(extendedKeyChainBuilder.build());
         }
         walletBuilder.addAllExtKeyChains(extendedKeyChains);
@@ -636,7 +650,7 @@ public class WalletProtobufSerializer {
         }
 
         if(walletProto.getExtKeyChainsCount() > 0) {
-            AuthenticationKeyChainFactory factory = new AuthenticationKeyChainFactory();
+            AnyKeyChainFactory factory = new AnyAuthenticationKeyChainFactory();
             KeyCrypter keyCrypter = null;
             if (walletProto.hasEncryptionParameters()) {
                 Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
@@ -674,16 +688,27 @@ public class WalletProtobufSerializer {
                     default:
                         type = AuthenticationKeyChain.KeyChainType.INVALID_KEY_CHAIN;
                 }
-                if(extendedKeyChain.getKeyType() == Protos.ExtendedKeyChain.KeyType.ECDSA) {
-                    if (extendedKeyChain.getKeyCount() > 0) {
-                        List<DeterministicKeyChain> chains = AuthenticationKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory);
-                        if (!chains.isEmpty()) {
-                            AuthenticationKeyChain chain = (AuthenticationKeyChain)chains.get(0);
-                            chain.setHardenedChildren(type == AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
-                            wallet.setAuthenticationKeyChain(chain, type);
-                        }
+                //if(extendedKeyChain.getKeyType() == Protos.ExtendedKeyChain.KeyType.ECDSA) {
+                if (extendedKeyChain.getKeyCount() > 0) {
+                    KeyFactory keyFactory;
+                    switch (extendedKeyChain.getKeyType()) {
+                        case ECDSA:
+                            keyFactory = ECKeyFactory.get();
+                            break;
+                        case BLS:
+                            keyFactory = BLSKeyFactory.get();
+                            break;
+                        default:
+                            throw new UnreadableWalletException("Unknown extended key type found:" + extendedKeyChain.getKeyType());
+                    }
+                    List<AnyDeterministicKeyChain> chains = AnyAuthenticationKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory, keyFactory);
+                    if (!chains.isEmpty()) {
+                        AnyAuthenticationKeyChain chain = (AnyAuthenticationKeyChain)chains.get(0);
+                        chain.setHardenedChildren(type == AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
+                        wallet.setAuthenticationKeyChain(chain, type);
                     }
                 }
+                //}
             }
         }
 

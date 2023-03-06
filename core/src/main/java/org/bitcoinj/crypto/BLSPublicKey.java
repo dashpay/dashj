@@ -182,4 +182,12 @@ public class BLSPublicKey extends BLSAbstractObject {
         }
         return new BLSPublicKey(DASHJBLS.multiply(sk.privateKey, pk.publicKeyImpl));
     }
+
+    public long getFingerprint() {
+        return publicKeyImpl.getFingerprint(false);
+    }
+
+    public long getFingerprint(boolean legacy) {
+        return publicKeyImpl.getFingerprint(legacy);
+    }
 }

@@ -52,6 +52,10 @@ public class BLSSignature extends BLSAbstractObject {
         updateHash();
     }
 
+    public static BLSSignature dummy() {
+        return new BLSSignature(emptySignatureBytes);
+    }
+
     @Override
     boolean internalSetBuffer(byte[] buffer) {
         try {
@@ -235,6 +239,10 @@ public class BLSSignature extends BLSAbstractObject {
             // representation
             return false;
         }
+        return true;
+    }
+
+    public boolean isCanonical() {
         return true;
     }
 }

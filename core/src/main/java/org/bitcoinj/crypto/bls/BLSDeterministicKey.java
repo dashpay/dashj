@@ -1,6 +1,7 @@
 /*
  * Copyright 2013 Matija Mazi.
  * Copyright 2014 Andreas Schildbach
+ * Copyright 2023 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,28 +16,46 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto;
-
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.bls.BLSHDKeyDerivation;
-import org.bitcoinj.crypto.factory.ECKeyFactory;
-import org.bitcoinj.crypto.factory.KeyFactory;
-import org.bitcoinj.script.Script;
+package org.bitcoinj.crypto.bls;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Base58;
+import org.bitcoinj.core.Context;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Utils;
+import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSSecretKey;
+import org.bitcoinj.crypto.BLSSignature;
+import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicHierarchy;
+import org.bitcoinj.crypto.EncryptedData;
+import org.bitcoinj.crypto.ExtendedChildNumber;
+import org.bitcoinj.crypto.HDKeyDerivation;
+import org.bitcoinj.crypto.HDUtils;
+import org.bitcoinj.crypto.IDeterministicKey;
+import org.bitcoinj.crypto.KeyCrypter;
+import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.crypto.factory.BLSKeyFactory;
+import org.bitcoinj.crypto.factory.KeyFactory;
+import org.bitcoinj.script.Script;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.math.ec.ECPoint;
+import org.dashj.bls.ExtendedPrivateKey;
+import org.dashj.bls.ExtendedPublicKey;
 
 import javax.annotation.Nullable;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.core.Utils.HEX;
-import static com.google.common.base.Preconditions.*;
 
 /**
  * A deterministic key is a node in a {@link DeterministicHierarchy}. As per
@@ -44,71 +63,90 @@ import static com.google.common.base.Preconditions.*;
  * (key, chaincode). If you know its path in the tree and its chain code you can derive more keys from this. To obtain
  * one of these, you can call {@link HDKeyDerivation#createMasterPrivateKey(byte[])}.
  */
-public class DeterministicKey extends ECKey implements IDeterministicKey {
-
-    /** Sorts deterministic keys in the order of their child number. That's <i>usually</i> the order used to derive them. */
-    public static final Comparator<ECKey> CHILDNUM_ORDER = new Comparator<ECKey>() {
-        @Override
-        public int compare(ECKey k1, ECKey k2) {
-            ChildNumber cn1 = ((DeterministicKey) k1).getChildNumber();
-            ChildNumber cn2 = ((DeterministicKey) k2).getChildNumber();
-            return cn1.compareTo(cn2);
-        }
-    };
-
-    private final DeterministicKey parent;
+public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
+    private final BLSDeterministicKey parent;
     private final ImmutableList<ChildNumber> childNumberPath;
     private final int depth;
     private int parentFingerprint; // 0 if this key is root node of key hierarchy
 
     /** 32 bytes */
     private final byte[] chainCode;
+    /* package */ ExtendedPrivateKey extendedPrivateKey;
+    /* package */ ExtendedPublicKey extendedPublicKey;
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
-                            byte[] chainCode,
-                            LazyECPoint publicAsPoint,
-                            @Nullable BigInteger priv,
-                            @Nullable DeterministicKey parent) {
-        super(priv, compressPoint(checkNotNull(publicAsPoint)));
+    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+                               byte[] chainCode,
+                               BLSPublicKey pub,
+                               @Nullable BLSSecretKey priv,
+                               @Nullable IDeterministicKey parent) {
+        super(priv, pub);
+        checkArgument(chainCode.length == 32);
+        if (parent != null) {
+            this.parent = (BLSDeterministicKey) parent;
+        } else {
+            this.parent = null;
+        }
+        this.childNumberPath = checkNotNull(childNumberPath);
+        this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
+        this.depth = parent == null ? 0 : parent.getDepth() + 1;
+        this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
+        byte[] bytes;
+        if (priv != null) {
+            bytes = serialize(Context.get().getParams(), false, Script.ScriptType.P2PKH);
+            extendedPrivateKey = ExtendedPrivateKey.fromBytes(bytes);
+            extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
+        } else {
+            bytes = serialize(Context.get().getParams(), true, Script.ScriptType.P2PKH);
+            extendedPrivateKey = null;
+            extendedPublicKey = ExtendedPublicKey.fromBytes(bytes);
+        }
+    }
+
+    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+                               byte[] chainCode,
+                               byte[] pub,
+                               @Nullable byte[] priv,
+                               @Nullable BLSDeterministicKey parent) {
+        this(childNumberPath, chainCode, new BLSPublicKey(pub), new BLSSecretKey(priv), parent);
+    }
+
+    /** Constructs a key from its components. This is not normally something you should use. */
+    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+                               byte[] chainCode,
+                               byte[] priv,
+                               @Nullable BLSDeterministicKey parent) {
+        super(new BLSSecretKey(priv), new BLSSecretKey(priv).getPublicKey());
         checkArgument(chainCode.length == 32);
         this.parent = parent;
         this.childNumberPath = checkNotNull(childNumberPath);
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
-    }
-
-    public DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
-                            byte[] chainCode,
-                            ECPoint publicAsPoint,
-                            boolean compressed,
-                            @Nullable BigInteger priv,
-                            @Nullable DeterministicKey parent) {
-        this(childNumberPath, chainCode, new LazyECPoint(publicAsPoint, compressed), priv, parent);
+        byte[] bytes = serialize(Context.get().getParams(), false, Script.ScriptType.P2PKH);
+        extendedPrivateKey = ExtendedPrivateKey.fromBytes(bytes);
+        extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
     }
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
-                            byte[] chainCode,
-                            BigInteger priv,
-                            @Nullable DeterministicKey parent) {
-        super(priv, ECKey.publicPointFromPrivate(priv), true);
-        checkArgument(chainCode.length == 32);
-        this.parent = parent;
-        this.childNumberPath = checkNotNull(childNumberPath);
-        this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
-        this.depth = parent == null ? 0 : parent.depth + 1;
-        this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
+    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+                               byte[] chainCode,
+                               KeyCrypter crypter,
+                               byte[] pub,
+                               EncryptedData priv,
+                               @Nullable BLSDeterministicKey parent) {
+        this(childNumberPath, chainCode, pub, null, parent);
+        this.encryptedPrivateKey = checkNotNull(priv);
+        this.keyCrypter = checkNotNull(crypter);
     }
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
-                            byte[] chainCode,
-                            KeyCrypter crypter,
-                            LazyECPoint pub,
-                            EncryptedData priv,
-                            @Nullable DeterministicKey parent) {
+    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+                               byte[] chainCode,
+                               KeyCrypter crypter,
+                               BLSPublicKey pub,
+                               EncryptedData priv,
+                               @Nullable BLSDeterministicKey parent) {
         this(childNumberPath, chainCode, pub, null, parent);
         this.encryptedPrivateKey = checkNotNull(priv);
         this.keyCrypter = checkNotNull(crypter);
@@ -119,7 +157,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
      * root node of the key hierarchy.  Raise an exception if the arguments are inconsistent.
      * This method exists to avoid code repetition in the constructors.
      */
-    private int ascertainParentFingerprint(DeterministicKey parentKey, int parentFingerprint)
+    private int ascertainParentFingerprint(BLSDeterministicKey parentKey, int parentFingerprint)
     throws IllegalArgumentException {
         if (parentFingerprint != 0) {
             if (parent != null)
@@ -135,13 +173,13 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
      * information about its parent key.  Invoked when deserializing, but otherwise not something that
      * you normally should use.
      */
-    public DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
-                            byte[] chainCode,
-                            LazyECPoint publicAsPoint,
-                            @Nullable DeterministicKey parent,
-                            int depth,
-                            int parentFingerprint) {
-        super(null, compressPoint(checkNotNull(publicAsPoint)));
+    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+                               byte[] chainCode,
+                               byte[] publicAsPoint,
+                               @Nullable BLSDeterministicKey parent,
+                               int depth,
+                               int parentFingerprint) {
+        super(null, publicAsPoint);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
         this.childNumberPath = checkNotNull(childNumberPath);
@@ -155,13 +193,13 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
      * information about its parent key.  Invoked when deserializing, but otherwise not something that
      * you normally should use.
      */
-    public DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
-                            byte[] chainCode,
-                            BigInteger priv,
-                            @Nullable DeterministicKey parent,
-                            int depth,
-                            int parentFingerprint) {
-        super(priv, ECKey.publicPointFromPrivate(priv), true);
+    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+                               byte[] chainCode,
+                               BLSSecretKey priv,
+                               @Nullable BLSDeterministicKey parent,
+                               int depth,
+                               int parentFingerprint) {
+        super(priv, priv.getPublicKey());
         checkArgument(chainCode.length == 32);
         this.parent = parent;
         this.childNumberPath = checkNotNull(childNumberPath);
@@ -170,16 +208,77 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
     }
 
-    
+
     /** Clones the key */
-    public DeterministicKey(DeterministicKey keyToClone, DeterministicKey newParent) {
-        super(keyToClone.priv, keyToClone.pub.get(), keyToClone.pub.isCompressed());
+    public BLSDeterministicKey(BLSDeterministicKey keyToClone, BLSDeterministicKey newParent) {
+        super(keyToClone.extendedPrivateKey != null ? keyToClone.priv.bitcoinSerialize() : null,
+                keyToClone.extendedPrivateKey != null ?keyToClone.pub.bitcoinSerialize() : null);
+        if (keyToClone.priv != null) {
+            this.extendedPrivateKey = ExtendedPrivateKey.fromBytes(keyToClone.extendedPrivateKey.serialize());
+            this.extendedPublicKey = ExtendedPublicKey.fromBytes(keyToClone.extendedPublicKey.serialize());
+        } else {
+            this.extendedPrivateKey = null;
+            this.extendedPublicKey = ExtendedPublicKey.fromBytes(keyToClone.extendedPublicKey.serialize());
+        }
         this.parent = newParent;
         this.childNumberPath = keyToClone.childNumberPath;
         this.chainCode = keyToClone.chainCode;
         this.encryptedPrivateKey = keyToClone.encryptedPrivateKey;
         this.depth = this.childNumberPath.size();
         this.parentFingerprint = this.parent.getFingerprint();
+    }
+
+    /** Clones the key */
+    public BLSDeterministicKey(byte[] seed) {
+        extendedPrivateKey = ExtendedPrivateKey.fromSeed(seed);
+        extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
+        priv = new BLSSecretKey(extendedPrivateKey.getPrivateKey());
+        pub = new BLSPublicKey(extendedPrivateKey.getPublicKey());
+        this.parent = null;
+        this.childNumberPath = ImmutableList.<ChildNumber>of();
+        this.chainCode = extendedPrivateKey.getChainCode().serialize();
+        this.encryptedPrivateKey = null;
+        this.depth = childNumberPath.size();
+        this.parentFingerprint = 0;
+    }
+
+    public BLSDeterministicKey(ExtendedPrivateKey extendedPrivateKey, @Nullable BLSDeterministicKey parent) {
+        this.extendedPrivateKey = extendedPrivateKey;
+        extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
+        priv = new BLSSecretKey(extendedPrivateKey.getPrivateKey());
+        pub = new BLSPublicKey(extendedPrivateKey.getPublicKey());
+        this.parent = parent;
+        long childNumberLong = extendedPrivateKey.getChildNumber();
+        ChildNumber childNumber = new ChildNumber((int)childNumberLong);
+        if (parent != null)
+            this.childNumberPath = HDUtils.append(parent.getPath(), childNumber);
+        else
+            this.childNumberPath = ImmutableList.of(childNumber);
+
+        extendedPrivateKey.getChildNumber();
+        this.chainCode = extendedPrivateKey.getChainCode().serialize();
+        this.encryptedPrivateKey = null;
+        this.depth = extendedPrivateKey.getDepth();
+        this.parentFingerprint = childNumberPath.size();
+    }
+
+    public BLSDeterministicKey(ExtendedPublicKey extendedPublicKey, @Nullable BLSDeterministicKey parent) {
+        this.extendedPrivateKey = null;
+        this.extendedPublicKey = extendedPublicKey;
+        this.priv = null;
+        this.pub = new BLSPublicKey(extendedPublicKey.getPublicKey());
+        this.parent = parent;
+        long childNumberLong = extendedPublicKey.getChildNumber();
+        ChildNumber childNumber = new ChildNumber((int)childNumberLong);
+        if (parent != null)
+            this.childNumberPath = HDUtils.append(parent.getPath(), childNumber);
+        else
+            this.childNumberPath = ImmutableList.of(childNumber);
+
+        this.chainCode = extendedPublicKey.getChainCode().serialize();
+        this.encryptedPrivateKey = null;
+        this.depth = extendedPublicKey.getDepth();
+        this.parentFingerprint = childNumberPath.size();
     }
 
     /**
@@ -207,7 +306,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         return depth;
     }
 
-    /** Returns the last element of the path returned by {@link DeterministicKey#getPath()} */
+    /** Returns the last element of the path returned by {@link BLSDeterministicKey#getPath()} */
     public ChildNumber getChildNumber() {
         return childNumberPath.size() == 0 ? ChildNumber.ZERO : childNumberPath.get(childNumberPath.size() - 1);
     }
@@ -233,7 +332,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     }
 
     @Nullable
-    public DeterministicKey getParent() {
+    public BLSDeterministicKey getParent() {
         return parent;
     }
 
@@ -247,14 +346,14 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
 
     /**
      * Returns private key bytes, padded with zeros to 33 bytes.
-     * @throws java.lang.IllegalStateException if the private key bytes are missing.
+     * @throws IllegalStateException if the private key bytes are missing.
      */
-    public byte[] getPrivKeyBytes33() {
-        byte[] bytes33 = new byte[33];
-        byte[] priv = getPrivKeyBytes();
-        System.arraycopy(priv, 0, bytes33, 33 - priv.length, priv.length);
-        return bytes33;
-    }
+//    public byte[] getPrivKeyBytes33() {
+//        byte[] bytes33 = new byte[33];
+//        byte[] priv = getPrivKeyBytes();
+//        System.arraycopy(priv, 0, bytes33, 33 - priv.length, priv.length);
+//        return bytes33;
+//    }
 
     /**
      * Returns the same key with the private bytes removed. May return the same instance. The purpose of this is to save
@@ -263,11 +362,11 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
      * key may still be usable for signing and so on, so don't expect it to be a true pubkey-only object! If you want
      * that then you should follow this call with a call to {@link #dropParent()}.
      */
-    public DeterministicKey dropPrivateBytes() {
+    public BLSDeterministicKey dropPrivateBytes() {
         if (isPubKeyOnly())
             return this;
         else
-            return new DeterministicKey(getPath(), getChainCode(), pub, null, parent);
+            return new BLSDeterministicKey(getPath(), getChainCode(), pub, null, parent);
     }
 
     /**
@@ -278,20 +377,15 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
      * regular DeterministicKey will yield a new DeterministicKey that cannot sign or do other things involving the
      * private key at all.</p>
      */
-    public DeterministicKey dropParent() {
-        DeterministicKey key = new DeterministicKey(getPath(), getChainCode(), pub, priv, null);
+    public BLSDeterministicKey dropParent() {
+        BLSDeterministicKey key = new BLSDeterministicKey(getPath(), getChainCode(), pub, priv, null);
         key.parentFingerprint = parentFingerprint;
         return key;
     }
 
     @Override
-    public DeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey, @Nullable IDeterministicKey newParent) throws KeyCrypterException {
-        if (newParent == null) {
-            return encrypt(keyCrypter, aesKey, null);
-        } else {
-            checkArgument(newParent instanceof DeterministicKey);
-            return encrypt(keyCrypter, aesKey, (DeterministicKey) newParent);
-        }
+    public IDeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey, @Nullable IDeterministicKey newParent) throws KeyCrypterException {
+        return null;
     }
 
     static byte[] addChecksum(byte[] input) {
@@ -304,11 +398,11 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     }
 
     @Override
-    public DeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey) throws KeyCrypterException {
+    public BLSDeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey) throws KeyCrypterException {
         throw new UnsupportedOperationException("Must supply a new parent for encryption");
     }
 
-    public DeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey, @Nullable DeterministicKey newParent) throws KeyCrypterException {
+    public BLSDeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey, @Nullable BLSDeterministicKey newParent) throws KeyCrypterException {
         // Same as the parent code, except we construct a DeterministicKey instead of an ECKey.
         checkNotNull(keyCrypter);
         if (newParent != null)
@@ -316,7 +410,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         final byte[] privKeyBytes = getPrivKeyBytes();
         checkState(privKeyBytes != null, "Private key is not available");
         EncryptedData encryptedPrivateKey = keyCrypter.encrypt(privKeyBytes, aesKey);
-        DeterministicKey key = new DeterministicKey(childNumberPath, chainCode, keyCrypter, pub, encryptedPrivateKey, newParent);
+        BLSDeterministicKey key = new BLSDeterministicKey(childNumberPath, chainCode, keyCrypter, pub, encryptedPrivateKey, newParent);
         if (newParent == null)
             key.setCreationTimeSeconds(getCreationTimeSeconds());
         return key;
@@ -366,14 +460,14 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     }
 
     @Override
-    public ECDSASignature sign(Sha256Hash input, @Nullable KeyParameter aesKey) throws KeyCrypterException {
+    public BLSSignature sign(Sha256Hash input, @Nullable KeyParameter aesKey) throws KeyCrypterException {
         if (isEncrypted()) {
             // If the key is encrypted, ECKey.sign will decrypt it first before rerunning sign. Decryption walks the
             // key hierarchy to find the private key (see below), so, we can just run the inherited method.
             return super.sign(input, aesKey);
         } else {
             // If it's not encrypted, derive the private via the parents.
-            final BigInteger privateKey = findOrDerivePrivateKey();
+            final BLSSecretKey privateKey = findOrDerivePrivateKey();
             if (privateKey == null) {
                 // This key is a part of a public-key only hierarchy and cannot be used for signing
                 throw new MissingPrivateKeyException();
@@ -383,13 +477,13 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     }
 
     @Override
-    public DeterministicKey decrypt(KeyCrypter keyCrypter, KeyParameter aesKey) throws KeyCrypterException {
+    public BLSDeterministicKey decrypt(KeyCrypter keyCrypter, KeyParameter aesKey) throws KeyCrypterException {
         checkNotNull(keyCrypter);
         // Check that the keyCrypter matches the one used to encrypt the keys, if set.
         if (this.keyCrypter != null && !this.keyCrypter.equals(keyCrypter))
             throw new KeyCrypterException("The keyCrypter being used to decrypt the key is different to the one that was used to encrypt it");
-        BigInteger privKey = findOrDeriveEncryptedPrivateKey(keyCrypter, aesKey);
-        DeterministicKey key = new DeterministicKey(childNumberPath, chainCode, privKey, parent);
+        BLSSecretKey privKey = findOrDeriveEncryptedPrivateKey(keyCrypter, aesKey);
+        BLSDeterministicKey key = new BLSDeterministicKey(childNumberPath, chainCode, privKey.bitcoinSerialize(), parent);
         if (!Arrays.equals(key.getPubKey(), getPubKey()))
             throw new KeyCrypterException.PublicPrivateMismatch("Provided AES key is wrong");
         if (parent == null)
@@ -398,33 +492,23 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     }
 
     @Override
-    public Object getPubKeyObject() {
-        return getPubKeyPoint();
-    }
-
-    @Override
-    public KeyFactory getKeyFactory() {
-        return ECKeyFactory.get();
-    }
-
-    @Override
-    public DeterministicKey decrypt(KeyParameter aesKey) throws KeyCrypterException {
-        return (DeterministicKey) super.decrypt(aesKey);
+    public BLSDeterministicKey decrypt(KeyParameter aesKey) throws KeyCrypterException {
+        return (BLSDeterministicKey) super.decrypt(aesKey);
     }
 
     // For when a key is encrypted, either decrypt our encrypted private key bytes, or work up the tree asking parents
     // to decrypt and re-derive.
-    private BigInteger findOrDeriveEncryptedPrivateKey(KeyCrypter keyCrypter, KeyParameter aesKey) {
+    private BLSSecretKey findOrDeriveEncryptedPrivateKey(KeyCrypter keyCrypter, KeyParameter aesKey) {
         if (encryptedPrivateKey != null) {
             byte[] decryptedKey = keyCrypter.decrypt(encryptedPrivateKey, aesKey);
-            if (decryptedKey.length != 32)
+            if (decryptedKey.length != BLSSecretKey.BLS_CURVE_SECKEY_SIZE)
                 throw new KeyCrypterException.InvalidCipherText(
                         "Decrypted key must be 32 bytes long, but is " + decryptedKey.length);
-            return new BigInteger(1, decryptedKey);
+            return new BLSSecretKey(decryptedKey);
         }
         // Otherwise we don't have it, but maybe we can figure it out from our parents. Walk up the tree looking for
         // the first key that has some encrypted private key data.
-        DeterministicKey cursor = parent;
+        BLSDeterministicKey cursor = parent;
         while (cursor != null) {
             if (cursor.encryptedPrivateKey != null) break;
             cursor = cursor.parent;
@@ -432,14 +516,14 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         if (cursor == null)
             throw new KeyCrypterException("Neither this key nor its parents have an encrypted private key");
         byte[] parentalPrivateKeyBytes = keyCrypter.decrypt(cursor.encryptedPrivateKey, aesKey);
-        if (parentalPrivateKeyBytes.length != 32)
+        if (parentalPrivateKeyBytes.length != BLSSecretKey.BLS_CURVE_SECKEY_SIZE)
             throw new KeyCrypterException.InvalidCipherText(
                     "Decrypted key must be 32 bytes long, but is " + parentalPrivateKeyBytes.length);
-        return derivePrivateKeyDownwards(cursor, parentalPrivateKeyBytes);
+        return derivePrivateKeyDownwards(cursor, new BLSSecretKey(parentalPrivateKeyBytes));
     }
 
-    private DeterministicKey findParentWithPrivKey() {
-        DeterministicKey cursor = this;
+    private BLSDeterministicKey findParentWithPrivKey() {
+        BLSDeterministicKey cursor = this;
         while (cursor != null) {
             if (cursor.priv != null) break;
             cursor = cursor.parent;
@@ -448,21 +532,23 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     }
 
     @Nullable
-    private BigInteger findOrDerivePrivateKey() {
-        DeterministicKey cursor = findParentWithPrivKey();
+    private BLSSecretKey findOrDerivePrivateKey() {
+        if (priv != null) // does this work?
+            return priv;
+        BLSDeterministicKey cursor = findParentWithPrivKey();
         if (cursor == null)
             return null;
-        return derivePrivateKeyDownwards(cursor, cursor.priv.toByteArray());
+        return derivePrivateKeyDownwards(cursor, cursor.priv);
     }
 
-    private BigInteger derivePrivateKeyDownwards(DeterministicKey cursor, byte[] parentalPrivateKeyBytes) {
-        DeterministicKey downCursor = new DeterministicKey(cursor.childNumberPath, cursor.chainCode,
-                cursor.pub, new BigInteger(1, parentalPrivateKeyBytes), cursor.parent);
+    private BLSSecretKey derivePrivateKeyDownwards(BLSDeterministicKey cursor, BLSSecretKey parentalPrivateKeyBytes) {
+        BLSDeterministicKey downCursor = new BLSDeterministicKey(cursor.childNumberPath, cursor.chainCode,
+                cursor.pub, parentalPrivateKeyBytes, cursor.parent);
         // Now we have to rederive the keys along the path back to ourselves. That path can be found by just truncating
         // our path with the length of the parents path.
         ImmutableList<ChildNumber> path = childNumberPath.subList(cursor.getPath().size(), childNumberPath.size());
         for (ChildNumber num : path) {
-            downCursor = HDKeyDerivation.deriveChildKey(downCursor, num);
+            downCursor = BLSHDKeyDerivation.deriveChildKey(downCursor, num);
         }
         // downCursor is now the same key as us, but with private key bytes.
         // If it's not, it means we tried decrypting with an invalid password and earlier checks e.g. for padding didn't
@@ -477,20 +563,31 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
      * not the "i" value.  If you want the softened derivation, then use instead
      * {@code HDKeyDerivation.deriveChildKey(this, new ChildNumber(child, false))}.
      */
-    public DeterministicKey derive(int child) {
-        return HDKeyDerivation.deriveChildKey(this, new ChildNumber(child, true));
+    public BLSDeterministicKey derive(int child) {
+        return BLSHDKeyDerivation.deriveChildKey(this, new ChildNumber(child, true));
+    }
+
+    public BLSDeterministicKey deriveSoftened(int child) {
+        return BLSHDKeyDerivation.deriveChildKey(this, new ChildNumber(child, false));
     }
 
     /**
      * Returns the private key of this deterministic key. Even if this object isn't storing the private key,
      * it can be re-derived by walking up to the parents if necessary and this is what will happen.
-     * @throws java.lang.IllegalStateException if the parents are encrypted or a watching chain.
+     * @throws IllegalStateException if the parents are encrypted or a watching chain.
      */
     @Override
-    public BigInteger getPrivKey() {
-        final BigInteger key = findOrDerivePrivateKey();
+    public BLSSecretKey getPrivKey() {
+        final BLSSecretKey key = findOrDerivePrivateKey();
         checkState(key != null, "Private key bytes not available");
         return key;
+    }
+
+    public BLSPublicKey getPublicKey() {
+        if (extendedPrivateKey != null)
+            return new BLSPublicKey(extendedPrivateKey.getPublicKey());
+        else
+            return new BLSPublicKey(extendedPublicKey.getPublicKey());
     }
 
     @Deprecated
@@ -504,7 +601,8 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     }
 
     private byte[] serialize(NetworkParameters params, boolean pub, Script.ScriptType outputScriptType) {
-        ByteBuffer ser = ByteBuffer.allocate(78);
+        int size = pub ? 93 : 77;
+        ByteBuffer ser = ByteBuffer.allocate(size);
         if (outputScriptType == Script.ScriptType.P2PKH)
             ser.putInt(pub ? params.getBip32HeaderP2PKHpub() : params.getBip32HeaderP2PKHpriv());
         else
@@ -513,9 +611,14 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         ser.putInt(getParentFingerprint());
         ser.putInt(getChildNumber().i());
         ser.put(getChainCode());
-        ser.put(pub ? getPubKey() : getPrivKeyBytes33());
-        checkState(ser.position() == 78);
+        ser.put(pub ? getPubKey() : getPrivKeyBytes());
+        checkState(ser.position() == size);
         return ser.array();
+/*        if (pub) {
+            return extendedPublicKey.serialize();
+        } else {
+            return extendedPrivateKey.serialize();
+        }*/
     }
 
     public String serializePubB58(NetworkParameters params, Script.ScriptType outputScriptType) {
@@ -527,13 +630,13 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     }
 
     @Override
-    public DeterministicKey deriveChildKey(ChildNumber childNumber) {
-        return HDKeyDerivation.deriveChildKey(this, childNumber);
+    public BLSDeterministicKey deriveChildKey(ChildNumber childNumber) {
+        return BLSHDKeyDerivation.deriveChildKey(this, childNumber);
     }
 
     @Override
-    public IDeterministicKey deriveThisOrNextChildKey(int nextChild) {
-        return HDKeyDerivation.deriveThisOrNextChildKey(this, nextChild);
+    public BLSDeterministicKey deriveThisOrNextChildKey(int nextChild) {
+        return BLSHDKeyDerivation.deriveThisOrNextChildKey(this, nextChild);
     }
 
     public String serializePubB58(NetworkParameters params) {
@@ -557,7 +660,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
             ser.put((byte)(childNumber.isHardened() ? 1 : 0));
             ser.put(Sha256Hash.wrap(childNumber.bi()).getBytes());
             ser.put(getChainCode());
-            ser.put(pub ? getPubKey() : getPrivKeyBytes33());
+            ser.put(pub ? getPubKey() : getPrivKeyBytes());
             checkState(ser.position() == 107);
             return ser.array();
         } else {
@@ -594,7 +697,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         return ser.array();
     }
 
-    public static DeterministicKey deserializeContactPub(NetworkParameters params, byte [] contactPub) {
+    public static BLSDeterministicKey deserializeContactPub(NetworkParameters params, byte [] contactPub) {
         checkArgument(contactPub.length == 69);
         ByteBuffer serXPub = ByteBuffer.allocate(78);
         serXPub.putInt(params.getBip32HeaderP2PKHpub()); // header
@@ -612,7 +715,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     }
 
     /** Deserialize a base-58-encoded HD Key with no parent */
-    public static DeterministicKey deserializeB58(String base58, NetworkParameters params) {
+    public static BLSDeterministicKey deserializeB58(String base58, NetworkParameters params) {
         return deserializeB58(null, base58, params);
     }
 
@@ -621,7 +724,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
       *  @param parent The parent node in the given key's deterministic hierarchy.
       *  @throws IllegalArgumentException if the base58 encoded key could not be parsed.
       */
-    public static DeterministicKey deserializeB58(@Nullable DeterministicKey parent, String base58, NetworkParameters params) {
+    public static BLSDeterministicKey deserializeB58(@Nullable BLSDeterministicKey parent, String base58, NetworkParameters params) {
         return deserialize(params, Base58.decodeChecked(base58), parent);
     }
 
@@ -629,22 +732,22 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
      * Deserialize a base-58-encoded HD Key and associates it with a given path.
      *  @throws IllegalArgumentException if the base58 encoded key could not be parsed.
      */
-    public static DeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
+    public static BLSDeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
         return deserialize(params, Base58.decodeChecked(base58), null, path);
     }
 
     /**
       * Deserialize an HD Key with no parent
       */
-    public static DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey) {
-        return deserialize(params, serializedKey, (DeterministicKey)null);
+    public static BLSDeterministicKey deserialize(NetworkParameters params, byte[] serializedKey) {
+        return deserialize(params, serializedKey, (BLSDeterministicKey)null);
     }
 
     /**
       * Deserialize an HD Key.
      * @param parent The parent node in the given key's deterministic hierarchy.
      */
-    public static DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, @Nullable DeterministicKey parent) {
+    public static BLSDeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, @Nullable BLSDeterministicKey parent) {
         ByteBuffer buffer = ByteBuffer.wrap(serializedKey);
         int header = buffer.getInt();
         final boolean pub = header == params.getBip32HeaderP2PKHpub() || header == params.getBip32HeaderP2WPKHpub();
@@ -679,16 +782,16 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         buffer.get(data);
         checkArgument(!buffer.hasRemaining(), "Found unexpected data in key");
         if (pub) {
-            return new DeterministicKey(path, chainCode, new LazyECPoint(ECKey.CURVE.getCurve(), data), parent, depth, parentFingerprint);
+            return new BLSDeterministicKey(path, chainCode, data, parent, depth, parentFingerprint);
         } else {
-            return new DeterministicKey(path, chainCode, new BigInteger(1, data), parent, depth, parentFingerprint);
+            return new BLSDeterministicKey(path, chainCode, data, parent, depth, parentFingerprint);
         }
     }
 
     /**
      * Deserialize an HD Key and associate it with a full path.
      */
-    public static DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, DeterministicKey parent, ImmutableList<ChildNumber> fullPath) {
+    public static BLSDeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, BLSDeterministicKey parent, ImmutableList<ChildNumber> fullPath) {
         ByteBuffer buffer = ByteBuffer.wrap(serializedKey);
         int header = buffer.getInt();
         if (header != params.getBip32HeaderP2PKHpriv() && header != params.getBip32HeaderP2PKHpub())
@@ -709,9 +812,9 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         buffer.get(data);
         checkArgument(!buffer.hasRemaining(), "Found unexpected data in key");
         if (pub) {
-            return new DeterministicKey(path, chainCode, new LazyECPoint(ECKey.CURVE.getCurve(), data), null, depth, parentFingerprint);
+            return new BLSDeterministicKey(path, chainCode, data, null, depth, parentFingerprint);
         } else {
-            return new DeterministicKey(path, chainCode, new BigInteger(1, data), null, depth, parentFingerprint);
+            return new BLSDeterministicKey(path, chainCode, data, null, depth, parentFingerprint);
         }
     }
 
@@ -747,7 +850,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        DeterministicKey other = (DeterministicKey) o;
+        BLSDeterministicKey other = (BLSDeterministicKey) o;
         return super.equals(other)
                 && Arrays.equals(this.chainCode, other.chainCode)
                 && Objects.equal(this.childNumberPath, other.childNumberPath);
@@ -761,7 +864,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     @Override
     public String toString() {
         final MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
-        helper.add("pub", Utils.HEX.encode(pub.getEncoded()));
+        helper.add("pub", Utils.HEX.encode(pub.bitcoinSerialize()));
         helper.add("chainCode", HEX.encode(chainCode));
         helper.add("path", getPathAsString());
         if (creationTimeSeconds > 0)
@@ -774,7 +877,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     @Override
     public void formatKeyWithAddress(boolean includePrivateKeys, @Nullable KeyParameter aesKey, StringBuilder builder,
             NetworkParameters params, Script.ScriptType outputScriptType, @Nullable String comment) {
-        builder.append("  addr:").append(Address.fromKey(params, this, outputScriptType).toString());
+        builder.append("  addr:").append(Address.fromPubKeyHash(params, getPubKeyHash()));
         builder.append("  hash160:").append(Utils.HEX.encode(getPubKeyHash()));
         builder.append("  (").append(getPathAsString());
         if (comment != null)
@@ -783,5 +886,10 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         if (includePrivateKeys) {
             builder.append("  ").append(toStringWithPrivate(aesKey, params)).append("\n");
         }
+    }
+
+    @Override
+    public KeyFactory getKeyFactory() {
+        return BLSKeyFactory.get();
     }
 }
