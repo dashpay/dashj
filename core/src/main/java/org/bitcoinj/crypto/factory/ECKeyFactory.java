@@ -87,6 +87,11 @@ public class ECKeyFactory implements KeyFactory {
     }
 
     @Override
+    public IDeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
+        return DeterministicKey.deserializeB58(base58, path, params);
+    }
+
+    @Override
     public IDeterministicKey createMasterPrivateKey(byte[] bytes) {
         return HDKeyDerivation.createMasterPrivateKey(bytes);
     }

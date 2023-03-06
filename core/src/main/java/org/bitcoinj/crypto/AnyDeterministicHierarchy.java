@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.crypto.bls;
+package org.bitcoinj.crypto;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.HDDerivationException;
-import org.bitcoinj.crypto.HDUtils;
-import org.bitcoinj.crypto.IDeterministicKey;
+import org.bitcoinj.crypto.bls.BLSDeterministicKey;
+import org.bitcoinj.crypto.bls.BLSHDKeyDerivation;
 
 import java.util.List;
 import java.util.Locale;

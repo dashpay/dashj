@@ -41,7 +41,6 @@ import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.bls.AnyAuthenticationKeyChain;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 
 import java.io.File;
@@ -215,7 +214,7 @@ public class ForwardingServiceEvo {
             if(CreditFundingTransaction.isCreditFundingTransaction(tx))
                 return;
 
-            AnyAuthenticationKeyChain blockchainIdentityFunding = kit.wallet().getBlockchainIdentityFundingKeyChain();
+            AuthenticationKeyChain blockchainIdentityFunding = kit.wallet().getBlockchainIdentityFundingKeyChain();
             IKey publicKey = blockchainIdentityFunding.freshAuthenticationKey(true);
             Coin fundingAmount = Coin.valueOf(40000);
             SendRequest sendRequest = SendRequest.creditFundingTransaction(kit.params(), (ECKey)publicKey, fundingAmount);

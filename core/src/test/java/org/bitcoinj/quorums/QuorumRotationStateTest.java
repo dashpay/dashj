@@ -4,6 +4,7 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.evolution.SimplifiedMasternodesTest;
 import org.bitcoinj.params.MainNetParams;
@@ -36,6 +37,7 @@ public class QuorumRotationStateTest {
         MAINPARAMS = MainNetParams.get();
         PARAMS = WhiteRussianDevNetParams.get();
         initContext(PARAMS, "devnet-333.spvchain");
+        BLSScheme.setLegacyDefault(true);
     }
 
     private static void initContext(NetworkParameters params, String blockchainFile) throws BlockStoreException {
@@ -126,6 +128,7 @@ public class QuorumRotationStateTest {
     @Test
     public void loadBasicSchemeQuorumRotationStateFromFile() throws Exception {
         URL datafile = getClass().getResource("core19.mnlist");
+        BLSScheme.setLegacyDefault(false);
         FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true);
 
         SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(Context.get());

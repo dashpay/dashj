@@ -11,16 +11,19 @@ import org.bitcoinj.crypto.KeyType;
 
 public interface KeyFactory {
 
+    // Keys
     IKey newKey();
     IKey fromEncrypted (EncryptedData e, KeyCrypter keyCrypter, byte [] pub);
     IKey fromPrivate(byte[] privateKeyBytes, boolean pubKeyCompressed);
     IKey fromPrivateAndPrecalculatedPublic(byte [] priv, byte[] pub);
     IKey fromPublicOnly(byte[] pub);
 
+    // Deterministic Keys
     IDeterministicKey fromExtended(ImmutableList<ChildNumber> immutablePath, byte [] chainCode, byte[] pubkey, byte [] priv, IDeterministicKey parent);
     IDeterministicKey fromExtendedEncrypted(ImmutableList<ChildNumber> immutablePath, byte [] chainCode, KeyCrypter keyCrypter, byte[] pubkey, EncryptedData data, IDeterministicKey parent);
     IDeterministicKey fromChildAndParent(IDeterministicKey child, IDeterministicKey parent);
     IDeterministicKey deserializeB58(IDeterministicKey parent, String pub58, NetworkParameters mainnet);
+    IDeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params);
     IDeterministicKey createMasterPrivateKey(byte[] checkNotNull);
     KeyType getKeyType();
 }

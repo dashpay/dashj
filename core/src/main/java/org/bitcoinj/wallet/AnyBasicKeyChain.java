@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.bls;
+package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -31,11 +31,6 @@ import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.BasicKeyChain;
-import org.bitcoinj.wallet.IEncryptableKeyChain;
-import org.bitcoinj.wallet.KeyChain;
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
 

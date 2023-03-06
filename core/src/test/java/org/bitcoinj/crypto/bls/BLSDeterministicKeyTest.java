@@ -6,14 +6,13 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.HDUtils;
-import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.factory.BLSKeyFactory;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.UnreadableWalletException;
-import org.bitcoinj.wallet.bls.AnyDeterministicKeyChain;
+import org.bitcoinj.wallet.AnyDeterministicKeyChain;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;

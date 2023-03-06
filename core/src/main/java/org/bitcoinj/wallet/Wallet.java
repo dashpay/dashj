@@ -68,8 +68,6 @@ import org.bitcoinj.signers.*;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.wallet.Protos.Wallet.*;
 import org.bitcoinj.wallet.WalletTransaction.*;
-import org.bitcoinj.wallet.bls.AnyAuthenticationKeyChain;
-import org.bitcoinj.wallet.bls.AnyDeterministicKeyChain;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bitcoinj.wallet.listeners.ScriptsChangeEventListener;
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
@@ -5726,14 +5724,14 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
-    AnyAuthenticationKeyChain providerOwnerKeyChain;
-    AnyAuthenticationKeyChain providerVoterKeyChain;
-    AnyAuthenticationKeyChain providerOperatorKeyChain;
-    AnyAuthenticationKeyChain blockchainIdentityFundingKeyChain;
-    AnyAuthenticationKeyChain blockchainIdentityTopupKeyChain;
-    AnyAuthenticationKeyChain blockchainIdentityKeyChain;
-    AnyAuthenticationKeyChain invitationFundingKeyChain;
-    AnyAuthenticationKeyChainGroup authenticationGroup;
+    AuthenticationKeyChain providerOwnerKeyChain;
+    AuthenticationKeyChain providerVoterKeyChain;
+    AuthenticationKeyChain providerOperatorKeyChain;
+    AuthenticationKeyChain blockchainIdentityFundingKeyChain;
+    AuthenticationKeyChain blockchainIdentityTopupKeyChain;
+    AuthenticationKeyChain blockchainIdentityKeyChain;
+    AuthenticationKeyChain invitationFundingKeyChain;
+    AuthenticationKeyChainGroup authenticationGroup;
 
     public void initializeAuthenticationKeyChains(DeterministicSeed seed, @Nullable KeyParameter keyParameter) {
         //TODO: add provider*KeyChains when that functionality is required
@@ -5767,25 +5765,25 @@ public class Wallet extends BaseTaggableObject
                 keyParameter);
     }
 
-    AnyAuthenticationKeyChain addAuthenticationKeyChain(DeterministicSeed seed,
+    AuthenticationKeyChain addAuthenticationKeyChain(DeterministicSeed seed,
                                                      ImmutableList<ChildNumber> path,
                                                      AuthenticationKeyChain.KeyChainType type,
                                                      @Nullable KeyParameter keyParameter) {
         return addAuthenticationKeyChain(seed, path, type, keyParameter, false);
     }
 
-    AnyAuthenticationKeyChain addAuthenticationKeyChain(DeterministicSeed seed,
+    AuthenticationKeyChain addAuthenticationKeyChain(DeterministicSeed seed,
                                    ImmutableList<ChildNumber> path,
                                    AuthenticationKeyChain.KeyChainType type,
                                    @Nullable KeyParameter keyParameter, boolean hardenedChildren) {
 
         if (authenticationGroup == null) {
-            authenticationGroup = AnyAuthenticationKeyChainGroup.authenticationBuilder(params).build();
+            authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(params).build();
         }
-        AnyAuthenticationKeyChain chain = authenticationGroup.getKeyChain(type);
+        AuthenticationKeyChain chain = authenticationGroup.getKeyChain(type);
         if (chain == null) {
 
-            chain = AnyAuthenticationKeyChain.authenticationBuilder()
+            chain = AuthenticationKeyChain.authenticationBuilder()
                     .seed(seed).accountPath(path).type(type).createHardenedChildren(hardenedChildren)
                     .build();
 
@@ -5798,39 +5796,39 @@ public class Wallet extends BaseTaggableObject
         return chain;
     }
 
-    public AnyAuthenticationKeyChain getProviderOwnerKeyChain() {
+    public AuthenticationKeyChain getProviderOwnerKeyChain() {
         return providerOwnerKeyChain;
     }
 
-    public AnyAuthenticationKeyChain getProviderVoterKeyChain() {
+    public AuthenticationKeyChain getProviderVoterKeyChain() {
         return providerVoterKeyChain;
     }
 
-    public AnyAuthenticationKeyChain getProviderOperatorKeyChain() {
+    public AuthenticationKeyChain getProviderOperatorKeyChain() {
         return providerOperatorKeyChain;
     }
 
-    public AnyAuthenticationKeyChain getBlockchainIdentityKeyChain() {
+    public AuthenticationKeyChain getBlockchainIdentityKeyChain() {
         return blockchainIdentityKeyChain;
     }
 
-    public AnyAuthenticationKeyChain getBlockchainIdentityFundingKeyChain() {
+    public AuthenticationKeyChain getBlockchainIdentityFundingKeyChain() {
         return blockchainIdentityFundingKeyChain;
     }
 
-    public AnyAuthenticationKeyChain getBlockchainIdentityTopupKeyChain() {
+    public AuthenticationKeyChain getBlockchainIdentityTopupKeyChain() {
         return blockchainIdentityTopupKeyChain;
     }
 
-    public AnyAuthenticationKeyChain getInvitationFundingKeyChain() {
+    public AuthenticationKeyChain getInvitationFundingKeyChain() {
         return invitationFundingKeyChain;
     }
 
     //package level access
-    void setAuthenticationKeyChain(AnyAuthenticationKeyChain chain, AuthenticationKeyChain.KeyChainType type) {
+    void setAuthenticationKeyChain(AuthenticationKeyChain chain, AuthenticationKeyChain.KeyChainType type) {
         chain.setType(type);
         if(authenticationGroup == null)
-            authenticationGroup = AnyAuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
+            authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
 
         switch(type) {
             case MASTERNODE_VOTING:
@@ -5912,7 +5910,7 @@ public class Wallet extends BaseTaggableObject
         return getFundingTransactions(invitationFundingKeyChain);
     }
 
-    private List<CreditFundingTransaction> getFundingTransactions(AnyAuthenticationKeyChain chain) {
+    private List<CreditFundingTransaction> getFundingTransactions(AuthenticationKeyChain chain) {
         ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
         List<CreditFundingTransaction> allTxs = getCreditFundingTransactions();
 

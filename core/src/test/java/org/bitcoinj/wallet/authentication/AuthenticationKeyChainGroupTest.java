@@ -1,15 +1,14 @@
-package org.bitcoinj.wallet.bls;
+package org.bitcoinj.wallet.authentication;
 
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.AnyAuthenticationKeyChainGroup;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
+import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChain;
@@ -18,6 +17,7 @@ import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.bitcoinj.wallet.AnyDeterministicKeyChain;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -25,7 +25,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class AnyAuthenticationKeyChainGroupTest {
+public class AuthenticationKeyChainGroupTest {
 
     Context context;
     UnitTestParams PARAMS;
@@ -54,7 +54,7 @@ public class AnyAuthenticationKeyChainGroupTest {
     IDeterministicKey operatorKeyMaster;
     IDeterministicKey operatorKey;
     KeyId operatorKeyId;
-    AnyAuthenticationKeyChainGroup authGroup;
+    AuthenticationKeyChainGroup authGroup;
     @Before
     public void startup() throws UnreadableWalletException {
         PARAMS = UnitTestParams.get();
@@ -79,17 +79,17 @@ public class AnyAuthenticationKeyChainGroupTest {
         group.addAndActivateHDChain(active);
         wallet = new Wallet(PARAMS, group);
 
-        voting = AnyAuthenticationKeyChain.authenticationBuilder()
+        voting = AuthenticationKeyChain.authenticationBuilder()
                 .seed(seed)
                 .accountPath(AnyDeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET)
                 .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING)
                 .build();
-        owner = AnyAuthenticationKeyChain.authenticationBuilder()
+        owner = AuthenticationKeyChain.authenticationBuilder()
                 .seed(seed)
                 .accountPath(AnyDeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET)
                 .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER)
                 .build();
-        bu = AnyAuthenticationKeyChain.authenticationBuilder()
+        bu = AuthenticationKeyChain.authenticationBuilder()
                 .seed(seed)
                 .accountPath(AnyDeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET)
                 .type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
@@ -108,7 +108,7 @@ public class AnyAuthenticationKeyChainGroupTest {
         buKey = buKeyMaster.deriveChildKey(ChildNumber.ZERO);
         buKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
 
-        operator = AnyAuthenticationKeyChain.authenticationBuilder()
+        operator = AuthenticationKeyChain.authenticationBuilder()
                 .seed(seed)
                 .accountPath(AnyDeterministicKeyChain.PROVIDER_OPERATOR_PATH_TESTNET)
                 .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR)
@@ -119,7 +119,7 @@ public class AnyAuthenticationKeyChainGroupTest {
         operatorKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
 
         // put these in the same Authentication Group
-        authGroup = AnyAuthenticationKeyChainGroup.authenticationBuilder(PARAMS)
+        authGroup = AuthenticationKeyChainGroup.authenticationBuilder(PARAMS)
                 .addChain(voting)
                 .addChain(owner)
                 .addChain(operator)

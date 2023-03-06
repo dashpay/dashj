@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.bls;
+package org.bitcoinj.wallet;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
-import org.bitcoinj.crypto.bls.BLSHDKeyDerivation;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.DeterministicSeed;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,12 +44,12 @@ public class AnyExternalKeyChain extends AnyDeterministicKeyChain {
         super(seed, keyCrypter, Script.ScriptType.P2PKH, path, keyFactory);
     }
 
-    public AnyExternalKeyChain(IDeterministicKey key, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) {
-        super(key, false, true, Script.ScriptType.P2PKH, accountPath, keyFactory);
+    public AnyExternalKeyChain(IDeterministicKey key, ImmutableList<ChildNumber> accountPath) {
+        super(key, false, true, Script.ScriptType.P2PKH, accountPath);
     }
 
-    public AnyExternalKeyChain(IDeterministicKey key, boolean isFollowing, KeyFactory keyFactory) {
-        super(key, isFollowing, true, Script.ScriptType.P2PKH, keyFactory);
+    public AnyExternalKeyChain(IDeterministicKey key, boolean isFollowing) {
+        super(key, isFollowing, true, Script.ScriptType.P2PKH);
     }
 
     protected AnyExternalKeyChain(KeyCrypter crypter, KeyParameter aesKey, AnyExternalKeyChain chain) {

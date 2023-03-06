@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.bls;
+package org.bitcoinj.wallet;
 
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.RedeemData;
 
 import javax.annotation.Nullable;
 

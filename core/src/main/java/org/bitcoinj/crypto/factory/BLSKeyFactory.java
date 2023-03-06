@@ -22,6 +22,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.EncryptedData;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
@@ -81,6 +82,10 @@ public class BLSKeyFactory implements KeyFactory {
     @Override
     public IDeterministicKey deserializeB58(IDeterministicKey parent, String pub58, NetworkParameters params) {
         return BLSDeterministicKey.deserializeB58((BLSDeterministicKey) parent, pub58, params);
+    }
+    @Override
+    public IDeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
+        return BLSDeterministicKey.deserializeB58(base58, path, params);
     }
 
     @Override

@@ -38,10 +38,6 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.WireFormat;
 
-import org.bitcoinj.wallet.bls.AnyAuthenticationKeyChain;
-import org.bitcoinj.wallet.bls.AnyAuthenticationKeyChainFactory;
-import org.bitcoinj.wallet.bls.AnyDeterministicKeyChain;
-import org.bitcoinj.wallet.bls.AnyKeyChainFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -650,7 +646,7 @@ public class WalletProtobufSerializer {
         }
 
         if(walletProto.getExtKeyChainsCount() > 0) {
-            AnyKeyChainFactory factory = new AnyAuthenticationKeyChainFactory();
+            AnyKeyChainFactory factory = new AuthenticationKeyChainFactory();
             KeyCrypter keyCrypter = null;
             if (walletProto.hasEncryptionParameters()) {
                 Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
@@ -701,9 +697,9 @@ public class WalletProtobufSerializer {
                         default:
                             throw new UnreadableWalletException("Unknown extended key type found:" + extendedKeyChain.getKeyType());
                     }
-                    List<AnyDeterministicKeyChain> chains = AnyAuthenticationKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory, keyFactory);
+                    List<AnyDeterministicKeyChain> chains = AuthenticationKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory, keyFactory);
                     if (!chains.isEmpty()) {
-                        AnyAuthenticationKeyChain chain = (AnyAuthenticationKeyChain)chains.get(0);
+                        AuthenticationKeyChain chain = (AuthenticationKeyChain)chains.get(0);
                         chain.setHardenedChildren(type == AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
                         wallet.setAuthenticationKeyChain(chain, type);
                     }

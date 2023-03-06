@@ -18,43 +18,81 @@ package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
+import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
 
 /**
  * Default factory for creating authentication keychains while de-serializing.
  */
-public class AuthenticationKeyChainFactory implements KeyChainFactory {
+public class AuthenticationKeyChainFactory implements AnyKeyChainFactory {
+
+    /**
+     * Make a keychain (but not a watching one) with the specified account path
+     *
+     * @param key              the protobuf for the root key
+     * @param firstSubKey      the protobuf for the first child key (normally the parent of the external subchain)
+     * @param seed             the seed
+     * @param crypter          the encrypted/decrypter
+     * @param isMarried        whether the keychain is leading in a marriage
+     * @param outputScriptType type of addresses (aka output scripts) to generate for receiving
+     * @param accountPath      account path to generate receiving addresses on
+     * @param keyFactory
+     */
 
     @Override
-    public DeterministicKeyChain makeKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
-                                              KeyCrypter crypter, boolean isMarried, Script.ScriptType scriptType, ImmutableList<ChildNumber> accountPath) {
+    public AnyDeterministicKeyChain makeKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
+                                                 KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) {
         AuthenticationKeyChain chain;
-        if (isMarried)
+        if (isMarried) {
             throw new UnsupportedOperationException();
-        else
-            chain = new AuthenticationKeyChain(seed, crypter, accountPath);
+        } else {
+            chain = new AuthenticationKeyChain(seed, crypter, accountPath, keyFactory);
+        }
         return chain;
     }
 
+    /**
+     * Make a watching keychain.
+     *
+     * <p>isMarried and isFollowingKey must not be true at the same time.
+     *
+     * @param key              the protobuf for the account key
+     * @param firstSubKey      the protobuf for the first child key (normally the parent of the external subchain)
+     * @param accountKey       the account extended public key
+     * @param isFollowingKey   whether the keychain is following in a marriage
+     * @param isMarried        whether the keychain is leading in a marriage
+     * @param outputScriptType type of addresses (aka output scripts) to generate for watching
+     */
     @Override
-    public DeterministicKeyChain makeWatchingKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicKey accountKey,
-                                                      boolean isFollowingKey, boolean isMarried, Script.ScriptType scriptType) throws UnreadableWalletException {
+    public AnyDeterministicKeyChain makeWatchingKeyChain(Protos.Key key, Protos.Key firstSubKey, IDeterministicKey accountKey, boolean isFollowingKey, boolean isMarried, Script.ScriptType outputScriptType) throws UnreadableWalletException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Make a spending keychain.
+     *
+     * <p>isMarried and isFollowingKey must not be true at the same time.
+     *
+     * @param key              the protobuf for the account key
+     * @param firstSubKey      the protobuf for the first child key (normally the parent of the external subchain)
+     * @param accountKey       the account extended public key
+     * @param isMarried        whether the keychain is leading in a marriage
+     * @param outputScriptType type of addresses (aka output scripts) to generate for spending
+     */
+    @Override
+    public AnyDeterministicKeyChain makeSpendingKeyChain(Protos.Key key, Protos.Key firstSubKey, IDeterministicKey accountKey, boolean isMarried, Script.ScriptType outputScriptType) throws UnreadableWalletException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public DeterministicKeyChain makeSpendingKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicKey accountKey, boolean isMarried, Script.ScriptType outputScriptType) throws UnreadableWalletException {
-        throw new UnsupportedOperationException();
-    }
-
-    public DeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) {
+    public AnyDeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) throws UnreadableWalletException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public DeterministicKeyChain makeWatchingFriendKeyChain(DeterministicKey accountKey, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException {
+    public AnyDeterministicKeyChain makeWatchingFriendKeyChain(IDeterministicKey accountKey, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException {
         throw new UnsupportedOperationException();
     }
 }

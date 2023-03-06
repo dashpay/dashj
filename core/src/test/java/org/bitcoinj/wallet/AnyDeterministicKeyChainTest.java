@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.bls;
+package org.bitcoinj.wallet;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -36,6 +36,7 @@ import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.AnyDeterministicKeyChain;
 import org.bitcoinj.wallet.AnyKeyChainGroup;
 import org.bitcoinj.wallet.KeyChain;
 import org.bitcoinj.wallet.Protos;

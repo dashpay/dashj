@@ -17,10 +17,13 @@
 package org.bitcoinj.wallet;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.crypto.*;
+import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.HDUtils;
+import org.bitcoinj.crypto.IDeterministicKey;
+import org.bitcoinj.crypto.KeyCrypter;
+import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,17 +38,18 @@ import java.util.Map;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-public class AuthenticationKeyChainGroup extends KeyChainGroup {
+public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationKeyChainGroup.class);
 
-    HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentAuthenticationKeys;
+    HashMap<AuthenticationKeyChain.KeyChainType, IDeterministicKey> currentAuthenticationKeys;
 
     public static class Builder {
         private final NetworkParameters params;
         private final KeyChainGroupStructure structure;
-        private final List<DeterministicKeyChain> chains = new LinkedList<>();
+        private final List<AnyDeterministicKeyChain> chains = new LinkedList<>();
         private int lookaheadSize = -1, lookaheadThreshold = -1;
+        private KeyFactory keyFactory;
 
         private Builder(NetworkParameters params, KeyChainGroupStructure structure) {
             this.params = params;
@@ -80,7 +84,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
          */
         public AuthenticationKeyChainGroup.Builder fromSeed(DeterministicSeed seed, Script.ScriptType outputScriptType) {
             if (outputScriptType == Script.ScriptType.P2PKH) {
-                DeterministicKeyChain chain = DeterministicKeyChain.builder().seed(seed)
+                AnyDeterministicKeyChain chain = AnyDeterministicKeyChain.builder().seed(seed)
                         .outputScriptType(Script.ScriptType.P2PKH)
                         .accountPath(structure.accountPathFor(Script.ScriptType.P2PKH)).build();
                 this.chains.clear();
@@ -95,7 +99,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
          * Add a single chain.
          * @param chain to add
          */
-        public AuthenticationKeyChainGroup.Builder addChain(DeterministicKeyChain chain) {
+        public AuthenticationKeyChainGroup.Builder addChain(AnyDeterministicKeyChain chain) {
             this.chains.add(chain);
             return this;
         }
@@ -104,7 +108,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
          * Add multiple chains.
          * @param chains to add
          */
-        public AuthenticationKeyChainGroup.Builder chains(List<DeterministicKeyChain> chains) {
+        public AuthenticationKeyChainGroup.Builder chains(List<AnyDeterministicKeyChain> chains) {
             this.chains.clear();
             this.chains.addAll(chains);
             return this;
@@ -129,15 +133,14 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
         }
 
         public AuthenticationKeyChainGroup build() {
-            return new AuthenticationKeyChainGroup(params, null, chains, lookaheadSize, lookaheadThreshold, null, null);
+            return new AuthenticationKeyChainGroup(params, null, chains, lookaheadSize, lookaheadThreshold, null, null, keyFactory);
         }
     }
 
-    protected AuthenticationKeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain, List<DeterministicKeyChain> chains, int lookAheadSize, int lookAheadThreshold,
-                                          @Nullable HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentKeys, @Nullable KeyCrypter crypter) {
-        super(params, basicKeyChain, chains, lookAheadSize, lookAheadThreshold,null, crypter);
-        currentAuthenticationKeys = currentKeys != null ? currentKeys :
-                new HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey>();
+    protected AuthenticationKeyChainGroup(NetworkParameters params, @Nullable AnyBasicKeyChain basicKeyChain, List<AnyDeterministicKeyChain> chains, int lookAheadSize, int lookAheadThreshold,
+                                             @Nullable HashMap<AuthenticationKeyChain.KeyChainType, IDeterministicKey> currentKeys, @Nullable KeyCrypter crypter, KeyFactory keyFactory) {
+        super(params, basicKeyChain, chains, lookAheadSize, lookAheadThreshold,null, crypter, keyFactory);
+        currentAuthenticationKeys = currentKeys != null ? currentKeys : new HashMap<>();
     }
 
     public static AuthenticationKeyChainGroup.Builder authenticationBuilder(NetworkParameters params) {
@@ -145,8 +148,8 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
     }
 
     public AuthenticationKeyChain getKeyChain(AuthenticationKeyChain.KeyChainType type) {
-        for(DeterministicKeyChain chain : chains) {
-            if(((AuthenticationKeyChain)chain).type == type)
+        for(AnyDeterministicKeyChain chain : chains) {
+            if(((AuthenticationKeyChain)chain).getType() == type)
                 return (AuthenticationKeyChain)chain;
         }
         return null;
@@ -154,7 +157,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
 
 
     @Override
-    public void addAndActivateHDChain(DeterministicKeyChain chain) {
+    public void addAndActivateHDChain(AnyDeterministicKeyChain chain) {
         if(chain instanceof AuthenticationKeyChain)
             super.addAndActivateHDChain(chain);
         else throw new IllegalArgumentException("chain is not of type AuthenticationKeyChain");
@@ -163,48 +166,50 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
     public boolean hasKeyChains() { return !chains.isEmpty(); }
 
     static AuthenticationKeyChainGroup fromProtobufUnencrypted(NetworkParameters params, List<Protos.Key> keys, AuthenticationKeyChain.KeyChainType type) throws UnreadableWalletException {
-        return fromProtobufUnencrypted(params, keys, new DefaultKeyChainFactory(), type);
+        return fromProtobufUnencrypted(params, keys, new AnyDefaultKeyChainFactory(), type);
     }
 
-    public static AuthenticationKeyChainGroup fromProtobufUnencrypted(NetworkParameters params, List<Protos.Key> keys, KeyChainFactory factory, AuthenticationKeyChain.KeyChainType type) throws UnreadableWalletException {
-        BasicKeyChain basicKeyChain = BasicKeyChain.fromProtobufUnencrypted(keys);
-        List<DeterministicKeyChain> chains = DeterministicKeyChain.fromProtobuf(keys, null, factory);
-        for(DeterministicKeyChain chain : chains) {
+    public static AuthenticationKeyChainGroup fromProtobufUnencrypted(NetworkParameters params, List<Protos.Key> keys, AnyKeyChainFactory factory, AuthenticationKeyChain.KeyChainType type) throws UnreadableWalletException {
+        KeyFactory keyFactory = AuthenticationKeyChain.getKeyFactory(type);
+        AnyBasicKeyChain basicKeyChain = AnyBasicKeyChain.fromProtobufUnencrypted(keys, keyFactory);
+        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, null, factory, keyFactory);
+        for(AnyDeterministicKeyChain chain : chains) {
             Preconditions.checkState(chain instanceof AuthenticationKeyChain);
         }
-        HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentKeys = null;
+        HashMap<AuthenticationKeyChain.KeyChainType, IDeterministicKey> currentKeys = null;
 
         int lookaheadSize = -1, lookaheadThreshold = -1;
         if (!chains.isEmpty()) {
-            DeterministicKeyChain activeChain = chains.get(chains.size() - 1);
+            AnyDeterministicKeyChain activeChain = chains.get(chains.size() - 1);
             lookaheadSize = activeChain.getLookaheadSize();
             lookaheadThreshold = activeChain.getLookaheadThreshold();
             currentKeys = createCurrentAuthenticationKeysMap(chains);
         }
-        return new AuthenticationKeyChainGroup(params, basicKeyChain, chains, lookaheadSize, lookaheadThreshold, currentKeys, null);
+        return new AuthenticationKeyChainGroup(params, basicKeyChain, chains, lookaheadSize, lookaheadThreshold, currentKeys, null, keyFactory);
     }
 
     static AuthenticationKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, AuthenticationKeyChain.KeyChainType type) throws UnreadableWalletException {
-        return fromProtobufEncrypted(params, keys, crypter, new DefaultKeyChainFactory(), type);
+        return fromProtobufEncrypted(params, keys, crypter, new AnyDefaultKeyChainFactory(), type);
     }
 
-    public static AuthenticationKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, KeyChainFactory factory, AuthenticationKeyChain.KeyChainType type) throws UnreadableWalletException {
+    public static AuthenticationKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, AnyKeyChainFactory factory, AuthenticationKeyChain.KeyChainType type) throws UnreadableWalletException {
         checkNotNull(crypter);
-        BasicKeyChain basicKeyChain = BasicKeyChain.fromProtobufEncrypted(keys, crypter);
-        List<DeterministicKeyChain> chains = DeterministicKeyChain.fromProtobuf(keys, crypter, factory);
-        for(DeterministicKeyChain chain : chains) {
+        KeyFactory keyFactory = AuthenticationKeyChain.getKeyFactory(type);
+        AnyBasicKeyChain basicKeyChain = AnyBasicKeyChain.fromProtobufEncrypted(keys, crypter, keyFactory);
+        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, crypter, factory, keyFactory);
+        for(AnyDeterministicKeyChain chain : chains) {
             Preconditions.checkState(chain instanceof AuthenticationKeyChain);
         }
-        HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentKeys = null;
+        HashMap<AuthenticationKeyChain.KeyChainType, IDeterministicKey> currentKeys = null;
 
         int lookaheadSize = -1, lookaheadThreshold = -1;
         if (!chains.isEmpty()) {
-            DeterministicKeyChain activeChain = chains.get(chains.size() - 1);
+            AnyDeterministicKeyChain activeChain = chains.get(chains.size() - 1);
             lookaheadSize = activeChain.getLookaheadSize();
             lookaheadThreshold = activeChain.getLookaheadThreshold();
             currentKeys = createCurrentAuthenticationKeysMap(chains);
         }
-        return new AuthenticationKeyChainGroup(params, basicKeyChain, chains, lookaheadSize, lookaheadThreshold, currentKeys, crypter);
+        return new AuthenticationKeyChainGroup(params, basicKeyChain, chains, lookaheadSize, lookaheadThreshold, currentKeys, crypter, keyFactory);
     }
 
     /**
@@ -213,17 +218,17 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
      * a different key (for each purpose independently).
      * <p>This method is not supposed to be used for married keychains and will throw UnsupportedOperationException if
      * the active chain is married.
-     * For married keychains use {@link #currentAddress(org.bitcoinj.wallet.AuthenticationKeyChain.KeyChainType)}
+     * For married keychains use {@link #currentAddress(AuthenticationKeyChain.KeyChainType)}
      * to get a proper P2SH address</p>
      */
-    public DeterministicKey currentKey(AuthenticationKeyChain.KeyChainType type) {
-        DeterministicKeyChain chain = getKeyChain(type);
+    public IDeterministicKey currentKey(AuthenticationKeyChain.KeyChainType type) {
+        AnyDeterministicKeyChain chain = getKeyChain(type);
         if (chain.isMarried()) {
             throw new UnsupportedOperationException("Key is not suitable to receive coins for married keychains." +
                     " Use freshAddress to get P2SH address instead");
         }
-        AuthenticationKeyChain.KeyChainType accountPath = ((AuthenticationKeyChain) chain).type;
-        DeterministicKey current = currentAuthenticationKeys.get(accountPath);
+        AuthenticationKeyChain.KeyChainType accountPath = ((AuthenticationKeyChain) chain).getType();
+        IDeterministicKey current = currentAuthenticationKeys.get(accountPath);
         if (current == null) {
             current = freshKey(type);
             currentAuthenticationKeys.put(accountPath, current);
@@ -235,7 +240,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
      * Returns address for a {@link #currentKey(AuthenticationKeyChain.KeyChainType)}
      */
     public Address currentAddress(AuthenticationKeyChain.KeyChainType type) {
-        DeterministicKeyChain chain = getKeyChain(type);
+        AnyDeterministicKeyChain chain = getKeyChain(type);
         if (chain.isMarried()) {
             Address current = currentAddresses.get(KeyChain.KeyPurpose.AUTHENTICATION);
             if (current == null) {
@@ -259,7 +264,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
      * For married keychains use {@link #freshAddress(AuthenticationKeyChain.KeyChainType)}
      * to get a proper P2SH address</p>
      */
-    public DeterministicKey freshKey(AuthenticationKeyChain.KeyChainType type) {
+    public IDeterministicKey freshKey(AuthenticationKeyChain.KeyChainType type) {
         return freshKeys(type, 1).get(0);
     }
 
@@ -274,8 +279,8 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
      * to get a proper P2SH address</p>
      */
 
-    public List<DeterministicKey> freshKeys(AuthenticationKeyChain.KeyChainType type, int numberOfKeys) {
-        DeterministicKeyChain chain = getKeyChain(type);
+    public List<IDeterministicKey> freshKeys(AuthenticationKeyChain.KeyChainType type, int numberOfKeys) {
+        AnyDeterministicKeyChain chain = getKeyChain(type);
         if (chain.isMarried()) {
             throw new UnsupportedOperationException("Key is not suitable to receive coins for married keychains." +
                     " Use freshAddress to get P2SH address instead");
@@ -287,7 +292,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
      * Returns address for a {@link #freshKey(AuthenticationKeyChain.KeyChainType)}
      */
     public Address freshAddress(AuthenticationKeyChain.KeyChainType type) {
-        DeterministicKeyChain chain = getKeyChain(type);
+        AnyDeterministicKeyChain chain = getKeyChain(type);
         if (chain.isMarried()) {
             Script outputScript = chain.freshOutputScript(KeyChain.KeyPurpose.AUTHENTICATION);
             checkState(outputScript.isPayToScriptHash()); // Only handle P2SH for now
@@ -300,31 +305,31 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
         }
     }
 
-    protected static HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> createCurrentAuthenticationKeysMap(List<DeterministicKeyChain> chains) {
+    protected static HashMap<AuthenticationKeyChain.KeyChainType, IDeterministicKey> createCurrentAuthenticationKeysMap(List<AnyDeterministicKeyChain> chains) {
 
-        HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey> currentKeys = new HashMap<AuthenticationKeyChain.KeyChainType, DeterministicKey>(chains.size());
+        HashMap<AuthenticationKeyChain.KeyChainType, IDeterministicKey> currentKeys = new HashMap<>(chains.size());
 
-        for(DeterministicKeyChain chain : chains) {
-            FriendKeyChain contactChain = (FriendKeyChain)chain;
+        for(AnyDeterministicKeyChain chain : chains) {
+            AuthenticationKeyChain contactChain = (AuthenticationKeyChain)chain;
             // assuming that only RECEIVE and CHANGE keys are being used at the moment, we will treat latest issued external key
             // as current RECEIVE key and latest issued internal key as CHANGE key. This should be changed as soon as other
             // kinds of KeyPurpose are introduced.
             if (contactChain.getIssuedExternalKeys() > 0) {
-                DeterministicKey currentExternalKey = contactChain.getKeyByPath(
+                IDeterministicKey currentExternalKey = contactChain.getKeyByPath(
                         HDUtils.append(
                                 contactChain.getAccountPath(),
                                 new ChildNumber(contactChain.getIssuedExternalKeys() - 1)));
-                currentKeys.put(((AuthenticationKeyChain)chain).type, currentExternalKey);
+                currentKeys.put(((AuthenticationKeyChain)chain).getType(), currentExternalKey);
             }
         }
         return currentKeys;
     }
 
     /** If the given key is "current", advance the current key to a new one. */
-    protected void maybeMarkCurrentKeyAsUsed(DeterministicKey key) {
+    protected void maybeMarkCurrentKeyAsUsed(IDeterministicKey key) {
         // It's OK for currentKeys to be empty here: it means we're a married wallet and the key may be a part of a
         // rotating chain.
-        for (Map.Entry<AuthenticationKeyChain.KeyChainType, DeterministicKey> entry : currentAuthenticationKeys.entrySet()) {
+        for (Map.Entry<AuthenticationKeyChain.KeyChainType, IDeterministicKey> entry : currentAuthenticationKeys.entrySet()) {
             if (entry.getValue() != null && entry.getValue().equals(key)) {
                 log.info("Marking key as used: {}", key);
                 currentAuthenticationKeys.put(entry.getKey(), freshKey(entry.getKey()));
@@ -334,7 +339,7 @@ public class AuthenticationKeyChainGroup extends KeyChainGroup {
     }
 
     protected AuthenticationKeyChain.KeyChainType getKeyChainType(byte [] pubkeyHash) {
-        for (DeterministicKeyChain chain: chains) {
+        for (AnyDeterministicKeyChain chain: chains) {
             if (chain.findKeyFromPubHash(pubkeyHash) != null) {
                 return ((AuthenticationKeyChain)chain).getType();
             }

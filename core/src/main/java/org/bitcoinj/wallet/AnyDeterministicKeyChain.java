@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.bls;
+package org.bitcoinj.wallet;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
@@ -26,28 +26,24 @@ import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.EncryptedData;
 import org.bitcoinj.crypto.ExtendedChildNumber;
+import org.bitcoinj.crypto.HDKeyDerivation;
 import org.bitcoinj.crypto.HDUtils;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
+import org.bitcoinj.crypto.KeyType;
 import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.crypto.bls.AnyDeterministicHierarchy;
+import org.bitcoinj.crypto.AnyDeterministicHierarchy;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.IEncryptableKeyChain;
-import org.bitcoinj.wallet.KeyChain;
-import org.bitcoinj.wallet.MarriedKeyChain;
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.RedeemData;
-import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
@@ -56,9 +52,11 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
@@ -87,7 +85,7 @@ import static com.google.common.collect.Lists.newLinkedList;
  * wallet instead. You can do this by calling {@link #getWatchingKey()} and then serializing it with
  * {@link IDeterministicKey#serializePubB58(NetworkParameters)}. The resulting "xpub..." string encodes
  * sufficient information about the account key to create a watching chain via
- * {@link IDeterministicKey#deserializeB58(IDeterministicKey, String, NetworkParameters)}
+ * {@link KeyFactory#deserializeB58(IDeterministicKey, String, NetworkParameters)}
  * (with null as the first parameter) and then
  * {@link Builder#watch(IDeterministicKey)}.</p>
  *
@@ -362,9 +360,9 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
             else if (seed != null)
                 return new AnyDeterministicKeyChain(seed, null, outputScriptType, accountPath, keyFactory);
             else if (watchingKey != null)
-                return new AnyDeterministicKeyChain(watchingKey, isFollowing, true, outputScriptType, keyFactory);
+                return new AnyDeterministicKeyChain(watchingKey, isFollowing, true, outputScriptType);
             else if (spendingKey != null)
-                return new AnyDeterministicKeyChain(spendingKey, false, false, outputScriptType, keyFactory);
+                return new AnyDeterministicKeyChain(spendingKey, false, false, outputScriptType);
             else
                 throw new IllegalStateException();
         }
@@ -394,13 +392,13 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
      * </p>
      */
     public AnyDeterministicKeyChain(IDeterministicKey key, boolean isFollowing, boolean isWatching,
-                                    Script.ScriptType outputScriptType, KeyFactory keyFactory) {
+                                    Script.ScriptType outputScriptType) {
         if (isWatching)
             checkArgument(key.isPubKeyOnly(), "Private subtrees not currently supported for watching keys: if you got this key from DKC.getWatchingKey() then use .dropPrivate().dropParent() on it first.");
         else
             checkArgument(key.hasPrivKey(), "Private subtrees are required.");
         checkArgument(isWatching || !isFollowing, "Can only follow a key that is watched");
-        this.keyFactory = keyFactory;
+        this.keyFactory = key.getKeyFactory();
         basicKeyChain = new AnyBasicKeyChain(keyFactory);
         this.seed = null;
         this.rootKey = null;
@@ -413,13 +411,13 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
     }
 
     public AnyDeterministicKeyChain(IDeterministicKey key, boolean isFollowing, boolean isWatching,
-                                    Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) {
+                                    Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath) {
         if (isWatching)
             checkArgument(key.isPubKeyOnly(), "Private subtrees not currently supported for watching keys: if you got this key from DKC.getWatchingKey() then use .dropPrivate().dropParent() on it first.");
         else
             checkArgument(key.hasPrivKey(), "Private subtrees are required.");
         checkArgument(isWatching || !isFollowing, "Can only follow a key that is watched");
-        this.keyFactory = keyFactory;
+        this.keyFactory = key.getKeyFactory();
         basicKeyChain = new AnyBasicKeyChain(keyFactory);
         this.seed = null;
         this.rootKey = null;
@@ -517,7 +515,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
             basicKeyChain.importKey(key);
         }
         for (ListenerRegistration<KeyChainEventListener> listener : chain.basicKeyChain.getListeners()) {
-            basicKeyChain.addEventListener(listener);
+            basicKeyChain.addEventListener(listener.listener);
         }
     }
 
@@ -598,13 +596,28 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
             for (int i = 0; i < numberOfKeys; i++) {
                 ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
                 IDeterministicKey k = hierarchy.get(path, false, false);
-
+                if (k.getKeyFactory().getKeyType() == KeyType.ECDSA) {
+                    // Just a last minute sanity check before we hand the key out to the app for usage. This isn't inspired
+                    // by any real problem reports from bitcoinj users, but I've heard of cases via the grapevine of
+                    // places that lost money due to bitflips causing addresses to not match keys. Of course in an
+                    // environment with flaky RAM there's no real way to always win: bitflips could be introduced at any
+                    // other layer. But as we're potentially retrieving from long term storage here, check anyway.
+                    checkForBitFlip((DeterministicKey) k);
+                }
                 keys.add(k);
             }
             return keys;
         } finally {
             lock.unlock();
         }
+    }
+
+    protected void checkForBitFlip(DeterministicKey k) {
+        DeterministicKey parent = checkNotNull(k.getParent());
+        byte[] rederived = HDKeyDerivation.deriveChildKeyBytesFromPublic(parent, k.getChildNumber(), HDKeyDerivation.PublicDeriveMode.WITH_INVERSION).keyBytes;
+        byte[] actual = k.getPubKey();
+        if (!Arrays.equals(rederived, actual))
+            throw new IllegalStateException(String.format(Locale.US, "Bit-flip check failed: %s vs %s", Arrays.toString(rederived), Arrays.toString(actual)));
     }
 
     /**

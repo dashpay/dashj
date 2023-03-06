@@ -15,19 +15,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.bls;
+package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
-import org.bitcoinj.crypto.bls.BLSDeterministicKey;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.DerivationPathFactory;
-import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.UnreadableWalletException;
 
 /**
  * Default factory for creating keychains while de-serializing.
@@ -39,7 +34,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
                                                  ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) {
         AnyDeterministicKeyChain chain;
         if (isMarried)
-            throw new UnsupportedOperationException("Married chains are not supported with BLS");
+            throw new UnsupportedOperationException("Married chains are not supported");
         else
             chain = new AnyDeterministicKeyChain(seed, crypter, outputScriptType, accountPath, keyFactory);
         return chain;
@@ -52,7 +47,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
             throws UnreadableWalletException {
         AnyDeterministicKeyChain chain;
         if (isMarried)
-            throw new UnsupportedOperationException("Married chains are not supported with BLS");
+            throw new UnsupportedOperationException("Married chains are not supported");
         else if (isFollowingKey)
             chain = AnyDeterministicKeyChain.builder().watchAndFollow(accountKey).outputScriptType(outputScriptType).build();
         else
@@ -67,7 +62,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
             throws UnreadableWalletException {
         AnyDeterministicKeyChain chain;
         if (isMarried)
-            throw new UnsupportedOperationException("Married chains are not supported with BLS");
+            throw new UnsupportedOperationException("Married chains are not supported");
         else
             chain = AnyDeterministicKeyChain.builder().spend(accountKey).outputScriptType(outputScriptType).build();
         return chain;
@@ -79,10 +74,10 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
                                                                ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) throws UnreadableWalletException
     {
         if (isMarried)
-            throw new UnsupportedOperationException("Married Friend Keychains are not allowed with BLS");
+            throw new UnsupportedOperationException("Married Friend Keychains are not allowed");
         else if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && /* allow any coin type */
                 accountPath.get(2).equals(DerivationPathFactory.FEATURE_PURPOSE_DASHPAY))
-            throw new UnsupportedOperationException("Friend keys are not supported with BLS");
+            throw new UnsupportedOperationException("Friend keys are not supported");
         else return new AnyDeterministicKeyChain(seed, crypter, Script.ScriptType.P2PKH, accountPath, keyFactory);
     }
 

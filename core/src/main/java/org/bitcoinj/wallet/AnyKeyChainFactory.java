@@ -15,19 +15,14 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.bls;
+package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
-import org.bitcoinj.crypto.bls.BLSDeterministicKey;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.UnreadableWalletException;
-
 /**
  * Factory interface for creation keychains while de-serializing a wallet.
  */
