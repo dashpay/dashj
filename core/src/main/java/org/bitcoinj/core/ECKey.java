@@ -1139,7 +1139,12 @@ public class ECKey implements IKey {
      * @throws IllegalStateException if the private key is not available.
      */
     public DumpedPrivateKey getPrivateKeyEncoded(NetworkParameters params) {
-        return new DumpedPrivateKey(params, getPrivKeyBytes(), isCompressed());
+        return new DumpedPrivateKey(params, getPrivKeyBytes(), isCompressed(), getKeyFactory());
+    }
+
+    @Override
+    public byte getPrivateKeyCompressedByte() {
+        return 0x00;
     }
 
     /**
@@ -1212,6 +1217,7 @@ public class ECKey implements IKey {
     public KeyFactory getKeyFactory() {
         return ECKeyFactory.get();
     }
+
 
     /**
      * Create a decrypted private key with AES key. Note that if the AES key is wrong, this

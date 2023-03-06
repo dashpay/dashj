@@ -100,4 +100,9 @@ public class ECKeyFactory implements KeyFactory {
     public KeyType getKeyType() {
         return KeyType.ECDSA;
     }
+
+    @Override
+    public byte getDumpedPrivateKeyLastByte() {
+        return 0x01;
+    }
 }

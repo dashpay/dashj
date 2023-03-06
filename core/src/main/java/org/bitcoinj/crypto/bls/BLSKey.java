@@ -111,52 +111,6 @@ public class BLSKey implements IKey {
         pub = priv.getPublicKey();
     }
 
-//    protected BLSKey(@Nullable BigInteger priv, ECPoint pub, boolean compressed) {
-//        this(priv, getPointWithCompression(checkNotNull(pub), compressed));
-//    }
-//
-//    protected BLSKey(@Nullable BigInteger priv, LazyECPoint pub) {
-//        if (priv != null) {
-//            checkArgument(priv.bitLength() <= 32 * 8, "private key exceeds 32 bytes: %s bits", priv.bitLength());
-//            // Try and catch buggy callers or bad key imports, etc. Zero and one are special because these are often
-//            // used as sentinel values and because scripting languages have a habit of auto-casting true and false to
-//            // 1 and 0 or vice-versa. Type confusion bugs could therefore result in private keys with these values.
-//            checkArgument(!priv.equals(BigInteger.ZERO));
-//            checkArgument(!priv.equals(BigInteger.ONE));
-//        }
-//        this.priv = priv;
-//        this.pub = checkNotNull(pub);
-//    }
-
-    /**
-     * Utility for decompressing an elliptic curve point. Returns the same point if it's already uncompressed.
-     * See the BLSKey class docs for a discussion of point compression.
-     */
-//    public static LazyECPoint decompressPoint(LazyECPoint point) {
-//        return !point.isCompressed() ? point : getPointWithCompression(point.get(), false);
-//    }
-
-//    private static LazyECPoint getPointWithCompression(ECPoint point, boolean compressed) {
-//        return new LazyECPoint(point, compressed);
-//    }
-
-    /**
-     * Construct an BLSKey from an ASN.1 encoded private key. These are produced by OpenSSL and stored by Bitcoin
-     * Core in its wallet. Note that this is slow because it requires an EC point multiply.
-     */
-//    public static BLSKey fromASN1(byte[] asn1privkey) {
-//        return extractKeyFromASN1(asn1privkey);
-//    }
-
-    /**
-     * Creates an BLSKey given the private key only. The public key is calculated from it (this is slow).
-     * @param compressed Determines whether the resulting BLSKey will use a compressed encoding for the public key.
-     */
-//    public static BLSKey fromPrivate(BigInteger privKey, boolean compressed) {
-//        ECPoint point = publicPointFromPrivate(privKey);
-//        return new BLSKey(privKey, getPointWithCompression(point, compressed));
-//    }
-
     /**
      * Creates an BLSKey given the private key only. The public key is calculated from it (this is slow). The resulting
      * public key is compressed.
@@ -165,24 +119,6 @@ public class BLSKey implements IKey {
         BLSSecretKey secretKey = new BLSSecretKey(privKeyBytes);
         return new BLSKey(secretKey, secretKey.getPublicKey());
     }
-
-    /**
-     * Creates an BLSKey given the private key only. The public key is calculated from it (this is slow).
-     * @param compressed Determines whether the resulting BLSKey will use a compressed encoding for the public key.
-     */
-//    public static BLSKey fromPrivate(byte[] privKeyBytes, boolean compressed) {
-//        return fromPrivate(new BigInteger(1, privKeyBytes), compressed);
-//    }
-
-    /**
-     * Creates an BLSKey that simply trusts the caller to ensure that point is really the result of multiplying the
-     * generator point by the private key. This is used to speed things up when you know you have the right values
-     * already.
-     * @param compressed Determines whether the resulting BLSKey will use a compressed encoding for the public key.
-     */
-    //public static BLSKey fromPrivateAndPrecalculatedPublic(BigInteger priv, ECPoint pub, boolean compressed) {
-    //    return new BLSKey(priv, pub, compressed);
-    //}
 
     /**
      * Creates an BLSKey that simply trusts the caller to ensure that point is really the result of multiplying the
@@ -194,14 +130,6 @@ public class BLSKey implements IKey {
         checkNotNull(pub);
         return new BLSKey(priv, pub);
     }
-
-    /**
-     * Creates an BLSKey that cannot be used for signing, only verifying signatures, from the given point.
-     * @param compressed Determines whether the resulting BLSKey will use a compressed encoding for the public key.
-     */
-//    public static BLSKey fromPublicOnly(ECPoint pub, boolean compressed) {
-//        return new BLSKey(null, pub, compressed);
-//    }
 
     /**
      * Creates an BLSKey that cannot be used for signing, only verifying signatures, from the given encoded point.
@@ -522,94 +450,6 @@ public class BLSKey implements IKey {
     }
 
     /**
-     * Given an arbitrary piece of text and a Bitcoin-format message signature encoded in base64, returns an BLSKey
-     * containing the public key that was used to sign it. This can then be compared to the expected public key to
-     * determine if the signature was correct. These sorts of signatures are compatible with the Bitcoin-Qt/bitcoind
-     * format generated by signmessage/verifymessage RPCs and GUI menu options. They are intended for humans to verify
-     * their communications with each other, hence the base64 format and the fact that the input is text.
-     *
-     * @param message Some piece of human readable text.
-     * @param signatureBase64 The Bitcoin-format message signature in base64
-     * @throws SignatureException If the public key could not be recovered or if there was a signature format error.
-     */
-//    public static BLSKey signedMessageToKey(String message, String signatureBase64) throws SignatureException {
-//        byte[] signatureEncoded;
-//        try {
-//            signatureEncoded = Base64.decode(signatureBase64);
-//        } catch (RuntimeException e) {
-//            // This is what you get back from Bouncy Castle if base64 doesn't decode :(
-//            throw new SignatureException("Could not decode base64", e);
-//        }
-//        // Parse the signature bytes into r/s and the selector value.
-//        if (signatureEncoded.length != BLSSignature.BLS_CURVE_SIG_SIZE)
-//            throw new SignatureException("Signature truncated, expected " + BLSSignature.BLS_CURVE_SIG_SIZE +
-//                    " bytes and got " + signatureEncoded.length);
-//
-//        byte[] messageBytes = Utils.formatMessageForSigning(message);
-//        // Note that the C++ code doesn't actually seem to specify any character encoding. Presumably it's whatever
-//        // JSON-SPIRIT hands back. Assume UTF-8 for now.
-//        Sha256Hash messageHash = Sha256Hash.twiceOf(messageBytes);
-//
-//        BLSKey key = BLSKey.recoverFromSignature(recId, sig, messageHash, compressed);
-//        if (key == null)
-//            throw new SignatureException("Could not recover public key from signature");
-//        return key;
-//    }
-//    public static BLSKey signedMessageToKey(byte [] message, byte [] signatureEncoded) throws SignatureException {
-//
-//        // Parse the signature bytes into r/s and the selector value.
-//        if (signatureEncoded.length < 65)
-//            throw new SignatureException("Signature truncated, expected 65 bytes and got " + signatureEncoded.length);
-//        int header = signatureEncoded[0] & 0xFF;
-//        // The header byte: 0x1B = first key with even y, 0x1C = first key with odd y,
-//        //                  0x1D = second key with even y, 0x1E = second key with odd y
-//        if (header < 27 || header > 34)
-//            throw new SignatureException("Header byte out of range: " + header);
-//        BigInteger r = new BigInteger(1, Arrays.copyOfRange(signatureEncoded, 1, 33));
-//        BigInteger s = new BigInteger(1, Arrays.copyOfRange(signatureEncoded, 33, 65));
-//        ECDSASignature sig = new ECDSASignature(r, s);
-//        byte[] messageBytes = Utils.formatMessageForSigning(message);
-//        // Note that the C++ code doesn't actually seem to specify any character encoding. Presumably it's whatever
-//        // JSON-SPIRIT hands back. Assume UTF-8 for now.
-//        Sha256Hash messageHash = Sha256Hash.twiceOf(messageBytes);
-//        boolean compressed = false;
-//        if (header >= 31) {
-//            compressed = true;
-//            header -= 4;
-//        }
-//        int recId = header - 27;
-//        BLSKey key = BLSKey.recoverFromSignature(recId, sig, messageHash, compressed);
-//        if (key == null)
-//            throw new SignatureException("Could not recover public key from signature");
-//        return key;
-//    }
-//
-//    public static BLSKey signedMessageToKey(Sha256Hash messageHash, byte [] signatureEncoded) throws SignatureException {
-//
-//        // Parse the signature bytes into r/s and the selector value.
-//        if (signatureEncoded.length < 65)
-//            throw new SignatureException("Signature truncated, expected 65 bytes and got " + signatureEncoded.length);
-//        int header = signatureEncoded[0] & 0xFF;
-//        // The header byte: 0x1B = first key with even y, 0x1C = first key with odd y,
-//        //                  0x1D = second key with even y, 0x1E = second key with odd y
-//        if (header < 27 || header > 34)
-//            throw new SignatureException("Header byte out of range: " + header);
-//        BigInteger r = new BigInteger(1, Arrays.copyOfRange(signatureEncoded, 1, 33));
-//        BigInteger s = new BigInteger(1, Arrays.copyOfRange(signatureEncoded, 33, 65));
-//        ECDSASignature sig = new ECDSASignature(r, s);
-//        boolean compressed = false;
-//        if (header >= 31) {
-//            compressed = true;
-//            header -= 4;
-//        }
-//        int recId = header - 27;
-//        BLSKey key = BLSKey.recoverFromSignature(recId, sig, messageHash, compressed);
-//        if (key == null)
-//            throw new SignatureException("Could not recover public key from signature");
-//        return key;
-//    }
-
-    /**
      * If the signature cannot be verified, throws a SignatureException.
      */
     public void verifyMessage(String message, String signatureBase64) throws SignatureException {
@@ -624,76 +464,6 @@ public class BLSKey implements IKey {
         if (!signature.verifyInsecure(pub, Sha256Hash.twiceOf(messageBytes)))
             throw new SignatureException("Signature did not match for message");
     }
-
-    /**
-     * <p>Given the components of a signature and a selector value, recover and return the public key
-     * that generated the signature according to the algorithm in SEC1v2 section 4.1.6.</p>
-     *
-     * <p>The recId is an index from 0 to 3 which indicates which of the 4 possible keys is the correct one. Because
-     * the key recovery operation yields multiple potential keys, the correct key must either be stored alongside the
-     * signature, or you must be willing to try each recId in turn until you find one that outputs the key you are
-     * expecting.</p>
-     *
-     * <p>If this method returns null it means recovery was not possible and recId should be iterated.</p>
-     *
-     * <p>Given the above two points, a correct usage of this method is inside a for loop from 0 to 3, and if the
-     * output is null OR a key that is not the one you expect, you try again with the next recId.</p>
-     *
-     * @param recId Which possible key to recover.
-     * @param sig the R and S components of the signature, wrapped.
-     * @param message Hash of the data that was signed.
-     * @param compressed Whether or not the original pubkey was compressed.
-     * @return An BLSKey containing only the public part, or null if recovery wasn't possible.
-     */
-//    @Nullable
-//    public static BLSKey recoverFromSignature(int recId, ECDSASignature sig, Sha256Hash message, boolean compressed) {
-//        Preconditions.checkArgument(recId >= 0, "recId must be positive");
-//        Preconditions.checkArgument(sig.r.signum() >= 0, "r must be positive");
-//        Preconditions.checkArgument(sig.s.signum() >= 0, "s must be positive");
-//        Preconditions.checkNotNull(message);
-//        // 1.0 For j from 0 to h   (h == recId here and the loop is outside this function)
-//        //   1.1 Let x = r + jn
-//        BigInteger n = CURVE.getN();  // Curve order.
-//        BigInteger i = BigInteger.valueOf((long) recId / 2);
-//        BigInteger x = sig.r.add(i.multiply(n));
-//        //   1.2. Convert the integer x to an octet string X of length mlen using the conversion routine
-//        //        specified in Section 2.3.7, where mlen = ⌈(log2 p)/8⌉ or mlen = ⌈m/8⌉.
-//        //   1.3. Convert the octet string (16 set binary digits)||X to an elliptic curve point R using the
-//        //        conversion routine specified in Section 2.3.4. If this conversion routine outputs "invalid", then
-//        //        do another iteration of Step 1.
-//        //
-//        // More concisely, what these points mean is to use X as a compressed public key.
-//        BigInteger prime = SecP256K1Curve.q;
-//        if (x.compareTo(prime) >= 0) {
-//            // Cannot have point co-ordinates larger than this as everything takes place modulo Q.
-//            return null;
-//        }
-//        // Compressed keys require you to know an extra bit of data about the y-coord as there are two possibilities.
-//        // So it's encoded in the recId.
-//        ECPoint R = decompressKey(x, (recId & 1) == 1);
-//        //   1.4. If nR != point at infinity, then do another iteration of Step 1 (callers responsibility).
-//        if (!R.multiply(n).isInfinity())
-//            return null;
-//        //   1.5. Compute e from M using Steps 2 and 3 of ECDSA signature verification.
-//        BigInteger e = message.toBigInteger();
-//        //   1.6. For k from 1 to 2 do the following.   (loop is outside this function via iterating recId)
-//        //   1.6.1. Compute a candidate public key as:
-//        //               Q = mi(r) * (sR - eG)
-//        //
-//        // Where mi(x) is the modular multiplicative inverse. We transform this into the following:
-//        //               Q = (mi(r) * s ** R) + (mi(r) * -e ** G)
-//        // Where -e is the modular additive inverse of e, that is z such that z + e = 0 (mod n). In the above equation
-//        // ** is point multiplication and + is point addition (the EC group operator).
-//        //
-//        // We can find the additive inverse by subtracting e from zero then taking the mod. For example the additive
-//        // inverse of 3 modulo 11 is 8 because 3 + 8 mod 11 = 0, and -3 mod 11 = 8.
-//        BigInteger eInv = BigInteger.ZERO.subtract(e).mod(n);
-//        BigInteger rInv = sig.r.modInverse(n);
-//        BigInteger srInv = rInv.multiply(sig.s).mod(n);
-//        BigInteger eInvrInv = rInv.multiply(eInv).mod(n);
-//        ECPoint q = ECAlgorithms.sumOfTwoMultiplies(CURVE.getG(), eInvrInv, R, srInv);
-//        return BLSKey.fromPublicOnly(q, compressed);
-//    }
 
     /**
      * Returns a 32 byte array containing the private key.
@@ -715,8 +485,14 @@ public class BLSKey implements IKey {
      */
     @Override
     public DumpedPrivateKey getPrivateKeyEncoded(NetworkParameters params) {
-        return new DumpedPrivateKey(params, getPrivKeyBytes(), isCompressed());
+        return new DumpedPrivateKey(params, getPrivKeyBytes(), isCompressed(), getKeyFactory());
     }
+
+    @Override
+    public byte getPrivateKeyCompressedByte() {
+        return 0x02;
+    }
+
 
     /**
      * Returns the creation time of this key or zero if the key was deserialized from a version that did not store

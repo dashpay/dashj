@@ -22,14 +22,19 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Base58;
 import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
+import org.bitcoinj.crypto.bls.BLSDeterministicKey;
+import org.bitcoinj.crypto.factory.BLSKeyFactory;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.UnitTestParams;
@@ -43,6 +48,9 @@ import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.listeners.AbstractKeyChainEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.dashj.bls.ExtendedPrivateKey;
+import org.dashj.bls.ExtendedPublicKey;
+import org.dashj.bls.PrivateKey;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -52,6 +60,7 @@ import java.security.SecureRandom;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -699,6 +708,57 @@ public class AnyDeterministicKeyChainTest {
         BloomFilter filter = chain.getFilter(e, 0.001, 1);
         for (IDeterministicKey key : keys)
             assertTrue("key " + key, filter.contains(key.getPubKeyHash()));
+    }
+
+    @Test
+    public void blsCheckPathDerivationTest() {
+        // TODO: should this be legacy or basic?
+        BLSScheme.setLegacyDefault(false);
+        ImmutableList<ChildNumber> operatorPath = DerivationPathFactory.get(UNITTEST).masternodeOperatorDerivationPath();
+
+        AnyDeterministicKeyChain blsChain = AuthenticationKeyChain.builder()
+                .seed(chain.getSeed())
+                .keyFactory(BLSKeyFactory.get())
+                .accountPath(operatorPath)
+                .build();
+
+        ExtendedPrivateKey extendedPrivateKey = ExtendedPrivateKey.fromSeed(chain.getSeed().getSeedBytes())
+                .privateChild(new ChildNumber(9, true).getI())
+                .privateChild(ChildNumber.ONE_HARDENED.getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(new ChildNumber(3, true).getI());
+
+        ExtendedPrivateKey blsExtPrivKeyCursor = null;
+        // check each element along the path
+        for (int i = 0; i < operatorPath.size(); ++i) {
+            IDeterministicKey key = blsChain.getKeyByPath(operatorPath.subList(0, i));
+            if (i == 0) {
+                blsExtPrivKeyCursor = ExtendedPrivateKey.fromSeed(chain.getSeed().getSeedBytes());
+            } else {
+                int child = operatorPath.get(i-1).getI();
+                blsExtPrivKeyCursor = blsExtPrivKeyCursor.privateChild(child);
+            }
+            assertArrayEquals(blsExtPrivKeyCursor.getChainCode().serialize(), key.getChainCode());
+            assertEquals(blsExtPrivKeyCursor.getParentFingerprint(), key.getParentFingerprint());
+            assertArrayEquals(blsExtPrivKeyCursor.getPrivateKey().serialize(), key.getPrivKeyBytes());
+            assertArrayEquals(blsExtPrivKeyCursor.getPublicKey().serialize(), key.getPubKey());
+            assertEquals(0x1L, blsExtPrivKeyCursor.getVersion());
+        }
+
+        // check the extended private key for the full path
+        assertArrayEquals(extendedPrivateKey.getChainCode().serialize(), blsChain.getWatchingKey().getChainCode());
+        assertEquals(extendedPrivateKey.getParentFingerprint(), blsChain.getWatchingKey().getParentFingerprint());
+        assertArrayEquals(extendedPrivateKey.getPrivateKey().serialize(), blsChain.getWatchingKey().getPrivKeyBytes());
+        assertArrayEquals(extendedPrivateKey.getPublicKey().serialize(), blsChain.getWatchingKey().getPubKey());
+        assertEquals(0x1L, extendedPrivateKey.getVersion());
+
+        // check the extended public key for the full path
+        ExtendedPublicKey extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
+        IDeterministicKey blsChainPublicKey = blsChain.getWatchingKey().dropPrivateBytes();
+        assertArrayEquals(extendedPublicKey.getChainCode().serialize(), blsChainPublicKey.getChainCode());
+        assertEquals(extendedPublicKey.getParentFingerprint(), blsChainPublicKey.getParentFingerprint());
+        assertArrayEquals(extendedPublicKey.getPublicKey().serialize(), blsChainPublicKey.getPubKey());
+        assertEquals(0x1L, extendedPublicKey.getVersion());
     }
 
     private String protoToString(List<Protos.Key> keys) {

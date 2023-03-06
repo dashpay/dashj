@@ -23,6 +23,7 @@ import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
+import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.params.Networks;
@@ -71,7 +72,13 @@ public class DumpedPrivateKey extends PrefixedChecksummedBytes {
 
     // Used by ECKey.getPrivateKeyEncoded()
     public DumpedPrivateKey(NetworkParameters params, byte[] keyBytes, boolean compressed) {
-        this(params, encode(keyBytes, compressed));
+        this(params, encode(keyBytes, compressed, ECKeyFactory.get()));
+    }
+
+
+    // Used by ECKey.getPrivateKeyEncoded()
+    public DumpedPrivateKey(NetworkParameters params, byte[] keyBytes, boolean compressed, KeyFactory keyFactory) {
+        this(params, encode(keyBytes, compressed, keyFactory));
     }
 
     /**
@@ -83,7 +90,7 @@ public class DumpedPrivateKey extends PrefixedChecksummedBytes {
         return Base58.encodeChecked(params.getDumpedPrivateKeyHeader(), bytes);
     }
 
-    private static byte[] encode(byte[] keyBytes, boolean compressed) {
+    private static byte[] encode(byte[] keyBytes, boolean compressed, KeyFactory keyFactory) {
         Preconditions.checkArgument(keyBytes.length == 32, "Private keys must be 32 bytes");
         if (!compressed) {
             return keyBytes;
@@ -91,7 +98,7 @@ public class DumpedPrivateKey extends PrefixedChecksummedBytes {
             // Keys that have compressed public components have an extra 1 byte on the end in dumped form.
             byte[] bytes = new byte[33];
             System.arraycopy(keyBytes, 0, bytes, 0, 32);
-            bytes[32] = 1;
+            bytes[32] = keyFactory.getDumpedPrivateKeyLastByte();
             return bytes;
         }
     }

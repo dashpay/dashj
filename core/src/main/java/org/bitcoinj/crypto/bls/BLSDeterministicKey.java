@@ -93,11 +93,11 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
         byte[] bytes;
         if (priv != null) {
-            bytes = serialize(Context.get().getParams(), false, Script.ScriptType.P2PKH);
+            bytes = serialize(null, false, Script.ScriptType.P2PKH);
             extendedPrivateKey = ExtendedPrivateKey.fromBytes(bytes);
             extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
         } else {
-            bytes = serialize(Context.get().getParams(), true, Script.ScriptType.P2PKH);
+            bytes = serialize(null, true, Script.ScriptType.P2PKH);
             extendedPrivateKey = null;
             extendedPublicKey = ExtendedPublicKey.fromBytes(bytes);
         }
@@ -123,7 +123,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
-        byte[] bytes = serialize(Context.get().getParams(), false, Script.ScriptType.P2PKH);
+        byte[] bytes = serialize(null, false, Script.ScriptType.P2PKH);
         extendedPrivateKey = ExtendedPrivateKey.fromBytes(bytes);
         extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
     }
@@ -259,7 +259,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         this.chainCode = extendedPrivateKey.getChainCode().serialize();
         this.encryptedPrivateKey = null;
         this.depth = extendedPrivateKey.getDepth();
-        this.parentFingerprint = childNumberPath.size();
+        this.parentFingerprint = parent != null ? (int)extendedPrivateKey.getParentFingerprint() : 0;
     }
 
     public BLSDeterministicKey(ExtendedPublicKey extendedPublicKey, @Nullable BLSDeterministicKey parent) {
@@ -278,7 +278,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         this.chainCode = extendedPublicKey.getChainCode().serialize();
         this.encryptedPrivateKey = null;
         this.depth = extendedPublicKey.getDepth();
-        this.parentFingerprint = childNumberPath.size();
+        this.parentFingerprint = parent != null ? (int)extendedPublicKey.getParentFingerprint() : 0;
     }
 
     /**
@@ -348,12 +348,12 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
      * Returns private key bytes, padded with zeros to 33 bytes.
      * @throws IllegalStateException if the private key bytes are missing.
      */
-//    public byte[] getPrivKeyBytes33() {
-//        byte[] bytes33 = new byte[33];
-//        byte[] priv = getPrivKeyBytes();
-//        System.arraycopy(priv, 0, bytes33, 33 - priv.length, priv.length);
-//        return bytes33;
-//    }
+    public byte[] getPrivKeyBytes33() {
+        byte[] bytes33 = new byte[33];
+        byte[] priv = getPrivKeyBytes();
+        System.arraycopy(priv, 0, bytes33, 33 - priv.length, priv.length);
+        return bytes33;
+    }
 
     /**
      * Returns the same key with the private bytes removed. May return the same instance. The purpose of this is to save
@@ -366,7 +366,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         if (isPubKeyOnly())
             return this;
         else
-            return new BLSDeterministicKey(getPath(), getChainCode(), pub, null, parent);
+            return new BLSDeterministicKey(extendedPublicKey, parent);
     }
 
     /**
@@ -600,13 +600,22 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         return serialize(params, false, Script.ScriptType.P2PKH);
     }
 
-    private byte[] serialize(NetworkParameters params, boolean pub, Script.ScriptType outputScriptType) {
+    /**
+     * Follows the bls-signature serialization, except that private keys are not prepended by a zero byte and the
+     * network prefix will replace the version.
+     */
+    private byte[] serialize(@Nullable NetworkParameters params, boolean pub, Script.ScriptType outputScriptType) {
         int size = pub ? 93 : 77;
         ByteBuffer ser = ByteBuffer.allocate(size);
-        if (outputScriptType == Script.ScriptType.P2PKH)
-            ser.putInt(pub ? params.getBip32HeaderP2PKHpub() : params.getBip32HeaderP2PKHpriv());
-        else
+        if (outputScriptType == Script.ScriptType.P2PKH) {
+            if (params == null) {
+                ser.putInt(0x1);
+            } else {
+                ser.putInt(pub ? params.getBip32HeaderP2PKHpub() : params.getBip32HeaderP2PKHpriv());
+            }
+        } else {
             throw new IllegalStateException(outputScriptType.toString());
+        }
         ser.put((byte) getDepth());
         ser.putInt(getParentFingerprint());
         ser.putInt(getChildNumber().i());
@@ -614,11 +623,6 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         ser.put(pub ? getPubKey() : getPrivKeyBytes());
         checkState(ser.position() == size);
         return ser.array();
-/*        if (pub) {
-            return extendedPublicKey.serialize();
-        } else {
-            return extendedPrivateKey.serialize();
-        }*/
     }
 
     public String serializePubB58(NetworkParameters params, Script.ScriptType outputScriptType) {

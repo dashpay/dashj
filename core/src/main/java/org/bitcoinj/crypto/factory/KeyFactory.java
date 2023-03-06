@@ -25,5 +25,8 @@ public interface KeyFactory {
     IDeterministicKey deserializeB58(IDeterministicKey parent, String pub58, NetworkParameters mainnet);
     IDeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params);
     IDeterministicKey createMasterPrivateKey(byte[] checkNotNull);
+
+    // other information (key type, WIF suffix, etc)
     KeyType getKeyType();
+    byte getDumpedPrivateKeyLastByte();
 }

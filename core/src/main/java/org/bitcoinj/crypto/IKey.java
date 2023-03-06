@@ -107,6 +107,7 @@ public interface IKey extends EncryptableItem {
     Object getPubKeyObject();
 
     KeyFactory getKeyFactory();
+    byte getPrivateKeyCompressedByte();
 
     DumpedPrivateKey getPrivateKeyEncoded(NetworkParameters params);
 

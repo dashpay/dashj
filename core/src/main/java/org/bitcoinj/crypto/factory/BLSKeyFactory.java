@@ -22,7 +22,6 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.EncryptedData;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
@@ -96,5 +95,10 @@ public class BLSKeyFactory implements KeyFactory {
     @Override
     public KeyType getKeyType() {
         return KeyType.BLS;
+    }
+
+    @Override
+    public byte getDumpedPrivateKeyLastByte() {
+        return 0x02;
     }
 }
