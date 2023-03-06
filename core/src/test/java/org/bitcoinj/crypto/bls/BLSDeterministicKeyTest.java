@@ -21,8 +21,6 @@ import static org.junit.Assert.fail;
 
 public class BLSDeterministicKeyTest {
     private final NetworkParameters UNITTEST = UnitTestParams.get();
-    private final Context context = Context.getOrCreate(MainNetParams.get());
-
     @Test
     public void legacyBLSFingerprintFromSeedTest() {
         BLSScheme.setLegacyDefault(true);
