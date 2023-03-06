@@ -73,7 +73,7 @@ public class AnyDeterministicKeyChainTest {
     private final byte[] ENTROPY = Sha256Hash.hash("don't use a string seed like this in real life".getBytes());
     private static final NetworkParameters UNITTEST = UnitTestParams.get();
     private static final NetworkParameters MAINNET = MainNetParams.get();
-    private static final Context context = Context.getOrCreate(UNITTEST);
+    //private static final Context context = Context.getOrCreate(UNITTEST);
     private static final ImmutableList<ChildNumber> BIP44_ACCOUNT_ONE_PATH = ImmutableList.of(new ChildNumber(44, true),
             new ChildNumber(1, true), ChildNumber.ZERO_HARDENED);
 
