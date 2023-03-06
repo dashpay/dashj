@@ -1,6 +1,7 @@
 /*
  * Copyright 2014 Kosta Korenkov
  * Copyright 2019 Andreas Schildbach
+ * Copyright 2023 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

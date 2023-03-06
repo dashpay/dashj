@@ -1,6 +1,7 @@
 /*
  * Copyright 2013 Google Inc.
  * Copyright 2019 Andreas Schildbach
+ * Copyright 2023 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +57,7 @@ import static com.google.common.base.Preconditions.checkState;
  * it will automatically add one to itself if it's empty or if encryption is requested.
  */
 public class AnyBasicKeyChain implements IEncryptableKeyChain {
-    private final ReentrantLock lock = Threading.lock("BLSBasicKeyChain");
+    private final ReentrantLock lock = Threading.lock("AnyBasicKeyChain");
 
     // Maps used to let us quickly look up a key given data we find in transactions or the block chain.
     private final LinkedHashMap<ByteString, IKey> hashToKeys;
