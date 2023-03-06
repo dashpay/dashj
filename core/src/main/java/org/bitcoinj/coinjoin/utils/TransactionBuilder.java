@@ -16,7 +16,6 @@
 package org.bitcoinj.coinjoin.utils;
 
 import com.google.common.collect.Lists;
-import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.InsufficientMoneyException;
@@ -167,11 +166,13 @@ public class TransactionBuilder {
             lock.unlock();
         }
 
+        // TODO: can't this go into the try block below?
         SendRequest req = SendRequest.to(wallet.getParams(), vecSend);
         req.ensureMinRequiredFee = false;
 
         try {
             SendRequest request = SendRequest.forTx(req.tx);
+            request.aesKey = wallet.getContext().coinJoinManager.requestKeyParameter(wallet);
             wallet.sendCoins(request);
         } catch (InsufficientMoneyException x) {
             throw new RuntimeException(x);
@@ -292,6 +293,10 @@ public class TransactionBuilder {
         for (TransactionOutput output : txouts) {
             ECKey key = wallet.findKeyFromPubKeyHash(ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey()), Script.ScriptType.P2PKH);
             checkState(key != null, "there must be a key for this output");
+            if (key.isEncrypted()) {
+                key = wallet.getContext().coinJoinManager.requestDecryptKey(key);
+            }
+
             req.tx.addSignedInputNoOutputsCheck(output.getOutPointFor(),output.getScriptPubKey(), key, Transaction.SigHash.ALL, false);
         }
         return tx.getMessageSize();

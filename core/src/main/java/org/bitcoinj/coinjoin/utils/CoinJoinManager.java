@@ -20,18 +20,22 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinBroadcastTx;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
+import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinClientQueueManager;
 import org.bitcoinj.coinjoin.CoinJoinClientSession;
 import org.bitcoinj.coinjoin.CoinJoinComplete;
 import org.bitcoinj.coinjoin.CoinJoinFinalTransaction;
 import org.bitcoinj.coinjoin.CoinJoinQueue;
 import org.bitcoinj.coinjoin.CoinJoinStatusUpdate;
+import org.bitcoinj.coinjoin.callbacks.RequestDecryptedKey;
+import org.bitcoinj.coinjoin.callbacks.RequestKeyParameter;
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
@@ -41,9 +45,12 @@ import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -61,6 +68,9 @@ public class CoinJoinManager {
 
     private ScheduledFuture<?> schedule;
     private AbstractBlockChain blockChain;
+
+    private RequestKeyParameter requestKeyParameter;
+    private RequestDecryptedKey requestDecryptedKey;
 
     public CoinJoinManager(Context context) {
         this.context = context;
@@ -99,16 +109,20 @@ public class CoinJoinManager {
     int tick = 0;
 
     public void doMaintenance() {
-        // report masternode group
-        tick++;
-        if (tick % 10 == 0) {
-            log.info(masternodeGroup.toString());
-            log.info(masternodeGroup.toString());
-        }
-        coinJoinClientQueueManager.doMaintenance();
+        if (CoinJoinClientOptions.isEnabled()) {
+            // report masternode group
+            if (masternodeGroup != null) {
+                tick++;
+                if (tick % 10 == 0) {
+                    log.info(masternodeGroup.toString());
+                    log.info(masternodeGroup.toString());
+                }
+            }
+            coinJoinClientQueueManager.doMaintenance();
 
-        for (CoinJoinClientManager clientManager: coinJoinClientManagers.values()) {
-            clientManager.doMaintenance();
+            for (CoinJoinClientManager clientManager : coinJoinClientManagers.values()) {
+                clientManager.doMaintenance();
+            }
         }
     }
 
@@ -159,7 +173,9 @@ public class CoinJoinManager {
     }
 
     public void close() {
-        blockChain.removeNewBestBlockListener(newBestBlockListener);
+        if (blockChain != null) {
+            blockChain.removeNewBestBlockListener(newBestBlockListener);
+        }
     }
 
     public boolean isMasternodeOrDisconnectRequested(MasternodeAddress address) {
@@ -312,5 +328,21 @@ public class CoinJoinManager {
         for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
             manager.removeMixingCompleteListener(listener);
         }
+    }
+
+    public void setRequestKeyParameter(RequestKeyParameter requestKeyParameter) {
+        this.requestKeyParameter = requestKeyParameter;
+    }
+
+    public void setRequestDecryptedKey(RequestDecryptedKey requestDecryptedKey) {
+        this.requestDecryptedKey = requestDecryptedKey;
+    }
+
+    public @Nullable KeyParameter requestKeyParameter(WalletEx mixingWallet) {
+        return requestKeyParameter != null ? requestKeyParameter.requestKeyParameter(mixingWallet) : null;
+    }
+
+    public @Nullable ECKey requestDecryptKey(ECKey key) {
+        return requestDecryptedKey != null ? requestDecryptedKey.requestDecryptedKey(key) : null;
     }
 }

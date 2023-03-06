@@ -530,12 +530,16 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     }
 
     public void removeEventListeners(AbstractBlockChain blockChain, PeerGroup peerGroup) {
-        blockChain.removeNewBestBlockListener(newBestBlockListener);
-        blockChain.removeReorganizeListener(reorganizeListener);
-        peerGroup.removeConnectedEventListener(peerConnectedEventListener);
-        peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
-        peerGroup.removeHeadersDownloadStartedEventListener(headersDownloadStartedEventListener);
-        peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
+        if (blockChain != null) {
+            blockChain.removeNewBestBlockListener(newBestBlockListener);
+            blockChain.removeReorganizeListener(reorganizeListener);
+        }
+         if (peerGroup != null) {
+            peerGroup.removeConnectedEventListener(peerConnectedEventListener);
+            peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+            peerGroup.removeHeadersDownloadStartedEventListener(headersDownloadStartedEventListener);
+            peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
+        }
     }
 
     public final NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {

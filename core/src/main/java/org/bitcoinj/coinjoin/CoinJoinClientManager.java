@@ -46,6 +46,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -57,6 +58,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MAX;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MIN;
 
@@ -75,6 +77,7 @@ public class CoinJoinClientManager {
     private final AtomicBoolean isMixing = new AtomicBoolean(false);
     private boolean stopOnNothingToDo = false;
     private SettableFuture<Boolean> mixingFinished;
+    private final EnumSet<PoolStatus> continueMixingOnStatus = EnumSet.noneOf(PoolStatus.class);
 
     private int cachedLastSuccessBlock = 0;
     private int minBlocksToWait = 1; // how many blocks to wait for after one successful mixing tx in non-multisession mode
@@ -109,6 +112,12 @@ public class CoinJoinClientManager {
     }
 
     public int cachedNumBlocks = Integer.MAX_VALUE;    // used for the overview screen
+
+    public CoinJoinClientManager(Wallet wallet) {
+        checkArgument(wallet instanceof WalletEx);
+        mixingWallet = (WalletEx) wallet;
+        context = wallet.getContext();
+    }
 
     public CoinJoinClientManager(WalletEx wallet) {
         mixingWallet = wallet;
@@ -205,7 +214,7 @@ public class CoinJoinClientManager {
             return false;
         }
 
-        if (!dryRun && mixingWallet.isEncrypted()) {
+        if (!dryRun && mixingWallet.isEncrypted() && context.coinJoinManager.requestKeyParameter(mixingWallet) == null) {
             strAutoDenomResult = "Wallet is locked.";
             return false;
         }
@@ -415,7 +424,7 @@ public class CoinJoinClientManager {
         }
 
         // are all sessions idle?
-        boolean isIdle = true;
+        boolean isIdle = !deqSessions.isEmpty(); // false if no sessions created yet
         for (CoinJoinClientSession session : deqSessions) {
             if (!session.hasNothingToDo()) {
                 isIdle = false;
@@ -424,7 +433,12 @@ public class CoinJoinClientManager {
         }
         // if all sessions idle, then trigger stop mixing
         if (isIdle) {
-            triggerMixingFinished();
+            List<PoolStatus> statuses = getSessionsStatus();
+            for (PoolStatus status : statuses) {
+                if (status == PoolStatus.FINISHED || (status.isError() && !continueMixingOnStatus.contains(status)))
+                    triggerMixingFinished();
+            }
+
         }
     }
 
@@ -587,5 +601,13 @@ public class CoinJoinClientManager {
             sessionsStatus.add(session.getStatus());
         }
         return sessionsStatus;
+    }
+
+    public EnumSet<PoolStatus> getContinueMixingOnStatus() {
+        return continueMixingOnStatus;
+    }
+
+    public void addContinueMixingOnError(PoolStatus error) {
+        continueMixingOnStatus.add(error);
     }
 }

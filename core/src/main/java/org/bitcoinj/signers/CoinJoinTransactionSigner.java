@@ -18,6 +18,7 @@
 
 package org.bitcoinj.signers;
 
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
@@ -117,6 +118,9 @@ public class CoinJoinTransactionSigner implements TransactionSigner {
             try {
                 if (ScriptPattern.isP2PK(scriptPubKey) || ScriptPattern.isP2PKH(scriptPubKey)
                         || ScriptPattern.isP2SH(scriptPubKey)) {
+                    if (key.isEncrypted()) {
+                        key = Context.get().coinJoinManager.requestDecryptKey(key);
+                    }
                     TransactionSignature signature = tx.calculateSignature(i, key, script, Transaction.SigHash.ALL,
                             false);
 

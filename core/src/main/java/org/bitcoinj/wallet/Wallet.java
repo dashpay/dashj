@@ -2985,7 +2985,7 @@ public class Wallet extends BaseTaggableObject
         if (receivingFromFriendsGroup != null)
             receivingFromFriendsGroup.addEventListener(listener, Threading.USER_THREAD);
         for (KeyChainWalletExtension extension : keyChainExtensions.values()) {
-                extension.addKeyChainEventListener(Threading.USER_THREAD, listener);
+                extension.addEventListener(listener, Threading.USER_THREAD);
         }
     }
 
@@ -2998,7 +2998,7 @@ public class Wallet extends BaseTaggableObject
         if (receivingFromFriendsGroup != null)
             receivingFromFriendsGroup.addEventListener(listener, executor);
         for (KeyChainWalletExtension extension : keyChainExtensions.values()) {
-            extension.addKeyChainEventListener(Threading.USER_THREAD, listener);
+            extension.addEventListener(listener, Threading.USER_THREAD);
         }
     }
 
@@ -3082,7 +3082,14 @@ public class Wallet extends BaseTaggableObject
      * was never added.
      */
     public boolean removeKeyChainEventListener(KeyChainEventListener listener) {
-        return keyChainGroup.removeEventListener(listener);
+        boolean removed = keyChainGroup.removeEventListener(listener);
+        if (receivingFromFriendsGroup != null)
+            removed |= receivingFromFriendsGroup.removeEventListener(listener);
+
+        for (KeyChainWalletExtension extension : keyChainExtensions.values()) {
+            removed |= extension.removeEventListener(listener);
+        }
+        return removed;
     }
 
     /**
@@ -6330,11 +6337,11 @@ public class Wallet extends BaseTaggableObject
         for(TransactionOutput output : tx.getOutputs()) {
             if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
                 byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
-                EvolutionContact contact = sendingToFriendsGroup.getFriendFromPublicKeyHash(hash160);
+                EvolutionContact contact = sendingToFriendsGroup != null ? sendingToFriendsGroup.getFriendFromPublicKeyHash(hash160) : null;
                 if (contact != null) {
                     return contact;
                 } else {
-                    contact = receivingFromFriendsGroup.getFriendFromPublicKeyHash(hash160);
+                    contact = receivingFromFriendsGroup != null ? receivingFromFriendsGroup.getFriendFromPublicKeyHash(hash160) : null;
                     if (contact != null) {
                         return contact;
                     }

@@ -293,7 +293,7 @@ public class WalletTool {
         mixAmountFlag = parser.accepts("amount").withRequiredArg();
         sessionsFlag = parser.accepts("sessions").withRequiredArg().ofType(Integer.class);
         roundsFlag = parser.accepts("rounds").withRequiredArg().ofType(Integer.class);
-        multiSessionFlag = parser.accepts("multi-session").withOptionalArg().ofType(Boolean.class);
+        multiSessionFlag = parser.accepts("multi-session").withOptionalArg().ofType(Boolean.class).defaultsTo(false);
 
         options = parser.parse(args);
 

@@ -22,13 +22,10 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.wallet.CoinSelection;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 
 public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
@@ -65,12 +62,16 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                 break;
             // don't bother with shouldSelect, since we have to check all the outputs
             // with isCoinJoin anyways.
-            if (output.isCoinJoin(wallet)) {
+            if (output.isCoinJoin(wallet) && !isLockedCoin(output)) {
                 selected.add(output);
                 total += output.getValue().value;
             }
         }
         return new CoinSelection(Coin.valueOf(total), selected);
+    }
+
+    private boolean isLockedCoin(TransactionOutput output) {
+        return wallet instanceof WalletEx && ((WalletEx) wallet).isLockedCoin(output.getOutPointFor());
     }
 
     @Override
