@@ -28,6 +28,7 @@ import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.kits.WalletAppKit;
@@ -214,9 +215,9 @@ public class ForwardingServiceEvo {
                 return;
 
             AuthenticationKeyChain blockchainIdentityFunding = kit.wallet().getBlockchainIdentityFundingKeyChain();
-            ECKey publicKey = blockchainIdentityFunding.freshAuthenticationKey(true);
+            IKey publicKey = blockchainIdentityFunding.freshAuthenticationKey(true);
             Coin fundingAmount = Coin.valueOf(40000);
-            SendRequest sendRequest = SendRequest.creditFundingTransaction(kit.params(), publicKey, fundingAmount);
+            SendRequest sendRequest = SendRequest.creditFundingTransaction(kit.params(), (ECKey)publicKey, fundingAmount);
             Wallet.SendResult sendResult = kit.wallet().sendCoins(sendRequest);
             System.out.println("Sending Credit Funding Transaction...");
             sendResult.broadcastComplete.addListener(new Runnable() {

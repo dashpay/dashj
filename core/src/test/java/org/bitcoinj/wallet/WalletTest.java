@@ -3296,10 +3296,10 @@ public class WalletTest extends TestWithWallet {
     public void keyEvents() throws Exception {
         // Check that we can register an event listener, generate some keys and the callbacks are invoked properly.
         wallet = new Wallet(UNITTEST, KeyChainGroup.builder(UNITTEST).addChain(DeterministicKeyChain.builder().random(new SecureRandom()).build()).build());
-        final List<ECKey> keys = Lists.newLinkedList();
+        final List<IKey> keys = Lists.newLinkedList();
         wallet.addKeyChainEventListener(Threading.SAME_THREAD, new KeyChainEventListener() {
             @Override
-            public void onKeysAdded(List<ECKey> k) {
+            public void onKeysAdded(List<IKey> k) {
                 keys.addAll(k);
             }
         });

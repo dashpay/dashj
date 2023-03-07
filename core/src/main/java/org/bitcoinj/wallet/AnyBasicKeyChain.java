@@ -1,6 +1,7 @@
 /*
  * Copyright 2013 Google Inc.
  * Copyright 2019 Andreas Schildbach
+ * Copyright 2023 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,52 +18,67 @@
 
 package org.bitcoinj.wallet;
 
-import org.bitcoinj.core.BloomFilter;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.crypto.*;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.listeners.KeyChainEventListener;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
+import org.bitcoinj.core.BloomFilter;
+import org.bitcoinj.crypto.IKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.crypto.EncryptableItem;
+import org.bitcoinj.crypto.EncryptedData;
+import org.bitcoinj.crypto.KeyCrypter;
+import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.crypto.KeyCrypterScrypt;
+import org.bitcoinj.crypto.factory.KeyFactory;
+import org.bitcoinj.utils.ListenerRegistration;
+import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * A {@link KeyChain} that implements the simplest model possible: it can have keys imported into it, and just acts as
  * a dumb bag of keys. It will, left to its own devices, always return the same key for usage by the wallet, although
  * it will automatically add one to itself if it's empty or if encryption is requested.
  */
-public class BasicKeyChain implements EncryptableKeyChain {
-    private final ReentrantLock lock = Threading.lock("BasicKeyChain");
+public class AnyBasicKeyChain implements IEncryptableKeyChain {
+    private final ReentrantLock lock = Threading.lock("AnyBasicKeyChain");
 
     // Maps used to let us quickly look up a key given data we find in transactions or the block chain.
-    private final LinkedHashMap<ByteString, ECKey> hashToKeys;
-    private final LinkedHashMap<ByteString, ECKey> pubkeyToKeys;
+    private final LinkedHashMap<ByteString, IKey> hashToKeys;
+    private final LinkedHashMap<ByteString, IKey> pubkeyToKeys;
     @Nullable private final KeyCrypter keyCrypter;
+
+    private final KeyFactory keyFactory;
     private boolean isWatching;
 
     private final CopyOnWriteArrayList<ListenerRegistration<KeyChainEventListener>> listeners;
 
-    public BasicKeyChain() {
-        this(null);
+    public AnyBasicKeyChain(KeyFactory keyFactory) {
+        this(null, keyFactory);
     }
 
-    public BasicKeyChain(@Nullable KeyCrypter crypter) {
+    public AnyBasicKeyChain(@Nullable KeyCrypter crypter, KeyFactory keyFactory) {
         this.keyCrypter = crypter;
         hashToKeys = new LinkedHashMap<>();
         pubkeyToKeys = new LinkedHashMap<>();
         listeners = new CopyOnWriteArrayList<>();
+        this.keyFactory = keyFactory;
     }
 
     /** Returns the {@link KeyCrypter} in use or null if the key chain is not encrypted. */
@@ -78,12 +94,12 @@ public class BasicKeyChain implements EncryptableKeyChain {
     }
 
     @Override
-    public ECKey getKey(@Nullable KeyPurpose ignored) {
+    public IKey getKey(@Nullable KeyChain.KeyPurpose ignored) {
         lock.lock();
         try {
             if (hashToKeys.isEmpty()) {
                 checkState(keyCrypter == null);   // We will refuse to encrypt an empty key chain.
-                final ECKey key = new ECKey();
+                final IKey key = keyFactory.newKey();
                 importKeyLocked(key);
                 queueOnKeysAdded(ImmutableList.of(key));
             }
@@ -94,25 +110,24 @@ public class BasicKeyChain implements EncryptableKeyChain {
     }
 
     @Override
-    public List<ECKey> getKeys(@Nullable KeyPurpose purpose, int numberOfKeys) {
+    public List<IKey> getKeys(@Nullable KeyChain.KeyPurpose purpose, int numberOfKeys) {
         checkArgument(numberOfKeys > 0);
         lock.lock();
         try {
             if (hashToKeys.size() < numberOfKeys) {
                 checkState(keyCrypter == null);
 
-                List<ECKey> keys = new ArrayList<>();
+                List<IKey> keys = new ArrayList<>();
                 for (int i = 0; i < numberOfKeys - hashToKeys.size(); i++) {
-                    keys.add(new ECKey());
+                    keys.add(keyFactory.newKey());
                 }
 
-                ImmutableList<IKey> immutableIKeys = ImmutableList.copyOf(keys);
-                ImmutableList<ECKey> immutableKeys = ImmutableList.copyOf(keys);
+                ImmutableList<IKey> immutableKeys = ImmutableList.copyOf(keys);
                 importKeysLocked(immutableKeys);
-                queueOnKeysAdded(immutableIKeys);
+                queueOnKeysAdded(immutableKeys);
             }
 
-            List<ECKey> keysToReturn = new ArrayList<>();
+            List<IKey> keysToReturn = new ArrayList<>();
             int count = 0;
             while (hashToKeys.values().iterator().hasNext() && numberOfKeys != count) {
                 keysToReturn.add(hashToKeys.values().iterator().next());
@@ -125,7 +140,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
     }
 
     /** Returns a copy of the list of keys that this chain is managing. */
-    public List<ECKey> getKeys() {
+    public List<IKey> getKeys() {
         lock.lock();
         try {
             return new ArrayList<>(hashToKeys.values());
@@ -134,35 +149,35 @@ public class BasicKeyChain implements EncryptableKeyChain {
         }
     }
 
-    public int importKeys(ECKey... keys) {
+    public int importKeys(IKey... keys) {
         return importKeys(ImmutableList.copyOf(keys));
     }
 
-    public int importKeys(List<? extends ECKey> keys) {
+    public int importKeys(List<? extends IKey> keys) {
         lock.lock();
         try {
             // Check that if we're encrypted, the keys are all encrypted, and if we're not, that none are.
             // We are NOT checking that the actual password matches here because we don't have access to the password at
             // this point: if you screw up and import keys with mismatched passwords, you lose! So make sure the
             // password is checked first.
-            for (ECKey key : keys) {
+            for (IKey key : keys) {
                 checkKeyEncryptionStateMatches(key);
             }
-            List<ECKey> actuallyAdded = new ArrayList<>(keys.size());
-            for (final ECKey key : keys) {
+            List<IKey> actuallyAdded = new ArrayList<>(keys.size());
+            for (final IKey key : keys) {
                 if (hasKey(key)) continue;
                 actuallyAdded.add(key);
                 importKeyLocked(key);
             }
             if (actuallyAdded.size() > 0)
-                queueOnKeysAdded(ImmutableList.copyOf(actuallyAdded));
+                queueOnKeysAdded(actuallyAdded);
             return actuallyAdded.size();
         } finally {
             lock.unlock();
         }
     }
 
-    private void checkKeyEncryptionStateMatches(ECKey key) {
+    private void checkKeyEncryptionStateMatches(IKey key) {
         if (keyCrypter == null && key.isEncrypted())
             throw new KeyCrypterException("Key is encrypted but chain is not");
         else if (keyCrypter != null && !key.isEncrypted())
@@ -171,7 +186,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
             throw new KeyCrypterException("Key encrypted under different parameters to chain");
     }
 
-    private void importKeyLocked(ECKey key) {
+    private void importKeyLocked(IKey key) {
         if (hashToKeys.isEmpty()) {
             isWatching = key.isWatching();
         } else {
@@ -180,13 +195,13 @@ public class BasicKeyChain implements EncryptableKeyChain {
             if (!key.isWatching() && isWatching)
                 throw new IllegalArgumentException("Key is not watching but chain is");
         }
-        ECKey previousKey = pubkeyToKeys.put(ByteString.copyFrom(key.getPubKey()), key);
+        IKey previousKey = pubkeyToKeys.put(ByteString.copyFrom(key.getPubKey()), key);
         hashToKeys.put(ByteString.copyFrom(key.getPubKeyHash()), key);
         checkState(previousKey == null);
     }
 
-    private void importKeysLocked(List<ECKey> keys) {
-        for (ECKey key : keys) {
+    private void importKeysLocked(List<IKey> keys) {
+        for (IKey key : keys) {
             importKeyLocked(key);
         }
     }
@@ -194,7 +209,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
     /**
      * Imports a key to the key chain. If key is present in the key chain, ignore it.
      */
-    public void importKey(ECKey key) {
+    public void importKey(IKey key) {
         lock.lock();
         try {
             checkKeyEncryptionStateMatches(key);
@@ -206,7 +221,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
         }
     }
 
-    public ECKey findKeyFromPubHash(byte[] pubKeyHash) {
+    public IKey findKeyFromPubHash(byte[] pubKeyHash) {
         lock.lock();
         try {
             return hashToKeys.get(ByteString.copyFrom(pubKeyHash));
@@ -215,7 +230,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
         }
     }
 
-    public ECKey findKeyFromPubKey(byte[] pubKey) {
+    public IKey findKeyFromPubKey(byte[] pubKey) {
         lock.lock();
         try {
             return pubkeyToKeys.get(ByteString.copyFrom(pubKey));
@@ -225,7 +240,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
     }
 
     @Override
-    public boolean hasKey(ECKey key) {
+    public boolean hasKey(IKey key) {
         return findKeyFromPubKey(key.getPubKey()) != null;
     }
 
@@ -234,23 +249,16 @@ public class BasicKeyChain implements EncryptableKeyChain {
         return pubkeyToKeys.size();
     }
 
-    /** Whether this basic key chain is empty, full of regular (usable for signing) keys, or full of watching keys. */
-    public enum State {
-        EMPTY,
-        WATCHING,
-        REGULAR
-    }
-
     /**
      * Returns whether this chain consists of pubkey only (watching) keys, regular keys (usable for signing), or
      * has no keys in it yet at all (thus we cannot tell).
      */
-    public State isWatching() {
+    public BasicKeyChain.State isWatching() {
         lock.lock();
         try {
             if (hashToKeys.isEmpty())
-                return State.EMPTY;
-            return isWatching ? State.WATCHING : State.REGULAR;
+                return BasicKeyChain.State.EMPTY;
+            return isWatching ? BasicKeyChain.State.WATCHING : BasicKeyChain.State.REGULAR;
         } finally {
             lock.unlock();
         }
@@ -261,7 +269,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
      * money associated with it</b>.
      * @return Whether the key was removed or not.
      */
-    public boolean removeKey(ECKey key) {
+    public boolean removeKey(IKey key) {
         lock.lock();
         try {
             boolean a = hashToKeys.remove(ByteString.copyFrom(key.getPubKeyHash())) != null;
@@ -278,7 +286,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
         lock.lock();
         try {
             long time = Long.MAX_VALUE;
-            for (ECKey key : hashToKeys.values())
+            for (IKey key : hashToKeys.values())
                 time = Math.min(key.getCreationTimeSeconds(), time);
             return time;
         } finally {
@@ -296,9 +304,9 @@ public class BasicKeyChain implements EncryptableKeyChain {
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    Map<ECKey, Protos.Key.Builder> serializeToEditableProtobufs() {
-        Map<ECKey, Protos.Key.Builder> result = new LinkedHashMap<>();
-        for (ECKey ecKey : hashToKeys.values()) {
+    Map<IKey, Protos.Key.Builder> serializeToEditableProtobufs() {
+        Map<IKey, Protos.Key.Builder> result = new LinkedHashMap<>();
+        for (IKey ecKey : hashToKeys.values()) {
             Protos.Key.Builder protoKey = serializeEncryptableItem(ecKey);
             protoKey.setPublicKey(ByteString.copyFrom(ecKey.getPubKey()));
             result.put(ecKey, protoKey);
@@ -343,8 +351,8 @@ public class BasicKeyChain implements EncryptableKeyChain {
      * Returns a new BasicKeyChain that contains all basic, ORIGINAL type keys extracted from the list. Unrecognised
      * key types are ignored.
      */
-    public static BasicKeyChain fromProtobufUnencrypted(List<Protos.Key> keys) throws UnreadableWalletException {
-        BasicKeyChain chain = new BasicKeyChain();
+    public static AnyBasicKeyChain fromProtobufUnencrypted(List<Protos.Key> keys, KeyFactory keyFactory) throws UnreadableWalletException {
+        AnyBasicKeyChain chain = new AnyBasicKeyChain(keyFactory);
         chain.deserializeFromProtobuf(keys);
         return chain;
     }
@@ -352,11 +360,11 @@ public class BasicKeyChain implements EncryptableKeyChain {
     /**
      * Returns a new BasicKeyChain that contains all basic, ORIGINAL type keys and also any encrypted keys extracted
      * from the list. Unrecognised key types are ignored.
-     * @throws org.bitcoinj.wallet.UnreadableWalletException.BadPassword if the password doesn't seem to match
-     * @throws org.bitcoinj.wallet.UnreadableWalletException if the data structures are corrupted/inconsistent
+     * @throws UnreadableWalletException.BadPassword if the password doesn't seem to match
+     * @throws UnreadableWalletException if the data structures are corrupted/inconsistent
      */
-    public static BasicKeyChain fromProtobufEncrypted(List<Protos.Key> keys, KeyCrypter crypter) throws UnreadableWalletException {
-        BasicKeyChain chain = new BasicKeyChain(checkNotNull(crypter));
+    public static AnyBasicKeyChain fromProtobufEncrypted(List<Protos.Key> keys, KeyCrypter crypter, KeyFactory keyFactory) throws UnreadableWalletException {
+        AnyBasicKeyChain chain = new AnyBasicKeyChain(checkNotNull(crypter), keyFactory);
         chain.deserializeFromProtobuf(keys);
         return chain;
     }
@@ -373,7 +381,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
                 if (!key.hasPublicKey())
                     throw new UnreadableWalletException("Public key missing");
                 byte[] pub = key.getPublicKey().toByteArray();
-                ECKey ecKey;
+                IKey ecKey;
                 if (encrypted) {
                     checkState(keyCrypter != null, "This wallet is encrypted but encrypt() was not called prior to deserialization");
                     if (!key.hasEncryptedData())
@@ -381,12 +389,12 @@ public class BasicKeyChain implements EncryptableKeyChain {
                     Protos.EncryptedData proto = key.getEncryptedData();
                     EncryptedData e = new EncryptedData(proto.getInitialisationVector().toByteArray(),
                             proto.getEncryptedPrivateKey().toByteArray());
-                    ecKey = ECKey.fromEncrypted(e, keyCrypter, pub);
+                    ecKey = keyFactory.fromEncrypted(e, keyCrypter, pub);
                 } else {
                     if (priv != null)
-                        ecKey = ECKey.fromPrivateAndPrecalculatedPublic(priv, pub);
+                        ecKey = keyFactory.fromPrivateAndPrecalculatedPublic(priv, pub);
                     else
-                        ecKey = ECKey.fromPublicOnly(pub);
+                        ecKey = keyFactory.fromPublicOnly(pub);
                 }
                 ecKey.setCreationTimeSeconds(key.getCreationTimestamp() / 1000);
                 importKeyLocked(ecKey);
@@ -442,11 +450,11 @@ public class BasicKeyChain implements EncryptableKeyChain {
 
     /**
      * Convenience wrapper around {@link #toEncrypted(KeyCrypter,
-     * org.bouncycastle.crypto.params.KeyParameter)} which uses the default Scrypt key derivation algorithm and
+     * KeyParameter)} which uses the default Scrypt key derivation algorithm and
      * parameters, derives a key from the given password and returns the created key.
      */
     @Override
-    public BasicKeyChain toEncrypted(CharSequence password) {
+    public AnyBasicKeyChain toEncrypted(CharSequence password) {
         checkNotNull(password);
         checkArgument(password.length() > 0);
         KeyCrypter scrypt = new KeyCrypterScrypt();
@@ -464,20 +472,20 @@ public class BasicKeyChain implements EncryptableKeyChain {
      * @throws KeyCrypterException Thrown if the wallet encryption fails. If so, the wallet state is unchanged.
      */
     @Override
-    public BasicKeyChain toEncrypted(KeyCrypter keyCrypter, KeyParameter aesKey) {
+    public AnyBasicKeyChain toEncrypted(KeyCrypter keyCrypter, KeyParameter aesKey) {
         lock.lock();
         try {
             checkNotNull(keyCrypter);
             checkState(this.keyCrypter == null, "Key chain is already encrypted");
-            BasicKeyChain encrypted = new BasicKeyChain(keyCrypter);
-            for (ECKey key : hashToKeys.values()) {
-                ECKey encryptedKey = key.encrypt(keyCrypter, aesKey);
+            AnyBasicKeyChain encrypted = new AnyBasicKeyChain(keyCrypter, keyFactory);
+            for (IKey key : hashToKeys.values()) {
+                IKey encryptedKey = key.encrypt(keyCrypter, aesKey);
                 // Check that the encrypted key can be successfully decrypted.
                 // This is done as it is a critical failure if the private key cannot be decrypted successfully
                 // (all bitcoin controlled by that private key is lost forever).
                 // For a correctly constructed keyCrypter the encryption should always be reversible so it is just
                 // being as cautious as possible.
-                if (!ECKey.encryptionIsReversible(key, encryptedKey, keyCrypter, aesKey))
+                if (!IKey.encryptionIsReversible(key, encryptedKey, keyCrypter, aesKey))
                     throw new KeyCrypterException("The key " + key.toString() + " cannot be successfully decrypted after encryption so aborting wallet encryption.");
                 encrypted.importKeyLocked(encryptedKey);
             }
@@ -491,22 +499,22 @@ public class BasicKeyChain implements EncryptableKeyChain {
     }
 
     @Override
-    public BasicKeyChain toDecrypted(CharSequence password) {
+    public AnyBasicKeyChain toDecrypted(CharSequence password) {
         checkNotNull(keyCrypter, "Wallet is already decrypted");
         KeyParameter aesKey = keyCrypter.deriveKey(password);
         return toDecrypted(aesKey);
     }
 
     @Override
-    public BasicKeyChain toDecrypted(KeyParameter aesKey) {
+    public AnyBasicKeyChain toDecrypted(KeyParameter aesKey) {
         lock.lock();
         try {
             checkState(keyCrypter != null, "Wallet is already decrypted");
             // Do an up-front check.
             if (numKeys() > 0 && !checkAESKey(aesKey))
                 throw new KeyCrypterException("Password/key was incorrect.");
-            BasicKeyChain decrypted = new BasicKeyChain();
-            for (ECKey key : hashToKeys.values()) {
+            AnyBasicKeyChain decrypted = new AnyBasicKeyChain(keyFactory);
+            for (IKey key : hashToKeys.values()) {
                 decrypted.importKeyLocked(key.decrypt(aesKey));
             }
             for (ListenerRegistration<KeyChainEventListener> listener : listeners) {
@@ -543,8 +551,8 @@ public class BasicKeyChain implements EncryptableKeyChain {
             checkState(keyCrypter != null, "Key chain is not encrypted");
 
             // Find the first encrypted key in the wallet.
-            ECKey first = null;
-            for (ECKey key : hashToKeys.values()) {
+            IKey first = null;
+            for (IKey key : hashToKeys.values()) {
                 if (key.isEncrypted()) {
                     first = key;
                     break;
@@ -553,7 +561,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
             checkState(first != null, "No encrypted keys in the wallet");
 
             try {
-                ECKey rebornKey = first.decrypt(aesKey);
+                IKey rebornKey = first.decrypt(aesKey);
                 return Arrays.equals(first.getPubKey(), rebornKey.getPubKey());
             } catch (KeyCrypterException e) {
                 // The AES key supplied is incorrect.
@@ -576,7 +584,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
         lock.lock();
         try {
             BloomFilter filter = new BloomFilter(size, falsePositiveRate, tweak);
-            for (ECKey key : hashToKeys.values())
+            for (IKey key : hashToKeys.values())
                 filter.insert(key);
             return filter;
         } finally {
@@ -596,13 +604,13 @@ public class BasicKeyChain implements EncryptableKeyChain {
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /** Returns the first ECKey created after the given UNIX time, or null if there is none. */
+    /** Returns the first IKey created after the given UNIX time, or null if there is none. */
     @Nullable
-    public ECKey findOldestKeyAfter(long timeSecs) {
+    public IKey findOldestKeyAfter(long timeSecs) {
         lock.lock();
         try {
-            ECKey oldest = null;
-            for (ECKey key : hashToKeys.values()) {
+            IKey oldest = null;
+            for (IKey key : hashToKeys.values()) {
                 final long keyTime = key.getCreationTimeSeconds();
                 if (keyTime > timeSecs) {
                     if (oldest == null || oldest.getCreationTimeSeconds() > keyTime)
@@ -616,11 +624,11 @@ public class BasicKeyChain implements EncryptableKeyChain {
     }
 
     /** Returns a list of all ECKeys created after the given UNIX time. */
-    public List<ECKey> findKeysBefore(long timeSecs) {
+    public List<IKey> findKeysBefore(long timeSecs) {
         lock.lock();
         try {
-            List<ECKey> results = Lists.newLinkedList();
-            for (ECKey key : hashToKeys.values()) {
+            List<IKey> results = Lists.newLinkedList();
+            for (IKey key : hashToKeys.values()) {
                 final long keyTime = key.getCreationTimeSeconds();
                 if (keyTime < timeSecs) {
                     results.add(key);
@@ -634,9 +642,9 @@ public class BasicKeyChain implements EncryptableKeyChain {
 
     public String toString(boolean includePrivateKeys, @Nullable KeyParameter aesKey, NetworkParameters params) {
         final StringBuilder builder = new StringBuilder();
-        List<ECKey> keys = getKeys();
-        Collections.sort(keys, ECKey.AGE_COMPARATOR);
-        for (ECKey key : keys)
+        List<IKey> keys = getKeys();
+        Collections.sort(keys, IKey.AGE_COMPARATOR);
+        for (IKey key : keys)
             key.formatKeyWithAddress(includePrivateKeys, aesKey, builder, params, null, "imported");
         return builder.toString();
     }

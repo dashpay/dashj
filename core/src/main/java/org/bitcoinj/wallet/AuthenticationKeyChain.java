@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2023 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,19 @@
 
 package org.bitcoinj.wallet;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.crypto.*;
+import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.IDeterministicKey;
+import org.bitcoinj.crypto.IKey;
+import org.bitcoinj.crypto.HDUtils;
+import org.bitcoinj.crypto.KeyCrypter;
+import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.crypto.factory.BLSKeyFactory;
+import org.bitcoinj.crypto.factory.ECKeyFactory;
+import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
@@ -35,7 +43,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-public class AuthenticationKeyChain extends ExternalKeyChain {
+public class AuthenticationKeyChain extends AnyExternalKeyChain {
 
     public enum KeyChainType {
         BLOCKCHAIN_IDENTITY,
@@ -47,6 +55,36 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         BLOCKCHAIN_IDENTITY_TOPUP,
         INVITATION_FUNDING,
         INVALID_KEY_CHAIN
+    }
+    public static KeyFactory getKeyFactory(KeyChainType type) {
+        KeyFactory keyFactory = null;
+        switch (type) {
+            case MASTERNODE_OWNER:
+            case MASTERNODE_VOTING:
+            case BLOCKCHAIN_IDENTITY:
+            case BLOCKCHAIN_IDENTITY_FUNDING:
+            case BLOCKCHAIN_IDENTITY_TOPUP:
+            case INVITATION_FUNDING:
+            case MASTERNODE_HOLDINGS:
+                keyFactory = new ECKeyFactory();
+                break;
+            case MASTERNODE_OPERATOR:
+                keyFactory = new BLSKeyFactory();
+                break;
+            default:
+                break;
+        }
+        return keyFactory;
+    }
+    public static boolean isECDSA(KeyChainType type) {
+        return !isBLS(type) && !isEDDSA(type);
+    }
+
+    public static boolean isBLS(KeyChainType type) {
+        return type == KeyChainType.MASTERNODE_OPERATOR;
+    }
+    public static boolean isEDDSA(KeyChainType type) {
+        return false;
     }
     KeyChainType type;
     boolean hardenedChildren;
@@ -61,10 +99,11 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         protected byte[] entropy;
         protected DeterministicSeed seed;
         protected boolean isFollowing = false;
-        protected DeterministicKey spendingKey = null;
+        protected IDeterministicKey spendingKey = null;
         protected ImmutableList<ChildNumber> accountPath = null;
         protected KeyChainType type = null;
         protected boolean hardenedChildren = false;
+        protected KeyFactory keyFactory = null;
 
         protected Builder() {
         }
@@ -110,7 +149,7 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         /**
          * Creates a key chain that can spend from the given account key.
          */
-        public T spend(DeterministicKey accountKey) {
+        public T spend(IDeterministicKey accountKey) {
             checkState(accountPath == null, "either spend or accountPath");
             this.spendingKey = accountKey;
             this.isFollowing = false;
@@ -172,33 +211,33 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
 
 
 
-    public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
-        super(seed, null, path);
+    public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyFactory keyFactory) {
+        super(seed, null, path, keyFactory);
         setLookaheadSize(5);
     }
 
-    public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path) {
-        super(seed, keyCrypter, path);
+    public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyFactory factory) {
+        super(seed, keyCrypter, path, factory);
         setLookaheadSize(5);
     }
 
-    public AuthenticationKeyChain(DeterministicKey key) {
+    public AuthenticationKeyChain(IDeterministicKey key) {
         super(key, false);
     }
 
     public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyChainType type, boolean hardenedChildren) {
-        this(seed, path);
+        this(seed, path, getKeyFactory(type));
         this.type = type;
         this.hardenedChildren = hardenedChildren;
     }
 
     public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyChainType type, boolean hardenedChildren) {
-        this(seed, keyCrypter, path);
+        this(seed, keyCrypter, path, getKeyFactory(type));
         this.type = type;
         this.hardenedChildren = hardenedChildren;
     }
 
-    public AuthenticationKeyChain(DeterministicKey key, KeyChainType type, boolean hardenedChildren) {
+    public AuthenticationKeyChain(IDeterministicKey key, KeyChainType type, boolean hardenedChildren) {
         this(key);
         this.type = type;
         this.hardenedChildren = hardenedChildren;
@@ -225,21 +264,21 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
      * @param type the type of authentication key chain
      */
     /* package */
-    void setType(KeyChainType type) {
+    public void setType(KeyChainType type) {
         this.type = type;
     }
 
     @Override
-    public DeterministicKey getKey(KeyPurpose purpose) {
+    public IDeterministicKey getKey(KeyChain.KeyPurpose purpose) {
         return getKeys(purpose, 1).get(0);
     }
 
     @Override
-    public List<DeterministicKey> getKeys(KeyPurpose purpose, int numberOfKeys) {
+    public List<IDeterministicKey> getKeys(KeyChain.KeyPurpose purpose, int numberOfKeys) {
         checkArgument(numberOfKeys > 0);
         lock.lock();
         try {
-            DeterministicKey parentKey;
+            IDeterministicKey parentKey;
             int index;
             switch (purpose) {
                 case AUTHENTICATION:
@@ -252,15 +291,14 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
             }
 
             //TODO: do we need to look ahead here, even for one key?  Does anything get saved?
-            /** Optimization: see {@link DeterministicKeyChain.getKeys(org.bitcoinj.wallet.KeyChain.KeyPurpose, int)} */
+            /** Optimization: see {@link DeterministicKeyChain.getKeys( KeyPurpose, int)} */
 
-            List<DeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
+            List<IDeterministicKey> lookahead = maybeLookAhead(parentKey, index, 0, 0);
             basicKeyChain.importKeys(lookahead);
-            List<DeterministicKey> keys = new ArrayList<DeterministicKey>(numberOfKeys);
+            List<IDeterministicKey> keys = new ArrayList<>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
                 ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
-                DeterministicKey k = hierarchy.get(path, false, false);
-                checkForBitFlip(k);
+                IDeterministicKey k = hierarchy.get(path, false, false);
                 keys.add(k);
             }
             return keys;
@@ -269,11 +307,11 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         }
     }
 
-    public DeterministicKey getKey(int index, boolean isHardened) {
+    public IDeterministicKey getKey(int index, boolean isHardened) {
         return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, isHardened))).build(), true);
     }
 
-    public DeterministicKey getKey(int index) {
+    public IDeterministicKey getKey(int index) {
         return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, hardenedChildren))).build(), true);
     }
 
@@ -281,23 +319,23 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         return currentIndex;
     }
 
-    public DeterministicKey freshAuthenticationKey(boolean isHardened) {
-        return getKey(KeyPurpose.AUTHENTICATION);
+    public IDeterministicKey freshAuthenticationKey(boolean isHardened) {
+        return getKey(KeyChain.KeyPurpose.AUTHENTICATION);
     }
 
-    public DeterministicKey currentAuthenticationKey(boolean isHardened) {
+    public IDeterministicKey currentAuthenticationKey(boolean isHardened) {
         return getKey(currentIndex, isHardened);
     }
 
-    public DeterministicKey getKeyByPubKeyHash(byte [] hash160) {
+    public IDeterministicKey getKeyByPubKeyHash(byte [] hash160) {
         Preconditions.checkState(hash160.length == 20);
-        return (DeterministicKey)basicKeyChain.findKeyFromPubHash(hash160);
+        return (IDeterministicKey)basicKeyChain.findKeyFromPubHash(hash160);
     }
 
     @Override
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, NetworkParameters params) {
         return "Authentication Key Chain: " + (type != null ? type.toString() : "unknown") + "\n" +
-            super.toString(includeLookahead, includePrivateKeys, aesKey, params);
+                super.toString(includeLookahead, includePrivateKeys, aesKey, params);
     }
 
     @Override
@@ -314,25 +352,25 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
         DeterministicSeed decSeed = getSeed().decrypt(getKeyCrypter(), passphrase, aesKey);
         AuthenticationKeyChain chain = new AuthenticationKeyChain(decSeed, getAccountPath(), type, hardenedChildren);
         // Now double check that the keys match to catch the case where the key is wrong but padding didn't catch it.
-        if (!chain.getWatchingKey().getPubKeyPoint().equals(getWatchingKey().getPubKeyPoint()))
+        if (!chain.getWatchingKey().getPubKeyObject().equals(getWatchingKey().getPubKeyObject()))
             throw new KeyCrypterException.PublicPrivateMismatch("Provided AES key is wrong");
         chain.lookaheadSize = lookaheadSize;
         // Now copy the (pubkey only) leaf keys across to avoid rederiving them. The private key bytes are missing
         // anyway so there's nothing to decrypt.
-        for (ECKey eckey : basicKeyChain.getKeys()) {
-            DeterministicKey key = (DeterministicKey) eckey;
+        for (IKey eckey : basicKeyChain.getKeys()) {
+            IDeterministicKey key = (IDeterministicKey) eckey;
             if (key.getPath().size() != getAccountPath().size() + 2) continue; // Not a leaf key.
             checkState(key.isEncrypted());
-            DeterministicKey parent = chain.hierarchy.get(checkNotNull(key.getParent()).getPath(), false, false);
+            IDeterministicKey parent = chain.hierarchy.get(checkNotNull(key.getParent()).getPath(), false, false);
             // Clone the key to the new decrypted hierarchy.
-            key = new DeterministicKey(key.dropPrivateBytes(), parent);
+            key = keyFactory.fromChildAndParent(key.dropPrivateBytes(), parent);
             chain.hierarchy.putKey(key);
             chain.basicKeyChain.importKey(key);
         }
         chain.issuedExternalKeys = issuedExternalKeys;
         chain.issuedInternalKeys = issuedInternalKeys;
         for (ListenerRegistration<KeyChainEventListener> listener : basicKeyChain.getListeners()) {
-            chain.basicKeyChain.addEventListener(listener);
+            chain.basicKeyChain.addEventListener(listener.listener);
         }
         return chain;
     }
@@ -343,5 +381,19 @@ public class AuthenticationKeyChain extends ExternalKeyChain {
 
     public void setHardenedChildren(boolean hardenedChildren) {
         this.hardenedChildren = hardenedChildren;
+    }
+
+    @Override
+    public String toString() {
+        MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
+        helper.addValue(type);
+        helper.addValue(keyFactory.getKeyType());
+        helper.addValue(getOutputScriptType());
+        helper.add("accountPath", getAccountPath());
+        helper.add("lookaheadSize", lookaheadSize);
+        helper.add("lookaheadThreshold", lookaheadThreshold);
+        if (isFollowing)
+            helper.addValue("following");
+        return helper.toString();
     }
 }

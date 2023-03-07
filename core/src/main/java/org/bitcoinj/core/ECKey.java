@@ -19,6 +19,8 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.crypto.factory.ECKeyFactory;
+import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -91,7 +93,7 @@ import static com.google.common.base.Preconditions.*;
  * this class so round-tripping preserves state. Unless you're working with old software or doing unusual things, you
  * can usually ignore the compressed/uncompressed distinction.</p>
  */
-public class ECKey implements EncryptableItem {
+public class ECKey implements IKey {
     private static final Logger log = LoggerFactory.getLogger(ECKey.class);
 
     /** Sorts oldest keys first, newest last. */
@@ -1137,7 +1139,12 @@ public class ECKey implements EncryptableItem {
      * @throws IllegalStateException if the private key is not available.
      */
     public DumpedPrivateKey getPrivateKeyEncoded(NetworkParameters params) {
-        return new DumpedPrivateKey(params, getPrivKeyBytes(), isCompressed());
+        return new DumpedPrivateKey(params, getPrivKeyBytes(), isCompressed(), getKeyFactory());
+    }
+
+    @Override
+    public byte getPrivateKeyCompressedByte() {
+        return 0x00;
     }
 
     /**
@@ -1200,6 +1207,17 @@ public class ECKey implements EncryptableItem {
         key.setCreationTimeSeconds(creationTimeSeconds);
         return key;
     }
+
+    @Override
+    public Object getPubKeyObject() {
+        return getPubKeyPoint();
+    }
+
+    @Override
+    public KeyFactory getKeyFactory() {
+        return ECKeyFactory.get();
+    }
+
 
     /**
      * Create a decrypted private key with AES key. Note that if the AES key is wrong, this
@@ -1301,11 +1319,11 @@ public class ECKey implements EncryptableItem {
         return keyCrypter;
     }
 
-    public static class MissingPrivateKeyException extends RuntimeException {
-    }
+    //public static class MissingPrivateKeyException extends RuntimeException {
+    //}
 
-    public static class KeyIsEncryptedException extends MissingPrivateKeyException {
-    }
+    //public static class KeyIsEncryptedException extends MissingPrivateKeyException {
+    //}
 
     @Override
     public boolean equals(Object o) {

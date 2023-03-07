@@ -5726,6 +5726,7 @@ public class Wallet extends BaseTaggableObject
 
     AuthenticationKeyChain providerOwnerKeyChain;
     AuthenticationKeyChain providerVoterKeyChain;
+    AuthenticationKeyChain providerOperatorKeyChain;
     AuthenticationKeyChain blockchainIdentityFundingKeyChain;
     AuthenticationKeyChain blockchainIdentityTopupKeyChain;
     AuthenticationKeyChain blockchainIdentityKeyChain;
@@ -5734,14 +5735,18 @@ public class Wallet extends BaseTaggableObject
 
     public void initializeAuthenticationKeyChains(DeterministicSeed seed, @Nullable KeyParameter keyParameter) {
         //TODO: add provider*KeyChains when that functionality is required
-        //addAuthenticationKeyChain(seed,
-        //        derivationPathFactory.masternodeOwnerDerivationPath(),
-        //        AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
-        //        keyParameter);
-        //addAuthenticationKeyChain(seed,
-        //        derivationPathFactory.masternodeVotingDerivationPath(),
-        //        AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
-        //        keyParameter);
+        providerOwnerKeyChain = addAuthenticationKeyChain(seed,
+                derivationPathFactory.masternodeOwnerDerivationPath(),
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
+                keyParameter);
+        providerVoterKeyChain = addAuthenticationKeyChain(seed,
+                derivationPathFactory.masternodeVotingDerivationPath(),
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+                keyParameter);
+        providerOperatorKeyChain = addAuthenticationKeyChain(seed,
+                derivationPathFactory.masternodeVotingDerivationPath(),
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                keyParameter);
         blockchainIdentityFundingKeyChain = addAuthenticationKeyChain(seed,
                 derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath(),
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
@@ -5799,6 +5804,10 @@ public class Wallet extends BaseTaggableObject
         return providerVoterKeyChain;
     }
 
+    public AuthenticationKeyChain getProviderOperatorKeyChain() {
+        return providerOperatorKeyChain;
+    }
+
     public AuthenticationKeyChain getBlockchainIdentityKeyChain() {
         return blockchainIdentityKeyChain;
     }
@@ -5844,6 +5853,10 @@ public class Wallet extends BaseTaggableObject
                 break;
             case INVITATION_FUNDING:
                 invitationFundingKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
+            case MASTERNODE_OPERATOR:
+                providerOperatorKeyChain = chain;
                 authenticationGroup.addAndActivateHDChain(chain);
                 break;
         }
@@ -5921,13 +5934,13 @@ public class Wallet extends BaseTaggableObject
         CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
 
         // set some internal data for the transaction
-        DeterministicKey publicKey = getBlockchainIdentityFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+        DeterministicKey publicKey = (DeterministicKey) getBlockchainIdentityFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
 
         if (publicKey == null)
-            publicKey = getBlockchainIdentityTopupKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+            publicKey = (DeterministicKey) getBlockchainIdentityTopupKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
 
         if (publicKey == null)
-            publicKey = getInvitationFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+            publicKey = (DeterministicKey) getInvitationFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
 
         if(publicKey != null)
             cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
@@ -5947,7 +5960,7 @@ public class Wallet extends BaseTaggableObject
      * it's actually seen in a pending or confirmed transaction, at which point this method will start returning
      * a different key (for each purpose independently).
      */
-    public DeterministicKey currentAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
+    public IDeterministicKey currentAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
         keyChainGroupLock.lock();
         try {
             return authenticationGroup.currentKey(type);
@@ -5976,7 +5989,7 @@ public class Wallet extends BaseTaggableObject
      * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key out
      * to someone who wishes to send money.
      */
-    public DeterministicKey freshAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
+    public IDeterministicKey freshAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
         return freshAuthenticationKeys(type, 1).get(0);
     }
 
@@ -5988,8 +6001,8 @@ public class Wallet extends BaseTaggableObject
      * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key/s out
      * to someone who wishes to send money.
      */
-    public List<DeterministicKey> freshAuthenticationKeys(AuthenticationKeyChain.KeyChainType type, int numberOfKeys) {
-        List<DeterministicKey> keys;
+    public List<IDeterministicKey> freshAuthenticationKeys(AuthenticationKeyChain.KeyChainType type, int numberOfKeys) {
+        List<IDeterministicKey> keys;
         keyChainGroupLock.lock();
         try {
             keys = authenticationGroup.freshKeys(type, numberOfKeys);
@@ -6021,12 +6034,12 @@ public class Wallet extends BaseTaggableObject
      * Returns only the keys that have been issued by {@link #freshReceiveKey()}, {@link #freshReceiveAddress()},
      * {@link #currentReceiveKey()} or {@link #currentReceiveAddress()}.
      */
-    public List<ECKey> getIssuedAuthenticationKeys(AuthenticationKeyChain.KeyChainType type) {
+    public List<IKey> getIssuedAuthenticationKeys(AuthenticationKeyChain.KeyChainType type) {
         keyChainGroupLock.lock();
         try {
-            List<ECKey> keys = new LinkedList<>();
+            List<IKey> keys = new LinkedList<>();
             long keyRotationTimeSecs = vKeyRotationTimestamp;
-            for (final DeterministicKeyChain chain : authenticationGroup.getActiveKeyChains(keyRotationTimeSecs))
+            for (final AnyDeterministicKeyChain chain : authenticationGroup.getActiveKeyChains(keyRotationTimeSecs))
                 keys.addAll(chain.getIssuedReceiveKeys());
             return keys;
         } finally {

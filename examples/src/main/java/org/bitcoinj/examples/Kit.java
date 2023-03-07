@@ -15,6 +15,7 @@
 package org.bitcoinj.examples;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.script.Script;
@@ -80,7 +81,7 @@ public class Kit {
 
         kit.wallet().addKeyChainEventListener(new KeyChainEventListener() {
             @Override
-            public void onKeysAdded(List<ECKey> keys) {
+            public void onKeysAdded(List<IKey> keys) {
                 System.out.println("new key added");
             }
         });

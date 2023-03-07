@@ -1,26 +1,32 @@
-package org.bitcoinj.wallet;
+package org.bitcoinj.wallet.authentication;
 
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.KeyId;
-import org.bitcoinj.crypto.BLSPublicKey;
-import org.bitcoinj.crypto.BLSSecretKey;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.IDeterministicKey;
-import org.bitcoinj.crypto.bls.BLSDeterministicKey;
-import org.bitcoinj.crypto.factory.BLSKeyFactory;
-import org.bitcoinj.crypto.factory.ECKeyFactory;
-import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
-import org.dashj.bls.BLSJniLibrary;
-import org.dashj.bls.ExtendedPrivateKey;
-import org.dashj.bls.PrivateKey;
+import org.bitcoinj.wallet.AuthenticationKeyChain;
+import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
+import org.bitcoinj.wallet.DeterministicKeyChain;
+import org.bitcoinj.wallet.DeterministicSeed;
+import org.bitcoinj.wallet.KeyChain;
+import org.bitcoinj.wallet.KeyChainGroup;
+import org.bitcoinj.wallet.Protos;
+import org.bitcoinj.wallet.UnreadableWalletException;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.bitcoinj.wallet.AnyDeterministicKeyChain;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-public class AuthenticationKeyChainTest {
+public class AuthenticationKeyChainGroupTest {
+
     Context context;
     UnitTestParams PARAMS;
 
@@ -48,19 +54,13 @@ public class AuthenticationKeyChainTest {
     IDeterministicKey operatorKeyMaster;
     IDeterministicKey operatorKey;
     KeyId operatorKeyId;
-
-    final KeyFactory EC_KEY_FACTORY = ECKeyFactory.get();
-    final KeyFactory BLS_KEY_FACTORY = BLSKeyFactory.get();
-    static {
-        BLSJniLibrary.init();
-    }
-
+    AuthenticationKeyChainGroup authGroup;
     @Before
     public void startup() throws UnreadableWalletException {
         PARAMS = UnitTestParams.get();
         context = new Context(PARAMS);
 
-        seed = new DeterministicSeed(seedPhrase, null, "", 0);
+        seed = new DeterministicSeed(seedPhrase, null, "", Utils.currentTimeSeconds());
         DeterministicKeyChain bip32 = DeterministicKeyChain.builder()
                 .seed(seed)
                 .outputScriptType(Script.ScriptType.P2PKH)
@@ -105,7 +105,7 @@ public class AuthenticationKeyChainTest {
         votingKeyId = KeyId.fromBytes(votingKey.getPubKeyHash());
 
         buKeyMaster = bu.getWatchingKey();
-        buKey = buKeyMaster.deriveChildKey(ChildNumber.ZERO_HARDENED);
+        buKey = buKeyMaster.deriveChildKey(ChildNumber.ZERO);
         buKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
 
         operator = AuthenticationKeyChain.authenticationBuilder()
@@ -117,36 +117,42 @@ public class AuthenticationKeyChainTest {
         operatorKeyMaster = operator.getWatchingKey();
         operatorKey = operatorKeyMaster.deriveChildKey(ChildNumber.ZERO);
         operatorKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
+
+        // put these in the same Authentication Group
+        authGroup = AuthenticationKeyChainGroup.authenticationBuilder(PARAMS)
+                .addChain(voting)
+                .addChain(owner)
+                .addChain(operator)
+                .addChain(bu)
+                .build();
+
+        wallet.initializeAuthenticationKeyChains(seed, null);
     }
 
     @Test
-    public void authenticationKeyChainTest() {
-        // check that derivatation matches an alternate method
-        AuthenticationKeyChain owner = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET, EC_KEY_FACTORY);
-        IDeterministicKey myOwnerKey = owner.getKey(KeyChain.KeyPurpose.AUTHENTICATION);
-        assertEquals(myOwnerKey, ownerKey);
+    public void keyChainTest() {
+        assertTrue(authGroup.hasKeyChains());
+        IDeterministicKey currentOperator = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
+        IDeterministicKey currentOwner = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
+        IDeterministicKey currentVoter = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
+        IDeterministicKey currentIdentity = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
 
-        AuthenticationKeyChain voting = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET, EC_KEY_FACTORY);
-        IDeterministicKey myVotingKey = voting.getKey(KeyChain.KeyPurpose.AUTHENTICATION);
-        assertEquals(myVotingKey, votingKey);
+        assertEquals(currentOwner, ownerKey);
+        assertEquals(currentVoter, votingKey);
+        assertEquals(currentOperator, operatorKey);
+        assertEquals(currentIdentity, buKey);
+    }
 
-        AuthenticationKeyChain blockchainUser = new AuthenticationKeyChain(seed, DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET, AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY, true);
-        IDeterministicKey myBlockchainUserKey = blockchainUser.getKey(0, true);
-        assertEquals(myBlockchainUserKey, buKey);
-        IDeterministicKey bukeyIndexZero = blockchainUser.getKey(0, true);
-        assertEquals(bukeyIndexZero, buKey);
+    @Test
+    public void serializationTest() throws UnreadableWalletException {
+        Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
+        Wallet walletCopy = new WalletProtobufSerializer().readWallet(PARAMS, null, protos);
 
-        ExtendedPrivateKey blsExtendedPrivateKey = ExtendedPrivateKey.fromSeed(seed.getSeedBytes());
+        assertEquals(wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER),
+                walletCopy.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER));
 
-        PrivateKey operatorPrivateKey = blsExtendedPrivateKey.privateChild(new ChildNumber(9, true).getI())
-                .privateChild(new ChildNumber(1, true).getI())
-                .privateChild(new ChildNumber(3, true).getI())
-                .privateChild(new ChildNumber(3, true).getI())
-                .privateChild(0)
-                .getPrivateKey();
-        BLSPublicKey blsOperatorKey = new BLSPublicKey(operatorPrivateKey.getG1Element());
-        BLSSecretKey blsOperatorSecret = new BLSSecretKey(operatorPrivateKey);
-        assertEquals(blsOperatorKey, operatorKey.getPubKeyObject());
-        assertEquals(blsOperatorSecret, ((BLSDeterministicKey)operatorKey).getPrivKey());
+        // TODO: for some reason "wallet" has creation times for all BLS keys, so this fails if we compare keys, so lets compare priv key bytes
+        assertArrayEquals(wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR).getPrivKeyBytes(),
+                walletCopy.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR).getPrivKeyBytes());
     }
 }

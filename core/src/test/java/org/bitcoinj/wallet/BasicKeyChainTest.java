@@ -19,6 +19,7 @@ package org.bitcoinj.wallet;
 import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
@@ -44,7 +45,7 @@ import static org.junit.Assert.*;
 
 public class BasicKeyChainTest {
     private BasicKeyChain chain;
-    private AtomicReference<List<ECKey>> onKeysAdded;
+    private AtomicReference<List<IKey>> onKeysAdded;
     private AtomicBoolean onKeysAddedRan;
 
     @Before
@@ -54,7 +55,7 @@ public class BasicKeyChainTest {
         onKeysAddedRan = new AtomicBoolean();
         chain.addEventListener(new AbstractKeyChainEventListener() {
             @Override
-            public void onKeysAdded(List<ECKey> keys2) {
+            public void onKeysAdded(List<IKey> keys2) {
                 onKeysAdded.set(keys2);
                 onKeysAddedRan.set(true);
             }

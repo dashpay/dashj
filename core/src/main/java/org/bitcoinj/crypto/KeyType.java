@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Google Inc.
+ * Copyright 2023 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,17 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.wallet.listeners;
+package org.bitcoinj.crypto;
 
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.crypto.IKey;
-import org.bitcoinj.wallet.KeyChain;
+public enum KeyType {
+    RSA(0),
+    ECDSA(1), // secp256k1
+    BLS(2),   // BLS12-381
+    EDDSA(3); // ED25519
 
-import java.util.List;
+    final int value;
 
-public interface KeyChainEventListener {
-    /**
-     * Called whenever a new key is added to the key chain, whether that be via an explicit addition or due to some
-     * other automatic derivation. See the documentation for your {@link KeyChain} implementation for details on what
-     * can trigger this event.
-     */
-    void onKeysAdded(List<IKey> keys);
+    KeyType(int value) {
+        this.value = value;
+    }
 }
