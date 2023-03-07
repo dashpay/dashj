@@ -368,6 +368,20 @@ public class SimplifiedMasternodeList extends Message {
         return false;
     }
 
+    public boolean isValid(Sha256Hash proRegTxHash) {
+        lock.lock();
+        try {
+            SimplifiedMasternodeListEntry entry = mnMap.get(proRegTxHash);
+            if (entry != null) {
+                return entry.isValid();
+            } else {
+                return false;
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public interface ForeachMNCallback {
         void processMN(SimplifiedMasternodeListEntry mn);
     }

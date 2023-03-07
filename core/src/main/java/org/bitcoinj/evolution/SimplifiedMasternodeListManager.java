@@ -34,6 +34,8 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.evolution.SimplifiedMasternodeListDiff.BASIC_BLS_VERSION;
+
 /**
  * This class manages the state of the masternode lists and quorums.  It does so with help from
  * {@link QuorumState} for DIP4 quorums and {@link QuorumRotationState} for DIP24 quorums
@@ -178,6 +180,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             quorumRotationState.setStateManager(this);
             cursor += quorumRotationState.getMessageSize();
         }
+        if (getFormatVersion() >= BLS_SCHEME_FORMAT_VERSION) {
+            params.setV19Active((int) quorumState.getMasternodeList().getHeight());
+        }
         processQuorumList(quorumState.getQuorumListAtTip());
         processQuorumList(quorumRotationState.getQuorumListAtH());
         length = cursor - offset;
@@ -281,6 +286,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         try {
             quorumState.processDiff(peer, mnlistdiff, headersChain, blockChain, isLoadingBootStrap);
 
+            processMasternodeList(mnlistdiff);
             processQuorumList(quorumState.getQuorumListAtTip());
 
             unCache();
@@ -313,7 +319,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public void processQuorumRotationInfo(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap) {
         try {
             quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
-
+            processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
             setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
             unCache();
             if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
@@ -583,6 +589,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                     }
                 }
             });
+        }
+    }
+
+    public void processMasternodeList(SimplifiedMasternodeListDiff mnlistdiff) {
+        int height = (int)mnlistdiff.getHeight();
+        if (!params.isDIP0024Active(height)) {
+            if (mnlistdiff.getVersion() == BASIC_BLS_VERSION) {
+                params.setV19Active(height);
+            }
         }
     }
 

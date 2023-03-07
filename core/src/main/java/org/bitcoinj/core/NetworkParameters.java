@@ -123,8 +123,11 @@ public abstract class NetworkParameters {
     /** Used to check for DIP0008 upgrade */
     protected int DIP0008BlockHeight;
 
-    /** Used to check for DIP0008 upgrade */
+    /** Used to check for DIP0024 upgrade */
     protected int DIP0024BlockHeight;
+
+    /** Used to check for v19 upgrade */
+    protected int v19BlockHeight = Integer.MAX_VALUE;
 
     protected boolean isDIP24Only = false;
 
@@ -803,6 +806,19 @@ public abstract class NetworkParameters {
     public void setDIP0024Active(int height) {
         System.out.println("DIP24 is now active");
         DIP0024BlockHeight = height;
+    }
+
+    public boolean isV19Active(StoredBlock block) {
+        return block.getHeight() >= v19BlockHeight;
+    }
+
+    public boolean isV19Active(int height) {
+        return height >= v19BlockHeight;
+    }
+
+    public void setV19Active(int height) {
+        System.out.println("v19 is now active");
+        v19BlockHeight = height;
     }
 
     @Deprecated

@@ -230,7 +230,7 @@ public class FlatDB<Type extends AbstractManager> {
                 }
 
                 // de-serialize file header (network specific magic number) and ..
-                pchMsgTmp = (int)Utils.readUint32(vchData, magicMessage.length());
+                pchMsgTmp = Utils.readUint32(vchData, magicMessage.length());
 
                 // ... verify the network matches ours
                 if (pchMsgTmp != context.getParams().getPacketMagic()) {
