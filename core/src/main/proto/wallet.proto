@@ -425,14 +425,37 @@ message ExtendedKeyChain {
     BLOCKCHAIN_IDENTITY_FUNDING = 5;
     BLOCKCHAIN_IDENTITY_TOPUP = 6;
     INVITATION_FUNDING = 7;
+    MASTERNODE_PLATFORM_OPERATOR = 8;
+    INVALID = 99;
   }
   enum KeyType {
     ECDSA = 0;
     BLS = 1;
+    EDDSA = 2;
   }
   required ExtendedKeyChainType type = 1;
   required KeyType keyType = 2;
   repeated Key key = 3;
+}
+
+message AuthenticationKeyUsage {
+  enum AuthenticationKeyStatus {
+      UNKNOWN = 0;
+      CURRENT = 1;
+      PREVIOUS = 2;
+      REVOKED = 3;
+      NEVER = 4;
+  }
+  required bytes keyOrKeyId = 1;
+  required ExtendedKeyChain.ExtendedKeyChainType keyType = 2;
+  required AuthenticationKeyStatus status = 3;
+  required bytes whereUsed = 4;
+  optional PeerAddress address = 5;
+}
+
+message AuthenticationWalletExtension {
+  repeated ExtendedKeyChain authenticationKeyChains = 1;
+  repeated AuthenticationKeyUsage authenticationKeyUsage = 2;
 }
 
 /** A bitcoin wallet */

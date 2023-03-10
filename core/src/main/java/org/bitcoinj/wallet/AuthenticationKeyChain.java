@@ -54,6 +54,7 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
         MASTERNODE_VOTING,
         BLOCKCHAIN_IDENTITY_TOPUP,
         INVITATION_FUNDING,
+        MASTERNODE_PLATFORM_OPERATOR,
         INVALID_KEY_CHAIN
     }
     public static KeyFactory getKeyFactory(KeyChainType type) {
@@ -84,7 +85,7 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
         return type == KeyChainType.MASTERNODE_OPERATOR;
     }
     public static boolean isEDDSA(KeyChainType type) {
-        return false;
+        return type == KeyChainType.MASTERNODE_PLATFORM_OPERATOR;
     }
     KeyChainType type;
     boolean hardenedChildren;
