@@ -30,7 +30,6 @@ import org.dashj.bls.ExtendedPrivateKey;
 import org.dashj.bls.G1Element;
 import org.dashj.bls.PrivateKey;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.bouncycastle.util.encoders.Base64;
 

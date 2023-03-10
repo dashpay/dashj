@@ -306,6 +306,13 @@ public class WalletProtobufSerializer {
             proto.setData(ByteString.copyFrom(extension.serializeWalletExtension()));
             walletBuilder.addExtension(proto);
         }
+        for (KeyChainGroupExtension extension : wallet.getKeyChainExtensions().values()) {
+            Protos.Extension.Builder proto = Protos.Extension.newBuilder();
+            proto.setId(extension.getWalletExtensionID());
+            proto.setMandatory(extension.isWalletExtensionMandatory());
+            proto.setData(ByteString.copyFrom(extension.serializeWalletExtension()));
+            walletBuilder.addExtension(proto);
+        }
     }
 
     private static Protos.Transaction makeTxProto(WalletTransaction wtx) {
@@ -742,6 +749,8 @@ public class WalletProtobufSerializer {
             wallet.setDescription(walletProto.getDescription());
         }
 
+        loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
+
         if (forceReset) {
             // Should mirror Wallet.reset()
             wallet.setLastBlockSeenHash(null);
@@ -778,8 +787,6 @@ public class WalletProtobufSerializer {
             }
         }
 
-        loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
-
         for (Protos.Tag tag : walletProto.getTagsList()) {
             wallet.setTag(tag.getTag(), tag.getData());
         }
@@ -801,6 +808,7 @@ public class WalletProtobufSerializer {
         // The Wallet object, if subclassed, might have added some extensions to itself already. In that case, don't
         // expect them to be passed in, just fetch them here and don't re-add.
         extensions.putAll(wallet.getExtensions());
+        extensions.putAll(wallet.getKeyChainExtensions());
         for (Protos.Extension extProto : walletProto.getExtensionList()) {
             String id = extProto.getId();
             WalletExtension extension = extensions.get(id);
