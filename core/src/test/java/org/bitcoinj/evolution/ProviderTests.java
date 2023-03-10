@@ -34,8 +34,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.bouncycastle.util.encoders.Base64;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -98,13 +100,7 @@ public class ProviderTests {
         votingKeyId = KeyId.fromBytes(votingKey.getPubKeyHash());
 
         blsExtendedPrivateKey = ExtendedPrivateKey.fromSeed(seed.getSeedBytes());
-        /*operatorKey = new BLSPublicKey(blsExtendedPrivateKey.privateChild(new ChildNumber(9, true).getI())
-                .privateChild(new ChildNumber(1, true).getI())
-                .privateChild(new ChildNumber(3, true).getI())
-                .privateChild(new ChildNumber(3, true).getI())
-                .privateChild(0)
-                .GetPublicKey());
-*/
+
         PrivateKey operatorPrivateKey = blsExtendedPrivateKey.privateChild(new ChildNumber(9, true).getI())
                 .privateChild(new ChildNumber(1, true).getI())
                 .privateChild(new ChildNumber(3, true).getI())
@@ -301,7 +297,101 @@ public class ProviderTests {
             // this call is expected to fail the first time it is called
         }
     }
-    
+
+    @Test
+    public void testCollateralProviderRegistrationTransaction() {
+        byte[] hexData = Utils.HEX.decode("0300010001ca9a43051750da7c5f858008f2ff7732d15691e48eb7f845c791e5dca78bab58010000006b483045022100fe8fec0b3880bcac29614348887769b0b589908e3f5ec55a6cf478a6652e736502202f30430806a6690524e4dd599ba498e5ff100dea6a872ebb89c2fd651caa71ed012103d85b25d6886f0b3b8ce1eef63b720b518fad0b8e103eba4e85b6980bfdda2dfdffffffff018e37807e090000001976a9144ee1d4e5d61ac40a13b357ac6e368997079678c888ac00000000fd1201010000000000ca9a43051750da7c5f858008f2ff7732d15691e48eb7f845c791e5dca78bab580000000000000000000000000000ffff010205064e1f3dd03f9ec192b5f275a433bfc90f468ee1a3eb4c157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfad38a30fafe61575db40f05ab0a08d55119b0aad300001976a9144fbc8fb6e11e253d77e5a9c987418e89cf4a63d288ac3477990b757387cb0406168c2720acf55f83603736a314a37d01b135b873a27b411fb37e49c1ff2b8057713939a5513e6e711a71cff2e517e6224df724ed750aef1b7f9ad9ec612b4a7250232e1e400da718a9501e1d9a5565526e4b1ff68c028763");
+
+        Transaction providerRegistrationTransactionFromMessage = new Transaction(PARAMS, hexData);
+        ProviderRegisterTx providerRegistrationTx = (ProviderRegisterTx) providerRegistrationTransactionFromMessage.getExtraPayloadObject();
+
+        //    protx register_prepare
+        //    58ab8ba7dce591c745f8b78ee49156d13277fff20880855f7cda501705439aca
+        //    0
+        //    1.2.5.6:19999
+        //    yRxHYGLf9G4UVYdtAoB2iAzR3sxxVaZB6y
+        //    97762493aef0bcba1925870abf51dc21f4bc2b8c410c79b7589590e6869a0e04
+        //    yfbxyP4ctRJR1rs3A8C3PdXA4Wtcrw7zTi
+        //    0
+        //    ycBFJGv7V95aSs6XvMewFyp1AMngeRHBwy
+
+        Sha256Hash txId = Sha256Hash.wrap("e65f550356250100513aa9c260400562ac8ee1b93ae1cc1214cc9f6830227b51");
+        Sha256Hash inputTransactionHashValue = Sha256Hash.wrapReversed(Utils.HEX.decode("ca9a43051750da7c5f858008f2ff7732d15691e48eb7f845c791e5dca78bab58"));
+        Address inputAddress0 = Address.fromBase58(PARAMS,"yQxPwSSicYgXiU22k4Ysq464VxRtgbnvpJ");
+        Address outputAddress0 = Address.fromBase58(PARAMS,"yTWY6DsS4HBGs2JwDtnvVcpykLkbvtjUte");
+        Address collateralAddress = Address.fromBase58(PARAMS,"yeNVS6tFeQNXJVkjv6nm6gb7PtTERV5dGh");
+        Sha256Hash collateralHash = Sha256Hash.wrap("58ab8ba7dce591c745f8b78ee49156d13277fff20880855f7cda501705439aca");
+        int collateralIndex = 0;
+        TransactionOutPoint reversedCollateral = new TransactionOutPoint(PARAMS, collateralIndex, collateralHash);
+        Address payoutAddress = Address.fromBase58(PARAMS, "yTb47qEBpNmgXvYYsHEN4nh8yJwa5iC4Cs");
+        ECKey inputPrivateKey0 = wallet.findKeyFromAddress(inputAddress0);
+
+        Address checkInputAddress0 = Address.fromKey(PARAMS, inputPrivateKey0);
+        assertEquals(checkInputAddress0, inputAddress0);
+
+        ECKey inputPrivateKey = wallet.findKeyFromAddress(inputAddress0);
+        Sha256Hash messageDigest = Sha256Hash.twiceOf(Utils.formatMessageForSigning(providerRegistrationTx.getPayloadCollateralString()));
+
+        assertEquals(providerRegistrationTx.getInputsHash(), Sha256Hash.wrap("7ba273b835b1017da314a3363760835ff5ac20278c160604cb8773750b997734"));
+
+        assertEquals(providerRegistrationTx.getHash(), Sha256Hash.wrap("71e973f79003accd202b9a2ab2613ac6ced601b26684e82f561f6684fef2f102"));
+
+        assertEquals("yTb47qEBpNmgXvYYsHEN4nh8yJwa5iC4Cs|0|yRxHYGLf9G4UVYdtAoB2iAzR3sxxVaZB6y|yfbxyP4ctRJR1rs3A8C3PdXA4Wtcrw7zTi|71e973f79003accd202b9a2ab2613ac6ced601b26684e82f561f6684fef2f102", providerRegistrationTx.getPayloadCollateralString());
+
+        String base64Signature = "H7N+ScH/K4BXcTk5pVE+bnEacc/y5RfmIk33JO11Cu8bf5rZ7GErSnJQIy4eQA2nGKlQHh2aVWVSbksf9owCh2M=";
+
+        ECKey key = wallet.findKeyFromAddress(collateralAddress);
+        byte[] signatureData = key.signHash(messageDigest);
+        String signature = Base64.toBase64String(signatureData);
+
+        assertEquals(signature, base64Signature);
+
+
+        assertEquals(providerRegistrationTx.getSignature(), new MasternodeSignature(signatureData));
+
+        MasternodeAddress masternodeAddress = new MasternodeAddress(new InetSocketAddress("1.2.5.6", 19999));
+        Sha256Hash inputsHash = null;
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            new TransactionOutPoint(PARAMS, 1, inputTransactionHashValue).bitcoinSerialize(bos);
+            inputsHash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+        } catch (Exception x) {
+            fail();
+        }
+
+        Transaction providerRegistrationTransaction = new Transaction(PARAMS);
+        providerRegistrationTransaction.setVersionAndType(3, Transaction.Type.TRANSACTION_PROVIDER_REGISTER);
+        ProviderRegisterTx proRegTx = new ProviderRegisterTx(
+                PARAMS,
+                ProviderRegisterTx.LEGACY_BLS_VERSION,
+                MasternodeType.REGULAR.index,
+                0,
+                reversedCollateral,
+                masternodeAddress,
+                ownerKeyId,
+                operatorKey,
+                votingKeyId,
+                0,
+                ScriptBuilder.createOutputScript(payoutAddress),
+                inputsHash,
+                new MasternodeSignature(signatureData));
+        providerRegistrationTransaction.setExtraPayload(proRegTx);
+        providerRegistrationTransaction.addOutput(Coin.valueOf(40777037710L), outputAddress0);
+        providerRegistrationTransaction.addSignedInput(new TransactionOutPoint(PARAMS, 1, inputTransactionHashValue), ScriptBuilder.createOutputScript(inputAddress0), inputPrivateKey);
+        // verify some data
+        assertArrayEquals(providerRegistrationTransaction.getExtraPayload(), providerRegistrationTransactionFromMessage.getExtraPayload());
+        assertEquals(proRegTx.getPayloadCollateralString(), providerRegistrationTx.getPayloadCollateralString());
+        assertEquals(providerRegistrationTransaction.getInput(0).toStringHex(), providerRegistrationTransactionFromMessage.getInput(0).toStringHex());
+        assertEquals(providerRegistrationTransaction.getOutput(0).toStringHex(), providerRegistrationTransactionFromMessage.getOutput(0).toStringHex());
+        assertEquals(proRegTx.getPubkeyOperator(), providerRegistrationTx.getPubkeyOperator());
+        assertEquals(proRegTx.operatorReward, providerRegistrationTx.operatorReward);
+        assertEquals(proRegTx.getOwnerAddress(), providerRegistrationTx.getOwnerAddress());
+         // verify txId's
+        assertEquals(providerRegistrationTransactionFromMessage.getTxId(), txId);
+        assertEquals(providerRegistrationTransaction.getTxId(), txId);
+    }
+
+
     @Test
     public void testNoCollateralProviderRegistrationTransaction() throws IOException {
 
