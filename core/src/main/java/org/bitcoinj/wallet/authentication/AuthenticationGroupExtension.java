@@ -157,7 +157,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      */
     @Override
     public byte[] serializeWalletExtension() {
-        Protos.AuthenticationWalletExtension.Builder builder = Protos.AuthenticationWalletExtension.newBuilder();
+        Protos.AuthenticationGroupExtension.Builder builder = Protos.AuthenticationGroupExtension.newBuilder();
 
         for (AuthenticationKeyChain.KeyChainType type : AuthenticationKeyChain.KeyChainType.values()) {
             AuthenticationKeyChain chain = keyChainGroup.getKeyChain(type);
@@ -210,7 +210,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         wallet = containingWallet;
         KeyCrypter keyCrypter = wallet.getKeyCrypter();
         AuthenticationKeyChainFactory factory = new AuthenticationKeyChainFactory();
-        Protos.AuthenticationWalletExtension walletExtension = Protos.AuthenticationWalletExtension.parseFrom(data);
+        Protos.AuthenticationGroupExtension walletExtension = Protos.AuthenticationGroupExtension.parseFrom(data);
 
         // extended chains
         for (Protos.ExtendedKeyChain extendedKeyChain : walletExtension.getAuthenticationKeyChainsList()) {

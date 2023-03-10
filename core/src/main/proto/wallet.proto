@@ -453,7 +453,7 @@ message AuthenticationKeyUsage {
   optional PeerAddress address = 5;
 }
 
-message AuthenticationWalletExtension {
+message AuthenticationGroupExtension {
   repeated ExtendedKeyChain authenticationKeyChains = 1;
   repeated AuthenticationKeyUsage authenticationKeyUsage = 2;
 }

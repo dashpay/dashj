@@ -16867,8 +16867,8 @@ public final class Protos {
     }
   }
 
-  public interface AuthenticationWalletExtensionOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:wallet.AuthenticationWalletExtension)
+  public interface AuthenticationGroupExtensionOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:wallet.AuthenticationGroupExtension)
       com.google.protobuf.MessageLiteOrBuilder {
 
     /**
@@ -16900,14 +16900,14 @@ public final class Protos {
     int getAuthenticationKeyUsageCount();
   }
   /**
-   * Protobuf type {@code wallet.AuthenticationWalletExtension}
+   * Protobuf type {@code wallet.AuthenticationGroupExtension}
    */
-  public  static final class AuthenticationWalletExtension extends
+  public  static final class AuthenticationGroupExtension extends
       com.google.protobuf.GeneratedMessageLite<
-          AuthenticationWalletExtension, AuthenticationWalletExtension.Builder> implements
-      // @@protoc_insertion_point(message_implements:wallet.AuthenticationWalletExtension)
-      AuthenticationWalletExtensionOrBuilder {
-    private AuthenticationWalletExtension() {
+          AuthenticationGroupExtension, AuthenticationGroupExtension.Builder> implements
+      // @@protoc_insertion_point(message_implements:wallet.AuthenticationGroupExtension)
+      AuthenticationGroupExtensionOrBuilder {
+    private AuthenticationGroupExtension() {
       authenticationKeyChains_ = emptyProtobufList();
       authenticationKeyUsage_ = emptyProtobufList();
     }
@@ -17099,73 +17099,73 @@ public final class Protos {
       authenticationKeyUsage_.remove(index);
     }
 
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
         java.nio.ByteBuffer data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return com.google.protobuf.GeneratedMessageLite.parseFrom(
           DEFAULT_INSTANCE, data);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
         java.nio.ByteBuffer data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return com.google.protobuf.GeneratedMessageLite.parseFrom(
           DEFAULT_INSTANCE, data, extensionRegistry);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return com.google.protobuf.GeneratedMessageLite.parseFrom(
           DEFAULT_INSTANCE, data);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return com.google.protobuf.GeneratedMessageLite.parseFrom(
           DEFAULT_INSTANCE, data, extensionRegistry);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(byte[] data)
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return com.google.protobuf.GeneratedMessageLite.parseFrom(
           DEFAULT_INSTANCE, data);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return com.google.protobuf.GeneratedMessageLite.parseFrom(
           DEFAULT_INSTANCE, data, extensionRegistry);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(java.io.InputStream input)
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageLite.parseFrom(
           DEFAULT_INSTANCE, input);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageLite.parseFrom(
           DEFAULT_INSTANCE, input, extensionRegistry);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseDelimitedFrom(java.io.InputStream input)
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return parseDelimitedFrom(DEFAULT_INSTANCE, input);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseDelimitedFrom(
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageLite.parseFrom(
           DEFAULT_INSTANCE, input);
     }
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension parseFrom(
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -17176,19 +17176,19 @@ public final class Protos {
     public static Builder newBuilder() {
       return (Builder) DEFAULT_INSTANCE.createBuilder();
     }
-    public static Builder newBuilder(org.bitcoinj.wallet.Protos.AuthenticationWalletExtension prototype) {
+    public static Builder newBuilder(org.bitcoinj.wallet.Protos.AuthenticationGroupExtension prototype) {
       return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
     }
 
     /**
-     * Protobuf type {@code wallet.AuthenticationWalletExtension}
+     * Protobuf type {@code wallet.AuthenticationGroupExtension}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageLite.Builder<
-          org.bitcoinj.wallet.Protos.AuthenticationWalletExtension, Builder> implements
-        // @@protoc_insertion_point(builder_implements:wallet.AuthenticationWalletExtension)
-        org.bitcoinj.wallet.Protos.AuthenticationWalletExtensionOrBuilder {
-      // Construct using org.bitcoinj.wallet.Protos.AuthenticationWalletExtension.newBuilder()
+          org.bitcoinj.wallet.Protos.AuthenticationGroupExtension, Builder> implements
+        // @@protoc_insertion_point(builder_implements:wallet.AuthenticationGroupExtension)
+        org.bitcoinj.wallet.Protos.AuthenticationGroupExtensionOrBuilder {
+      // Construct using org.bitcoinj.wallet.Protos.AuthenticationGroupExtension.newBuilder()
       private Builder() {
         super(DEFAULT_INSTANCE);
       }
@@ -17398,7 +17398,7 @@ public final class Protos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:wallet.AuthenticationWalletExtension)
+      // @@protoc_insertion_point(builder_scope:wallet.AuthenticationGroupExtension)
     }
     private byte memoizedIsInitialized = 2;
     @java.lang.Override
@@ -17408,7 +17408,7 @@ public final class Protos {
         java.lang.Object arg0, java.lang.Object arg1) {
       switch (method) {
         case NEW_MUTABLE_INSTANCE: {
-          return new org.bitcoinj.wallet.Protos.AuthenticationWalletExtension();
+          return new org.bitcoinj.wallet.Protos.AuthenticationGroupExtension();
         }
         case NEW_BUILDER: {
           return new Builder();
@@ -17430,13 +17430,13 @@ public final class Protos {
           return DEFAULT_INSTANCE;
         }
         case GET_PARSER: {
-          com.google.protobuf.Parser<org.bitcoinj.wallet.Protos.AuthenticationWalletExtension> parser = PARSER;
+          com.google.protobuf.Parser<org.bitcoinj.wallet.Protos.AuthenticationGroupExtension> parser = PARSER;
           if (parser == null) {
-            synchronized (org.bitcoinj.wallet.Protos.AuthenticationWalletExtension.class) {
+            synchronized (org.bitcoinj.wallet.Protos.AuthenticationGroupExtension.class) {
               parser = PARSER;
               if (parser == null) {
                 parser =
-                    new DefaultInstanceBasedParser<org.bitcoinj.wallet.Protos.AuthenticationWalletExtension>(
+                    new DefaultInstanceBasedParser<org.bitcoinj.wallet.Protos.AuthenticationGroupExtension>(
                         DEFAULT_INSTANCE);
                 PARSER = parser;
               }
@@ -17456,24 +17456,24 @@ public final class Protos {
     }
 
 
-    // @@protoc_insertion_point(class_scope:wallet.AuthenticationWalletExtension)
-    private static final org.bitcoinj.wallet.Protos.AuthenticationWalletExtension DEFAULT_INSTANCE;
+    // @@protoc_insertion_point(class_scope:wallet.AuthenticationGroupExtension)
+    private static final org.bitcoinj.wallet.Protos.AuthenticationGroupExtension DEFAULT_INSTANCE;
     static {
-      AuthenticationWalletExtension defaultInstance = new AuthenticationWalletExtension();
+      AuthenticationGroupExtension defaultInstance = new AuthenticationGroupExtension();
       // New instances are implicitly immutable so no need to make
       // immutable.
       DEFAULT_INSTANCE = defaultInstance;
       com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-        AuthenticationWalletExtension.class, defaultInstance);
+        AuthenticationGroupExtension.class, defaultInstance);
     }
 
-    public static org.bitcoinj.wallet.Protos.AuthenticationWalletExtension getDefaultInstance() {
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
-    private static volatile com.google.protobuf.Parser<AuthenticationWalletExtension> PARSER;
+    private static volatile com.google.protobuf.Parser<AuthenticationGroupExtension> PARSER;
 
-    public static com.google.protobuf.Parser<AuthenticationWalletExtension> parser() {
+    public static com.google.protobuf.Parser<AuthenticationGroupExtension> parser() {
       return DEFAULT_INSTANCE.getParserForType();
     }
   }

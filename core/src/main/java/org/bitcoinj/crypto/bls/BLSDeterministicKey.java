@@ -189,7 +189,6 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         this.extendedPrivateKey = null;
         byte[] bytes = serialize(null, true, Script.ScriptType.P2PKH);
         extendedPublicKey = ExtendedPublicKey.fromBytes(bytes);
-        //.parentFingerprint = parent != null ? (int)extendedPrivateKey.getParentFingerprint() : 0;
     }
 
     /**
@@ -213,7 +212,6 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         byte[] bytes = serialize(null, false, Script.ScriptType.P2PKH);
         extendedPrivateKey = ExtendedPrivateKey.fromBytes(bytes);
         extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
-        //this.parentFingerprint = parent != null ? (int)extendedPrivateKey.getParentFingerprint() : 0;
     }
 
 
@@ -343,7 +341,6 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     public int getFingerprint() {
         // TODO: why is this different than armory's fingerprint? BIP 32: "The first 32 bits of the identifier are called the fingerprint."
         return (int)extendedPublicKey.getPublicKey().getFingerprint();
-        //return ByteBuffer.wrap(Arrays.copyOfRange(getIdentifier(), 0, 4)).getInt();
     }
 
     @Nullable

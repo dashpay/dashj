@@ -86,7 +86,6 @@ import static com.google.common.base.Preconditions.checkState;
  * class docs for {@link AnyDeterministicKeyChain} for more information on this topic.</p>
  */
 public class AnyKeyChainGroup implements IKeyBag {
-
     /**
      * Builder for {@link AnyKeyChainGroup}. Use {@link AnyKeyChainGroup#builder(NetworkParameters, KeyFactory)} to acquire an instance.
      */
