@@ -164,4 +164,12 @@ public class ProviderUpdateRevocationTx extends SpecialTxPayload {
         length = MESSAGE_SIZE;
         unCache();
     }
+
+    public Sha256Hash getProTxHash() {
+        return proTxHash;
+    }
+
+    public int getReason() {
+        return reason;
+    }
 }
