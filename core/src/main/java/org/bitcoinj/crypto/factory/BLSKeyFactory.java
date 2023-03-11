@@ -31,6 +31,8 @@ import org.bitcoinj.crypto.bls.BLSDeterministicKey;
 import org.bitcoinj.crypto.bls.BLSHDKeyDerivation;
 import org.bitcoinj.crypto.bls.BLSKey;
 
+import java.math.BigInteger;
+
 public class BLSKeyFactory implements KeyFactory {
 
     private static final BLSKeyFactory INSTANCE = new BLSKeyFactory();
@@ -49,6 +51,11 @@ public class BLSKeyFactory implements KeyFactory {
     }
 
     @Override
+    public IKey fromPrivate(BigInteger bi) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public IKey fromPrivateAndPrecalculatedPublic(byte[] priv, byte[] pub) {
         return new BLSKey(priv, pub);
     }
@@ -59,8 +66,13 @@ public class BLSKeyFactory implements KeyFactory {
     }
 
     @Override
+    public IKey fromPublicOnly(IKey key) {
+        return BLSKey.fromPublicOnly((BLSKey) key);
+    }
+
+    @Override
     public IDeterministicKey fromExtended(ImmutableList<ChildNumber> immutablePath, byte[] chainCode, byte[] pubkey, byte[] priv, IDeterministicKey parent) {
-        return new BLSDeterministicKey(immutablePath, chainCode, new BLSPublicKey(pubkey), new BLSSecretKey(priv), parent);
+        return new BLSDeterministicKey(immutablePath, chainCode, new BLSPublicKey(pubkey), priv != null ? new BLSSecretKey(priv) : null, parent);
     }
 
     @Override
@@ -71,6 +83,11 @@ public class BLSKeyFactory implements KeyFactory {
     @Override
     public IDeterministicKey fromChildAndParent(IDeterministicKey child, IDeterministicKey parent) {
         return new BLSDeterministicKey((BLSDeterministicKey) child, (BLSDeterministicKey) parent);
+    }
+
+    @Override
+    public IDeterministicKey deserializeB58(String base58, NetworkParameters params) {
+        return null;
     }
 
     @Override

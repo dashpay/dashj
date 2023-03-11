@@ -23,7 +23,6 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Base58;
-import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
@@ -50,7 +49,6 @@ import org.dashj.bls.ExtendedPublicKey;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Comparator;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -96,10 +94,12 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
             bytes = serialize(null, false, Script.ScriptType.P2PKH);
             extendedPrivateKey = ExtendedPrivateKey.fromBytes(bytes);
             extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
+            this.parentFingerprint = (parent != null) ? (int)extendedPrivateKey.getParentFingerprint() : 0;
         } else {
             bytes = serialize(null, true, Script.ScriptType.P2PKH);
             extendedPrivateKey = null;
             extendedPublicKey = ExtendedPublicKey.fromBytes(bytes);
+            this.parentFingerprint = (parent != null) ? (int)extendedPublicKey.getParentFingerprint() : 0;
         }
     }
 
@@ -175,17 +175,20 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
      */
     public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
                                byte[] chainCode,
-                               byte[] publicAsPoint,
+                               byte[] publicKeyBytes,
                                @Nullable BLSDeterministicKey parent,
                                int depth,
                                int parentFingerprint) {
-        super(null, publicAsPoint);
+        super(null, publicKeyBytes);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
         this.childNumberPath = checkNotNull(childNumberPath);
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
+        this.extendedPrivateKey = null;
+        byte[] bytes = serialize(null, true, Script.ScriptType.P2PKH);
+        extendedPublicKey = ExtendedPublicKey.fromBytes(bytes);
     }
 
     /**
@@ -206,13 +209,16 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
+        byte[] bytes = serialize(null, false, Script.ScriptType.P2PKH);
+        extendedPrivateKey = ExtendedPrivateKey.fromBytes(bytes);
+        extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
     }
 
 
     /** Clones the key */
     public BLSDeterministicKey(BLSDeterministicKey keyToClone, BLSDeterministicKey newParent) {
         super(keyToClone.extendedPrivateKey != null ? keyToClone.priv.bitcoinSerialize() : null,
-                keyToClone.extendedPrivateKey != null ?keyToClone.pub.bitcoinSerialize() : null);
+                keyToClone.pub.bitcoinSerialize());
         if (keyToClone.priv != null) {
             this.extendedPrivateKey = ExtendedPrivateKey.fromBytes(keyToClone.extendedPrivateKey.serialize());
             this.extendedPublicKey = ExtendedPublicKey.fromBytes(keyToClone.extendedPublicKey.serialize());
@@ -225,11 +231,15 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         this.chainCode = keyToClone.chainCode;
         this.encryptedPrivateKey = keyToClone.encryptedPrivateKey;
         this.depth = this.childNumberPath.size();
-        this.parentFingerprint = this.parent.getFingerprint();
+        this.parentFingerprint = parent != null ? (int)extendedPublicKey.getParentFingerprint() : 0;
     }
 
     /** Clones the key */
     public BLSDeterministicKey(byte[] seed) {
+        // call this BLSKey constructor that will initialize nothing
+        // BLSKey() will create a random key and assign the creation time
+        // then this constructor will replace the key and keep the creation time
+        super((byte[]) null, null);
         extendedPrivateKey = ExtendedPrivateKey.fromSeed(seed);
         extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
         priv = new BLSSecretKey(extendedPrivateKey.getPrivateKey());
@@ -243,6 +253,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     }
 
     public BLSDeterministicKey(ExtendedPrivateKey extendedPrivateKey, @Nullable BLSDeterministicKey parent) {
+        super((byte[]) null, null);
         this.extendedPrivateKey = extendedPrivateKey;
         extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
         priv = new BLSSecretKey(extendedPrivateKey.getPrivateKey());
@@ -263,6 +274,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     }
 
     public BLSDeterministicKey(ExtendedPublicKey extendedPublicKey, @Nullable BLSDeterministicKey parent) {
+        super((byte[]) null, null);
         this.extendedPrivateKey = null;
         this.extendedPublicKey = extendedPublicKey;
         this.priv = null;
@@ -328,7 +340,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     /** Returns the first 32 bits of the result of {@link #getIdentifier()}. */
     public int getFingerprint() {
         // TODO: why is this different than armory's fingerprint? BIP 32: "The first 32 bits of the identifier are called the fingerprint."
-        return ByteBuffer.wrap(Arrays.copyOfRange(getIdentifier(), 0, 4)).getInt();
+        return (int)extendedPublicKey.getPublicKey().getFingerprint();
     }
 
     @Nullable
@@ -385,7 +397,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
 
     @Override
     public IDeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey, @Nullable IDeterministicKey newParent) throws KeyCrypterException {
-        return null;
+        return encrypt(keyCrypter, aesKey, (BLSDeterministicKey) newParent);
     }
 
     static byte[] addChecksum(byte[] input) {
@@ -782,13 +794,13 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         }
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);
-        byte[] data = new byte[33];
+        byte[] data = new byte[pub ? 48 : 32];
         buffer.get(data);
         checkArgument(!buffer.hasRemaining(), "Found unexpected data in key");
         if (pub) {
             return new BLSDeterministicKey(path, chainCode, data, parent, depth, parentFingerprint);
         } else {
-            return new BLSDeterministicKey(path, chainCode, data, parent, depth, parentFingerprint);
+            return new BLSDeterministicKey(path, chainCode, new BLSSecretKey(data), parent, depth, parentFingerprint);
         }
     }
 
@@ -818,7 +830,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         if (pub) {
             return new BLSDeterministicKey(path, chainCode, data, null, depth, parentFingerprint);
         } else {
-            return new BLSDeterministicKey(path, chainCode, data, null, depth, parentFingerprint);
+            return new BLSDeterministicKey(path, chainCode, new BLSSecretKey(data), null, depth, parentFingerprint);
         }
     }
 

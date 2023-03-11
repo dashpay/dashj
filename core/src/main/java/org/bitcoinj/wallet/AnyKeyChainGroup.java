@@ -1020,7 +1020,7 @@ public class AnyKeyChainGroup implements IKeyBag {
     }
 
     /** Returns a copy of the current list of chains. */
-    public List<AnyDeterministicKeyChain> getBLSDeterministicKeyChains() {
+    public List<AnyDeterministicKeyChain> getDeterministicKeyChains() {
         checkState(isSupportsDeterministicChains(), "doesn't support deterministic chains");
         return new ArrayList<>(chains);
     }

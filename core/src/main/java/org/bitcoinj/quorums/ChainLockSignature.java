@@ -65,7 +65,7 @@ public class ChainLockSignature extends Message {
 
     @Override
     public String toString() {
-        return String.format("ChainLockSignature(height=%d, blockHash=%s, sig=%s)", height, blockHash, signature);
+        return String.format("ChainLockSignature{height=%d, blockHash=%s, sig=%s}", height, blockHash, signature);
     }
 
     @Override
@@ -81,5 +81,17 @@ public class ChainLockSignature extends Message {
     @Override
     public int hashCode() {
         return getHash().hashCode();
+    }
+
+    public long getHeight() {
+        return height;
+    }
+
+    public Sha256Hash getBlockHash() {
+        return blockHash;
+    }
+
+    public BLSSignature getSignature() {
+        return signature;
     }
 }

@@ -49,6 +49,11 @@ public class ECKeyFactory implements KeyFactory {
     }
 
     @Override
+    public IKey fromPrivate(BigInteger privateKey) {
+        return ECKey.fromPrivate(privateKey);
+    }
+
+    @Override
     public IKey fromPrivateAndPrecalculatedPublic(byte[] priv, byte[] pub) {
         return ECKey.fromPrivateAndPrecalculatedPublic(priv, pub);
     }
@@ -56,6 +61,11 @@ public class ECKeyFactory implements KeyFactory {
     @Override
     public IKey fromPublicOnly(byte[] pub) {
         return ECKey.fromPublicOnly(pub);
+    }
+
+    @Override
+    public IKey fromPublicOnly(IKey key) {
+        return ECKey.fromPublicOnly(key.getPubKey());
     }
 
     @Override
@@ -74,6 +84,11 @@ public class ECKeyFactory implements KeyFactory {
     @Override
     public IDeterministicKey fromChildAndParent(IDeterministicKey child, IDeterministicKey parent) {
         return new DeterministicKey((DeterministicKey) child, (DeterministicKey) parent);
+    }
+
+    @Override
+    public IDeterministicKey deserializeB58(String base58, NetworkParameters params) {
+        return DeterministicKey.deserializeB58(base58, params);
     }
 
     @Override

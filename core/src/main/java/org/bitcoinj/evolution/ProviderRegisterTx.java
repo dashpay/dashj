@@ -230,4 +230,42 @@ public class ProviderRegisterTx extends SpecialTxPayload {
         length = MESSAGE_SIZE;
         unCache();
     }
+
+    public MasternodeAddress getAddress() {
+        return address;
+    }
+
+    public Sha256Hash getInputsHash() {
+        return inputsHash;
+    }
+
+    public KeyId getKeyIDOwner() {
+        return keyIDOwner;
+    }
+    public Address getOwnerAddress() {
+        return Address.fromPubKeyHash(params, keyIDOwner.getBytes());
+    }
+
+    public KeyId getKeyIDVoting() {
+        return keyIDVoting;
+    }
+    public Address getVotingAddress() {
+        return Address.fromPubKeyHash(params, keyIDVoting.getBytes());
+    }
+
+    public BLSPublicKey getPubkeyOperator() {
+        return pubkeyOperator;
+    }
+
+    public KeyId getPlatformNodeID() {
+        return platformNodeID;
+    }
+
+    public String getPayloadCollateralString() {
+        return String.format("%s|%d|%s|%s|%s", scriptPayout.getToAddress(params), operatorReward, getOwnerAddress(), getVotingAddress(), getHash());
+    }
+
+    public MasternodeSignature getSignature() {
+        return signature;
+    }
 }

@@ -166,4 +166,20 @@ public class ProviderUpdateRegistarTx extends SpecialTxPayload {
         signature = HashSigner.signHash(getSignatureHash(), signingKey);
         unCache();
     }
+
+    public KeyId getKeyIDVoting() {
+        return keyIDVoting;
+    }
+
+    public BLSPublicKey getPubkeyOperator() {
+        return pubkeyOperator;
+    }
+
+    public Sha256Hash getProTxHash() {
+        return proTxHash;
+    }
+
+    public Sha256Hash getInputsHash() {
+        return inputsHash;
+    }
 }

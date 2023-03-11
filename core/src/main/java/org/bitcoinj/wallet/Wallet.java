@@ -249,6 +249,10 @@ public class Wallet extends BaseTaggableObject
     // or not. The string key comes from the extension itself.
     private final HashMap<String, WalletExtension> extensions;
 
+    // Stores objects that know how to serialize/unserialize themselves to byte streams and whether they're mandatory
+    // or not. The string key comes from the extension itself.
+    private final HashMap<String, KeyChainGroupExtension> keyChainExtensions;
+
     // Objects that perform transaction signing. Applied subsequently one after another
     @GuardedBy("lock") private volatile List<TransactionSigner> signers;
 
@@ -483,14 +487,15 @@ public class Wallet extends BaseTaggableObject
         dead = new HashMap<>();
         transactions = new HashMap<>();
         extensions = new HashMap<>();
+        keyChainExtensions = new HashMap<>();
         // Use a linked hash map to ensure ordering of event listeners is correct.
         confidenceChanged = new LinkedHashMap<>();
         signers = new ArrayList<>();
         addTransactionSigner(new LocalTransactionSigner());
         createTransientState();
         derivationPathFactory = new DerivationPathFactory(params);
-        receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
-        sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
+        receivingFromFriendsGroup = null;
+        sendingToFriendsGroup = null;
     }
 
     private void createTransientState() {
@@ -1170,6 +1175,17 @@ public class Wallet extends BaseTaggableObject
             ECKey key = keyChainGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
             if (key == null && receivingFromFriendsGroup != null)
                 key = receivingFromFriendsGroup.findKeyFromPubKeyHash(pubKeyHash, scriptType);
+            if (key == null) {
+                for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                    if (extension.hasSpendableKeys()) {
+                        IKey keyFromExtension = extension.findKeyFromPubKeyHash(pubKeyHash, scriptType);
+                        if (keyFromExtension instanceof ECKey) {
+                            key = (ECKey) keyFromExtension;
+                            break;
+                        }
+                    }
+                }
+            }
             return key;
         } finally {
             keyChainGroupLock.unlock();
@@ -1180,7 +1196,14 @@ public class Wallet extends BaseTaggableObject
     public boolean hasKey(ECKey key) {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.hasKey(key) || (receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKey(key));
+            if (keyChainGroup.hasKey(key) || (receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKey(key)))
+                return true;
+            // search keychain extensions
+            for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                if (extension.hasKey(key))
+                    return true;
+            }
+            return false;
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1245,6 +1268,17 @@ public class Wallet extends BaseTaggableObject
             if (key == null && receivingFromFriendsGroup != null) {
                 key = receivingFromFriendsGroup.findKeyFromPubKey(pubKey);
             }
+            if (key == null) {
+                for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                    if (extension.hasSpendableKeys()) {
+                        IKey keyFromExtension = extension.findKeyFromPubKey(pubKey);
+                        if (keyFromExtension instanceof ECKey) {
+                            key = (ECKey) keyFromExtension;
+                            break;
+                        }
+                    }
+                }
+            }
             return key;
         } finally {
             keyChainGroupLock.unlock();
@@ -1289,19 +1323,35 @@ public class Wallet extends BaseTaggableObject
                     if (ScriptPattern.isP2PK(script)) {
                         byte[] pubkey = ScriptPattern.extractKeyFromP2PK(script);
                         keyChainGroup.markPubKeyAsUsed(pubkey);
+                        if (receivingFromFriendsGroup != null)
                         receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
+                        if (sendingToFriendsGroup != null)
                         sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
+                        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                            extension.markPubKeyAsUsed(pubkey);
+                        }
+
                     } else if (ScriptPattern.isP2PKH(script)) {
                         byte[] pubkeyHash = ScriptPattern.extractHashFromP2PKH(script);
                         keyChainGroup.markPubKeyHashAsUsed(pubkeyHash);
+                        if (receivingFromFriendsGroup != null)
                         receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                        if (sendingToFriendsGroup != null)
                         sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                            extension.markPubKeyHashAsUsed(pubkeyHash);
+                        }
                     } else if (ScriptPattern.isP2SH(script)) {
                         Address a = Address.fromScriptHash(tx.getParams(),
                                 ScriptPattern.extractHashFromP2SH(script));
                         keyChainGroup.markP2SHAddressAsUsed(a);
+                        if (receivingFromFriendsGroup != null)
                         receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
+                        if (sendingToFriendsGroup != null)
                         sendingToFriendsGroup.markP2SHAddressAsUsed(a);
+                        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                            extension.markP2SHAddressAsUsed(a);
+                        }
                     } else if (ScriptPattern.isCreditBurn(script)) {
                         byte [] h = ScriptPattern.extractCreditBurnKeyId(script);
                         if (authenticationGroup != null)
@@ -1355,7 +1405,14 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         try {
             final KeyCrypterScrypt scrypt = new KeyCrypterScrypt();
-            keyChainGroup.encrypt(scrypt, scrypt.deriveKey(password));
+            KeyParameter aesKey = scrypt.deriveKey(password);
+            keyChainGroup.encrypt(scrypt, aesKey);
+            for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                if (extension.supportsEncryption())
+                    extension.encrypt(scrypt, aesKey);
+            }
+            if (receivingFromFriendsGroup != null)
+                receivingFromFriendsGroup.encrypt(scrypt, aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1374,6 +1431,12 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         try {
             keyChainGroup.encrypt(keyCrypter, aesKey);
+            for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                if (extension.supportsEncryption())
+                    extension.encrypt(keyCrypter, aesKey);
+            }
+            if (receivingFromFriendsGroup != null)
+                receivingFromFriendsGroup.encrypt(keyCrypter, aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1389,7 +1452,14 @@ public class Wallet extends BaseTaggableObject
         try {
             final KeyCrypter crypter = keyChainGroup.getKeyCrypter();
             checkState(crypter != null, "Not encrypted");
-            keyChainGroup.decrypt(crypter.deriveKey(password));
+            KeyParameter aesKey = crypter.deriveKey(password);
+            keyChainGroup.decrypt(aesKey);
+            for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                if (extension.supportsEncryption())
+                    extension.decrypt(aesKey);
+            }
+            if (receivingFromFriendsGroup != null)
+                receivingFromFriendsGroup.decrypt(aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1406,6 +1476,12 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         try {
             keyChainGroup.decrypt(aesKey);
+            for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                if (extension.supportsEncryption())
+                    extension.decrypt(aesKey);
+            }
+            if (receivingFromFriendsGroup != null)
+                receivingFromFriendsGroup.decrypt(aesKey);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -2035,6 +2111,7 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
+    @Deprecated
     public boolean isPendingTransactionLockRelevant(Transaction tx) throws ScriptException {
         lock.lock();
         try {
@@ -2309,6 +2386,10 @@ public class Wallet extends BaseTaggableObject
         if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
             CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
             queueOnCreditFundingEvent(cftx, block, blockType);
+        }
+        // let keychain extensions process the transaction
+        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+            extension.processTransaction(tx);
         }
         isConsistentOrThrow();
         // Optimization for the case where a block has tons of relevant transactions.
@@ -2882,7 +2963,11 @@ public class Wallet extends BaseTaggableObject
      */
     public void addKeyChainEventListener(KeyChainEventListener listener) {
         keyChainGroup.addEventListener(listener, Threading.USER_THREAD);
-        receivingFromFriendsGroup.addEventListener(listener, Threading.USER_THREAD);
+        if (receivingFromFriendsGroup != null)
+            receivingFromFriendsGroup.addEventListener(listener, Threading.USER_THREAD);
+        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                extension.addEventListener(listener, Threading.USER_THREAD);
+        }
     }
 
     /**
@@ -2891,7 +2976,11 @@ public class Wallet extends BaseTaggableObject
      */
     public void addKeyChainEventListener(Executor executor, KeyChainEventListener listener) {
         keyChainGroup.addEventListener(listener, executor);
-        receivingFromFriendsGroup.addEventListener(listener, executor);
+        if (receivingFromFriendsGroup != null)
+            receivingFromFriendsGroup.addEventListener(listener, executor);
+        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+            extension.addEventListener(listener, Threading.USER_THREAD);
+        }
     }
 
     /**
@@ -2974,7 +3063,14 @@ public class Wallet extends BaseTaggableObject
      * was never added.
      */
     public boolean removeKeyChainEventListener(KeyChainEventListener listener) {
-        return keyChainGroup.removeEventListener(listener);
+        boolean removed = keyChainGroup.removeEventListener(listener);
+        if (receivingFromFriendsGroup != null)
+            removed |= receivingFromFriendsGroup.removeEventListener(listener);
+
+        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+            removed |= extension.removeEventListener(listener);
+        }
+        return removed;
     }
 
     /**
@@ -3565,6 +3661,12 @@ public class Wallet extends BaseTaggableObject
             if(sendingToFriendsGroup != null) {
                 builder.append("\nContacts (sending)\n");
                 builder.append(sendingToFriendsGroup.toString(includeLookahead, includePrivateKeys, aesKey));
+            }
+            if (includeExtensions && keyChainExtensions.size() > 0) {
+                builder.append("\n>>> KEYCHAIN EXTENSIONS:\n");
+                for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                    builder.append(extension.toString(includeLookahead, includePrivateKeys, aesKey)).append("\n\n");
+                }
             }
             if (!watchedScripts.isEmpty()) {
                 builder.append("\nWatched scripts:\n");
@@ -4994,6 +5096,11 @@ public class Wallet extends BaseTaggableObject
             size += bloomSpecialTxOutpoints.size();
             if (receivingFromFriendsGroup != null)
                 size += receivingFromFriendsGroup.getBloomFilterElementCount();
+            for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                if (extension.supportsBloomFilters()) {
+                    size += extension.getBloomFilterElementCount();
+                }
+            }
             return size;
         } finally {
             endBloomFilterCalculation();
@@ -5086,6 +5193,13 @@ public class Wallet extends BaseTaggableObject
                 BloomFilter friendFilter = receivingFromFriendsGroup.getBloomFilter(size, falsePositiveRate, nTweak);
                 filter.merge(friendFilter);
             }
+            for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+               if (extension.supportsBloomFilters()) {
+                   BloomFilter extensionBloomFilter = extension.getBloomFilter(size, falsePositiveRate, nTweak);
+                   if (extensionBloomFilter != null)
+                       filter.merge(extensionBloomFilter);
+               }
+            }
             return filter;
         } finally {
             endBloomFilterCalculation();
@@ -5139,7 +5253,9 @@ public class Wallet extends BaseTaggableObject
         try {
             if (extensions.containsKey(id))
                 throw new IllegalStateException("Cannot add two extensions with the same ID: " + id);
-            extensions.put(id, extension);
+            if (extension instanceof KeyChainGroupExtension)
+                keyChainExtensions.put(id, (KeyChainGroupExtension) extension);
+            else extensions.put(id, extension);
             saveNow();
         } finally {
             lock.unlock();
@@ -5154,9 +5270,14 @@ public class Wallet extends BaseTaggableObject
         lock.lock();
         try {
             WalletExtension previousExtension = extensions.get(id);
+            if (previousExtension == null) {
+                previousExtension = keyChainExtensions.get(id);
+            }
             if (previousExtension != null)
                 return previousExtension;
-            extensions.put(id, extension);
+            if (extension instanceof KeyChainGroupExtension)
+                keyChainExtensions.put(id, (KeyChainGroupExtension) extension);
+            else extensions.put(id, extension);
             saveNow();
             return extension;
         } finally {
@@ -5190,6 +5311,16 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
+    /** Returns a snapshot of all registered extension objects. The extensions themselves are not copied. */
+    public Map<String, KeyChainGroupExtension> getKeyChainExtensions() {
+        lock.lock();
+        try {
+            return ImmutableMap.copyOf(keyChainExtensions);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     /**
      * Deserialize the wallet extension with the supplied data and then install it, replacing any existing extension
      * that may have existed with the same ID. If an exception is thrown then the extension is removed from the wallet,
@@ -5201,9 +5332,15 @@ public class Wallet extends BaseTaggableObject
         try {
             // This method exists partly to establish a lock ordering of wallet > extension.
             extension.deserializeWalletExtension(this, data);
-            extensions.put(extension.getWalletExtensionID(), extension);
+            if (extension instanceof KeyChainGroupExtension)
+                keyChainExtensions.put(extension.getWalletExtensionID(), (KeyChainGroupExtension) extension);
+            else
+                extensions.put(extension.getWalletExtensionID(), extension);
         } catch (Throwable throwable) {
             log.error("Error during extension deserialization", throwable);
+            if (extension instanceof KeyChainGroupExtension)
+                keyChainExtensions.remove(extension.getWalletExtensionID());
+            else
             extensions.remove(extension.getWalletExtensionID());
             Throwables.propagate(throwable);
         } finally {
@@ -6117,8 +6254,12 @@ public class Wallet extends BaseTaggableObject
     }
 
     public List<Transaction> getTransactionsWithFriend(EvolutionContact contact) {
-        FriendKeyChain fromChain = receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
-        FriendKeyChain toChain = sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN);
+        FriendKeyChain fromChain = receivingFromFriendsGroup != null  ?
+                receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN) :
+                null;
+        FriendKeyChain toChain = sendingToFriendsGroup != null ?
+                sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN) :
+                null;
 
         ArrayList<Transaction> txs = Lists.newArrayList();
         if (fromChain == null && toChain == null) {
@@ -6144,11 +6285,11 @@ public class Wallet extends BaseTaggableObject
         for(TransactionOutput output : tx.getOutputs()) {
             if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
                 byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
-                EvolutionContact contact = sendingToFriendsGroup.getFriendFromPublicKeyHash(hash160);
+                EvolutionContact contact = sendingToFriendsGroup != null ? sendingToFriendsGroup.getFriendFromPublicKeyHash(hash160) : null;
                 if (contact != null) {
                     return contact;
                 } else {
-                    contact = receivingFromFriendsGroup.getFriendFromPublicKeyHash(hash160);
+                    contact = receivingFromFriendsGroup != null ? receivingFromFriendsGroup.getFriendFromPublicKeyHash(hash160) : null;
                     if (contact != null) {
                         return contact;
                     }
@@ -6159,7 +6300,8 @@ public class Wallet extends BaseTaggableObject
     }
 
     public boolean hasReceivingKeyChain(EvolutionContact contact) {
-        return receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) != null;
+        return receivingFromFriendsGroup != null &&
+                receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) != null;
     }
 
     public DeterministicKey getReceivingExtendedPublicKey(EvolutionContact contact) {
@@ -6171,7 +6313,8 @@ public class Wallet extends BaseTaggableObject
     }
 
     public boolean hasSendingKeyChain(EvolutionContact contact) {
-        return sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN) != null;
+        return sendingToFriendsGroup != null &&
+                sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN) != null;
     }
 
     public boolean hasReceivingFriendKeyChains() {
