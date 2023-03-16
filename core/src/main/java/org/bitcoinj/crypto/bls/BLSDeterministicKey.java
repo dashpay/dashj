@@ -94,12 +94,10 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
             bytes = serialize(null, false, Script.ScriptType.P2PKH);
             extendedPrivateKey = ExtendedPrivateKey.fromBytes(bytes);
             extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
-            this.parentFingerprint = (parent != null) ? (int)extendedPrivateKey.getParentFingerprint() : 0;
         } else {
             bytes = serialize(null, true, Script.ScriptType.P2PKH);
             extendedPrivateKey = null;
             extendedPublicKey = ExtendedPublicKey.fromBytes(bytes);
-            this.parentFingerprint = (parent != null) ? (int)extendedPublicKey.getParentFingerprint() : 0;
         }
     }
 
