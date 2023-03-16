@@ -207,7 +207,6 @@ public class Ed25519Key implements IKey {
      * is more convenient if you are importing a key from elsewhere. The public key will be automatically derived
      * from the private key.
      */
-    @Deprecated
     public Ed25519Key(@Nullable byte[] privKeyBytes, @Nullable byte[] pubKey) {
         this(privKeyBytes == null ? null : new Ed25519PrivateKeyParameters(privKeyBytes, 0), pubKey);
     }
@@ -219,7 +218,6 @@ public class Ed25519Key implements IKey {
      * @param pubKey The keys public key
      * @param keyCrypter The KeyCrypter that will be used, with an AES key, to encrypt and decrypt the private key
      */
-    @Deprecated
     public Ed25519Key(EncryptedData encryptedPrivateKey, byte[] pubKey, KeyCrypter keyCrypter) {
         this((byte[])null, pubKey);
 
@@ -380,10 +378,7 @@ public class Ed25519Key implements IKey {
     public static boolean FAKE_SIGNATURES = false;
 
     /**
-     * Signs the given hash and returns the R and S components as BigIntegers. In the Bitcoin protocol, they are
-     * usually encoded using DER format, so you want {@link EdDSASignature#encodeToDER()}
-     * instead. However sometimes the independent components can be useful, for instance, if you're doing to do further
-     * EC maths on them.
+     * Signs the given hash
      *
      * @param aesKey The AES key to use for decryption of the private key. If null then no decryption is required.
      * @throws KeyCrypterException if there's something wrong with aesKey.
