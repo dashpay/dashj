@@ -691,7 +691,7 @@ public class WalletProtobufSerializer {
                     default:
                         type = AuthenticationKeyChain.KeyChainType.INVALID_KEY_CHAIN;
                 }
-                //if(extendedKeyChain.getKeyType() == Protos.ExtendedKeyChain.KeyType.ECDSA) {
+
                 if (extendedKeyChain.getKeyCount() > 0) {
                     KeyFactory keyFactory;
                     switch (extendedKeyChain.getKeyType()) {
@@ -704,10 +704,11 @@ public class WalletProtobufSerializer {
                         default:
                             throw new UnreadableWalletException("Unknown extended key type found:" + extendedKeyChain.getKeyType());
                     }
-                    List<AnyDeterministicKeyChain> chains = AuthenticationKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory, keyFactory);
+                    List<AnyDeterministicKeyChain> chains = AuthenticationKeyChain.fromProtobuf(
+                            extendedKeyChain.getKeyList(), keyCrypter, factory, keyFactory,
+                            AuthenticationKeyChain.requiresHardenedKeys(type));
                     if (!chains.isEmpty()) {
                         AuthenticationKeyChain chain = (AuthenticationKeyChain)chains.get(0);
-                        chain.setHardenedChildren(type == AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
                         wallet.setAuthenticationKeyChain(chain, type);
                     }
                 }

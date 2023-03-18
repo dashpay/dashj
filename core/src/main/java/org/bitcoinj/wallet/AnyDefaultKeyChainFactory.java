@@ -31,12 +31,12 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
     @Override
     public AnyDeterministicKeyChain makeKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
                                                  KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType,
-                                                 ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) {
+                                                 ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) {
         AnyDeterministicKeyChain chain;
         if (isMarried)
             throw new UnsupportedOperationException("Married chains are not supported");
         else
-            chain = new AnyDeterministicKeyChain(seed, crypter, outputScriptType, accountPath, keyFactory);
+            chain = new AnyDeterministicKeyChain(seed, crypter, outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
         return chain;
     }
 
@@ -58,27 +58,27 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
     @Override
     public AnyDeterministicKeyChain makeSpendingKeyChain(Protos.Key key, Protos.Key firstSubKey,
                                                          IDeterministicKey accountKey, boolean isMarried,
-                                                         Script.ScriptType outputScriptType)
+                                                         Script.ScriptType outputScriptType, boolean hardenedKeysOnly)
             throws UnreadableWalletException {
         AnyDeterministicKeyChain chain;
         if (isMarried)
             throw new UnsupportedOperationException("Married chains are not supported");
         else
-            chain = AnyDeterministicKeyChain.builder().spend(accountKey).outputScriptType(outputScriptType).build();
+            chain = AnyDeterministicKeyChain.builder().spend(accountKey).outputScriptType(outputScriptType).hardenedKeysOnly(hardenedKeysOnly).build();
         return chain;
     }
 
     @Override
     public AnyDeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
                                                                KeyCrypter crypter, boolean isMarried,
-                                                               ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) throws UnreadableWalletException
+                                                               ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException
     {
         if (isMarried)
             throw new UnsupportedOperationException("Married Friend Keychains are not allowed");
         else if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && /* allow any coin type */
                 accountPath.get(2).equals(DerivationPathFactory.FEATURE_PURPOSE_DASHPAY))
             throw new UnsupportedOperationException("Friend keys are not supported");
-        else return new AnyDeterministicKeyChain(seed, crypter, Script.ScriptType.P2PKH, accountPath, keyFactory);
+        else return new AnyDeterministicKeyChain(seed, crypter, Script.ScriptType.P2PKH, accountPath, keyFactory, hardenedKeysOnly);
     }
 
     @Override

@@ -43,12 +43,12 @@ public class AuthenticationKeyChainFactory implements AnyKeyChainFactory {
 
     @Override
     public AnyDeterministicKeyChain makeKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
-                                                 KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) {
+                                                 KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) {
         AuthenticationKeyChain chain;
         if (isMarried) {
             throw new UnsupportedOperationException();
         } else {
-            chain = new AuthenticationKeyChain(seed, crypter, accountPath, keyFactory);
+            chain = new AuthenticationKeyChain(seed, crypter, accountPath, keyFactory, hardenedKeysOnly);
         }
         return chain;
     }
@@ -82,12 +82,12 @@ public class AuthenticationKeyChainFactory implements AnyKeyChainFactory {
      * @param outputScriptType type of addresses (aka output scripts) to generate for spending
      */
     @Override
-    public AnyDeterministicKeyChain makeSpendingKeyChain(Protos.Key key, Protos.Key firstSubKey, IDeterministicKey accountKey, boolean isMarried, Script.ScriptType outputScriptType) throws UnreadableWalletException {
+    public AnyDeterministicKeyChain makeSpendingKeyChain(Protos.Key key, Protos.Key firstSubKey, IDeterministicKey accountKey, boolean isMarried, Script.ScriptType outputScriptType, boolean hardenedKeysOnly) throws UnreadableWalletException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public AnyDeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) throws UnreadableWalletException {
+    public AnyDeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException {
         throw new UnsupportedOperationException();
     }
 

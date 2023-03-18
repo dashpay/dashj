@@ -36,24 +36,24 @@ public class AnyExternalKeyChain extends AnyDeterministicKeyChain {
 
     private static final Logger log = LoggerFactory.getLogger(AnyExternalKeyChain.class);
 
-    public AnyExternalKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyFactory keyFactory) {
-        super(seed, null, Script.ScriptType.P2PKH, path, keyFactory);
+    public AnyExternalKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
+        super(seed, null, Script.ScriptType.P2PKH, path, keyFactory, hardenedKeysOnly);
     }
 
-    public AnyExternalKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyFactory keyFactory) {
-        super(seed, keyCrypter, Script.ScriptType.P2PKH, path, keyFactory);
+    public AnyExternalKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
+        super(seed, keyCrypter, Script.ScriptType.P2PKH, path, keyFactory, hardenedKeysOnly);
     }
 
-    public AnyExternalKeyChain(IDeterministicKey key, ImmutableList<ChildNumber> accountPath) {
-        super(key, false, true, Script.ScriptType.P2PKH, accountPath);
+    public AnyExternalKeyChain(IDeterministicKey key, ImmutableList<ChildNumber> accountPath, boolean hardenedKeysOnly) {
+        super(key, false, true, Script.ScriptType.P2PKH, accountPath, hardenedKeysOnly);
     }
 
-    public AnyExternalKeyChain(IDeterministicKey key, boolean isFollowing) {
-        super(key, isFollowing, true, Script.ScriptType.P2PKH);
+    public AnyExternalKeyChain(IDeterministicKey key, boolean isFollowing, boolean hardenedKeysOnly) {
+        super(key, isFollowing, true, Script.ScriptType.P2PKH, hardenedKeysOnly);
     }
 
-    protected AnyExternalKeyChain(KeyCrypter crypter, KeyParameter aesKey, AnyExternalKeyChain chain) {
-        super(crypter, aesKey, chain);
+    protected AnyExternalKeyChain(KeyCrypter crypter, KeyParameter aesKey, AnyExternalKeyChain chain, boolean hardenedKeysOnly) {
+        super(crypter, aesKey, chain, hardenedKeysOnly);
     }
 
     /** {@inheritDoc} */

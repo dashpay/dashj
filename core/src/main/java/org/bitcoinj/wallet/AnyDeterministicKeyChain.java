@@ -130,7 +130,8 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
     @Nullable private DeterministicSeed seed;
     private final Script.ScriptType outputScriptType;
     private final ImmutableList<ChildNumber> accountPath;
-    protected KeyFactory keyFactory;
+    protected final KeyFactory keyFactory;
+    protected final boolean hardenedKeysOnly;
 
     // Paths through the key tree. External keys are ones that are communicated to other parties. Internal keys are
     // keys created for change addresses, coinbases, mixing, etc - anything that isn't communicated. The distinction
@@ -180,6 +181,9 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
 
     public static final ImmutableList<ChildNumber> EXTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ZERO);
     public static final ImmutableList<ChildNumber> INTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ONE);
+
+    public static final ImmutableList<ChildNumber> EXTERNAL_SUBPATH_HARDENED = ImmutableList.of(ChildNumber.ZERO_HARDENED);
+    public static final ImmutableList<ChildNumber> INTERNAL_SUBPATH_HARDENED = ImmutableList.of(ChildNumber.ONE_HARDENED);
 
     // We try to ensure we have at least this many keys ready and waiting to be handed out via getKey().
     // See docs for getLookaheadSize() for more info on what this is for. The -1 value means it hasn't been calculated
@@ -233,6 +237,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         protected IDeterministicKey spendingKey = null;
         protected ImmutableList<ChildNumber> accountPath = null;
         protected KeyFactory keyFactory = ECKeyFactory.get();
+        protected boolean hardenedKeysOnly = false;
 
         protected Builder() {
         }
@@ -345,6 +350,11 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
             return self();
         }
 
+        public T hardenedKeysOnly(boolean hardenedKeysOnly) {
+            this.hardenedKeysOnly = hardenedKeysOnly;
+            return self();
+        }
+
         public AnyDeterministicKeyChain build() {
             checkState(passphrase == null || seed == null, "Passphrase must not be specified with seed");
 
@@ -354,16 +364,16 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
             if (random != null)
                 // Default passphrase to "" if not specified
                 return new AnyDeterministicKeyChain(new DeterministicSeed(random, bits, getPassphrase()), null,
-                        outputScriptType, accountPath, keyFactory);
+                        outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
             else if (entropy != null)
                 return new AnyDeterministicKeyChain(new DeterministicSeed(entropy, getPassphrase(), creationTimeSecs),
-                        null, outputScriptType, accountPath, keyFactory);
+                        null, outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
             else if (seed != null)
-                return new AnyDeterministicKeyChain(seed, null, outputScriptType, accountPath, keyFactory);
+                return new AnyDeterministicKeyChain(seed, null, outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
             else if (watchingKey != null)
-                return new AnyDeterministicKeyChain(watchingKey, isFollowing, true, outputScriptType);
+                return new AnyDeterministicKeyChain(watchingKey, isFollowing, true, outputScriptType, hardenedKeysOnly);
             else if (spendingKey != null)
-                return new AnyDeterministicKeyChain(spendingKey, false, false, outputScriptType);
+                return new AnyDeterministicKeyChain(spendingKey, false, false, outputScriptType, hardenedKeysOnly);
             else
                 throw new IllegalStateException();
         }
@@ -393,7 +403,8 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
      * </p>
      */
     public AnyDeterministicKeyChain(IDeterministicKey key, boolean isFollowing, boolean isWatching,
-                                    Script.ScriptType outputScriptType) {
+                                    Script.ScriptType outputScriptType, boolean hardenedKeysOnly) {
+        this.hardenedKeysOnly = hardenedKeysOnly;
         if (isWatching)
             checkArgument(key.isPubKeyOnly(), "Private subtrees not currently supported for watching keys: if you got this key from DKC.getWatchingKey() then use .dropPrivate().dropParent() on it first.");
         else
@@ -412,7 +423,8 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
     }
 
     public AnyDeterministicKeyChain(IDeterministicKey key, boolean isFollowing, boolean isWatching,
-                                    Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath) {
+                                    Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, boolean hardenedKeysOnly) {
+        this.hardenedKeysOnly = hardenedKeysOnly;
         if (isWatching)
             checkArgument(key.isPubKeyOnly(), "Private subtrees not currently supported for watching keys: if you got this key from DKC.getWatchingKey() then use .dropPrivate().dropParent() on it first.");
         else
@@ -442,7 +454,8 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
      * </p>
      */
     protected AnyDeterministicKeyChain(DeterministicSeed seed, @Nullable KeyCrypter crypter,
-                                       Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory) {
+                                       Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) {
+        this.hardenedKeysOnly = hardenedKeysOnly;
         checkArgument(outputScriptType == null || outputScriptType == Script.ScriptType.P2PKH,
                  "Only P2PKH is allowed.");
         this.outputScriptType = outputScriptType != null ? outputScriptType : Script.ScriptType.P2PKH;
@@ -471,7 +484,8 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
      *
      * See also {@link #makeKeyChainFromSeed(DeterministicSeed, ImmutableList, Script.ScriptType)}
      */
-    protected AnyDeterministicKeyChain(KeyCrypter crypter, KeyParameter aesKey, AnyDeterministicKeyChain chain) {
+    protected AnyDeterministicKeyChain(KeyCrypter crypter, KeyParameter aesKey, AnyDeterministicKeyChain chain, boolean hardenedKeysOnly) {
+        this.hardenedKeysOnly = hardenedKeysOnly;
         // Can't encrypt a watching chain.
         checkNotNull(chain.rootKey);
         checkNotNull(chain.seed);
@@ -501,8 +515,8 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         IDeterministicKey accountParent = hierarchy.get(getAccountPath().subList(0, getAccountPath().size() - 1), false, false);
 
         IDeterministicKey account = encryptNonLeaf(aesKey, chain, accountParent, getAccountPath());
-        externalParentKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), EXTERNAL_SUBPATH));
-        internalParentKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), INTERNAL_SUBPATH));
+        externalParentKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), getExternalPath()));
+        internalParentKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), getInternalPath()));
 
         // Now copy the (pubkey only) leaf keys across to avoid rederiving them. The private key bytes are missing
         // anyway so there's nothing to encrypt.
@@ -518,6 +532,14 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         for (ListenerRegistration<KeyChainEventListener> listener : chain.basicKeyChain.getListeners()) {
             basicKeyChain.addEventListener(listener.listener);
         }
+    }
+
+    private ImmutableList<ChildNumber> getExternalPath() {
+        return hardenedKeysOnly ? EXTERNAL_SUBPATH_HARDENED : EXTERNAL_SUBPATH;
+    }
+
+    private ImmutableList<ChildNumber> getInternalPath() {
+        return hardenedKeysOnly ? INTERNAL_SUBPATH_HARDENED : INTERNAL_SUBPATH;
     }
 
     public ImmutableList<ChildNumber> getAccountPath() {
@@ -540,8 +562,8 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
     // Derives the account path keys and inserts them into the basic key chain. This is important to preserve their
     // order for serialization, amongst other things.
     private void initializeHierarchyUnencrypted(IDeterministicKey baseKey) {
-        externalParentKey = hierarchy.deriveChild(getAccountPath(), false, false, ChildNumber.ZERO);
-        internalParentKey = hierarchy.deriveChild(getAccountPath(), false, false, ChildNumber.ONE);
+        externalParentKey = hierarchy.deriveChild(getAccountPath(), false, false, hardenedKeysOnly ? ChildNumber.ZERO_HARDENED : ChildNumber.ZERO);
+        internalParentKey = hierarchy.deriveChild(getAccountPath(), false, false, hardenedKeysOnly ? ChildNumber.ONE_HARDENED : ChildNumber.ONE);
         basicKeyChain.importKey(externalParentKey);
         basicKeyChain.importKey(internalParentKey);
     }
@@ -595,9 +617,9 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
             basicKeyChain.importKeys(lookahead);
             List<IDeterministicKey> keys = new ArrayList<>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
-                ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
+                ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, hardenedKeysOnly));
                 IDeterministicKey k = hierarchy.get(path, false, false);
-                if (k.getKeyFactory().getKeyType() == KeyType.ECDSA) {
+                if (k.getKeyFactory().getKeyType() == KeyType.ECDSA && !hardenedKeysOnly) {
                     // Just a last minute sanity check before we hand the key out to the app for usage. This isn't inspired
                     // by any real problem reports from bitcoinj users, but I've heard of cases via the grapevine of
                     // places that lost money due to bitflips causing addresses to not match keys. Of course in an
@@ -619,6 +641,10 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         byte[] actual = k.getPubKey();
         if (!Arrays.equals(rederived, actual))
             throw new IllegalStateException(String.format(Locale.US, "Bit-flip check failed: %s vs %s", Arrays.toString(rederived), Arrays.toString(actual)));
+    }
+
+    public boolean hasHardenedKeysOnly() {
+        return hardenedKeysOnly;
     }
 
     /**
@@ -936,15 +962,15 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         return hasExtendedChildren;
     }
 
-    static List<AnyDeterministicKeyChain> fromProtobuf(List<Protos.Key> keys, @Nullable KeyCrypter crypter, KeyFactory keyFactory) throws UnreadableWalletException {
-        return fromProtobuf(keys, crypter, new AnyDefaultKeyChainFactory(), keyFactory);
+    static List<AnyDeterministicKeyChain> fromProtobuf(List<Protos.Key> keys, @Nullable KeyCrypter crypter, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException {
+        return fromProtobuf(keys, crypter, new AnyDefaultKeyChainFactory(), keyFactory, hardenedKeysOnly);
     }
 
     /**
      * Returns all the key chains found in the given list of keys. Typically there will only be one, but in the case of
      * key rotation it can happen that there are multiple chains found.
      */
-    public static List<AnyDeterministicKeyChain> fromProtobuf(List<Protos.Key> keys, @Nullable KeyCrypter crypter, AnyKeyChainFactory factory, KeyFactory keyFactory) throws UnreadableWalletException {
+    public static List<AnyDeterministicKeyChain> fromProtobuf(List<Protos.Key> keys, @Nullable KeyCrypter crypter, AnyKeyChainFactory factory, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException {
         List<AnyDeterministicKeyChain> chains = newLinkedList();
         DeterministicSeed seed = null;
         AnyDeterministicKeyChain chain = null;
@@ -1060,7 +1086,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
                     if (seed == null && key.hasSecretBytes()) {
                         IDeterministicKey accountKey = keyFactory.fromExtended(immutablePath, chainCode, pubkey, key.getSecretBytes().toByteArray(), null);
                         accountKey.setCreationTimeSeconds(key.getCreationTimestamp() / 1000);
-                        chain = factory.makeSpendingKeyChain(key, iter.peek(), accountKey, isMarried, outputScriptType);
+                        chain = factory.makeSpendingKeyChain(key, iter.peek(), accountKey, isMarried, outputScriptType, hardenedKeysOnly);
                         isSpendingKey = true;
                     } else if (seed == null) {
                         IDeterministicKey accountKey = keyFactory.fromExtended(immutablePath, chainCode, pubkey, null, null);
@@ -1075,10 +1101,10 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
                     } else {
                         if (simple)
                             chain = factory.makeKeyChain(key, iter.peek(), seed, crypter, isMarried,
-                                    outputScriptType, ImmutableList.<ChildNumber> builder().addAll(accountPath).build(), keyFactory);
+                                    outputScriptType, ImmutableList.<ChildNumber> builder().addAll(accountPath).build(), keyFactory, hardenedKeysOnly);
                         else
                             chain = factory.makeSpendingFriendKeyChain(key, iter.peek(), seed, crypter, isMarried,
-                                    ImmutableList.<ChildNumber> builder().addAll(accountPath).build(), keyFactory);
+                                    ImmutableList.<ChildNumber> builder().addAll(accountPath).build(), keyFactory, hardenedKeysOnly);
                         chain.lookaheadSize = LAZY_CALCULATE_LOOKAHEAD;
                         // If the seed is encrypted, then the chain is incomplete at this point. However, we will load
                         // it up below as we parse in the keys. We just need to check at the end that we've loaded
@@ -1149,7 +1175,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         }
         if (chain != null) {
             checkState(lookaheadSize >= 0);
-            chain.setLookaheadSize(lookaheadSize);
+            chain.setLookaheadSize(hardenedKeysOnly ? 0 : lookaheadSize);
             chain.setSigsRequiredToSpend(sigsRequiredToSpend);
             chain.maybeLookAhead();
             chains.add(chain);
@@ -1176,7 +1202,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
 
     @Override
     public AnyDeterministicKeyChain toEncrypted(KeyCrypter keyCrypter, KeyParameter aesKey) {
-        return new AnyDeterministicKeyChain(keyCrypter, aesKey, this);
+        return new AnyDeterministicKeyChain(keyCrypter, aesKey, this, hardenedKeysOnly);
     }
 
     @Override
@@ -1228,7 +1254,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
      */
     protected AnyDeterministicKeyChain makeKeyChainFromSeed(DeterministicSeed seed, ImmutableList<ChildNumber> accountPath,
                                                             Script.ScriptType outputScriptType) {
-        return new AnyDeterministicKeyChain(seed, null, outputScriptType, accountPath, keyFactory);
+        return new AnyDeterministicKeyChain(seed, null, outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
     }
 
     @Override
@@ -1395,7 +1421,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         final Stopwatch watch = Stopwatch.createStarted();
         int nextChild = numChildren;
         for (int i = 0; i < needed; i++) {
-            IDeterministicKey key = parent.deriveThisOrNextChildKey(nextChild);
+            IDeterministicKey key = parent.deriveThisOrNextChildKey(nextChild | (hardenedKeysOnly ? ChildNumber.HARDENED_BIT : 0));
             key = key.dropPrivateBytes();
             hierarchy.putKey(key);
             result.add(key);

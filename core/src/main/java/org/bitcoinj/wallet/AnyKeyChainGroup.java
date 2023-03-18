@@ -831,13 +831,13 @@ public class AnyKeyChainGroup implements IKeyBag {
         return result;
     }
 
-    static AnyKeyChainGroup fromProtobufUnencrypted(NetworkParameters params, List<Protos.Key> keys, KeyFactory keyFactory) throws UnreadableWalletException {
-        return fromProtobufUnencrypted(params, keys, new AnyDefaultKeyChainFactory(), keyFactory);
+    static AnyKeyChainGroup fromProtobufUnencrypted(NetworkParameters params, List<Protos.Key> keys, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException {
+        return fromProtobufUnencrypted(params, keys, new AnyDefaultKeyChainFactory(), keyFactory, hardenedKeysOnly);
     }
 
-    public static AnyKeyChainGroup fromProtobufUnencrypted(NetworkParameters params, List<Protos.Key> keys, AnyKeyChainFactory factory, KeyFactory keyFactory) throws UnreadableWalletException {
+    public static AnyKeyChainGroup fromProtobufUnencrypted(NetworkParameters params, List<Protos.Key> keys, AnyKeyChainFactory factory, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException {
         AnyBasicKeyChain basicKeyChain = AnyBasicKeyChain.fromProtobufUnencrypted(keys, keyFactory);
-        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, null, factory, keyFactory);
+        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, null, factory, keyFactory, hardenedKeysOnly);
         int lookaheadSize = -1, lookaheadThreshold = -1;
         EnumMap<KeyChain.KeyPurpose, IDeterministicKey> currentKeys = null;
         if (!chains.isEmpty()) {
@@ -850,14 +850,14 @@ public class AnyKeyChainGroup implements IKeyBag {
         return new AnyKeyChainGroup(params, basicKeyChain, chains, lookaheadSize, lookaheadThreshold, currentKeys, null, keyFactory);
     }
 
-    static AnyKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, KeyFactory keyFactory) throws UnreadableWalletException {
-        return fromProtobufEncrypted(params, keys, crypter, new AnyDefaultKeyChainFactory(), keyFactory);
+    static AnyKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException {
+        return fromProtobufEncrypted(params, keys, crypter, new AnyDefaultKeyChainFactory(), keyFactory, hardenedKeysOnly);
     }
 
-    public static AnyKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, AnyKeyChainFactory factory, KeyFactory keyFactory) throws UnreadableWalletException {
+    public static AnyKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, AnyKeyChainFactory factory, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException {
         checkNotNull(crypter);
         AnyBasicKeyChain basicKeyChain = AnyBasicKeyChain.fromProtobufEncrypted(keys, crypter, keyFactory);
-        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, crypter, factory, keyFactory);
+        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, crypter, factory, keyFactory, hardenedKeysOnly);
         int lookaheadSize = -1, lookaheadThreshold = -1;
         EnumMap<KeyChain.KeyPurpose, IDeterministicKey> currentKeys = null;
         if (!chains.isEmpty()) {
@@ -977,7 +977,7 @@ public class AnyKeyChainGroup implements IKeyBag {
         if (activeChain.getIssuedExternalKeys() > 0) {
             IDeterministicKey currentExternalKey = activeChain.getKeyByPath(
                     HDUtils.append(
-                            HDUtils.concat(activeChain.getAccountPath(), AnyDeterministicKeyChain.EXTERNAL_SUBPATH),
+                            HDUtils.concat(activeChain.getAccountPath(), activeChain.hardenedKeysOnly ? AnyDeterministicKeyChain.EXTERNAL_SUBPATH_HARDENED : AnyDeterministicKeyChain.EXTERNAL_SUBPATH),
                             new ChildNumber(activeChain.getIssuedExternalKeys() - 1)));
             currentKeys.put(KeyChain.KeyPurpose.RECEIVE_FUNDS, currentExternalKey);
         }
@@ -985,7 +985,7 @@ public class AnyKeyChainGroup implements IKeyBag {
         if (activeChain.getIssuedInternalKeys() > 0) {
             IDeterministicKey currentInternalKey = activeChain.getKeyByPath(
                     HDUtils.append(
-                            HDUtils.concat(activeChain.getAccountPath(), AnyDeterministicKeyChain.INTERNAL_SUBPATH),
+                            HDUtils.concat(activeChain.getAccountPath(), activeChain.hardenedKeysOnly ? AnyDeterministicKeyChain.INTERNAL_SUBPATH_HARDENED : AnyDeterministicKeyChain.INTERNAL_SUBPATH),
                             new ChildNumber(activeChain.getIssuedInternalKeys() - 1)));
             currentKeys.put(KeyChain.KeyPurpose.CHANGE, currentInternalKey);
         }
