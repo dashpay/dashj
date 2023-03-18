@@ -18,12 +18,11 @@ package org.bitcoinj.crypto.factory;
 
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.ed25519.Ed25519DeterministicKey;
+import org.bitcoinj.crypto.ed25519.Ed25519HDKeyDerivation;
 import org.bitcoinj.crypto.ed25519.Ed25519Key;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.EncryptedData;
-import org.bitcoinj.crypto.HDKeyDerivation;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypter;
@@ -72,7 +71,10 @@ public class Ed25519KeyFactory implements KeyFactory {
 
     @Override
     public IDeterministicKey fromExtended(ImmutableList<ChildNumber> immutablePath, byte[] chainCode, byte[] pubkey, byte[] priv, IDeterministicKey parent) {
-        return new Ed25519DeterministicKey(immutablePath, chainCode, new Ed25519PublicKeyParameters(pubkey, 1), new Ed25519PrivateKeyParameters(priv, 0), (Ed25519DeterministicKey) parent);
+        return new Ed25519DeterministicKey(immutablePath, chainCode,
+                new Ed25519PublicKeyParameters(pubkey, 1),
+                priv != null ? new Ed25519PrivateKeyParameters(priv, 0) : null,
+                (Ed25519DeterministicKey) parent);
     }
 
     @Override
@@ -87,7 +89,7 @@ public class Ed25519KeyFactory implements KeyFactory {
 
     @Override
     public IDeterministicKey deserializeB58(String base58, NetworkParameters params) {
-        return DeterministicKey.deserializeB58(base58, params);
+        return Ed25519DeterministicKey.deserializeB58(base58, params);
     }
 
     @Override
@@ -97,22 +99,22 @@ public class Ed25519KeyFactory implements KeyFactory {
 
     @Override
     public IDeterministicKey deserializeB58(IDeterministicKey parent, String pub58, NetworkParameters params) {
-        return DeterministicKey.deserializeB58((DeterministicKey) parent, pub58, params);
+        return Ed25519DeterministicKey.deserializeB58((Ed25519DeterministicKey) parent, pub58, params);
     }
 
     @Override
     public IDeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
-        return DeterministicKey.deserializeB58(base58, path, params);
+        return Ed25519DeterministicKey.deserializeB58(base58, path, params);
     }
 
     @Override
     public IDeterministicKey createMasterPrivateKey(byte[] bytes) {
-        return HDKeyDerivation.createMasterPrivateKey(bytes);
+        return Ed25519HDKeyDerivation.createMasterPrivateKey(bytes);
     }
 
     @Override
     public KeyType getKeyType() {
-        return KeyType.ECDSA;
+        return KeyType.EdDSA;
     }
 
     @Override

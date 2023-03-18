@@ -31,13 +31,10 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicHierarchy;
 import org.bitcoinj.crypto.EncryptedData;
 import org.bitcoinj.crypto.ExtendedChildNumber;
-import org.bitcoinj.crypto.HDKeyDerivation;
 import org.bitcoinj.crypto.HDUtils;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.crypto.factory.ECKeyFactory;
-import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
@@ -56,7 +53,7 @@ import static org.bitcoinj.core.Utils.HEX;
  * A deterministic key is a node in a {@link DeterministicHierarchy}. As per
  * <a href="https://github.com/satoshilabs/slips/blob/master/slip-0010.md">the SLIP-0010 specification</a> it is a pair
  * (key, chaincode). If you know its path in the tree and its chain code you can derive more keys from this. To obtain
- * one of these, you can call {@link Ed25519HDKeyDerivation#createMasterPrivateKey(byte[])}.
+ * one of these, you can call {@link Ed25519HDKeyDerivation#createMasterPrivateKey(byte[])}. Only hardened keys are supported.
  */
 public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministicKey {
 
@@ -406,11 +403,6 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
     @Override
     public Object getPubKeyObject() {
         return priv;
-    }
-
-    @Override
-    public KeyFactory getKeyFactory() {
-        return ECKeyFactory.get();
     }
 
     @Override
