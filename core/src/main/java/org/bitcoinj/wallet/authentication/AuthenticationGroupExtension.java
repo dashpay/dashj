@@ -235,7 +235,6 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
                         extendedKeyChain.getKeyList(), keyCrypter, factory, keyFactory, AuthenticationKeyChain.requiresHardenedKeys(keyChainType));
                 if (!chains.isEmpty()) {
                     AuthenticationKeyChain chain = (AuthenticationKeyChain)chains.get(0);
-                    //chain.setHardenedChildren(keyChainType == AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
                     chain.setType(keyChainType);
                     addAndActivateHDChain(chain);
                 }
