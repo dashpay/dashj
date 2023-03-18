@@ -764,8 +764,15 @@ public class Ed25519Key implements IKey {
         if (this == o) return true;
         if (o == null || !(o instanceof Ed25519Key)) return false;
         Ed25519Key other = (Ed25519Key) o;
-        return Objects.equal(this.priv, other.priv)
-                && Objects.equal(this.pub, other.pub)
+        boolean privateKeysEqual = false;
+        if (priv != null && other.priv != null) {
+            if (Arrays.equals(getPrivKeyBytes(), other.getPrivKeyBytes())) {
+                privateKeysEqual = true;
+            }
+        } else if (priv == other.priv) {
+            privateKeysEqual = true;
+        }
+        return privateKeysEqual && Arrays.equals(this.pub.getEncoded(), other.pub.getEncoded())
                 && Objects.equal(this.creationTimeSeconds, other.creationTimeSeconds)
                 && Objects.equal(this.keyCrypter, other.keyCrypter)
                 && Objects.equal(this.encryptedPrivateKey, other.encryptedPrivateKey);

@@ -473,7 +473,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         // downCursor is now the same key as us, but with private key bytes.
         // If it's not, it means we tried decrypting with an invalid password and earlier checks e.g. for padding didn't
         // catch it.
-        if (!downCursor.pub.equals(pub))
+        if (!Arrays.equals(downCursor.pub.getEncoded(), pub.getEncoded()))
             throw new KeyCrypterException.PublicPrivateMismatch("Could not decrypt bytes");
         return checkNotNull(downCursor.priv);
     }
