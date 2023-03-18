@@ -25,6 +25,7 @@ import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
+import org.bitcoinj.wallet.DerivationPathFactory;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChain;
@@ -53,6 +54,7 @@ public class AuthenticationKeyChainGroupTest {
     AnyDeterministicKeyChain owner;
     AnyDeterministicKeyChain bu;
     AnyDeterministicKeyChain operator;
+    AnyDeterministicKeyChain platform;
 
     IDeterministicKey ownerKeyMaster;
     IDeterministicKey ownerKey;
@@ -69,11 +71,17 @@ public class AuthenticationKeyChainGroupTest {
     IDeterministicKey operatorKeyMaster;
     IDeterministicKey operatorKey;
     KeyId operatorKeyId;
+    IDeterministicKey platformKeyMaster;
+    IDeterministicKey platformKey;
+    KeyId platformKeyId;
     AuthenticationKeyChainGroup authGroup;
+
+    DerivationPathFactory derivationPathFactory;
     @Before
     public void startup() throws UnreadableWalletException {
         PARAMS = UnitTestParams.get();
         context = new Context(PARAMS);
+        derivationPathFactory = DerivationPathFactory.get(PARAMS);
 
         seed = new DeterministicSeed(seedPhrase, null, "", Utils.currentTimeSeconds());
         DeterministicKeyChain bip32 = DeterministicKeyChain.builder()
@@ -111,6 +119,13 @@ public class AuthenticationKeyChainGroupTest {
                 .createHardenedChildren(true)
                 .build();
 
+        platform = AuthenticationKeyChain.authenticationBuilder()
+                .seed(seed)
+                .accountPath(derivationPathFactory.masternodePlatformDerivationPath())
+                .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR)
+                .createHardenedChildren(true)
+                .build();
+
         ownerKeyMaster = owner.getWatchingKey();
         ownerKey = ownerKeyMaster.deriveChildKey(ChildNumber.ZERO);
         ownerKeyId = KeyId.fromBytes(ownerKey.getPubKeyHash());
@@ -120,8 +135,12 @@ public class AuthenticationKeyChainGroupTest {
         votingKeyId = KeyId.fromBytes(votingKey.getPubKeyHash());
 
         buKeyMaster = bu.getWatchingKey();
-        buKey = buKeyMaster.deriveChildKey(ChildNumber.ZERO);
+        buKey = buKeyMaster.deriveChildKey(ChildNumber.ZERO_HARDENED);
         buKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
+
+        platformKeyMaster = platform.getWatchingKey();
+        platformKey = platformKeyMaster.deriveChildKey(ChildNumber.ZERO_HARDENED);
+        platformKeyId = KeyId.fromBytes(platformKey.getPubKeyHash());
 
         operator = AuthenticationKeyChain.authenticationBuilder()
                 .seed(seed)
@@ -139,6 +158,7 @@ public class AuthenticationKeyChainGroupTest {
                 .addChain(owner)
                 .addChain(operator)
                 .addChain(bu)
+                .addChain(platform)
                 .build();
 
         wallet.initializeAuthenticationKeyChains(seed, null);
@@ -151,11 +171,13 @@ public class AuthenticationKeyChainGroupTest {
         IDeterministicKey currentOwner = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
         IDeterministicKey currentVoter = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
         IDeterministicKey currentIdentity = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
+        IDeterministicKey currentPlatform = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
 
         assertEquals(currentOwner, ownerKey);
         assertEquals(currentVoter, votingKey);
         assertEquals(currentOperator, operatorKey);
         assertEquals(currentIdentity, buKey);
+        assertEquals(currentPlatform, platformKey);
     }
 
     @Test
@@ -166,8 +188,10 @@ public class AuthenticationKeyChainGroupTest {
         assertEquals(wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER),
                 walletCopy.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER));
 
-        // TODO: for some reason "wallet" has creation times for all BLS keys, so this fails if we compare keys, so lets compare priv key bytes
         assertEquals(wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR),
                 walletCopy.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR));
+
+        assertEquals(wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR),
+                walletCopy.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR));
     }
 }

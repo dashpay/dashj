@@ -35,8 +35,9 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
-public class AuthenticationGroupExtensionExtensionTest {
+public class AuthenticationGroupExtensionTest {
     Wallet wallet;
     AuthenticationGroupExtension mnext;
     UnitTestParams UNITTEST = UnitTestParams.get();
@@ -66,6 +67,7 @@ public class AuthenticationGroupExtensionExtensionTest {
         mnext.addKeyChain(seed, factory.masternodeOwnerDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
         mnext.addKeyChain(seed, factory.masternodeVotingDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
         mnext.addKeyChain(seed, factory.masternodeOperatorDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
+        mnext.addKeyChain(seed, factory.masternodePlatformDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
         wallet.addExtension(mnext);
     }
 
@@ -80,6 +82,7 @@ public class AuthenticationGroupExtensionExtensionTest {
         IKey votingKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
         IKey ownerKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
         IKey operatorKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
+        IKey platformKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
 
 
         assertEquals(3, mnext.getKeyUsage().size());
@@ -97,6 +100,9 @@ public class AuthenticationGroupExtensionExtensionTest {
         assertNotNull(operatorUsage);
         assertEquals(operatorUsage.getWhereUsed(), proRegTx.getTxId());
         assertEquals(AuthenticationKeyStatus.CURRENT, ownerUsage.getStatus());
+
+        AuthenticationKeyUsage platformUsage = mnext.getKeyUsage().get(platformKey);
+        assertNull(null, platformUsage);
     }
 
     @Test
@@ -114,13 +120,11 @@ public class AuthenticationGroupExtensionExtensionTest {
         assertNotNull(mnext.getActiveKeyChain());
 
 
-
-
-
         // the voting and owner key should have been found
         IKey votingKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
         IKey ownerKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
         IKey operatorKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
+        IKey platformKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
 
 
         assertEquals(3, mnext.getKeyUsage().size());
@@ -136,19 +140,11 @@ public class AuthenticationGroupExtensionExtensionTest {
 
         // is something wrong with some hashCode's why is it not found...
         AuthenticationKeyUsage operatorUsage = mnext.getKeyUsage().get(operatorKey);
-//        System.out.println(operatorKey.hashCode() + " " + operatorKey);
-//        System.out.println("--------------");
-//        for (IKey key : mnext.getKeyUsage().keySet()) {
-//            System.out.println(key.hashCode() + " " + key);
-//            System.out.println(" --> " + mnext.getKeyUsage().get(key).getKey());
-//        }
-//        System.out.println("--------------");
-
-//        for (AuthenticationKeyUsage usage : mnext.getKeyUsage().values()) {
-//            System.out.println(usage.getKey().hashCode() + " " + usage.getKey());
-//        }
         assertNotNull(operatorUsage);
         assertEquals(operatorUsage.getWhereUsed(), proRegTx.getTxId());
         assertEquals(AuthenticationKeyStatus.CURRENT, ownerUsage.getStatus());
+
+        AuthenticationKeyUsage platformUsage = mnext.getKeyUsage().get(platformKey);
+        assertNull(null, platformUsage);
     }
 }

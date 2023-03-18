@@ -122,11 +122,11 @@ public class AuthenticationKeyChainTest {
     @Test
     public void authenticationKeyChainTest() {
         // check that derivatation matches an alternate method
-        AuthenticationKeyChain owner = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET, EC_KEY_FACTORY);
+        AuthenticationKeyChain owner = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET, EC_KEY_FACTORY, false);
         IDeterministicKey myOwnerKey = owner.getKey(KeyChain.KeyPurpose.AUTHENTICATION);
         assertEquals(myOwnerKey, ownerKey);
 
-        AuthenticationKeyChain voting = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET, EC_KEY_FACTORY);
+        AuthenticationKeyChain voting = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET, EC_KEY_FACTORY, false);
         IDeterministicKey myVotingKey = voting.getKey(KeyChain.KeyPurpose.AUTHENTICATION);
         assertEquals(myVotingKey, votingKey);
 
