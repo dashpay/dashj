@@ -36,6 +36,7 @@ import org.bitcoinj.store.*;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.DerivationPathFactory;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
@@ -87,6 +88,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
@@ -105,6 +107,7 @@ import java.security.SecureRandom;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
@@ -140,6 +143,7 @@ public class WalletTool {
     private static ValidationMode mode;
     private static String password;
     private static org.bitcoin.protocols.payments.Protos.PaymentRequest paymentRequest;
+    private static AuthenticationGroupExtension authenticationGroupExtension;
 
     public static class Condition {
         public enum Type {
@@ -368,7 +372,8 @@ public class WalletTool {
             if (options.has("ignore-mandatory-extensions"))
                 loader.setRequireMandatoryExtensions(false);
             walletInputStream = new BufferedInputStream(new FileInputStream(walletFile));
-            wallet = loader.readWallet(walletInputStream, forceReset, (WalletExtension[])(null));
+            authenticationGroupExtension = new AuthenticationGroupExtension(params);
+            wallet = loader.readWallet(walletInputStream, forceReset, new WalletExtension[]{authenticationGroupExtension});
             if (!wallet.getParams().equals(params)) {
                 System.err.println("Wallet does not match requested network parameters: " +
                         wallet.getParams().getId() + " vs " + params.getId());
@@ -1392,6 +1397,15 @@ public class WalletTool {
                 .accountPath(DerivationPathFactory.get(params).bip44DerivationPath(0))
                 .build();
         wallet.addAndActivateHDChain(bip44Chain);
+
+        authenticationGroupExtension = new AuthenticationGroupExtension(wallet);
+        authenticationGroupExtension.addKeyChains(params, wallet.getKeyChainSeed(), EnumSet.of(
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR
+        ));
+        wallet.addExtension(authenticationGroupExtension);
 
         if (password != null)
             wallet.encrypt(password);
