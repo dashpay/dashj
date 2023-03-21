@@ -449,8 +449,9 @@ message AuthenticationKeyUsage {
   required bytes keyOrKeyId = 1;
   required ExtendedKeyChain.ExtendedKeyChainType keyType = 2;
   required AuthenticationKeyStatus status = 3;
-  required bytes whereUsed = 4;
+  required bytes whereUsed = 4;  // proTxHash
   optional PeerAddress address = 5;
+  optional bool legacy = 6; // for BLS keys, legacy or basic scheme
 }
 
 message AuthenticationGroupExtension {

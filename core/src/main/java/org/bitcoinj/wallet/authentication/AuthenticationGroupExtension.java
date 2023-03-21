@@ -60,6 +60,7 @@ import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static org.bitcoinj.evolution.ProviderRegisterTx.LEGACY_BLS_VERSION;
 
 public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension {
     private final AuthenticationKeyChainGroup keyChainGroup;
@@ -198,6 +199,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
                 peerAddressBuilder.setServices(VersionMessage.NODE_NETWORK);
                 usageBuilder.setAddress(peerAddressBuilder);
             }
+            if (usage.getType() == AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR) {
+                usageBuilder.setLegacy(usage.isLegacy());
+            }
             builder.addAuthenticationKeyUsage(usageBuilder);
         }
         return builder.build().toByteArray();
@@ -260,10 +264,14 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             } else {
                 key = findKeyFromPubKeyHash(keyOrKeyId, Script.ScriptType.P2PKH);
             }
-            InetAddress inetAddress = InetAddress.getByAddress(usageProto.getAddress().getIpAddress().toByteArray());
-            InetSocketAddress inetSocketAddress = new InetSocketAddress(inetAddress, usageProto.getAddress().getPort());
-            MasternodeAddress address = new MasternodeAddress(inetSocketAddress);
-            AuthenticationKeyUsage usage = new AuthenticationKeyUsage(key, keyChainType, status, whereUsed, address);
+            MasternodeAddress address = null;
+            if (usageProto.hasAddress()) {
+                InetAddress inetAddress = InetAddress.getByAddress(usageProto.getAddress().getIpAddress().toByteArray());
+                InetSocketAddress inetSocketAddress = new InetSocketAddress(inetAddress, usageProto.getAddress().getPort());
+                address = new MasternodeAddress(inetSocketAddress);
+            }
+            boolean legacy = usageProto.hasLegacy() && usageProto.getLegacy();
+            AuthenticationKeyUsage usage = new AuthenticationKeyUsage(key, keyChainType, status, whereUsed, address, legacy);
             keyUsage.put(key, usage);
         }
     }
@@ -342,7 +350,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         }
 
         if (operatorKey != null) {
-            AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, tx.getTxId(), providerRegisterTx.getAddress());
+            boolean legacy = providerRegisterTx.getVersion() == LEGACY_BLS_VERSION;
+            AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, legacy, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(operatorKey, operatorKeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(operatorKey.getPubKey());
         }
