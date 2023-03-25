@@ -56,6 +56,7 @@ import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.util.Arrays;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -151,6 +152,7 @@ public class Ed25519Key implements IKey {
      * @param compressed Determines whether the resulting Ed25519Key will use a compressed encoding for the public key.
      */
     public static Ed25519Key fromPrivate(byte[] privKeyBytes, boolean compressed) {
+        checkArgument(privKeyBytes.length == 32);
         return new Ed25519Key(new Ed25519PrivateKeyParameters(privKeyBytes, 0), (byte[]) null, compressed);
     }
 
