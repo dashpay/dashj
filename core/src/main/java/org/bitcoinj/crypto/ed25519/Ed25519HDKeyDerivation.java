@@ -96,8 +96,6 @@ public final class Ed25519HDKeyDerivation {
     public static Ed25519DeterministicKey createMasterPrivKeyFromBytes(byte[] privKeyBytes, byte[] chainCode,
             ImmutableList<ChildNumber> childNumberPath) throws HDDerivationException {
         Ed25519PrivateKeyParameters priv = new Ed25519PrivateKeyParameters(privKeyBytes, 0);
-        //assertNonZero(priv, "Generated master key is invalid.");
-        //assertLessThanN(priv, "Generated master key is invalid.");
         return new Ed25519DeterministicKey(childNumberPath, chainCode, priv, null);
     }
 
