@@ -41,7 +41,7 @@ public interface AnyKeyChainFactory {
      */
     AnyDeterministicKeyChain makeKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
                                           KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType,
-                                          ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory);
+                                          ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly);
 
     /**
      * Make a watching keychain.
@@ -71,11 +71,11 @@ public interface AnyKeyChainFactory {
      * @param outputScriptType type of addresses (aka output scripts) to generate for spending
      */
     AnyDeterministicKeyChain makeSpendingKeyChain(Protos.Key key, Protos.Key firstSubKey, IDeterministicKey accountKey,
-                                                  boolean isMarried, Script.ScriptType outputScriptType) throws UnreadableWalletException;
+                                                  boolean isMarried, Script.ScriptType outputScriptType, boolean hardenedKeysOnly) throws UnreadableWalletException;
 
     AnyDeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
                                                         KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath,
-                                                        KeyFactory keyFactory) throws UnreadableWalletException;
+                                                        KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException;
 
     AnyDeterministicKeyChain makeWatchingFriendKeyChain(IDeterministicKey accountKey, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException;
 

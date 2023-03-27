@@ -32,6 +32,7 @@ import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.factory.BLSKeyFactory;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
+import org.bitcoinj.crypto.factory.Ed25519KeyFactory;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.evolution.ProviderRegisterTx;
 import org.bitcoinj.evolution.ProviderUpdateRegistarTx;
@@ -224,13 +225,16 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
                     case BLS:
                         keyFactory = BLSKeyFactory.get();
                         break;
+                    case EDDSA:
+                        keyFactory = Ed25519KeyFactory.get();
+                        break;
                     default:
                         throw new UnreadableWalletException("Unknown extended key type found:" + extendedKeyChain.getKeyType());
                 }
-                List<AnyDeterministicKeyChain> chains = AuthenticationKeyChain.fromProtobuf(extendedKeyChain.getKeyList(), keyCrypter, factory, keyFactory);
+                List<AnyDeterministicKeyChain> chains = AuthenticationKeyChain.fromProtobuf(
+                        extendedKeyChain.getKeyList(), keyCrypter, factory, keyFactory, AuthenticationKeyChain.requiresHardenedKeys(keyChainType));
                 if (!chains.isEmpty()) {
                     AuthenticationKeyChain chain = (AuthenticationKeyChain)chains.get(0);
-                    chain.setHardenedChildren(keyChainType == AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
                     chain.setType(keyChainType);
                     addAndActivateHDChain(chain);
                 }
@@ -462,11 +466,12 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             case BLOCKCHAIN_IDENTITY_TOPUP:
             case INVITATION_FUNDING:
             case MASTERNODE_HOLDINGS:
-            case MASTERNODE_PLATFORM_OPERATOR:
             default:
                 return Protos.ExtendedKeyChain.KeyType.ECDSA;
             case MASTERNODE_OPERATOR:
                 return Protos.ExtendedKeyChain.KeyType.BLS;
+            case MASTERNODE_PLATFORM_OPERATOR:
+                return Protos.ExtendedKeyChain.KeyType.EDDSA;
         }
     }
 }

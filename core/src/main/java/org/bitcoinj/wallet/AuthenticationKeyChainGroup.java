@@ -170,9 +170,10 @@ public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
     }
 
     public static AuthenticationKeyChainGroup fromProtobufUnencrypted(NetworkParameters params, List<Protos.Key> keys, AnyKeyChainFactory factory, AuthenticationKeyChain.KeyChainType type) throws UnreadableWalletException {
+        boolean hardenedKeysOnly = AuthenticationKeyChain.requiresHardenedKeys(type);
         KeyFactory keyFactory = AuthenticationKeyChain.getKeyFactory(type);
         AnyBasicKeyChain basicKeyChain = AnyBasicKeyChain.fromProtobufUnencrypted(keys, keyFactory);
-        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, null, factory, keyFactory);
+        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, null, factory, keyFactory, hardenedKeysOnly);
         for(AnyDeterministicKeyChain chain : chains) {
             Preconditions.checkState(chain instanceof AuthenticationKeyChain);
         }
@@ -194,9 +195,10 @@ public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
 
     public static AuthenticationKeyChainGroup fromProtobufEncrypted(NetworkParameters params, List<Protos.Key> keys, KeyCrypter crypter, AnyKeyChainFactory factory, AuthenticationKeyChain.KeyChainType type) throws UnreadableWalletException {
         checkNotNull(crypter);
+        boolean hardenedKeysOnly = AuthenticationKeyChain.requiresHardenedKeys(type);
         KeyFactory keyFactory = AuthenticationKeyChain.getKeyFactory(type);
         AnyBasicKeyChain basicKeyChain = AnyBasicKeyChain.fromProtobufEncrypted(keys, crypter, keyFactory);
-        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, crypter, factory, keyFactory);
+        List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(keys, crypter, factory, keyFactory, hardenedKeysOnly);
         for(AnyDeterministicKeyChain chain : chains) {
             Preconditions.checkState(chain instanceof AuthenticationKeyChain);
         }

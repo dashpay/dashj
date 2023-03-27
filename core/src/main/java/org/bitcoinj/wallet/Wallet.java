@@ -5864,6 +5864,7 @@ public class Wallet extends BaseTaggableObject
     AuthenticationKeyChain providerOwnerKeyChain;
     AuthenticationKeyChain providerVoterKeyChain;
     AuthenticationKeyChain providerOperatorKeyChain;
+    AuthenticationKeyChain providerPlatformOperatorKeyChain;
     AuthenticationKeyChain blockchainIdentityFundingKeyChain;
     AuthenticationKeyChain blockchainIdentityTopupKeyChain;
     AuthenticationKeyChain blockchainIdentityKeyChain;
@@ -5883,6 +5884,10 @@ public class Wallet extends BaseTaggableObject
         providerOperatorKeyChain = addAuthenticationKeyChain(seed,
                 derivationPathFactory.masternodeVotingDerivationPath(),
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                keyParameter);
+        providerPlatformOperatorKeyChain = addAuthenticationKeyChain(seed,
+                derivationPathFactory.masternodePlatformDerivationPath(),
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
                 keyParameter);
         blockchainIdentityFundingKeyChain = addAuthenticationKeyChain(seed,
                 derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath(),
@@ -5945,6 +5950,10 @@ public class Wallet extends BaseTaggableObject
         return providerOperatorKeyChain;
     }
 
+    public AuthenticationKeyChain getProviderPlatformOperatorKeyChain() {
+        return providerPlatformOperatorKeyChain;
+    }
+
     public AuthenticationKeyChain getBlockchainIdentityKeyChain() {
         return blockchainIdentityKeyChain;
     }
@@ -5994,6 +6003,10 @@ public class Wallet extends BaseTaggableObject
                 break;
             case MASTERNODE_OPERATOR:
                 providerOperatorKeyChain = chain;
+                authenticationGroup.addAndActivateHDChain(chain);
+                break;
+            case MASTERNODE_PLATFORM_OPERATOR:
+                providerPlatformOperatorKeyChain = chain;
                 authenticationGroup.addAndActivateHDChain(chain);
                 break;
         }

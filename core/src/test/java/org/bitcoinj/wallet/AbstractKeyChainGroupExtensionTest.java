@@ -161,24 +161,6 @@ public class AbstractKeyChainGroupExtensionTest {
         assertEquals(ScriptType.P2PKH, address.getOutputScriptType());
     }
 
-//    private KeyChainGroupWalletExtension createMarriedKeyChainGroup() {
-//        AnyDeterministicKeyChain chain = createMarriedKeyChain();
-//        AnyKeyChainGroup group = AnyKeyChainGroup.builder(MAINNET, EC_KEYFACTORY).lookaheadSize(LOOKAHEAD_SIZE).addChain(chain).build();
-//        KeyChainGroupWalletExtension groupExt = new KeyChainGroupWalletExtension(group);
-//        group.getActiveKeyChain();
-//        return groupExt;
-//    }
-//
-//    private MarriedKeyChain createMarriedKeyChain() {
-//        byte[] entropy = Sha256Hash.hash("don't use a seed like this in real life".getBytes());
-//        DeterministicSeed seed = new DeterministicSeed(entropy, "", MnemonicCode.BIP39_STANDARDISATION_TIME_SECS);
-//        MarriedKeyChain chain = MarriedKeyChain.builder()
-//                .seed(seed)
-//                .followingKeys(watchingAccountKey)
-//                .threshold(2).build();
-//        return chain;
-    //}
-
     @Test
     public void freshCurrentKeys() throws Exception {
         int numKeys = ((groupExt.getLookaheadSize() + groupExt.getLookaheadThreshold()) * 2)   // * 2 because of internal/external
@@ -418,46 +400,6 @@ public class AbstractKeyChainGroupExtensionTest {
         assertTrue(filter.contains(key2.getPubKey()));
     }
 
-//    @Test
-//    public void findRedeemScriptFromPubHash() throws Exception {
-//        groupExt = createMarriedKeyChainGroup();
-//        Address address = groupExt.freshAddress(KeyPurpose.RECEIVE_FUNDS);
-//        assertTrue(groupExt.findRedeemDataFromScriptHash(address.getHash()) != null);
-//        groupExt.getBloomFilterElementCount();
-//        KeyChainGroupWalletExtension group2Ext = createMarriedKeyChainGroup();
-//        group2Ext.freshAddress(KeyPurpose.RECEIVE_FUNDS);
-//        group2Ext.getBloomFilterElementCount();  // Force lookahead.
-//        // test address from lookahead zone and lookahead threshold zone
-//        for (int i = 0; i < groupExt.getLookaheadSize() + groupExt.getLookaheadThreshold(); i++) {
-//            address = groupExt.freshAddress(KeyPurpose.RECEIVE_FUNDS);
-//            assertTrue(group2Ext.findRedeemDataFromScriptHash(address.getHash()) != null);
-//        }
-//        assertFalse(group2Ext.findRedeemDataFromScriptHash(groupExt.freshAddress(KeyPurpose.RECEIVE_FUNDS).getHash()) != null);
-//    }
-
-//    @Test
-//    public void bloomFilterForMarriedChains() throws Exception {
-//        groupExt = createMarriedKeyChainGroup();
-//        int bufferSize = groupExt.getLookaheadSize() + groupExt.getLookaheadThreshold();
-//        int expected = bufferSize * 2 /* chains */ * 2 /* elements */;
-//        assertEquals(expected, groupExt.getBloomFilterElementCount());
-//        Address address1 = groupExt.freshAddress(KeyPurpose.RECEIVE_FUNDS);
-//        assertEquals(expected, groupExt.getBloomFilterElementCount());
-//        BloomFilter filter = groupExt.getBloomFilter(expected + 2, 0.001, (long)(Math.random() * Long.MAX_VALUE));
-//        assertTrue(filter.contains(address1.getHash()));
-//
-//        Address address2 = groupExt.freshAddress(KeyPurpose.CHANGE);
-//        assertTrue(filter.contains(address2.getHash()));
-//
-//        // Check that the filter contains the lookahead buffer.
-//        for (int i = 0; i < bufferSize - 1 /* issued address */; i++) {
-//            Address address = groupExt.freshAddress(KeyPurpose.RECEIVE_FUNDS);
-//            assertTrue("key " + i, filter.contains(address.getHash()));
-//        }
-//        // We ran ahead of the lookahead buffer.
-//        assertFalse(filter.contains(groupExt.freshAddress(KeyPurpose.RECEIVE_FUNDS).getHash()));
-//    }
-
     @Test
     public void earliestKeyTime() throws Exception {
         long now = Utils.currentTimeSeconds();   // mock
@@ -502,7 +444,7 @@ public class AbstractKeyChainGroupExtensionTest {
     public void serialization() throws Exception {
         int initialKeys = INITIAL_KEYS + group.getActiveKeyChain().getAccountPath().size() - 1;
         assertEquals(initialKeys + 1 /* for the seed */, group.serializeToProtobuf().size());
-        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, group.serializeToProtobuf(), EC_KEYFACTORY);
+        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, group.serializeToProtobuf(), EC_KEYFACTORY, false);
         KeyChainGroupGroupExtension groupExt = new KeyChainGroupGroupExtension(group);
         groupExt.freshKey(KeyPurpose.RECEIVE_FUNDS);
         IDeterministicKey key1 = groupExt.freshKey(KeyPurpose.RECEIVE_FUNDS);
@@ -515,21 +457,21 @@ public class AbstractKeyChainGroupExtensionTest {
         groupExt.importKeys(EC_KEYFACTORY.newKey());
         assertEquals(initialKeys + ((LOOKAHEAD_SIZE + 1) * 2) + 1 /* for the seed */ + 2, protoKeys2.size());
 
-        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, protoKeys1, EC_KEYFACTORY);
+        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, protoKeys1, EC_KEYFACTORY, false);
         groupExt = new KeyChainGroupGroupExtension(group);
         assertEquals(initialKeys + ((LOOKAHEAD_SIZE + 1)  * 2)  + 1 /* for the seed */ + 1, protoKeys1.size());
         assertTrue(groupExt.hasKey(key1));
         assertTrue(groupExt.hasKey(key2));
         assertEquals(key2, groupExt.currentKey(KeyPurpose.CHANGE));
         assertEquals(key1, groupExt.currentKey(KeyPurpose.RECEIVE_FUNDS));
-        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, protoKeys2, EC_KEYFACTORY);
+        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, protoKeys2, EC_KEYFACTORY, false);
         assertEquals(initialKeys + ((LOOKAHEAD_SIZE + 1) * 2) + 1 /* for the seed */ + 2, protoKeys2.size());
         assertTrue(groupExt.hasKey(key1));
         assertTrue(groupExt.hasKey(key2));
 
         groupExt.encrypt(KEY_CRYPTER, AES_KEY);
         List<Protos.Key> protoKeys3 = groupExt.serializeToProtobuf();
-        group = AnyKeyChainGroup.fromProtobufEncrypted(MAINNET, protoKeys3, KEY_CRYPTER, EC_KEYFACTORY);
+        group = AnyKeyChainGroup.fromProtobufEncrypted(MAINNET, protoKeys3, KEY_CRYPTER, EC_KEYFACTORY, false);
         groupExt = new KeyChainGroupGroupExtension(group);
         assertTrue(groupExt.isEncrypted());
         assertTrue(groupExt.checkPassword("password"));
@@ -549,7 +491,7 @@ public class AbstractKeyChainGroupExtensionTest {
         groupExt.getBloomFilterElementCount();  // Force lookahead.
         List<Protos.Key> protoKeys1 = groupExt.serializeToProtobuf();
         assertEquals(3 + (groupExt.getLookaheadSize() + groupExt.getLookaheadThreshold() + 1) * 2, protoKeys1.size());
-        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, protoKeys1, EC_KEYFACTORY);
+        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, protoKeys1, EC_KEYFACTORY, false);
         groupExt = new KeyChainGroupGroupExtension(group);
         assertEquals(3 + (groupExt.getLookaheadSize() + groupExt.getLookaheadThreshold() + 1) * 2, group.serializeToProtobuf().size());
     }
@@ -642,7 +584,7 @@ public class AbstractKeyChainGroupExtensionTest {
         DeterministicSeed seed1 = groupExt.getActiveKeyChain().getSeed();
         assertNotNull(seed1);
 
-        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, protobufs, EC_KEYFACTORY);
+        group = AnyKeyChainGroup.fromProtobufUnencrypted(MAINNET, protobufs, EC_KEYFACTORY, false);
         groupExt = new KeyChainGroupGroupExtension(group);
         groupExt.upgradeToDeterministic(Script.ScriptType.P2PKH, KeyChainGroupStructure.DEFAULT, 0, null);  // Should give same result as last time.
         assertFalse(groupExt.isEncrypted());

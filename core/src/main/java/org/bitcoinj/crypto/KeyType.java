@@ -20,7 +20,7 @@ public enum KeyType {
     RSA(0),
     ECDSA(1), // secp256k1
     BLS(2),   // BLS12-381
-    EDDSA(3); // ED25519
+    EdDSA(3); // ED25519
 
     final int value;
 

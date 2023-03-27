@@ -165,7 +165,7 @@ public class AnyDeterministicKeyChainTest {
         IDeterministicKey watching = chain1.getWatchingKey();
 
         List<Protos.Key> keys = chain1.serializeToProtobuf();
-        chain1 = AnyDeterministicKeyChain.fromProtobuf(keys, null, chain1.getKeyFactory()).get(0);
+        chain1 = AnyDeterministicKeyChain.fromProtobuf(keys, null, chain1.getKeyFactory(), false).get(0);
         assertEquals(accountOne, chain1.getAccountPath());
 
         IKey key2 = chain1.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
@@ -260,7 +260,7 @@ public class AnyDeterministicKeyChainTest {
 
         // Round trip the data back and forth to check it is preserved.
         int oldLookaheadSize = chain.getLookaheadSize();
-        chain = AnyDeterministicKeyChain.fromProtobuf(keys, null, chain.getKeyFactory()).get(0);
+        chain = AnyDeterministicKeyChain.fromProtobuf(keys, null, chain.getKeyFactory(), false).get(0);
         assertEquals(AnyDeterministicKeyChain.ACCOUNT_ZERO_PATH, chain.getAccountPath());
         assertEquals(EXPECTED_SERIALIZATION, protoToString(chain.serializeToProtobuf()));
         assertEquals(key1, chain.findKeyFromPubHash(key1.getPubKeyHash()));
@@ -298,7 +298,7 @@ public class AnyDeterministicKeyChainTest {
 
         // Round trip the data back and forth to check it is preserved.
         int oldLookaheadSize = bip44chain.getLookaheadSize();
-        bip44chain = AnyDeterministicKeyChain.fromProtobuf(keys, null, bip44chain.getKeyFactory()).get(0);
+        bip44chain = AnyDeterministicKeyChain.fromProtobuf(keys, null, bip44chain.getKeyFactory(), false).get(0);
         assertEquals(BIP44_ACCOUNT_ONE_PATH, bip44chain.getAccountPath());
         assertEquals(EXPECTED_SERIALIZATION, protoToString(bip44chain.serializeToProtobuf()));
         assertEquals(key1, bip44chain.findKeyFromPubHash(key1.getPubKeyHash()));
@@ -350,7 +350,7 @@ public class AnyDeterministicKeyChainTest {
         List<Protos.Key> doubled = Lists.newArrayListWithExpectedSize(serialized.size() * 2);
         doubled.addAll(serialized);
         doubled.addAll(serialized);
-        final List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(doubled, encChain.getKeyCrypter(), chain.getKeyFactory());
+        final List<AnyDeterministicKeyChain> chains = AnyDeterministicKeyChain.fromProtobuf(doubled, encChain.getKeyCrypter(), chain.getKeyFactory(), false);
         assertEquals(2, chains.size());
         encChain = chains.get(0);
         checkEncryptedKeyChain(encChain, chain.findKeyFromPubKey(key1.getPubKey()));
@@ -405,7 +405,7 @@ public class AnyDeterministicKeyChainTest {
         // Test we can serialize and deserialize a watching chain OK.
         List<Protos.Key> serialization = chain.serializeToProtobuf();
         checkSerialization(serialization, "watching-wallet-serialization.txt");
-        chain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, chain.getKeyFactory()).get(0);
+        chain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, chain.getKeyFactory(), false).get(0);
         assertEquals(AnyDeterministicKeyChain.ACCOUNT_ZERO_PATH, chain.getAccountPath());
         final IDeterministicKey rekey4 = chain.getKey(KeyChain.KeyPurpose.CHANGE);
         assertEquals(key4.getPubKeyObject(), rekey4.getPubKeyObject());
@@ -442,7 +442,7 @@ public class AnyDeterministicKeyChainTest {
         // Test we can serialize and deserialize a watching chain OK.
         List<Protos.Key> serialization = chain.serializeToProtobuf();
         checkSerialization(serialization, "watching-wallet-arbitrary-path-serialization.txt");
-        chain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, chain.getKeyFactory()).get(0);
+        chain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, chain.getKeyFactory(), false).get(0);
         assertEquals(BIP44_ACCOUNT_ONE_PATH, chain.getAccountPath());
         final IDeterministicKey rekey4 = chain.getKey(KeyChain.KeyPurpose.CHANGE);
         assertEquals(key4.getPubKeyObject(), rekey4.getPubKeyObject());
@@ -485,7 +485,7 @@ public class AnyDeterministicKeyChainTest {
         // Test we can serialize and deserialize a watching chain OK.
         List<Protos.Key> serialization = chain.serializeToProtobuf();
         checkSerialization(serialization, "watching-wallet-serialization-account-one.txt");
-        chain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, chain.getKeyFactory()).get(0);
+        chain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, chain.getKeyFactory(), false).get(0);
         assertEquals(accountOne, chain.getAccountPath());
         final IDeterministicKey rekey4 = chain.getKey(KeyChain.KeyPurpose.CHANGE);
         assertEquals(key4.getPubKeyObject(), rekey4.getPubKeyObject());
@@ -524,7 +524,7 @@ public class AnyDeterministicKeyChainTest {
         // Test we can serialize and deserialize a watching chain OK.
         List<Protos.Key> serialization = chain.serializeToProtobuf();
         checkSerialization(serialization, "spending-wallet-serialization.txt");
-        chain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, chain.getKeyFactory()).get(0);
+        chain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, chain.getKeyFactory(), false).get(0);
         assertEquals(AnyDeterministicKeyChain.ACCOUNT_ZERO_PATH, chain.getAccountPath());
         final IDeterministicKey rekey4 = chain.getKey(KeyChain.KeyPurpose.CHANGE);
         assertEquals(key4.getPubKeyObject(), rekey4.getPubKeyObject());
@@ -633,7 +633,7 @@ public class AnyDeterministicKeyChainTest {
 
         // Check that the second change key matches after loading from the serialization, serializing and deserializing
         long secs = keyChain.getEarliestKeyCreationTime();
-        keyChain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, keyChain.getKeyFactory()).get(0);
+        keyChain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, keyChain.getKeyFactory(), false).get(0);
         serialization = keyChain.serializeToProtobuf();
         checkSerialization(serialization, serializationFile);
         assertEquals(secs, keyChain.getEarliestKeyCreationTime());
