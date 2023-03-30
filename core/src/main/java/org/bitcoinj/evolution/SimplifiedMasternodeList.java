@@ -139,6 +139,9 @@ public class SimplifiedMasternodeList extends Message {
 
         lock.lock();
         try {
+            if (diff.getVersion() >= SimplifiedMasternodeListDiff.BASIC_BLS_VERSION) {
+                params.setBasicBLSSchemeActivationHeight((int)((CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject()).height);
+            }
             SimplifiedMasternodeList result = new SimplifiedMasternodeList(this);
 
             result.blockHash = diff.blockHash;
