@@ -178,7 +178,7 @@ public class SimplifiedQuorumList extends Message {
             //if quorum was created before DIP8 activation, then allow it to be added
             if (chainHeight >= params.getDIP0008BlockHeight() || !isLoadingBootstrap) {
                 //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
-                if (!isFirstQuorumCheck && entry.llmqType != 2 && !params.getAssumeValidQuorums().contains(entry.quorumHash)) {
+                if (!params.getId().equals(NetworkParameters.ID_TESTNET) && !isFirstQuorumCheck && entry.llmqType != 2 && !params.getAssumeValidQuorums().contains(entry.quorumHash)) {
                     throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
                 }
             }
