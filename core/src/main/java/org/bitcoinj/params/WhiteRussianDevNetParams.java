@@ -58,7 +58,7 @@ public class WhiteRussianDevNetParams extends DevNetParams {
     };
 
     public WhiteRussianDevNetParams() {
-        super(DEVNET_NAME, "yZaEFuVfaycMzvQbHH7dgbDPJ6F2AGLqzR", 20001,
+        super(DEVNET_NAME, "yLcmdXzHKb9Vi6iamyCrqUTYSRP6wF46wJ", 20001,
                 MASTERNODES, true, -1);
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
