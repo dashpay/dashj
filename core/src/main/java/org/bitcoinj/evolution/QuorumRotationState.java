@@ -691,13 +691,18 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         log.info(builder.toString());
     }
 
+    private static ArrayList<ArrayList<SimplifiedMasternodeListEntry>> createNewQuarterQuorumMembers(LLMQParameters llmqParameters) {
+        int nQuorums = llmqParameters.getSigningActiveQuorumCount();
+        ArrayList<ArrayList<SimplifiedMasternodeListEntry>> quarterQuorumMembers = new ArrayList<>(nQuorums);
+        for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
+            quarterQuorumMembers.add(Lists.newArrayList());
+        }
+        return quarterQuorumMembers;
+    }
+
     private ArrayList<ArrayList<SimplifiedMasternodeListEntry>> buildNewQuorumQuarterMembers(LLMQParameters llmqParameters, StoredBlock quorumBaseBlock, PreviousQuorumQuarters previousQuarters) {
         try {
-            int nQuorums = llmqParameters.getSigningActiveQuorumCount();
-            ArrayList<ArrayList<SimplifiedMasternodeListEntry>> quarterQuorumMembers = new ArrayList<>(nQuorums);
-            for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
-                quarterQuorumMembers.add(Lists.newArrayList());
-            }
+            ArrayList<ArrayList<SimplifiedMasternodeListEntry>> quarterQuorumMembers = createNewQuarterQuorumMembers(llmqParameters);
             int quorumSize = llmqParameters.getSize();
             int quarterSize = quorumSize / 4;
 
@@ -804,7 +809,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                         // we made full "while" loop
                         if (!updated) {
                             // there are not enough MNs, there is nothing we can do here
-                            return new ArrayList<>(nQuorums);
+                            return createNewQuarterQuorumMembers(llmqParameters);
                         }
                         // reset and try again
                         updated = false;
