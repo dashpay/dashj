@@ -80,11 +80,10 @@ public class AuthenticationGroupExtensionTest {
         mnext.processTransaction(proRegTx, null, AbstractBlockChain.NewBlockType.BEST_CHAIN);
 
         // the voting and owner key should have been found
-        IKey votingKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
-        IKey ownerKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
-        IKey operatorKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
-        IKey platformKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
-
+        IKey votingKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING).getKey(0);
+        IKey ownerKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER).getKey(0);
+        IKey operatorKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR).getKey(0);
+        IKey platformKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR).getKey(0);
 
         assertEquals(3, mnext.getKeyUsage().size());
         AuthenticationKeyUsage votingUsage = mnext.getKeyUsage().get(votingKey);
@@ -122,11 +121,10 @@ public class AuthenticationGroupExtensionTest {
 
 
         // the voting and owner key should have been found
-        IKey votingKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
-        IKey ownerKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
-        IKey operatorKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
-        IKey platformKey = mnext.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
-
+        IKey votingKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING).getKey(0);
+        IKey ownerKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER).getKey(0);
+        IKey operatorKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR).getKey(0);
+        IKey platformKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR).getKey(0);
 
         assertEquals(3, mnext.getKeyUsage().size());
         AuthenticationKeyUsage votingUsage = mnext.getKeyUsage().get(votingKey);
