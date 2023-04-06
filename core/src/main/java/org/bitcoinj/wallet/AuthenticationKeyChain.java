@@ -104,7 +104,6 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
     }
     KeyChainType type;
     int currentIndex;
-    int issuedKeys;
 
     public static class Builder<T extends Builder<T>> {
         protected SecureRandom random;
@@ -316,8 +315,8 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
             int index;
             switch (purpose) {
                 case AUTHENTICATION:
-                    issuedKeys += numberOfKeys;
-                    index = issuedKeys;
+                    issuedExternalKeys += numberOfKeys;
+                    index = issuedExternalKeys;
                     parentKey = getKeyByPath(getAccountPath());
                     break;
                 default:
@@ -351,6 +350,10 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
 
     public int getCurrentIndex() {
         return currentIndex;
+    }
+
+    public int getIssuedKeyCount() {
+        return issuedExternalKeys;
     }
 
     public IDeterministicKey freshAuthenticationKey(boolean isHardened) {
