@@ -114,6 +114,15 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         return hasPath;
     }
 
+    public boolean missingAnyKeyChainTypes(EnumSet<AuthenticationKeyChain.KeyChainType> types) {
+        for (AuthenticationKeyChain.KeyChainType type : types) {
+            if (getKeyChain(type) == null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void addKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, AuthenticationKeyChain.KeyChainType type) {
         checkState(!seed.isEncrypted());
         if (!hasKeyChain(path)) {
@@ -128,7 +137,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     public void addKeyChains(NetworkParameters params, DeterministicSeed seed, EnumSet<AuthenticationKeyChain.KeyChainType> types) {
         checkState(!seed.isEncrypted());
         for (AuthenticationKeyChain.KeyChainType type : types) {
-            addKeyChain(seed, getDefaultPath(params, type), type);
+            if (getKeyChain(type) == null) {
+                addKeyChain(seed, getDefaultPath(params, type), type);
+            }
         }
     }
 
@@ -150,9 +161,12 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     }
 
     public void addEncryptedKeyChains(NetworkParameters params, DeterministicSeed seed, @Nonnull KeyParameter keyParameter, EnumSet<AuthenticationKeyChain.KeyChainType> types) {
-        checkState(!seed.isEncrypted());
+        checkState(seed.isEncrypted());
+        checkNotNull(keyParameter);
         for (AuthenticationKeyChain.KeyChainType type : types) {
-            addEncryptedKeyChain(seed, getDefaultPath(params, type), keyParameter, type);
+            if (getKeyChain(type) == null) {
+                addEncryptedKeyChain(seed, getDefaultPath(params, type), keyParameter, type);
+            }
         }
     }
 
@@ -365,8 +379,23 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     }
 
     public IDeterministicKey freshKey(AuthenticationKeyChain.KeyChainType type) {
-        return keyChainGroup.freshKey(type);
+        return freshKeys(type, 1).get(0);
     }
+
+    public List<IDeterministicKey> freshKeys(AuthenticationKeyChain.KeyChainType type, int numberOfKeys) {
+        List<IDeterministicKey> keys;
+        keyChainGroupLock.lock();
+        try {
+            keys = keyChainGroup.freshKeys(type, numberOfKeys);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
+        // and that's not quite so important, so we could coalesce for more performance.
+        saveWallet();
+        return keys;
+    }
+
 
     private void processRegistration(Transaction tx, ProviderRegisterTx providerRegisterTx) {
         KeyId voting = providerRegisterTx.getKeyIDVoting();
@@ -376,7 +405,10 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
         IKey votingKey = findKeyFromPubKeyHash(voting.getBytes(), Script.ScriptType.P2PKH);
         IKey ownerKey = findKeyFromPubKeyHash(owner.getBytes(), Script.ScriptType.P2PKH);
-        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize());
+        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(true));
+        if (operatorKey == null)
+            operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(false));
+
         IKey platformKey = platformNodeId != null ? findKeyFromPubKeyHash(platformNodeId.getBytes(), Script.ScriptType.P2PKH) : null;
 
         // voting
@@ -411,7 +443,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         BLSPublicKey operator = providerUpdateRegistarTx.getPubkeyOperator();
 
         IKey votingKey = findKeyFromPubKeyHash(voting.getBytes(), Script.ScriptType.P2PKH);
-        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize());
+        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(true));
+        if (operatorKey == null)
+            operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(false));
         // TODO: find BLS
 
         // there could be a previous usage of voting and operator keys
@@ -574,19 +608,23 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         return txs;
     }
 
-    AuthenticationKeyChain getIdentityKeyChain() {
+    public AuthenticationKeyChain getKeyChain(AuthenticationKeyChain.KeyChainType type) {
+        return keyChainGroup.getKeyChain(type);
+    }
+
+    public AuthenticationKeyChain getIdentityKeyChain() {
         return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
     }
 
-    AuthenticationKeyChain getIdentityTopupKeyChain() {
+    public AuthenticationKeyChain getIdentityTopupKeyChain() {
         return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
     }
 
-    AuthenticationKeyChain getIdentityFundingKeyChain() {
+    public AuthenticationKeyChain getIdentityFundingKeyChain() {
         return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
     }
 
-    AuthenticationKeyChain getInvitationFundingKeyChain() {
+    public AuthenticationKeyChain getInvitationFundingKeyChain() {
         return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING);
     }
 
