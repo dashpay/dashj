@@ -19,14 +19,18 @@ package org.bitcoinj.wallet.authentication;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
+import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VersionMessage;
+import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypter;
@@ -34,36 +38,53 @@ import org.bitcoinj.crypto.factory.BLSKeyFactory;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.crypto.factory.Ed25519KeyFactory;
 import org.bitcoinj.crypto.factory.KeyFactory;
+import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.ProviderRegisterTx;
 import org.bitcoinj.evolution.ProviderUpdateRegistarTx;
 import org.bitcoinj.evolution.ProviderUpdateRevocationTx;
+import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.ListenerRegistration;
+import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.AbstractKeyChainGroupExtension;
 import org.bitcoinj.wallet.AnyDeterministicKeyChain;
 import org.bitcoinj.wallet.AnyKeyChainGroup;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.AuthenticationKeyChainFactory;
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
+import org.bitcoinj.wallet.DerivationPathFactory;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletTransaction;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static org.bitcoinj.evolution.ProviderRegisterTx.LEGACY_BLS_VERSION;
 
 public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension {
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationGroupExtension.class);
     private final AuthenticationKeyChainGroup keyChainGroup;
     private final HashMap<IKey, AuthenticationKeyUsage> keyUsage = Maps.newHashMap();
+
+    private final CopyOnWriteArrayList<ListenerRegistration<CreditFundingTransactionEventListener>> creditFundingListeners
+            = new CopyOnWriteArrayList<>();
 
     public AuthenticationGroupExtension(Wallet wallet) {
         super(wallet);
@@ -93,6 +114,15 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         return hasPath;
     }
 
+    public boolean missingAnyKeyChainTypes(EnumSet<AuthenticationKeyChain.KeyChainType> types) {
+        for (AuthenticationKeyChain.KeyChainType type : types) {
+            if (getKeyChain(type) == null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void addKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, AuthenticationKeyChain.KeyChainType type) {
         checkState(!seed.isEncrypted());
         if (!hasKeyChain(path)) {
@@ -101,6 +131,15 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
                         .type(type)
                         .accountPath(path)
                         .build());
+        }
+    }
+
+    public void addKeyChains(NetworkParameters params, DeterministicSeed seed, EnumSet<AuthenticationKeyChain.KeyChainType> types) {
+        checkState(!seed.isEncrypted());
+        for (AuthenticationKeyChain.KeyChainType type : types) {
+            if (getKeyChain(type) == null) {
+                addKeyChain(seed, getDefaultPath(params, type), type);
+            }
         }
     }
 
@@ -119,6 +158,20 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             AuthenticationKeyChain encryptedChain = chain.toEncrypted(wallet.getKeyCrypter(), keyParameter);
             keyChainGroup.addAndActivateHDChain(encryptedChain);
         }
+    }
+
+    public void addEncryptedKeyChains(NetworkParameters params, DeterministicSeed seed, @Nonnull KeyParameter keyParameter, EnumSet<AuthenticationKeyChain.KeyChainType> types) {
+        checkState(seed.isEncrypted());
+        checkNotNull(keyParameter);
+        for (AuthenticationKeyChain.KeyChainType type : types) {
+            if (getKeyChain(type) == null) {
+                addEncryptedKeyChain(seed, getDefaultPath(params, type), keyParameter, type);
+            }
+        }
+    }
+
+    public IDeterministicKey currentKey(AuthenticationKeyChain.KeyChainType type) {
+        return keyChainGroup.currentKey(type);
     }
 
     public HashMap<IKey, AuthenticationKeyUsage> getKeyUsage() {
@@ -198,6 +251,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
                 peerAddressBuilder.setServices(VersionMessage.NODE_NETWORK);
                 usageBuilder.setAddress(peerAddressBuilder);
             }
+            if (usage.getType() == AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR) {
+                usageBuilder.setLegacy(usage.isLegacy());
+            }
             builder.addAuthenticationKeyUsage(usageBuilder);
         }
         return builder.build().toByteArray();
@@ -260,16 +316,20 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             } else {
                 key = findKeyFromPubKeyHash(keyOrKeyId, Script.ScriptType.P2PKH);
             }
-            InetAddress inetAddress = InetAddress.getByAddress(usageProto.getAddress().getIpAddress().toByteArray());
-            InetSocketAddress inetSocketAddress = new InetSocketAddress(inetAddress, usageProto.getAddress().getPort());
-            MasternodeAddress address = new MasternodeAddress(inetSocketAddress);
-            AuthenticationKeyUsage usage = new AuthenticationKeyUsage(key, keyChainType, status, whereUsed, address);
+            MasternodeAddress address = null;
+            if (usageProto.hasAddress()) {
+                InetAddress inetAddress = InetAddress.getByAddress(usageProto.getAddress().getIpAddress().toByteArray());
+                InetSocketAddress inetSocketAddress = new InetSocketAddress(inetAddress, usageProto.getAddress().getPort());
+                address = new MasternodeAddress(inetSocketAddress);
+            }
+            boolean legacy = usageProto.hasLegacy() && usageProto.getLegacy();
+            AuthenticationKeyUsage usage = new AuthenticationKeyUsage(key, keyChainType, status, whereUsed, address, legacy);
             keyUsage.put(key, usage);
         }
     }
 
     @Override
-    public void processTransaction(Transaction tx) {
+    public void processTransaction(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType) {
         if (tx.getVersion() >= Transaction.SPECIAL_VERSION) {
             switch (tx.getType()) {
                 case TRANSACTION_PROVIDER_REGISTER:
@@ -286,6 +346,11 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
                     processRevoke((ProviderUpdateRevocationTx) tx.getExtraPayloadObject());
                 default:
                     break;
+            }
+        } else {
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
+                queueOnCreditFundingEvent(cftx, block, blockType);
             }
         }
     }
@@ -314,8 +379,23 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     }
 
     public IDeterministicKey freshKey(AuthenticationKeyChain.KeyChainType type) {
-        return keyChainGroup.freshKey(type);
+        return freshKeys(type, 1).get(0);
     }
+
+    public List<IDeterministicKey> freshKeys(AuthenticationKeyChain.KeyChainType type, int numberOfKeys) {
+        List<IDeterministicKey> keys;
+        keyChainGroupLock.lock();
+        try {
+            keys = keyChainGroup.freshKeys(type, numberOfKeys);
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
+        // and that's not quite so important, so we could coalesce for more performance.
+        saveWallet();
+        return keys;
+    }
+
 
     private void processRegistration(Transaction tx, ProviderRegisterTx providerRegisterTx) {
         KeyId voting = providerRegisterTx.getKeyIDVoting();
@@ -325,7 +405,10 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
         IKey votingKey = findKeyFromPubKeyHash(voting.getBytes(), Script.ScriptType.P2PKH);
         IKey ownerKey = findKeyFromPubKeyHash(owner.getBytes(), Script.ScriptType.P2PKH);
-        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize());
+        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(true));
+        if (operatorKey == null)
+            operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(false));
+
         IKey platformKey = platformNodeId != null ? findKeyFromPubKeyHash(platformNodeId.getBytes(), Script.ScriptType.P2PKH) : null;
 
         // voting
@@ -342,7 +425,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         }
 
         if (operatorKey != null) {
-            AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, tx.getTxId(), providerRegisterTx.getAddress());
+            boolean legacy = providerRegisterTx.getVersion() == LEGACY_BLS_VERSION;
+            AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, legacy, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(operatorKey, operatorKeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(operatorKey.getPubKey());
         }
@@ -359,7 +443,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         BLSPublicKey operator = providerUpdateRegistarTx.getPubkeyOperator();
 
         IKey votingKey = findKeyFromPubKeyHash(voting.getBytes(), Script.ScriptType.P2PKH);
-        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize());
+        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(true));
+        if (operatorKey == null)
+            operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(false));
         // TODO: find BLS
 
         // there could be a previous usage of voting and operator keys
@@ -385,7 +471,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
         // operator
         if (operatorKey != null) {
-            AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, tx.getTxId(), address);
+            boolean legacy = providerUpdateRegistarTx.getCurrentVersion() == LEGACY_BLS_VERSION;
+            AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, legacy, tx.getTxId(), address);
             keyUsage.put(operatorKey, operatorKeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(operatorKey.getPubKey());
         }
@@ -397,7 +484,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         builder.append(super.toString(includeLookahead, includePrivateKeys, aesKey));
         builder.append("\n").append("Authentication Key Usage").append("\n");
         for (AuthenticationKeyUsage usage : keyUsage.values()) {
-            builder.append(usage).append("\n");
+            builder.append(usage.toString(wallet.getParams())).append("\n");
         }
         return builder.toString();
     }
@@ -473,5 +560,158 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             case MASTERNODE_PLATFORM_OPERATOR:
                 return Protos.ExtendedKeyChain.KeyType.EDDSA;
         }
+    }
+
+    private static ImmutableList<ChildNumber> getDefaultPath(NetworkParameters params, AuthenticationKeyChain.KeyChainType keyChainType) {
+        DerivationPathFactory factory = DerivationPathFactory.get(params);
+        switch (keyChainType) {
+            case MASTERNODE_OWNER:
+                return factory.masternodeOwnerDerivationPath();
+            case MASTERNODE_VOTING:
+                return factory.masternodeVotingDerivationPath();
+            case BLOCKCHAIN_IDENTITY:
+                return factory.blockchainIdentityECDSADerivationPath();
+            case BLOCKCHAIN_IDENTITY_FUNDING:
+                return factory.blockchainIdentityRegistrationFundingDerivationPath();
+            case BLOCKCHAIN_IDENTITY_TOPUP:
+                return factory.blockchainIdentityTopupFundingDerivationPath();
+            case INVITATION_FUNDING:
+                return factory.identityInvitationFundingDerivationPath();
+            case MASTERNODE_HOLDINGS:
+                return factory.masternodeHoldingsDerivationPath();
+            case MASTERNODE_OPERATOR:
+                return factory.masternodeOperatorDerivationPath();
+            case MASTERNODE_PLATFORM_OPERATOR:
+                return factory.masternodePlatformDerivationPath();
+            default:
+                throw new IllegalArgumentException();
+        }
+    }
+
+    HashMap<Sha256Hash, CreditFundingTransaction> mapCreditFundingTxs = new HashMap<>();
+
+    /**
+     * @return list of credit funding transactions found in the wallet.
+     */
+
+    public List<CreditFundingTransaction> getCreditFundingTransactions() {
+        mapCreditFundingTxs.clear();
+        ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
+        for(WalletTransaction wtx : wallet.getWalletTransactions()) {
+            Transaction tx = wtx.getTransaction();
+            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
+                txs.add(cftx);
+                mapCreditFundingTxs.put(cftx.getTxId(), cftx);
+            }
+        }
+        return txs;
+    }
+
+    public AuthenticationKeyChain getKeyChain(AuthenticationKeyChain.KeyChainType type) {
+        return keyChainGroup.getKeyChain(type);
+    }
+
+    public AuthenticationKeyChain getIdentityKeyChain() {
+        return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
+    }
+
+    public AuthenticationKeyChain getIdentityTopupKeyChain() {
+        return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
+    }
+
+    public AuthenticationKeyChain getIdentityFundingKeyChain() {
+        return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
+    }
+
+    public AuthenticationKeyChain getInvitationFundingKeyChain() {
+        return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING);
+    }
+
+    public List<CreditFundingTransaction> getIdentityFundingTransactions() {
+        return getFundingTransactions(getIdentityFundingKeyChain());
+    }
+
+    public List<CreditFundingTransaction> getTopupFundingTransactions() {
+        return getFundingTransactions(getIdentityTopupKeyChain());
+    }
+
+    public List<CreditFundingTransaction> getInvitationFundingTransactions() {
+        return getFundingTransactions(getInvitationFundingKeyChain());
+    }
+
+    private List<CreditFundingTransaction> getFundingTransactions(AuthenticationKeyChain chain) {
+        ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
+        List<CreditFundingTransaction> allTxs = getCreditFundingTransactions();
+
+        for (CreditFundingTransaction cftx : allTxs) {
+            if(chain.findKeyFromPubHash(cftx.getCreditBurnPublicKeyId().getBytes()) != null) {
+                txs.add(cftx);
+            }
+        }
+        return txs;
+    }
+
+    /**
+     * Get a CreditFundingTransaction object for a specific transaction
+     */
+    public CreditFundingTransaction getCreditFundingTransaction(Transaction tx) {
+        if(mapCreditFundingTxs.containsKey(tx.getTxId()))
+            return mapCreditFundingTxs.get(tx.getTxId());
+
+        CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
+
+        // set some internal data for the transaction
+        DeterministicKey publicKey = (DeterministicKey) getIdentityFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+
+        if (publicKey == null)
+            publicKey = (DeterministicKey) getIdentityTopupKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+
+        if (publicKey == null)
+            publicKey = (DeterministicKey) getInvitationFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+
+        if(publicKey != null)
+            cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
+        else log.error("Cannot find " + KeyId.fromBytes(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
+
+        mapCreditFundingTxs.put(cftx.getTxId(), cftx);
+        return cftx;
+    }
+
+    protected void queueOnCreditFundingEvent(final CreditFundingTransaction tx, StoredBlock block,
+                                             BlockChain.NewBlockType blockType) {
+        for (final ListenerRegistration<CreditFundingTransactionEventListener> registration : creditFundingListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onTransactionReceived(tx, block, blockType);
+                }
+            });
+        }
+    }
+
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addCreditFundingEventListener(CreditFundingTransactionEventListener listener) {
+        addCreditFundingEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addCreditFundingEventListener(Executor executor, CreditFundingTransactionEventListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        creditFundingListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeCreditFundingEventListener(CreditFundingTransactionEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, creditFundingListeners);
     }
 }

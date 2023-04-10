@@ -33,10 +33,13 @@ import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.AnyDeterministicKeyChain;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.EnumSet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -77,6 +80,7 @@ public class AuthenticationKeyChainGroupTest {
     AuthenticationKeyChainGroup authGroup;
 
     DerivationPathFactory derivationPathFactory;
+    AuthenticationGroupExtension authenticationGroupExtension;
     @Before
     public void startup() throws UnreadableWalletException {
         PARAMS = UnitTestParams.get();
@@ -102,19 +106,20 @@ public class AuthenticationKeyChainGroupTest {
         group.addAndActivateHDChain(active);
         wallet = new Wallet(PARAMS, group);
 
+        // manually derive keys
         voting = AuthenticationKeyChain.authenticationBuilder()
                 .seed(seed)
-                .accountPath(AnyDeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET)
+                .accountPath(derivationPathFactory.masternodeVotingDerivationPath())
                 .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING)
                 .build();
         owner = AuthenticationKeyChain.authenticationBuilder()
                 .seed(seed)
-                .accountPath(AnyDeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET)
+                .accountPath(derivationPathFactory.masternodeOwnerDerivationPath())
                 .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER)
                 .build();
         bu = AuthenticationKeyChain.authenticationBuilder()
                 .seed(seed)
-                .accountPath(AnyDeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET)
+                .accountPath(derivationPathFactory.blockchainIdentityECDSADerivationPath())
                 .type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
                 .createHardenedChildren(true)
                 .build();
@@ -144,7 +149,7 @@ public class AuthenticationKeyChainGroupTest {
 
         operator = AuthenticationKeyChain.authenticationBuilder()
                 .seed(seed)
-                .accountPath(AnyDeterministicKeyChain.PROVIDER_OPERATOR_PATH_TESTNET)
+                .accountPath(derivationPathFactory.masternodeOperatorDerivationPath())
                 .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR)
                 .build();
 
@@ -152,26 +157,27 @@ public class AuthenticationKeyChainGroupTest {
         operatorKey = operatorKeyMaster.deriveChildKey(ChildNumber.ZERO);
         operatorKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
 
-        // put these in the same Authentication Group
-        authGroup = AuthenticationKeyChainGroup.authenticationBuilder(PARAMS)
-                .addChain(voting)
-                .addChain(owner)
-                .addChain(operator)
-                .addChain(bu)
-                .addChain(platform)
-                .build();
-
-        wallet.initializeAuthenticationKeyChains(seed, null);
+        authenticationGroupExtension = new AuthenticationGroupExtension(wallet);
+        authenticationGroupExtension.addKeyChains(wallet.getParams(), seed, EnumSet.of(
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER
+        ));
+        wallet.addExtension(authenticationGroupExtension);
     }
 
     @Test
     public void keyChainTest() {
-        assertTrue(authGroup.hasKeyChains());
-        IDeterministicKey currentOperator = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
-        IDeterministicKey currentOwner = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
-        IDeterministicKey currentVoter = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
-        IDeterministicKey currentIdentity = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
-        IDeterministicKey currentPlatform = authGroup.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
+        assertTrue(authenticationGroupExtension.hasKeyChains());
+        IDeterministicKey currentOperator = authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
+        IDeterministicKey currentOwner = authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
+        IDeterministicKey currentVoter = authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
+        IDeterministicKey currentIdentity = authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
+        IDeterministicKey currentPlatform = authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
 
         assertEquals(currentOwner, ownerKey);
         assertEquals(currentVoter, votingKey);
@@ -183,15 +189,16 @@ public class AuthenticationKeyChainGroupTest {
     @Test
     public void serializationTest() throws UnreadableWalletException {
         Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
-        Wallet walletCopy = new WalletProtobufSerializer().readWallet(PARAMS, null, protos);
+        AuthenticationGroupExtension authenticationGroupExtensionCopy = new AuthenticationGroupExtension(wallet.getParams());
+        Wallet walletCopy = new WalletProtobufSerializer().readWallet(PARAMS, new WalletExtension[]{authenticationGroupExtensionCopy}, protos);
 
-        assertEquals(wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER),
-                walletCopy.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER));
+        assertEquals(authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER),
+                authenticationGroupExtensionCopy.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER));
 
-        assertEquals(wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR),
-                walletCopy.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR));
+        assertEquals(authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR),
+                authenticationGroupExtensionCopy.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR));
 
-        assertEquals(wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR),
-                walletCopy.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR));
+        assertEquals(authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR),
+                authenticationGroupExtensionCopy.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR));
     }
 }

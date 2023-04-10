@@ -24,7 +24,6 @@ import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
-import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Base58;
@@ -41,8 +40,6 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerFilterProvider;
 import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.evolution.CreditFundingTransaction;
-import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
@@ -208,8 +205,7 @@ public class Wallet extends BaseTaggableObject
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<TransactionConfidenceEventListener>> transactionConfidenceListeners
         = new CopyOnWriteArrayList<>();
-    private final CopyOnWriteArrayList<ListenerRegistration<CreditFundingTransactionEventListener>> creditFundingListeners
-            = new CopyOnWriteArrayList<>();
+
     // A listener that relays confidence changes from the transaction confidence object to the wallet event listener,
     // as a convenience to API users so they don't have to register on every transaction themselves.
     private TransactionConfidence.Listener txConfidenceListener;
@@ -1354,8 +1350,9 @@ public class Wallet extends BaseTaggableObject
                         }
                     } else if (ScriptPattern.isCreditBurn(script)) {
                         byte [] h = ScriptPattern.extractCreditBurnKeyId(script);
-                        if (authenticationGroup != null)
-                            authenticationGroup.markPubKeyHashAsUsed(h);
+                        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                            extension.markPubKeyHashAsUsed(h);
+                        }
                     }
                 } catch (ScriptException e) {
                     // Just means we didn't understand the output of this transaction: ignore it.
@@ -2383,13 +2380,10 @@ public class Wallet extends BaseTaggableObject
         }
 
         informConfidenceListenersIfNotReorganizing();
-        if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
-            CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
-            queueOnCreditFundingEvent(cftx, block, blockType);
-        }
+
         // let keychain extensions process the transaction
         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
-            extension.processTransaction(tx);
+            extension.processTransaction(tx, block, blockType);
         }
         isConsistentOrThrow();
         // Optimization for the case where a block has tons of relevant transactions.
@@ -2866,9 +2860,9 @@ public class Wallet extends BaseTaggableObject
             if(context.instantSendManager != null && context.instantSendManager.isInstantSendEnabled())
                 context.instantSendManager.syncTransaction(tx, null, -1);
 
-            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
-                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
-                queueOnCreditFundingEvent(cftx, null, BlockChain.NewBlockType.BEST_CHAIN);
+            // let keychain extensions process the transaction
+            for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                extension.processTransaction(tx, null, BlockChain.NewBlockType.BEST_CHAIN);
             }
 
             informConfidenceListenersIfNotReorganizing();
@@ -3097,30 +3091,6 @@ public class Wallet extends BaseTaggableObject
         return ListenerRegistration.removeFromList(listener, transactionConfidenceListeners);
     }
 
-    /**
-     * Adds an credit funding event listener object. Methods on this object are called when
-     * a credit funding transaction is created or received.
-     */
-    public void addCreditFundingEventListener(TransactionConfidenceEventListener listener) {
-        addTransactionConfidenceEventListener(Threading.USER_THREAD, listener);
-    }
-
-    /**
-     * Adds an credit funding event listener object. Methods on this object are called when
-     * a credit funding transaction is created or received.
-     */
-    public void addCreditFundingEventListener(Executor executor, CreditFundingTransactionEventListener listener) {
-        // This is thread safe, so we don't need to take the lock.
-        creditFundingListeners.add(new ListenerRegistration<>(listener, executor));
-    }
-
-    /**
-     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
-     * was never added.
-     */
-    public boolean removeCreditFundingEventListener(CreditFundingTransactionEventListener listener) {
-        return ListenerRegistration.removeFromList(listener, creditFundingListeners);
-    }
 
     private void queueOnTransactionConfidenceChanged(final Transaction tx) {
         checkState(lock.isHeldByCurrentThread());
@@ -3197,19 +3167,6 @@ public class Wallet extends BaseTaggableObject
                 @Override
                 public void run() {
                     registration.listener.onScriptsChanged(Wallet.this, scripts, isAddingScripts);
-                }
-            });
-        }
-    }
-
-    protected void queueOnCreditFundingEvent(final CreditFundingTransaction tx, StoredBlock block,
-                                             BlockChain.NewBlockType blockType) {
-        checkState(lock.isHeldByCurrentThread());
-        for (final ListenerRegistration<CreditFundingTransactionEventListener> registration : creditFundingListeners) {
-            registration.executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    registration.listener.onTransactionReceived(tx, block, blockType);
                 }
             });
         }
@@ -3648,11 +3605,6 @@ public class Wallet extends BaseTaggableObject
             if (keyRotationTime != null)
                 builder.append("Key rotation time:      ").append(Utils.dateTimeFormat(keyRotationTime)).append('\n');
             builder.append(keyChainGroup.toString(includeLookahead, includePrivateKeys, aesKey));
-
-            if(authenticationGroup != null) {
-                builder.append("\nAuthentication\n");
-                builder.append(authenticationGroup.toString(includeLookahead, includePrivateKeys, aesKey));
-            }
 
             if(receivingFromFriendsGroup != null) {
                 builder.append("\nContacts (receiving)\n");
@@ -5085,8 +5037,6 @@ public class Wallet extends BaseTaggableObject
         try {
             int size = bloomOutPoints.size();
             size += keyChainGroup.getBloomFilterElementCount();
-            if(authenticationGroup != null)
-                size += authenticationGroup.getBloomFilterElementCount(); //authentication keys
             // Some scripts may have more than one bloom element.  That should normally be okay, because under-counting
             // just increases false-positive rate.
             size += watchedScripts.size();
@@ -5184,11 +5134,6 @@ public class Wallet extends BaseTaggableObject
                 }
             }
 
-            // add authentication keys
-            if(authenticationGroup != null) {
-                BloomFilter authFilter = authenticationGroup.getBloomFilter(size, falsePositiveRate, nTweak);
-                filter.merge(authFilter);
-            }
             if(receivingFromFriendsGroup != null) {
                 BloomFilter friendFilter = receivingFromFriendsGroup.getBloomFilter(size, falsePositiveRate, nTweak);
                 filter.merge(friendFilter);
@@ -5860,363 +5805,6 @@ public class Wallet extends BaseTaggableObject
             keyChainGroupLock.unlock();
         }
     }
-
-    AuthenticationKeyChain providerOwnerKeyChain;
-    AuthenticationKeyChain providerVoterKeyChain;
-    AuthenticationKeyChain providerOperatorKeyChain;
-    AuthenticationKeyChain providerPlatformOperatorKeyChain;
-    AuthenticationKeyChain blockchainIdentityFundingKeyChain;
-    AuthenticationKeyChain blockchainIdentityTopupKeyChain;
-    AuthenticationKeyChain blockchainIdentityKeyChain;
-    AuthenticationKeyChain invitationFundingKeyChain;
-    AuthenticationKeyChainGroup authenticationGroup;
-
-    public void initializeAuthenticationKeyChains(DeterministicSeed seed, @Nullable KeyParameter keyParameter) {
-        //TODO: add provider*KeyChains when that functionality is required
-        providerOwnerKeyChain = addAuthenticationKeyChain(seed,
-                derivationPathFactory.masternodeOwnerDerivationPath(),
-                AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
-                keyParameter);
-        providerVoterKeyChain = addAuthenticationKeyChain(seed,
-                derivationPathFactory.masternodeVotingDerivationPath(),
-                AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
-                keyParameter);
-        providerOperatorKeyChain = addAuthenticationKeyChain(seed,
-                derivationPathFactory.masternodeVotingDerivationPath(),
-                AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
-                keyParameter);
-        providerPlatformOperatorKeyChain = addAuthenticationKeyChain(seed,
-                derivationPathFactory.masternodePlatformDerivationPath(),
-                AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
-                keyParameter);
-        blockchainIdentityFundingKeyChain = addAuthenticationKeyChain(seed,
-                derivationPathFactory.blockchainIdentityRegistrationFundingDerivationPath(),
-                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
-                keyParameter);
-        blockchainIdentityTopupKeyChain = addAuthenticationKeyChain(seed,
-                derivationPathFactory.blockchainIdentityTopupFundingDerivationPath(),
-                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
-                keyParameter);
-        blockchainIdentityKeyChain = addAuthenticationKeyChain(seed,
-                derivationPathFactory.blockchainIdentityECDSADerivationPath(),
-                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
-                keyParameter, true);
-        invitationFundingKeyChain = addAuthenticationKeyChain(seed,
-                derivationPathFactory.identityInvitationFundingDerivationPath(),
-                AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
-                keyParameter);
-    }
-
-    AuthenticationKeyChain addAuthenticationKeyChain(DeterministicSeed seed,
-                                                     ImmutableList<ChildNumber> path,
-                                                     AuthenticationKeyChain.KeyChainType type,
-                                                     @Nullable KeyParameter keyParameter) {
-        return addAuthenticationKeyChain(seed, path, type, keyParameter, false);
-    }
-
-    AuthenticationKeyChain addAuthenticationKeyChain(DeterministicSeed seed,
-                                   ImmutableList<ChildNumber> path,
-                                   AuthenticationKeyChain.KeyChainType type,
-                                   @Nullable KeyParameter keyParameter, boolean hardenedChildren) {
-
-        if (authenticationGroup == null) {
-            authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(params).build();
-        }
-        AuthenticationKeyChain chain = authenticationGroup.getKeyChain(type);
-        if (chain == null) {
-
-            chain = AuthenticationKeyChain.authenticationBuilder()
-                    .seed(seed).accountPath(path).type(type).createHardenedChildren(hardenedChildren)
-                    .build();
-
-            if (keyParameter != null && getKeyCrypter() != null) {
-                chain = chain.toEncrypted(getKeyCrypter(), keyParameter);
-            }
-
-            authenticationGroup.addAndActivateHDChain(chain);
-        }
-        return chain;
-    }
-
-    public AuthenticationKeyChain getProviderOwnerKeyChain() {
-        return providerOwnerKeyChain;
-    }
-
-    public AuthenticationKeyChain getProviderVoterKeyChain() {
-        return providerVoterKeyChain;
-    }
-
-    public AuthenticationKeyChain getProviderOperatorKeyChain() {
-        return providerOperatorKeyChain;
-    }
-
-    public AuthenticationKeyChain getProviderPlatformOperatorKeyChain() {
-        return providerPlatformOperatorKeyChain;
-    }
-
-    public AuthenticationKeyChain getBlockchainIdentityKeyChain() {
-        return blockchainIdentityKeyChain;
-    }
-
-    public AuthenticationKeyChain getBlockchainIdentityFundingKeyChain() {
-        return blockchainIdentityFundingKeyChain;
-    }
-
-    public AuthenticationKeyChain getBlockchainIdentityTopupKeyChain() {
-        return blockchainIdentityTopupKeyChain;
-    }
-
-    public AuthenticationKeyChain getInvitationFundingKeyChain() {
-        return invitationFundingKeyChain;
-    }
-
-    //package level access
-    void setAuthenticationKeyChain(AuthenticationKeyChain chain, AuthenticationKeyChain.KeyChainType type) {
-        chain.setType(type);
-        if(authenticationGroup == null)
-            authenticationGroup = AuthenticationKeyChainGroup.authenticationBuilder(getParams()).build();
-
-        switch(type) {
-            case MASTERNODE_VOTING:
-                providerVoterKeyChain = chain;
-                authenticationGroup.addAndActivateHDChain(chain);
-                break;
-            case MASTERNODE_OWNER:
-                providerOwnerKeyChain = chain;
-                authenticationGroup.addAndActivateHDChain(chain);
-                break;
-            case BLOCKCHAIN_IDENTITY:
-                blockchainIdentityKeyChain = chain;
-                authenticationGroup.addAndActivateHDChain(chain);
-                break;
-            case BLOCKCHAIN_IDENTITY_FUNDING:
-                blockchainIdentityFundingKeyChain = chain;
-                authenticationGroup.addAndActivateHDChain(chain);
-                break;
-            case BLOCKCHAIN_IDENTITY_TOPUP:
-                blockchainIdentityTopupKeyChain = chain;
-                authenticationGroup.addAndActivateHDChain(chain);
-                break;
-            case INVITATION_FUNDING:
-                invitationFundingKeyChain = chain;
-                authenticationGroup.addAndActivateHDChain(chain);
-                break;
-            case MASTERNODE_OPERATOR:
-                providerOperatorKeyChain = chain;
-                authenticationGroup.addAndActivateHDChain(chain);
-                break;
-            case MASTERNODE_PLATFORM_OPERATOR:
-                providerPlatformOperatorKeyChain = chain;
-                authenticationGroup.addAndActivateHDChain(chain);
-                break;
-        }
-    }
-
-    public AuthenticationKeyChain.KeyChainType getAuthenticationKeyType(byte [] pubkeyHash) {
-        keyChainGroupLock.lock();
-        try {
-            if (authenticationGroup != null) {
-                return authenticationGroup.getKeyChainType(pubkeyHash);
-            }
-            return AuthenticationKeyChain.KeyChainType.INVALID_KEY_CHAIN;
-        } finally {
-            keyChainGroupLock.unlock();
-        }
-    }
-
-    public boolean hasAuthenticationKeyChains() {
-        return authenticationGroup != null && !authenticationGroup.chains.isEmpty();
-    }
-
-    HashMap<Sha256Hash, CreditFundingTransaction> mapCreditFundingTxs = new HashMap<>();
-
-    /**
-     * @return list of credit funding transactions found in the wallet.
-     */
-
-    public List<CreditFundingTransaction> getCreditFundingTransactions() {
-        mapCreditFundingTxs.clear();
-        ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
-        for(WalletTransaction wtx : getWalletTransactions()) {
-            Transaction tx = wtx.getTransaction();
-            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
-                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
-                txs.add(cftx);
-                mapCreditFundingTxs.put(cftx.getTxId(), cftx);
-            }
-        }
-        return txs;
-    }
-
-    public List<CreditFundingTransaction> getIdentityFundingTransactions() {
-        return getFundingTransactions(blockchainIdentityFundingKeyChain);
-    }
-
-    public List<CreditFundingTransaction> getTopupFundingTransactions() {
-        return getFundingTransactions(blockchainIdentityTopupKeyChain);
-    }
-
-    public List<CreditFundingTransaction> getInvitationFundingTransactions() {
-        return getFundingTransactions(invitationFundingKeyChain);
-    }
-
-    private List<CreditFundingTransaction> getFundingTransactions(AuthenticationKeyChain chain) {
-        ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
-        List<CreditFundingTransaction> allTxs = getCreditFundingTransactions();
-
-        for (CreditFundingTransaction cftx : allTxs) {
-            if(chain.findKeyFromPubHash(cftx.getCreditBurnPublicKeyId().getBytes()) != null) {
-                txs.add(cftx);
-            }
-        }
-        return txs;
-    }
-
-
-
-    /**
-     * Get a CreditFundingTransaction object for a specific transaction
-     */
-    public CreditFundingTransaction getCreditFundingTransaction(Transaction tx) {
-        if(mapCreditFundingTxs.containsKey(tx.getTxId()))
-            return mapCreditFundingTxs.get(tx.getTxId());
-
-        CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
-
-        // set some internal data for the transaction
-        DeterministicKey publicKey = (DeterministicKey) getBlockchainIdentityFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
-
-        if (publicKey == null)
-            publicKey = (DeterministicKey) getBlockchainIdentityTopupKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
-
-        if (publicKey == null)
-            publicKey = (DeterministicKey) getInvitationFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
-
-        if(publicKey != null)
-            cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
-        else log.error("Cannot find " + KeyId.fromBytes(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
-
-        mapCreditFundingTxs.put(cftx.getTxId(), cftx);
-        return cftx;
-    }
-    // ***************************************************************************************************************
-
-    //region Authentication Key Management
-
-    /**
-     * Returns a key that hasn't been seen in a transaction yet, and which is suitable for displaying in a wallet
-     * user interface as "a convenient key to receive funds on" when the purpose parameter is
-     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS}. The returned key is stable until
-     * it's actually seen in a pending or confirmed transaction, at which point this method will start returning
-     * a different key (for each purpose independently).
-     */
-    public IDeterministicKey currentAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
-        keyChainGroupLock.lock();
-        try {
-            return authenticationGroup.currentKey(type);
-        } finally {
-            keyChainGroupLock.unlock();
-        }
-    }
-
-    /**
-     * Returns address for a {@link #currentKey(KeyChain.KeyPurpose)}
-     */
-    public Address currentAuthenticationAddress(AuthenticationKeyChain.KeyChainType type) {
-        keyChainGroupLock.lock();
-        try {
-            return authenticationGroup.currentAddress(type);
-        } finally {
-            keyChainGroupLock.unlock();
-        }
-    }
-
-    /**
-     * Returns a key that has not been returned by this method before (fresh). You can think of this as being
-     * a newly created key, although the notion of "create" is not really valid for a
-     * {@link DeterministicKeyChain}. When the parameter is
-     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS} the returned key is suitable for being put
-     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key out
-     * to someone who wishes to send money.
-     */
-    public IDeterministicKey freshAuthenticationKey(AuthenticationKeyChain.KeyChainType type) {
-        return freshAuthenticationKeys(type, 1).get(0);
-    }
-
-    /**
-     * Returns a key/s that has not been returned by this method before (fresh). You can think of this as being
-     * a newly created key/s, although the notion of "create" is not really valid for a
-     * {@link DeterministicKeyChain}. When the parameter is
-     * {@link KeyChain.KeyPurpose#RECEIVE_FUNDS} the returned key is suitable for being put
-     * into a receive coins wizard type UI. You should use this when the user is definitely going to hand this key/s out
-     * to someone who wishes to send money.
-     */
-    public List<IDeterministicKey> freshAuthenticationKeys(AuthenticationKeyChain.KeyChainType type, int numberOfKeys) {
-        List<IDeterministicKey> keys;
-        keyChainGroupLock.lock();
-        try {
-            keys = authenticationGroup.freshKeys(type, numberOfKeys);
-        } finally {
-            keyChainGroupLock.unlock();
-        }
-        // Do we really need an immediate hard save? Arguably all this is doing is saving the 'current' key
-        // and that's not quite so important, so we could coalesce for more performance.
-        saveNow();
-        return keys;
-    }
-
-    /**
-     * Returns address for a {@link #freshKey(KeyChain.KeyPurpose)}
-     */
-    public Address freshAuthenticationAddress(AuthenticationKeyChain.KeyChainType type) {
-        Address key;
-        keyChainGroupLock.lock();
-        try {
-            key = authenticationGroup.freshAddress(type);
-        } finally {
-            keyChainGroupLock.unlock();
-        }
-        saveNow();
-        return key;
-    }
-
-    /**
-     * Returns only the keys that have been issued by {@link #freshReceiveKey()}, {@link #freshReceiveAddress()},
-     * {@link #currentReceiveKey()} or {@link #currentReceiveAddress()}.
-     */
-    public List<IKey> getIssuedAuthenticationKeys(AuthenticationKeyChain.KeyChainType type) {
-        keyChainGroupLock.lock();
-        try {
-            List<IKey> keys = new LinkedList<>();
-            long keyRotationTimeSecs = vKeyRotationTimestamp;
-            for (final AnyDeterministicKeyChain chain : authenticationGroup.getActiveKeyChains(keyRotationTimeSecs))
-                keys.addAll(chain.getIssuedReceiveKeys());
-            return keys;
-        } finally {
-            keyChainGroupLock.unlock();
-        }
-    }
-
-    /**
-     * Returns only the addresses that have been issued by {@link #freshReceiveKey()}, {@link #freshReceiveAddress()},
-     * {@link #currentReceiveKey()} or {@link #currentReceiveAddress()}.
-     */
-    public List<Address> getIssuedAuthenticationAddresses(AuthenticationKeyChain.KeyChainType type) {
-        keyChainGroupLock.lock();
-        try {
-            List<Address> addresses = new ArrayList<>();
-            long keyRotationTimeSecs = vKeyRotationTimestamp;
-            for (final DeterministicKeyChain chain : keyChainGroup.getActiveKeyChains(keyRotationTimeSecs)) {
-                Script.ScriptType outputScriptType = chain.getOutputScriptType();
-                for (ECKey key : chain.getIssuedReceiveKeys())
-                    addresses.add(Address.fromKey(getParams(), key, outputScriptType));
-            }
-            return addresses;
-        } finally {
-            keyChainGroupLock.unlock();
-        }
-    }
-
 
     FriendKeyChainGroup receivingFromFriendsGroup;
     FriendKeyChainGroup sendingToFriendsGroup;

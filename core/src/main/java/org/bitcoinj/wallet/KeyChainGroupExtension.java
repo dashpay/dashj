@@ -16,7 +16,9 @@
 package org.bitcoinj.wallet;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.BloomFilter;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.crypto.IDeterministicKey;
@@ -60,6 +62,7 @@ public interface KeyChainGroupExtension extends WalletExtension {
     int getLookaheadSize();
     int getLookaheadThreshold();
     boolean hasKey(IKey key);
+    boolean hasKeyChains();
     int importKeys(List<IKey> keys);
     int importKeys(IKey... keys);
     int importKeysAndEncrypt(final List<IKey> keys, KeyParameter aesKey);
@@ -77,7 +80,7 @@ public interface KeyChainGroupExtension extends WalletExtension {
                                 long keyRotationTimeSecs, @Nullable KeyParameter aesKey);
 
     // transaction support
-    void processTransaction(Transaction tx);
+    void processTransaction(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType);
 
     // listener support
     void addEventListener(KeyChainEventListener listener);

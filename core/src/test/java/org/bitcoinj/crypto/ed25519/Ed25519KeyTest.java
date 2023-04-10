@@ -38,6 +38,7 @@ import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator;
 import org.bouncycastle.crypto.params.Ed25519KeyGenerationParameters;
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
+import org.bouncycastle.util.encoders.Base64;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -45,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
 import java.security.SignatureException;
+import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.bitcoinj.core.Utils.HEX;
@@ -297,5 +299,33 @@ public class Ed25519KeyTest {
         final byte[] bytes = new byte[33];
         bytes[0] = 42;
         Ed25519Key.fromPrivate(bytes);
+    }
+
+    @Test
+    public void nodeIdfromPrivatePublicKey() {
+        // node_key:
+        //   id: 4991b7a8fecc8f6e034a421f5486ffa20d57b5b6
+        //   private_key: >-
+        //     oHamk0xHFklpM5BgIyt0yXPgkImcHhyUgEk3JQD5FmdDD3UrQ76Kn3L1xrLdwao+ras/1Sl9/nPrT6BNhzLTAQ==
+
+        byte[] tenderDashKey = Base64.decode("oHamk0xHFklpM5BgIyt0yXPgkImcHhyUgEk3JQD5FmdDD3UrQ76Kn3L1xrLdwao+ras/1Sl9/nPrT6BNhzLTAQ==");
+        byte[] nodeId = HEX.decode("4991b7a8fecc8f6e034a421f5486ffa20d57b5b6");
+        byte[] privateKey = Arrays.copyOfRange(tenderDashKey, 0, 32);
+        byte[] publicKey = new byte[33];
+        System.arraycopy(tenderDashKey, 32, publicKey, 1, 32);
+
+        Ed25519Key fromBoth = Ed25519Key.fromPrivateAndPrecalculatedPublic(privateKey, publicKey);
+        Ed25519Key fromPrivate = Ed25519Key.fromPrivate(privateKey);
+        Ed25519Key fromPublic = Ed25519Key.fromPublicOnly(publicKey);
+        assertArrayEquals(privateKey, fromBoth.getPrivKeyBytes());
+        assertArrayEquals(privateKey, fromPrivate.getPrivKeyBytes());
+
+        assertArrayEquals(publicKey, fromBoth.getPubKey());
+        assertArrayEquals(publicKey, fromPrivate.getPubKey());
+        assertArrayEquals(publicKey, fromPublic.getPubKey());
+
+        assertArrayEquals(nodeId, fromPrivate.getPubKeyHash());
+        assertArrayEquals(nodeId, fromPublic.getPubKeyHash());
+        assertArrayEquals(nodeId, fromBoth.getPubKeyHash());
     }
 }

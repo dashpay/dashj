@@ -26,6 +26,7 @@ import com.google.protobuf.ByteString;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.bls.BLSKey;
@@ -90,6 +91,7 @@ public class BLSKeyTest {
         keyCrypter = new KeyCrypterScrypt(scryptParameters);
 
         BriefLogFormatter.init();
+        BLSScheme.setLegacyDefault(true);
     }
 
     @Test

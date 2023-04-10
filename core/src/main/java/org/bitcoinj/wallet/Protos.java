@@ -16166,11 +16166,19 @@ public final class Protos {
     org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus getStatus();
 
     /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
      * <code>required bytes whereUsed = 4;</code>
      * @return Whether the whereUsed field is set.
      */
     boolean hasWhereUsed();
     /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
      * <code>required bytes whereUsed = 4;</code>
      * @return The whereUsed.
      */
@@ -16186,6 +16194,25 @@ public final class Protos {
      * @return The address.
      */
     org.bitcoinj.wallet.Protos.PeerAddress getAddress();
+
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @return Whether the legacy field is set.
+     */
+    boolean hasLegacy();
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @return The legacy.
+     */
+    boolean getLegacy();
   }
   /**
    * Protobuf type {@code wallet.AuthenticationKeyUsage}
@@ -16419,6 +16446,10 @@ public final class Protos {
     public static final int WHEREUSED_FIELD_NUMBER = 4;
     private com.google.protobuf.ByteString whereUsed_;
     /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
      * <code>required bytes whereUsed = 4;</code>
      * @return Whether the whereUsed field is set.
      */
@@ -16427,6 +16458,10 @@ public final class Protos {
       return ((bitField0_ & 0x00000008) != 0);
     }
     /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
      * <code>required bytes whereUsed = 4;</code>
      * @return The whereUsed.
      */
@@ -16435,6 +16470,10 @@ public final class Protos {
       return whereUsed_;
     }
     /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
      * <code>required bytes whereUsed = 4;</code>
      * @param value The whereUsed to set.
      */
@@ -16444,6 +16483,10 @@ public final class Protos {
       whereUsed_ = value;
     }
     /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
      * <code>required bytes whereUsed = 4;</code>
      */
     private void clearWhereUsed() {
@@ -16495,6 +16538,56 @@ public final class Protos {
      */
     private void clearAddress() {  address_ = null;
       bitField0_ = (bitField0_ & ~0x00000010);
+    }
+
+    public static final int LEGACY_FIELD_NUMBER = 6;
+    private boolean legacy_;
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @return Whether the legacy field is set.
+     */
+    @java.lang.Override
+    public boolean hasLegacy() {
+      return ((bitField0_ & 0x00000020) != 0);
+    }
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @return The legacy.
+     */
+    @java.lang.Override
+    public boolean getLegacy() {
+      return legacy_;
+    }
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @param value The legacy to set.
+     */
+    private void setLegacy(boolean value) {
+      bitField0_ |= 0x00000020;
+      legacy_ = value;
+    }
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     */
+    private void clearLegacy() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      legacy_ = false;
     }
 
     public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(
@@ -16701,6 +16794,10 @@ public final class Protos {
       }
 
       /**
+       * <pre>
+       * proTxHash
+       * </pre>
+       *
        * <code>required bytes whereUsed = 4;</code>
        * @return Whether the whereUsed field is set.
        */
@@ -16709,6 +16806,10 @@ public final class Protos {
         return instance.hasWhereUsed();
       }
       /**
+       * <pre>
+       * proTxHash
+       * </pre>
+       *
        * <code>required bytes whereUsed = 4;</code>
        * @return The whereUsed.
        */
@@ -16717,6 +16818,10 @@ public final class Protos {
         return instance.getWhereUsed();
       }
       /**
+       * <pre>
+       * proTxHash
+       * </pre>
+       *
        * <code>required bytes whereUsed = 4;</code>
        * @param value The whereUsed to set.
        * @return This builder for chaining.
@@ -16727,6 +16832,10 @@ public final class Protos {
         return this;
       }
       /**
+       * <pre>
+       * proTxHash
+       * </pre>
+       *
        * <code>required bytes whereUsed = 4;</code>
        * @return This builder for chaining.
        */
@@ -16783,6 +16892,58 @@ public final class Protos {
         return this;
       }
 
+      /**
+       * <pre>
+       * for BLS keys, legacy or basic scheme
+       * </pre>
+       *
+       * <code>optional bool legacy = 6;</code>
+       * @return Whether the legacy field is set.
+       */
+      @java.lang.Override
+      public boolean hasLegacy() {
+        return instance.hasLegacy();
+      }
+      /**
+       * <pre>
+       * for BLS keys, legacy or basic scheme
+       * </pre>
+       *
+       * <code>optional bool legacy = 6;</code>
+       * @return The legacy.
+       */
+      @java.lang.Override
+      public boolean getLegacy() {
+        return instance.getLegacy();
+      }
+      /**
+       * <pre>
+       * for BLS keys, legacy or basic scheme
+       * </pre>
+       *
+       * <code>optional bool legacy = 6;</code>
+       * @param value The legacy to set.
+       * @return This builder for chaining.
+       */
+      public Builder setLegacy(boolean value) {
+        copyOnWrite();
+        instance.setLegacy(value);
+        return this;
+      }
+      /**
+       * <pre>
+       * for BLS keys, legacy or basic scheme
+       * </pre>
+       *
+       * <code>optional bool legacy = 6;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearLegacy() {
+        copyOnWrite();
+        instance.clearLegacy();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:wallet.AuthenticationKeyUsage)
     }
     private byte memoizedIsInitialized = 2;
@@ -16808,10 +16969,12 @@ public final class Protos {
               org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus.internalGetVerifier(),
               "whereUsed_",
               "address_",
+              "legacy_",
             };
             java.lang.String info =
-                "\u0001\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0005\u0001\u150a\u0000\u0002" +
-                "\u150c\u0001\u0003\u150c\u0002\u0004\u150a\u0003\u0005\u1409\u0004";
+                "\u0001\u0006\u0000\u0001\u0001\u0006\u0006\u0000\u0000\u0005\u0001\u150a\u0000\u0002" +
+                "\u150c\u0001\u0003\u150c\u0002\u0004\u150a\u0003\u0005\u1409\u0004\u0006\u1007\u0005" +
+                "";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
@@ -17728,20 +17891,6 @@ public final class Protos {
     int getTagsCount();
 
     /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> 
-        getExtKeyChainsList();
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    org.bitcoinj.wallet.Protos.ExtendedKeyChain getExtKeyChains(int index);
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    int getExtKeyChainsCount();
-
-    /**
      * <pre>
      *spending, friends send us money
      * </pre>
@@ -17816,7 +17965,6 @@ public final class Protos {
       extension_ = emptyProtobufList();
       description_ = "";
       tags_ = emptyProtobufList();
-      extKeyChains_ = emptyProtobufList();
       keysForFriends_ = emptyProtobufList();
       keysFromFriends_ = emptyProtobufList();
     }
@@ -18936,100 +19084,6 @@ public final class Protos {
     private void removeTags(int index) {
       ensureTagsIsMutable();
       tags_.remove(index);
-    }
-
-    public static final int EXTKEYCHAINS_FIELD_NUMBER = 29;
-    private com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.ExtendedKeyChain> extKeyChains_;
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    @java.lang.Override
-    public java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> getExtKeyChainsList() {
-      return extKeyChains_;
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    public java.util.List<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder> 
-        getExtKeyChainsOrBuilderList() {
-      return extKeyChains_;
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    @java.lang.Override
-    public int getExtKeyChainsCount() {
-      return extKeyChains_.size();
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    @java.lang.Override
-    public org.bitcoinj.wallet.Protos.ExtendedKeyChain getExtKeyChains(int index) {
-      return extKeyChains_.get(index);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    public org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder getExtKeyChainsOrBuilder(
-        int index) {
-      return extKeyChains_.get(index);
-    }
-    private void ensureExtKeyChainsIsMutable() {
-      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.ExtendedKeyChain> tmp = extKeyChains_;
-      if (!tmp.isModifiable()) {
-        extKeyChains_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-       }
-    }
-
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void setExtKeyChains(
-        int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-      value.getClass();
-  ensureExtKeyChainsIsMutable();
-      extKeyChains_.set(index, value);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void addExtKeyChains(org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-      value.getClass();
-  ensureExtKeyChainsIsMutable();
-      extKeyChains_.add(value);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void addExtKeyChains(
-        int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-      value.getClass();
-  ensureExtKeyChainsIsMutable();
-      extKeyChains_.add(index, value);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void addAllExtKeyChains(
-        java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChain> values) {
-      ensureExtKeyChainsIsMutable();
-      com.google.protobuf.AbstractMessageLite.addAll(
-          values, extKeyChains_);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void clearExtKeyChains() {
-      extKeyChains_ = emptyProtobufList();
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void removeExtKeyChains(int index) {
-      ensureExtKeyChainsIsMutable();
-      extKeyChains_.remove(index);
     }
 
     public static final int KEYSFORFRIENDS_FIELD_NUMBER = 30;
@@ -20423,108 +20477,6 @@ public final class Protos {
       }
 
       /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      @java.lang.Override
-      public java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> getExtKeyChainsList() {
-        return java.util.Collections.unmodifiableList(
-            instance.getExtKeyChainsList());
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      @java.lang.Override
-      public int getExtKeyChainsCount() {
-        return instance.getExtKeyChainsCount();
-      }/**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      @java.lang.Override
-      public org.bitcoinj.wallet.Protos.ExtendedKeyChain getExtKeyChains(int index) {
-        return instance.getExtKeyChains(index);
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder setExtKeyChains(
-          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-        copyOnWrite();
-        instance.setExtKeyChains(index, value);
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder setExtKeyChains(
-          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
-        copyOnWrite();
-        instance.setExtKeyChains(index,
-            builderForValue.build());
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addExtKeyChains(org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-        copyOnWrite();
-        instance.addExtKeyChains(value);
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addExtKeyChains(
-          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-        copyOnWrite();
-        instance.addExtKeyChains(index, value);
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addExtKeyChains(
-          org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
-        copyOnWrite();
-        instance.addExtKeyChains(builderForValue.build());
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addExtKeyChains(
-          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
-        copyOnWrite();
-        instance.addExtKeyChains(index,
-            builderForValue.build());
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addAllExtKeyChains(
-          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChain> values) {
-        copyOnWrite();
-        instance.addAllExtKeyChains(values);
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder clearExtKeyChains() {
-        copyOnWrite();
-        instance.clearExtKeyChains();
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder removeExtKeyChains(int index) {
-        copyOnWrite();
-        instance.removeExtKeyChains(index);
-        return this;
-      }
-
-      /**
        * <pre>
        *spending, friends send us money
        * </pre>
@@ -20862,18 +20814,16 @@ public final class Protos {
               org.bitcoinj.wallet.Protos.Script.class,
               "tags_",
               org.bitcoinj.wallet.Protos.Tag.class,
-              "extKeyChains_",
-              org.bitcoinj.wallet.Protos.ExtendedKeyChain.class,
               "keysForFriends_",
               org.bitcoinj.wallet.Protos.Key.class,
               "keysFromFriends_",
               org.bitcoinj.wallet.Protos.Key.class,
             };
             java.lang.String info =
-                "\u0001\u0011\u0000\u0001\u0001\u001f\u0011\u0000\b\n\u0001\u1508\u0000\u0002\u100a" +
-                "\u0001\u0003\u041b\u0004\u041b\u0005\u100c\u0004\u0006\u1409\u0005\u0007\u1004\u0006" +
-                "\n\u041b\u000b\u1008\u0007\f\u100b\u0002\r\u1003\b\u000e\u1002\u0003\u000f\u041b" +
-                "\u0010\u041b\u001d\u041b\u001e\u041b\u001f\u041b";
+                "\u0001\u0010\u0000\u0001\u0001\u001f\u0010\u0000\u0007\t\u0001\u1508\u0000\u0002" +
+                "\u100a\u0001\u0003\u041b\u0004\u041b\u0005\u100c\u0004\u0006\u1409\u0005\u0007\u1004" +
+                "\u0006\n\u041b\u000b\u1008\u0007\f\u100b\u0002\r\u1003\b\u000e\u1002\u0003\u000f" +
+                "\u041b\u0010\u041b\u001e\u041b\u001f\u041b";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through

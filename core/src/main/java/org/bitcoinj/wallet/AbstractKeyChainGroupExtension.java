@@ -17,7 +17,9 @@ package org.bitcoinj.wallet;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.BloomFilter;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.IDeterministicKey;
@@ -348,6 +350,11 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
     }
 
     @Override
+    public boolean hasKeyChains() {
+        return isInitialized() && getKeyChainGroup().hasKeyChains();
+    }
+
+    @Override
     public int importKeys(List<IKey> keys) {
         keyChainGroupLock.lock();
         try {
@@ -477,7 +484,7 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
     }
 
     @Override
-    public void processTransaction(Transaction tx) {
+    public void processTransaction(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType) {
 
     }
 
@@ -522,5 +529,10 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
     @Override
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
         return getWalletExtensionID() + ":\n" + (isInitialized() ? getKeyChainGroup().toString(includeLookahead, includePrivateKeys, aesKey) : "No keychains");
+    }
+
+    protected void saveWallet() {
+        if (wallet != null)
+            wallet.saveNow();
     }
 }

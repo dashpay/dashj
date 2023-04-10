@@ -16,7 +16,9 @@
 
 package org.bitcoinj.wallet.authentication;
 
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.MasternodeAddress;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.IKey;
@@ -31,28 +33,36 @@ public class AuthenticationKeyUsage {
     private final Sha256Hash whereUsed;
     private @Nullable MasternodeAddress address; // this may not be available
 
-    AuthenticationKeyUsage(IKey key, AuthenticationKeyChain.KeyChainType type, AuthenticationKeyStatus status, Sha256Hash whereUsed, @Nullable MasternodeAddress address) {
+    private boolean legacy;
+
+    AuthenticationKeyUsage(IKey key, AuthenticationKeyChain.KeyChainType type, AuthenticationKeyStatus status,
+                           Sha256Hash whereUsed, @Nullable MasternodeAddress address, boolean legacy) {
         this.key = key;
         this.type = type;
         this.status = status;
         this.whereUsed = whereUsed;
         this.address = address;
+        this.legacy = legacy;
     }
 
     public static AuthenticationKeyUsage createVoting(IKey key, Sha256Hash proRegTx, MasternodeAddress address) {
-        return new AuthenticationKeyUsage(key, AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING, AuthenticationKeyStatus.CURRENT, proRegTx, address);
+        return new AuthenticationKeyUsage(key, AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+                AuthenticationKeyStatus.CURRENT, proRegTx, address, false);
     }
 
     public static AuthenticationKeyUsage createOwner(IKey key, Sha256Hash proRegTx, MasternodeAddress address) {
-        return new AuthenticationKeyUsage(key, AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER, AuthenticationKeyStatus.CURRENT, proRegTx, address);
+        return new AuthenticationKeyUsage(key, AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
+                AuthenticationKeyStatus.CURRENT, proRegTx, address, false);
     }
 
-    public static AuthenticationKeyUsage createOperator(IKey key, Sha256Hash proRegTx, MasternodeAddress address) {
-        return new AuthenticationKeyUsage(key, AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR, AuthenticationKeyStatus.CURRENT, proRegTx, address);
+    public static AuthenticationKeyUsage createOperator(IKey key, boolean legacy, Sha256Hash proRegTx, MasternodeAddress address) {
+        return new AuthenticationKeyUsage(key, AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                AuthenticationKeyStatus.CURRENT, proRegTx, address, legacy);
     }
 
     public static AuthenticationKeyUsage createPlatformNodeId(IKey key, Sha256Hash proRegTx, MasternodeAddress address) {
-        return new AuthenticationKeyUsage(key, AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR, AuthenticationKeyStatus.CURRENT, proRegTx, address);
+        return new AuthenticationKeyUsage(key, AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
+                AuthenticationKeyStatus.CURRENT, proRegTx, address, false);
     }
 
     public IKey getKey() {
@@ -78,13 +88,27 @@ public class AuthenticationKeyUsage {
     public @Nullable MasternodeAddress getAddress() {
         return address;
     }
-
     public void setAddress(@Nullable MasternodeAddress address) {
         this.address = address;
     }
 
-    @Override
-    public String toString() {
-        return "hash160:" + Utils.HEX.encode(key.getPubKeyHash()) + ": " + type + " " + status + " " + address + " " + whereUsed;
+    public boolean isLegacy() {
+        return legacy;
+    }
+
+    public String toString(NetworkParameters params) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(type).append(" ").append(status).append(" ").append(address);
+        builder.append(" proTxHash: ").append(whereUsed).append("\n  ");
+        if (type == AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR) {
+            builder.append("pubkey: ").append(Utils.HEX.encode(key.getPubKey())).append(" ").append(legacy ? "LEGACY" : "BASIC");
+        } else if (type == AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR) {
+            builder.append("nodeId: ").append(Utils.HEX.encode(key.getPubKeyHash())).append(" ");
+        } else {
+            builder.append("addr:").append(Address.fromPubKeyHash(params, key.getPubKeyHash())).append(" ");
+            builder.append("hash160:").append(Utils.HEX.encode(key.getPubKeyHash()));
+        }
+
+        return builder.toString();
     }
 }

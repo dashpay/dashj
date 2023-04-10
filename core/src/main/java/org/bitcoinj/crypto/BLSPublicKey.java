@@ -112,6 +112,10 @@ public class BLSPublicKey extends BLSAbstractObject {
         super.bitcoinSerializeToStream(stream);
     }
 
+    public byte[] bitcoinSerialize(boolean legacy) {
+        return publicKeyImpl.serialize(legacy);
+    }
+
     public void aggregateInsecure(BLSPublicKey sk) {
         Preconditions.checkState(valid && sk.valid);
         publicKeyImpl = BLSScheme.get(BLSScheme.isLegacyDefault()).aggregate(
