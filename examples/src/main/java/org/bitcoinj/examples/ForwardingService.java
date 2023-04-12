@@ -75,6 +75,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("white-russian")) {
             params = WhiteRussianDevNetParams.get();
             filePrefix = "forwarding-service-white-russian";
+        } else if (args.length > 1 && args[1].equals("two-islands")) {
+            params = TwoIslandsDevNetParams.get();
+            filePrefix = "forwarding-service-two-islands";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
@@ -110,7 +113,7 @@ public class ForwardingService {
                 if(!kit.wallet().hasAuthenticationKeyChains())
                     kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
                 kit.peerGroup().setMaxConnections(6); // for small devnets
-                kit.peerGroup().setUseLocalhostPeerWhenPossible(true);
+                kit.peerGroup().setUseLocalhostPeerWhenPossible(false);
                 kit.peerGroup().setDropPeersAfterBroadcast(params.getDropPeersAfterBroadcast());
             }
         };
