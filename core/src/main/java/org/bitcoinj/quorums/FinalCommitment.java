@@ -364,7 +364,7 @@ public class FinalCommitment extends SpecialTxPayload {
     public Sha256Hash getHash() {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getMessageSize());
-            bitcoinSerializeToStream(bos, BLSScheme.isLegacyDefault());
+            bitcoinSerializeToStream(bos, isLegacy());
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException x) {
             throw new RuntimeException(x);

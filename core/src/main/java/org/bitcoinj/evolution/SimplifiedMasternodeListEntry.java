@@ -95,7 +95,6 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         service = new MasternodeAddress(params, payload, cursor, 0);
         cursor += service.getMessageSize();
         pubKeyOperator = new BLSLazyPublicKey(params, payload, cursor, version == LEGACY_BLS_VERSION);
-        System.out.println("operator key: " + pubKeyOperator.getPublicKey());
         cursor += pubKeyOperator.getMessageSize();
         keyIdVoting = new KeyId(params, payload, cursor);
         cursor += keyIdVoting.getMessageSize();

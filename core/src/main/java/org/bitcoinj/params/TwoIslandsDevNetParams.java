@@ -18,47 +18,29 @@ package org.bitcoinj.params;
 
 import org.bitcoinj.quorums.LLMQParameters;
 
-public class WhiteRussianDevNetParams extends DevNetParams {
+public class TwoIslandsDevNetParams extends DevNetParams {
 
-    private static final String DEVNET_NAME = "white-russian";
+    private static final String DEVNET_NAME = "two-islands";
 
     private static final String[] MASTERNODES = new String[]{
-        "34.222.50.127",
-        "54.184.88.196",
-        "34.220.160.44",
-        "35.88.208.132",
-        "54.201.94.25",
-        "35.91.0.64",
-        "34.212.225.222",
-        "35.91.107.251",
-        "18.236.108.59",
-        "18.237.168.207",
-        "52.42.161.19",
-        "34.216.240.176",
-        "34.212.169.34",
-        "34.212.20.156",
-        "34.210.76.97",
-        "34.215.99.247",
-        "35.165.211.75",
-        "35.91.200.106",
-        "35.167.103.31",
-        "54.188.68.5",
-        "35.89.166.103",
-        "52.25.73.15",
-        "54.212.27.211",
-        "54.149.165.217",
-        "35.88.194.155",
-        "34.222.123.215",
-        "35.89.113.194",
-        "35.167.24.233",
-        "35.160.143.192",
-        "54.186.59.239",
-
-
+        "34.221.170.217",
+        "54.191.146.189",
+        "54.149.47.81",
+        "44.227.219.110",
+        "35.84.65.19",
+        "34.218.147.83",
+        "52.10.213.115",
+        "44.241.67.131",
+        "54.187.37.165",
+        "44.228.137.254",
+        "35.166.84.162",
+        "44.231.62.211",
+        "52.39.77.20",
+        "18.236.195.112"
     };
 
-    public WhiteRussianDevNetParams() {
-        super(DEVNET_NAME, "yLcmdXzHKb9Vi6iamyCrqUTYSRP6wF46wJ", 20001,
+    public TwoIslandsDevNetParams() {
+        super(DEVNET_NAME, "yXs5gFBzepP6buEXsAi23yoHdbuQvzvx4N", 20001,
                 MASTERNODES, true, -1);
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
@@ -73,11 +55,11 @@ public class WhiteRussianDevNetParams extends DevNetParams {
         llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_DEVNET;
     }
 
-    private static WhiteRussianDevNetParams instance;
+    private static TwoIslandsDevNetParams instance;
 
-    public static WhiteRussianDevNetParams get() {
+    public static TwoIslandsDevNetParams get() {
         if (instance == null) {
-            instance = new WhiteRussianDevNetParams();
+            instance = new TwoIslandsDevNetParams();
             add(instance);
         }
         return instance;

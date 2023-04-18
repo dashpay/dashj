@@ -130,9 +130,10 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         addLLMQ(LLMQParameters.LLMQType.LLMQ_400_85);
         addLLMQ(LLMQParameters.LLMQType.LLMQ_100_67);
         addLLMQ(LLMQParameters.LLMQType.LLMQ_60_75);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_25_67);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
-        llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
+        llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_25_67;
         llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_60_75;
         llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_50_60;
 
