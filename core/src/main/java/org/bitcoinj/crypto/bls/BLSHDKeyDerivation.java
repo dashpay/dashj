@@ -73,7 +73,7 @@ public final class BLSHDKeyDerivation {
     }
 
     public static BLSDeterministicKey createMasterPubKeyFromBytes(byte[] pubKeyBytes, byte[] chainCode) {
-        return new BLSDeterministicKey(ImmutableList.of(), chainCode, pubKeyBytes, null, null);
+        return new BLSDeterministicKey(ImmutableList.of(), chainCode, pubKeyBytes, null, false, null);
     }
 
     public static BLSDeterministicKey createMasterPubKeyFromBytes(byte[] seed) {

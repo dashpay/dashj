@@ -40,9 +40,13 @@ public class BLSSecretKey extends BLSAbstractObject
     }
 
     public BLSSecretKey(PrivateKey sk) {
+       this(sk, BLSScheme.isLegacyDefault());
+    }
+    public BLSSecretKey(PrivateKey sk, boolean legacy) {
         super(BLS_CURVE_SECKEY_SIZE);
         valid = true;
         privateKey = sk;
+        this.legacy = legacy;
         updateHash();
     }
 

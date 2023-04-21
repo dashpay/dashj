@@ -228,11 +228,10 @@ public class BLSKey implements IKey {
     }
 
     /**
-     * Gets the raw public key value. This appears in transaction scriptSigs. Note that this is <b>not</b> the same
-     * as the pubKeyHash/address.
+     * Gets the raw public key value using the BLS scheme of the public key object.
      */
     public byte[] getPubKey() {
-        return pub.bitcoinSerialize();
+        return pub.bitcoinSerialize(pub.isLegacy());
     }
 
     /** Gets the public key in the form of an elliptic curve point object from Bouncy Castle. */
@@ -555,6 +554,22 @@ public class BLSKey implements IKey {
         return key;
     }
 
+    @Override
+    public byte[] getSerializedSecretKey() {
+        byte[] serializedPrivateKey = new byte[pub.getMessageSize() + 1];
+        serializedPrivateKey[0] = (byte) (pub.isLegacy() ? 0 : 1);
+        System.arraycopy(priv.bitcoinSerialize(), 0, serializedPrivateKey, 1, pub.getMessageSize());
+        return serializedPrivateKey;
+    }
+
+    @Override
+    public byte[] getSerializedPublicKey() {
+        byte[] serializedPublicKey = new byte[pub.getMessageSize() + 1];
+        serializedPublicKey[0] = (byte) (pub.isLegacy() ? 1 : 0);
+        System.arraycopy(pub.bitcoinSerialize(pub.isLegacy()), 0, serializedPublicKey, 1, pub.getMessageSize());
+        return serializedPublicKey;
+    }
+
     /**
      * Create a decrypted private key with AES key. Note that if the AES key is wrong, this
      * has some chance of throwing KeyCrypterException due to the corrupted padding that will result, but it can also
@@ -693,13 +708,17 @@ public class BLSKey implements IKey {
         return Utils.HEX.encode(pub.bitcoinSerialize());
     }
 
+    public String getPublicKeyAsHex(boolean legacy) {
+        return Utils.HEX.encode(pub.bitcoinSerialize(legacy));
+    }
+
     public String getPrivateKeyAsWiF(NetworkParameters params) {
         return getPrivateKeyEncoded(params).toString();
     }
 
     private String toString(boolean includePrivate, @Nullable KeyParameter aesKey, @Nullable NetworkParameters params) {
         final MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
-        helper.add("pub HEX", getPublicKeyAsHex());
+        helper.add("pub HEX", getPublicKeyAsHex(pub.isLegacy()));
         if (includePrivate) {
             BLSKey decryptedKey = isEncrypted() ? decrypt(checkNotNull(aesKey)) : this;
             try {
@@ -717,6 +736,7 @@ public class BLSKey implements IKey {
         helper.add("keyCrypter", keyCrypter);
         if (includePrivate)
             helper.add("encryptedPrivateKey", encryptedPrivateKey);
+        helper.add("isLegacy", pub.isLegacy());
         helper.add("isEncrypted", isEncrypted());
         helper.add("isPubKeyOnly", isPubKeyOnly());
         return helper.toString();

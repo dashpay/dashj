@@ -72,12 +72,12 @@ public class BLSKeyFactory implements KeyFactory {
 
     @Override
     public IDeterministicKey fromExtended(ImmutableList<ChildNumber> immutablePath, byte[] chainCode, byte[] pubkey, byte[] priv, IDeterministicKey parent) {
-        return new BLSDeterministicKey(immutablePath, chainCode, new BLSPublicKey(pubkey), priv != null ? new BLSSecretKey(priv) : null, parent);
+        return new BLSDeterministicKey(immutablePath, chainCode, BLSPublicKey.fromSerializedBytes(pubkey), priv != null ? new BLSSecretKey(priv) : null, parent);
     }
 
     @Override
     public IDeterministicKey fromExtendedEncrypted(ImmutableList<ChildNumber> immutablePath, byte[] chainCode, KeyCrypter keyCrypter, byte[] pubkey, EncryptedData data, IDeterministicKey parent) {
-        return new BLSDeterministicKey(immutablePath, chainCode, keyCrypter, new BLSPublicKey(pubkey), data, (BLSDeterministicKey) parent);
+        return new BLSDeterministicKey(immutablePath, chainCode, keyCrypter, BLSPublicKey.fromSerializedBytes(pubkey), data, (BLSDeterministicKey) parent);
     }
 
     @Override

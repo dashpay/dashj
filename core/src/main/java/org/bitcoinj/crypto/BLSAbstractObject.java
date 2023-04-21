@@ -75,7 +75,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
     byte [] getBuffer(int size, boolean legacy) {
         Preconditions.checkArgument(size == serializedSize);
         byte [] buffer = new byte [serializedSize];
-        if(valid) {
+        if (valid) {
             boolean ok = internalGetBuffer(buffer, legacy);
             Preconditions.checkState(ok);
         }

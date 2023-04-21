@@ -28,6 +28,7 @@ import org.dashj.bls.G1ElementVector;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * This class wraps a G1Element in the BLS library
@@ -40,22 +41,43 @@ public class BLSPublicKey extends BLSAbstractObject {
     public BLSPublicKey() {
         super(BLS_CURVE_PUBKEY_SIZE);
     }
+    public BLSPublicKey(G1Element pk) {
+        this(pk, BLSScheme.isLegacyDefault());
+    }
 
-    public BLSPublicKey(G1Element sk) {
+    public BLSPublicKey(G1Element pk, boolean legacy) {
         super(BLS_CURVE_PUBKEY_SIZE);
         valid = true;
-        publicKeyImpl = sk;
+        publicKeyImpl = pk;
+        this.legacy = legacy;
         updateHash();
     }
 
+    /**
+     *
+     * @param publicKey if length == 49, the first byte indicates legacy
+     */
     public BLSPublicKey(byte [] publicKey) {
         this(publicKey, BLSScheme.isLegacyDefault());
     }
 
+    public static BLSPublicKey fromSerializedBytes(byte [] publicKey) {
+        boolean legacy;
+        if (publicKey.length == BLS_CURVE_PUBKEY_SIZE + 1) {
+            legacy = publicKey[0] != 0;
+            publicKey = Arrays.copyOfRange(publicKey, 1, publicKey.length);
+        } else {
+            legacy = BLSScheme.isLegacyDefault();
+        }
+        return new BLSPublicKey(publicKey, legacy);
+    }
+
     public BLSPublicKey(byte [] publicKey, boolean legacy) {
         super(BLS_CURVE_PUBKEY_SIZE);
+        Preconditions.checkArgument(publicKey.length == BLS_CURVE_PUBKEY_SIZE);
         publicKeyImpl = G1Element.fromBytes(publicKey, legacy);
         valid = true;
+        this.legacy = legacy;
         updateHash();
     }
 
@@ -193,5 +215,21 @@ public class BLSPublicKey extends BLSAbstractObject {
 
     public long getFingerprint(boolean legacy) {
         return publicKeyImpl.getFingerprint(legacy);
+    }
+
+    public boolean isLegacy() {
+        return legacy;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        BLSPublicKey that = (BLSPublicKey) o;
+        if (publicKeyImpl == that.publicKeyImpl) {
+            return true;
+        }
+        return DASHJBLS.objectEquals(publicKeyImpl, that.publicKeyImpl);
     }
 }

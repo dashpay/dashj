@@ -261,8 +261,8 @@ public class BLSKeyTest {
     public void testToString() throws Exception {
         BLSKey key = BLSKey.fromPrivate(PRIVATE_KEY).decompress(); // An example private key.
         NetworkParameters params = MAINNET;
-        assertEquals("BLSKey{pub HEX=0f805ee206ecfc037e2998cca95042f5de40f1bf1c8ea03e31f48461a9ab9b604afdee6ccf4b4526b4189e1acdf160ec, isEncrypted=false, isPubKeyOnly=false}", key.toString());
-        assertEquals("BLSKey{pub HEX=0f805ee206ecfc037e2998cca95042f5de40f1bf1c8ea03e31f48461a9ab9b604afdee6ccf4b4526b4189e1acdf160ec, priv HEX=117c779e44e36d3f84445ec67eec49470b0789eb633f102209af6e0ebd9c1bf9, isEncrypted=false, isPubKeyOnly=false}", key.toStringWithPrivate(null, params));
+        assertEquals("BLSKey{pub HEX=0f805ee206ecfc037e2998cca95042f5de40f1bf1c8ea03e31f48461a9ab9b604afdee6ccf4b4526b4189e1acdf160ec, isLegacy=true, isEncrypted=false, isPubKeyOnly=false}", key.toString());
+        assertEquals("BLSKey{pub HEX=0f805ee206ecfc037e2998cca95042f5de40f1bf1c8ea03e31f48461a9ab9b604afdee6ccf4b4526b4189e1acdf160ec, priv HEX=117c779e44e36d3f84445ec67eec49470b0789eb633f102209af6e0ebd9c1bf9, isLegacy=true, isEncrypted=false, isPubKeyOnly=false}", key.toStringWithPrivate(null, params));
     }
 
     @Test
@@ -274,7 +274,7 @@ public class BLSKeyTest {
     @Test
     public void testGetPublicKeyAsHex() throws Exception {
         BLSSecretKey key1 = BLSSecretKey.fromSeed(new byte[] {1, 2, 3});
-        BLSKey key = BLSKey.fromPrivate(PRIVATE_KEY).decompress(); // An example private key.
+        BLSKey key = BLSKey.fromPrivate(PRIVATE_KEY); // An example private key.
         assertEquals("0f805ee206ecfc037e2998cca95042f5de40f1bf1c8ea03e31f48461a9ab9b604afdee6ccf4b4526b4189e1acdf160ec", key.getPublicKeyAsHex());
     }
 
@@ -336,5 +336,17 @@ public class BLSKeyTest {
         final byte[] bytes = new byte[33];
         bytes[0] = 42;
         BLSKey.fromPrivate(bytes);
+    }
+
+    @Test
+    public void testBLSSchemes() {
+        for (int i = 0; i < 10; ++i) {
+            BLSKey key = new BLSKey();
+            System.out.println("key["+i+"]:" + key.pub.isLegacy());
+            System.out.println(key.priv.toStringHex(true));
+            System.out.println(key.priv.toStringHex(false));
+            System.out.println(key.pub.toStringHex(true));
+            System.out.println(key.pub.toStringHex(false));
+        }
     }
 }

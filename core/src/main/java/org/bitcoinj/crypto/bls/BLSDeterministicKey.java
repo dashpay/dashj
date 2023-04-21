@@ -105,8 +105,9 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
                                byte[] chainCode,
                                byte[] pub,
                                @Nullable byte[] priv,
+                               boolean legacy,
                                @Nullable BLSDeterministicKey parent) {
-        this(childNumberPath, chainCode, new BLSPublicKey(pub), new BLSSecretKey(priv), parent);
+        this(childNumberPath, chainCode, new BLSPublicKey(pub, legacy), new BLSSecretKey(priv, legacy), parent);
     }
 
     /** Constructs a key from its components. This is not normally something you should use. */
@@ -132,8 +133,9 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
                                KeyCrypter crypter,
                                byte[] pub,
                                EncryptedData priv,
+                               boolean legacy,
                                @Nullable BLSDeterministicKey parent) {
-        this(childNumberPath, chainCode, pub, null, parent);
+        this(childNumberPath, chainCode, pub, null, legacy, parent);
         this.encryptedPrivateKey = checkNotNull(priv);
         this.keyCrypter = checkNotNull(crypter);
     }
@@ -240,8 +242,8 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         super((byte[]) null, null);
         extendedPrivateKey = ExtendedPrivateKey.fromSeed(seed);
         extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
-        priv = new BLSSecretKey(extendedPrivateKey.getPrivateKey());
-        pub = new BLSPublicKey(extendedPrivateKey.getPublicKey());
+        priv = new BLSSecretKey(extendedPrivateKey.getPrivateKey(), false);
+        pub = new BLSPublicKey(extendedPrivateKey.getPublicKey(), false);
         this.parent = null;
         this.childNumberPath = ImmutableList.<ChildNumber>of();
         this.chainCode = extendedPrivateKey.getChainCode().serialize();
@@ -255,7 +257,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         this.extendedPrivateKey = extendedPrivateKey;
         extendedPublicKey = extendedPrivateKey.getExtendedPublicKey();
         priv = new BLSSecretKey(extendedPrivateKey.getPrivateKey());
-        pub = new BLSPublicKey(extendedPrivateKey.getPublicKey());
+        pub = new BLSPublicKey(extendedPrivateKey.getPublicKey(), parent.pub.isLegacy());
         this.parent = parent;
         long childNumberLong = extendedPrivateKey.getChildNumber();
         ChildNumber childNumber = new ChildNumber((int)childNumberLong);
@@ -276,7 +278,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         this.extendedPrivateKey = null;
         this.extendedPublicKey = extendedPublicKey;
         this.priv = null;
-        this.pub = new BLSPublicKey(extendedPublicKey.getPublicKey());
+        this.pub = new BLSPublicKey(extendedPublicKey.getPublicKey(), parent != null ? parent.pub.isLegacy() : false);
         this.parent = parent;
         long childNumberLong = extendedPublicKey.getChildNumber();
         ChildNumber childNumber = new ChildNumber((int)childNumberLong);

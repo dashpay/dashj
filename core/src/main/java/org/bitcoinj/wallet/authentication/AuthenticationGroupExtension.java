@@ -233,7 +233,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         for (AuthenticationKeyUsage usage : keyUsage.values()) {
             Protos.AuthenticationKeyUsage.Builder usageBuilder = Protos.AuthenticationKeyUsage.newBuilder();
             if (usage.getType() == AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR) {
-                usageBuilder.setKeyOrKeyId(ByteString.copyFrom(usage.getKey().getPubKey()));
+                usageBuilder.setKeyOrKeyId(ByteString.copyFrom(usage.getKey().getSerializedPublicKey()));
             } else {
                 usageBuilder.setKeyOrKeyId(ByteString.copyFrom(usage.getKey().getPubKeyHash()));
             }
@@ -317,6 +317,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             Sha256Hash whereUsed = Sha256Hash.wrapReversed(usageProto.getWhereUsed().toByteArray());
             IKey key;
             if (keyChainType == AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR) {
+                // remove first byte
+                keyOrKeyId = Arrays.copyOfRange(keyOrKeyId, 1, BLSPublicKey.BLS_CURVE_PUBKEY_SIZE + 1);
                 key = findKeyFromPubKey(keyOrKeyId);
             } else {
                 key = findKeyFromPubKeyHash(keyOrKeyId, Script.ScriptType.P2PKH);
@@ -415,6 +417,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(false));
 
         IKey platformKey = platformNodeId != null ? findKeyFromPubKeyHash(platformNodeId.getBytes(), Script.ScriptType.P2PKH) : null;
+        if (platformKey == null) {
+            platformKey = platformNodeId != null ? findKeyFromPubKeyHash(Utils.reverseBytes(platformNodeId.getBytes()), Script.ScriptType.P2PKH) : null;
+        }
 
         // voting
         if (votingKey != null) {
@@ -433,7 +438,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             boolean legacy = providerRegisterTx.getVersion() == LEGACY_BLS_VERSION;
             AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, legacy, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(operatorKey, operatorKeyUsage);
-            keyChainGroup.markPubKeyHashAsUsed(operatorKey.getPubKey());
+            keyChainGroup.markPubKeyAsUsed(operatorKey.getPubKey());
         }
 
         if (platformKey != null) {
@@ -479,7 +484,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             boolean legacy = providerUpdateRegistarTx.getCurrentVersion() == LEGACY_BLS_VERSION;
             AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, legacy, tx.getTxId(), address);
             keyUsage.put(operatorKey, operatorKeyUsage);
-            keyChainGroup.markPubKeyHashAsUsed(operatorKey.getPubKey());
+            keyChainGroup.markPubKeyAsUsed(operatorKey.getPubKey());
         }
     }
 
