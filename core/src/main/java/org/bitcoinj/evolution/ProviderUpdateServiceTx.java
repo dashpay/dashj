@@ -174,4 +174,16 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
         length = MESSAGE_SIZE;
         unCache();
     }
+
+    public Sha256Hash getProTxHash() {
+        return proTxHash;
+    }
+
+    public MasternodeAddress getAddress() {
+        return address;
+    }
+
+    public Script getScriptOperatorPayout() {
+        return scriptOperatorPayout;
+    }
 }

@@ -20,12 +20,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.crypto.BLSPublicKey;
@@ -42,6 +44,7 @@ import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.ProviderRegisterTx;
 import org.bitcoinj.evolution.ProviderUpdateRegistarTx;
 import org.bitcoinj.evolution.ProviderUpdateRevocationTx;
+import org.bitcoinj.evolution.ProviderUpdateServiceTx;
 import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ListenerRegistration;
@@ -68,8 +71,10 @@ import javax.annotation.Nullable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -713,5 +718,74 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      */
     public boolean removeCreditFundingEventListener(CreditFundingTransactionEventListener listener) {
         return ListenerRegistration.removeFromList(listener, creditFundingListeners);
+    }
+
+    private HashSet<Sha256Hash> getProTxSet() {
+        HashSet<Sha256Hash> proTxSet = new HashSet<>();
+        for (AuthenticationKeyUsage usage : keyUsage.values()) {
+            proTxSet.add(usage.getWhereUsed());
+        }
+        return proTxSet;
+    }
+
+    @Override
+    public BloomFilter getBloomFilter(int size, double falsePositiveRate, long nTweak) {
+        BloomFilter filter = super.getBloomFilter(size, falsePositiveRate, nTweak);
+        HashSet<Sha256Hash> proTxSet = getProTxSet();
+        for (Sha256Hash proTxHash : proTxSet) {
+            filter.insert(proTxHash.getReversedBytes());
+        }
+        return filter;
+    }
+
+    @Override
+    public int getBloomFilterElementCount() {
+        int count = super.getBloomFilterElementCount();
+        count += getProTxSet().size();
+        return count;
+    }
+
+    @Override
+    public boolean isTransactionRevelant(Transaction tx) {
+        switch (tx.getType()) {
+            case TRANSACTION_PROVIDER_REGISTER:
+                return isProTxRegisterRevelant((ProviderRegisterTx)tx.getExtraPayloadObject());
+            case TRANSACTION_PROVIDER_UPDATE_REGISTRAR:
+                return isProTxUpdateRegistrarRevelant((ProviderUpdateRegistarTx) tx.getExtraPayloadObject());
+            case TRANSACTION_PROVIDER_UPDATE_REVOKE:
+                return isProTxRevokeRevelant((ProviderUpdateRevocationTx) tx.getExtraPayloadObject());
+            case TRANSACTION_PROVIDER_UPDATE_SERVICE:
+                return isProTxUpdateServiceRevelant((ProviderUpdateServiceTx) tx.getExtraPayloadObject());
+        }
+        return false;
+    }
+
+    private boolean isProTxHashRevelant(Sha256Hash proTxHash) {
+        for (AuthenticationKeyUsage usage : keyUsage.values()) {
+            if (usage.getWhereUsed().equals(proTxHash))
+                return true;
+        }
+        return false;
+    }
+
+    private boolean isProTxRevokeRevelant(ProviderUpdateRevocationTx revocationTx) {
+        return isProTxHashRevelant(revocationTx.getProTxHash());
+    }
+
+    private boolean isProTxUpdateRegistrarRevelant(ProviderUpdateRegistarTx updateRegistarTx) {
+        return findKeyFromPubKeyHash(updateRegistarTx.getKeyIDVoting().getBytes(), Script.ScriptType.P2PKH) != null ||
+                findKeyFromPubKey(updateRegistarTx.getPubkeyOperator().bitcoinSerialize(false)) != null ||
+                findKeyFromPubKey(updateRegistarTx.getPubkeyOperator().bitcoinSerialize(true)) != null;
+    }
+
+    private boolean isProTxUpdateServiceRevelant(ProviderUpdateServiceTx updateServiceTx) {
+        return isProTxHashRevelant(updateServiceTx.getProTxHash());
+    }
+
+    private boolean isProTxRegisterRevelant(ProviderRegisterTx providerRegisterTx) {
+        return findKeyFromPubKeyHash(providerRegisterTx.getKeyIDOwner().getBytes(), Script.ScriptType.P2PKH) != null ||
+                findKeyFromPubKeyHash(providerRegisterTx.getKeyIDVoting().getBytes(), Script.ScriptType.P2PKH) != null ||
+                findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().bitcoinSerialize(false)) != null ||
+                findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().bitcoinSerialize(true)) != null;
     }
 }
