@@ -1283,7 +1283,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             setBlockChain(headersChain, blockChain);
             applyDiff(peer, headersChain, blockChain, quorumRotationInfo, isLoadingBootStrap);
 
-            log.info(this.toString()); // do we need to remove this?
             unCache();
             failedAttempts = 0;
 
@@ -1297,7 +1296,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, quorumRotationInfo.getMnListDiffTip());
 
         } catch (MasternodeListDiffException x) {
-            //we already have this mnlistdiff or doesn't match our current tipBlockHash
+            //we already have this qrinfo or doesn't match our current tipBlockHash
             if (mnListAtH.getBlockHash().equals(quorumRotationInfo.getMnListDiffAtH().blockHash)) {
                 log.info("heights are the same: " + x.getMessage(), x);
                 log.info("mnList = {} vs mnlistdiff {}", mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
@@ -1343,10 +1342,10 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 initChainTipSyncComplete = true;
                 if (downloadPeer != null) {
                     log.info("initChainTipSync=false");
-                    context.peerGroup.triggerMnListDownloadComplete();
+                    //context.peerGroup.triggerMnListDownloadComplete();
                     log.info("initChainTipSync=true");
                 } else {
-                    context.peerGroup.triggerMnListDownloadComplete();
+                    //context.peerGroup.triggerMnListDownloadComplete();
                 }
             }
             requestNextMNListDiff();
