@@ -42,7 +42,7 @@ public class BLSPublicKey extends BLSAbstractObject {
         super(BLS_CURVE_PUBKEY_SIZE);
     }
     public BLSPublicKey(G1Element pk) {
-        this(pk, BLSScheme.isLegacyDefault());
+        this(pk, false);
     }
 
     public BLSPublicKey(G1Element pk, boolean legacy) {
@@ -55,19 +55,18 @@ public class BLSPublicKey extends BLSAbstractObject {
 
     /**
      *
-     * @param publicKey if length == 49, the first byte indicates legacy
+     * @param publicKey the bytes for the public key in basic scheme
      */
     public BLSPublicKey(byte [] publicKey) {
-        this(publicKey, BLSScheme.isLegacyDefault());
+        this(publicKey, false);
     }
-
     public static BLSPublicKey fromSerializedBytes(byte [] publicKey) {
         boolean legacy;
         if (publicKey.length == BLS_CURVE_PUBKEY_SIZE + 1) {
             legacy = publicKey[0] != 0;
             publicKey = Arrays.copyOfRange(publicKey, 1, publicKey.length);
         } else {
-            legacy = BLSScheme.isLegacyDefault();
+            throw new IllegalArgumentException("serialized public key should be 49 bytes but is " + publicKey.length + " bytes");
         }
         return new BLSPublicKey(publicKey, legacy);
     }
@@ -86,7 +85,7 @@ public class BLSPublicKey extends BLSAbstractObject {
     }
 
     public BLSPublicKey(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset, BLSScheme.isLegacyDefault());
+        super(params, payload, offset, false);
     }
 
     public BLSPublicKey(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
@@ -134,7 +133,7 @@ public class BLSPublicKey extends BLSAbstractObject {
         super.bitcoinSerializeToStream(stream);
     }
 
-    public byte[] bitcoinSerialize(boolean legacy) {
+    public byte[] serialize(boolean legacy) {
         return publicKeyImpl.serialize(legacy);
     }
 

@@ -18,6 +18,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.coinjoin.*;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
@@ -304,7 +305,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("isdlock")) {
             return new InstantSendLock(params, payloadBytes, InstantSendLock.ISDLOCK_VERSION);
         } else if(command.equals("clsig")) {
-            return new ChainLockSignature(params, payloadBytes);
+            return new ChainLockSignature(params, payloadBytes, BLSScheme.isLegacyDefault());
         } else if(command.equals("qrinfo")) {
             return new QuorumRotationInfo(params, payloadBytes, protocolVersion);
         } else if(command.equals("dssu")) {

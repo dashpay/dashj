@@ -40,7 +40,7 @@ public class BLSSecretKey extends BLSAbstractObject
     }
 
     public BLSSecretKey(PrivateKey sk) {
-       this(sk, BLSScheme.isLegacyDefault());
+       this(sk, false);
     }
     public BLSSecretKey(PrivateKey sk, boolean legacy) {
         super(BLS_CURVE_SECKEY_SIZE);
@@ -51,7 +51,7 @@ public class BLSSecretKey extends BLSAbstractObject
     }
 
     public BLSSecretKey(byte[] buffer) {
-        super(buffer, BLS_CURVE_SECKEY_SIZE, BLSScheme.isLegacyDefault());
+        super(buffer, BLS_CURVE_SECKEY_SIZE, false);
     }
 
     public BLSSecretKey(byte [] buffer, boolean legacy) {
@@ -63,7 +63,7 @@ public class BLSSecretKey extends BLSAbstractObject
     }
 
     public BLSSecretKey(String hex) {
-        this(Utils.HEX.decode(hex), BLSScheme.isLegacyDefault());
+        this(Utils.HEX.decode(hex), false);
     }
 
     public BLSSecretKey(String hex, boolean legacy) {
@@ -72,6 +72,10 @@ public class BLSSecretKey extends BLSAbstractObject
 
     public static BLSSecretKey fromSeed(byte [] seed) {
         return new BLSSecretKey(PrivateKey.fromSeedBIP32(seed));
+    }
+
+    public static BLSSecretKey fromSeed(byte [] seed, boolean legacy) {
+        return new BLSSecretKey(PrivateKey.fromSeedBIP32(seed), legacy);
     }
 
     @Override
@@ -190,5 +194,13 @@ public class BLSSecretKey extends BLSAbstractObject
         }
 
         return new BLSSignature(BLSScheme.get(BLSScheme.isLegacyDefault()).sign(privateKey, hash.getBytes()));
+    }
+
+    public BLSSignature sign(Sha256Hash hash, boolean legacy) {
+        if(!valid) {
+            return new BLSSignature();
+        }
+
+        return new BLSSignature(BLSScheme.get(legacy).sign(privateKey, hash.getBytes()), legacy);
     }
 }

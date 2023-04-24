@@ -100,13 +100,13 @@ public class BLSKeyTest {
         // a message with it.
         byte[] privkey = HEX.decode("180cb41c7c600be951b5d3d0a7334acc7506173875834f7a6c4c786a28fcbb19");
         BLSKey key = BLSKey.fromPrivate(privkey);
-        byte[] output = key.sign(Sha256Hash.ZERO_HASH).bitcoinSerialize();
-        assertTrue(key.verify(Sha256Hash.ZERO_HASH.getBytes(), output));
+        byte[] output = key.sign(Sha256Hash.ZERO_HASH, true).bitcoinSerialize();
+        assertTrue(key.verify(Sha256Hash.ZERO_HASH.getBytes(), output, true));
 
         // Test interop with a signature from elsewhere.
         byte[] sig = HEX.decode(
                 "097b2427b58cf9c3806efc72fd5b885b8585692a6338ac675be4b44df6d0873759d5a5af7757ff9de5a8d156460e726d180c4d0314975f49ec584cd0264f2dc4d33b372e6fa73413c8b81bbf048f0e949ce2e3d162ed690ead6f15e9e8155161");
-        assertTrue(key.verify(Sha256Hash.ZERO_HASH.getBytes(), sig));
+        assertTrue(key.verify(Sha256Hash.ZERO_HASH.getBytes(), sig, true));
     }
 
     @Test
@@ -121,19 +121,19 @@ public class BLSKeyTest {
         for (BLSKey key : new BLSKey[] {decodedKey, roundtripKey}) {
             byte[] message = reverseBytes(HEX.decode(
                     "11da3761e86431e4a54c176789e41f1651b324d240d599a7067bee23d328ec2a"));
-            byte[] output = key.sign(Sha256Hash.wrap(message)).bitcoinSerialize();
-            assertTrue(key.verify(message, output));
+            byte[] output = key.sign(Sha256Hash.wrap(message), true).bitcoinSerialize();
+            assertTrue(key.verify(message, output, true));
 
             output = HEX.decode(
                     "0a88ee8a2528ca2a3870736f81a7578af0986136467ddf650a1ef6090e068d6d5674b123cc44d8f673eb987a9926e9210283c14db921aeca7a09c443c469902837267e7387551dc60000cfeccfa382e73b0bd900df7ebbaddb702f9b51cc1210");
-            assertTrue(key.verify(message, output));
+            assertTrue(key.verify(message, output, true));
         }
         
         // Try to sign with one key and verify with the other.
         byte[] message = reverseBytes(HEX.decode(
             "11da3761e86431e4a54c176789e41f1651b324d240d599a7067bee23d328ec2a"));
-        assertTrue(roundtripKey.verify(message, decodedKey.sign(Sha256Hash.wrap(message)).bitcoinSerialize()));
-        assertTrue(decodedKey.verify(message, roundtripKey.sign(Sha256Hash.wrap(message)).bitcoinSerialize()));
+        assertTrue(roundtripKey.verify(message, decodedKey.sign(Sha256Hash.wrap(message), true).bitcoinSerialize(), true));
+        assertTrue(decodedKey.verify(message, roundtripKey.sign(Sha256Hash.wrap(message), true).bitcoinSerialize(), true));
 
         // Verify bytewise equivalence of public keys (i.e. compression state is preserved)
         BLSKey key = new BLSKey();
@@ -197,7 +197,7 @@ public class BLSKeyTest {
         BLSKey key = new BLSKey(secretKey, publicKey);
 
         String sigBase64 = "lmo8PBn6VJ5EVtuA3pEMSiU7YPxlMbQQvV3UIVC3zWxA/t2gvOJXUq0lVEcrloAVFnA9vn7Cr2QQMcRX8TqEOFaYRF0P8Wmc6or3RMm3QjSEPqLVOMnFs4jomQvNvN8Z";
-        key.verifyMessage(message, sigBase64);
+        key.verifyMessage(message, sigBase64, true);
     }
 
     @Test
@@ -267,7 +267,7 @@ public class BLSKeyTest {
 
     @Test
     public void testGetPrivateKeyAsHex() throws Exception {
-        BLSKey key = BLSKey.fromPrivate(PRIVATE_KEY).decompress(); // An example private key.
+        BLSKey key = BLSKey.fromPrivate(PRIVATE_KEY); // An example private key.
         assertEquals("117c779e44e36d3f84445ec67eec49470b0789eb633f102209af6e0ebd9c1bf9", key.getPrivateKeyAsHex());
     }
 
@@ -275,7 +275,7 @@ public class BLSKeyTest {
     public void testGetPublicKeyAsHex() throws Exception {
         BLSSecretKey key1 = BLSSecretKey.fromSeed(new byte[] {1, 2, 3});
         BLSKey key = BLSKey.fromPrivate(PRIVATE_KEY); // An example private key.
-        assertEquals("0f805ee206ecfc037e2998cca95042f5de40f1bf1c8ea03e31f48461a9ab9b604afdee6ccf4b4526b4189e1acdf160ec", key.getPublicKeyAsHex());
+        assertEquals("0f805ee206ecfc037e2998cca95042f5de40f1bf1c8ea03e31f48461a9ab9b604afdee6ccf4b4526b4189e1acdf160ec", key.getPublicKeyAsHex(true));
     }
 
     @Test

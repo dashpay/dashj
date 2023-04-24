@@ -713,7 +713,7 @@ public class AnyDeterministicKeyChainTest {
     @Test
     public void blsCheckPathDerivationTest() {
         // TODO: should this be legacy or basic?
-        BLSScheme.setLegacyDefault(false);
+        BLSScheme.setLegacyDefault(true);
         ImmutableList<ChildNumber> operatorPath = DerivationPathFactory.get(UNITTEST).masternodeOperatorDerivationPath();
 
         AnyDeterministicKeyChain blsChain = AuthenticationKeyChain.builder()
@@ -741,7 +741,7 @@ public class AnyDeterministicKeyChainTest {
             assertArrayEquals(blsExtPrivKeyCursor.getChainCode().serialize(), key.getChainCode());
             assertEquals(blsExtPrivKeyCursor.getParentFingerprint(), key.getParentFingerprint());
             assertArrayEquals(blsExtPrivKeyCursor.getPrivateKey().serialize(), key.getPrivKeyBytes());
-            assertArrayEquals(blsExtPrivKeyCursor.getPublicKey().serialize(), key.getPubKey());
+            assertArrayEquals(blsExtPrivKeyCursor.getPublicKey().serialize(true), key.getPubKey());
             assertEquals(0x1L, blsExtPrivKeyCursor.getVersion());
         }
 
@@ -749,7 +749,7 @@ public class AnyDeterministicKeyChainTest {
         assertArrayEquals(extendedPrivateKey.getChainCode().serialize(), blsChain.getWatchingKey().getChainCode());
         assertEquals(extendedPrivateKey.getParentFingerprint(), blsChain.getWatchingKey().getParentFingerprint());
         assertArrayEquals(extendedPrivateKey.getPrivateKey().serialize(), blsChain.getWatchingKey().getPrivKeyBytes());
-        assertArrayEquals(extendedPrivateKey.getPublicKey().serialize(), blsChain.getWatchingKey().getPubKey());
+        assertArrayEquals(extendedPrivateKey.getPublicKey().serialize(true), blsChain.getWatchingKey().getPubKey());
         assertEquals(0x1L, extendedPrivateKey.getVersion());
 
         // check the extended public key for the full path
@@ -757,7 +757,7 @@ public class AnyDeterministicKeyChainTest {
         IDeterministicKey blsChainPublicKey = blsChain.getWatchingKey().dropPrivateBytes();
         assertArrayEquals(extendedPublicKey.getChainCode().serialize(), blsChainPublicKey.getChainCode());
         assertEquals(extendedPublicKey.getParentFingerprint(), blsChainPublicKey.getParentFingerprint());
-        assertArrayEquals(extendedPublicKey.getPublicKey().serialize(), blsChainPublicKey.getPubKey());
+        assertArrayEquals(extendedPublicKey.getPublicKey().serialize(true), blsChainPublicKey.getPubKey());
         assertEquals(0x1L, extendedPublicKey.getVersion());
     }
 

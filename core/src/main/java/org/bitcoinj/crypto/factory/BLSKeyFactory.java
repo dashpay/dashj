@@ -47,7 +47,7 @@ public class BLSKeyFactory implements KeyFactory {
 
     @Override
     public IKey fromEncrypted(EncryptedData e, KeyCrypter keyCrypter, byte[] pub) {
-        return new BLSKey(e, pub, keyCrypter);
+        return new BLSKey(e, pub, true, keyCrypter);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class BLSKeyFactory implements KeyFactory {
 
     @Override
     public IKey fromPrivateAndPrecalculatedPublic(byte[] priv, byte[] pub) {
-        return new BLSKey(priv, pub);
+        return new BLSKey(priv, pub, true);
     }
 
     @Override

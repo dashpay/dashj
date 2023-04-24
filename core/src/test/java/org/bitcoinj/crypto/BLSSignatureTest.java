@@ -92,7 +92,7 @@ public class BLSSignatureTest {
             assertEquals(ret, new BLSSecretKey());
         }
         {
-            BLSPublicKey ret = BLSPublicKey.aggregateInsecure(vec_pk, BLSScheme.isLegacyDefault());
+            BLSPublicKey ret = BLSPublicKey.aggregateInsecure(vec_pk, legacy);
             assertEquals(ret, new BLSPublicKey());
         }
         
@@ -103,7 +103,7 @@ public class BLSSignatureTest {
         }
 
         BLSSecretKey ag_sk = BLSSecretKey.aggregateInsecure (vec_sk);
-        BLSPublicKey ag_pk = BLSPublicKey.aggregateInsecure (vec_pk, BLSScheme.isLegacyDefault());
+        BLSPublicKey ag_pk = BLSPublicKey.aggregateInsecure (vec_pk, legacy);
 
         assertTrue(ag_sk.isValid());
         assertTrue(ag_pk.isValid());
@@ -143,7 +143,7 @@ public class BLSSignatureTest {
             assertTrue(sig.verifyInsecureAggregated(vec_pks, vec_hashes));
         }
         // Create an aggregated signature from the vector of individual signatures
-        BLSSignature vecSig = BLSSignature.aggregateInsecure (vec_sigs, BLSScheme.isLegacyDefault());
+        BLSSignature vecSig = BLSSignature.aggregateInsecure (vec_sigs, legacy);
         assertTrue(vecSig.verifyInsecureAggregated(vec_pks, vec_hashes));
         // Check that these two signatures are equal
         assertEquals(sig, vecSig);
@@ -181,7 +181,7 @@ public class BLSSignatureTest {
             vec_sigs.add(sk.sign(hash));
         }
 
-        BLSSignature sec_agg_sig = BLSSignature.aggregateSecure(vec_sigs, vec_pks, hash, BLSScheme.isLegacyDefault());
+        BLSSignature sec_agg_sig = BLSSignature.aggregateSecure(vec_sigs, vec_pks, hash, legacy);
         assertTrue(sec_agg_sig.isValid());
         assertTrue(sec_agg_sig.verifySecureAggregated(vec_pks, hash));
     }
@@ -226,8 +226,8 @@ public class BLSSignatureTest {
         BLSScheme.setLegacyDefault(true);
         // 000000000000002c82df7f716994d9dc7dd0694249bdd380d1b09cda746da7c8:8
         // valid quorum commitment: 000000000000002c82df7f716994d9dc7dd0694249bdd380d1b09cda746da7c8:9: quorumPublicKey = 1612b2daa422daa274af5884e2ef7cdcae1c33d36573a8702a3d6c6a8e389f1b14981465df891df5a1b7210432bdfb55, membersSignature = 052f62455ad81786528a2c7b7ab4c22f812982ed99c0799e6cbf9a719a76e9cff2eaca9aefd41f29922c2f85e3c3d70a1100b35bc0d7d25bd54291d99234bf556a5649e8cccf4fddb040ebaca5fa401b0ec409cbd285f6c58a8dc17b521b2093
-        BLSPublicKey quorumPublicKey = new BLSPublicKey(Utils.HEX.decode("1612b2daa422daa274af5884e2ef7cdcae1c33d36573a8702a3d6c6a8e389f1b14981465df891df5a1b7210432bdfb55"));
-        BLSSignature membersSignature = new BLSSignature(Utils.HEX.decode("052f62455ad81786528a2c7b7ab4c22f812982ed99c0799e6cbf9a719a76e9cff2eaca9aefd41f29922c2f85e3c3d70a1100b35bc0d7d25bd54291d99234bf556a5649e8cccf4fddb040ebaca5fa401b0ec409cbd285f6c58a8dc17b521b2093"));
+        BLSPublicKey quorumPublicKey = new BLSPublicKey(Utils.HEX.decode("1612b2daa422daa274af5884e2ef7cdcae1c33d36573a8702a3d6c6a8e389f1b14981465df891df5a1b7210432bdfb55"), true);
+        BLSSignature membersSignature = new BLSSignature(Utils.HEX.decode("052f62455ad81786528a2c7b7ab4c22f812982ed99c0799e6cbf9a719a76e9cff2eaca9aefd41f29922c2f85e3c3d70a1100b35bc0d7d25bd54291d99234bf556a5649e8cccf4fddb040ebaca5fa401b0ec409cbd285f6c58a8dc17b521b2093"), true);
 
         String[] strOperatorKeys = new String[] {
                 "8f3a813aa68a07fca73c616ea60d0dfbc81667c24a8ac6e6d4c9a64c6d162d5738808c5eab7138742a3d17c814a8bf94",
@@ -291,7 +291,7 @@ public class BLSSignatureTest {
 
         ArrayList<BLSPublicKey> mnOperatorKeys = new ArrayList<>();
         for (String opKey : strOperatorKeys) {
-            mnOperatorKeys.add(new BLSPublicKey(Utils.HEX.decode(opKey)));
+            mnOperatorKeys.add(new BLSPublicKey(Utils.HEX.decode(opKey), true));
         }
 
         Sha256Hash commitmentHash = Sha256Hash.wrap("656e3b2e895b155da40860ad4c09d48204d0847f1eb20bd1ebbe9416bfbd7961");

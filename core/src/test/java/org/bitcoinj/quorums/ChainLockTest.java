@@ -45,7 +45,7 @@ public class ChainLockTest {
         Sha256Hash expectedHash = Sha256Hash.wrap("3764ada6c32f09bb4f02295415b230657720f8be17d6fe046f0f8bf3db72b8e0");
         Sha256Hash expectedId = Sha256Hash.wrap("6639d0da4a746f7260968e54be1b14fce8c5429f51bfe8762b58aae294e0925d");
 
-        ChainLockSignature clsig = new ChainLockSignature(PARAMS, chainLockMsg);
+        ChainLockSignature clsig = new ChainLockSignature(PARAMS, chainLockMsg, true);
 
         // verify that the serialized chain lock signature matches original data
         UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(chainLockMsg.length);
@@ -65,7 +65,7 @@ public class ChainLockTest {
         assertArrayEquals(chainLockMsg, serialized);
 
         ChainLockSignature fromConstructor = new ChainLockSignature(84202, Sha256Hash.wrap("0000000007e0a65b763c0a4fb2274ff757abdbd19c9efe9de189f5828c70a5f4"),
-                new BLSSignature(Utils.HEX.decode("0a43f1c3e5b3e8dbd670bca8d437dc25572f72d8e1e9be673e9ebbb606570307c3e5f5d073f7beb209dd7e0b8f96c751060ab3a7fb69a71d5ccab697b8cfa5a91038a6fecf76b7a827d75d17f01496302942aa5e2c7f4a48246efc8d3941bf6c")));
+                new BLSSignature(Utils.HEX.decode("0a43f1c3e5b3e8dbd670bca8d437dc25572f72d8e1e9be673e9ebbb606570307c3e5f5d073f7beb209dd7e0b8f96c751060ab3a7fb69a71d5ccab697b8cfa5a91038a6fecf76b7a827d75d17f01496302942aa5e2c7f4a48246efc8d3941bf6c"), true));
         assertEquals(clsig, fromConstructor);
     }
 
@@ -79,7 +79,7 @@ public class ChainLockTest {
         Sha256Hash expectedHash = Sha256Hash.wrap("3566bc6475cbcc3e9f231f4ed03764de41faaeaee3c77c033db6537964ed26e3");
         Sha256Hash expectedId = Sha256Hash.wrap("6b244be04bec653cacfd71fb9ffd6ecb7cd2c3b93e0af3afc325114c8b1e89af");
 
-        ChainLockSignature clsig = new ChainLockSignature(PARAMS, chainLockMsg);
+        ChainLockSignature clsig = new ChainLockSignature(PARAMS, chainLockMsg, false);
 
         // verify that the serialized chain lock signature matches original data
         UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(chainLockMsg.length);

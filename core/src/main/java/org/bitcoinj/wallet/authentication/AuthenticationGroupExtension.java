@@ -29,7 +29,6 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VersionMessage;
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
@@ -412,9 +411,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
         IKey votingKey = findKeyFromPubKeyHash(voting.getBytes(), Script.ScriptType.P2PKH);
         IKey ownerKey = findKeyFromPubKeyHash(owner.getBytes(), Script.ScriptType.P2PKH);
-        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(true));
+        IKey operatorKey = findKeyFromPubKey(operator.serialize(true));
         if (operatorKey == null)
-            operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(false));
+            operatorKey = findKeyFromPubKey(operator.serialize(false));
 
         IKey platformKey = platformNodeId != null ? findKeyFromPubKeyHash(platformNodeId.getBytes(), Script.ScriptType.P2PKH) : null;
         if (platformKey == null) {
@@ -453,9 +452,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         BLSPublicKey operator = providerUpdateRegistarTx.getPubkeyOperator();
 
         IKey votingKey = findKeyFromPubKeyHash(voting.getBytes(), Script.ScriptType.P2PKH);
-        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(true));
+        IKey operatorKey = findKeyFromPubKey(operator.serialize(true));
         if (operatorKey == null)
-            operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(false));
+            operatorKey = findKeyFromPubKey(operator.serialize(false));
         // TODO: find BLS
 
         // there could be a previous usage of voting and operator keys
@@ -779,8 +778,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
     private boolean isProTxUpdateRegistrarRevelant(ProviderUpdateRegistarTx updateRegistarTx) {
         return findKeyFromPubKeyHash(updateRegistarTx.getKeyIDVoting().getBytes(), Script.ScriptType.P2PKH) != null ||
-                findKeyFromPubKey(updateRegistarTx.getPubkeyOperator().bitcoinSerialize(false)) != null ||
-                findKeyFromPubKey(updateRegistarTx.getPubkeyOperator().bitcoinSerialize(true)) != null;
+                findKeyFromPubKey(updateRegistarTx.getPubkeyOperator().serialize(false)) != null ||
+                findKeyFromPubKey(updateRegistarTx.getPubkeyOperator().serialize(true)) != null;
     }
 
     private boolean isProTxUpdateServiceRevelant(ProviderUpdateServiceTx updateServiceTx) {
@@ -790,7 +789,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     private boolean isProTxRegisterRevelant(ProviderRegisterTx providerRegisterTx) {
         return findKeyFromPubKeyHash(providerRegisterTx.getKeyIDOwner().getBytes(), Script.ScriptType.P2PKH) != null ||
                 findKeyFromPubKeyHash(providerRegisterTx.getKeyIDVoting().getBytes(), Script.ScriptType.P2PKH) != null ||
-                findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().bitcoinSerialize(false)) != null ||
-                findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().bitcoinSerialize(true)) != null;
+                findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().serialize(false)) != null ||
+                findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().serialize(true)) != null;
     }
 }

@@ -167,7 +167,6 @@ public class AllDeterministicKeyChainTest {
                 .hardenedKeysOnly(hardenedOnly)
                 .build();
         chain.setLookaheadSize(10);
-        BLSScheme.setLegacyDefault(true);
     }
 
     @Test
@@ -523,10 +522,10 @@ public class AllDeterministicKeyChainTest {
     public void xpubsMatchAfterEncryption() {
         NetworkParameters params = MainNetParams.get();
 
-        String expected = Utils.HEX.encode(Base58.decode("7tqAshzJAHbxH9X3n8ZUqVoqBy3SAh8WZ4Z5R6YYZoFLiMQhDt7Jih32X9kgXVNb3GfK2tqxCxkn5wbqqg1mXTJex7QHETspCCHvehLc2dNqe6st3hLFTf7gLs9wSMRhm2SQ"));
-        String actual = Utils.HEX.encode(Base58.decode("7tqAshoqQcuDTuku7oPuBfXoYDYfYhwvqw6BVwdyPg7HEeBBMTnx6wLNUv1cztFdvH97LBVJSUTqoKqQkzy23hK5fvs1z4T3YWGqMi3ypeAZiRezVLjFwWed7nagaijPmHTV"));
-        System.out.println(expected);
-        System.out.println(actual);
+        //String expected = Utils.HEX.encode(Base58.decode("7tqAshzJAHbxH9X3n8ZUqVoqBy3SAh8WZ4Z5R6YYZoFLiMQhDt7Jih32X9kgXVNb3GfK2tqxCxkn5wbqqg1mXTJex7QHETspCCHvehLc2dNqe6st3hLFTf7gLs9wSMRhm2SQ"));
+        //String actual = Utils.HEX.encode(Base58.decode("7tqAshoqQcuDTuku7oPuBfXoYDYfYhwvqw6BVwdyPg7HEeBBMTnx6wLNUv1cztFdvH97LBVJSUTqoKqQkzy23hK5fvs1z4T3YWGqMi3ypeAZiRezVLjFwWed7nagaijPmHTV"));
+        //System.out.println(expected);
+        //System.out.println(actual);
         String expectedXpub = watchingXpub;
 
         // Check the BIP32 keychain
@@ -569,7 +568,7 @@ public class AllDeterministicKeyChainTest {
         if (!hardenedOnly)
             builder.watch(chain.getWatchingKey().dropPrivateBytes().dropParent());
         else builder.spend(chain.getWatchingKey().dropParent());
-        //chain = AnyDeterministicKeyChain.builder().watch(chain.getWatchingKey().dropPrivateBytes().dropParent())
+        // chain = AnyDeterministicKeyChain.builder().watch(chain.getWatchingKey().dropPrivateBytes().dropParent())
         chain = builder.outputScriptType(chain.getOutputScriptType()).hardenedKeysOnly(hardenedOnly).build();
         int e = chain.numBloomFilterEntries();
         BloomFilter filter = chain.getFilter(e, 0.001, 1);
