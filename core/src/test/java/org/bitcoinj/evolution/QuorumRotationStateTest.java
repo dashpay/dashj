@@ -1,5 +1,6 @@
 package org.bitcoinj.evolution;
 
+import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
@@ -20,6 +21,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -61,7 +63,7 @@ public class QuorumRotationStateTest {
     }
 
     @Test
-    public void processQRInfoMessage() throws BlockStoreException, IOException {
+    public void processQRInfoMessage() throws BlockStoreException, IOException, ExecutionException, InterruptedException {
         // this is for mainnet
         URL datafile = Objects.requireNonNull(getClass().getResource("QRINFO_0_1739226.dat"));
 
@@ -79,8 +81,9 @@ public class QuorumRotationStateTest {
 
         QuorumRotationInfo qrinfo = new QuorumRotationInfo(context.getParams(), buffer, 70220);
 
-        manager.processDiffMessage(null, qrinfo, false);
-
+        SettableFuture<Boolean> qrinfoComplete = SettableFuture.create();
+        manager.processDiffMessage(null, qrinfo, false, qrinfoComplete);
+        qrinfoComplete.get();
 
         assertEquals(1738936, manager.getQuorumListAtTip(context.getParams().getLlmqDIP0024InstantSend()).getHeight());
         context.setDebugMode(false);
