@@ -1339,14 +1339,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             log.info(toString());
             waitingForMNListDiff = false;
             if (isSyncingHeadersFirst) {
+                log.info("initChainTipSync=false");
                 initChainTipSyncComplete = true;
-                if (downloadPeer != null) {
-                    log.info("initChainTipSync=false");
-                    //context.peerGroup.triggerMnListDownloadComplete();
-                    log.info("initChainTipSync=true");
-                } else {
-                    //context.peerGroup.triggerMnListDownloadComplete();
-                }
+                log.info("initChainTipSync=true");
             }
             requestNextMNListDiff();
             lock.unlock();
