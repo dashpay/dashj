@@ -245,6 +245,7 @@ public class BLSBatchVerifier<SourceId, MessageId>
         HashSet<MessageId> dups = new HashSet<MessageId>();
 
         Iterator<Map.Entry<Sha256Hash, Vector<Pair<MessageId, Message>>>> it = byMessageHash.entrySet().iterator();
+        
         while (it.hasNext()) {
             Map.Entry<Sha256Hash, Vector<Pair<MessageId, Message>>> entry = it.next();
             Sha256Hash msgHash = entry.getKey();

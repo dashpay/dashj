@@ -94,8 +94,8 @@ public class ForwardingService {
         String confPath = "";
         if (lastArg + 1 < args.length) {
             clientPath = args[lastArg];
-            if (lastArg + 2 >= args.length)
-                confPath = args[lastArg + 1];
+            if (lastArg + 2 > args.length)
+                confPath = args[lastArg];
         }
 
         txReport = new TransactionReport(clientPath, confPath, params);
