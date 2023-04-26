@@ -492,11 +492,13 @@ public class SimplifiedQuorumList extends Message {
             }
 
             log.info("Quorum: {}", commitment.quorumHash);
-            StringBuilder builder = new StringBuilder();
-            for (Masternode mn : members) {
-                builder.append("\n ").append(mn.getProTxHash());
+            if (Context.get().isDebugMode()) {
+                StringBuilder builder = new StringBuilder();
+                for (Masternode mn : members) {
+                    builder.append("\n ").append(mn.getProTxHash());
+                }
+                log.info(builder.toString());
             }
-            log.info(builder.toString());
 
             if (!commitment.verify(quorumBlock, members, true)) {
                 // TODO: originally, the exception was thrown here.  For now, report the error to the logs

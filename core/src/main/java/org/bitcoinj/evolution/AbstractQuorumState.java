@@ -791,7 +791,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 if (mnlistdiff instanceof SimplifiedMasternodeListDiff) {
                     stateManager.processDiffMessage(null, (SimplifiedMasternodeListDiff) mnlistdiff, true);
                 } else if (mnlistdiff instanceof QuorumRotationInfo) {
-                    stateManager.processDiffMessage(null, (QuorumRotationInfo) mnlistdiff, true);
+                    SettableFuture<Boolean> qrinfoComplete = SettableFuture.create();
+                    stateManager.processDiffMessage(null, (QuorumRotationInfo) mnlistdiff, true, qrinfoComplete);
+                    qrinfoComplete.get();
                 } else {
                     throw new IllegalStateException("Unknown difference message: " + mnlistdiff.getShortName());
                 }
@@ -802,7 +804,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             }
             bootStrapLoaded.set(true);
             log.info("finished loading bootstrap files");
-        } catch (VerificationException | IOException | IllegalStateException | NullPointerException x) {
+        } catch (VerificationException | IOException | IllegalStateException | NullPointerException | InterruptedException | ExecutionException x) {
             bootStrapLoaded.setException(x);
             log.info("failed loading bootstrap files: ", x);
         } finally {

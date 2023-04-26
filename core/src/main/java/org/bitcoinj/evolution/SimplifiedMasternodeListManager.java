@@ -1,7 +1,24 @@
+/*
+ * Copyright 2019 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.evolution;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.AbstractManager;
 import org.bitcoinj.core.Context;
@@ -23,6 +40,7 @@ import org.bitcoinj.quorums.QuorumSnapshotManager;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +50,9 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.evolution.SimplifiedMasternodeListDiff.BASIC_BLS_VERSION;
@@ -56,6 +77,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public static int MAX_CACHE_SIZE = 10;
     public static int MIN_CACHE_SIZE = 1;
+    private final ExecutorService threadPool = Executors.newFixedThreadPool(1, new ContextPropagatingThreadFactory("process-qrinfo"));
 
     public List<Quorum> getAllQuorums(LLMQParameters.LLMQType llmqType) {
         ArrayList<Quorum> list = Lists.newArrayList();
@@ -102,7 +124,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public enum SaveOptions {
         SAVE_EVERY_BLOCK,
         SAVE_EVERY_CHANGE,
-    };
+    }
 
     public SaveOptions saveOptions;
 
@@ -312,21 +334,26 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         }
     }
 
-    public void processDiffMessage(Peer peer, QuorumRotationInfo qrinfo, boolean isLoadingBootStrap) {
-        processQuorumRotationInfo(peer, qrinfo, isLoadingBootStrap);
+    public void processDiffMessage(Peer peer, QuorumRotationInfo qrinfo, boolean isLoadingBootStrap, @Nullable SettableFuture<Boolean> opComplete) {
+        processQuorumRotationInfo(peer, qrinfo, isLoadingBootStrap, opComplete);
     }
 
-    public void processQuorumRotationInfo(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap) {
-        try {
-            quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
-            processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
-            setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
-            unCache();
-            if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
-                save();
-        } finally {
-            // TODO: do we need a finally?
-        }
+    public void processQuorumRotationInfo(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap, @Nullable SettableFuture<Boolean> opComplete) {
+
+        // process qrinfo asynchronously
+        threadPool.execute(new Runnable() {
+            @Override
+            public void run() {
+                quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
+                processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
+                setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
+                unCache();
+                if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
+                    save();
+                if (opComplete != null)
+                    opComplete.set(true);
+            }
+        });
     }
 
     // TODO: does this need an argument for LLQMType?
@@ -394,8 +421,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 quorumRotationState.removeEventListeners(blockChain, peerGroup);
             }
 
+            try {
+                threadPool.shutdown();
+                threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+            } catch (InterruptedException x) {
+                // swallow
+            }
             saveNow();
             super.close();
+
         }
     }
 

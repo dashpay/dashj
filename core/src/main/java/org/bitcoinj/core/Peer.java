@@ -607,7 +607,7 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof SendAddressMessageV2) {
             // We ignore this message, because we don't reply to sendaddrv2 message.
         } else if (m instanceof QuorumRotationInfo) {
-            context.masternodeListManager.processQuorumRotationInfo(this, (QuorumRotationInfo) m, false);
+            context.masternodeListManager.processQuorumRotationInfo(this, (QuorumRotationInfo) m, false, null);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
