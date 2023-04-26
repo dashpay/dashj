@@ -59,7 +59,6 @@ public class MasternodeSignature extends ChildMessage {
 
     @Override
     protected void parse() throws ProtocolException {
-        cursor = offset;
         bytes = readByteArray();
         length = cursor - offset;
     }

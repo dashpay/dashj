@@ -19,6 +19,8 @@ import org.bitcoinj.core.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * BLSPublicKey uses 152 bytes of native memory + java overhead,
@@ -30,44 +32,44 @@ import java.io.OutputStream;
  * Unlike BLSLazySignature, this class is Immutable
  */
 
-public class BLSLazyPublicKey extends ChildMessage {
-
-    byte [] buffer;
+public class BLSLazyPublicKey extends BLSAbstractLazyObject {
     BLSPublicKey publicKey;
-    boolean isPublicKeyInitialized;
 
+    @Deprecated
     public BLSLazyPublicKey(NetworkParameters params) {
         super(params);
     }
 
     public BLSLazyPublicKey(BLSLazyPublicKey publicKey) {
-        super(publicKey.params);
-        this.buffer = publicKey.buffer;
+        super(publicKey);
         this.publicKey = publicKey.publicKey;
-        this.isPublicKeyInitialized = publicKey.isPublicKeyInitialized;
     }
 
     public BLSLazyPublicKey(BLSPublicKey publicKey) {
         super(Context.get().getParams());
         this.buffer = null;
         this.publicKey = publicKey;
-        this.isPublicKeyInitialized = true;
+        this.initialized = true;
     }
 
     public BLSLazyPublicKey(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+        super(params, payload, offset, BLSScheme.isLegacyDefault());
+    }
+
+    public BLSLazyPublicKey(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
+        super(params, payload, offset, legacy);
     }
 
     @Override
     protected void parse() throws ProtocolException {
+        super.parse();
         buffer = readBytes(BLSPublicKey.BLS_CURVE_PUBKEY_SIZE);
-        isPublicKeyInitialized = false;
         length = cursor - offset;
     }
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        if (!isPublicKeyInitialized && buffer == null) {
+        if (!initialized && buffer == null) {
             throw new IOException("public key and buffer are not initialized");
         }
         if (buffer == null) {
@@ -80,22 +82,48 @@ public class BLSLazyPublicKey extends ChildMessage {
     public static BLSPublicKey invalidSignature = new BLSPublicKey();
 
     public BLSPublicKey getPublicKey() {
-        if(buffer == null && !isPublicKeyInitialized)
+        if(buffer == null && !initialized)
             return invalidSignature;
-        if(!isPublicKeyInitialized) {
-            publicKey = new BLSPublicKey(params, buffer, 0);
+        if(!initialized) {
+            publicKey = new BLSPublicKey(params, buffer, 0, legacy);
             buffer = null;  //save memory
-            isPublicKeyInitialized = true;
+            initialized = true;
         }
         return publicKey;
     }
 
     @Override
     public String toString() {
-        return isPublicKeyInitialized ? publicKey.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
+        return initialized ? publicKey.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
     }
 
+    @Deprecated
     public boolean isPublicKeyInitialized() {
-        return isPublicKeyInitialized;
+        return initialized;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BLSLazyPublicKey that = (BLSLazyPublicKey) o;
+
+        if (isInitialized()) {
+            if (that.isInitialized())
+                return Objects.equals(publicKey, that.publicKey);
+            else
+                return Objects.equals(publicKey.getBuffer(), that.buffer);
+        } else {
+            if (that.isInitialized())
+                return Arrays.equals(buffer, that.publicKey.getBuffer());
+            else
+                return Arrays.equals(buffer, that.buffer);
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return publicKey != null ? publicKey.hashCode() : 0;
     }
 }

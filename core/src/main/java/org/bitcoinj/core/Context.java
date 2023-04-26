@@ -29,6 +29,7 @@ import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
 import org.dashj.bls.BLS;
 import org.bitcoinj.wallet.SendRequest;
+import org.dashj.bls.BLSJniLibrary;
 import org.slf4j.*;
 
 import java.io.File;
@@ -121,7 +122,7 @@ public class Context {
      * @param ensureMinRequiredFee Whether to ensure the minimum required fee by default when completing transactions. For details, see {@link SendRequest#ensureMinRequiredFee}.
      */
     public Context(NetworkParameters params, int eventHorizon, Coin feePerKb, boolean ensureMinRequiredFee) {
-        log.info("Creating dashj {} context.", VersionMessage.BITCOINJ_VERSION);
+        log.info("Creating dashj {} context using dashj-bls {}.", VersionMessage.BITCOINJ_VERSION, BLSJniLibrary.VERSION);
         this.confidenceTable = new TxConfidenceTable();
         this.voteConfidenceTable = new VoteConfidenceTable();
         this.params = params;
@@ -131,6 +132,7 @@ public class Context {
         lastConstructed = this;
         scheduledExecutorService = Executors.newScheduledThreadPool(1);
         slot.set(this);
+        BLSJniLibrary.init(false);
     }
 
     private static volatile Context lastConstructed;
@@ -202,7 +204,7 @@ public class Context {
      */
     public static void propagate(Context context) {
         slot.set(checkNotNull(context));
-        BLS.Init();
+        BLSJniLibrary.init(false);
     }
 
     /**
@@ -277,7 +279,6 @@ public class Context {
         llmqBackgroundThread = new LLMQBackgroundThread(this);
         masternodeMetaDataManager = new MasternodeMetaDataManager(this);
 
-        BLS.Init();
         initializedObjects = true;
     }
 
@@ -389,6 +390,7 @@ public class Context {
             blockChain.close();
             if (headerChain != null)
                 headerChain.close();
+            peerGroup = null;
         }
     }
 

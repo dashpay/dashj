@@ -27,6 +27,7 @@ import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.LLMQUtils;
@@ -70,8 +71,8 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         init();
     }
 
-    public QuorumState(Context context, MasternodeListSyncOptions syncOptions, byte [] payload, int offset) {
-        super(context.getParams(), payload, offset);
+    public QuorumState(Context context, MasternodeListSyncOptions syncOptions, byte [] payload, int offset, int protocolVersion) {
+        super(context.getParams(), payload, offset, protocolVersion);
         this.context = context;
         this.syncOptions = syncOptions;
         finishInitialization();
@@ -96,8 +97,8 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     }
 
     @Override
-    SimplifiedMasternodeListDiff loadDiffMessageFromBuffer(byte[] buffer) {
-        return new SimplifiedMasternodeListDiff(params, buffer);
+    SimplifiedMasternodeListDiff loadDiffMessageFromBuffer(byte[] buffer, int protocolVersion) {
+        return new SimplifiedMasternodeListDiff(params, buffer, protocolVersion);
     }
 
     @Override
@@ -201,7 +202,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
     @Override
     protected void parse() throws ProtocolException {
-        mnList = new SimplifiedMasternodeList(params, payload, cursor);
+        mnList = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
         cursor += mnList.getMessageSize();
 
         // specify an empty quorumList for now
@@ -210,7 +211,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     }
 
     public int parseQuorums(byte [] payload, int offset) {
-        quorumList = new SimplifiedQuorumList(params, payload, offset);
+        quorumList = new SimplifiedQuorumList(params, payload, offset, protocolVersion);
         return quorumList.getMessageSize();
     }
 
@@ -248,6 +249,9 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
     @Override
     public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap) {
+        if (mnlistdiff.getVersion() == SimplifiedMasternodeListDiff.BASIC_BLS_VERSION) {
+            BLSScheme.setLegacyDefault(false);
+        }
         StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);

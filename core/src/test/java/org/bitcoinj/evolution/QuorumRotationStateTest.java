@@ -1,34 +1,25 @@
 package org.bitcoinj.evolution;
 
+import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
-import org.bitcoinj.core.KeyId;
-import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.params.DevNetParams;
-import org.bitcoinj.params.JackDanielsDevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.WhiteRussianDevNetParams;
 import org.bitcoinj.quorums.QuorumRotationInfo;
-import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.FlatDB;
-import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.store.SPVBlockStore;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
@@ -53,7 +44,7 @@ public class QuorumRotationStateTest {
     public static void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
         PARAMS = TestNet3Params.get();
-        DEVNETPARAMS = JackDanielsDevNetParams.get();
+        DEVNETPARAMS = WhiteRussianDevNetParams.get();
         initContext(MAINPARAMS);
 
         //PeerGroup peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
@@ -72,7 +63,7 @@ public class QuorumRotationStateTest {
     }
 
     @Test
-    public void processQRInfoMessage() throws BlockStoreException, IOException {
+    public void processQRInfoMessage() throws BlockStoreException, IOException, ExecutionException, InterruptedException {
         // this is for mainnet
         URL datafile = Objects.requireNonNull(getClass().getResource("QRINFO_0_1739226.dat"));
 
@@ -88,10 +79,11 @@ public class QuorumRotationStateTest {
         context.setMasternodeListManager(manager);
         context.setDebugMode(true);
 
-        QuorumRotationInfo qrinfo = new QuorumRotationInfo(context.getParams(), buffer);
+        QuorumRotationInfo qrinfo = new QuorumRotationInfo(context.getParams(), buffer, 70220);
 
-        manager.processDiffMessage(null, qrinfo, false);
-
+        SettableFuture<Boolean> qrinfoComplete = SettableFuture.create();
+        manager.processDiffMessage(null, qrinfo, false, qrinfoComplete);
+        qrinfoComplete.get();
 
         assertEquals(1738936, manager.getQuorumListAtTip(context.getParams().getLlmqDIP0024InstantSend()).getHeight());
         context.setDebugMode(false);

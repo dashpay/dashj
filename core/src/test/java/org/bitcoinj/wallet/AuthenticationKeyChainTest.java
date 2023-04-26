@@ -5,14 +5,13 @@ import org.bitcoinj.core.KeyId;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
+import org.dashj.bls.BLSJniLibrary;
 import org.dashj.bls.ExtendedPrivateKey;
-import org.dashj.bls.JNI;
 import org.dashj.bls.PrivateKey;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class AuthenticationKeyChainTest {
     Context context;
@@ -42,11 +41,7 @@ public class AuthenticationKeyChainTest {
     BLSPublicKey operatorKey;
     BLSSecretKey operatorSecret;
     static {
-        try {
-            System.loadLibrary(JNI.LIBRARY_NAME);
-        } catch (UnsatisfiedLinkError x) {
-            fail(x.getMessage());
-        }
+        BLSJniLibrary.init();
     }
 
     @Before
@@ -71,25 +66,25 @@ public class AuthenticationKeyChainTest {
 
         ownerKeyMaster = owner.getWatchingKey();//(ChildNumber.ZERO);
         ownerKey = HDKeyDerivation.deriveChildKey(ownerKeyMaster, ChildNumber.ZERO);
-        ownerKeyId = new KeyId(ownerKey.getPubKeyHash());
+        ownerKeyId = KeyId.fromBytes(ownerKey.getPubKeyHash());
 
         votingKeyMaster = voting.getWatchingKey();//(ChildNumber.ZERO);
         votingKey = HDKeyDerivation.deriveChildKey(votingKeyMaster, ChildNumber.ZERO);
-        votingKeyId = new KeyId(votingKey.getPubKeyHash());
+        votingKeyId = KeyId.fromBytes(votingKey.getPubKeyHash());
 
         buKeyMaster = bu.getWatchingKey();//(ChildNumber.ZERO);
         buKey = HDKeyDerivation.deriveChildKey(buKeyMaster, ChildNumber.ZERO);
-        buKeyId = new KeyId(buKey.getPubKeyHash());
+        buKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
 
-        blsExtendedPrivateKey = ExtendedPrivateKey.FromSeed(seed.getSeedBytes(), seed.getSeedBytes().length);
+        blsExtendedPrivateKey = ExtendedPrivateKey.fromSeed(seed.getSeedBytes());
 
-        PrivateKey operatorPrivateKey = blsExtendedPrivateKey.PrivateChild(new ChildNumber(9, true).getI())
-                .PrivateChild(new ChildNumber(1, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(0)
-                .GetPrivateKey();
-        operatorKey = new BLSPublicKey(operatorPrivateKey.GetPublicKey());
+        PrivateKey operatorPrivateKey = blsExtendedPrivateKey.privateChild(new ChildNumber(9, true).getI())
+                .privateChild(new ChildNumber(1, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(0)
+                .getPrivateKey();
+        operatorKey = new BLSPublicKey(operatorPrivateKey.getG1Element());
         operatorSecret = new BLSSecretKey(operatorPrivateKey);
     }
 

@@ -481,7 +481,7 @@ public class Peer extends PeerSocketHandler {
         // Announce ourselves. This has to come first to connect to clients beyond v0.3.20.2 which wait to hear
         // from us until they send their version message back.
         PeerAddress address = getAddress();
-        log.info("Announcing to {} as: {}", address == null ? "Peer" : address.toSocketAddress(), versionMessage.subVer);
+        log.info("Announcing to {} with protocol {} as: {}", address == null ? "Peer" : address.toSocketAddress(), versionMessage.clientVersion, versionMessage.subVer);
         sendMessage(versionMessage);
         connectionOpenFuture.set(this);
         // When connecting, the remote peer sends us a version message with various bits of
@@ -540,7 +540,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         // No further communication is possible until version handshake is complete.
-        if (!(m instanceof VersionMessage || m instanceof VersionAck
+        if (!(m instanceof VersionMessage || m instanceof VersionAck || m instanceof SendAddressMessageV2
                 || (versionHandshakeFuture.isDone() && !versionHandshakeFuture.isCancelled())))
             throw new ProtocolException(
                     "Received " + m.getClass().getSimpleName() + " before version handshake is complete.");
@@ -607,7 +607,7 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof SendAddressMessageV2) {
             // We ignore this message, because we don't reply to sendaddrv2 message.
         } else if (m instanceof QuorumRotationInfo) {
-            context.masternodeListManager.processQuorumRotationInfo(this, (QuorumRotationInfo) m, false);
+            context.masternodeListManager.processQuorumRotationInfo(this, (QuorumRotationInfo) m, false, null);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
@@ -656,6 +656,7 @@ public class Peer extends PeerSocketHandler {
         if (vPeerVersionMessage != null)
             throw new ProtocolException("Got two version messages from peer");
         vPeerVersionMessage = peerVersionMessage;
+        peerAddress.protocolVersion = peerVersionMessage.clientVersion;
         // Switch to the new protocol version.
         log.info(toString());
         // bitcoinj is a client mode implementation. That means there's not much point in us talking to other client

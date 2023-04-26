@@ -85,7 +85,10 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     }
 
     public void close() {
-        this.blockChain.removeNewBestBlockListener(this.newBestBlockListener);
+        if (blockChain != null) {
+            blockChain.removeNewBestBlockListener(this.newBestBlockListener);
+        }
+        blockChain = null;
         super.close();
     }
 
@@ -569,8 +572,8 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     public void setBestChainLockBlockMock(StoredBlock bestChainLockBlock) {
         this.bestChainLockBlock = bestChainLockBlock;
-        BLSSecretKey secretKey = new BLSSecretKey(PrivateKey.FromSeed(bestChainLockBlock.getHeader().getHash().getBytes(), 32));
-        BLSSignature signature = secretKey.Sign(bestChainLockBlock.getHeader().getHash());
+        BLSSecretKey secretKey = new BLSSecretKey(PrivateKey.fromSeedBIP32(bestChainLockBlock.getHeader().getHash().getBytes()));
+        BLSSignature signature = secretKey.sign(bestChainLockBlock.getHeader().getHash());
         this.bestChainLock = new ChainLockSignature(bestChainLockBlock.getHeight(), bestChainLockBlock.getHeader().getHash(), signature);
         this.bestChainLockHash = bestChainLockBlock.getHeader().getHash();
         blockChain.handleChainLock(bestChainLockBlock);

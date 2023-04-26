@@ -245,11 +245,12 @@ public class BLSBatchVerifier<SourceId, MessageId>
         HashSet<MessageId> dups = new HashSet<MessageId>();
 
         Iterator<Map.Entry<Sha256Hash, Vector<Pair<MessageId, Message>>>> it = byMessageHash.entrySet().iterator();
-        while(it.hasNext()) {
+        
+        while (it.hasNext()) {
             Map.Entry<Sha256Hash, Vector<Pair<MessageId, Message>>> entry = it.next();
             Sha256Hash msgHash = entry.getKey();
             Vector<Pair<MessageId, Message>> messageIts = entry.getValue();
-            Message msg = messageIts.elementAt(messageIts.size()-1).getSecond();
+            Message msg = messageIts.lastElement().getSecond();
 
             if (dups.add(msg.msgId)) {
                 msgHashes.add(msgHash);

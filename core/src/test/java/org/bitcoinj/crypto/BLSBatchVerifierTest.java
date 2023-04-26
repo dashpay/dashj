@@ -1,7 +1,7 @@
 package org.bitcoinj.crypto;
 
 import org.bitcoinj.core.Sha256Hash;
-import org.dashj.bls.BLS;
+import org.dashj.bls.BLSJniLibrary;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -15,7 +15,7 @@ import static org.junit.Assert.assertTrue;
 public class BLSBatchVerifierTest {
     @BeforeClass
     public static void beforeClass() {
-        BLS.Init();
+        BLSJniLibrary.init();
     }
 
     static class Message {
@@ -36,16 +36,14 @@ public class BLSBatchVerifierTest {
         byte [] msgHashBytes = new byte [32];
         msgHashBytes[31] = (byte)msgHash;
         m.msgHash = Sha256Hash.wrap(msgHashBytes);
-        m.sk = new BLSSecretKey();
-        m.sk.makeNewKey();
-        m.pk = m.sk.GetPublicKey();
-        m.sig = m.sk.Sign(m.msgHash);
+        m.sk = BLSSecretKey.makeNewKey();
+        m.pk = m.sk.getPublicKey();
+        m.sig = m.sk.sign(m.msgHash);
         m.valid = valid;
 
         if (!valid) {
-            BLSSecretKey tmp = new BLSSecretKey();
-            tmp.makeNewKey();
-            m.sig = tmp.Sign(m.msgHash);
+            BLSSecretKey tmp = BLSSecretKey.makeNewKey();
+            m.sig = tmp.sign(m.msgHash);
         }
 
         vec.add(m);
@@ -68,7 +66,7 @@ public class BLSBatchVerifierTest {
 
         batchVerifier.verify();
 
-        assertEquals(expectedBadSources, batchVerifier.badSources);
+        assertEquals("secure: " + secureVerification + "perMessage: " + perMessageFallback, expectedBadSources, batchVerifier.badSources);
 
         if (perMessageFallback) {
             assertEquals(expectedBadMessages, batchVerifier.badMessages);
@@ -84,8 +82,8 @@ public class BLSBatchVerifierTest {
         verify(vec, true, true);
     }
 
-    @Test
-    public void batch_verifier_tests() {
+    public void batchVerifier(boolean legacy) {
+        BLSScheme.setLegacyDefault(legacy);
         ArrayList<Message> msgs = new ArrayList<>();
 
         // distinct messages from distinct sources
@@ -125,5 +123,11 @@ public class BLSBatchVerifierTest {
         // last message invalid from one source
         addMessage(msgs, 1, 7, 1, false);
         verify(msgs);
+    }
+
+    @Test
+    public void batchVerifierTest() {
+        batchVerifier(true);
+        batchVerifier(false);
     }
 }

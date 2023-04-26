@@ -5931,7 +5931,7 @@ public class Wallet extends BaseTaggableObject
 
         if(publicKey != null)
             cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
-        else log.error("Cannot find " + new KeyId(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
+        else log.error("Cannot find " + KeyId.fromBytes(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
 
         mapCreditFundingTxs.put(cftx.getTxId(), cftx);
         return cftx;

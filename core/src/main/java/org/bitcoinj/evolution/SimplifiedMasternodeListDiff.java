@@ -3,17 +3,24 @@ package org.bitcoinj.evolution;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.utils.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
 
 public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
-    private static final String SHORT_NAME = "mnlistdiff";
 
+    private static final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeListDiff.class);
+    private static final String SHORT_NAME = "mnlistdiff";
+    public static final short LEGACY_BLS_VERSION = 1;
+    public static final short BASIC_BLS_VERSION = 2;
+    private short version;
     public Sha256Hash prevBlockHash;
     public Sha256Hash blockHash;
     PartialMerkleTree cbTxMerkleTree;
@@ -25,12 +32,12 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
     protected ArrayList<FinalCommitment> newQuorums;
 
 
-    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload) {
-        super(params, payload, 0);
+    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int protocolVersion) {
+        super(params, payload, 0, protocolVersion);
     }
 
-    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
     }
 
     @Override
@@ -41,7 +48,8 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
     public SimplifiedMasternodeListDiff(NetworkParameters params, Sha256Hash prevBlockHash, Sha256Hash blockHash,
                                         PartialMerkleTree cbTxMerkleTree, Transaction coinBaseTx,
                                         List<SimplifiedMasternodeListEntry> mnList,
-                                        List<FinalCommitment> quorumList) {
+                                        List<FinalCommitment> quorumList,
+                                        short version) {
         super(params);
         this.prevBlockHash = prevBlockHash;
         this.blockHash = blockHash;
@@ -51,6 +59,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         this.mnList = Lists.newArrayList(mnList);
         this.deletedQuorums = Lists.newArrayList();
         this.newQuorums = Lists.newArrayList(quorumList);
+        this.version = version;
     }
 
     @Override
@@ -63,9 +72,16 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
         coinBaseTx = new Transaction(params, payload, cursor);
         cursor += coinBaseTx.getMessageSize();
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+            version = (short) readUint16();
+        } else {
+            version = LEGACY_BLS_VERSION;
+        }
+
+        BLSScheme.setLegacyDefault(version == LEGACY_BLS_VERSION);
 
         int size = (int)readVarInt();
-        deletedMNs = new HashSet<Sha256Hash>(size);
+        deletedMNs = new HashSet<>(size);
         for(int i = 0; i < size; ++i) {
             deletedMNs.add(readHash());
         }
@@ -74,7 +90,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         mnList = new ArrayList<SimplifiedMasternodeListEntry>(size);
         for(int i = 0; i < size; ++i)
         {
-            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor);
+            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, params.getProtocolVersionNum(version == LEGACY_BLS_VERSION ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC));
             cursor += mn.getMessageSize();
             mnList.add(mn);
         }
@@ -107,6 +123,10 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
         cbTxMerkleTree.bitcoinSerializeToStream(stream);
         coinBaseTx.bitcoinSerialize(stream);
+
+        if (version == BASIC_BLS_VERSION || protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+            Utils.uint16ToByteStreamLE(version, stream);
+        }
 
         stream.write(new VarInt(deletedMNs.size()).encode());
         for(Sha256Hash entry : deletedMNs) {
@@ -185,5 +205,9 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
     public long getHeight() {
         return ((CoinbaseTx)getCoinBaseTx().getExtraPayloadObject()).getHeight();
+    }
+
+    public short getVersion() {
+        return version;
     }
 }

@@ -135,7 +135,8 @@ public class DeterministicMasternodeList extends Message {
     }
 
 
-    <T extends ChildMessage> void addUniqueProperty(DeterministicMasternode dmn, T value)
+    @Deprecated
+    <T extends Message> void addUniqueProperty(DeterministicMasternode dmn, T value)
     {
         Sha256Hash hash = value.getHash();
         int i = 1;
@@ -147,7 +148,8 @@ public class DeterministicMasternodeList extends Message {
 
         mnUniquePropertyMap.put(hash, newEntry);
     }
-    <T extends ChildMessage>
+    @Deprecated
+    <T extends Message>
     void deleteUniqueProperty(DeterministicMasternode dmn, T oldValue)
     {
         Sha256Hash oldHash = oldValue.getHash();
@@ -159,7 +161,8 @@ public class DeterministicMasternodeList extends Message {
             mnUniquePropertyMap.put(oldHash, new Pair<Sha256Hash, Integer>(dmn.proRegTxHash, p.getSecond() - 1));
         }
     }
-    <T extends ChildMessage>
+    @Deprecated
+    <T extends Message>
     void updateUniqueProperty(DeterministicMasternode dmn, T oldValue, T newValue)
     {
         if (oldValue == newValue) {

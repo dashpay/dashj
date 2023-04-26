@@ -68,7 +68,7 @@ public class CreditFundingTransaction extends Transaction {
         super(params);
         this.fundingAmount = fundingAmount;
         this.creditBurnPublicKey = creditBurnKey;
-        this.creditBurnPublicKeyId = new KeyId(creditBurnPublicKey.getPubKeyHash());
+        this.creditBurnPublicKeyId = KeyId.fromBytes(creditBurnPublicKey.getPubKeyHash());
         this.creditBurnIdentityIdentifier = Sha256Hash.ZERO_HASH;
         if (creditBurnKey instanceof DeterministicKey) {
             this.usedDerivationPathIndex = ((DeterministicKey)creditBurnKey).getChildNumber().num();
@@ -182,7 +182,7 @@ public class CreditFundingTransaction extends Transaction {
         if(creditBurnPublicKeyId == null || creditBurnPublicKeyId.equals(KeyId.KEYID_ZERO)) {
             byte [] opReturnBytes = lockedOutput.getScriptPubKey().getChunks().get(1).data;
             if(opReturnBytes.length == 20)
-                creditBurnPublicKeyId = new KeyId(opReturnBytes);
+                creditBurnPublicKeyId = KeyId.fromBytes(opReturnBytes);
         }
         return creditBurnPublicKeyId;
     }

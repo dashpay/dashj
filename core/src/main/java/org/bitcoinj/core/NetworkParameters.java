@@ -17,10 +17,8 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.*;
 import org.bitcoinj.script.*;
@@ -125,8 +123,11 @@ public abstract class NetworkParameters {
     /** Used to check for DIP0008 upgrade */
     protected int DIP0008BlockHeight;
 
-    /** Used to check for DIP0008 upgrade */
+    /** Used to check for DIP0024 upgrade */
     protected int DIP0024BlockHeight;
+
+    /** Used to check for v19 upgrade */
+    protected int v19BlockHeight = Integer.MAX_VALUE;
 
     protected boolean isDIP24Only = false;
 
@@ -668,7 +669,15 @@ public abstract class NetworkParameters {
         DMN_LIST(70214),
         CORE17(70219),
         ISDLOCK(70220),
-        CURRENT(70220);
+        BLS_LEGACY(70220),  // used internally by DashJ only
+        BLS_BASIC(70225),   // used internally by DashJ only
+        GOVSCRIPT(70221),
+        ADDRV2(70223),
+        COINJOIN_SU(70224),
+        BLS_SCHEME(70225),
+        COINJOIN_PROTX_HASH(70226),
+        DMN_TYPE(70227),
+        CURRENT(70227);
 
         private final int bitcoinProtocol;
 
@@ -801,8 +810,31 @@ public abstract class NetworkParameters {
         DIP0024BlockHeight = height;
     }
 
+    public boolean isV19Active(StoredBlock block) {
+        return block.getHeight() >= v19BlockHeight;
+    }
+
+    public boolean isV19Active(int height) {
+        return height >= v19BlockHeight;
+    }
+
+    public void setV19Active(int height) {
+        System.out.println("v19 is now active");
+        v19BlockHeight = height;
+    }
+
+    @Deprecated
     public boolean isDIP24Only() {
         return isDIP24Only;
+    }
+
+    protected int basicBLSSchemeActivationHeight = Integer.MAX_VALUE;
+    public boolean isBasicBLSSchemeActive(int height) {
+        return height >= basicBLSSchemeActivationHeight;
+    }
+    @VisibleForTesting
+    public void setBasicBLSSchemeActivationHeight(int basicBLSSchemeActivationHeight) {
+        this.basicBLSSchemeActivationHeight = basicBLSSchemeActivationHeight;
     }
 
     public int getBIP65Height() {
