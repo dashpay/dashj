@@ -218,13 +218,13 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash);
             if (baseMNList == null)
-                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false);
+                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false, false);
             SimplifiedMasternodeList newMNListAtHMinus3C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C());
             mnListsCache.put(newMNListAtHMinus3C.getBlockHash(), newMNListAtHMinus3C);
 
             baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinus2C().prevBlockHash);
             if (baseMNList == null)
-                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false);
+                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false, false);
             SimplifiedMasternodeList newMNListAtHMinus2C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C());
             mnListsCache.put(newMNListAtHMinus2C.getBlockHash(), newMNListAtHMinus2C);
 
@@ -233,7 +233,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             SimplifiedMasternodeList newMNListAtH = mnListAtH.applyDiff(quorumRotationInfo.getMnListDiffAtH());
             baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash);
             if (baseMNList == null)
-                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false);
+                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false, false);
             StoredBlock prevBlockHMinusC = chain.getBlockStore().get(quorumRotationInfo.getMnListDiffAtHMinusC().prevBlockHash);
 
             if (baseMNList == null) {
@@ -1315,10 +1315,14 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 log.info("mnList = {} vs qrinfo = {}", mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
                 log.info("qrinfo {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
                 log.info("lastRequest: {} -> {}", lastRequest.request.getBaseBlockHashes(), lastRequest.request.getBlockRequestHash());
-                failedAttempts++;
-                log.info("failed attempts {}", failedAttempts);
-                if (failedAttempts > MAX_ATTEMPTS)
-                    resetMNList(true);
+                if (x.requireReset && x.merkleRootMismatch) {
+                    resetMNList();
+                } else {
+                    incrementFailedAttempts();
+                    log.info("failed attempts {}", getFailedAttempts());
+                    if (reachedMaxFailedAttempts())
+                        resetMNList(true);
+                }
             }
         } catch (VerificationException x) {
             //request this block again and close this peer

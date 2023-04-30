@@ -124,7 +124,7 @@ public class SimplifiedQuorumList extends Message {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
             if(!diff.prevBlockHash.equals(blockHash))
                 throw new MasternodeListDiffException("The mnlistdiff does not connect to this quorum.  height: " +
-                        height + " vs " + cbtx.getHeight(), false, false, height == cbtx.getHeight());
+                        height + " vs " + cbtx.getHeight(), false, false, height == cbtx.getHeight(), false);
 
             SimplifiedQuorumList result = new SimplifiedQuorumList(this);
             result.blockHash = diff.blockHash;
@@ -248,7 +248,7 @@ public class SimplifiedQuorumList extends Message {
 
 
     public boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff,
-                          SimplifiedQuorumList prevList, SimplifiedMasternodeList mnList) throws VerificationException {
+                          SimplifiedQuorumList prevList, SimplifiedMasternodeList mnList) throws MasternodeListDiffException {
         lock.lock();
 
         try {
@@ -280,7 +280,7 @@ public class SimplifiedQuorumList extends Message {
             if (!cbtx.getMerkleRootQuorums().isZero() &&
                     !commitmentHashes.isEmpty() &&
                     !cbtx.getMerkleRootQuorums().equals(calculateMerkleRoot(commitmentHashes)))
-                throw new VerificationException("MerkleRoot of quorum list does not match coinbaseTx - " + commitmentHashes.size());
+                throw new MasternodeListDiffException("MerkleRoot of quorum list does not match coinbaseTx - " + commitmentHashes.size(), true, false, false, true);
 
             return true;
         } finally {

@@ -135,7 +135,7 @@ public class SimplifiedMasternodeList extends Message {
         CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
         if(!diff.prevBlockHash.equals(blockHash) && !(diff.prevBlockHash.isZero() && blockHash.equals(params.getGenesisBlock().getHash())))
             throw new MasternodeListDiffException("The mnlistdiff does not connect to this list.  height: " +
-                    height + " -> " + cbtx.getHeight(), false, false, height == cbtx.getHeight());
+                    height + " -> " + cbtx.getHeight(), false, false, height == cbtx.getHeight(), false);
 
         lock.lock();
         try {
@@ -233,7 +233,7 @@ public class SimplifiedMasternodeList extends Message {
     }
 
     public
-    boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff, SimplifiedMasternodeList prevList) throws VerificationException {
+    boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff, SimplifiedMasternodeList prevList) throws MasternodeListDiffException {
         //check mnListMerkleRoot
 
         if(!(coinbaseTx.getExtraPayloadObject() instanceof CoinbaseTx))
@@ -269,7 +269,7 @@ public class SimplifiedMasternodeList extends Message {
                 return true;
 
             if (!cbtx.merkleRootMasternodeList.equals(calculateMerkleRoot(smnlHashes)))
-                throw new VerificationException("MerkleRoot of masternode list does not match coinbaseTx");
+                throw new MasternodeListDiffException("MerkleRoot of masternode list does not match coinbaseTx", true, false, false, true);
             return true;
         } finally {
             lock.unlock();
