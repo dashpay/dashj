@@ -52,6 +52,7 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -77,7 +78,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public static int MAX_CACHE_SIZE = 10;
     public static int MIN_CACHE_SIZE = 1;
-    private final ExecutorService threadPool = Executors.newFixedThreadPool(1, new ContextPropagatingThreadFactory("process-qrinfo"));
+    private ExecutorService threadPool = Executors.newFixedThreadPool(1, new ContextPropagatingThreadFactory("process-qrinfo"));
 
     public List<Quorum> getAllQuorums(LLMQParameters.LLMQType llmqType) {
         ArrayList<Quorum> list = Lists.newArrayList();
@@ -341,19 +342,23 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public void processQuorumRotationInfo(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap, @Nullable SettableFuture<Boolean> opComplete) {
 
         // process qrinfo asynchronously
-        threadPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
-                processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
-                setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
-                unCache();
-                if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
-                    save();
-                if (opComplete != null)
-                    opComplete.set(true);
-            }
-        });
+        try {
+            threadPool.execute(new Runnable() {
+                @Override
+                public void run() {
+                    quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
+                    processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
+                    setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
+                    unCache();
+                    if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
+                        save();
+                    if (opComplete != null)
+                        opComplete.set(true);
+                }
+            });
+        } catch (RejectedExecutionException x) {
+            x.printStackTrace();
+        }
     }
 
     // TODO: does this need an argument for LLQMType?
@@ -407,6 +412,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             //if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
                 quorumRotationState.addEventListeners(blockChain, peerGroup);
             //}
+        }
+        if (threadPool.isShutdown()) {
+            threadPool = Executors.newFixedThreadPool(1, new ContextPropagatingThreadFactory("process-qrinfo"));
         }
     }
 
