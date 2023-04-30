@@ -27,7 +27,7 @@ dependencies {
 
     // Dash Specific
     implementation 'de.sfuhrm:saphir-hash-core:3.0.10'
-    implementation 'org.dashj:dashj-bls:1.2.5-SNAPSHOT'
+    implementation 'org.dashj:dashj-bls:1.0.0'
     implementation 'com.lambdaworks:scrypt:1.4.0'
     implementation 'org.json:json:20210307'
 
