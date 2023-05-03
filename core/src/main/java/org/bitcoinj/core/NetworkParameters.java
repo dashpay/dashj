@@ -781,6 +781,8 @@ public abstract class NetworkParameters {
         return llmqForInstantSend;
     }
 
+    public LLMQParameters.LLMQType getLlmqPlatform() { return llmqTypePlatform; }
+
     public LLMQParameters.LLMQType getLlmqDIP0024InstantSend() {
         return llmqTypeDIP0024InstantSend;
     }

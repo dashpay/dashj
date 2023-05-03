@@ -441,7 +441,7 @@ public class SimplifiedMasternodeList extends Message {
         return entry.isValid;
     }
 
-    ArrayList<Pair<Sha256Hash, Masternode>> calculateScores(final Sha256Hash modifier)
+    ArrayList<Pair<Sha256Hash, Masternode>> calculateScores(final Sha256Hash modifier, boolean hpmnOnly)
     {
         final ArrayList<Pair<Sha256Hash, Masternode>> scores = new ArrayList<Pair<Sha256Hash, Masternode>>(getAllMNsCount());
 
@@ -452,6 +452,10 @@ public class SimplifiedMasternodeList extends Message {
                     // we only take confirmed MNs into account to avoid hash grinding on the ProRegTxHash to sneak MNs into a
                     // future quorums
                     return;
+                }
+                if (hpmnOnly) {
+                    if (mn.type != MasternodeType.HIGHPERFORMANCE.index)
+                        return;
                 }
 
                 // calculate sha256(sha256(proTxHash, confirmedHash), modifier) per MN
@@ -486,7 +490,7 @@ public class SimplifiedMasternodeList extends Message {
         }
     }
 
-    public int getMasternodeRank(Sha256Hash proTxHash, Sha256Hash quorumModifierHash)
+    public int getMasternodeRank(Sha256Hash proTxHash, Sha256Hash quorumModifierHash, boolean hpmnOnly)
     {
         int rank = -1;
         //Added to speed things up
@@ -498,7 +502,7 @@ public class SimplifiedMasternodeList extends Message {
         lock.lock();
         try {
 
-            ArrayList<Pair<Sha256Hash, Masternode>> vecMasternodeScores = calculateScores(quorumModifierHash);
+            ArrayList<Pair<Sha256Hash, Masternode>> vecMasternodeScores = calculateScores(quorumModifierHash, hpmnOnly);
             if (vecMasternodeScores.isEmpty())
                 return -1;
 
@@ -530,9 +534,13 @@ public class SimplifiedMasternodeList extends Message {
         return blockHash;
     }
 
-    ArrayList<Masternode> calculateQuorum(int maxSize, Sha256Hash modifier)
+    ArrayList<Masternode> calculateQuorum(int maxSize, Sha256Hash modifier) {
+        return calculateQuorum(maxSize, modifier, false);
+    }
+
+    ArrayList<Masternode> calculateQuorum(int maxSize, Sha256Hash modifier, boolean hpmnOnly)
     {
-        ArrayList<Pair<Sha256Hash, Masternode>> scores = calculateScores(modifier);
+        ArrayList<Pair<Sha256Hash, Masternode>> scores = calculateScores(modifier, hpmnOnly);
 
         // sort is descending order
         Collections.sort(scores, Collections.reverseOrder(new CompareScoreMN()));

@@ -190,7 +190,8 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         SimplifiedMasternodeList allMns = getListForBlock(blockHash);
         if (allMns != null) {
             Sha256Hash modifier = LLMQUtils.buildLLMQBlockHash(llmqType, blockHash);
-            return allMns.calculateQuorum(llmqParameters.getSize(), modifier);
+            boolean hmpnOnly = (params.getLlmqPlatform() == llmqType) && params.isV19Active(allMns.getStoredBlock());
+            return allMns.calculateQuorum(llmqParameters.getSize(), modifier, hmpnOnly);
         }
         return null;
     }
