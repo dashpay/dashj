@@ -78,6 +78,12 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("two-islands")) {
             params = TwoIslandsDevNetParams.get();
             filePrefix = "forwarding-service-two-islands";
+        } else if (args.length > 1 && args[1].equals("screwdriver")) {
+            params = ScrewDriverDevNetParams.get();
+            filePrefix = "forwarding-service-screwdriver";
+        } else if (args.length > 1 && args[1].equals("absinthe")) {
+            params = AbsintheDevNetParams.get();
+            filePrefix = "forwarding-service-absinthe";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
@@ -115,6 +121,7 @@ public class ForwardingService {
                 kit.peerGroup().setMaxConnections(6); // for small devnets
                 kit.peerGroup().setUseLocalhostPeerWhenPossible(false);
                 kit.peerGroup().setDropPeersAfterBroadcast(params.getDropPeersAfterBroadcast());
+                kit.wallet().getContext().setDebugMode(true);
             }
         };
         kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
