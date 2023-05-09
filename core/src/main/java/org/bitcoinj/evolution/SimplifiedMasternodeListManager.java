@@ -348,7 +348,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 public void run() {
                     quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
                     processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
-                    setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
                     unCache();
                     if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
                         save();
@@ -624,7 +623,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 public void processQuorum(FinalCommitment finalCommitment) {
                     if (!params.isDIP0024Active(height) && finalCommitment.getLlmqType() == params.getLlmqDIP0024InstantSend()) {
                         params.setDIP0024Active(height);
-                        setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
                     }
                     if (peerGroup != null && params.isDIP0024Active(height)) {
                         peerGroup.setMinRequiredProtocolVersion(params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));
@@ -639,6 +637,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         if (!params.isDIP0024Active(height)) {
             if (mnlistdiff.getVersion() == BASIC_BLS_VERSION) {
                 params.setV19Active(height);
+                setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
             }
         }
     }
