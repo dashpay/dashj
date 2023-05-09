@@ -5,6 +5,8 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -18,6 +20,7 @@ import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedMasternodeList extends Message {
 
+    private final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeList.class);
     private ReentrantLock lock = Threading.lock("SimplifiedMasternodeList");
 
     private short version;
@@ -117,7 +120,15 @@ public class SimplifiedMasternodeList extends Message {
         }
         stream.write(new VarInt(0).encode());
         ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
-        storedBlock.serializeCompact(buffer);
+        try {
+            storedBlock.serializeCompact(buffer);
+        } catch (IllegalStateException x) {
+            // the chainwork is too large
+            log.info("chain work is too large on {}, work = {}, size = {} bits (max = 96)", storedBlock,
+                    storedBlock.getChainWork().toString(16), storedBlock.getChainWork().bitLength());
+            storedBlock = new StoredBlock(storedBlock.getHeader(), BigInteger.ZERO, storedBlock.getHeight());
+            storedBlock.serializeCompact(buffer);
+        }
         stream.write(buffer.array());
     }
 
