@@ -305,7 +305,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
                 if (x.requireReset && x.merkleRootMismatch) {
-                    resetMNList();
+                    resetMNList(true);
                 } else {
                     incrementFailedAttempts();
                     log.info("failed attempts {}", getFailedAttempts());

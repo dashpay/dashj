@@ -1316,7 +1316,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 log.info("qrinfo {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
                 log.info("lastRequest: {} -> {}", lastRequest.request.getBaseBlockHashes(), lastRequest.request.getBlockRequestHash());
                 if (x.requireReset && x.merkleRootMismatch) {
-                    resetMNList();
+                    resetMNList(true);
                 } else {
                     incrementFailedAttempts();
                     log.info("failed attempts {}", getFailedAttempts());
