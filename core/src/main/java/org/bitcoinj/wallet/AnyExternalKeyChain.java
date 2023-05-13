@@ -18,6 +18,7 @@ package org.bitcoinj.wallet;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
@@ -37,23 +38,23 @@ public class AnyExternalKeyChain extends AnyDeterministicKeyChain {
     private static final Logger log = LoggerFactory.getLogger(AnyExternalKeyChain.class);
 
     public AnyExternalKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
-        super(seed, null, Script.ScriptType.P2PKH, path, keyFactory, hardenedKeysOnly);
+        super(seed, null, Script.ScriptType.P2PKH, path, keyFactory, hardenedKeysOnly, true);
     }
 
     public AnyExternalKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
-        super(seed, keyCrypter, Script.ScriptType.P2PKH, path, keyFactory, hardenedKeysOnly);
+        super(seed, keyCrypter, Script.ScriptType.P2PKH, path, keyFactory, hardenedKeysOnly, true);
     }
 
     public AnyExternalKeyChain(IDeterministicKey key, ImmutableList<ChildNumber> accountPath, boolean hardenedKeysOnly) {
-        super(key, false, true, Script.ScriptType.P2PKH, accountPath, hardenedKeysOnly);
+        super(key, false, true, Script.ScriptType.P2PKH, accountPath, hardenedKeysOnly, true);
     }
 
     public AnyExternalKeyChain(IDeterministicKey key, boolean isFollowing, boolean hardenedKeysOnly) {
-        super(key, isFollowing, true, Script.ScriptType.P2PKH, hardenedKeysOnly);
+        super(key, isFollowing, true, Script.ScriptType.P2PKH, hardenedKeysOnly, true);
     }
 
     protected AnyExternalKeyChain(KeyCrypter crypter, KeyParameter aesKey, AnyExternalKeyChain chain, boolean hardenedKeysOnly) {
-        super(crypter, aesKey, chain, hardenedKeysOnly);
+        super(crypter, aesKey, chain, hardenedKeysOnly, true);
     }
 
     /** {@inheritDoc} */
@@ -83,7 +84,11 @@ public class AnyExternalKeyChain extends AnyDeterministicKeyChain {
     public void maybeLookAhead() {
         lock.lock();
         try {
-            List<IDeterministicKey> keys = maybeLookAhead(getKeyByPath(getAccountPath()), issuedExternalKeys);
+            IDeterministicKey parent = getKeyByPath(getAccountPath());
+            List<IDeterministicKey> keys = Lists.newArrayList();
+            if (!hardenedKeysOnly || parent.hasPrivKey()) {
+                keys = maybeLookAhead(getKeyByPath(getAccountPath()), issuedExternalKeys);
+            }
             if (keys.isEmpty())
                 return;
             keyLookaheadEpoch++;
@@ -121,8 +126,9 @@ public class AnyExternalKeyChain extends AnyDeterministicKeyChain {
         List<IDeterministicKey> result  = new ArrayList<IDeterministicKey>(needed);
         final Stopwatch watch = Stopwatch.createStarted();
         int nextChild = numChildren;
+        int hardenedBit = hardenedKeysOnly ? ChildNumber.HARDENED_BIT : 0;
         for (int i = 0; i < needed; i++) {
-            IDeterministicKey key = parent.deriveThisOrNextChildKey(nextChild);
+            IDeterministicKey key = parent.deriveThisOrNextChildKey(nextChild | hardenedBit);
             key = key.dropPrivateBytes();
             hierarchy.putKey(key);
             result.add(key);

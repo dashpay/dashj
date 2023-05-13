@@ -672,9 +672,9 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         buffer.get(data);
         checkArgument(!buffer.hasRemaining(), "Found unexpected data in key");
         if (pub) {
-            return new Ed25519DeterministicKey(path, chainCode, new Ed25519PublicKeyParameters(data, 0), parent, depth, parentFingerprint);
+            return new Ed25519DeterministicKey(path, chainCode, new Ed25519PublicKeyParameters(data, 1), parent, depth, parentFingerprint);
         } else {
-            return new Ed25519DeterministicKey(path, chainCode, new Ed25519PrivateKeyParameters(data, 0), parent, depth, parentFingerprint);
+            return new Ed25519DeterministicKey(path, chainCode, new Ed25519PrivateKeyParameters(data, 1), parent, depth, parentFingerprint);
         }
     }
 
@@ -702,9 +702,9 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         buffer.get(data);
         checkArgument(!buffer.hasRemaining(), "Found unexpected data in key");
         if (pub) {
-            return new Ed25519DeterministicKey(path, chainCode, new Ed25519PublicKeyParameters(data, 0), null, depth, parentFingerprint);
+            return new Ed25519DeterministicKey(path, chainCode, new Ed25519PublicKeyParameters(data, 1), null, depth, parentFingerprint);
         } else {
-            return new Ed25519DeterministicKey(path, chainCode, new Ed25519PrivateKeyParameters(data, 0), null, depth, parentFingerprint);
+            return new Ed25519DeterministicKey(path, chainCode, new Ed25519PrivateKeyParameters(data, 1), null, depth, parentFingerprint);
         }
     }
 

@@ -57,6 +57,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -415,10 +416,19 @@ public class AllDeterministicKeyChainTest {
         chain.setLookaheadSize(10);
         chain.maybeLookAhead();
 
-        assertEquals(key1.getPubKeyObject(), chain.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS).getPubKeyObject());
-        assertEquals(key2.getPubKeyObject(), chain.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS).getPubKeyObject());
+        if (key1.getKeyFactory().getKeyType() == KeyType.EdDSA) {
+            assertArrayEquals(key1.getPubKey(), chain.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS).getPubKey());
+            assertArrayEquals(key2.getPubKey(), chain.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS).getPubKey());
+        } else {
+            assertEquals(key1.getPubKeyObject(), chain.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS).getPubKeyObject());
+            assertEquals(key2.getPubKeyObject(), chain.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS).getPubKeyObject());
+        }
         final IDeterministicKey key = chain.getKey(KeyChain.KeyPurpose.CHANGE);
-        assertEquals(key3.getPubKeyObject(), key.getPubKeyObject());
+        if (key1.getKeyFactory().getKeyType() == KeyType.EdDSA) {
+            assertArrayEquals(key3.getPubKey(), key.getPubKey());
+        } else {
+            assertEquals(key3.getPubKeyObject(), key.getPubKeyObject());
+        }
         try {
             // We can signHash with a key from a spending chain.
             key.signHash(Sha256Hash.ZERO_HASH);
@@ -430,7 +440,11 @@ public class AllDeterministicKeyChainTest {
         chain = AnyDeterministicKeyChain.fromProtobuf(serialization, null, chain.getKeyFactory(), hardenedOnly).get(0);
         assertEquals(Lists.newArrayList(accountPath.get(accountPath.size()-1)), chain.getAccountPath());
         final IDeterministicKey rekey4 = chain.getKey(KeyChain.KeyPurpose.CHANGE);
-        assertEquals(key4.getPubKeyObject(), rekey4.getPubKeyObject());
+        if (key1.getKeyFactory().getKeyType() == KeyType.EdDSA) {
+            assertArrayEquals(key4.getPubKey(), rekey4.getPubKey());
+        } else {
+            assertEquals(key4.getPubKeyObject(), rekey4.getPubKeyObject());
+        }
     }
 
     @Test
@@ -522,10 +536,6 @@ public class AllDeterministicKeyChainTest {
     public void xpubsMatchAfterEncryption() {
         NetworkParameters params = MainNetParams.get();
 
-        //String expected = Utils.HEX.encode(Base58.decode("7tqAshzJAHbxH9X3n8ZUqVoqBy3SAh8WZ4Z5R6YYZoFLiMQhDt7Jih32X9kgXVNb3GfK2tqxCxkn5wbqqg1mXTJex7QHETspCCHvehLc2dNqe6st3hLFTf7gLs9wSMRhm2SQ"));
-        //String actual = Utils.HEX.encode(Base58.decode("7tqAshoqQcuDTuku7oPuBfXoYDYfYhwvqw6BVwdyPg7HEeBBMTnx6wLNUv1cztFdvH97LBVJSUTqoKqQkzy23hK5fvs1z4T3YWGqMi3ypeAZiRezVLjFwWed7nagaijPmHTV"));
-        //System.out.println(expected);
-        //System.out.println(actual);
         String expectedXpub = watchingXpub;
 
         // Check the BIP32 keychain

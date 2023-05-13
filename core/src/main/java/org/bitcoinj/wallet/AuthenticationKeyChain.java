@@ -38,6 +38,7 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import javax.annotation.Nullable;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -356,12 +357,12 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
         return issuedExternalKeys;
     }
 
-    public IDeterministicKey freshAuthenticationKey(boolean isHardened) {
-        return getKey(KeyChain.KeyPurpose.AUTHENTICATION);
+    public IDeterministicKey freshAuthenticationKey() {
+        return getKeys(KeyChain.KeyPurpose.AUTHENTICATION, 1).get(0);
     }
 
-    public IDeterministicKey currentAuthenticationKey(boolean isHardened) {
-        return getKey(currentIndex, isHardened);
+    public IDeterministicKey currentAuthenticationKey() {
+        return getKey(issuedExternalKeys, hardenedKeysOnly);
     }
 
     public IDeterministicKey getKeyByPubKeyHash(byte [] hash160) {
@@ -389,7 +390,8 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
         DeterministicSeed decSeed = getSeed().decrypt(getKeyCrypter(), passphrase, aesKey);
         AuthenticationKeyChain chain = new AuthenticationKeyChain(decSeed, getAccountPath(), type, hardenedKeysOnly);
         // Now double check that the keys match to catch the case where the key is wrong but padding didn't catch it.
-        if (!chain.getWatchingKey().getPubKeyObject().equals(getWatchingKey().getPubKeyObject()))
+        if (!chain.getWatchingKey().getPubKeyObject().equals(getWatchingKey().getPubKeyObject()) &&
+            !Arrays.equals(chain.getWatchingKey().getPubKey(), getWatchingKey().getPubKey()))
             throw new KeyCrypterException.PublicPrivateMismatch("Provided AES key is wrong");
         chain.lookaheadSize = lookaheadSize;
         // Now copy the (pubkey only) leaf keys across to avoid rederiving them. The private key bytes are missing

@@ -132,6 +132,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
     private final ImmutableList<ChildNumber> accountPath;
     protected final KeyFactory keyFactory;
     protected final boolean hardenedKeysOnly;
+    protected boolean externalKeysOnly;
 
     // Paths through the key tree. External keys are ones that are communicated to other parties. Internal keys are
     // keys created for change addresses, coinbases, mixing, etc - anything that isn't communicated. The distinction
@@ -364,16 +365,16 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
             if (random != null)
                 // Default passphrase to "" if not specified
                 return new AnyDeterministicKeyChain(new DeterministicSeed(random, bits, getPassphrase()), null,
-                        outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
+                        outputScriptType, accountPath, keyFactory, hardenedKeysOnly, false);
             else if (entropy != null)
                 return new AnyDeterministicKeyChain(new DeterministicSeed(entropy, getPassphrase(), creationTimeSecs),
-                        null, outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
+                        null, outputScriptType, accountPath, keyFactory, hardenedKeysOnly, false);
             else if (seed != null)
-                return new AnyDeterministicKeyChain(seed, null, outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
+                return new AnyDeterministicKeyChain(seed, null, outputScriptType, accountPath, keyFactory, hardenedKeysOnly, false);
             else if (watchingKey != null)
-                return new AnyDeterministicKeyChain(watchingKey, isFollowing, true, outputScriptType, hardenedKeysOnly);
+                return new AnyDeterministicKeyChain(watchingKey, isFollowing, true, outputScriptType, hardenedKeysOnly, false);
             else if (spendingKey != null)
-                return new AnyDeterministicKeyChain(spendingKey, false, false, outputScriptType, hardenedKeysOnly);
+                return new AnyDeterministicKeyChain(spendingKey, false, false, outputScriptType, hardenedKeysOnly, false);
             else
                 throw new IllegalStateException();
         }
@@ -403,8 +404,9 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
      * </p>
      */
     public AnyDeterministicKeyChain(IDeterministicKey key, boolean isFollowing, boolean isWatching,
-                                    Script.ScriptType outputScriptType, boolean hardenedKeysOnly) {
+                                    Script.ScriptType outputScriptType, boolean hardenedKeysOnly, boolean externalKeysOnly) {
         this.hardenedKeysOnly = hardenedKeysOnly;
+        this.externalKeysOnly = externalKeysOnly;
         if (isWatching)
             checkArgument(key.isPubKeyOnly(), "Private subtrees not currently supported for watching keys: if you got this key from DKC.getWatchingKey() then use .dropPrivate().dropParent() on it first.");
         else
@@ -423,8 +425,10 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
     }
 
     public AnyDeterministicKeyChain(IDeterministicKey key, boolean isFollowing, boolean isWatching,
-                                    Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, boolean hardenedKeysOnly) {
+                                    Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath,
+                                    boolean hardenedKeysOnly, boolean externalKeysOnly) {
         this.hardenedKeysOnly = hardenedKeysOnly;
+        this.externalKeysOnly = externalKeysOnly;
         if (isWatching)
             checkArgument(key.isPubKeyOnly(), "Private subtrees not currently supported for watching keys: if you got this key from DKC.getWatchingKey() then use .dropPrivate().dropParent() on it first.");
         else
@@ -454,8 +458,10 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
      * </p>
      */
     protected AnyDeterministicKeyChain(DeterministicSeed seed, @Nullable KeyCrypter crypter,
-                                       Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) {
+                                       Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath,
+                                       KeyFactory keyFactory, boolean hardenedKeysOnly, boolean externalKeysOnly) {
         this.hardenedKeysOnly = hardenedKeysOnly;
+        this.externalKeysOnly = externalKeysOnly;
         checkArgument(outputScriptType == null || outputScriptType == Script.ScriptType.P2PKH,
                  "Only P2PKH is allowed.");
         this.outputScriptType = outputScriptType != null ? outputScriptType : Script.ScriptType.P2PKH;
@@ -484,8 +490,10 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
      *
      * See also {@link #makeKeyChainFromSeed(DeterministicSeed, ImmutableList, Script.ScriptType)}
      */
-    protected AnyDeterministicKeyChain(KeyCrypter crypter, KeyParameter aesKey, AnyDeterministicKeyChain chain, boolean hardenedKeysOnly) {
+    protected AnyDeterministicKeyChain(KeyCrypter crypter, KeyParameter aesKey, AnyDeterministicKeyChain chain,
+                                       boolean hardenedKeysOnly, boolean externalKeysOnly) {
         this.hardenedKeysOnly = hardenedKeysOnly;
+        this.externalKeysOnly = externalKeysOnly;
         // Can't encrypt a watching chain.
         checkNotNull(chain.rootKey);
         checkNotNull(chain.seed);
@@ -522,7 +530,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         // anyway so there's nothing to encrypt.
         for (IKey eckey : chain.basicKeyChain.getKeys()) {
             IDeterministicKey key = (IDeterministicKey) eckey;
-            if (key.getPath().size() != getAccountPath().size() + 2) continue; // Not a leaf key.
+            if (key.getPath().size() != getAccountPath().size() + (externalKeysOnly ? 1 : 2)) continue; // Not a leaf key.
             IDeterministicKey parent = hierarchy.get(checkNotNull(key.getParent()).getPath(), false, false);
             // Clone the key to the new encrypted hierarchy.
             key = keyFactory.fromChildAndParent(key.dropPrivateBytes(), parent);
@@ -1202,7 +1210,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
 
     @Override
     public AnyDeterministicKeyChain toEncrypted(KeyCrypter keyCrypter, KeyParameter aesKey) {
-        return new AnyDeterministicKeyChain(keyCrypter, aesKey, this, hardenedKeysOnly);
+        return new AnyDeterministicKeyChain(keyCrypter, aesKey, this, hardenedKeysOnly, false);
     }
 
     @Override
@@ -1224,7 +1232,8 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         DeterministicSeed decSeed = seed.decrypt(getKeyCrypter(), passphrase, aesKey);
         AnyDeterministicKeyChain chain = makeKeyChainFromSeed(decSeed, getAccountPath(), outputScriptType);
         // Now double check that the keys match to catch the case where the key is wrong but padding didn't catch it.
-        if (!chain.getWatchingKey().getPubKeyObject().equals(getWatchingKey().getPubKeyObject()))
+        if (!chain.getWatchingKey().getPubKeyObject().equals(getWatchingKey().getPubKeyObject()) &&
+                !Arrays.equals(chain.getWatchingKey().getPubKey(), getWatchingKey().getPubKey()))
             throw new KeyCrypterException.PublicPrivateMismatch("Provided AES key is wrong");
         chain.lookaheadSize = lookaheadSize;
         // Now copy the (pubkey only) leaf keys across to avoid rederiving them. The private key bytes are missing
@@ -1254,7 +1263,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
      */
     protected AnyDeterministicKeyChain makeKeyChainFromSeed(DeterministicSeed seed, ImmutableList<ChildNumber> accountPath,
                                                             Script.ScriptType outputScriptType) {
-        return new AnyDeterministicKeyChain(seed, null, outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
+        return new AnyDeterministicKeyChain(seed, null, outputScriptType, accountPath, keyFactory, hardenedKeysOnly, false);
     }
 
     @Override
