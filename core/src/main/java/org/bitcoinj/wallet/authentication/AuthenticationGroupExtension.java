@@ -22,6 +22,7 @@ import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.BloomFilter;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.NetworkParameters;
@@ -175,6 +176,17 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             if (getKeyChain(type) == null) {
                 addEncryptedKeyChain(seed, getDefaultPath(params, type), keyParameter, type);
             }
+        }
+    }
+
+    public void addNewKey(AuthenticationKeyChain.KeyChainType type, IDeterministicKey currentKey) {
+
+        keyChainGroupLock.lock();
+        try {
+            keyChainGroup.addNewKey(type, currentKey);
+            saveWallet();
+        } finally {
+            keyChainGroupLock.unlock();
         }
     }
 

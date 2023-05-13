@@ -429,4 +429,21 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
             helper.addValue("following");
         return helper.toString();
     }
+
+    public boolean addNewKey(IDeterministicKey key) {
+        checkArgument(hasKey(key.getParent()));
+        if (!hasKey(key)) {
+            basicKeyChain.importKey(key);
+            hierarchy.putKey(key);
+            issuedExternalKeys += 1;
+            return true;
+        } else if (issuedExternalKeys <= key.getChildNumber().num()) {
+            // some keys may have been generated but not considered issued
+            issuedExternalKeys += 1;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
 }
