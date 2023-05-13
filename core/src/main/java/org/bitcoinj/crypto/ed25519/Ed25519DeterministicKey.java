@@ -401,11 +401,6 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
     }
 
     @Override
-    public Object getPubKeyObject() {
-        return priv;
-    }
-
-    @Override
     public Ed25519DeterministicKey decrypt(KeyParameter aesKey) throws KeyCrypterException {
         return (Ed25519DeterministicKey) super.decrypt(aesKey);
     }

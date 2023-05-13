@@ -662,7 +662,7 @@ public class Ed25519Key implements IKey {
 
     @Override
     public Object getPubKeyObject() {
-        return pub;//getPubKeyPoint();
+        return pub;
     }
 
     @Override
