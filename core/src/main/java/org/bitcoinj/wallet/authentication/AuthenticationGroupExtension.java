@@ -17,6 +17,7 @@
 package org.bitcoinj.wallet.authentication;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import org.bitcoinj.core.BlockChain;
@@ -60,6 +61,7 @@ import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletTransaction;
+import org.bitcoinj.wallet.listeners.AuthenticationKeyUsageEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,6 +90,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     private final HashMap<IKey, AuthenticationKeyUsage> keyUsage = Maps.newHashMap();
 
     private final CopyOnWriteArrayList<ListenerRegistration<CreditFundingTransactionEventListener>> creditFundingListeners
+            = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<AuthenticationKeyUsageEventListener>> usageListeners
             = new CopyOnWriteArrayList<>();
 
     public AuthenticationGroupExtension(Wallet wallet) {
@@ -369,7 +373,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
         AuthenticationKeyUsage operatorKeyUsage = getCurrentOperatorKeyUsage(proTxHash);
         if (operatorKeyUsage != null) {
+            log.info("protx revoke: operator key {}", operatorKeyUsage.getKey());
             operatorKeyUsage.setStatus(AuthenticationKeyStatus.REVOKED);
+            queueOnUsageEvent(Lists.newArrayList(operatorKeyUsage));
         }
     }
 
@@ -419,32 +425,42 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         if (platformKey == null) {
             platformKey = platformNodeId != null ? findKeyFromPubKeyHash(Utils.reverseBytes(platformNodeId.getBytes()), Script.ScriptType.P2PKH) : null;
         }
+        List<AuthenticationKeyUsage> updates = Lists.newArrayList();
 
         // voting
         if (votingKey != null) {
+            log.info("protx register: found voting key {}", votingKey);
             AuthenticationKeyUsage votingkeyUsage = AuthenticationKeyUsage.createVoting(votingKey, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(votingKey, votingkeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(voting.getBytes());
+            updates.add(votingkeyUsage);
         }
 
         if (ownerKey != null) {
+            log.info("protx register: found owner key {}", votingKey);
             AuthenticationKeyUsage ownerKeyUsage = AuthenticationKeyUsage.createOwner(ownerKey, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(ownerKey, ownerKeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(owner.getBytes());
+            updates.add(ownerKeyUsage);
         }
 
         if (operatorKey != null) {
+            log.info("protx register: found operator key {}", votingKey);
             boolean legacy = providerRegisterTx.getVersion() == LEGACY_BLS_VERSION;
             AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, legacy, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(operatorKey, operatorKeyUsage);
             keyChainGroup.markPubKeyAsUsed(operatorKey.getPubKey());
+            updates.add(operatorKeyUsage);
         }
 
         if (platformKey != null) {
+            log.info("protx register: found platform node key {}", votingKey);
             AuthenticationKeyUsage platformKeyUsage = AuthenticationKeyUsage.createPlatformNodeId(platformKey, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(platformKey, platformKeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(platformKey.getPubKey());
+            updates.add(platformKeyUsage);
         }
+        queueOnUsageEvent(updates);
     }
 
     private void processUpdateRegistrar(Transaction tx, ProviderUpdateRegistarTx providerUpdateRegistarTx) {
@@ -470,21 +486,27 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             if (address == null)
                 address = previousOperatorKeyUsage.getAddress();
         }
+        List<AuthenticationKeyUsage> updates = Lists.newArrayList();
 
         // voting
         if (votingKey != null) {
+            log.info("protx update register: found voting key {}", votingKey);
             AuthenticationKeyUsage votingkeyUsage = AuthenticationKeyUsage.createVoting(votingKey, tx.getTxId(), address);
             keyUsage.put(votingKey, votingkeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(voting.getBytes());
+            updates.add(votingkeyUsage);
         }
 
         // operator
         if (operatorKey != null) {
+            log.info("protx update register: found operator key {}", votingKey);
             boolean legacy = providerUpdateRegistarTx.getCurrentVersion() == LEGACY_BLS_VERSION;
             AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, legacy, tx.getTxId(), address);
             keyUsage.put(operatorKey, operatorKeyUsage);
             keyChainGroup.markPubKeyAsUsed(operatorKey.getPubKey());
+            updates.add(operatorKeyUsage);
         }
+        queueOnUsageEvent(updates);
     }
 
     @Override
@@ -492,8 +514,12 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         StringBuilder builder = new StringBuilder();
         builder.append(super.toString(includeLookahead, includePrivateKeys, aesKey));
         builder.append("\n").append("Authentication Key Usage").append("\n");
+        NetworkParameters params;
+        if (wallet != null)
+            params = wallet.getParams();
+        else params = Context.get().getParams();
         for (AuthenticationKeyUsage usage : keyUsage.values()) {
-            builder.append(usage.toString(wallet.getParams())).append("\n");
+            builder.append(usage.toString(params)).append("\n");
         }
         return builder.toString();
     }
@@ -791,5 +817,41 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
                 findKeyFromPubKeyHash(providerRegisterTx.getKeyIDVoting().getBytes(), Script.ScriptType.P2PKH) != null ||
                 findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().serialize(false)) != null ||
                 findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().serialize(true)) != null;
+    }
+
+    protected void queueOnUsageEvent(final List<AuthenticationKeyUsage> usage) {
+        for (final ListenerRegistration<AuthenticationKeyUsageEventListener> registration : usageListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onAuthenticationKeyUsageEvent(usage);
+                }
+            });
+        }
+    }
+
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addAuthenticationKeyUsageEventListener(AuthenticationKeyUsageEventListener listener) {
+        addAuthenticationKeyUsageEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addAuthenticationKeyUsageEventListener(Executor executor, AuthenticationKeyUsageEventListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        usageListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeAuthenticationKeyUsageEventListener(AuthenticationKeyUsageEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, usageListeners);
     }
 }
