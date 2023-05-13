@@ -533,6 +533,6 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
 
     protected void saveWallet() {
         if (wallet != null)
-            wallet.saveNow();
+            wallet.saveLater();
     }
 }
