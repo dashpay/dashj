@@ -57,6 +57,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.evolution.SimplifiedMasternodeListDiff.BASIC_BLS_VERSION;
+import static org.bitcoinj.evolution.SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION;
 
 /**
  * This class manages the state of the masternode lists and quorums.  It does so with help from
@@ -313,8 +314,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             processQuorumList(quorumState.getQuorumListAtTip());
 
             unCache();
-            if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= LLMQ_FORMAT_VERSION && quorumState.quorumList.size() > 0)
+            if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() == LLMQ_FORMAT_VERSION && quorumState.quorumList.size() > 0)
                 setFormatVersion(LLMQ_FORMAT_VERSION);
+            if (mnlistdiff.getVersion() == LEGACY_BLS_VERSION)
+                setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
+            else if (mnlistdiff.getVersion() == BASIC_BLS_VERSION)
+                setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
             if (mnlistdiff.hasChanges() || quorumState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
 

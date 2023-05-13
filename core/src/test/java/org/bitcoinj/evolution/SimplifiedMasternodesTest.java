@@ -95,6 +95,7 @@ public class SimplifiedMasternodesTest {
             smle.pubKeyOperator = new BLSLazyPublicKey(sk.getPublicKey());
             smle.keyIdVoting = KeyId.fromBytes(Utils.HEX.decode(String.format("%040x", i)), false);
             smle.isValid = true;
+            smle.version = SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION;
 
             entries.add(smle);
         }
@@ -124,7 +125,8 @@ public class SimplifiedMasternodesTest {
 
         assertArrayEquals(expectedHashes, calculatedHashes.toArray());
 
-        SimplifiedMasternodeList sml = new SimplifiedMasternodeList(PARAMS, entries);
+        SimplifiedMasternodeList sml = new SimplifiedMasternodeList(PARAMS, entries,
+                NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion());
 
         String expectedMerkleRoot = "3b2a4f6be32c13070979910150d6be0ff1890f17b3169d1eabb96b217b6df2d7";
         String calculatedMerkleRoot = sml.calculateMerkleRoot().toString();

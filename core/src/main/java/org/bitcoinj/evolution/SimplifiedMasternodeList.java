@@ -46,17 +46,28 @@ public class SimplifiedMasternodeList extends Message {
         super(params, payload, offset, protocolVersion);
     }
 
-    SimplifiedMasternodeList(SimplifiedMasternodeList other) {
+    SimplifiedMasternodeList(SimplifiedMasternodeList other, short version) {
         super(other.params);
+        this.version = version;
+        this.protocolVersion = version == SimplifiedMasternodeListDiff.BASIC_BLS_VERSION ?
+                NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion() :
+                NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
         this.blockHash = other.blockHash;
         this.height = other.height;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(other.mnMap);
+        // tell all entries to render as version 2 (BLS basic scheme)
+        for (SimplifiedMasternodeListEntry mn : mnMap.values()) {
+            mn.version = version;
+        }
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(other.mnUniquePropertyMap);
         this.storedBlock = other.storedBlock;
     }
 
-    SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries) {
+    SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries, int protocolVersion) {
         super(params);
+        this.protocolVersion = protocolVersion;
+        this.version = protocolVersion == NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion() ?
+                SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION : SimplifiedMasternodeListDiff.BASIC_BLS_VERSION;
         this.blockHash = params.getGenesisBlock().getHash();
         this.height = -1;
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>();
@@ -109,7 +120,9 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        Utils.uint16ToByteStreamLE(version, stream);
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+            Utils.uint16ToByteStreamLE(version, stream);
+        }
         stream.write(blockHash.getReversedBytes());
         Utils.uint32ToByteStreamLE(height, stream);
 
@@ -150,10 +163,11 @@ public class SimplifiedMasternodeList extends Message {
 
         lock.lock();
         try {
+            // this should not be necessary since the activation height is hard coded
             if (diff.getVersion() >= SimplifiedMasternodeListDiff.BASIC_BLS_VERSION) {
                 params.setBasicBLSSchemeActivationHeight((int)((CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject()).height);
             }
-            SimplifiedMasternodeList result = new SimplifiedMasternodeList(this);
+            SimplifiedMasternodeList result = new SimplifiedMasternodeList(this, diff.getVersion());
 
             result.blockHash = diff.blockHash;
             result.height = cbtx.getHeight();
