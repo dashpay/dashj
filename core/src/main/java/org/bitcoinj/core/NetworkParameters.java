@@ -808,8 +808,9 @@ public abstract class NetworkParameters {
     }
 
     public void setDIP0024Active(int height) {
-        System.out.println("DIP24 is now active");
-        DIP0024BlockHeight = height;
+        if (DIP0024BlockHeight == Integer.MAX_VALUE) {
+            DIP0024BlockHeight = height;
+        }
     }
 
     public boolean isV19Active(StoredBlock block) {
@@ -821,8 +822,9 @@ public abstract class NetworkParameters {
     }
 
     public void setV19Active(int height) {
-        System.out.println("v19 is now active");
-        v19BlockHeight = height;
+        if (v19BlockHeight == Integer.MAX_VALUE) {
+            v19BlockHeight = height;
+        }
     }
 
     @Deprecated
