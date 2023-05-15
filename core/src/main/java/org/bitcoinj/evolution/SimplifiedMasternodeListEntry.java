@@ -119,7 +119,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         stream.write(proRegTxHash.getReversedBytes());
         stream.write(confirmedHash.getReversedBytes());
         service.bitcoinSerialize(stream);
-        pubKeyOperator.bitcoinSerialize(stream);
+        pubKeyOperator.bitcoinSerialize(stream, version == LEGACY_BLS_VERSION);
         keyIdVoting.bitcoinSerialize(stream);
         stream.write(isValid ? 1 : 0);
         if (version == BASIC_BLS_VERSION) {

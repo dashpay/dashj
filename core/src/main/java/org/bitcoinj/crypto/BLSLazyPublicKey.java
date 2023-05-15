@@ -79,6 +79,21 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
         }
     }
 
+    public void bitcoinSerialize(OutputStream stream, boolean legacy) throws IOException {
+        if (!initialized && buffer == null) {
+            throw new IOException("public key and buffer are not initialized");
+        }
+        if (buffer == null) {
+            stream.write(publicKey.getBuffer(BLSPublicKey.BLS_CURVE_PUBKEY_SIZE, legacy));
+        } else {
+            if (this.legacy == legacy) {
+                stream.write(buffer);
+            } else {
+                getPublicKey().bitcoinSerialize(stream, legacy);
+            }
+        }
+    }
+
     public static BLSPublicKey invalidSignature = new BLSPublicKey();
 
     public BLSPublicKey getPublicKey() {

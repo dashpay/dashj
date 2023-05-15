@@ -123,6 +123,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
 
         DIP0008BlockHeight = 78800;
         DIP0024BlockHeight = 769700 + 4 * 288;
+        v19BlockHeight = 850100;
 
         //LLMQ parameters
         addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
