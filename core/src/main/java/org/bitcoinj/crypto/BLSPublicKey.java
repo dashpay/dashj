@@ -28,6 +28,7 @@ import org.dashj.bls.G1ElementVector;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * This class wraps a G1Element in the BLS library
@@ -40,22 +41,42 @@ public class BLSPublicKey extends BLSAbstractObject {
     public BLSPublicKey() {
         super(BLS_CURVE_PUBKEY_SIZE);
     }
+    public BLSPublicKey(G1Element pk) {
+        this(pk, false);
+    }
 
-    public BLSPublicKey(G1Element sk) {
+    public BLSPublicKey(G1Element pk, boolean legacy) {
         super(BLS_CURVE_PUBKEY_SIZE);
         valid = true;
-        publicKeyImpl = sk;
+        publicKeyImpl = pk;
+        this.legacy = legacy;
         updateHash();
     }
 
+    /**
+     *
+     * @param publicKey the bytes for the public key in basic scheme
+     */
     public BLSPublicKey(byte [] publicKey) {
-        this(publicKey, BLSScheme.isLegacyDefault());
+        this(publicKey, false);
+    }
+    public static BLSPublicKey fromSerializedBytes(byte [] publicKey) {
+        boolean legacy;
+        if (publicKey.length == BLS_CURVE_PUBKEY_SIZE + 1) {
+            legacy = publicKey[0] != 0;
+            publicKey = Arrays.copyOfRange(publicKey, 1, publicKey.length);
+        } else {
+            throw new IllegalArgumentException("serialized public key should be 49 bytes but is " + publicKey.length + " bytes");
+        }
+        return new BLSPublicKey(publicKey, legacy);
     }
 
     public BLSPublicKey(byte [] publicKey, boolean legacy) {
         super(BLS_CURVE_PUBKEY_SIZE);
+        Preconditions.checkArgument(publicKey.length == BLS_CURVE_PUBKEY_SIZE);
         publicKeyImpl = G1Element.fromBytes(publicKey, legacy);
         valid = true;
+        this.legacy = legacy;
         updateHash();
     }
 
@@ -64,7 +85,7 @@ public class BLSPublicKey extends BLSAbstractObject {
     }
 
     public BLSPublicKey(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset, BLSScheme.isLegacyDefault());
+        super(params, payload, offset, false);
     }
 
     public BLSPublicKey(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
@@ -110,6 +131,10 @@ public class BLSPublicKey extends BLSAbstractObject {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         super.bitcoinSerializeToStream(stream);
+    }
+
+    public byte[] serialize(boolean legacy) {
+        return publicKeyImpl.serialize(legacy);
     }
 
     public void aggregateInsecure(BLSPublicKey sk) {
@@ -181,5 +206,29 @@ public class BLSPublicKey extends BLSAbstractObject {
             return null;
         }
         return new BLSPublicKey(DASHJBLS.multiply(sk.privateKey, pk.publicKeyImpl));
+    }
+
+    public long getFingerprint() {
+        return publicKeyImpl.getFingerprint(false);
+    }
+
+    public long getFingerprint(boolean legacy) {
+        return publicKeyImpl.getFingerprint(legacy);
+    }
+
+    public boolean isLegacy() {
+        return legacy;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        BLSPublicKey that = (BLSPublicKey) o;
+        if (publicKeyImpl == that.publicKeyImpl) {
+            return true;
+        }
+        return DASHJBLS.objectEquals(publicKeyImpl, that.publicKeyImpl);
     }
 }

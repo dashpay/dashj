@@ -46,14 +46,20 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
     }
 
     public BLSLazyPublicKey(BLSPublicKey publicKey) {
+        this(publicKey, publicKey.legacy);
+    }
+
+    public BLSLazyPublicKey(BLSPublicKey publicKey, boolean legacy) {
         super(Context.get().getParams());
         this.buffer = null;
         this.publicKey = publicKey;
         this.initialized = true;
+        this.legacy = legacy;
+        this.publicKey.setLegacy(legacy);
     }
 
     public BLSLazyPublicKey(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset, BLSScheme.isLegacyDefault());
+        super(params, payload, offset, false);
     }
 
     public BLSLazyPublicKey(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
@@ -73,7 +79,7 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
             throw new IOException("public key and buffer are not initialized");
         }
         if (buffer == null) {
-            stream.write(publicKey.getBuffer(BLSPublicKey.BLS_CURVE_PUBKEY_SIZE));
+            stream.write(publicKey.getBuffer(BLSPublicKey.BLS_CURVE_PUBKEY_SIZE, legacy));
         } else {
             stream.write(buffer);
         }

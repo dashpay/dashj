@@ -17,6 +17,7 @@
 package org.bitcoinj.wallet.listeners;
 
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.wallet.KeyChain;
 
 import java.util.List;
@@ -27,5 +28,5 @@ public interface KeyChainEventListener {
      * other automatic derivation. See the documentation for your {@link KeyChain} implementation for details on what
      * can trigger this event.
      */
-    void onKeysAdded(List<ECKey> keys);
+    void onKeysAdded(List<IKey> keys);
 }

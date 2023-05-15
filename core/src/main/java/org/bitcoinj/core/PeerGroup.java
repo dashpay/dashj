@@ -24,6 +24,7 @@ import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import net.jcip.annotations.*;
 import org.bitcoinj.core.listeners.*;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.governance.GovernanceVote;
@@ -210,7 +211,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     };
 
     private final KeyChainEventListener walletKeyEventListener = new KeyChainEventListener() {
-        @Override public void onKeysAdded(List<ECKey> keys) {
+        @Override public void onKeysAdded(List<IKey> keys) {
             recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
         }
     };

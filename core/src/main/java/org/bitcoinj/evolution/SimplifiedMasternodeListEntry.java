@@ -24,9 +24,10 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     //In Memory
     Sha256Hash confirmedHashWithProRegTxHash;
 
-    public SimplifiedMasternodeListEntry(NetworkParameters params) {
+    public SimplifiedMasternodeListEntry(NetworkParameters params, short version) {
         super(params);
         length = MESSAGE_SIZE;
+        this.version = version;
     }
 
     public SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {

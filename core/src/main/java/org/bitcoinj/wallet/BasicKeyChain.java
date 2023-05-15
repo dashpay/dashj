@@ -106,9 +106,10 @@ public class BasicKeyChain implements EncryptableKeyChain {
                     keys.add(new ECKey());
                 }
 
+                ImmutableList<IKey> immutableIKeys = ImmutableList.copyOf(keys);
                 ImmutableList<ECKey> immutableKeys = ImmutableList.copyOf(keys);
                 importKeysLocked(immutableKeys);
-                queueOnKeysAdded(immutableKeys);
+                queueOnKeysAdded(immutableIKeys);
             }
 
             List<ECKey> keysToReturn = new ArrayList<>();
@@ -154,7 +155,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
                 importKeyLocked(key);
             }
             if (actuallyAdded.size() > 0)
-                queueOnKeysAdded(actuallyAdded);
+                queueOnKeysAdded(ImmutableList.copyOf(actuallyAdded));
             return actuallyAdded.size();
         } finally {
             lock.unlock();
@@ -421,7 +422,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
         return ListenerRegistration.removeFromList(listener, listeners);
     }
 
-    private void queueOnKeysAdded(final List<ECKey> keys) {
+    private void queueOnKeysAdded(final List<IKey> keys) {
         checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<KeyChainEventListener> registration : listeners) {
             registration.executor.execute(new Runnable() {

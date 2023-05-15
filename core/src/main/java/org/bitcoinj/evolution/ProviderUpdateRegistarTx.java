@@ -80,7 +80,7 @@ public class ProviderUpdateRegistarTx extends SpecialTxPayload {
         super.bitcoinSerializeToStream(stream);
         stream.write(proTxHash.getReversedBytes());
         Utils.uint16ToByteStreamLE(mode, stream);
-        pubkeyOperator.bitcoinSerialize(stream);
+        pubkeyOperator.bitcoinSerialize(stream, version == LEGACY_BLS_VERSION);
         keyIDVoting.bitcoinSerialize(stream);
         Utils.bytesToByteStream(scriptPayout.getProgram(), stream);
         stream.write(inputsHash.getReversedBytes());
@@ -165,5 +165,21 @@ public class ProviderUpdateRegistarTx extends SpecialTxPayload {
     void sign(ECKey signingKey) {
         signature = HashSigner.signHash(getSignatureHash(), signingKey);
         unCache();
+    }
+
+    public KeyId getKeyIDVoting() {
+        return keyIDVoting;
+    }
+
+    public BLSPublicKey getPubkeyOperator() {
+        return pubkeyOperator;
+    }
+
+    public Sha256Hash getProTxHash() {
+        return proTxHash;
+    }
+
+    public Sha256Hash getInputsHash() {
+        return inputsHash;
     }
 }

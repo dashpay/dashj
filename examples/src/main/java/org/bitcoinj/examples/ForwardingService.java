@@ -116,8 +116,7 @@ public class ForwardingService {
         kit = new WalletAppKit(params, new File("."), filePrefix) {
             @Override
             protected void onSetupCompleted() {
-                if(!kit.wallet().hasAuthenticationKeyChains())
-                    kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
+                //TODO: init auth keychains using AuthenticationGroupExtension
                 kit.peerGroup().setMaxConnections(6); // for small devnets
                 kit.peerGroup().setUseLocalhostPeerWhenPossible(false);
                 kit.peerGroup().setDropPeersAfterBroadcast(params.getDropPeersAfterBroadcast());

@@ -400,8 +400,8 @@ public class KeyChainGroupTest {
         final AtomicReference<ECKey> ran = new AtomicReference<>(null);
         final KeyChainEventListener listener = new KeyChainEventListener() {
             @Override
-            public void onKeysAdded(List<ECKey> keys) {
-                ran.set(keys.get(0));
+            public void onKeysAdded(List<IKey> keys) {
+                ran.set(((ECKey) keys.get(0)));
             }
         };
         group.addEventListener(listener, Threading.SAME_THREAD);

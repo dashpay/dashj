@@ -28,14 +28,14 @@ public class BLSSignature extends BLSAbstractObject {
     }
 
     public BLSSignature(byte[] signature) {
-        super(signature, BLS_CURVE_SIG_SIZE, BLSScheme.isLegacyDefault());
+        super(signature, BLS_CURVE_SIG_SIZE, false);
     }
     public BLSSignature(byte [] signature, boolean legacy) {
         super(signature, BLS_CURVE_SIG_SIZE, legacy);
     }
 
     public BLSSignature(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset, BLSScheme.isLegacyDefault());
+        super(params, payload, offset, false);
     }
     public BLSSignature(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
         super(params, payload, offset, legacy);
@@ -50,6 +50,17 @@ public class BLSSignature extends BLSAbstractObject {
         valid = true;
         signatureImpl = sk;
         updateHash();
+    }
+
+    BLSSignature(G2Element sk, boolean legacy) {
+        super(BLS_CURVE_SIG_SIZE, legacy);
+        valid = true;
+        signatureImpl = sk;
+        updateHash();
+    }
+
+    public static BLSSignature dummy() {
+        return new BLSSignature(emptySignatureBytes);
     }
 
     @Override
@@ -151,6 +162,18 @@ public class BLSSignature extends BLSAbstractObject {
         }
     }
 
+    public boolean verifyInsecure(BLSPublicKey pubKey, Sha256Hash hash, boolean legacy) {
+        if(!valid || !pubKey.valid)
+            return false;
+
+        try {
+            return BLSScheme.get(legacy).verify(pubKey.publicKeyImpl, hash.getBytes(), signatureImpl);
+        } catch (Exception x) {
+            log.error("signature verification error: ", x);
+            return false;
+        }
+    }
+
     public boolean verifyInsecureAggregated(ArrayList<BLSPublicKey> pubKeys, ArrayList<Sha256Hash> hashes)
     {
         if (!valid) {
@@ -235,6 +258,10 @@ public class BLSSignature extends BLSAbstractObject {
             // representation
             return false;
         }
+        return true;
+    }
+
+    public boolean isCanonical() {
         return true;
     }
 }
