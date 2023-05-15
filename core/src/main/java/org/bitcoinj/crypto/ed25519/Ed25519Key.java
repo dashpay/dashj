@@ -651,8 +651,18 @@ public class Ed25519Key implements IKey {
     }
 
     @Override
+    public byte[] getSerializedSecretKey() {
+        return getSecretBytes();
+    }
+
+    @Override
+    public byte[] getSerializedPublicKey() {
+        return getPubKey();
+    }
+
+    @Override
     public Object getPubKeyObject() {
-        return pub;//getPubKeyPoint();
+        return pub;
     }
 
     @Override

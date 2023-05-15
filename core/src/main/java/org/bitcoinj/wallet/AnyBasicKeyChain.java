@@ -306,10 +306,10 @@ public class AnyBasicKeyChain implements IEncryptableKeyChain {
 
     Map<IKey, Protos.Key.Builder> serializeToEditableProtobufs() {
         Map<IKey, Protos.Key.Builder> result = new LinkedHashMap<>();
-        for (IKey ecKey : hashToKeys.values()) {
-            Protos.Key.Builder protoKey = serializeEncryptableItem(ecKey);
-            protoKey.setPublicKey(ByteString.copyFrom(ecKey.getPubKey()));
-            result.put(ecKey, protoKey);
+        for (IKey key : hashToKeys.values()) {
+            Protos.Key.Builder protoKey = serializeEncryptableItem(key);
+            protoKey.setPublicKey(ByteString.copyFrom(key.getSerializedPublicKey()));
+            result.put(key, protoKey);
         }
         return result;
     }

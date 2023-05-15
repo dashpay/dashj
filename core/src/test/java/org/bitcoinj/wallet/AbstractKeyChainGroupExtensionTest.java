@@ -24,6 +24,7 @@ import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
@@ -99,6 +100,11 @@ public class AbstractKeyChainGroupExtensionTest {
         @Override
         public boolean hasSpendableKeys() {
             return true;
+        }
+
+        @Override
+        public boolean isTransactionRevelant(Transaction tx) {
+            return false;
         }
 
         /**

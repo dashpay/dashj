@@ -18,6 +18,7 @@ package org.bitcoinj.crypto;
 
 import com.google.common.base.Preconditions;
 import org.bitcoinj.core.*;
+import org.bouncycastle.util.encoders.Base64;
 import org.dashj.bls.BLSJniLibrary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     abstract boolean internalSetBuffer(final byte [] buffer);
     boolean internalGetBuffer(byte [] buffer) {
-        return internalGetBuffer(buffer, BLSScheme.isLegacyDefault());
+        return internalGetBuffer(buffer, false);
     }
 
     abstract boolean internalGetBuffer(byte [] buffer, boolean legacy);
@@ -47,7 +48,16 @@ public abstract class BLSAbstractObject extends ChildMessage {
     BLSAbstractObject(int serializedSize) {
         this.serializedSize = serializedSize;
         this.valid = false;
-        this.legacy = BLSScheme.isLegacyDefault();
+        this.legacy = false;
+        this.length = serializedSize;
+        updateHash();
+    }
+
+    BLSAbstractObject(int serializedSize, boolean legacy) {
+        this.serializedSize = serializedSize;
+        this.valid = false;
+        this.legacy = legacy;
+        this.length = serializedSize;
         updateHash();
     }
 
@@ -69,13 +79,13 @@ public abstract class BLSAbstractObject extends ChildMessage {
     }
 
     byte [] getBuffer(int size) {
-        return getBuffer(size, BLSScheme.isLegacyDefault());
+        return getBuffer(size, false);
     }
 
     byte [] getBuffer(int size, boolean legacy) {
         Preconditions.checkArgument(size == serializedSize);
         byte [] buffer = new byte [serializedSize];
-        if(valid) {
+        if (valid) {
             boolean ok = internalGetBuffer(buffer, legacy);
             Preconditions.checkState(ok);
         }
@@ -120,7 +130,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        stream.write(getBuffer(serializedSize));
+        stream.write(getBuffer(serializedSize, legacy));
     }
 
     public void bitcoinSerialize(OutputStream stream, boolean legacy) throws IOException{
@@ -128,7 +138,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
     }
 
     protected void updateHash() {
-        byte [] buffer = isValid() ? getBuffer(serializedSize) : new byte[serializedSize];
+        byte [] buffer = isValid() ? getBuffer(serializedSize, legacy) : new byte[serializedSize];
         hash = Sha256Hash.twiceOf(buffer);
     }
 
@@ -146,7 +156,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     @Override
     public String toString() {
-        return Utils.HEX.encode(getBuffer(serializedSize));
+        return Utils.HEX.encode(getBuffer(serializedSize, legacy));
     }
 
     public String toString(boolean legacy) {
@@ -155,6 +165,10 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     public String toStringHex(boolean legacy) {
         return Utils.HEX.encode(getBuffer(serializedSize, legacy));
+    }
+
+    public String toStringBase64(boolean legacy) {
+        return Base64.toBase64String(getBuffer(serializedSize, legacy));
     }
 
     @Override
@@ -172,5 +186,9 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     public void setLegacy(boolean legacy) {
         this.legacy = legacy;
+    }
+
+    public boolean isLegacy() {
+        return legacy;
     }
 }

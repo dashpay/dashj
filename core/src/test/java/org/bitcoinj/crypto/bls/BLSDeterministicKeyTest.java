@@ -13,6 +13,8 @@ import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.AnyDeterministicKeyChain;
+import org.dashj.bls.ExtendedPrivateKey;
+import org.dashj.bls.ExtendedPublicKey;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -34,7 +36,7 @@ public class BLSDeterministicKeyTest {
     }
     @Test
     public void legacyBLSDerivationTest() {
-        BLSScheme.setLegacyDefault(true);
+        BLSScheme.setLegacyDefault(false);
         byte[] seed = new byte[]{1, 50, 6, (byte)244, 24, (byte)199, 1, 25};
         BLSDeterministicKey rootKey = new BLSDeterministicKey(seed);
         assertEquals(0xa4700b27L, rootKey.getPublicKey().getFingerprint(true));
@@ -81,7 +83,24 @@ public class BLSDeterministicKeyTest {
                 .build();
 
         BLSDeterministicKey firstOperatorKey = (BLSDeterministicKey) chain.getKeyByPath(HDUtils.append(DeterministicKeyChain.PROVIDER_OPERATOR_PATH_TESTNET, ChildNumber.ZERO));
-        assertEquals("0cb6db5b5827e24138abb32e3476c5c7768bda0431c78030d62e9c5b107d3d73f5c78043401c5e8ad8f21a460a02bbbe", firstOperatorKey.pub.toStringHex());
-        assertEquals("392e5db8a1fb59608723c9d77320909924dbb06e397ce195429a1c4a7fcefb45", firstOperatorKey.priv.toStringHex());
+        assertEquals("0cb6db5b5827e24138abb32e3476c5c7768bda0431c78030d62e9c5b107d3d73f5c78043401c5e8ad8f21a460a02bbbe", firstOperatorKey.pub.toStringHex(true));
+        assertEquals("392e5db8a1fb59608723c9d77320909924dbb06e397ce195429a1c4a7fcefb45", firstOperatorKey.priv.toStringHex(true));
+    }
+
+    @Test
+    public void publicPrivateDerivationTest() {
+        ExtendedPrivateKey extendedPrivateKey = ExtendedPrivateKey.fromSeed(new byte[]{10, 9, 8});
+        ExtendedPrivateKey hardenedChild = extendedPrivateKey.privateChild(0, true);
+        ExtendedPrivateKey privateChild = hardenedChild.privateChild(1, true);
+        ExtendedPublicKey publicChild = hardenedChild.publicChild(1);
+        assertArrayEquals(privateChild.getChainCode().serialize(), publicChild.getChainCode().serialize());
+
+        // derive another layer
+        ExtendedPrivateKey privateSecondLevel = privateChild.privateChild(2, false);
+        ExtendedPublicKey publicSecondLevel = publicChild.publicChild(2, false);
+        assertArrayEquals(privateSecondLevel.getChainCode().serialize(), publicSecondLevel.getChainCode().serialize());
+        assertArrayEquals(privateSecondLevel.getPublicKey().serialize(false), publicSecondLevel.getPublicKey().serialize(false));
+
+        BLSDeterministicKey root = new BLSDeterministicKey(new byte []{5,4,3});
     }
 }

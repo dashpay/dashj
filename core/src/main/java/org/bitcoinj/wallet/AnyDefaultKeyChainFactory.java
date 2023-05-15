@@ -36,7 +36,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
         if (isMarried)
             throw new UnsupportedOperationException("Married chains are not supported");
         else
-            chain = new AnyDeterministicKeyChain(seed, crypter, outputScriptType, accountPath, keyFactory, hardenedKeysOnly);
+            chain = new AnyDeterministicKeyChain(seed, crypter, outputScriptType, accountPath, keyFactory, hardenedKeysOnly, false);
         return chain;
     }
 
@@ -78,7 +78,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
         else if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && /* allow any coin type */
                 accountPath.get(2).equals(DerivationPathFactory.FEATURE_PURPOSE_DASHPAY))
             throw new UnsupportedOperationException("Friend keys are not supported");
-        else return new AnyDeterministicKeyChain(seed, crypter, Script.ScriptType.P2PKH, accountPath, keyFactory, hardenedKeysOnly);
+        else return new AnyDeterministicKeyChain(seed, crypter, Script.ScriptType.P2PKH, accountPath, keyFactory, hardenedKeysOnly, false);
     }
 
     @Override

@@ -348,4 +348,11 @@ public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
         }
         return AuthenticationKeyChain.KeyChainType.INVALID_KEY_CHAIN;
     }
+
+    public void addNewKey(AuthenticationKeyChain.KeyChainType type, IDeterministicKey key) {
+        AuthenticationKeyChain currentChain = getKeyChain(type);
+        if (currentChain.addNewKey(key)) {
+            currentAuthenticationKeys.put(type, key);
+        }
+    }
 }

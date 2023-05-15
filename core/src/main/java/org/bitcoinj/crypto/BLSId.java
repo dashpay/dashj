@@ -20,7 +20,7 @@ public class BLSId extends BLSAbstractObject {
     }
 
     public BLSId(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset, BLSScheme.isLegacyDefault());
+        super(params, payload, offset, false);
     }
 
     @Override

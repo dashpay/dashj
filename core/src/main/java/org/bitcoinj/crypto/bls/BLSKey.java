@@ -36,7 +36,6 @@ import org.bitcoinj.crypto.EncryptedData;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.crypto.KeyType;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.crypto.factory.BLSKeyFactory;
 import org.bitcoinj.crypto.factory.KeyFactory;
@@ -92,16 +91,25 @@ public class BLSKey implements IKey {
      * (32 for the co-ordinate and 1 byte to represent the y bit).
      */
     public BLSKey() {
-        this(secureRandom);
+        this(secureRandom, true);
     }
+
+    public BLSKey(boolean legacy) {
+        this(secureRandom, legacy);
+    }
+
 
     /**
      * Generates an entirely new keypair with the given {@link SecureRandom} object.
      */
     public BLSKey(SecureRandom secureRandom) {
+        this(secureRandom, true);
+    }
+
+    public BLSKey(SecureRandom secureRandom, boolean legacy) {
         byte [] seed = new byte[64];
         secureRandom.nextBytes(seed);
-        priv = BLSSecretKey.fromSeed(seed);
+        priv = BLSSecretKey.fromSeed(seed, legacy);
         pub = priv.getPublicKey();
         creationTimeSeconds = Utils.currentTimeSeconds();
     }
@@ -112,11 +120,18 @@ public class BLSKey implements IKey {
     }
 
     /**
-     * Creates an BLSKey given the private key only. The public key is calculated from it (this is slow). The resulting
-     * public key is compressed.
+     * Creates an BLSKey given the private key only. The public key is calculated from it (this is slow).
      */
     public static BLSKey fromPrivate(byte[] privKeyBytes) {
-        BLSSecretKey secretKey = new BLSSecretKey(privKeyBytes);
+        BLSSecretKey secretKey = new BLSSecretKey(privKeyBytes, true);
+        return new BLSKey(secretKey, secretKey.getPublicKey());
+    }
+
+    /**
+     * Creates an BLSKey given the private key only. The public key is calculated from it (this is slow).
+     */
+    public static BLSKey fromPrivate(byte[] privKeyBytes, boolean legacy) {
+        BLSSecretKey secretKey = new BLSSecretKey(privKeyBytes, legacy);
         return new BLSKey(secretKey, secretKey.getPublicKey());
     }
 
@@ -128,7 +143,18 @@ public class BLSKey implements IKey {
     public static BLSKey fromPrivateAndPrecalculatedPublic(byte[] priv, byte[] pub) {
         checkNotNull(priv);
         checkNotNull(pub);
-        return new BLSKey(priv, pub);
+        return new BLSKey(priv, pub, true);
+    }
+
+    /**
+     * Creates an BLSKey that simply trusts the caller to ensure that point is really the result of multiplying the
+     * generator point by the private key. This is used to speed things up when you know you have the right values
+     * already. The compression state of the point will be preserved.
+     */
+    public static BLSKey fromPrivateAndPrecalculatedPublic(byte[] priv, byte[] pub, boolean legacy) {
+        checkNotNull(priv);
+        checkNotNull(pub);
+        return new BLSKey(priv, pub, legacy);
     }
 
     /**
@@ -136,7 +162,10 @@ public class BLSKey implements IKey {
      * The compression state of pub will be preserved.
      */
     public static BLSKey fromPublicOnly(byte[] pub) {
-        return new BLSKey((byte[]) null, pub);
+        return new BLSKey((byte[]) null, pub, true);
+    }
+    public static BLSKey fromPublicOnly(byte[] pub, boolean legacy) {
+        return new BLSKey((byte[]) null, pub, legacy);
     }
 
     public static BLSKey fromPublicOnly(BLSKey key) {
@@ -148,7 +177,7 @@ public class BLSKey implements IKey {
      * never need this: it's for specialised scenarios or when backwards compatibility in encoded form is necessary.
      */
     public BLSKey decompress() {
-        return new BLSKey(priv != null ? priv.bitcoinSerialize() : null, pub.bitcoinSerialize());
+        return new BLSKey(priv != null ? priv.bitcoinSerialize() : null, pub.bitcoinSerialize(), pub.isLegacy());
     }
 
     /**
@@ -156,9 +185,9 @@ public class BLSKey implements IKey {
      * is more convenient if you are importing a key from elsewhere. The public key will be automatically derived
      * from the private key.
      */
-    public BLSKey(@Nullable byte[] privKeyBytes, @Nullable byte[] pubKey) {
-        priv = privKeyBytes == null ? null : new BLSSecretKey(privKeyBytes);
-        pub = pubKey == null ? (priv != null ? priv.getPublicKey() : null) : new BLSPublicKey(pubKey);
+    public BLSKey(@Nullable byte[] privKeyBytes, @Nullable byte[] pubKey, boolean legacy) {
+        priv = privKeyBytes == null ? null : new BLSSecretKey(privKeyBytes, legacy);
+        pub = pubKey == null ? (priv != null ? priv.getPublicKey() : null) : new BLSPublicKey(pubKey, legacy);
     }
 
     /**
@@ -179,8 +208,8 @@ public class BLSKey implements IKey {
      * @param keyCrypter The KeyCrypter that will be used, with an AES key, to encrypt and decrypt the private key
      */
     @Deprecated
-    public BLSKey(EncryptedData encryptedPrivateKey, byte[] pubKey, KeyCrypter keyCrypter) {
-        this((byte[])null, pubKey);
+    public BLSKey(EncryptedData encryptedPrivateKey, byte[] pubKey, boolean legacy, KeyCrypter keyCrypter) {
+        this((byte[])null, pubKey, legacy);
 
         this.keyCrypter = checkNotNull(keyCrypter);
         this.encryptedPrivateKey = encryptedPrivateKey;
@@ -223,16 +252,15 @@ public class BLSKey implements IKey {
     /** Gets the hash160 form of the public key (as seen in addresses). */
     public byte[] getPubKeyHash() {
         if (pubKeyHash == null)
-            pubKeyHash = Utils.sha256hash160(this.pub.bitcoinSerialize());
+            pubKeyHash = Utils.sha256hash160(this.pub.serialize(pub.isLegacy()));
         return pubKeyHash;
     }
 
     /**
-     * Gets the raw public key value. This appears in transaction scriptSigs. Note that this is <b>not</b> the same
-     * as the pubKeyHash/address.
+     * Gets the raw public key value using the BLS scheme of the public key object.
      */
     public byte[] getPubKey() {
-        return pub.bitcoinSerialize();
+        return pub.serialize(pub.isLegacy());
     }
 
     /** Gets the public key in the form of an elliptic curve point object from Bouncy Castle. */
@@ -270,6 +298,14 @@ public class BLSKey implements IKey {
      */
     public BLSSignature sign(Sha256Hash input) throws KeyCrypterException {
         return priv.sign(input);
+    }
+
+    /**
+     * Signs the given hash and returns the BLSSignature.
+     * @throws KeyCrypterException if this BLSKey doesn't have a private part.
+     */
+    public BLSSignature sign(Sha256Hash input, boolean legacy) throws KeyCrypterException {
+        return priv.sign(input, legacy);
     }
 
     /**
@@ -333,6 +369,26 @@ public class BLSKey implements IKey {
     }
 
     /**
+     * <p>Verifies the given BLS signature against the message bytes using the public key bytes.</p>
+     *
+     * @param data      Hash of the data to verify.
+     * @param signature BLS encoded signature.
+     * @param pub       The public key bytes to use.
+     * @param legacy    use legacy scheme
+     */
+    public static boolean verify(byte[] data, BLSSignature signature, byte[] pub, boolean legacy) {
+        if (FAKE_SIGNATURES)
+            return true;
+
+        try {
+            return signature.verifyInsecure(new BLSPublicKey(pub, legacy), Sha256Hash.wrap(data), legacy);
+        } catch (Exception e) {
+            log.error("Caught NPE inside bls-signatures", e);
+            return false;
+        }
+    }
+
+    /**
      * Verifies the given ASN.1 encoded ECDSA signature against a hash using the public key.
      *
      * @param data      Hash of the data to verify.
@@ -347,12 +403,36 @@ public class BLSKey implements IKey {
     /**
      * Verifies the given ASN.1 encoded ECDSA signature against a hash using the public key.
      *
+     * @param data      Hash of the data to verify.
+     * @param signature ASN.1 encoded signature.
+     * @param pub       The public key bytes to use.
+     * @param legacy    use legacy scheme
+     * @throws SignatureDecodeException if the signature is unparseable in some way.
+     */
+    public static boolean verify(byte[] data, byte[] signature, byte[] pub, boolean legacy) throws SignatureDecodeException {
+        return verify(data, new BLSSignature(signature, legacy), pub, legacy);
+    }
+
+    /**
+     * Verifies the given ASN.1 encoded ECDSA signature against a hash using the public key.
+     *
      * @param hash      Hash of the data to verify.
      * @param signature ASN.1 encoded signature.
      * @throws SignatureDecodeException if the signature is unparseable in some way.
      */
     public boolean verify(byte[] hash, byte[] signature) throws SignatureDecodeException {
         return BLSKey.verify(hash, signature, getPubKey());
+    }
+
+    /**
+     * Verifies the given ASN.1 encoded ECDSA signature against a hash using the public key.
+     *
+     * @param hash      Hash of the data to verify.
+     * @param signature ASN.1 encoded signature.
+     * @throws SignatureDecodeException if the signature is unparseable in some way.
+     */
+    public boolean verify(byte[] hash, byte[] signature, boolean legacy) throws SignatureDecodeException {
+        return BLSKey.verify(hash, signature, getPubKey(), legacy);
     }
 
     /**
@@ -458,6 +538,14 @@ public class BLSKey implements IKey {
         if (!signature.verifyInsecure(pub, Sha256Hash.twiceOf(messageForSigning)))
             throw new SignatureException("Signature did not match for message");
     }
+
+    public void verifyMessage(String message, String signatureBase64, boolean legacy) throws SignatureException {
+        byte [] messageForSigning = Utils.formatMessageForSigning(message);
+        BLSSignature signature = new BLSSignature(BaseEncoding.base64().decode(signatureBase64), legacy);
+        if (!signature.verifyInsecure(pub, Sha256Hash.twiceOf(messageForSigning), legacy))
+            throw new SignatureException("Signature did not match for message");
+    }
+
     public void verifyMessage(byte [] message, byte [] signatureEncoded) throws SignatureException {
         BLSSignature signature = new BLSSignature(signatureEncoded);
         byte[] messageBytes = Utils.formatMessageForSigning(message);
@@ -548,11 +636,27 @@ public class BLSKey implements IKey {
         if (unencryptedPrivateKey.length != BLSSecretKey.BLS_CURVE_SECKEY_SIZE)
             throw new KeyCrypterException.InvalidCipherText(
                     "Decrypted key must be 32 bytes long, but is " + unencryptedPrivateKey.length);
-        BLSKey key = BLSKey.fromPrivate(unencryptedPrivateKey);
+        BLSKey key = BLSKey.fromPrivate(unencryptedPrivateKey, pub.isLegacy());
         if (!Arrays.equals(key.getPubKey(), getPubKey()))
             throw new KeyCrypterException("Provided AES key is wrong");
         key.setCreationTimeSeconds(creationTimeSeconds);
         return key;
+    }
+
+    @Override
+    public byte[] getSerializedSecretKey() {
+        byte[] serializedPrivateKey = new byte[pub.getMessageSize() + 1];
+        serializedPrivateKey[0] = (byte) (pub.isLegacy() ? 0 : 1);
+        System.arraycopy(priv.bitcoinSerialize(), 0, serializedPrivateKey, 1, pub.getMessageSize());
+        return serializedPrivateKey;
+    }
+
+    @Override
+    public byte[] getSerializedPublicKey() {
+        byte[] serializedPublicKey = new byte[BLSPublicKey.BLS_CURVE_PUBKEY_SIZE + 1];
+        serializedPublicKey[0] = (byte) (pub.isLegacy() ? 1 : 0);
+        System.arraycopy(pub.serialize(pub.isLegacy()), 0, serializedPublicKey, 1, pub.getMessageSize());
+        return serializedPublicKey;
     }
 
     /**
@@ -693,13 +797,17 @@ public class BLSKey implements IKey {
         return Utils.HEX.encode(pub.bitcoinSerialize());
     }
 
+    public String getPublicKeyAsHex(boolean legacy) {
+        return Utils.HEX.encode(pub.serialize(legacy));
+    }
+
     public String getPrivateKeyAsWiF(NetworkParameters params) {
         return getPrivateKeyEncoded(params).toString();
     }
 
     private String toString(boolean includePrivate, @Nullable KeyParameter aesKey, @Nullable NetworkParameters params) {
         final MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
-        helper.add("pub HEX", getPublicKeyAsHex());
+        helper.add("pub HEX", getPublicKeyAsHex(pub.isLegacy()));
         if (includePrivate) {
             BLSKey decryptedKey = isEncrypted() ? decrypt(checkNotNull(aesKey)) : this;
             try {
@@ -717,6 +825,7 @@ public class BLSKey implements IKey {
         helper.add("keyCrypter", keyCrypter);
         if (includePrivate)
             helper.add("encryptedPrivateKey", encryptedPrivateKey);
+        helper.add("isLegacy", pub.isLegacy());
         helper.add("isEncrypted", isEncrypted());
         helper.add("isPubKeyOnly", isPubKeyOnly());
         return helper.toString();

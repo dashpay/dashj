@@ -114,7 +114,7 @@ public class ProviderRegisterTx extends SpecialTxPayload {
         address.bitcoinSerialize(stream);
 
         keyIDOwner.bitcoinSerialize(stream);
-        pubkeyOperator.bitcoinSerialize(stream);
+        pubkeyOperator.bitcoinSerialize(stream, version == LEGACY_BLS_VERSION);
         keyIDVoting.bitcoinSerialize(stream);
 
         Utils.uint16ToByteStreamLE(operatorReward, stream);

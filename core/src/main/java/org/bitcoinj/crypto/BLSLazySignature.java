@@ -32,7 +32,7 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
     }
 
     public BLSLazySignature(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset, BLSScheme.isLegacyDefault());
+        super(params, payload, offset, false);
     }
 
     public BLSLazySignature(NetworkParameters params, byte [] payload, int offset, boolean legacy) {

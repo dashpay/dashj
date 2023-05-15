@@ -1,6 +1,7 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.BLSSignature;
 
 import java.io.ByteArrayOutputStream;
@@ -15,22 +16,26 @@ public class ChainLockSignature extends Message {
     Sha256Hash blockHash;
     BLSSignature signature;
 
+    boolean legacy;
+
     public ChainLockSignature(long height, Sha256Hash blockHash, BLSSignature signature) {
         this.height = height;
         this.blockHash = blockHash;
         this.signature = signature;
+        this.legacy = signature.isLegacy();
         length = 4 + 32 + BLSSignature.BLS_CURVE_SIG_SIZE;
     }
 
-    public ChainLockSignature(NetworkParameters params, byte [] payload) {
-        super(params, payload, 0);
+    public ChainLockSignature(NetworkParameters params, byte [] payload, boolean legacy) {
+        super(params, payload, 0, (legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC).getBitcoinProtocolVersion());
+        this.legacy = legacy;
     }
 
     @Override
     protected void parse() throws ProtocolException {
         height = readUint32();
         blockHash = readHash();
-        signature = new BLSSignature(params, payload, cursor);
+        signature = new BLSSignature(params, payload, cursor, protocolVersion == NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion());
         cursor += signature.getMessageSize();
         length = cursor - offset;
     }

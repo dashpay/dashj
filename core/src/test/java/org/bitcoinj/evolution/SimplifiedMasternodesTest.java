@@ -21,6 +21,8 @@ import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
+
+import static org.bitcoinj.evolution.SimplifiedMasternodeListEntry.LEGACY_BLS_VERSION;
 import static org.junit.Assert.*;
 
 import org.bitcoinj.params.TestNet3Params;
@@ -80,7 +82,7 @@ public class SimplifiedMasternodesTest {
     {
         ArrayList<SimplifiedMasternodeListEntry> entries = new ArrayList<SimplifiedMasternodeListEntry>(15);
         for (int i = 0; i < 15; i++) {
-            SimplifiedMasternodeListEntry smle = new SimplifiedMasternodeListEntry(PARAMS);
+            SimplifiedMasternodeListEntry smle = new SimplifiedMasternodeListEntry(PARAMS, LEGACY_BLS_VERSION);
             smle.proRegTxHash = Sha256Hash.wrap(String.format("%064x", i));
             smle.confirmedHash = Sha256Hash.wrap(String.format("%064x", i));
 
@@ -92,7 +94,7 @@ public class SimplifiedMasternodesTest {
             BLSSecretKey sk = new BLSSecretKey(skBuf);
 
 
-            smle.pubKeyOperator = new BLSLazyPublicKey(sk.getPublicKey());
+            smle.pubKeyOperator = new BLSLazyPublicKey(sk.getPublicKey(), true);
             smle.keyIdVoting = KeyId.fromBytes(Utils.HEX.decode(String.format("%040x", i)), false);
             smle.isValid = true;
 

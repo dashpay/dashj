@@ -106,7 +106,7 @@ public class ProviderTests {
                 .privateChild(new ChildNumber(3, true).getI())
                 .privateChild(0)
                 .getPrivateKey();
-        operatorKey = new BLSPublicKey(operatorPrivateKey.getG1Element());
+        operatorKey = new BLSPublicKey(operatorPrivateKey.getG1Element(), true);
         operatorSecret = new BLSSecretKey(operatorPrivateKey);
 
         String inputAddress0 = "yRdHYt6nG1ooGaXK7GEbwVMteLY3m4FbVT";
@@ -496,25 +496,23 @@ public class ProviderTests {
 
         assertArrayEquals(fromMessage.toByteArray(), hexData);
 
-        BLSPublicKey operatorKeyNeeded = new BLSPublicKey(PARAMS, Utils.HEX.decode("157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfa"), 0);
+        BLSPublicKey operatorKeyNeeded = new BLSPublicKey(PARAMS, Utils.HEX.decode("157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfa"), 0, true);
         assertEquals(operatorKey.toString(), operatorKeyNeeded.toString());
 
         Sha256Hash payloadHash = ((ProviderUpdateServiceTx)providerUpdateServiceTransactionFromMessage.getExtraPayloadObject()).getSignatureHash();
 
-        BLSSignature signatureFromDigest = operatorSecret.sign(payloadHash);
-
-
+        BLSSignature signatureFromDigest = operatorSecret.sign(payloadHash, true);
 
         ProviderUpdateServiceTx providerUpdateServiceTx = ((ProviderUpdateServiceTx)providerUpdateServiceTransactionFromMessage.getExtraPayloadObject());
         assertEquals(signatureFromDigest.toString(), providerUpdateServiceTx.signature.toString());
 
-        Preconditions.checkState(signatureFromDigest.verifyInsecure(operatorKey, payloadHash));
+        Preconditions.checkState(signatureFromDigest.verifyInsecure(operatorKey, payloadHash, true));
         Preconditions.checkState(providerUpdateServiceTx.signature.verifyInsecure(operatorKey, payloadHash));
 
 
         MasternodeAddress ipAddress = new MasternodeAddress(InetAddress.getByName("52.36.64.148"), 19999);
 
-        ProviderUpdateServiceTx proUpServTx = new ProviderUpdateServiceTx(PARAMS, 1, providerTransactionHash, ipAddress, new Script(new byte[0]), Transaction.calculateInputsHash(input0), operatorSecret);
+        ProviderUpdateServiceTx proUpServTx = new ProviderUpdateServiceTx(PARAMS, 1, providerTransactionHash, ipAddress, new Script(new byte[0]), Transaction.calculateInputsHash(input0), operatorSecret, true);
         Transaction providerUpdateServiceTransaction = new Transaction(PARAMS, proUpServTx);
         providerUpdateServiceTransaction.addOutput(Coin.valueOf(1124999808L), Address.fromBase58(PARAMS, outputAddress0));
         providerUpdateServiceTransaction.addSignedInput(input0, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), inputPrivateKey0, Transaction.SigHash.ALL, false);

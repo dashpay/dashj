@@ -89,4 +89,5 @@ public interface KeyChainGroupExtension extends WalletExtension {
     String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey);
 
     boolean hasSpendableKeys();
+    boolean isTransactionRevelant(Transaction tx);
 }

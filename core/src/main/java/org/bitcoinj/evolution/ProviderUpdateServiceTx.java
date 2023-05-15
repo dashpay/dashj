@@ -67,9 +67,9 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
 
     public ProviderUpdateServiceTx(NetworkParameters params, int version, Sha256Hash proTxHash,
                                    MasternodeAddress address,
-                                   Script scriptOperatorPayout, Sha256Hash inputsHash, BLSSecretKey signingKey) {
+                                   Script scriptOperatorPayout, Sha256Hash inputsHash, BLSSecretKey signingKey, boolean legacy) {
         this(params, version, proTxHash, address, scriptOperatorPayout, inputsHash);
-        sign(signingKey);
+        sign(signingKey, legacy);
     }
 
     @Override
@@ -173,5 +173,23 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
         signature = signingKey.sign(getSignatureHash());
         length = MESSAGE_SIZE;
         unCache();
+    }
+
+    void sign(BLSSecretKey signingKey, boolean legacy) {
+        signature = signingKey.sign(getSignatureHash(), legacy);
+        length = MESSAGE_SIZE;
+        unCache();
+    }
+
+    public Sha256Hash getProTxHash() {
+        return proTxHash;
+    }
+
+    public MasternodeAddress getAddress() {
+        return address;
+    }
+
+    public Script getScriptOperatorPayout() {
+        return scriptOperatorPayout;
     }
 }

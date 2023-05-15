@@ -17,17 +17,20 @@
 package org.bitcoinj.wallet.authentication;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.BloomFilter;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VersionMessage;
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
@@ -42,6 +45,7 @@ import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.ProviderRegisterTx;
 import org.bitcoinj.evolution.ProviderUpdateRegistarTx;
 import org.bitcoinj.evolution.ProviderUpdateRevocationTx;
+import org.bitcoinj.evolution.ProviderUpdateServiceTx;
 import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ListenerRegistration;
@@ -58,6 +62,7 @@ import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletTransaction;
+import org.bitcoinj.wallet.listeners.AuthenticationKeyUsageEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,8 +73,10 @@ import javax.annotation.Nullable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -84,6 +91,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     private final HashMap<IKey, AuthenticationKeyUsage> keyUsage = Maps.newHashMap();
 
     private final CopyOnWriteArrayList<ListenerRegistration<CreditFundingTransactionEventListener>> creditFundingListeners
+            = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<AuthenticationKeyUsageEventListener>> usageListeners
             = new CopyOnWriteArrayList<>();
 
     public AuthenticationGroupExtension(Wallet wallet) {
@@ -170,6 +179,17 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         }
     }
 
+    public void addNewKey(AuthenticationKeyChain.KeyChainType type, IDeterministicKey currentKey) {
+
+        keyChainGroupLock.lock();
+        try {
+            keyChainGroup.addNewKey(type, currentKey);
+            saveWallet();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
+    }
+
     public IDeterministicKey currentKey(AuthenticationKeyChain.KeyChainType type) {
         return keyChainGroup.currentKey(type);
     }
@@ -228,7 +248,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         for (AuthenticationKeyUsage usage : keyUsage.values()) {
             Protos.AuthenticationKeyUsage.Builder usageBuilder = Protos.AuthenticationKeyUsage.newBuilder();
             if (usage.getType() == AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR) {
-                usageBuilder.setKeyOrKeyId(ByteString.copyFrom(usage.getKey().getPubKey()));
+                usageBuilder.setKeyOrKeyId(ByteString.copyFrom(usage.getKey().getSerializedPublicKey()));
             } else {
                 usageBuilder.setKeyOrKeyId(ByteString.copyFrom(usage.getKey().getPubKeyHash()));
             }
@@ -312,6 +332,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             Sha256Hash whereUsed = Sha256Hash.wrapReversed(usageProto.getWhereUsed().toByteArray());
             IKey key;
             if (keyChainType == AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR) {
+                // remove first byte
+                keyOrKeyId = Arrays.copyOfRange(keyOrKeyId, 1, BLSPublicKey.BLS_CURVE_PUBKEY_SIZE + 1);
                 key = findKeyFromPubKey(keyOrKeyId);
             } else {
                 key = findKeyFromPubKeyHash(keyOrKeyId, Script.ScriptType.P2PKH);
@@ -363,7 +385,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
         AuthenticationKeyUsage operatorKeyUsage = getCurrentOperatorKeyUsage(proTxHash);
         if (operatorKeyUsage != null) {
+            log.info("protx revoke: operator key {}", operatorKeyUsage.getKey());
             operatorKeyUsage.setStatus(AuthenticationKeyStatus.REVOKED);
+            queueOnUsageEvent(Lists.newArrayList(operatorKeyUsage));
         }
     }
 
@@ -405,37 +429,50 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
         IKey votingKey = findKeyFromPubKeyHash(voting.getBytes(), Script.ScriptType.P2PKH);
         IKey ownerKey = findKeyFromPubKeyHash(owner.getBytes(), Script.ScriptType.P2PKH);
-        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(true));
+        IKey operatorKey = findKeyFromPubKey(operator.serialize(true));
         if (operatorKey == null)
-            operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(false));
+            operatorKey = findKeyFromPubKey(operator.serialize(false));
 
         IKey platformKey = platformNodeId != null ? findKeyFromPubKeyHash(platformNodeId.getBytes(), Script.ScriptType.P2PKH) : null;
+        if (platformKey == null) {
+            platformKey = platformNodeId != null ? findKeyFromPubKeyHash(Utils.reverseBytes(platformNodeId.getBytes()), Script.ScriptType.P2PKH) : null;
+        }
+        List<AuthenticationKeyUsage> updates = Lists.newArrayList();
 
         // voting
         if (votingKey != null) {
+            log.info("protx register: found voting key {}", votingKey);
             AuthenticationKeyUsage votingkeyUsage = AuthenticationKeyUsage.createVoting(votingKey, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(votingKey, votingkeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(voting.getBytes());
+            updates.add(votingkeyUsage);
         }
 
         if (ownerKey != null) {
+            log.info("protx register: found owner key {}", votingKey);
             AuthenticationKeyUsage ownerKeyUsage = AuthenticationKeyUsage.createOwner(ownerKey, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(ownerKey, ownerKeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(owner.getBytes());
+            updates.add(ownerKeyUsage);
         }
 
         if (operatorKey != null) {
+            log.info("protx register: found operator key {}", votingKey);
             boolean legacy = providerRegisterTx.getVersion() == LEGACY_BLS_VERSION;
             AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, legacy, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(operatorKey, operatorKeyUsage);
-            keyChainGroup.markPubKeyHashAsUsed(operatorKey.getPubKey());
+            keyChainGroup.markPubKeyAsUsed(operatorKey.getPubKey());
+            updates.add(operatorKeyUsage);
         }
 
         if (platformKey != null) {
+            log.info("protx register: found platform node key {}", votingKey);
             AuthenticationKeyUsage platformKeyUsage = AuthenticationKeyUsage.createPlatformNodeId(platformKey, tx.getTxId(), providerRegisterTx.getAddress());
             keyUsage.put(platformKey, platformKeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(platformKey.getPubKey());
+            updates.add(platformKeyUsage);
         }
+        queueOnUsageEvent(updates);
     }
 
     private void processUpdateRegistrar(Transaction tx, ProviderUpdateRegistarTx providerUpdateRegistarTx) {
@@ -443,9 +480,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         BLSPublicKey operator = providerUpdateRegistarTx.getPubkeyOperator();
 
         IKey votingKey = findKeyFromPubKeyHash(voting.getBytes(), Script.ScriptType.P2PKH);
-        IKey operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(true));
+        IKey operatorKey = findKeyFromPubKey(operator.serialize(true));
         if (operatorKey == null)
-            operatorKey = findKeyFromPubKey(operator.bitcoinSerialize(false));
+            operatorKey = findKeyFromPubKey(operator.serialize(false));
         // TODO: find BLS
 
         // there could be a previous usage of voting and operator keys
@@ -461,21 +498,27 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             if (address == null)
                 address = previousOperatorKeyUsage.getAddress();
         }
+        List<AuthenticationKeyUsage> updates = Lists.newArrayList();
 
         // voting
         if (votingKey != null) {
+            log.info("protx update register: found voting key {}", votingKey);
             AuthenticationKeyUsage votingkeyUsage = AuthenticationKeyUsage.createVoting(votingKey, tx.getTxId(), address);
             keyUsage.put(votingKey, votingkeyUsage);
             keyChainGroup.markPubKeyHashAsUsed(voting.getBytes());
+            updates.add(votingkeyUsage);
         }
 
         // operator
         if (operatorKey != null) {
+            log.info("protx update register: found operator key {}", votingKey);
             boolean legacy = providerUpdateRegistarTx.getCurrentVersion() == LEGACY_BLS_VERSION;
             AuthenticationKeyUsage operatorKeyUsage = AuthenticationKeyUsage.createOperator(operatorKey, legacy, tx.getTxId(), address);
             keyUsage.put(operatorKey, operatorKeyUsage);
-            keyChainGroup.markPubKeyHashAsUsed(operatorKey.getPubKey());
+            keyChainGroup.markPubKeyAsUsed(operatorKey.getPubKey());
+            updates.add(operatorKeyUsage);
         }
+        queueOnUsageEvent(updates);
     }
 
     @Override
@@ -483,8 +526,12 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         StringBuilder builder = new StringBuilder();
         builder.append(super.toString(includeLookahead, includePrivateKeys, aesKey));
         builder.append("\n").append("Authentication Key Usage").append("\n");
+        NetworkParameters params;
+        if (wallet != null)
+            params = wallet.getParams();
+        else params = Context.get().getParams();
         for (AuthenticationKeyUsage usage : keyUsage.values()) {
-            builder.append(usage.toString(wallet.getParams())).append("\n");
+            builder.append(usage.toString(params)).append("\n");
         }
         return builder.toString();
     }
@@ -713,5 +760,110 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      */
     public boolean removeCreditFundingEventListener(CreditFundingTransactionEventListener listener) {
         return ListenerRegistration.removeFromList(listener, creditFundingListeners);
+    }
+
+    private HashSet<Sha256Hash> getProTxSet() {
+        HashSet<Sha256Hash> proTxSet = new HashSet<>();
+        for (AuthenticationKeyUsage usage : keyUsage.values()) {
+            proTxSet.add(usage.getWhereUsed());
+        }
+        return proTxSet;
+    }
+
+    @Override
+    public BloomFilter getBloomFilter(int size, double falsePositiveRate, long nTweak) {
+        BloomFilter filter = super.getBloomFilter(size, falsePositiveRate, nTweak);
+        HashSet<Sha256Hash> proTxSet = getProTxSet();
+        for (Sha256Hash proTxHash : proTxSet) {
+            filter.insert(proTxHash.getReversedBytes());
+        }
+        return filter;
+    }
+
+    @Override
+    public int getBloomFilterElementCount() {
+        int count = super.getBloomFilterElementCount();
+        count += getProTxSet().size();
+        return count;
+    }
+
+    @Override
+    public boolean isTransactionRevelant(Transaction tx) {
+        switch (tx.getType()) {
+            case TRANSACTION_PROVIDER_REGISTER:
+                return isProTxRegisterRevelant((ProviderRegisterTx)tx.getExtraPayloadObject());
+            case TRANSACTION_PROVIDER_UPDATE_REGISTRAR:
+                return isProTxUpdateRegistrarRevelant((ProviderUpdateRegistarTx) tx.getExtraPayloadObject());
+            case TRANSACTION_PROVIDER_UPDATE_REVOKE:
+                return isProTxRevokeRevelant((ProviderUpdateRevocationTx) tx.getExtraPayloadObject());
+            case TRANSACTION_PROVIDER_UPDATE_SERVICE:
+                return isProTxUpdateServiceRevelant((ProviderUpdateServiceTx) tx.getExtraPayloadObject());
+        }
+        return false;
+    }
+
+    private boolean isProTxHashRevelant(Sha256Hash proTxHash) {
+        for (AuthenticationKeyUsage usage : keyUsage.values()) {
+            if (usage.getWhereUsed().equals(proTxHash))
+                return true;
+        }
+        return false;
+    }
+
+    private boolean isProTxRevokeRevelant(ProviderUpdateRevocationTx revocationTx) {
+        return isProTxHashRevelant(revocationTx.getProTxHash());
+    }
+
+    private boolean isProTxUpdateRegistrarRevelant(ProviderUpdateRegistarTx updateRegistarTx) {
+        return findKeyFromPubKeyHash(updateRegistarTx.getKeyIDVoting().getBytes(), Script.ScriptType.P2PKH) != null ||
+                findKeyFromPubKey(updateRegistarTx.getPubkeyOperator().serialize(false)) != null ||
+                findKeyFromPubKey(updateRegistarTx.getPubkeyOperator().serialize(true)) != null;
+    }
+
+    private boolean isProTxUpdateServiceRevelant(ProviderUpdateServiceTx updateServiceTx) {
+        return isProTxHashRevelant(updateServiceTx.getProTxHash());
+    }
+
+    private boolean isProTxRegisterRevelant(ProviderRegisterTx providerRegisterTx) {
+        return findKeyFromPubKeyHash(providerRegisterTx.getKeyIDOwner().getBytes(), Script.ScriptType.P2PKH) != null ||
+                findKeyFromPubKeyHash(providerRegisterTx.getKeyIDVoting().getBytes(), Script.ScriptType.P2PKH) != null ||
+                findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().serialize(false)) != null ||
+                findKeyFromPubKey(providerRegisterTx.getPubkeyOperator().serialize(true)) != null;
+    }
+
+    protected void queueOnUsageEvent(final List<AuthenticationKeyUsage> usage) {
+        for (final ListenerRegistration<AuthenticationKeyUsageEventListener> registration : usageListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onAuthenticationKeyUsageEvent(usage);
+                }
+            });
+        }
+    }
+
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addAuthenticationKeyUsageEventListener(AuthenticationKeyUsageEventListener listener) {
+        addAuthenticationKeyUsageEventListener(Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an credit funding event listener object. Methods on this object are called when
+     * a credit funding transaction is created or received.
+     */
+    public void addAuthenticationKeyUsageEventListener(Executor executor, AuthenticationKeyUsageEventListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        usageListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeAuthenticationKeyUsageEventListener(AuthenticationKeyUsageEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, usageListeners);
     }
 }

@@ -80,7 +80,7 @@ public class ProviderUpdateRegistarTx extends SpecialTxPayload {
         super.bitcoinSerializeToStream(stream);
         stream.write(proTxHash.getReversedBytes());
         Utils.uint16ToByteStreamLE(mode, stream);
-        pubkeyOperator.bitcoinSerialize(stream);
+        pubkeyOperator.bitcoinSerialize(stream, version == LEGACY_BLS_VERSION);
         keyIDVoting.bitcoinSerialize(stream);
         Utils.bytesToByteStream(scriptPayout.getProgram(), stream);
         stream.write(inputsHash.getReversedBytes());

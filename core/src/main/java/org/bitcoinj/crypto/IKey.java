@@ -104,6 +104,8 @@ public interface IKey extends EncryptableItem {
 
     IKey decrypt(KeyCrypter keyCrypter, KeyParameter aesKey);
 
+    byte[] getSerializedSecretKey();
+    byte[] getSerializedPublicKey();
     Object getPubKeyObject();
 
     KeyFactory getKeyFactory();

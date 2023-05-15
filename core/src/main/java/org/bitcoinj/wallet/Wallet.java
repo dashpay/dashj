@@ -2146,7 +2146,12 @@ public class Wallet extends BaseTaggableObject
     public boolean isTransactionRelevant(Transaction tx) throws ScriptException {
         lock.lock();
         try {
-            return tx.getValueSentFromMe(this).signum() > 0 ||
+            boolean isRevelant = false;
+            for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                if (extension.isTransactionRevelant(tx))
+                    isRevelant = true;
+            }
+            return isRevelant || tx.getValueSentFromMe(this).signum() > 0 ||
                    tx.getValueSentToMe(this).signum() > 0 ||
                    !findDoubleSpendsAgainst(tx, transactions).isEmpty();
         } finally {
