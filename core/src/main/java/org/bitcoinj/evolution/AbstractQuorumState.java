@@ -733,7 +733,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                             }
                         }
                     } catch (InterruptedException x) {
-                        e.printStackTrace();
+                        x.printStackTrace();
+                    } catch (NullPointerException x) {
+                        log.info("peergroup is not initialized");
+                        x.printStackTrace();
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
