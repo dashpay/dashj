@@ -92,6 +92,10 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         super.close();
     }
 
+    private boolean isInitialized() {
+        return blockChain != null;
+    }
+
     @Override
     public void onNewRecoveredSignature(RecoveredSignature recoveredSig) {
         //do nothing.  In Dash Core, this handles signing CLSIG's
@@ -284,24 +288,26 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     }
 
     void checkActiveState() {
-        //TODO: check if DIP8 is active here
-        boolean isDIP0008Active = (blockChain.getBestChainHeight() - 1) > params.getDIP0008BlockHeight();
+        if (isInitialized()) {
+            //TODO: check if DIP8 is active here
+            boolean isDIP0008Active = (blockChain.getBestChainHeight() - 1) > params.getDIP0008BlockHeight();
 
-        boolean oldIsEnforced = isEnforced;
-        isSporkActive = context.sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED);
-        isEnforced = (isDIP0008Active && isSporkActive);
+            boolean oldIsEnforced = isEnforced;
+            isSporkActive = context.sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED);
+            isEnforced = (isDIP0008Active && isSporkActive);
 
-        if (!oldIsEnforced && isEnforced) {
-            // ChainLocks got activated just recently, but it's possible that it was already running before, leaving
-            // us with some stale values which we should not try to enforce anymore (there probably was a good reason
-            // to disable spork19)
-            lock.lock();
-            try {
-                bestChainLockHash = Sha256Hash.ZERO_HASH;
-                bestChainLock = bestChainLockWithKnownBlock = null;
-                bestChainLockBlock = lastNotifyChainLockBlock = null;
-            } finally {
-                lock.unlock();
+            if (!oldIsEnforced && isEnforced) {
+                // ChainLocks got activated just recently, but it's possible that it was already running before, leaving
+                // us with some stale values which we should not try to enforce anymore (there probably was a good reason
+                // to disable spork19)
+                lock.lock();
+                try {
+                    bestChainLockHash = Sha256Hash.ZERO_HASH;
+                    bestChainLock = bestChainLockWithKnownBlock = null;
+                    bestChainLockBlock = lastNotifyChainLockBlock = null;
+                } finally {
+                    lock.unlock();
+                }
             }
         }
     }
