@@ -98,7 +98,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     ArrayList<StoredBlock> pendingBlocks;
 
     int failedAttempts;
-    static final int MAX_ATTEMPTS = 10;
+    static final int MAX_ATTEMPTS = 3;
 
     public MasternodeListSyncOptions syncOptions;
     public int syncInterval;
