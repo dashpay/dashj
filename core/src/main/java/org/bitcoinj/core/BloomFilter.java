@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptChunk;
 import org.bitcoinj.script.ScriptPattern;
@@ -242,7 +243,7 @@ public class BloomFilter extends Message {
     }
 
     /** Inserts the given key and equivalent hashed form (for the address). */
-    public synchronized void insert(ECKey key) {
+    public synchronized void insert(IKey key) {
         insert(key.getPubKey());
         insert(key.getPubKeyHash());
     }

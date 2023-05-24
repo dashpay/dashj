@@ -5,7 +5,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import org.dashj.bls.BLS;
 import org.dashj.bls.PrivateKey;
-import org.dashj.bls.PublicKey;
+import org.dashj.bls.G1Element;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -16,11 +16,12 @@ import static org.junit.Assert.assertEquals;
 
 public class BLSLazyPublicKeyTest {
 
-    private static NetworkParameters PARAMS = MainNetParams.get();
+    private static final NetworkParameters PARAMS = MainNetParams.get();
 
     static {
         Context context = new Context(PARAMS);
-        BLS.Init();
+        //BLS.init();
+        new BLSPublicKey();
     }
 
     private byte [] getRandomSeed(int size) {
@@ -35,10 +36,10 @@ public class BLSLazyPublicKeyTest {
     public void testLazyPublicKey() {
         // Generate a random public key
         byte [] seed = getRandomSeed(32);
-        PrivateKey sk = PrivateKey.FromSeed(seed, seed.length);
-        PublicKey pk = sk.GetPublicKey();
+        PrivateKey sk = PrivateKey.fromSeedBIP32(seed);
+        G1Element pk = sk.getG1Element();
 
-        byte [] publicKeyBytes = pk.Serialize();
+        byte [] publicKeyBytes = pk.serialize(false);
         BLSPublicKey publicKey = new BLSPublicKey(PARAMS, publicKeyBytes, 0);
 
         // create a lazy public key from the bytes only
@@ -55,7 +56,6 @@ public class BLSLazyPublicKeyTest {
         // initialize the lazy public key that was created from bytes
         BLSPublicKey initializedPublicKey = lazyPublicKeyFromBytes.getPublicKey();
         checkState(lazyPublicKeyFromBytes.isPublicKeyInitialized()); // the BLS object should be initialized
-        assertEquals(lazyPublicKeyFromBytes.toString(), lazyPublicKeyFromObject.toString());
-
+        assertEquals(initializedPublicKey.toString(), lazyPublicKeyFromObject.toString());
     }
 }

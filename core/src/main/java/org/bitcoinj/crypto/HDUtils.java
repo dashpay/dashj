@@ -39,14 +39,14 @@ import java.util.List;
 public final class HDUtils {
     private static final Joiner PATH_JOINER = Joiner.on("/");
 
-    static HMac createHmacSha512Digest(byte[] key) {
+    public static HMac createHmacSha512Digest(byte[] key) {
         SHA512Digest digest = new SHA512Digest();
         HMac hMac = new HMac(digest);
         hMac.init(new KeyParameter(key));
         return hMac;
     }
 
-    static byte[] hmacSha512(HMac hmacSha512, byte[] input) {
+    public static byte[] hmacSha512(HMac hmacSha512, byte[] input) {
         hmacSha512.reset();
         hmacSha512.update(input, 0, input.length);
         byte[] out = new byte[64];

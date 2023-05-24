@@ -21,6 +21,7 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSLazySignature;
 import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SpecialTxPayload;
@@ -35,8 +36,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class FinalCommitment extends SpecialTxPayload {
+    @Deprecated
     public static final int CURRENT_VERSION = 1;
+    @Deprecated
     public static final int INDEXED_QUORUM_VERSION = 2;
+
+    public static final int LEGACY_BLS_NON_INDEXED_QUORUM_VERSION = 1;
+    public static final int LEGACY_BLS_INDEXED_QUORUM_VERSION = 2;
+    public static final int BASIC_BLS_NON_INDEXED_QUORUM_VERSION = 3;
+    public static final int BASIC_BLS_INDEXED_QUORUM_VERSION = 4;
+    public static final int MAX_VERSION = BASIC_BLS_INDEXED_QUORUM_VERSION;
 
     private static final Logger log = LoggerFactory.getLogger(FinalCommitment.class);
 
@@ -80,11 +89,13 @@ public class FinalCommitment extends SpecialTxPayload {
         int quorumSize = LLMQParameters.fromType(LLMQParameters.LLMQType.fromValue(llmqType)).size;
         this.signers = Utils.booleanArrayList(quorumSize, signers);
         this.validMembers = Utils.booleanArrayList(quorumSize, validMembers);
-        this.quorumPublicKey = new BLSPublicKey(params, quorumPublicKey, 0);
+        this.quorumPublicKey = new BLSPublicKey(params, quorumPublicKey, 0, isLegacy());
         this.quorumVvecHash = quorumVvecHash;
         this.quorumSignature = signature.getSignature();
         this.membersSignature = membersSignature.getSignature();
-        length = 1 + 32 + (version >= INDEXED_QUORUM_VERSION ? 2 : 0) + VarInt.sizeOf(quorumSize) * 2 +
+        length = 1 + 32 +
+                (isIndexed() ? 2 : 0) +
+                VarInt.sizeOf(quorumSize) * 2 +
                 signers.length + validMembers.length + quorumPublicKey.length + 32 + signature.getMessageSize() +
                 membersSignature.getMessageSize();
     }
@@ -95,7 +106,7 @@ public class FinalCommitment extends SpecialTxPayload {
 
         llmqType = readBytes(1)[0];
         quorumHash = readHash();
-        if (version >= INDEXED_QUORUM_VERSION) {
+        if (isIndexed()) {
             quorumIndex = readUint16();
         } else {
             quorumIndex = 0;
@@ -103,35 +114,39 @@ public class FinalCommitment extends SpecialTxPayload {
         signers = readBooleanArrayList();
         validMembers = readBooleanArrayList();
 
-        quorumPublicKey = new BLSPublicKey(params, payload, cursor);
+        quorumPublicKey = new BLSPublicKey(params, payload, cursor, isLegacy());
         cursor += quorumPublicKey.getMessageSize();
 
         quorumVvecHash = readHash();
 
-        quorumSignature = new BLSSignature(params, payload, cursor);
+        quorumSignature = new BLSSignature(params, payload, cursor, isLegacy());
         cursor += quorumSignature.getMessageSize();
 
-        membersSignature = new BLSSignature(params, payload, cursor);
+        membersSignature = new BLSSignature(params, payload, cursor, isLegacy());
         cursor += membersSignature.getMessageSize();
 
         length = cursor - offset;
     }
 
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException{
+        bitcoinSerializeToStream(stream, isLegacy());
+    }
+
+    protected void bitcoinSerializeToStream(OutputStream stream, boolean legacy) throws IOException{
         super.bitcoinSerializeToStream(stream);
         stream.write(llmqType);
 
         stream.write(quorumHash.getReversedBytes());
-        if (version >= INDEXED_QUORUM_VERSION) {
+        if (isIndexed()) {
             Utils.uint16ToByteStreamLE(quorumIndex, stream);
         }
         Utils.booleanArrayListToStream(signers, stream);
         Utils.booleanArrayListToStream(validMembers, stream);
 
-        quorumPublicKey.bitcoinSerialize(stream);
+        quorumPublicKey.bitcoinSerialize(stream, legacy);
         stream.write(quorumVvecHash.getReversedBytes());
-        quorumSignature.bitcoinSerialize(stream);
-        membersSignature.bitcoinSerialize(stream);
+        quorumSignature.bitcoinSerialize(stream, legacy);
+        membersSignature.bitcoinSerialize(stream, legacy);
     }
 
     public int getCurrentVersion() {
@@ -219,8 +234,14 @@ public class FinalCommitment extends SpecialTxPayload {
         return Collections.frequency(validMembers, Boolean.TRUE);
     }
 
-    public boolean verify(ArrayList<Masternode> members, boolean checkSigs) {
-        if(getVersion() == 0 || getVersion() > INDEXED_QUORUM_VERSION)
+    public boolean verify(StoredBlock block, ArrayList<Masternode> members, boolean checkSigs) {
+        int expectedVersion = LEGACY_BLS_NON_INDEXED_QUORUM_VERSION;
+        if (LLMQUtils.isQuorumRotationEnabled(block, params, LLMQParameters.LLMQType.fromValue(llmqType))) {
+            expectedVersion = params.isBasicBLSSchemeActive(block.getHeight()) ? BASIC_BLS_INDEXED_QUORUM_VERSION : LEGACY_BLS_INDEXED_QUORUM_VERSION;
+        } else {
+            expectedVersion = params.isBasicBLSSchemeActive(block.getHeight()) ? BASIC_BLS_NON_INDEXED_QUORUM_VERSION : LEGACY_BLS_NON_INDEXED_QUORUM_VERSION;
+        }
+        if(getVersion() == 0 || getVersion() != expectedVersion)
             return false;
 
         if(!params.getLlmqs().containsKey(LLMQParameters.LLMQType.fromValue(llmqType))) {
@@ -343,7 +364,7 @@ public class FinalCommitment extends SpecialTxPayload {
     public Sha256Hash getHash() {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getMessageSize());
-            bitcoinSerializeToStream(bos);
+            bitcoinSerializeToStream(bos, isLegacy());
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException x) {
             throw new RuntimeException(x);
@@ -352,6 +373,14 @@ public class FinalCommitment extends SpecialTxPayload {
 
     public Sha256Hash getQuorumHash() {
         return quorumHash;
+    }
+
+    public boolean isIndexed() {
+        return version == LEGACY_BLS_INDEXED_QUORUM_VERSION || version == BASIC_BLS_INDEXED_QUORUM_VERSION;
+    }
+
+    public boolean isLegacy() {
+        return version == LEGACY_BLS_INDEXED_QUORUM_VERSION || version == LEGACY_BLS_NON_INDEXED_QUORUM_VERSION;
     }
 
     public int getLlmqTypeInt() {

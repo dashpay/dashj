@@ -17,6 +17,7 @@
 package org.bitcoinj.uri;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import com.google.common.collect.ImmutableList;
@@ -382,11 +383,11 @@ public class BitcoinURITest {
         assertEquals(CENT, uri.getAmount());
     }
 
-    @Test(expected = BitcoinURIParseException.class)
-    public void testBad_AmountTooPrecise() throws BitcoinURIParseException {
-        new BitcoinURI(MAINNET, BITCOIN_SCHEME + ":" + MAINNET_GOOD_ADDRESS
-                + "?amount=0.123456789");
-    }
+//    @Test(expected = BitcoinURIParseException.class)
+//    public void testBad_AmountTooPrecise() throws BitcoinURIParseException {
+//        new BitcoinURI(MAINNET, BITCOIN_SCHEME + ":" + MAINNET_GOOD_ADDRESS
+//                + "?amount=0.123456789");
+//    }
 
     @Test(expected = BitcoinURIParseException.class)
     public void testBad_NegativeAmount() throws BitcoinURIParseException {
@@ -398,6 +399,14 @@ public class BitcoinURITest {
     public void testBad_TooLargeAmount() throws BitcoinURIParseException {
         new BitcoinURI(MAINNET, BITCOIN_SCHEME + ":" + MAINNET_GOOD_ADDRESS
                 + "?amount=100000000");
+    }
+
+    @Test
+    public void testTooPrecise() throws BitcoinURIParseException {
+        BitcoinURI uri = new BitcoinURI(MAINNET, "dash:" + MAINNET_GOOD_ADDRESS + "?amount=0.2330056037478755");
+        assertEquals(Coin.valueOf(23300560), uri.getAmount());
+        uri = new BitcoinURI(MAINNET, "dash:" + MAINNET_GOOD_ADDRESS + "?amount=0.233005605");
+        assertEquals(Coin.valueOf(23300560), uri.getAmount());
     }
 
     @Test

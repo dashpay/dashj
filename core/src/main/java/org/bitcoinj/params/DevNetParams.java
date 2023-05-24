@@ -58,7 +58,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         this.devNetName = "devnet-" + devNetName;
         id = ID_DEVNET + "." + devNetName;
 
-        packetMagic = 0xe2caffce;
+        packetMagic = 0xe2caffceL;
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
 
@@ -125,12 +125,18 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         llmqs = new HashMap<>(4);
         addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET);
         addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_60_75);
         addLLMQ(LLMQParameters.LLMQType.LLMQ_400_60);
         addLLMQ(LLMQParameters.LLMQType.LLMQ_400_85);
         addLLMQ(LLMQParameters.LLMQType.LLMQ_100_67);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024);
+        addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET_PLATFORM);
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_50_60;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_50_60;
+        llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_60_75;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
+        llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_50_60;
 
         BIP34Height = 1;
         BIP65Height = 1;

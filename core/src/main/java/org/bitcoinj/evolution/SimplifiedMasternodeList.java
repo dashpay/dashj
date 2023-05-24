@@ -5,6 +5,8 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -19,8 +21,10 @@ import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedMasternodeList extends Message {
 
+    private final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeList.class);
     private ReentrantLock lock = Threading.lock("SimplifiedMasternodeList");
 
+    private short version;
     private Sha256Hash blockHash;
     private long height;
     private StoredBlock storedBlock;
@@ -39,21 +43,32 @@ public class SimplifiedMasternodeList extends Message {
         storedBlock = new StoredBlock(params.getGenesisBlock(), BigInteger.ZERO, 0);
     }
 
-    SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+    SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
     }
 
-    SimplifiedMasternodeList(SimplifiedMasternodeList other) {
+    SimplifiedMasternodeList(SimplifiedMasternodeList other, short version) {
         super(other.params);
+        this.version = version;
+        this.protocolVersion = version == SimplifiedMasternodeListDiff.BASIC_BLS_VERSION ?
+                NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion() :
+                NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
         this.blockHash = other.blockHash;
         this.height = other.height;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(other.mnMap);
+        // tell all entries to render as version 2 (BLS basic scheme)
+        for (SimplifiedMasternodeListEntry mn : mnMap.values()) {
+            mn.version = version;
+        }
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(other.mnUniquePropertyMap);
         this.storedBlock = other.storedBlock;
     }
 
-    SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries) {
+    SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries, int protocolVersion) {
         super(params);
+        this.protocolVersion = protocolVersion;
+        this.version = protocolVersion == NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion() ?
+                SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION : SimplifiedMasternodeListDiff.BASIC_BLS_VERSION;
         this.blockHash = params.getGenesisBlock().getHash();
         this.height = -1;
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>();
@@ -66,14 +81,19 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+            version = (short) readUint16();
+        } else {
+            version = SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION;
+        }
         blockHash = readHash();
         height = (int)readUint32();
         int size = (int)readVarInt();
-        mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(size);
+        mnMap = new HashMap<>(size);
         for(int i = 0; i < size; ++i)
         {
             Sha256Hash hash = readHash();
-            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor);
+            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, protocolVersion);
             cursor += mn.getMessageSize();
             mnMap.put(hash, mn);
         }
@@ -101,6 +121,9 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+            Utils.uint16ToByteStreamLE(version, stream);
+        }
         stream.write(blockHash.getReversedBytes());
         Utils.uint32ToByteStreamLE(height, stream);
 
@@ -111,7 +134,15 @@ public class SimplifiedMasternodeList extends Message {
         }
         stream.write(new VarInt(0).encode());
         ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
-        storedBlock.serializeCompact(buffer);
+        try {
+            storedBlock.serializeCompact(buffer);
+        } catch (IllegalStateException x) {
+            // the chainwork is too large
+            log.info("chain work is too large on {}, work = {}, size = {} bits (max = 96)", storedBlock,
+                    storedBlock.getChainWork().toString(16), storedBlock.getChainWork().bitLength());
+            storedBlock = new StoredBlock(storedBlock.getHeader(), BigInteger.ZERO, storedBlock.getHeight());
+            storedBlock.serializeCompact(buffer);
+        }
         stream.write(buffer.array());
     }
 
@@ -129,11 +160,15 @@ public class SimplifiedMasternodeList extends Message {
         CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
         if(!diff.prevBlockHash.equals(blockHash) && !(diff.prevBlockHash.isZero() && blockHash.equals(params.getGenesisBlock().getHash())))
             throw new MasternodeListDiffException("The mnlistdiff does not connect to this list.  height: " +
-                    height + " -> " + cbtx.getHeight(), false, false, height == cbtx.getHeight());
+                    height + " -> " + cbtx.getHeight(), false, false, height == cbtx.getHeight(), false);
 
         lock.lock();
         try {
-            SimplifiedMasternodeList result = new SimplifiedMasternodeList(this);
+            // this should not be necessary since the activation height is hard coded
+            if (diff.getVersion() >= SimplifiedMasternodeListDiff.BASIC_BLS_VERSION) {
+                params.setBasicBLSSchemeActivationHeight((int)((CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject()).height);
+            }
+            SimplifiedMasternodeList result = new SimplifiedMasternodeList(this, diff.getVersion());
 
             result.blockHash = diff.blockHash;
             result.height = cbtx.getHeight();
@@ -224,7 +259,7 @@ public class SimplifiedMasternodeList extends Message {
     }
 
     public
-    boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff, SimplifiedMasternodeList prevList) throws VerificationException {
+    boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff, SimplifiedMasternodeList prevList) throws MasternodeListDiffException {
         //check mnListMerkleRoot
 
         if(!(coinbaseTx.getExtraPayloadObject() instanceof CoinbaseTx))
@@ -260,7 +295,7 @@ public class SimplifiedMasternodeList extends Message {
                 return true;
 
             if (!cbtx.merkleRootMasternodeList.equals(calculateMerkleRoot(smnlHashes)))
-                throw new VerificationException("MerkleRoot of masternode list does not match coinbaseTx");
+                throw new MasternodeListDiffException("MerkleRoot of masternode list does not match coinbaseTx", true, false, false, true);
             return true;
         } finally {
             lock.unlock();
@@ -362,6 +397,20 @@ public class SimplifiedMasternodeList extends Message {
         return false;
     }
 
+    public boolean isValid(Sha256Hash proRegTxHash) {
+        lock.lock();
+        try {
+            SimplifiedMasternodeListEntry entry = mnMap.get(proRegTxHash);
+            if (entry != null) {
+                return entry.isValid();
+            } else {
+                return false;
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public boolean containsMN(PeerAddress address) {
         for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
             if (entry.getValue().getService().getAddr().equals(address.getAddr())) {
@@ -447,7 +496,7 @@ public class SimplifiedMasternodeList extends Message {
         return entry.isValid;
     }
 
-    ArrayList<Pair<Sha256Hash, Masternode>> calculateScores(final Sha256Hash modifier)
+    ArrayList<Pair<Sha256Hash, Masternode>> calculateScores(final Sha256Hash modifier, boolean hpmnOnly)
     {
         final ArrayList<Pair<Sha256Hash, Masternode>> scores = new ArrayList<Pair<Sha256Hash, Masternode>>(getAllMNsCount());
 
@@ -458,6 +507,10 @@ public class SimplifiedMasternodeList extends Message {
                     // we only take confirmed MNs into account to avoid hash grinding on the ProRegTxHash to sneak MNs into a
                     // future quorums
                     return;
+                }
+                if (hpmnOnly) {
+                    if (mn.type != MasternodeType.HIGHPERFORMANCE.index)
+                        return;
                 }
 
                 // calculate sha256(sha256(proTxHash, confirmedHash), modifier) per MN
@@ -492,7 +545,7 @@ public class SimplifiedMasternodeList extends Message {
         }
     }
 
-    public int getMasternodeRank(Sha256Hash proTxHash, Sha256Hash quorumModifierHash)
+    public int getMasternodeRank(Sha256Hash proTxHash, Sha256Hash quorumModifierHash, boolean hpmnOnly)
     {
         int rank = -1;
         //Added to speed things up
@@ -504,7 +557,7 @@ public class SimplifiedMasternodeList extends Message {
         lock.lock();
         try {
 
-            ArrayList<Pair<Sha256Hash, Masternode>> vecMasternodeScores = calculateScores(quorumModifierHash);
+            ArrayList<Pair<Sha256Hash, Masternode>> vecMasternodeScores = calculateScores(quorumModifierHash, hpmnOnly);
             if (vecMasternodeScores.isEmpty())
                 return -1;
 
@@ -536,9 +589,13 @@ public class SimplifiedMasternodeList extends Message {
         return blockHash;
     }
 
-    ArrayList<Masternode> calculateQuorum(int maxSize, Sha256Hash modifier)
+    ArrayList<Masternode> calculateQuorum(int maxSize, Sha256Hash modifier) {
+        return calculateQuorum(maxSize, modifier, false);
+    }
+
+    ArrayList<Masternode> calculateQuorum(int maxSize, Sha256Hash modifier, boolean hpmnOnly)
     {
-        ArrayList<Pair<Sha256Hash, Masternode>> scores = calculateScores(modifier);
+        ArrayList<Pair<Sha256Hash, Masternode>> scores = calculateScores(modifier, hpmnOnly);
 
         // sort is descending order
         Collections.sort(scores, Collections.reverseOrder(new CompareScoreMN()));

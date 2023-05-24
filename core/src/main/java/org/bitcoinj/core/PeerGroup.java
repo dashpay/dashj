@@ -26,6 +26,7 @@ import net.jcip.annotations.*;
 import org.bitcoinj.coinjoin.SendCoinJoinQueue;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.governance.GovernanceVote;
@@ -215,7 +216,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     };
 
     private final KeyChainEventListener walletKeyEventListener = new KeyChainEventListener() {
-        @Override public void onKeysAdded(List<ECKey> keys) {
+        @Override public void onKeysAdded(List<IKey> keys) {
             recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
         }
     };
@@ -2155,16 +2156,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     private Integer masternodeListsSynced = 0;
     public void triggerMnListDownloadComplete() {
         masternodeListsSynced++;
-        int requiredListsToSync = LLMQUtils.isQuorumRotationEnabled(chain, params, params.getLlmqDIP0024InstantSend()) ? 2 : 1;
-
-        log.info("triggerMnListDownloadComplete: {}, requiredListsToSync = {}", masternodeListsSynced + 1, requiredListsToSync);
-        if (LLMQUtils.isQuorumRotationEnabled(context, params, params.getLlmqDIP0024InstantSend())) {
-            if (masternodeListsSynced == requiredListsToSync) {
-                mnListDownloadedFuture.set(masternodeListsSynced);
-            }
-        } else {
-            mnListDownloadedFuture.set(masternodeListsSynced);
-        }
+        mnListDownloadedFuture.set(masternodeListsSynced);
         queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Complete, null);
     }
 
@@ -2302,7 +2294,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     Futures.addCallback(preBlockDownloadFuture, preBlocksDownloadCallback, executor);
                     setSyncStage(SyncStage.PREBLOCKS);
                     queuePreBlockDownloadListeners(peer);
-                } else /*if (syncStage.value > SyncStage.PREBLOCKS.value)*/ {
+                } else {
                     // startBlockChainDownload will setDownloadData(true) on itself automatically.
                     setSyncStage(SyncStage.BLOCKS);
                     peer.startBlockChainDownload();

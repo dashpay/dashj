@@ -15,11 +15,16 @@
  */
 package org.bitcoinj.core;
 
+import com.google.common.base.Preconditions;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 
-/**
+/*
  * Created by Hash Engineering on 8/25/2018.
+ */
+
+/**
+ * KeyId stores a Hash160 of a public key.  It is displayed in big endian.
  */
 public class KeyId extends TransactionDestination {
     public static final KeyId KEYID_ZERO = new KeyId(new byte[20]);
@@ -28,13 +33,35 @@ public class KeyId extends TransactionDestination {
         super(params, payload, offset);
     }
 
-    public KeyId(byte [] keyId) {
+    private KeyId(byte [] keyId) {
         super(keyId);
     }
 
-    public String toString()
-    {
-        return "KeyId(" + Utils.HEX.encode(bytes) +")";
+    public static KeyId fromBytes(byte[] bytes) {
+        return new KeyId(bytes);
+    }
+
+    private KeyId(byte [] key, boolean isLittleEndian) {
+        super(key);
+        Preconditions.checkArgument(key.length == 20);
+        if (isLittleEndian) {
+            bytes = new byte[key.length];
+            System.arraycopy(key, 0, bytes, 0, key.length);
+        } else {
+            bytes = Utils.reverseBytes(key);
+        }
+    }
+
+    public static KeyId fromBytes(byte[] bytes, boolean isLittleEndian) {
+        return new KeyId(bytes, isLittleEndian);
+    }
+
+    public static KeyId fromString(String keyId) {
+        return new KeyId(Utils.reverseBytes(Utils.HEX.decode(keyId)));
+    }
+
+    public String toString() {
+        return "KeyId(" + Utils.HEX.encode(Utils.reverseBytes(bytes)) +")";
     }
 
     @Override

@@ -166,13 +166,13 @@ public class DeterministicKeyChainTest {
     @Test
     public void events() throws Exception {
         // Check that we get the right events at the right time.
-        final List<List<ECKey>> listenerKeys = Lists.newArrayList();
+        final List<List<IKey>> listenerKeys = Lists.newArrayList();
         long secs = 1389353062L;
         chain = DeterministicKeyChain.builder().entropy(ENTROPY, secs).outputScriptType(Script.ScriptType.P2PKH)
                 .build();
         chain.addEventListener(new AbstractKeyChainEventListener() {
             @Override
-            public void onKeysAdded(List<ECKey> keys) {
+            public void onKeysAdded(List<IKey> keys) {
                 listenerKeys.add(keys);
             }
         }, Threading.SAME_THREAD);
@@ -181,13 +181,13 @@ public class DeterministicKeyChainTest {
         assertEquals(0, listenerKeys.size());
         ECKey key = chain.getKey(KeyChain.KeyPurpose.CHANGE);
         assertEquals(1, listenerKeys.size());  // 1 event
-        final List<ECKey> firstEvent = listenerKeys.get(0);
+        final List<IKey> firstEvent = listenerKeys.get(0);
         assertEquals(1, firstEvent.size());
         assertTrue(firstEvent.contains(key));   // order is not specified.
         listenerKeys.clear();
 
         chain.maybeLookAhead();
-        final List<ECKey> secondEvent = listenerKeys.get(0);
+        final List<IKey> secondEvent = listenerKeys.get(0);
         assertEquals(12, secondEvent.size());  // (5 lookahead keys, +1 lookahead threshold) * 2 chains
         listenerKeys.clear();
 

@@ -16,8 +16,8 @@ public abstract class Masternode extends ChildMessage {
         super(params);
     }
 
-    Masternode(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+    Masternode(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
     }
 
     public Sha256Hash getProRegTxHash() {

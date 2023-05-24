@@ -40,7 +40,7 @@ public class LLMQParametersTest {
                 400, 350, 340, 24 * 24, 4, 20,
                 48, 300, 4, 5, 100);
         LLMQParameters llmq100_67 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_100_67, "llmq_100_67",
-                100, 80, 67, 2, 2, 10,
+                100, 80, 67, 24, 2, 10,
                 18, 80, 24, 25, 50);
         LLMQParameters llmq60_75 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_60_75, "llmq_60_75",
                 60, 50, 45, 24 * 12, 2, 42,

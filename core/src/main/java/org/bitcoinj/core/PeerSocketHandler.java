@@ -155,6 +155,7 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
                 Message message;
                 int preSerializePosition = buff.position();
                 try {
+                    serializer.setProtocolVersion(peerAddress.protocolVersion);
                     message = serializer.deserialize(buff);
                 } catch (BufferUnderflowException e) {
                     // If we went through the whole buffer without a full message, we need to use the largeReadBuffer

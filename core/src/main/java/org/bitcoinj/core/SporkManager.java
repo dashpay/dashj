@@ -279,7 +279,7 @@ public class SporkManager {
     boolean setSporkAddress(String strAddress) {
         try {
             Address address = Address.fromBase58(context.getParams(), strAddress);
-            KeyId sporkPubKeyId = new KeyId(address.getHash());
+            KeyId sporkPubKeyId = KeyId.fromBytes(address.getHash());
             setSporkPubKeyIds.add(sporkPubKeyId);
             return true;
         } catch (AddressFormatException x) {

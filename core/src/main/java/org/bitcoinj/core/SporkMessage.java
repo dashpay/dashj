@@ -109,7 +109,7 @@ public class SporkMessage extends Message{
                 return null;
             }
         }
-        return new KeyId(pubkeyFromSig.getPubKeyHash());
+        return KeyId.fromBytes(pubkeyFromSig.getPubKeyHash());
     }
 
     boolean checkSignature(byte [] publicKeyId)

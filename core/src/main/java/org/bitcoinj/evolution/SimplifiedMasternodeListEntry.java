@@ -4,34 +4,44 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSPublicKey;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 
 public class SimplifiedMasternodeListEntry extends Masternode {
-
+    public static final short LEGACY_BLS_VERSION = 1;
+    public static final short BASIC_BLS_VERSION = 2;
+    short version;
     Sha256Hash confirmedHash;
     MasternodeAddress service;
     BLSLazyPublicKey pubKeyOperator;
     KeyId keyIdVoting;
     boolean isValid;
+    int type;
+    int platformHTTPPort;
+    KeyId platformNodeId;
     static int MESSAGE_SIZE = 151;
     //In Memory
     Sha256Hash confirmedHashWithProRegTxHash;
 
-    public SimplifiedMasternodeListEntry(NetworkParameters params) {
+    public SimplifiedMasternodeListEntry(NetworkParameters params, short version) {
         super(params);
         length = MESSAGE_SIZE;
+        this.version = version;
     }
 
-    public SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+    public SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
     }
 
+    @Deprecated
     public SimplifiedMasternodeListEntry(NetworkParameters params,
         Sha256Hash proRegTxHash, Sha256Hash confirmedHash,
         MasternodeAddress service, KeyId keyIdVoting,
         BLSLazyPublicKey pubKeyOperator, boolean isValid) {
         super(params);
+        this.version = LEGACY_BLS_VERSION;
+        this.type = 0;
         this.proRegTxHash = proRegTxHash;
         this.confirmedHash = confirmedHash;
         this.service = service.duplicate();
@@ -40,6 +50,27 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         this.isValid = isValid;
         updateConfirmedHashWithProRegTxHash();
         length = MESSAGE_SIZE;
+    }
+
+    public SimplifiedMasternodeListEntry(NetworkParameters params, short version, int type,
+                                         Sha256Hash proRegTxHash, Sha256Hash confirmedHash,
+                                         MasternodeAddress service, KeyId keyIdVoting,
+                                         BLSLazyPublicKey pubKeyOperator, @Nullable KeyId platformNodeId,
+                                         int platformHTTPPort,
+                                         boolean isValid) {
+        super(params);
+        this.version = version;
+        this.type = type;
+        this.proRegTxHash = proRegTxHash;
+        this.confirmedHash = confirmedHash;
+        this.service = service.duplicate();
+        this.keyIdVoting = keyIdVoting;
+        this.pubKeyOperator = new BLSLazyPublicKey(pubKeyOperator);
+        this.platformNodeId = platformNodeId;
+        this.platformHTTPPort = platformHTTPPort;
+        this.isValid = isValid;
+        updateConfirmedHashWithProRegTxHash();
+        length = MESSAGE_SIZE + (version == BASIC_BLS_VERSION ? 2 + (type == MasternodeType.HIGHPERFORMANCE.index ? 22 : 0) : 0);
     }
 
     public SimplifiedMasternodeListEntry(NetworkParameters params, SimplifiedMasternodeListEntry other) {
@@ -55,15 +86,29 @@ public class SimplifiedMasternodeListEntry extends Masternode {
 
     @Override
     protected void parse() throws ProtocolException {
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_BASIC)) {
+            version = BASIC_BLS_VERSION;
+        } else {
+            version = LEGACY_BLS_VERSION;
+        }
         proRegTxHash = readHash();
         confirmedHash = readHash();
         service = new MasternodeAddress(params, payload, cursor, 0);
         cursor += service.getMessageSize();
-        pubKeyOperator = new BLSLazyPublicKey(params, payload, cursor);
+        pubKeyOperator = new BLSLazyPublicKey(params, payload, cursor, version == LEGACY_BLS_VERSION);
         cursor += pubKeyOperator.getMessageSize();
         keyIdVoting = new KeyId(params, payload, cursor);
         cursor += keyIdVoting.getMessageSize();
         isValid = readBytes(1)[0] == 1;
+        if (version == BASIC_BLS_VERSION) {
+            type = readUint16();
+            if (type == MasternodeType.HIGHPERFORMANCE.index) {
+                platformHTTPPort = readUint16();
+                // not in Beta 5
+                platformNodeId = new KeyId(params, payload, cursor);
+                cursor += platformNodeId.getMessageSize();
+            }
+        }
 
         updateConfirmedHashWithProRegTxHash();
 
@@ -75,9 +120,17 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         stream.write(proRegTxHash.getReversedBytes());
         stream.write(confirmedHash.getReversedBytes());
         service.bitcoinSerialize(stream);
-        pubKeyOperator.bitcoinSerialize(stream);
+        pubKeyOperator.bitcoinSerialize(stream, version == LEGACY_BLS_VERSION);
         keyIdVoting.bitcoinSerialize(stream);
         stream.write(isValid ? 1 : 0);
+        if (version == BASIC_BLS_VERSION) {
+            Utils.uint16ToByteStreamLE(type, stream);
+            if (type == MasternodeType.HIGHPERFORMANCE.index) {
+                Utils.uint16ToByteStreamLE(platformHTTPPort, stream);
+                // TODO: not in beta 5
+                platformNodeId.bitcoinSerialize(stream);
+            }
+        }
     }
 
     public Sha256Hash calculateHash() {
@@ -96,9 +149,8 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     }
 
     public String toString() {
-        return String.format("SimplifiedMNListEntry{proTxHash=%s, service=%s, keyIDOperator=%s, keyIDVoting=%s, isValid="+isValid+"}",
-            proRegTxHash.toString(), service.toString(),
-                pubKeyOperator, keyIdVoting);
+        return String.format("SimplifiedMNListEntry{proTxHash=%s, service=%s, keyIDOperator=%s, keyIDVoting=%s, isValid=%s, platformHTTPPort=%d, platformNodeID=%s}",
+            proRegTxHash.toString(), service.toString(), pubKeyOperator, keyIdVoting, isValid, platformHTTPPort, platformNodeId);
     }
 
     public Sha256Hash getConfirmedHash() {

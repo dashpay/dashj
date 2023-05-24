@@ -99,7 +99,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     ArrayList<StoredBlock> pendingBlocks;
 
     int failedAttempts;
-    static final int MAX_ATTEMPTS = 10;
+    static final int MAX_ATTEMPTS = 3;
 
     public MasternodeListSyncOptions syncOptions;
     public int syncInterval;
@@ -122,8 +122,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         initialize();
     }
 
-    public AbstractQuorumState(NetworkParameters params, byte[] payload, int offset) {
-        super(params, payload, offset);
+    public AbstractQuorumState(NetworkParameters params, byte[] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
         initialize();
     }
 
@@ -146,6 +146,11 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         this.bootstrapFilePath = bootstrapFilePath;
         this.bootstrapStream = bootstrapStream;
         this.bootStrapFileFormat = bootStrapFileFormat;
+        if (bootStrapFileFormat >= SimplifiedMasternodeListManager.BLS_SCHEME_FORMAT_VERSION) {
+            protocolVersion = NetworkParameters.ProtocolVersion.BLS_BASIC.getBitcoinProtocolVersion();
+        } else {
+            protocolVersion = NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
+        }
     }
 
     // TODO: Do we need to keep track of the header chain also?
@@ -729,7 +734,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                             }
                         }
                     } catch (InterruptedException x) {
-                        e.printStackTrace();
+                        x.printStackTrace();
+                    } catch (NullPointerException x) {
+                        log.info("peergroup is not initialized");
+                        x.printStackTrace();
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -746,7 +754,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         return bootstrapFilePath == null && bootstrapStream == null;
     }
 
-    abstract DiffMessage loadDiffMessageFromBuffer(byte [] buffer);
+    abstract DiffMessage loadDiffMessageFromBuffer(byte [] buffer, int protocolVersion);
 
     public void setLoadingBootstrap() {
         isLoadingBootstrap = true;
@@ -783,11 +791,13 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
             isLoadingBootstrap = true;
             if (buffer != null) {
-                DiffMessage mnlistdiff = loadDiffMessageFromBuffer(buffer);
+                DiffMessage mnlistdiff = loadDiffMessageFromBuffer(buffer, protocolVersion);
                 if (mnlistdiff instanceof SimplifiedMasternodeListDiff) {
                     stateManager.processDiffMessage(null, (SimplifiedMasternodeListDiff) mnlistdiff, true);
                 } else if (mnlistdiff instanceof QuorumRotationInfo) {
-                    stateManager.processDiffMessage(null, (QuorumRotationInfo) mnlistdiff, true);
+                    SettableFuture<Boolean> qrinfoComplete = SettableFuture.create();
+                    stateManager.processDiffMessage(null, (QuorumRotationInfo) mnlistdiff, true, qrinfoComplete);
+                    qrinfoComplete.get();
                 } else {
                     throw new IllegalStateException("Unknown difference message: " + mnlistdiff.getShortName());
                 }
@@ -798,7 +808,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             }
             bootStrapLoaded.set(true);
             log.info("finished loading bootstrap files");
-        } catch (VerificationException | IOException | IllegalStateException | NullPointerException x) {
+        } catch (VerificationException | IOException | IllegalStateException | NullPointerException | InterruptedException | ExecutionException x) {
             bootStrapLoaded.setException(x);
             log.info("failed loading bootstrap files: ", x);
         } finally {

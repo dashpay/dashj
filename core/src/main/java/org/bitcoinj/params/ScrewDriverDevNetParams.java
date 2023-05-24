@@ -18,45 +18,45 @@ package org.bitcoinj.params;
 
 import org.bitcoinj.quorums.LLMQParameters;
 
-public class JackDanielsDevNetParams extends DevNetParams {
-    private static final String DEVNET_NAME = "jack-daniels";
+public class ScrewDriverDevNetParams extends DevNetParams {
 
-    private static final String[] MASTERNODES = new String[] {
-        "34.220.200.8",
-        "35.90.255.217",
-        "54.218.109.249",
-        "35.91.227.162",
-        "34.222.40.218",
-        "35.88.38.193",
-        "35.91.226.251",
-        "35.160.157.3",
-        "18.237.219.248",
-        "35.91.210.71",
-        "35.89.227.73",
-        "35.90.188.155",
+    private static final String DEVNET_NAME = "screwdriver";
+
+    private static final String[] MASTERNODES = new String[]{
+        "35.92.67.183",
+        "54.244.217.185",
+        "54.149.244.160",
+        "35.93.71.90",
+        "52.34.46.50",
+        "35.160.137.75",
+        "35.92.93.204",
+        "54.70.34.204",
+        "35.91.184.146",
+        "52.35.142.34",
+        "35.89.135.53",
     };
 
-    public JackDanielsDevNetParams() {
-        super(DEVNET_NAME, "yYBanbwp2Pp2kYWqDkjvckY3MosuZzkKp7", 20001,
-                MASTERNODES, true, 70220);
+    public ScrewDriverDevNetParams() {
+        super(DEVNET_NAME, "yibwxyuuKsP6kBsq74vu9p6ju97qEb2B4b", 20001,
+                MASTERNODES, true, -1);
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
-        DIP0024BlockHeight = -1;
+        DIP0024BlockHeight = 300;
         isDIP24Only = false;
+        basicBLSSchemeActivationHeight = 1200;
 
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024;
-        llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_DEVNET;
+        llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_DEVNET_PLATFORM;
         llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_DEVNET;
-        addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024);
     }
 
-    private static JackDanielsDevNetParams instance;
+    private static ScrewDriverDevNetParams instance;
 
-    public static JackDanielsDevNetParams get() {
+    public static ScrewDriverDevNetParams get() {
         if (instance == null) {
-            instance = new JackDanielsDevNetParams();
+            instance = new ScrewDriverDevNetParams();
             add(instance);
         }
         return instance;

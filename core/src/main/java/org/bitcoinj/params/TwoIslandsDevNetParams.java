@@ -18,38 +18,48 @@ package org.bitcoinj.params;
 
 import org.bitcoinj.quorums.LLMQParameters;
 
-public class KrupnikDevNetParams extends DevNetParams {
+public class TwoIslandsDevNetParams extends DevNetParams {
 
-    private static final String DEVNET_NAME = "krupnik";
+    private static final String DEVNET_NAME = "two-islands";
 
     private static final String[] MASTERNODES = new String[]{
-            "34.210.237.116",
-            "54.69.65.231",
-            "54.185.90.95",
-            "54.186.234.0",
-            "35.87.212.139",
-            "34.212.52.44",
-            "34.217.47.197",
-            "34.220.79.131",
-            "18.237.212.176",
-            "54.188.17.188",
-            "34.210.1.159",
+        "34.221.170.217",
+        "54.191.146.189",
+        "54.149.47.81",
+        "44.227.219.110",
+        "35.84.65.19",
+        "34.218.147.83",
+        "52.10.213.115",
+        "44.241.67.131",
+        "54.187.37.165",
+        "44.228.137.254",
+        "35.166.84.162",
+        "44.231.62.211",
+        "52.39.77.20",
+        "18.236.195.112"
     };
 
-    public KrupnikDevNetParams() {
-        super(DEVNET_NAME, "yPBtLENPQ6Ri1R7SyjevvvyMdopdFJUsRo", 20001,
+    public TwoIslandsDevNetParams() {
+        super(DEVNET_NAME, "yXs5gFBzepP6buEXsAi23yoHdbuQvzvx4N", 20001,
                 MASTERNODES, true, -1);
         dnsSeeds = MASTERNODES;
-        addLLMQ(LLMQParameters.LLMQType.LLMQ_DEVNET);
+        dropPeersAfterBroadcast = false; // this network is too small
+        DIP0024BlockHeight = 300;
+        isDIP24Only = false;
+        basicBLSSchemeActivationHeight = 1200;
+
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET;
+        llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024;
+        llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_DEVNET_PLATFORM;
+        llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_DEVNET;
     }
 
-    private static KrupnikDevNetParams instance;
+    private static TwoIslandsDevNetParams instance;
 
-    public static KrupnikDevNetParams get() {
+    public static TwoIslandsDevNetParams get() {
         if (instance == null) {
-            instance = new KrupnikDevNetParams();
+            instance = new TwoIslandsDevNetParams();
             add(instance);
         }
         return instance;

@@ -425,14 +425,38 @@ message ExtendedKeyChain {
     BLOCKCHAIN_IDENTITY_FUNDING = 5;
     BLOCKCHAIN_IDENTITY_TOPUP = 6;
     INVITATION_FUNDING = 7;
+    MASTERNODE_PLATFORM_OPERATOR = 8;
+    INVALID = 99;
   }
   enum KeyType {
     ECDSA = 0;
     BLS = 1;
+    EDDSA = 2;
   }
   required ExtendedKeyChainType type = 1;
   required KeyType keyType = 2;
   repeated Key key = 3;
+}
+
+message AuthenticationKeyUsage {
+  enum AuthenticationKeyStatus {
+      UNKNOWN = 0;
+      CURRENT = 1;
+      PREVIOUS = 2;
+      REVOKED = 3;
+      NEVER = 4;
+  }
+  required bytes keyOrKeyId = 1;
+  required ExtendedKeyChain.ExtendedKeyChainType keyType = 2;
+  required AuthenticationKeyStatus status = 3;
+  required bytes whereUsed = 4;  // proTxHash
+  optional PeerAddress address = 5;
+  optional bool legacy = 6; // for BLS keys, legacy or basic scheme
+}
+
+message AuthenticationGroupExtension {
+  repeated ExtendedKeyChain authenticationKeyChains = 1;
+  repeated AuthenticationKeyUsage authenticationKeyUsage = 2;
 }
 
 /** A bitcoin wallet */
@@ -493,7 +517,8 @@ message Wallet {
 
   // (field number 17 was used by transaction_signers)
 
-  repeated ExtendedKeyChain extKeyChains = 29;
+  // not used, superseded by AuthenticationGroupExtension
+  // field number 29 was used for repeated ExtendedKeyChain extKeyChains = 29;
 
   repeated Key keysForFriends = 30;  //spending, friends send us money
   repeated Key keysFromFriends = 31; //watching, we send money to friends
