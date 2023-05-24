@@ -1267,7 +1267,8 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     }
 
     @Override
-    public void processDiff(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap) {
+    public void processDiff(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, AbstractBlockChain headersChain,
+                            AbstractBlockChain blockChain, boolean isLoadingBootStrap) throws VerificationException {
         long newHeight = ((CoinbaseTx) quorumRotationInfo.getMnListDiffTip().coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null)
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffTip());
