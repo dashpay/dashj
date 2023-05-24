@@ -8,6 +8,7 @@ import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.WhiteRussianDevNetParams;
 import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;

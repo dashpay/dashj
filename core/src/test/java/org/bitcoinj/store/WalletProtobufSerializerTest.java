@@ -54,6 +54,7 @@ import org.bitcoinj.wallet.MarriedKeyChain;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.WalletTransaction;
@@ -90,6 +91,13 @@ public class WalletProtobufSerializerTest {
 
     public static String WALLET_DESCRIPTION  = "The quick brown fox lives in \u4f26\u6566"; // Beijing in Chinese
     private long mScriptCreationTime;
+
+    WalletProtobufSerializer.WalletFactory walletFactory = new WalletProtobufSerializer.WalletFactory() {
+        @Override
+        public Wallet create(NetworkParameters params, KeyChainGroup keyChainGroup) {
+            return new Wallet(params, keyChainGroup);
+        }
+    };
 
     @BeforeClass
     public static void setUpClass() throws Exception {
@@ -426,12 +434,12 @@ public class WalletProtobufSerializerTest {
         Protos.Wallet proto = new WalletProtobufSerializer().walletToProto(myWallet);
         // Initial extension is mandatory: try to read it back into a wallet that doesn't know about it.
         try {
-            new WalletProtobufSerializer().readWallet(UNITTEST, null, proto);
+            new WalletProtobufSerializer(walletFactory).readWallet(UNITTEST, null, proto);
             fail();
         } catch (UnreadableWalletException e) {
             assertTrue(e.getMessage().contains("mandatory"));
         }
-        Wallet wallet = new WalletProtobufSerializer().readWallet(UNITTEST,
+        Wallet wallet = new WalletProtobufSerializer(walletFactory).readWallet(UNITTEST,
                 new WalletExtension[]{ new FooWalletExtension("com.whatever.required", true) },
                 proto);
         assertTrue(wallet.getExtensions().containsKey("com.whatever.required"));
@@ -439,8 +447,8 @@ public class WalletProtobufSerializerTest {
         // Non-mandatory extensions are ignored if the wallet doesn't know how to read them.
         Wallet wallet2 = new Wallet(UNITTEST);
         wallet2.addExtension(new FooWalletExtension("com.whatever.optional", false));
-        Protos.Wallet proto2 = new WalletProtobufSerializer().walletToProto(wallet2);
-        Wallet wallet5 = new WalletProtobufSerializer().readWallet(UNITTEST, null, proto2);
+        Protos.Wallet proto2 = new WalletProtobufSerializer(walletFactory).walletToProto(wallet2);
+        Wallet wallet5 = new WalletProtobufSerializer(walletFactory).readWallet(UNITTEST, null, proto2);
         assertEquals(0, wallet5.getExtensions().size());
     }
 
@@ -468,8 +476,8 @@ public class WalletProtobufSerializerTest {
             }
         };
         myWallet.addExtension(extension);
-        Protos.Wallet proto = new WalletProtobufSerializer().walletToProto(myWallet);
-        Wallet wallet = new WalletProtobufSerializer().readWallet(UNITTEST, new WalletExtension[]{extension}, proto);
+        Protos.Wallet proto = new WalletProtobufSerializer(walletFactory).walletToProto(myWallet);
+        Wallet wallet = new WalletProtobufSerializer(walletFactory).readWallet(UNITTEST, new WalletExtension[]{extension}, proto);
         assertEquals(0, wallet.getExtensions().size());
     }
 

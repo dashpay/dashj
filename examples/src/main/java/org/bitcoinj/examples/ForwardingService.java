@@ -78,9 +78,9 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("two-islands")) {
             params = TwoIslandsDevNetParams.get();
             filePrefix = "forwarding-service-two-islands";
-        } else if (args.length > 1 && args[1].equals("screwdriver")) {
-            params = ScrewDriverDevNetParams.get();
-            filePrefix = "forwarding-service-screwdriver";
+        } else if (args.length > 1 && args[1].equals("bintang")) {
+            params = BinTangDevNetParams.get();
+            filePrefix = "forwarding-service-bintang";
         } else if (args.length > 1 && args[1].equals("absinthe")) {
             params = AbsintheDevNetParams.get();
             filePrefix = "forwarding-service-absinthe";

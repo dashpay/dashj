@@ -50,17 +50,17 @@ public class CoinJoinCoinSelectorTest extends TestWithWallet {
     @Test
     public void selectable() {
         walletEx.initializeCoinJoin();
-        DeterministicKey key = walletEx.getCoinJoin().freshReceiveKey();
+        DeterministicKey key = (DeterministicKey) walletEx.getCoinJoin().freshReceiveKey();
 
         CoinJoinCoinSelector coinSelector = new CoinJoinCoinSelector(walletEx);
 
         Transaction txCoinJoin;
         Transaction txDemonination = new Transaction(UNITTEST);
-        txDemonination.addOutput(CoinJoin.getSmallestDenomination(), walletEx.getCoinJoin().freshReceiveKey());
+        txDemonination.addOutput(CoinJoin.getSmallestDenomination(), (DeterministicKey) walletEx.getCoinJoin().freshReceiveKey());
 
         txCoinJoin = new Transaction(UNITTEST);
         txCoinJoin.addInput(txDemonination.getOutput(0));
-        txCoinJoin.addOutput(CoinJoin.getSmallestDenomination(), walletEx.getCoinJoin().freshReceiveKey());
+        txCoinJoin.addOutput(CoinJoin.getSmallestDenomination(), (DeterministicKey) walletEx.getCoinJoin().freshReceiveKey());
         txCoinJoin.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
 
         assertTrue(coinSelector.shouldSelect(txCoinJoin));

@@ -261,13 +261,6 @@ public class WalletProtobufSerializer {
             proto.setData(ByteString.copyFrom(extension.serializeWalletExtension()));
             walletBuilder.addExtension(proto);
         }
-        for (KeyChainWalletExtension extension : wallet.getKeyChainExtensions().values()) {
-            Protos.Extension.Builder proto = Protos.Extension.newBuilder();
-            proto.setId(extension.getWalletExtensionID());
-            proto.setMandatory(extension.isWalletExtensionMandatory());
-            proto.setData(ByteString.copyFrom(extension.serializeWalletExtension()));
-            walletBuilder.addExtension(proto);
-        }
     }
 
     private static Protos.Transaction makeTxProto(WalletTransaction wtx) {

@@ -92,7 +92,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
                 Sha256Hash.ZERO_HASH,
                 Sha256Hash.ZERO_HASH,
                 new MasternodeAddress("127.0.0.1", 2003),
-                new KeyId(new ECKey().getPubKeyHash()),
+                KeyId.fromBytes(new ECKey().getPubKeyHash()),
                 new BLSLazyPublicKey(operatorSecretKey.GetPublicKey()),
                 true
         );

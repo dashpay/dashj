@@ -248,10 +248,6 @@ public class Wallet extends BaseTaggableObject
     private final HashMap<String, WalletExtension> extensions;
     // Stores objects that know how to serialize/unserialize themselves to byte streams and whether they're mandatory
     // or not. The string key comes from the extension itself.
-    private final HashMap<String, KeyChainWalletExtension> keyChainExtensions;
-
-    // Stores objects that know how to serialize/unserialize themselves to byte streams and whether they're mandatory
-    // or not. The string key comes from the extension itself.
     private final HashMap<String, KeyChainGroupExtension> keyChainExtensions;
 
     // Objects that perform transaction signing. Applied subsequently one after another
@@ -5344,16 +5340,6 @@ public class Wallet extends BaseTaggableObject
 
     /** Returns a snapshot of all registered extension objects. The extensions themselves are not copied. */
     public Map<String, KeyChainGroupExtension> getKeyChainExtensions() {
-        lock.lock();
-        try {
-            return ImmutableMap.copyOf(keyChainExtensions);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    /** Returns a snapshot of all registered extension objects. The extensions themselves are not copied. */
-    public Map<String, KeyChainWalletExtension> getKeyChainExtensions() {
         lock.lock();
         try {
             return ImmutableMap.copyOf(keyChainExtensions);

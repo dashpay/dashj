@@ -46,11 +46,11 @@ public abstract class TransactionDestination extends ChildMessage {
     @Nullable
     public static TransactionDestination fromScript(Script script) {
         if (ScriptPattern.isP2PKH(script)) {
-            return new KeyId(ScriptPattern.extractHashFromP2PKH(script));
+            return KeyId.fromBytes(ScriptPattern.extractHashFromP2PKH(script));
         } else if (ScriptPattern.isP2SH(script)) {
             return new ScriptId(ScriptPattern.extractHashFromP2SH(script));
         } else if (ScriptPattern.isP2PK(script)) {
-            return new KeyId(ECKey.fromPublicOnly(ScriptPattern.extractKeyFromP2PK(script)).getPubKeyHash());
+            return KeyId.fromBytes(ECKey.fromPublicOnly(ScriptPattern.extractKeyFromP2PK(script)).getPubKeyHash());
         } else {
             return null;
         }

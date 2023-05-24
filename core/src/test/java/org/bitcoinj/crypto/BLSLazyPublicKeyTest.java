@@ -3,7 +3,7 @@ package org.bitcoinj.crypto;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
-import org.dashj.bls.BLS;
+import org.dashj.bls.BLSJniLibrary;
 import org.dashj.bls.PrivateKey;
 import org.dashj.bls.G1Element;
 import org.junit.Test;
@@ -20,8 +20,7 @@ public class BLSLazyPublicKeyTest {
 
     static {
         Context context = new Context(PARAMS);
-        //BLS.init();
-        new BLSPublicKey();
+        BLSJniLibrary.init();
     }
 
     private byte [] getRandomSeed(int size) {

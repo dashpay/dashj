@@ -31,6 +31,7 @@ import org.bitcoinj.core.InventoryMessage;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.Message;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PartialMerkleTree;
 import org.bitcoinj.core.PrunedException;
 import org.bitcoinj.core.Sha256Hash;
@@ -123,7 +124,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 Sha256Hash.ZERO_HASH,
                 Sha256Hash.ZERO_HASH,
                 new MasternodeAddress("127.0.0.1", 2003),
-                new KeyId(new ECKey().getPubKeyHash()),
+                KeyId.fromBytes(new ECKey().getPubKeyHash()),
                 new BLSLazyPublicKey(operatorSecretKey.GetPublicKey()),
                 true
         );
@@ -149,7 +150,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                         1),
                 coinbase,
                 Collections.singletonList(entry),
-                Collections.emptyList()
+                Collections.emptyList(),
+                SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION
         );
         wallet.getContext().masternodeListManager.processMasternodeListDiff(null, diff, true);
 

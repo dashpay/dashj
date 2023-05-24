@@ -20,7 +20,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.CodedOutputStream;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,10 +40,10 @@ import static com.google.common.base.Preconditions.checkState;
  * Handles the CoinJoin related KeyChain
  */
 
-public class CoinJoinExtension extends AbstractKeyChainExtension {
+public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinExtension.class);
 
-    protected KeyChainGroup coinJoinKeyChainGroup;
+    protected AnyKeyChainGroup coinJoinKeyChainGroup;
 
     protected int rounds = CoinJoinClientOptions.getRounds();
 
@@ -109,9 +111,11 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
     public void deserializeWalletExtension(Wallet containingWallet, byte[] data) throws Exception {
         Protos.CoinJoin coinJoinProto = Protos.CoinJoin.parseFrom(data);
         if (containingWallet.isEncrypted()) {
-            coinJoinKeyChainGroup = KeyChainGroup.fromProtobufEncrypted(containingWallet.params, coinJoinProto.getKeyList(), containingWallet.getKeyCrypter());
+            coinJoinKeyChainGroup = AnyKeyChainGroup.fromProtobufEncrypted(containingWallet.params,
+                    coinJoinProto.getKeyList(), containingWallet.getKeyCrypter(), ECKeyFactory.get(), false);
         } else {
-            coinJoinKeyChainGroup = KeyChainGroup.fromProtobufUnencrypted(containingWallet.params, coinJoinProto.getKeyList());
+            coinJoinKeyChainGroup = AnyKeyChainGroup.fromProtobufUnencrypted(containingWallet.params,
+                    coinJoinProto.getKeyList(), ECKeyFactory.get(), false);
         }
         rounds = coinJoinProto.getRounds();
         CoinJoinClientOptions.setRounds(rounds);
@@ -121,7 +125,7 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
         if (coinJoinKeyChainGroup == null)
             return false;
         boolean hasPath = false;
-        for (DeterministicKeyChain chain : coinJoinKeyChainGroup.getDeterministicKeyChains()) {
+        for (AnyDeterministicKeyChain chain : coinJoinKeyChainGroup.getDeterministicKeyChains()) {
             if (chain.getAccountPath().equals(path)) {
                 hasPath = true;
                 break;
@@ -134,9 +138,9 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
         checkState(!seed.isEncrypted());
         if (!hasKeyChain(path)) {
             if (coinJoinKeyChainGroup == null) {
-                coinJoinKeyChainGroup = KeyChainGroup.builder(wallet.getParams()).build();
+                coinJoinKeyChainGroup = AnyKeyChainGroup.builder(wallet.getParams(), ECKeyFactory.get()).build();
             }
-            coinJoinKeyChainGroup.addAndActivateHDChain(DeterministicKeyChain.builder().seed(seed).accountPath(path).build());
+            coinJoinKeyChainGroup.addAndActivateHDChain(AnyDeterministicKeyChain.builder().seed(seed).accountPath(path).build());
         }
     }
 
@@ -145,19 +149,19 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
         checkState(seed.isEncrypted());
         if (!hasKeyChain(path)) {
             if (coinJoinKeyChainGroup == null) {
-                coinJoinKeyChainGroup = KeyChainGroup.builder(wallet.getParams()).build();
+                coinJoinKeyChainGroup = AnyKeyChainGroup.builder(wallet.getParams(), ECKeyFactory.get()).build();
             }
             if (seed.isEncrypted()) {
                 seed = seed.decrypt(wallet.getKeyCrypter(), "", keyParameter);
             }
-            DeterministicKeyChain chain = DeterministicKeyChain.builder().seed(seed).accountPath(path).build();
-            DeterministicKeyChain encryptedChain = chain.toEncrypted(wallet.getKeyCrypter(), keyParameter);
+            AnyDeterministicKeyChain chain = AnyDeterministicKeyChain.builder().seed(seed).accountPath(path).build();
+            AnyDeterministicKeyChain encryptedChain = chain.toEncrypted(wallet.getKeyCrypter(), keyParameter);
             coinJoinKeyChainGroup.addAndActivateHDChain(encryptedChain);
         }
     }
 
     @Override
-    KeyChainGroup getKeyChainGroup() {
+    protected AnyKeyChainGroup getKeyChainGroup() {
         return coinJoinKeyChainGroup;
     }
 
@@ -169,5 +173,17 @@ public class CoinJoinExtension extends AbstractKeyChainExtension {
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
         return "COINJOIN:\n Rounds: " + rounds + "\n" +
                 super.toString(includeLookahead, includePrivateKeys, aesKey);
+    }
+
+    @Override
+    public boolean hasSpendableKeys() {
+        return true;
+    }
+
+    @Override
+    public boolean isTransactionRevelant(Transaction tx) {
+        // use regular check based TransactionBag is* methods
+        // there are no special transactions with CoinJoin
+        return false;
     }
 }

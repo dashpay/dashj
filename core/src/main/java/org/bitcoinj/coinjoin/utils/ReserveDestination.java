@@ -50,7 +50,7 @@ public class ReserveDestination extends ReserveScript {
     //! Reserve an address
     public TransactionDestination getReservedDestination(boolean internal) {
         if (index == -1) {
-            DeterministicKey key = wallet.getCoinJoin().freshReceiveKey();
+            DeterministicKey key = (DeterministicKey) wallet.getCoinJoin().freshReceiveKey();
             if (key == null) {
                 return null;
             }
@@ -59,7 +59,7 @@ public class ReserveDestination extends ReserveScript {
             this.internal = true;
         }
 
-        return new KeyId(vchPubKey.getPubKeyHash());
+        return KeyId.fromBytes(vchPubKey.getPubKeyHash());
     }
 
     //! Return reserved address
