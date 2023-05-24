@@ -31,6 +31,7 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VarInt;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.Quorum;
@@ -351,17 +352,21 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             threadPool.execute(new Runnable() {
                 @Override
                 public void run() {
-                    quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
-                    processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
-                    unCache();
-                    if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
-                        save();
+                    try {
+                        quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
+                        processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
+                        unCache();
+                        if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
+                            save();
+                    } catch (VerificationException e) {
+                        log.info("qrinfo verification error:", e);
+                    }
                     if (opComplete != null)
                         opComplete.set(true);
                 }
             });
         } catch (RejectedExecutionException x) {
-            x.printStackTrace();
+            log.error("cannot process qrinfo:", x);
         }
     }
 

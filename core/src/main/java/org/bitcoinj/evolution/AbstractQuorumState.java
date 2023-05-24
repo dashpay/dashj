@@ -201,7 +201,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     abstract boolean needsUpdate(StoredBlock nextBlock);
 
-    public abstract void processDiff(@Nullable Peer peer, DiffMessage difference, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap);
+    public abstract void processDiff(@Nullable Peer peer, DiffMessage difference, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap)
+            throws VerificationException;
 
     public abstract void requestReset(Peer peer, StoredBlock block);
 
