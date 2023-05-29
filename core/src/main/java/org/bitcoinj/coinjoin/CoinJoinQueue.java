@@ -26,6 +26,7 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.UnsafeByteArrayOutputStream;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.slf4j.Logger;
@@ -125,7 +126,8 @@ public class CoinJoinQueue extends Message {
 
     public boolean checkSignature(BLSPublicKey pubKey) {
         Sha256Hash hash = getSignatureHash();
-        BLSSignature sig = new BLSSignature(signature.getBytes());
+        // use the currently active scheme
+        BLSSignature sig = new BLSSignature(signature.getBytes(), BLSScheme.isLegacyDefault());
 
         if (!sig.verifyInsecure(pubKey, hash)) {
             log.info("CoinJoinQueue-CheckSignature -- VerifyInsecure() failed\n");
