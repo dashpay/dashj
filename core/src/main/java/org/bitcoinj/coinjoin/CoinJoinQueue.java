@@ -53,8 +53,8 @@ public class CoinJoinQueue extends Message {
     // memory only
     private boolean tried;
 
-    public CoinJoinQueue(NetworkParameters params, byte[] payload) {
-        super(params, payload, 0);
+    public CoinJoinQueue(NetworkParameters params, byte[] payload, int protocolVersion) {
+        super(params, payload, 0, protocolVersion);
     }
 
     public CoinJoinQueue(
@@ -91,8 +91,12 @@ public class CoinJoinQueue extends Message {
     @Override
     protected void parse() throws ProtocolException {
         denomination = (int)readUint32();
-        masternodeOutpoint = new TransactionOutPoint(params, payload, cursor);
-        cursor += masternodeOutpoint.getMessageSize();
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.COINJOIN_PROTX_HASH)) {
+            proTxHash = readHash();
+        } else {
+            masternodeOutpoint = new TransactionOutPoint(params, payload, cursor);
+            cursor += masternodeOutpoint.getMessageSize();
+        }
         time = readInt64();
         ready = readBytes(1)[0] == 1;
         signature = new MasternodeSignature(params, payload, cursor);
@@ -104,7 +108,11 @@ public class CoinJoinQueue extends Message {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         Utils.uint32ToByteStreamLE(denomination, stream);
-        masternodeOutpoint.bitcoinSerialize(stream);
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.COINJOIN_PROTX_HASH)) {
+            stream.write(proTxHash.getReversedBytes());
+        } else {
+            masternodeOutpoint.bitcoinSerialize(stream);
+        }
         Utils.int64ToByteStreamLE(time, stream);
         stream.write(ready ? 1 : 0);
         signature.bitcoinSerialize(stream);
@@ -114,6 +122,10 @@ public class CoinJoinQueue extends Message {
         try {
             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
             Utils.uint32ToByteStreamLE(denomination, bos);
+
+            // this still requires the masternode output
+            if (masternodeOutpoint == null)
+                masternodeOutpoint = ProTxToOutpoint.getMasternodeOutpoint(proTxHash);
             masternodeOutpoint.bitcoinSerialize(bos);
             Utils.int64ToByteStreamLE(time, bos);
             bos.write(ready ? 1 : 0);
@@ -152,13 +164,13 @@ public class CoinJoinQueue extends Message {
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinQueue(denomination=%s[%d], time=%d[expired=%s], ready=%s, masternodeOutpoint=%s)",
+                "CoinJoinQueue(denomination=%s[%d], time=%d[expired=%s], ready=%s, proTxHash=%s)",
                 CoinJoin.denominationToString(denomination),
                 denomination,
                 time,
                 isTimeOutOfBounds(),
                 ready,
-                masternodeOutpoint
+                proTxHash
         );
     }
 

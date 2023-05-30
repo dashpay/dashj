@@ -309,15 +309,15 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("qrinfo")) {
             return new QuorumRotationInfo(params, payloadBytes, protocolVersion);
         } else if(command.equals("dssu")) {
-            return new CoinJoinStatusUpdate(params, payloadBytes);
+            return new CoinJoinStatusUpdate(params, payloadBytes, protocolVersion);
         } else if (command.equals("dsq")) {
-            return new CoinJoinQueue(params, payloadBytes);
+            return new CoinJoinQueue(params, payloadBytes, protocolVersion);
         } else if (command.equals("dsf")) {
             return new CoinJoinFinalTransaction(params, payloadBytes);
         } else if (command.equals("dsc")) {
             return new CoinJoinComplete(params, payloadBytes);
         } else if (command.equals("dstx")) {
-            return new CoinJoinBroadcastTx(params, payloadBytes);
+            return new CoinJoinBroadcastTx(params, payloadBytes, protocolVersion);
         } else if(command.equals("dsa")) {
             return new CoinJoinAccept(params, payloadBytes);
         } else if(command.equals("dsi")) {

@@ -47,7 +47,7 @@ public class CoinJoinStatusUpdateTest {
     public void statusUpdatePayloadTest() {
         // CoinJoinStatusUpdate(sessionID=783283, state=POOL_STATE_QUEUE, statusUpdate=STATUS_REJECTED, messageID=ERR_DENOM)
         byte[] payload = Utils.HEX.decode("b3f30b0001000000000000000000000001000000");
-        CoinJoinStatusUpdate customStatusUpdate = new CoinJoinStatusUpdate(PARAMS, payload);
+        CoinJoinStatusUpdate customStatusUpdate = new CoinJoinStatusUpdate(PARAMS, payload, PARAMS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_LEGACY));
         assertEquals(customStatusUpdate.getSessionID(), 783283);
         assertEquals(customStatusUpdate.getState(), POOL_STATE_QUEUE);
         assertEquals(customStatusUpdate.getStatusUpdate(), STATUS_REJECTED);
@@ -55,7 +55,7 @@ public class CoinJoinStatusUpdateTest {
 
         // CoinJoinStatusUpdate(sessionID=512727, state=POOL_STATE_SIGNING, statusUpdate=STATUS_ACCEPTED, messageID=MSG_NOERR)
         payload = Utils.HEX.decode("d7d2070003000000000000000100000013000000");
-        customStatusUpdate = new CoinJoinStatusUpdate(PARAMS, payload);
+        customStatusUpdate = new CoinJoinStatusUpdate(PARAMS, payload, PARAMS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_LEGACY));
         assertEquals(customStatusUpdate.getSessionID(), 512727);
         assertEquals(customStatusUpdate.getState(), POOL_STATE_SIGNING);
         assertEquals(customStatusUpdate.getStatusUpdate(), STATUS_ACCEPTED);
@@ -65,7 +65,7 @@ public class CoinJoinStatusUpdateTest {
     @Test
     public void updateStatusTest() {
         byte[] payload = Utils.HEX.decode("5faa0c0001000000000000000100000013000000");
-        CoinJoinStatusUpdate statusUpdateFromHex = new CoinJoinStatusUpdate(PARAMS, payload);
+        CoinJoinStatusUpdate statusUpdateFromHex = new CoinJoinStatusUpdate(PARAMS, payload, PARAMS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_LEGACY));
         assertEquals(830047, statusUpdateFromHex.getSessionID());
         assertEquals(PoolState.POOL_STATE_QUEUE, statusUpdateFromHex.getState());
         assertEquals(PoolStatusUpdate.STATUS_ACCEPTED, statusUpdateFromHex.getStatusUpdate());

@@ -420,6 +420,7 @@ public class SimplifiedMasternodeList extends Message {
         return false;
     }
 
+    @Deprecated
     public Masternode getValidMNByCollateral(TransactionOutPoint masternodeOutpoint) {
         // TODO: we don't have an answer for this yet
         // masternodeOutpoint is hardcoded

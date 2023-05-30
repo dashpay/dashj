@@ -61,7 +61,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                 return;
 
             SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
-            Masternode dmn = mnList.getValidMNByCollateral(dsq.getMasternodeOutpoint()); //TODO - we don't have this
+            Masternode dmn = mnList.getMN(dsq.getProTxHash());
             if (dmn == null)
                 return;
 
