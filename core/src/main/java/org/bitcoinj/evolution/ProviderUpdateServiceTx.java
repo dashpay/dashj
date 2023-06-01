@@ -29,17 +29,21 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class ProviderUpdateServiceTx extends SpecialTxPayload {
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
     public static final int LEGACY_BLS_VERSION = 1;
     public static final int BASIC_BLS_VERSION = 2;
     public static final int MESSAGE_SIZE = 181;
     public static final int MESSAGE_SIZE_WITHOUT_SIGNATURE = MESSAGE_SIZE - 96;
 
 
+    MasternodeType type;
     Sha256Hash proTxHash;
     MasternodeAddress address;
     Script scriptOperatorPayout;
     Sha256Hash inputsHash;  //replay protection
+    KeyId platformNodeID;
+    int platformP2PPort;
+    int platformHTTPPort;
     BLSSignature signature;
 
     public ProviderUpdateServiceTx(NetworkParameters params, Transaction tx) {
@@ -75,11 +79,20 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
     @Override
     protected void parse() throws ProtocolException {
         super.parse();  //read version
+        if (version == BASIC_BLS_VERSION) {
+            type = MasternodeType.getMasternodeType(readUint16());
+        }
         proTxHash = readHash();
         address = new MasternodeAddress(params, payload, cursor, NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
         cursor += address.getMessageSize();
         scriptOperatorPayout = new Script(readByteArray());
         inputsHash = readHash();
+        if (version == BASIC_BLS_VERSION && type == MasternodeType.HIGHPERFORMANCE) {
+            platformNodeID = new KeyId(params, payload, cursor);
+            cursor += platformNodeID.getMessageSize();
+            platformP2PPort = readUint16();
+            platformHTTPPort = readUint16();
+        }
         signature = new BLSSignature(params, payload, cursor, version == LEGACY_BLS_VERSION);
         cursor += signature.getMessageSize();
 
@@ -88,17 +101,26 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
 
     protected void bitcoinSerializeWithoutSignature(OutputStream stream) throws IOException{
         super.bitcoinSerializeToStream(stream);
+        if (version == BASIC_BLS_VERSION) {
+            Utils.uint16ToByteStreamLE(type.index, stream);
+        }
         stream.write(proTxHash.getReversedBytes());
         address.bitcoinSerialize(stream);
         if(scriptOperatorPayout != null)
             Utils.bytesToByteStream(scriptOperatorPayout.getProgram(), stream);
         else stream.write(new byte[0]);
         stream.write(inputsHash.getReversedBytes());
+
+        if (version == BASIC_BLS_VERSION && type == MasternodeType.HIGHPERFORMANCE) {
+            platformNodeID.bitcoinSerialize(stream);
+            Utils.uint16ToByteStreamLE(platformP2PPort,stream);
+            Utils.uint16ToByteStreamLE(platformHTTPPort,stream);
+        }
     }
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         bitcoinSerializeWithoutSignature(stream);
-        signature.bitcoinSerialize(stream);
+        signature.bitcoinSerialize(stream, version == LEGACY_BLS_VERSION);
     }
 
     public int getCurrentVersion() {
