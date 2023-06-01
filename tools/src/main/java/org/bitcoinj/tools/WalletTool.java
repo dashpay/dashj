@@ -351,7 +351,7 @@ public class WalletTool {
         Context.propagate(context);
         context.initDash(true, true);
         context.masternodeSync.syncFlags.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-        context.initDashSync(".", "coinjoin-bintang");
+        context.initDashSync(".", "coinjoin-" + params.getNetworkName());
 
         mode = modeFlag.value(options);
 
