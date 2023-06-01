@@ -73,6 +73,7 @@ public class CoinJoinQueue extends Message {
         this.signature = signature;
     }
 
+    @Deprecated
     public CoinJoinQueue(
             NetworkParameters params,
             int denomination,
@@ -83,6 +84,21 @@ public class CoinJoinQueue extends Message {
         super(params);
         this.denomination = denomination;
         this.masternodeOutpoint = masternodeOutpoint;
+        this.time = time;
+        this.ready = ready;
+        this.signature = null;
+    }
+
+    public CoinJoinQueue(
+            NetworkParameters params,
+            int denomination,
+            Sha256Hash proTxHash,
+            long time,
+            boolean ready) {
+
+        super(params);
+        this.denomination = denomination;
+        this.proTxHash = proTxHash;
         this.time = time;
         this.ready = ready;
         this.signature = null;
@@ -137,7 +153,12 @@ public class CoinJoinQueue extends Message {
     }
 
     public boolean checkSignature(BLSPublicKey pubKey) {
+        // return true until signature hash uses the proTxHash
+        if (masternodeOutpoint == null)
+            return true;
+
         Sha256Hash hash = getSignatureHash();
+
         // use the currently active scheme
         BLSSignature sig = new BLSSignature(signature.getBytes(), BLSScheme.isLegacyDefault());
 
@@ -178,6 +199,7 @@ public class CoinJoinQueue extends Message {
         return denomination;
     }
 
+    @Deprecated
     public TransactionOutPoint getMasternodeOutpoint() {
         if (masternodeOutpoint == null) {
             masternodeOutpoint = ProTxToOutpoint.getMasternodeOutpoint(proTxHash);

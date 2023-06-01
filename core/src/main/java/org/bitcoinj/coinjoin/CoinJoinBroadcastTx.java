@@ -74,6 +74,7 @@ public class CoinJoinBroadcastTx extends Message {
         this.signatureTime = signatureTime;
     }
 
+    @Deprecated
     public CoinJoinBroadcastTx(
             NetworkParameters params,
             Transaction tx,
@@ -83,6 +84,18 @@ public class CoinJoinBroadcastTx extends Message {
         super(params);
         this.tx = tx;
         this.masternodeOutpoint = masternodeOutpoint;
+        this.signatureTime = signatureTime;
+    }
+
+    public CoinJoinBroadcastTx(
+            NetworkParameters params,
+            Transaction tx,
+            Sha256Hash proTxHash,
+            long signatureTime
+    ) {
+        super(params);
+        this.tx = tx;
+        this.proTxHash = proTxHash;
         this.signatureTime = signatureTime;
     }
 
@@ -144,8 +157,12 @@ public class CoinJoinBroadcastTx extends Message {
 
     @Override
     public String toString() {
+        int denomination = CoinJoin.amountToDenomination(tx.getOutput(0).getValue());
         return String.format(
-                "CoinJoinBroadcastTx(tx=%s, proTxHash=%s, signatureTime=%d)",
+                "CoinJoinBroadcastTx(denomination=%s[%d], outputs=%d, tx=%s, proTxHash=%s, signatureTime=%d)",
+                CoinJoin.denominationToString(denomination),
+                denomination,
+                tx.getOutputs().size(),
                 tx.getTxId(),
                 proTxHash,
                 signatureTime

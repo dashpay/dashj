@@ -93,11 +93,11 @@ public class CoinJoinServer extends CoinJoinBaseSession {
                 Sha256Hash.ZERO_HASH,
                 new MasternodeAddress("127.0.0.1", 2003),
                 KeyId.fromBytes(new ECKey().getPubKeyHash()),
-                new BLSLazyPublicKey(operatorSecretKey.GetPublicKey()),
+                new BLSLazyPublicKey(operatorSecretKey.getPublicKey()),
                 true
         );
 
-        masternodeOutpoint = new TransactionOutPoint(context.getParams(), 0, Sha256Hash.ZERO_HASH);
+        proTxHash = Sha256Hash.ZERO_HASH;
     }
 
     protected ArrayList<Transaction> sessionCollaterals = Lists.newArrayList();
@@ -105,7 +105,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
     private RelayTransaction relayTransaction = null;
 
     SimplifiedMasternodeListEntry entry;
-    TransactionOutPoint masternodeOutpoint;
+    Sha256Hash proTxHash;
     BLSSecretKey operatorSecretKey;
 
     boolean feeCharged = false;
@@ -115,8 +115,8 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         return operatorSecretKey;
     }
 
-    public TransactionOutPoint getMasternodeOutpoint() {
-        return masternodeOutpoint;
+    public Sha256Hash getProTxHash() {
+        return proTxHash;
     }
 
     public SimplifiedMasternodeListEntry getMasternodeInfo() {
@@ -159,7 +159,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         log.info("coinjoin server:DSACCEPT -- denom {} ({})  txCollateral {}", dsa.getDenomination(), CoinJoin.denominationToString(dsa.getDenomination()), dsa.getTxCollateral()); /* Continued */
 
         SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
-        Masternode dmn = mnList.getValidMNByCollateral(masternodeOutpoint);
+        Masternode dmn = mnList.getMN(proTxHash);
         if (dmn == null) {
             pushStatus(from, STATUS_REJECTED, ERR_MN_LIST);
             return;
@@ -168,7 +168,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         if (sessionCollaterals.isEmpty()) {
             lock.lock();
             try {
-                if (baseManager.coinJoinQueue.stream().anyMatch(q -> q.getMasternodeOutpoint().equals(masternodeOutpoint))) {
+                if (baseManager.coinJoinQueue.stream().anyMatch(q -> q.getParams().equals(proTxHash))) {
                     // refuse to create another queue this often
                     log.info("coinjoin server:DSACCEPT -- last dsq is still in queue, refuse to mix\n");
                     pushStatus(from, STATUS_REJECTED, ERR_RECENT);
@@ -289,7 +289,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         if (state.get() == POOL_STATE_QUEUE && isSessionReady()) {
             setState(POOL_STATE_ACCEPTING_ENTRIES);
 
-            CoinJoinQueue dsq = new CoinJoinQueue(context.getParams(), sessionDenom, masternodeOutpoint, Utils.currentTimeSeconds(), true);
+            CoinJoinQueue dsq = new CoinJoinQueue(context.getParams(), sessionDenom, proTxHash, Utils.currentTimeSeconds(), true);
             log.info("CoinJoinServer::CheckForCompleteQueue -- queue is ready, signing and relaying ({}) " +
                     "with {} participants", dsq, sessionCollaterals.size());
             dsq.sign(operatorSecretKey);
@@ -413,7 +413,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
         // create and sign masternode dstx transaction
         if (CoinJoin.getDSTX(hashTx) == null) {
-            CoinJoinBroadcastTx dstxNew = new CoinJoinBroadcastTx(context.getParams(), finalTransaction, masternodeOutpoint, Utils.currentTimeSeconds());
+            CoinJoinBroadcastTx dstxNew = new CoinJoinBroadcastTx(context.getParams(), finalTransaction, proTxHash, Utils.currentTimeSeconds());
             dstxNew.sign(operatorSecretKey);
             CoinJoin.addDSTX(dstxNew);
         }
