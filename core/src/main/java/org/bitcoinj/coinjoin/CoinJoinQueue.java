@@ -179,6 +179,9 @@ public class CoinJoinQueue extends Message {
     }
 
     public TransactionOutPoint getMasternodeOutpoint() {
+        if (masternodeOutpoint == null) {
+            masternodeOutpoint = ProTxToOutpoint.getMasternodeOutpoint(proTxHash);
+        }
         return masternodeOutpoint;
     }
 
@@ -211,9 +214,6 @@ public class CoinJoinQueue extends Message {
     }
 
     public Sha256Hash getProTxHash() {
-        if (proTxHash == null) {
-            proTxHash = ProTxToOutpoint.getProTxHash(masternodeOutpoint);
-        }
         return proTxHash;
     }
 
@@ -228,14 +228,12 @@ public class CoinJoinQueue extends Message {
         if (time != that.time) return false;
         if (ready != that.ready) return false;
         if (tried != that.tried) return false;
-        if (!Objects.equals(masternodeOutpoint, that.masternodeOutpoint))
-            return false;
         if (!Objects.equals(proTxHash, that.proTxHash)) return false;
         return Objects.equals(signature, that.signature);
     }
 
     @Override
     public int hashCode() {
-        return masternodeOutpoint.getHash().hashCode();
+        return proTxHash.hashCode();
     }
 }
