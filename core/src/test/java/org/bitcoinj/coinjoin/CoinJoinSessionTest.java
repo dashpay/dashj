@@ -88,7 +88,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     // Information for a single masternode
     CoinJoinServer coinJoinServer;
     SimplifiedMasternodeListEntry entry;
-    TransactionOutPoint masternodeOutpoint;
+    Sha256Hash proTxHash;
     BLSSecretKey operatorSecretKey;
     private Address coinbaseTo;
     private Transaction finalTx = null;
@@ -129,7 +129,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 true
         );
 
-        masternodeOutpoint = new TransactionOutPoint(UNITTEST, 0, Sha256Hash.ZERO_HASH);
+        proTxHash = Sha256Hash.ZERO_HASH;
 
         Block nextBlock = blockChain.getChainHead().getHeader().createNextBlock(coinbaseTo,
                 1,
@@ -257,7 +257,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 coinJoinServer.setDenomination(dsa.getDenomination());
 
                 // send the dsq message indicating the mixing session is ready
-                queue = new CoinJoinQueue(m.getParams(), dsa.getDenomination(), masternodeOutpoint, Utils.currentTimeSeconds(), true);
+                queue = new CoinJoinQueue(m.getParams(), dsa.getDenomination(), proTxHash, Utils.currentTimeSeconds(), true);
                 queue.sign(operatorSecretKey);
                 coinJoinManager.processMessage(lastMasternode.peer, queue);
             } else if (m instanceof CoinJoinEntry) {
@@ -324,7 +324,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                     }
                 }
 
-                CoinJoinBroadcastTx broadcastTx = new CoinJoinBroadcastTx(UNITTEST, mixingTx, masternodeOutpoint, Utils.currentTimeSeconds());
+                CoinJoinBroadcastTx broadcastTx = new CoinJoinBroadcastTx(UNITTEST, mixingTx, proTxHash, Utils.currentTimeSeconds());
                 broadcastTx.sign(operatorSecretKey);
 
                 coinJoinManager.processMessage(lastMasternode.peer, broadcastTx);
