@@ -46,6 +46,7 @@ public class CoinJoinStatusUpdate extends Message {
         this.state = state;
         this.statusUpdate = statusUpdate;
         this.messageID = messageID;
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
     }
 
     @Override

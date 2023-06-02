@@ -71,6 +71,7 @@ public class CoinJoinQueue extends Message {
         this.time = time;
         this.ready = ready;
         this.signature = signature;
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
     }
 
     @Deprecated
@@ -87,6 +88,7 @@ public class CoinJoinQueue extends Message {
         this.time = time;
         this.ready = ready;
         this.signature = null;
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
     }
 
     public CoinJoinQueue(
@@ -102,6 +104,7 @@ public class CoinJoinQueue extends Message {
         this.time = time;
         this.ready = ready;
         this.signature = null;
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
     }
 
     @Override

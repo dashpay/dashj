@@ -47,6 +47,7 @@ public class CoinJoinBroadcastTx extends Message {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinQueue.class);
 
     private Transaction tx;
+    @Deprecated
     private TransactionOutPoint masternodeOutpoint;
     private Sha256Hash proTxHash;
     private MasternodeSignature signature;
@@ -60,6 +61,7 @@ public class CoinJoinBroadcastTx extends Message {
         super(params, payload, 0, protocolVersion);
     }
 
+    @Deprecated
     public CoinJoinBroadcastTx(
         NetworkParameters params,
         Transaction tx,
@@ -173,11 +175,16 @@ public class CoinJoinBroadcastTx extends Message {
         return tx;
     }
 
+    @Deprecated
     public TransactionOutPoint getMasternodeOutpoint() {
         if (masternodeOutpoint == null) {
             masternodeOutpoint = ProTxToOutpoint.getMasternodeOutpoint(proTxHash);
         }
         return masternodeOutpoint;
+    }
+
+    public Sha256Hash getProTxHash() {
+        return proTxHash;
     }
 
     public MasternodeSignature getSignature() {
