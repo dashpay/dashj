@@ -58,7 +58,12 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
         this.address = address.duplicate();
         this.scriptOperatorPayout = scriptOperatorPayout;
         this.inputsHash = inputsHash;
+        this.type = MasternodeType.REGULAR;
         length = MESSAGE_SIZE_WITHOUT_SIGNATURE;
+    }
+
+    public ProviderUpdateServiceTx(NetworkParameters params, byte[] payload, int offset) {
+        super(params, payload, offset);
     }
 
     public ProviderUpdateServiceTx(NetworkParameters params, int version, Sha256Hash proTxHash,
@@ -66,6 +71,7 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
                                    Script scriptOperatorPayout, Sha256Hash inputsHash, BLSSignature signature) {
         this(params, version, proTxHash, address, scriptOperatorPayout, inputsHash);
         this.signature = signature;
+        this.type = MasternodeType.REGULAR;
         length = MESSAGE_SIZE;
     }
 
