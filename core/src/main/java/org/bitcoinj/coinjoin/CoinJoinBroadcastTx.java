@@ -16,6 +16,7 @@
 package org.bitcoinj.coinjoin;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSignature;
 import org.bitcoinj.core.Message;
@@ -46,7 +47,9 @@ public class CoinJoinBroadcastTx extends Message {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinQueue.class);
 
     private Transaction tx;
+    @Deprecated
     private TransactionOutPoint masternodeOutpoint;
+    private Sha256Hash proTxHash;
     private MasternodeSignature signature;
     private long signatureTime;
 
@@ -54,10 +57,11 @@ public class CoinJoinBroadcastTx extends Message {
     // when corresponding tx is 0-confirmed or conflicted, nConfirmedHeight is -1
     int confirmedHeight = -1;
 
-    public CoinJoinBroadcastTx(NetworkParameters params, byte[] payload) {
-        super(params, payload, 0);
+    public CoinJoinBroadcastTx(NetworkParameters params, byte[] payload, int protocolVersion) {
+        super(params, payload, 0, protocolVersion);
     }
 
+    @Deprecated
     public CoinJoinBroadcastTx(
         NetworkParameters params,
         Transaction tx,
@@ -72,6 +76,7 @@ public class CoinJoinBroadcastTx extends Message {
         this.signatureTime = signatureTime;
     }
 
+    @Deprecated
     public CoinJoinBroadcastTx(
             NetworkParameters params,
             Transaction tx,
@@ -84,12 +89,28 @@ public class CoinJoinBroadcastTx extends Message {
         this.signatureTime = signatureTime;
     }
 
+    public CoinJoinBroadcastTx(
+            NetworkParameters params,
+            Transaction tx,
+            Sha256Hash proTxHash,
+            long signatureTime
+    ) {
+        super(params);
+        this.tx = tx;
+        this.proTxHash = proTxHash;
+        this.signatureTime = signatureTime;
+    }
+
     @Override
     protected void parse() throws ProtocolException {
         tx = new Transaction(params, payload, cursor);
         cursor += tx.getMessageSize();
-        masternodeOutpoint = new TransactionOutPoint(params, payload, cursor);
-        cursor += masternodeOutpoint.getMessageSize();
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.COINJOIN_PROTX_HASH)) {
+            proTxHash = readHash();
+        } else {
+            masternodeOutpoint = new TransactionOutPoint(params, payload, cursor);
+            cursor += masternodeOutpoint.getMessageSize();
+        }
         signature = new MasternodeSignature(params, payload, cursor);
         cursor += signature.getMessageSize();
         signatureTime = readInt64();
@@ -100,7 +121,11 @@ public class CoinJoinBroadcastTx extends Message {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         tx.bitcoinSerialize(stream);
-        masternodeOutpoint.bitcoinSerialize(stream);
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.COINJOIN_PROTX_HASH)) {
+            stream.write(proTxHash.getReversedBytes());
+        } else {
+            masternodeOutpoint.bitcoinSerialize(stream);
+        }
         signature.bitcoinSerialize(stream);
         Utils.int64ToByteStreamLE(signatureTime, stream);
     }
@@ -109,7 +134,9 @@ public class CoinJoinBroadcastTx extends Message {
         try {
             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
             tx.bitcoinSerialize(bos);
-            masternodeOutpoint.bitcoinSerialize(bos);
+            // this still requires the masternode output
+            if (masternodeOutpoint == null)
+                masternodeOutpoint = ProTxToOutpoint.getMasternodeOutpoint(proTxHash);
             Utils.int64ToByteStreamLE(signatureTime, bos);
 
             return Sha256Hash.twiceOf(bos.toByteArray());
@@ -132,10 +159,14 @@ public class CoinJoinBroadcastTx extends Message {
 
     @Override
     public String toString() {
+        int denomination = CoinJoin.amountToDenomination(tx.getOutput(0).getValue());
         return String.format(
-                "CoinJoinBroadcastTx(tx=%s, masternodeOutpoint=%s, signatureTime=%d)",
+                "CoinJoinBroadcastTx(denomination=%s[%d], outputs=%d, tx=%s, proTxHash=%s, signatureTime=%d)",
+                CoinJoin.denominationToString(denomination),
+                denomination,
+                tx.getOutputs().size(),
                 tx.getTxId(),
-                masternodeOutpoint.toString(),
+                proTxHash,
                 signatureTime
         );
     }
@@ -144,8 +175,16 @@ public class CoinJoinBroadcastTx extends Message {
         return tx;
     }
 
+    @Deprecated
     public TransactionOutPoint getMasternodeOutpoint() {
+        if (masternodeOutpoint == null) {
+            masternodeOutpoint = ProTxToOutpoint.getMasternodeOutpoint(proTxHash);
+        }
         return masternodeOutpoint;
+    }
+
+    public Sha256Hash getProTxHash() {
+        return proTxHash;
     }
 
     public MasternodeSignature getSignature() {

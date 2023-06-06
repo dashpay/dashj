@@ -30,8 +30,8 @@ public class CoinJoinStatusUpdate extends Message {
     private PoolStatusUpdate statusUpdate;
     private PoolMessage messageID;
 
-    public CoinJoinStatusUpdate(NetworkParameters params, byte[] payload) {
-        super(params, payload, 0);
+    public CoinJoinStatusUpdate(NetworkParameters params, byte[] payload, int protocolVersion) {
+        super(params, payload, 0, protocolVersion);
     }
 
     public CoinJoinStatusUpdate(
@@ -46,6 +46,7 @@ public class CoinJoinStatusUpdate extends Message {
         this.state = state;
         this.statusUpdate = statusUpdate;
         this.messageID = messageID;
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
     }
 
     @Override
@@ -53,7 +54,7 @@ public class CoinJoinStatusUpdate extends Message {
         sessionID = (int)readUint32();
         state = PoolState.fromValue((int)readUint32());
 
-        if (protocolVersion <= 702015) {
+        if (protocolVersion <= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.COINJOIN_SU)) {
             cursor += 4; // Skip deprecated nEntriesCount
         }
 
@@ -67,7 +68,7 @@ public class CoinJoinStatusUpdate extends Message {
         Utils.uint32ToByteStreamLE(sessionID, stream);
         Utils.uint32ToByteStreamLE(state.value, stream);
 
-        if (protocolVersion <= 702015) {
+        if (protocolVersion <= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.COINJOIN_SU)) {
             Utils.uint32ToByteStreamLE(0, stream); // nEntriesCount, deprecated
         }
 

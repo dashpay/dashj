@@ -28,6 +28,7 @@ public class LLMQParameters {
         LLMQ_400_85(3), // 400 members, 340 (85%) threshold, one every 24 hours
         LLMQ_100_67(4), // 100 members, 67 (67%) threshold, one per hour
         LLMQ_60_75(5),  // 60 members, 45 (75%) threshold, one every 12 hours
+        LLMQ_25_67(6), // 25 members, 67 (67%) threshold, one per hour
 
         // for testing only
         LLMQ_TEST(100), // 3 members, 2 (66%) threshold, one per hour
@@ -41,8 +42,9 @@ public class LLMQParameters {
         LLMQ_TEST_INSTANTSEND(104), // 3 members, 2 (66%) threshold, one per hour. Params might differ when -llmqtestinstantsendparams is used
 
         // for devnets only. rotated version (v2) for devnets
-        LLMQ_DEVNET_DIP0024(105); // 8 members, 4 (50%) threshold, one per hour. Params might differ when -llmqdevnetparams is used
-
+        LLMQ_DEVNET_DIP0024(105), // 8 members, 4 (50%) threshold, one per hour. Params might differ when -llmqdevnetparams is used
+        LLMQ_TEST_PLATFORM(106), // 3 members, 2 (66%) threshold, one per hour.
+        LLMQ_DEVNET_PLATFORM(107); // 12 members, 8 (67%) threshold, one per hour.
         final int value;
         LLMQType(int value) {
             this.value = value;
@@ -114,6 +116,10 @@ public class LLMQParameters {
                 8, 6, 4, 48, 2, 12,
                 20, 7, 2, 4, 4));
 
+        availableLlmqs.put(LLMQType.LLMQ_DEVNET_PLATFORM, new LLMQParameters(LLMQType.LLMQ_DEVNET_PLATFORM, "llmq_devnet_platform",
+                12, 9, 8, 24, 2, 10,
+                18, 7, 4, 5, 6));
+
         availableLlmqs.put(LLMQType.LLMQ_50_60, new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",
                 50, 40, 30, 24, 2, 10,
                 18,40, 24, 25, 25));
@@ -127,14 +133,22 @@ public class LLMQParameters {
                 48, 300, 4, 5, 100));
 
         availableLlmqs.put(LLMQType.LLMQ_100_67, new LLMQParameters(LLMQType.LLMQ_100_67, "llmq_100_67",
-                100, 80, 67, 2, 2, 10,
+                100, 80, 67, 24, 2, 10,
                 18, 80, 24, 25, 50));
+
+        availableLlmqs.put(LLMQType.LLMQ_25_67, new LLMQParameters(LLMQType.LLMQ_25_67, "llmq_25_67",
+                25, 22, 17, 24, 2, 10,
+                18, 22, 24, 25, 12));
 
         availableLlmqs.put(LLMQType.LLMQ_TEST_DIP0024, new LLMQParameters(LLMQType.LLMQ_TEST_DIP0024, "llmq_test_dip0024",
                 4, 3, 2, 24, 2, 12,
                 20, 2, 2, 3, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_TEST_INSTANTSEND, new LLMQParameters(LLMQType.LLMQ_TEST_INSTANTSEND, "llmq_test_instantsend",
+                3, 2, 2, 24, 2, 10,
+                18, 2, 2, 4, 3));
+
+        availableLlmqs.put(LLMQType.LLMQ_TEST_PLATFORM, new LLMQParameters(LLMQType.LLMQ_TEST_PLATFORM, "llmq_test_platform",
                 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 4, 3));
 

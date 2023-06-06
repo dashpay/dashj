@@ -2,17 +2,23 @@ package org.bitcoinj.wallet;
 
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.KeyId;
-import org.bitcoinj.crypto.*;
+import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSSecretKey;
+import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.IDeterministicKey;
+import org.bitcoinj.crypto.bls.BLSDeterministicKey;
+import org.bitcoinj.crypto.factory.BLSKeyFactory;
+import org.bitcoinj.crypto.factory.ECKeyFactory;
+import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
+import org.dashj.bls.BLSJniLibrary;
 import org.dashj.bls.ExtendedPrivateKey;
-import org.dashj.bls.JNI;
 import org.dashj.bls.PrivateKey;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class AuthenticationKeyChainTest {
     Context context;
@@ -22,31 +28,31 @@ public class AuthenticationKeyChainTest {
     DeterministicSeed seed;
     Wallet wallet;
 
-    DeterministicKeyChain voting;
-    DeterministicKeyChain owner;
-    DeterministicKeyChain bu;
+    AnyDeterministicKeyChain voting;
+    AnyDeterministicKeyChain owner;
+    AnyDeterministicKeyChain bu;
+    AnyDeterministicKeyChain operator;
 
-    DeterministicKey ownerKeyMaster;
-    DeterministicKey ownerKey;
+    IDeterministicKey ownerKeyMaster;
+    IDeterministicKey ownerKey;
     KeyId ownerKeyId;
 
-    DeterministicKey votingKeyMaster;
-    DeterministicKey votingKey;
+    IDeterministicKey votingKeyMaster;
+    IDeterministicKey votingKey;
     KeyId votingKeyId;
 
-    DeterministicKey buKeyMaster;
-    DeterministicKey buKey;
+    IDeterministicKey buKeyMaster;
+    IDeterministicKey buKey;
     KeyId buKeyId;
 
-    ExtendedPrivateKey blsExtendedPrivateKey;
-    BLSPublicKey operatorKey;
-    BLSSecretKey operatorSecret;
+    IDeterministicKey operatorKeyMaster;
+    IDeterministicKey operatorKey;
+    KeyId operatorKeyId;
+
+    final KeyFactory EC_KEY_FACTORY = ECKeyFactory.get();
+    final KeyFactory BLS_KEY_FACTORY = BLSKeyFactory.get();
     static {
-        try {
-            System.loadLibrary(JNI.LIBRARY_NAME);
-        } catch (UnsatisfiedLinkError x) {
-            fail(x.getMessage());
-        }
+        BLSJniLibrary.init();
     }
 
     @Before
@@ -55,58 +61,92 @@ public class AuthenticationKeyChainTest {
         context = new Context(PARAMS);
 
         seed = new DeterministicSeed(seedPhrase, null, "", 0);
-        DeterministicKeyChain bip32 = new DeterministicKeyChain(seed, null, Script.ScriptType.P2PKH, DeterministicKeyChain.ACCOUNT_ZERO_PATH);
+        DeterministicKeyChain bip32 = DeterministicKeyChain.builder()
+                .seed(seed)
+                .outputScriptType(Script.ScriptType.P2PKH)
+                .accountPath(DeterministicKeyChain.ACCOUNT_ZERO_PATH)
+                .build();
         bip32.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         bip32.getKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
-        DeterministicKeyChain active = new DeterministicKeyChain(seed, null,Script.ScriptType.P2PKH,  DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET);
+        DeterministicKeyChain active = DeterministicKeyChain.builder()
+                .seed(seed)
+                .outputScriptType(Script.ScriptType.P2PKH)
+                .accountPath(DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET)
+                .build();
 
         KeyChainGroup group = KeyChainGroup.builder(PARAMS).build();
         group.addAndActivateHDChain(bip32);
         group.addAndActivateHDChain(active);
         wallet = new Wallet(PARAMS, group);
 
-        voting = new DeterministicKeyChain(seed, null, Script.ScriptType.P2PKH, DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET);
-        owner = new DeterministicKeyChain(seed, null, Script.ScriptType.P2PKH, DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET);
-        bu = new DeterministicKeyChain(seed, null, Script.ScriptType.P2PKH, DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET);
+        voting = AuthenticationKeyChain.authenticationBuilder()
+                .seed(seed)
+                .accountPath(AnyDeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET)
+                .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING)
+                .build();
+        owner = AuthenticationKeyChain.authenticationBuilder()
+                .seed(seed)
+                .accountPath(AnyDeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET)
+                .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER)
+                .build();
+        bu = AuthenticationKeyChain.authenticationBuilder()
+                .seed(seed)
+                .accountPath(AnyDeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET)
+                .type(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
+                .createHardenedChildren(true)
+                .build();
 
-        ownerKeyMaster = owner.getWatchingKey();//(ChildNumber.ZERO);
-        ownerKey = HDKeyDerivation.deriveChildKey(ownerKeyMaster, ChildNumber.ZERO);
-        ownerKeyId = new KeyId(ownerKey.getPubKeyHash());
+        ownerKeyMaster = owner.getWatchingKey();
+        ownerKey = ownerKeyMaster.deriveChildKey(ChildNumber.ZERO);
+        ownerKeyId = KeyId.fromBytes(ownerKey.getPubKeyHash());
 
-        votingKeyMaster = voting.getWatchingKey();//(ChildNumber.ZERO);
-        votingKey = HDKeyDerivation.deriveChildKey(votingKeyMaster, ChildNumber.ZERO);
-        votingKeyId = new KeyId(votingKey.getPubKeyHash());
+        votingKeyMaster = voting.getWatchingKey();
+        votingKey = votingKeyMaster.deriveChildKey(ChildNumber.ZERO);
+        votingKeyId = KeyId.fromBytes(votingKey.getPubKeyHash());
 
-        buKeyMaster = bu.getWatchingKey();//(ChildNumber.ZERO);
-        buKey = HDKeyDerivation.deriveChildKey(buKeyMaster, ChildNumber.ZERO);
-        buKeyId = new KeyId(buKey.getPubKeyHash());
+        buKeyMaster = bu.getWatchingKey();
+        buKey = buKeyMaster.deriveChildKey(ChildNumber.ZERO_HARDENED);
+        buKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
 
-        blsExtendedPrivateKey = ExtendedPrivateKey.FromSeed(seed.getSeedBytes(), seed.getSeedBytes().length);
+        operator = AuthenticationKeyChain.authenticationBuilder()
+                .seed(seed)
+                .accountPath(AnyDeterministicKeyChain.PROVIDER_OPERATOR_PATH_TESTNET)
+                .type(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR)
+                .build();
 
-        PrivateKey operatorPrivateKey = blsExtendedPrivateKey.PrivateChild(new ChildNumber(9, true).getI())
-                .PrivateChild(new ChildNumber(1, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(0)
-                .GetPrivateKey();
-        operatorKey = new BLSPublicKey(operatorPrivateKey.GetPublicKey());
-        operatorSecret = new BLSSecretKey(operatorPrivateKey);
+        operatorKeyMaster = operator.getWatchingKey();
+        operatorKey = operatorKeyMaster.deriveChildKey(ChildNumber.ZERO);
+        operatorKeyId = KeyId.fromBytes(buKey.getPubKeyHash());
     }
 
     @Test
     public void authenticationKeyChainTest() {
-        AuthenticationKeyChain owner = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET);
-        DeterministicKey myOwnerKey = owner.getKey(KeyChain.KeyPurpose.AUTHENTICATION);
+        // check that derivatation matches an alternate method
+        AuthenticationKeyChain owner = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_OWNER_PATH_TESTNET, EC_KEY_FACTORY, false);
+        IDeterministicKey myOwnerKey = owner.getKey(KeyChain.KeyPurpose.AUTHENTICATION);
         assertEquals(myOwnerKey, ownerKey);
 
-        AuthenticationKeyChain voting = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET);
-        DeterministicKey myVotingKey = voting.getKey(KeyChain.KeyPurpose.AUTHENTICATION);
+        AuthenticationKeyChain voting = new AuthenticationKeyChain(seed, DeterministicKeyChain.PROVIDER_VOTING_PATH_TESTNET, EC_KEY_FACTORY, false);
+        IDeterministicKey myVotingKey = voting.getKey(KeyChain.KeyPurpose.AUTHENTICATION);
         assertEquals(myVotingKey, votingKey);
 
-        AuthenticationKeyChain blockchainUser = new AuthenticationKeyChain(seed, DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET);
-        DeterministicKey myBlockchainUserKey = blockchainUser.getKey(KeyChain.KeyPurpose.AUTHENTICATION);
+        AuthenticationKeyChain blockchainUser = new AuthenticationKeyChain(seed, DeterministicKeyChain.BLOCKCHAIN_USER_PATH_TESTNET, AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY, true);
+        IDeterministicKey myBlockchainUserKey = blockchainUser.getKey(0, true);
         assertEquals(myBlockchainUserKey, buKey);
-        DeterministicKey bukeyIndexZero = blockchainUser.getKey(0);
+        IDeterministicKey bukeyIndexZero = blockchainUser.getKey(0, true);
         assertEquals(bukeyIndexZero, buKey);
+
+        ExtendedPrivateKey blsExtendedPrivateKey = ExtendedPrivateKey.fromSeed(seed.getSeedBytes());
+
+        PrivateKey operatorPrivateKey = blsExtendedPrivateKey.privateChild(new ChildNumber(9, true).getI())
+                .privateChild(new ChildNumber(1, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(0)
+                .getPrivateKey();
+        BLSPublicKey blsOperatorKey = new BLSPublicKey(operatorPrivateKey.getG1Element());
+        BLSSecretKey blsOperatorSecret = new BLSSecretKey(operatorPrivateKey);
+        assertEquals(blsOperatorKey, operatorKey.getPubKeyObject());
+        assertEquals(blsOperatorSecret, ((BLSDeterministicKey)operatorKey).getPrivKey());
     }
 }

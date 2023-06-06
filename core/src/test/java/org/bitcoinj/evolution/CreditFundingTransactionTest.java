@@ -16,7 +16,7 @@
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
@@ -175,7 +175,7 @@ public class CreditFundingTransactionTest {
                 .build();
 
         // Get the first key from the blockchain identity funding keychain
-        DeterministicKey firstKey = group.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
+        IDeterministicKey firstKey = group.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
 
         /* tx data for 9788d647c020db783bd58f354eb56f049ea5f471b6a536ceb94d98b88bae4c31 */
         byte [] txData = Utils.HEX.decode("0100000001f19f93e98caea51ab67560a52b237dad7ca54546d0985aa11a1a639e9354fdba000000006a473044022074cd6796416991302d89954e458b996203428482a2d6650419ef0bba3f2a4791022054dead5e4a4eb2797628e4aecbd4be7679680293c668ae5008dc8174ec9dcd560121022535f1ee20879f1189656abd502a64c6dcbcbe5b732d4c2f780a4f6580a9f20affffffff0240420f0000000000166a14b98ac3c815ec340d9543cdc78ca2d24db1951aec20083d00000000001976a914afe755e29b119efa77f1b08c5ceacd885b53e5d088ac00000000");

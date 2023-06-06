@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2022 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,8 +85,8 @@ public class BLSVerifySignature {
 
             byte [] skBytes = sk1.Serialize();
             BLSSecretKey secretKey = new BLSSecretKey(skBytes);
-            BLSSignature signature = secretKey.Sign(sha256Hash);
-            BLSPublicKey publicKey = secretKey.GetPublicKey();
+            BLSSignature signature = secretKey.sign(sha256Hash);
+            BLSPublicKey publicKey = secretKey.getPublicKey();
             ArrayList<BLSPublicKey> pks2 = new ArrayList<>(1);
             pks2.add(publicKey);
 

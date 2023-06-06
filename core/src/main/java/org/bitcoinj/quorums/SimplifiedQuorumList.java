@@ -41,8 +41,8 @@ public class SimplifiedQuorumList extends Message {
         isFirstQuorumCheck = true;
     }
 
-    public SimplifiedQuorumList(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+    public SimplifiedQuorumList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+        super(params, payload, offset, protocolVersion);
     }
 
     public SimplifiedQuorumList(SimplifiedQuorumList other) {
@@ -124,7 +124,7 @@ public class SimplifiedQuorumList extends Message {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
             if(!diff.prevBlockHash.equals(blockHash))
                 throw new MasternodeListDiffException("The mnlistdiff does not connect to this quorum.  height: " +
-                        height + " vs " + cbtx.getHeight(), false, false, height == cbtx.getHeight());
+                        height + " vs " + cbtx.getHeight(), false, false, height == cbtx.getHeight(), false);
 
             SimplifiedQuorumList result = new SimplifiedQuorumList(this);
             result.blockHash = diff.blockHash;
@@ -178,7 +178,9 @@ public class SimplifiedQuorumList extends Message {
             //if quorum was created before DIP8 activation, then allow it to be added
             if (chainHeight >= params.getDIP0008BlockHeight() || !isLoadingBootstrap) {
                 //for some reason llmqType 2 quorumHashs are from block 72000, which is before DIP8 on testnet.
-                if (!isFirstQuorumCheck && entry.llmqType != 2 && !params.getAssumeValidQuorums().contains(entry.quorumHash)) {
+                if (!params.getId().equals(NetworkParameters.ID_TESTNET) && !isFirstQuorumCheck &&
+                        (entry.llmqType != LLMQParameters.LLMQType.LLMQ_400_60.value && entry.llmqType != LLMQParameters.LLMQType.LLMQ_400_85.value) &&
+                        !params.getAssumeValidQuorums().contains(entry.quorumHash)) {
                     throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
                 }
             }
@@ -248,7 +250,7 @@ public class SimplifiedQuorumList extends Message {
 
 
     public boolean verify(Transaction coinbaseTx, SimplifiedMasternodeListDiff mnlistdiff,
-                          SimplifiedQuorumList prevList, SimplifiedMasternodeList mnList) throws VerificationException {
+                          SimplifiedQuorumList prevList, SimplifiedMasternodeList mnList) throws MasternodeListDiffException {
         lock.lock();
 
         try {
@@ -280,7 +282,7 @@ public class SimplifiedQuorumList extends Message {
             if (!cbtx.getMerkleRootQuorums().isZero() &&
                     !commitmentHashes.isEmpty() &&
                     !cbtx.getMerkleRootQuorums().equals(calculateMerkleRoot(commitmentHashes)))
-                throw new VerificationException("MerkleRoot of quorum list does not match coinbaseTx - " + commitmentHashes.size());
+                throw new MasternodeListDiffException("MerkleRoot of quorum list does not match coinbaseTx - " + commitmentHashes.size(), true, false, false, true);
 
             return true;
         } finally {
@@ -449,7 +451,7 @@ public class SimplifiedQuorumList extends Message {
     void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
                          AbstractBlockChain chain, boolean validateQuorums) throws BlockStoreException
     {
-        if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitmentTxPayload.CURRENT_VERSION) {
+        if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitment.MAX_VERSION) {
             throw new VerificationException("invalid quorum commitment version" + commitment.getVersion());
         }
 
@@ -492,18 +494,20 @@ public class SimplifiedQuorumList extends Message {
             }
 
             log.info("Quorum: {}", commitment.quorumHash);
-            StringBuilder builder = new StringBuilder();
-            for (Masternode mn : members) {
-                builder.append("\n ").append(mn.getProTxHash());
+            if (Context.get().isDebugMode()) {
+                StringBuilder builder = new StringBuilder();
+                for (Masternode mn : members) {
+                    builder.append("\n ").append(mn.getProTxHash());
+                }
+                log.info(builder.toString());
             }
-            log.info(builder.toString());
 
-            if (!commitment.verify(members, true)) {
+            if (!commitment.verify(quorumBlock, members, true)) {
                 // TODO: originally, the exception was thrown here.  For now, report the error to the logs
                 // throw new VerificationException("invalid quorum commitment: " + commitment);
-                log.warn("invalid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
+                log.info("invalid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
             } else {
-                log.info("valid quorum commitment: {}:{}", commitment.quorumHash, commitment.quorumIndex);
+                log.info("valid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
             }
         }
     }

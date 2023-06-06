@@ -26,6 +26,7 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.UnsafeByteArrayOutputStream;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSPublicKey;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.slf4j.Logger;
@@ -52,8 +53,8 @@ public class CoinJoinQueue extends Message {
     // memory only
     private boolean tried;
 
-    public CoinJoinQueue(NetworkParameters params, byte[] payload) {
-        super(params, payload, 0);
+    public CoinJoinQueue(NetworkParameters params, byte[] payload, int protocolVersion) {
+        super(params, payload, 0, protocolVersion);
     }
 
     public CoinJoinQueue(
@@ -70,8 +71,10 @@ public class CoinJoinQueue extends Message {
         this.time = time;
         this.ready = ready;
         this.signature = signature;
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_LEGACY);
     }
 
+    @Deprecated
     public CoinJoinQueue(
             NetworkParameters params,
             int denomination,
@@ -85,13 +88,34 @@ public class CoinJoinQueue extends Message {
         this.time = time;
         this.ready = ready;
         this.signature = null;
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_LEGACY);
+    }
+
+    public CoinJoinQueue(
+            NetworkParameters params,
+            int denomination,
+            Sha256Hash proTxHash,
+            long time,
+            boolean ready) {
+
+        super(params);
+        this.denomination = denomination;
+        this.proTxHash = proTxHash;
+        this.time = time;
+        this.ready = ready;
+        this.signature = null;
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
     }
 
     @Override
     protected void parse() throws ProtocolException {
         denomination = (int)readUint32();
-        masternodeOutpoint = new TransactionOutPoint(params, payload, cursor);
-        cursor += masternodeOutpoint.getMessageSize();
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.COINJOIN_PROTX_HASH)) {
+            proTxHash = readHash();
+        } else {
+            masternodeOutpoint = new TransactionOutPoint(params, payload, cursor);
+            cursor += masternodeOutpoint.getMessageSize();
+        }
         time = readInt64();
         ready = readBytes(1)[0] == 1;
         signature = new MasternodeSignature(params, payload, cursor);
@@ -103,7 +127,11 @@ public class CoinJoinQueue extends Message {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         Utils.uint32ToByteStreamLE(denomination, stream);
-        masternodeOutpoint.bitcoinSerialize(stream);
+        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.COINJOIN_PROTX_HASH)) {
+            stream.write(proTxHash.getReversedBytes());
+        } else {
+            masternodeOutpoint.bitcoinSerialize(stream);
+        }
         Utils.int64ToByteStreamLE(time, stream);
         stream.write(ready ? 1 : 0);
         signature.bitcoinSerialize(stream);
@@ -113,6 +141,10 @@ public class CoinJoinQueue extends Message {
         try {
             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
             Utils.uint32ToByteStreamLE(denomination, bos);
+
+            // this still requires the masternode output
+            if (masternodeOutpoint == null)
+                masternodeOutpoint = ProTxToOutpoint.getMasternodeOutpoint(proTxHash);
             masternodeOutpoint.bitcoinSerialize(bos);
             Utils.int64ToByteStreamLE(time, bos);
             bos.write(ready ? 1 : 0);
@@ -124,8 +156,14 @@ public class CoinJoinQueue extends Message {
     }
 
     public boolean checkSignature(BLSPublicKey pubKey) {
+        // return true until signature hash uses the proTxHash
+        if (masternodeOutpoint == null)
+            return true;
+
         Sha256Hash hash = getSignatureHash();
-        BLSSignature sig = new BLSSignature(signature.getBytes());
+
+        // use the currently active scheme
+        BLSSignature sig = new BLSSignature(signature.getBytes(), BLSScheme.isLegacyDefault());
 
         if (!sig.verifyInsecure(pubKey, hash)) {
             log.info("CoinJoinQueue-CheckSignature -- VerifyInsecure() failed\n");
@@ -150,13 +188,13 @@ public class CoinJoinQueue extends Message {
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinQueue(denomination=%s[%d], time=%d[expired=%s], ready=%s, masternodeOutpoint=%s)",
+                "CoinJoinQueue(denomination=%s[%d], time=%d[expired=%s], ready=%s, proTxHash=%s)",
                 CoinJoin.denominationToString(denomination),
                 denomination,
                 time,
                 isTimeOutOfBounds(),
                 ready,
-                masternodeOutpoint
+                proTxHash
         );
     }
 
@@ -164,7 +202,11 @@ public class CoinJoinQueue extends Message {
         return denomination;
     }
 
+    @Deprecated
     public TransactionOutPoint getMasternodeOutpoint() {
+        if (masternodeOutpoint == null) {
+            masternodeOutpoint = ProTxToOutpoint.getMasternodeOutpoint(proTxHash);
+        }
         return masternodeOutpoint;
     }
 
@@ -197,9 +239,6 @@ public class CoinJoinQueue extends Message {
     }
 
     public Sha256Hash getProTxHash() {
-        if (proTxHash == null) {
-            proTxHash = ProTxToOutpoint.getProTxHash(masternodeOutpoint);
-        }
         return proTxHash;
     }
 
@@ -214,14 +253,12 @@ public class CoinJoinQueue extends Message {
         if (time != that.time) return false;
         if (ready != that.ready) return false;
         if (tried != that.tried) return false;
-        if (!Objects.equals(masternodeOutpoint, that.masternodeOutpoint))
-            return false;
         if (!Objects.equals(proTxHash, that.proTxHash)) return false;
         return Objects.equals(signature, that.signature);
     }
 
     @Override
     public int hashCode() {
-        return masternodeOutpoint.getHash().hashCode();
+        return proTxHash.hashCode();
     }
 }

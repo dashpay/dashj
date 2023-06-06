@@ -43,9 +43,9 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                     if (q == dsq) {
                         return;
                     }
-                    if (q.isReady() == dsq.isReady() && q.getMasternodeOutpoint().equals(dsq.getMasternodeOutpoint())) {
+                    if (q.isReady() == dsq.isReady() && q.getProTxHash().equals(dsq.getProTxHash())) {
                         // no way the same mn can send another dsq with the same readiness this soon
-                        log.info("coinjoin: DSQUEUE -- Peer {} is sending WAY too many dsq messages for a masternode with collateral {}", from.getAddress().getAddr(), dsq.getMasternodeOutpoint().toStringShort());
+                        log.info("coinjoin: DSQUEUE -- Peer {} is sending WAY too many dsq messages for a masternode {}", from.getAddress().getAddr(), dsq.getProTxHash());
                         return;
                     }
                 }
@@ -61,7 +61,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                 return;
 
             SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
-            Masternode dmn = mnList.getValidMNByCollateral(dsq.getMasternodeOutpoint()); //TODO - we don't have this
+            Masternode dmn = mnList.getMN(dsq.getProTxHash());
             if (dmn == null)
                 return;
 

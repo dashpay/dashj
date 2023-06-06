@@ -20,10 +20,10 @@ package org.bitcoinj.tools;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.*;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
-import org.bitcoinj.params.JackDanielsDevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.WhiteRussianDevNetParams;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
@@ -90,8 +90,8 @@ public class BuildCheckpoints {
                 suffix = "-regtest";
                 break;
             case DEVNET:
-                params = JackDanielsDevNetParams.get();
-                suffix = "-devnet";
+                params = WhiteRussianDevNetParams.get();
+                suffix = "-white-russian";
                 break;
             default:
                 throw new RuntimeException("Unreachable.");

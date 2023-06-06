@@ -18,6 +18,9 @@
 package org.bitcoinj.crypto;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.bls.BLSHDKeyDerivation;
+import org.bitcoinj.crypto.factory.ECKeyFactory;
+import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
 
 import com.google.common.base.MoreObjects;
@@ -41,7 +44,7 @@ import static com.google.common.base.Preconditions.*;
  * (key, chaincode). If you know its path in the tree and its chain code you can derive more keys from this. To obtain
  * one of these, you can call {@link HDKeyDerivation#createMasterPrivateKey(byte[])}.
  */
-public class DeterministicKey extends ECKey {
+public class DeterministicKey extends ECKey implements IDeterministicKey {
 
     /** Sorts deterministic keys in the order of their child number. That's <i>usually</i> the order used to derive them. */
     public static final Comparator<ECKey> CHILDNUM_ORDER = new Comparator<ECKey>() {
@@ -281,6 +284,16 @@ public class DeterministicKey extends ECKey {
         return key;
     }
 
+    @Override
+    public DeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey, @Nullable IDeterministicKey newParent) throws KeyCrypterException {
+        if (newParent == null) {
+            return encrypt(keyCrypter, aesKey, null);
+        } else {
+            checkArgument(newParent instanceof DeterministicKey);
+            return encrypt(keyCrypter, aesKey, (DeterministicKey) newParent);
+        }
+    }
+
     static byte[] addChecksum(byte[] input) {
         int inputLength = input.length;
         byte[] checksummed = new byte[inputLength + 4];
@@ -382,6 +395,16 @@ public class DeterministicKey extends ECKey {
         if (parent == null)
             key.setCreationTimeSeconds(getCreationTimeSeconds());
         return key;
+    }
+
+    @Override
+    public Object getPubKeyObject() {
+        return getPubKeyPoint();
+    }
+
+    @Override
+    public KeyFactory getKeyFactory() {
+        return ECKeyFactory.get();
     }
 
     @Override
@@ -501,6 +524,16 @@ public class DeterministicKey extends ECKey {
 
     public String serializePrivB58(NetworkParameters params, Script.ScriptType outputScriptType) {
         return toBase58(serialize(params, false, outputScriptType));
+    }
+
+    @Override
+    public DeterministicKey deriveChildKey(ChildNumber childNumber) {
+        return HDKeyDerivation.deriveChildKey(this, childNumber);
+    }
+
+    @Override
+    public IDeterministicKey deriveThisOrNextChildKey(int nextChild) {
+        return HDKeyDerivation.deriveThisOrNextChildKey(this, nextChild);
     }
 
     public String serializePubB58(NetworkParameters params) {

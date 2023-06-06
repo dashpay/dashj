@@ -554,10 +554,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // Look through the queues and see if anything matches
         CoinJoinQueue dsq;
         while ((dsq = mixingWallet.getContext().coinJoinManager.getCoinJoinClientQueueManager().getQueueItemAndTry()) != null) {
-            Masternode dmn = mnList.getValidMNByCollateral(dsq.getMasternodeOutpoint());
+            Masternode dmn = mnList.getMN(dsq.getProTxHash());
 
             if (dmn == null) {
-                log.info("coinjoin: dsq masternode is not in masternode list, masternode={}", dsq.getMasternodeOutpoint().toStringShort());
+                log.info("coinjoin: dsq masternode is not in masternode list, masternode={}", dsq.getProTxHash());
                 continue;
             }
 
@@ -575,7 +575,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 continue;
             }
 
-            mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).addUsedMasternode(dsq.getMasternodeOutpoint());
+            mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).addUsedMasternode(dsq.getProTxHash());
 
             if (mixingWallet.getContext().coinJoinManager.isMasternodeOrDisconnectRequested(dmn.getService())) {
                 log.info("coinjoin: skipping masternode connection, addr={}", dmn.getService());
@@ -624,7 +624,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 return false;
             }
 
-            context.coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).addUsedMasternode(dmn.getCollateralOutpoint());
+            context.coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).addUsedMasternode(dmn.getProTxHash());
 
             long nLastDsq = context.masternodeMetaDataManager.getMetaInfo(dmn.getProTxHash()).getLastDsq();
             long nDsqThreshold = context.masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), nMnCount);

@@ -17,10 +17,13 @@ package org.bitcoinj.wallet;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.BloomFilter;
-import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
-import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.IDeterministicKey;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.Threading;
@@ -37,21 +40,21 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Implements basic keychain functionality for a keychain extension
  */
-abstract public class AbstractKeyChainExtension implements KeyChainWalletExtension {
+abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExtension {
     protected final ReentrantLock keyChainGroupLock = Threading.lock("keychaingroup");
-    Wallet wallet;
+    protected @Nullable Wallet wallet;
 
-    protected AbstractKeyChainExtension(Wallet wallet) {
+    protected AbstractKeyChainGroupExtension(Wallet wallet) {
         this.wallet = wallet;
     }
 
-    abstract KeyChainGroup getKeyChainGroup();
+    abstract protected AnyKeyChainGroup getKeyChainGroup();
 
     boolean isInitialized() {
         return getKeyChainGroup() != null;
     }
 
-    public void addAndActivateHDChain(DeterministicKeyChain keyChain) {
+    public void addAndActivateHDChain(AnyDeterministicKeyChain keyChain) {
         keyChainGroupLock.lock();
         try {
             getKeyChainGroup().addAndActivateHDChain(keyChain);
@@ -92,7 +95,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
 
     /**
      * Get the wallet's KeyCrypter, or null if the wallet is not encrypted.
-     * (Used in encrypting/ decrypting an ECKey).
+     * (Used in encrypting/ decrypting an IKey).
      */
     @Nullable
     public KeyCrypter getKeyCrypter() {
@@ -114,7 +117,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
         }
     }
 
-    public DeterministicKey currentKey(KeyChain.KeyPurpose purpose) {
+    public IDeterministicKey currentKey(KeyChain.KeyPurpose purpose) {
         keyChainGroupLock.lock();
         try {
             return getKeyChainGroup().currentKey(purpose);
@@ -122,7 +125,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
             keyChainGroupLock.unlock();
         }
     }
-    public DeterministicKey currentReceiveKey() {
+    public IDeterministicKey currentReceiveKey() {
         return currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
     }
 
@@ -149,7 +152,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public ECKey findKeyFromPubKey(byte[] pubKey) {
+    public IKey findKeyFromPubKey(byte[] pubKey) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() ? getKeyChainGroup().findKeyFromPubKey(pubKey) : null;
@@ -159,7 +162,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public ECKey findKeyFromPubKeyHash(byte[] pubKeyHash, @Nullable Script.ScriptType scriptType) {
+    public IKey findKeyFromPubKeyHash(byte[] pubKeyHash, @Nullable Script.ScriptType scriptType) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() ? getKeyChainGroup().findKeyFromPubKeyHash(pubKeyHash, scriptType) : null;
@@ -169,7 +172,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public RedeemData findRedeemDataFromScriptHash(byte[] payToScriptHash) {
+    public IRedeemData findRedeemDataFromScriptHash(byte[] payToScriptHash) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() ? getKeyChainGroup().findRedeemDataFromScriptHash(payToScriptHash) : null;
@@ -179,13 +182,13 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public DeterministicKey freshKey(KeyChain.KeyPurpose purpose) {
+    public IDeterministicKey freshKey(KeyChain.KeyPurpose purpose) {
         return freshKeys(purpose, 1).get(0);
     }
 
     @Override
-    public List<DeterministicKey> freshKeys(KeyChain.KeyPurpose purpose, int numberOfKeys) {
-        List<DeterministicKey> keys;
+    public List<IDeterministicKey> freshKeys(KeyChain.KeyPurpose purpose, int numberOfKeys) {
+        List<IDeterministicKey> keys;
         keyChainGroupLock.lock();
         try {
             keys = getKeyChainGroup().freshKeys(purpose, numberOfKeys);
@@ -202,8 +205,8 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
      * Returns a key/s that has not been returned by this method before (fresh).
      */
     @Override
-    public List<DeterministicKey> freshKeys(int numberOfKeys) {
-        List<DeterministicKey> keys;
+    public List<IDeterministicKey> freshKeys(int numberOfKeys) {
+        List<IDeterministicKey> keys;
         checkNotNull(getKeyChainGroup(), "This wallet extension does not have any key chains.");
         keyChainGroupLock.lock();
         try {
@@ -218,7 +221,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public DeterministicKey freshReceiveKey() {
+    public IDeterministicKey freshReceiveKey() {
         return freshKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
     }
 
@@ -251,12 +254,12 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
      * Returns only the keys that have been issued by {@link #freshKeys(int)}}.
      */
     @Override
-    public List<ECKey> getIssuedReceiveKeys() {
+    public List<IKey> getIssuedReceiveKeys() {
         keyChainGroupLock.lock();
         try {
-            List<ECKey> keys = new LinkedList<>();
+            List<IKey> keys = new LinkedList<>();
             long keyRotationTimeSecs = wallet.getKeyRotationTime().getTime();
-            for (final DeterministicKeyChain chain : getActiveKeyChains(keyRotationTimeSecs))
+            for (final AnyDeterministicKeyChain chain : getActiveKeyChains(keyRotationTimeSecs))
                 keys.addAll(chain.getIssuedReceiveKeys());
             return keys;
         } finally {
@@ -265,7 +268,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public DeterministicKeyChain getActiveKeyChain() {
+    public AnyDeterministicKeyChain getActiveKeyChain() {
         keyChainGroupLock.lock();
         try {
             return getKeyChainGroup().getActiveKeyChain();
@@ -275,7 +278,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public List<DeterministicKeyChain> getActiveKeyChains(long walletCreationTime) {
+    public List<AnyDeterministicKeyChain> getActiveKeyChains(long walletCreationTime) {
         keyChainGroupLock.lock();
         try {
             return getKeyChainGroup().getActiveKeyChains(walletCreationTime);
@@ -337,7 +340,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public boolean hasKey(ECKey key) {
+    public boolean hasKey(IKey key) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() && getKeyChainGroup().hasKey(key);
@@ -347,7 +350,12 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public int importKeys(List<ECKey> keys) {
+    public boolean hasKeyChains() {
+        return isInitialized() && getKeyChainGroup().hasKeyChains();
+    }
+
+    @Override
+    public int importKeys(List<IKey> keys) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() ? getKeyChainGroup().importKeys(keys) : 0;
@@ -357,7 +365,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public int importKeys(ECKey... keys) {
+    public int importKeys(IKey... keys) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() ? getKeyChainGroup().importKeys(keys) : 0;
@@ -367,7 +375,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public int importKeysAndEncrypt(List<ECKey> keys, KeyParameter aesKey) {
+    public int importKeysAndEncrypt(List<IKey> keys, KeyParameter aesKey) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() ? getKeyChainGroup().importKeysAndEncrypt(keys, aesKey) : 0;
@@ -443,8 +451,8 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
         }
     }
     /**
-         * Returns the number of keys in the key chain group, including lookahead keys.
-            */
+     * Returns the number of keys in the key chain group, including lookahead keys.
+     */
     public int numKeys() {
         keyChainGroupLock.lock();
         try {
@@ -455,7 +463,7 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     }
 
     @Override
-    public boolean removeImportedKey(ECKey key) {
+    public boolean removeImportedKey(IKey key) {
         keyChainGroupLock.lock();
         try {
             return isInitialized() && getKeyChainGroup().removeImportedKey(key);
@@ -474,6 +482,12 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
             keyChainGroupLock.unlock();
         }
     }
+
+    @Override
+    public void processTransaction(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType) {
+
+    }
+
 
     /** Adds a listener for events that are run when keys are added, on the user thread. */
     public void addEventListener(KeyChainEventListener listener) {
@@ -515,5 +529,10 @@ abstract public class AbstractKeyChainExtension implements KeyChainWalletExtensi
     @Override
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
         return getWalletExtensionID() + ":\n" + (isInitialized() ? getKeyChainGroup().toString(includeLookahead, includePrivateKeys, aesKey) : "No keychains");
+    }
+
+    protected void saveWallet() {
+        if (wallet != null)
+            wallet.saveLater();
     }
 }

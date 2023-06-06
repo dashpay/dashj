@@ -1,6 +1,7 @@
 package org.bitcoinj.crypto;
 
 import org.bitcoinj.core.ChildMessage;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Utils;
@@ -12,15 +13,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class BLSLazySignature extends ChildMessage {
+public class BLSLazySignature extends BLSAbstractLazyObject {
     ReentrantLock lock = Threading.lock("BLSLazySignature");
     Logger log = LoggerFactory.getLogger(BLSLazySignature.class);
-
-    byte [] buffer;
     BLSSignature signature;
-    boolean isSingatureInitialized;
 
     public BLSLazySignature() {
+        super(Context.get().getParams());
     }
 
     public BLSLazySignature(NetworkParameters params) {
@@ -28,19 +27,22 @@ public class BLSLazySignature extends ChildMessage {
     }
 
     public BLSLazySignature(BLSLazySignature signature) {
-        super(signature.params);
+        super(signature);
         this.signature = signature.signature;
-        this.isSingatureInitialized = signature.isSingatureInitialized;
     }
 
     public BLSLazySignature(NetworkParameters params, byte [] payload, int offset) {
-        super(params, payload, offset);
+        super(params, payload, offset, false);
+    }
+
+    public BLSLazySignature(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
+        super(params, payload, offset, legacy);
     }
 
     @Override
     protected void parse() throws ProtocolException {
+        super.parse();
         buffer = readBytes(BLSSignature.BLS_CURVE_SIG_SIZE);
-        isSingatureInitialized = false;
         length = cursor - offset;
     }
 
@@ -48,7 +50,7 @@ public class BLSLazySignature extends ChildMessage {
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         lock.lock();
         try {
-            if (!isSingatureInitialized && buffer == null) {
+            if (!initialized && buffer == null) {
                 log.warn("signature and buffer are not initialized");
                 buffer = invalidSignature.getBuffer();
             }
@@ -68,8 +70,8 @@ public class BLSLazySignature extends ChildMessage {
             if(blsLazySignature.buffer != null) {
                 System.arraycopy(blsLazySignature.buffer, 0, buffer, 0, BLSSignature.BLS_CURVE_SIG_SIZE);
             }
-            isSingatureInitialized = blsLazySignature.isSingatureInitialized;
-            if(isSingatureInitialized) {
+            initialized = blsLazySignature.initialized;
+            if(initialized) {
                 signature = blsLazySignature.signature;
             } else {
                 signature.reset();
@@ -86,7 +88,7 @@ public class BLSLazySignature extends ChildMessage {
         lock.lock();
         try {
             buffer = null;
-            isSingatureInitialized = true;
+            initialized = true;
             this.signature = signature;
         } finally {
             lock.unlock();
@@ -96,16 +98,16 @@ public class BLSLazySignature extends ChildMessage {
     public BLSSignature getSignature() {
         lock.lock();
         try {
-            if(buffer == null && !isSingatureInitialized)
+            if(buffer == null && !initialized)
                 return invalidSignature;
-            if(!isSingatureInitialized) {
-                signature = new BLSSignature(buffer);
+            if(!initialized) {
+                signature = new BLSSignature(buffer, legacy);
                 if(!signature.checkMalleable(buffer, BLSSignature.BLS_CURVE_SIG_SIZE)) {
                     buffer = null;
-                    isSingatureInitialized = false;
+                    initialized = false;
                     signature = invalidSignature;
                 } else {
-                    isSingatureInitialized = true;
+                    initialized = true;
                 }
             }
             return signature;
@@ -116,6 +118,6 @@ public class BLSLazySignature extends ChildMessage {
 
     @Override
     public String toString() {
-        return isSingatureInitialized ? signature.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
+        return initialized ? signature.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
     }
 }

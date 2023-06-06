@@ -22,6 +22,8 @@ import com.google.common.primitives.Longs;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -135,7 +137,12 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
             long satoshis = new BigDecimal(str).movePointRight(SMALLEST_UNIT_EXPONENT).longValueExact();
             return Coin.valueOf(satoshis);
         } catch (ArithmeticException e) {
-            throw new IllegalArgumentException(e); // Repackage exception to honor method contract
+            try {
+                long satoshis = new BigDecimal(str).round(new MathContext(8, RoundingMode.DOWN)).movePointRight(SMALLEST_UNIT_EXPONENT).longValueExact();
+                return Coin.valueOf(satoshis);
+            } catch (ArithmeticException e1) {
+                throw new IllegalArgumentException(e1); // Repackage exception to honor method contract
+            }
         }
     }
 

@@ -24,6 +24,7 @@ import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.params.Networks;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.Script.ScriptType;
@@ -119,7 +120,7 @@ public class Address extends AbstractAddress {
      *            only the public part is used
      * @return constructed address
      */
-    public static Address fromKey(NetworkParameters params, ECKey key) {
+    public static Address fromKey(NetworkParameters params, IKey key) {
         return fromPubKeyHash(params, key.getPubKeyHash());
     }
 
@@ -134,7 +135,7 @@ public class Address extends AbstractAddress {
      *            script type the address should use
      * @return constructed address
      */
-    public static Address fromKey(final NetworkParameters params, final ECKey key, final ScriptType outputScriptType) {
+    public static Address fromKey(final NetworkParameters params, final IKey key, final ScriptType outputScriptType) {
         if (outputScriptType == Script.ScriptType.P2PKH)
             return Address.fromKey(params, key);
         else

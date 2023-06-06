@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Dash Core Group.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.evolution;
 
 
@@ -9,18 +25,18 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.wallet.*;
-import org.dashj.bls.BLS;
-import org.dashj.bls.BLSException;
+import org.dashj.bls.BLSJniLibrary;
 import org.dashj.bls.ExtendedPrivateKey;
-import org.dashj.bls.JNI;
+import org.dashj.bls.G1Element;
 import org.dashj.bls.PrivateKey;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.bouncycastle.util.encoders.Base64;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -50,16 +66,12 @@ public class ProviderTests {
     BLSPublicKey operatorKey;
     BLSSecretKey operatorSecret;
     static {
-        try {
-            System.loadLibrary(JNI.LIBRARY_NAME);
-            BLS.Init();
-        } catch (UnsatisfiedLinkError x) {
-            fail(x.getMessage());
-        }
+        BLSJniLibrary.init();
     }
 
     @Before
     public void startup() throws UnreadableWalletException {
+        BLSScheme.setLegacyDefault(true);
         PARAMS = UnitTestParams.get();
         context = new Context(PARAMS);
         txdata = Utils.HEX.decode("03000500010000000000000000000000000000000000000000000000000000000000000000ffffffff0502fa050105ffffffff02f4c21a3d0500000023210397181e4cc48fcba0e597bfb029d4cfc4473ae5772a0ff32223977d4e03e07fa9acf4c21a3d050000001976a91425e50daf158a83dfaacd1b77175900aa95a67d4188ac00000000260100fa050000aaaec8d6a8535a01bd844817dea1faed66f6c397b1dcaec5fe8c5af025023c35");
@@ -80,27 +92,21 @@ public class ProviderTests {
 
         ownerKeyMaster = owner.getWatchingKey();//(ChildNumber.ZERO);
         ownerKey = HDKeyDerivation.deriveChildKey(ownerKeyMaster, ChildNumber.ZERO);
-        ownerKeyId = new KeyId(ownerKey.getPubKeyHash());
+        ownerKeyId = KeyId.fromBytes(ownerKey.getPubKeyHash());
 
         votingKeyMaster = voting.getWatchingKey();//(ChildNumber.ZERO);
         votingKey = HDKeyDerivation.deriveChildKey(votingKeyMaster, ChildNumber.ZERO);
-        votingKeyId = new KeyId(votingKey.getPubKeyHash());
+        votingKeyId = KeyId.fromBytes(votingKey.getPubKeyHash());
 
-        blsExtendedPrivateKey = ExtendedPrivateKey.FromSeed(seed.getSeedBytes(), seed.getSeedBytes().length);
-        /*operatorKey = new BLSPublicKey(blsExtendedPrivateKey.PrivateChild(new ChildNumber(9, true).getI())
-                .PrivateChild(new ChildNumber(1, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(0)
-                .GetPublicKey());
-*/
-        PrivateKey operatorPrivateKey = blsExtendedPrivateKey.PrivateChild(new ChildNumber(9, true).getI())
-                .PrivateChild(new ChildNumber(1, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(new ChildNumber(3, true).getI())
-                .PrivateChild(0)
-                .GetPrivateKey();
-        operatorKey = new BLSPublicKey(operatorPrivateKey.GetPublicKey());
+        blsExtendedPrivateKey = ExtendedPrivateKey.fromSeed(seed.getSeedBytes());
+
+        PrivateKey operatorPrivateKey = blsExtendedPrivateKey.privateChild(new ChildNumber(9, true).getI())
+                .privateChild(new ChildNumber(1, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(new ChildNumber(3, true).getI())
+                .privateChild(0)
+                .getPrivateKey();
+        operatorKey = new BLSPublicKey(operatorPrivateKey.getG1Element(), true);
         operatorSecret = new BLSSecretKey(operatorPrivateKey);
 
         String inputAddress0 = "yRdHYt6nG1ooGaXK7GEbwVMteLY3m4FbVT";
@@ -222,15 +228,169 @@ public class ProviderTests {
     }
 
     @Test
+    public void providerRegistrationTestV2() throws IOException {
+        BLSScheme.setLegacyDefault(false);
+        //        "7494faf951e2d82cb353e39c53750636fd51d998f1e9f473045ab996e5dd7aa6-2": {
+        //            "proTxHash": "b23500c240c494e10aaf11ba3775a4a50bff732147a911c98ab74c3896ff6bf2",
+        //                    "address": "35.85.152.110:20001",
+        //                    "payee": "yezz6MkRVpH6SvNSDN3147EWa557Wq2dbR",
+        //                    "status": "ENABLED",
+        //                    "type": "Regular",
+        //                    "pospenaltyscore": 0,
+        //                    "consecutivePayments": 0,
+        //                    "lastpaidtime": 1676561550,
+        //                    "lastpaidblock": 4883,
+        //                    "owneraddress": "yRWWNg9vfnAJz6Ds3QUgu9Eh9CFaVbowfN",
+        //                    "votingaddress": "yRWWNg9vfnAJz6Ds3QUgu9Eh9CFaVbowfN",
+        //                    "collateraladdress": "yQBK54rJCM3rYQjkgB1qF3BJJZKJruVAVZ",
+        //                    "pubkeyoperator": "96adfce94d2bdf25b5248d316a6686bfa620def9bd19de09bac1adb61861d233ea9cf09612bf16d5e901411e0719715c"
+        //        },
+
+
+        byte [] hexData = Utils.HEX.decode("03000100016af1c4a180b768c45db79b231a01d3190ce0ab94f44bc90c4a9ab0cb8cf225b1010000006a4730440220647d64724ec6b7bee99c62c5fc6f76a34c7610f3e559bf6046634bd4ed8898a302201c3f389854f565883d78721e7339a66e7b7be3e3a59f8fcc2556e6ca204410d00121039f7ea1ecfdbe0475d3ef61f1709fb731fa10808eef18d603cde03cfc1252d80afeffffff0122dff505000000001976a9142a56aeb9cdfd17a50e67a2aad320b4475862a00a88ac00000000fd1201020000000000a67adde596b95a0473f4e9f198d951fd360675539ce353b32cd8e251f9fa94740200000000000000000000000000ffff2355986e4e2138f025b8a8b954b3f1fffea06f1e7211420d24ec96adfce94d2bdf25b5248d316a6686bfa620def9bd19de09bac1adb61861d233ea9cf09612bf16d5e901411e0719715c38f025b8a8b954b3f1fffea06f1e7211420d24ec00001976a914ccec915e5885f72ed49308e889ef7d31e7c2500c88ac72642f83ea608ebf3d5899b7254e52a20f0cbd49e132347a63222d5fc00cec1c412049c15cca750242a0e0e712fd7b9f1e79050b23fce1bc8b5185dd839f36e232fc41ad8eebaa8624c76ddf3bb2404f090d3b1427a70c963ac1b4c344f2d439ad31");
+
+        Transaction proRegTxFromMessage = new Transaction(PARAMS, hexData);
+
+        ProviderRegisterTx proRegTx = (ProviderRegisterTx) proRegTxFromMessage.getExtraPayloadObject();
+
+        assertEquals(Sha256Hash.wrap("b23500c240c494e10aaf11ba3775a4a50bff732147a911c98ab74c3896ff6bf2"), proRegTxFromMessage.getTxId());
+        assertEquals(MasternodeType.REGULAR.index, proRegTx.type);
+        assertEquals(new BLSSecretKey("039c40ee5760a1e8ca95c04abf7941b24d00f784ddb9c1804a7703fb1bc487fd", false).getPublicKey(), proRegTx.pubkeyOperator);
+
+        //        "31867e02cd4cccf250e86a1bfbb963ad2964e0f55398d9b64f71edab3b365a93-3": {
+        //            "proTxHash": "478941dbaf8e7b19bcf2edf4289a3ff8eca228f9263dfc8cdacb5f085674dbed",
+        //                    "address": "52.39.100.224:20001",
+        //                    "payee": "yezz6MkRVpH6SvNSDN3147EWa557Wq2dbR",
+        //                    "status": "ENABLED",
+        //                    "type": "HighPerformance",
+        //                    "platformNodeID": "83beba9ecea8b7a6eec4198d819ad6ac88a5b2de",
+        //                    "platformP2PPort": 26659,
+        //                    "platformHTTPPort": 3000,
+        //                    "pospenaltyscore": 0,
+        //                    "consecutivePayments": 0,
+        //                    "lastpaidtime": 1676560369,
+        //                    "lastpaidblock": 4875,
+        //                    "owneraddress": "yUiPZCLybf39dzpsuEjCsbvSs4UJbHgMuJ",
+        //                    "votingaddress": "yUiPZCLybf39dzpsuEjCsbvSs4UJbHgMuJ",
+        //                    "collateraladdress": "yWM8o4WHf3ZtvwM2fRxn344U82G9Rdq27J",
+        //                    "pubkeyoperator": "8364263c07ac8d0a23e3f4105033ab45977620154b9037eb9746644f968536e44f8d8ea26314e03a7decba266c85c994"
+        //        },
+
+        byte[] hexDataHPMN = Utils.HEX.decode("0300010001ab1cabd2444daccc662cac0f3c64f024cdf1c0e5a5570ca62313cb2f03e02b75020000006a473044022074aac6c0b9595cd4968bc8a16f27c89d9caeda1651d293e1eb0dfc5a7b951e1402200fcdff608dde89d0a686065c551e151bf16c8e547706137afa65fc968af4ac4d01210399b544309aea776ca93383676a91f93d91c01894adbf00a8bc8fc57c55d8882cfeffffff010adff505000000001976a9146e0304d6a02d1f441e64813359a3e09027284e2e88ac00000000fd2a01020001000000935a363babed714fb6d99853f5e06429ad63b9fb1b6ae850f2cc4ccd027e86310300000000000000000000000000ffff342764e04e215c17d308b161a38fd2f36bcba45963c6f489ff818364263c07ac8d0a23e3f4105033ab45977620154b9037eb9746644f968536e44f8d8ea26314e03a7decba266c85c9945c17d308b161a38fd2f36bcba45963c6f489ff8100001976a914ccec915e5885f72ed49308e889ef7d31e7c2500c88ac2e7329219be96b3ac7e04a46b23e7346cb41866745eb70c4c97c1f4232417ec8deb2a588acd69a818d19c4eea6b7a8ce9ebabe832368b80b41209ca3dad27f7dae9ad0b7759e2237711ead8fca60f36dd8c577a0fb62a09074267610540620485a02283d5d84cada8ac98e59b58a6897f5c23bfdb29ea1dcfa77");
+
+        Transaction proRegTxHPMN = new Transaction(PARAMS, hexDataHPMN);
+
+        ProviderRegisterTx proRegTxHPMNPayload = (ProviderRegisterTx) proRegTxHPMN.getExtraPayloadObject();
+
+        assertEquals(Sha256Hash.wrap("478941dbaf8e7b19bcf2edf4289a3ff8eca228f9263dfc8cdacb5f085674dbed"), proRegTxHPMN.getTxId());
+        assertEquals(MasternodeType.HIGHPERFORMANCE.index, proRegTxHPMNPayload.type);
+        assertEquals(KeyId.fromString("83beba9ecea8b7a6eec4198d819ad6ac88a5b2de"), proRegTxHPMNPayload.platformNodeID);
+    }
+
+    @Test
     public void testPublicBytes() {
         String bytes = "157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfa";
         try {
-            org.dashj.bls.PublicKey.FromBytes(org.dashj.bls.Utils.HEX.decode(bytes));
+            G1Element.fromBytes(Utils.HEX.decode(bytes));
         } catch (Exception x) {
             // this call is expected to fail the first time it is called
         }
     }
-    
+
+    @Test
+    public void testCollateralProviderRegistrationTransaction() {
+        byte[] hexData = Utils.HEX.decode("0300010001ca9a43051750da7c5f858008f2ff7732d15691e48eb7f845c791e5dca78bab58010000006b483045022100fe8fec0b3880bcac29614348887769b0b589908e3f5ec55a6cf478a6652e736502202f30430806a6690524e4dd599ba498e5ff100dea6a872ebb89c2fd651caa71ed012103d85b25d6886f0b3b8ce1eef63b720b518fad0b8e103eba4e85b6980bfdda2dfdffffffff018e37807e090000001976a9144ee1d4e5d61ac40a13b357ac6e368997079678c888ac00000000fd1201010000000000ca9a43051750da7c5f858008f2ff7732d15691e48eb7f845c791e5dca78bab580000000000000000000000000000ffff010205064e1f3dd03f9ec192b5f275a433bfc90f468ee1a3eb4c157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfad38a30fafe61575db40f05ab0a08d55119b0aad300001976a9144fbc8fb6e11e253d77e5a9c987418e89cf4a63d288ac3477990b757387cb0406168c2720acf55f83603736a314a37d01b135b873a27b411fb37e49c1ff2b8057713939a5513e6e711a71cff2e517e6224df724ed750aef1b7f9ad9ec612b4a7250232e1e400da718a9501e1d9a5565526e4b1ff68c028763");
+
+        Transaction providerRegistrationTransactionFromMessage = new Transaction(PARAMS, hexData);
+        ProviderRegisterTx providerRegistrationTx = (ProviderRegisterTx) providerRegistrationTransactionFromMessage.getExtraPayloadObject();
+
+        //    protx register_prepare
+        //    58ab8ba7dce591c745f8b78ee49156d13277fff20880855f7cda501705439aca
+        //    0
+        //    1.2.5.6:19999
+        //    yRxHYGLf9G4UVYdtAoB2iAzR3sxxVaZB6y
+        //    97762493aef0bcba1925870abf51dc21f4bc2b8c410c79b7589590e6869a0e04
+        //    yfbxyP4ctRJR1rs3A8C3PdXA4Wtcrw7zTi
+        //    0
+        //    ycBFJGv7V95aSs6XvMewFyp1AMngeRHBwy
+
+        Sha256Hash txId = Sha256Hash.wrap("e65f550356250100513aa9c260400562ac8ee1b93ae1cc1214cc9f6830227b51");
+        Sha256Hash inputTransactionHashValue = Sha256Hash.wrapReversed(Utils.HEX.decode("ca9a43051750da7c5f858008f2ff7732d15691e48eb7f845c791e5dca78bab58"));
+        Address inputAddress0 = Address.fromBase58(PARAMS,"yQxPwSSicYgXiU22k4Ysq464VxRtgbnvpJ");
+        Address outputAddress0 = Address.fromBase58(PARAMS,"yTWY6DsS4HBGs2JwDtnvVcpykLkbvtjUte");
+        Address collateralAddress = Address.fromBase58(PARAMS,"yeNVS6tFeQNXJVkjv6nm6gb7PtTERV5dGh");
+        Sha256Hash collateralHash = Sha256Hash.wrap("58ab8ba7dce591c745f8b78ee49156d13277fff20880855f7cda501705439aca");
+        int collateralIndex = 0;
+        TransactionOutPoint reversedCollateral = new TransactionOutPoint(PARAMS, collateralIndex, collateralHash);
+        Address payoutAddress = Address.fromBase58(PARAMS, "yTb47qEBpNmgXvYYsHEN4nh8yJwa5iC4Cs");
+        ECKey inputPrivateKey0 = wallet.findKeyFromAddress(inputAddress0);
+
+        Address checkInputAddress0 = Address.fromKey(PARAMS, inputPrivateKey0);
+        assertEquals(checkInputAddress0, inputAddress0);
+
+        ECKey inputPrivateKey = wallet.findKeyFromAddress(inputAddress0);
+        Sha256Hash messageDigest = Sha256Hash.twiceOf(Utils.formatMessageForSigning(providerRegistrationTx.getPayloadCollateralString()));
+
+        assertEquals(providerRegistrationTx.getInputsHash(), Sha256Hash.wrap("7ba273b835b1017da314a3363760835ff5ac20278c160604cb8773750b997734"));
+
+        assertEquals(providerRegistrationTx.getHash(), Sha256Hash.wrap("71e973f79003accd202b9a2ab2613ac6ced601b26684e82f561f6684fef2f102"));
+
+        assertEquals("yTb47qEBpNmgXvYYsHEN4nh8yJwa5iC4Cs|0|yRxHYGLf9G4UVYdtAoB2iAzR3sxxVaZB6y|yfbxyP4ctRJR1rs3A8C3PdXA4Wtcrw7zTi|71e973f79003accd202b9a2ab2613ac6ced601b26684e82f561f6684fef2f102", providerRegistrationTx.getPayloadCollateralString());
+
+        String base64Signature = "H7N+ScH/K4BXcTk5pVE+bnEacc/y5RfmIk33JO11Cu8bf5rZ7GErSnJQIy4eQA2nGKlQHh2aVWVSbksf9owCh2M=";
+
+        ECKey key = wallet.findKeyFromAddress(collateralAddress);
+        byte[] signatureData = key.signHash(messageDigest);
+        String signature = Base64.toBase64String(signatureData);
+
+        assertEquals(signature, base64Signature);
+
+
+        assertEquals(providerRegistrationTx.getSignature(), new MasternodeSignature(signatureData));
+
+        MasternodeAddress masternodeAddress = new MasternodeAddress(new InetSocketAddress("1.2.5.6", 19999));
+        Sha256Hash inputsHash = null;
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            new TransactionOutPoint(PARAMS, 1, inputTransactionHashValue).bitcoinSerialize(bos);
+            inputsHash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+        } catch (Exception x) {
+            fail();
+        }
+
+        Transaction providerRegistrationTransaction = new Transaction(PARAMS);
+        providerRegistrationTransaction.setVersionAndType(3, Transaction.Type.TRANSACTION_PROVIDER_REGISTER);
+        ProviderRegisterTx proRegTx = new ProviderRegisterTx(
+                PARAMS,
+                ProviderRegisterTx.LEGACY_BLS_VERSION,
+                MasternodeType.REGULAR.index,
+                0,
+                reversedCollateral,
+                masternodeAddress,
+                ownerKeyId,
+                operatorKey,
+                votingKeyId,
+                0,
+                ScriptBuilder.createOutputScript(payoutAddress),
+                inputsHash,
+                new MasternodeSignature(signatureData));
+        providerRegistrationTransaction.setExtraPayload(proRegTx);
+        providerRegistrationTransaction.addOutput(Coin.valueOf(40777037710L), outputAddress0);
+        providerRegistrationTransaction.addSignedInput(new TransactionOutPoint(PARAMS, 1, inputTransactionHashValue), ScriptBuilder.createOutputScript(inputAddress0), inputPrivateKey);
+        // verify some data
+        assertArrayEquals(providerRegistrationTransaction.getExtraPayload(), providerRegistrationTransactionFromMessage.getExtraPayload());
+        assertEquals(proRegTx.getPayloadCollateralString(), providerRegistrationTx.getPayloadCollateralString());
+        assertEquals(providerRegistrationTransaction.getInput(0).toStringHex(), providerRegistrationTransactionFromMessage.getInput(0).toStringHex());
+        assertEquals(providerRegistrationTransaction.getOutput(0).toStringHex(), providerRegistrationTransactionFromMessage.getOutput(0).toStringHex());
+        assertEquals(proRegTx.getPubkeyOperator(), providerRegistrationTx.getPubkeyOperator());
+        assertEquals(proRegTx.operatorReward, providerRegistrationTx.operatorReward);
+        assertEquals(proRegTx.getOwnerAddress(), providerRegistrationTx.getOwnerAddress());
+         // verify txId's
+        assertEquals(providerRegistrationTransactionFromMessage.getTxId(), txId);
+        assertEquals(providerRegistrationTransaction.getTxId(), txId);
+    }
+
+
     @Test
     public void testNoCollateralProviderRegistrationTransaction() throws IOException {
 
@@ -336,25 +496,23 @@ public class ProviderTests {
 
         assertArrayEquals(fromMessage.toByteArray(), hexData);
 
-        BLSPublicKey operatorKeyNeeded = new BLSPublicKey(PARAMS, Utils.HEX.decode("157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfa"), 0);
+        BLSPublicKey operatorKeyNeeded = new BLSPublicKey(PARAMS, Utils.HEX.decode("157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfa"), 0, true);
         assertEquals(operatorKey.toString(), operatorKeyNeeded.toString());
 
         Sha256Hash payloadHash = ((ProviderUpdateServiceTx)providerUpdateServiceTransactionFromMessage.getExtraPayloadObject()).getSignatureHash();
 
-        BLSSignature signatureFromDigest = operatorSecret.Sign(payloadHash);
-
-
+        BLSSignature signatureFromDigest = operatorSecret.sign(payloadHash, true);
 
         ProviderUpdateServiceTx providerUpdateServiceTx = ((ProviderUpdateServiceTx)providerUpdateServiceTransactionFromMessage.getExtraPayloadObject());
         assertEquals(signatureFromDigest.toString(), providerUpdateServiceTx.signature.toString());
 
-        Preconditions.checkState(signatureFromDigest.verifyInsecure(operatorKey, payloadHash));
+        Preconditions.checkState(signatureFromDigest.verifyInsecure(operatorKey, payloadHash, true));
         Preconditions.checkState(providerUpdateServiceTx.signature.verifyInsecure(operatorKey, payloadHash));
 
 
         MasternodeAddress ipAddress = new MasternodeAddress(InetAddress.getByName("52.36.64.148"), 19999);
 
-        ProviderUpdateServiceTx proUpServTx = new ProviderUpdateServiceTx(PARAMS, 1, providerTransactionHash, ipAddress, new Script(new byte[0]), Transaction.calculateInputsHash(input0), operatorSecret);
+        ProviderUpdateServiceTx proUpServTx = new ProviderUpdateServiceTx(PARAMS, 1, providerTransactionHash, ipAddress, new Script(new byte[0]), Transaction.calculateInputsHash(input0), operatorSecret, true);
         Transaction providerUpdateServiceTransaction = new Transaction(PARAMS, proUpServTx);
         providerUpdateServiceTransaction.addOutput(Coin.valueOf(1124999808L), Address.fromBase58(PARAMS, outputAddress0));
         providerUpdateServiceTransaction.addSignedInput(input0, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), inputPrivateKey0, Transaction.SigHash.ALL, false);
@@ -412,7 +570,7 @@ public class ProviderTests {
         Script scriptPayout = ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, payoutAddress));
 
         proUpRegTx = new ProviderUpdateRegistarTx(PARAMS, 1, providerTransactionHash, 0,
-                operatorKey.GetPublicKey(), new KeyId(Address.fromBase58(PARAMS, votingAddress).getHash()),
+                operatorKey.getPublicKey(), KeyId.fromBytes(Address.fromBase58(PARAMS, votingAddress).getHash()),
                 scriptPayout, Transaction.calculateInputsHash(input), ownerPrivateKey);
         Transaction providerUpdateRegistrarTransaction = new Transaction(PARAMS, proUpRegTx);
 

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Dash Core Group.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
@@ -5,10 +21,12 @@ import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
+
+import static org.bitcoinj.evolution.SimplifiedMasternodeListEntry.LEGACY_BLS_VERSION;
 import static org.junit.Assert.*;
 
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.ChaChaDevNetParams;
+import org.bitcoinj.params.WhiteRussianDevNetParams;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
@@ -41,7 +59,7 @@ public class SimplifiedMasternodesTest {
     public static void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
         PARAMS = TestNet3Params.get();
-        DEVNETPARAMS = ChaChaDevNetParams.get();
+        DEVNETPARAMS = WhiteRussianDevNetParams.get();
         initContext(PARAMS);
 
         //PeerGroup peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
@@ -64,7 +82,7 @@ public class SimplifiedMasternodesTest {
     {
         ArrayList<SimplifiedMasternodeListEntry> entries = new ArrayList<SimplifiedMasternodeListEntry>(15);
         for (int i = 0; i < 15; i++) {
-            SimplifiedMasternodeListEntry smle = new SimplifiedMasternodeListEntry(PARAMS);
+            SimplifiedMasternodeListEntry smle = new SimplifiedMasternodeListEntry(PARAMS, LEGACY_BLS_VERSION);
             smle.proRegTxHash = Sha256Hash.wrap(String.format("%064x", i));
             smle.confirmedHash = Sha256Hash.wrap(String.format("%064x", i));
 
@@ -76,15 +94,16 @@ public class SimplifiedMasternodesTest {
             BLSSecretKey sk = new BLSSecretKey(skBuf);
 
 
-            smle.pubKeyOperator = new BLSLazyPublicKey(sk.GetPublicKey());
-            smle.keyIdVoting = new KeyId(Utils.reverseBytes(Utils.HEX.decode(String.format("%040x", i))));
+            smle.pubKeyOperator = new BLSLazyPublicKey(sk.getPublicKey(), true);
+            smle.keyIdVoting = KeyId.fromBytes(Utils.HEX.decode(String.format("%040x", i)), false);
             smle.isValid = true;
+            smle.version = SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION;
 
             entries.add(smle);
         }
 
         String [] expectedHashes = {
-                "373b549f6380d8f7b04d7b04d7c58a749c5cbe3bf41536785ba819879c4870f1",
+                "c26be2378ee9da070e997b908b1a40988dcd92557638e0ecff84a8896f1a9f3d",
                 "3a1010e28226558560e5296bcee6bf0b9b963b73a1514f5aa2885e270f6b90c1",
                 "85d3d93b28689128daf3a41d706ae5002f447b9b6372776f0ca9d53b31146884",
                 "8930eee6bd2e7971a7090edfb79f74c00a12280e59adfc2cc99d406a01e368f9",
@@ -108,9 +127,10 @@ public class SimplifiedMasternodesTest {
 
         assertArrayEquals(expectedHashes, calculatedHashes.toArray());
 
-        SimplifiedMasternodeList sml = new SimplifiedMasternodeList(PARAMS, entries);
+        SimplifiedMasternodeList sml = new SimplifiedMasternodeList(PARAMS, entries,
+                NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion());
 
-        String expectedMerkleRoot = "b2303aca677ae2091c882e44b58f57869fa88a6db1f4e1a5d71975e5387fa195";
+        String expectedMerkleRoot = "3b2a4f6be32c13070979910150d6be0ff1890f17b3169d1eabb96b217b6df2d7";
         String calculatedMerkleRoot = sml.calculateMerkleRoot().toString();
 
         assertEquals(expectedMerkleRoot, calculatedMerkleRoot);

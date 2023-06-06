@@ -27,8 +27,8 @@ import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
@@ -66,7 +66,7 @@ public class CoinJoinClientManager {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
     private static final Random random = new Random();
     // Keep track of the used Masternodes
-    private final ArrayList<TransactionOutPoint> masternodesUsed = new ArrayList<>();
+    private final ArrayList<Sha256Hash> masternodesUsed = new ArrayList<>();
 
     private final ReentrantLock lock = Threading.lock("deqsessions");
 
@@ -231,7 +231,7 @@ public class CoinJoinClientManager {
             // this might be a problem for SPV
             lock.lock();
             try {
-                Iterator<TransactionOutPoint> it = masternodesUsed.iterator();
+                Iterator<Sha256Hash> it = masternodesUsed.iterator();
                 int i = 0;
                 while (it.hasNext()) {
                     it.next();
@@ -303,7 +303,7 @@ public class CoinJoinClientManager {
         try {
             for (CoinJoinClientSession session :deqSessions){
                 Masternode mnMixing;
-                if ((mnMixing = session.getMixingMasternodeInfo()) != null && mnMixing.getCollateralOutpoint().equals(dsq.getMasternodeOutpoint())) {
+                if ((mnMixing = session.getMixingMasternodeInfo()) != null && mnMixing.getProTxHash().equals(dsq.getProTxHash())) {
                     dsq.setTried(true);
                     return true;
                 }
@@ -343,8 +343,8 @@ public class CoinJoinClientManager {
     }
 
     // TODO: this is not good because SPV doesn't know the outpoint
-    public void addUsedMasternode(TransactionOutPoint outpointMn) {
-        masternodesUsed.add(outpointMn);
+    public void addUsedMasternode(Sha256Hash proTxHash) {
+        masternodesUsed.add(proTxHash);
     }
     public Masternode getRandomNotUsedMasternode() {
         SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
@@ -370,11 +370,11 @@ public class CoinJoinClientManager {
         // shuffle pointers
         Collections.shuffle(vpMasternodesShuffled);
 
-        HashSet<TransactionOutPoint> excludeSet = new HashSet<>(masternodesUsed);
+        HashSet<Sha256Hash> excludeSet = new HashSet<>(masternodesUsed);
 
         // loop through
         for (Masternode dmn : vpMasternodesShuffled) {
-            if (excludeSet.contains(dmn.getCollateralOutpoint())) {
+            if (excludeSet.contains(dmn.getProTxHash())) {
                 continue;
             }
 

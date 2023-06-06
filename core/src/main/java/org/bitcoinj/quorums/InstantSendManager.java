@@ -85,6 +85,10 @@ public class InstantSendManager implements RecoveredSignatureListener {
         context.chainLockHandler.removeChainLockListener(this.chainLockListener);
     }
 
+    private boolean isInitialized() {
+        return blockChain != null;
+    }
+
     @Deprecated
     public boolean isOldInstantSendEnabled()
     {
@@ -402,13 +406,16 @@ public class InstantSendManager implements RecoveredSignatureListener {
     }
 
     boolean processPendingInstantSendLocks() throws BlockStoreException {
-        StoredBlock blockTip = blockChain.getChainHead();
-        if (blockTip != null && context.getParams().isDIP0024Active(blockTip)) {
-            return processPendingInstantSendLocks(true);
-        } else {
-            // Don't short circuit. Try to process deterministic and not deterministic islocks
-            return processPendingInstantSendLocks(false) & processPendingInstantSendLocks(true);
+        if (isInitialized()) {
+            StoredBlock blockTip = blockChain.getChainHead();
+            if (blockTip != null && context.getParams().isDIP0024Active(blockTip)) {
+                return processPendingInstantSendLocks(true);
+            } else {
+                // Don't short circuit. Try to process deterministic and not deterministic islocks
+                return processPendingInstantSendLocks(false) & processPendingInstantSendLocks(true);
+            }
         }
+        return false;
     }
 
     boolean processPendingInstantSendLocks(boolean isDeterministic) throws BlockStoreException {

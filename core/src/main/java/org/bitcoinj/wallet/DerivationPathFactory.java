@@ -194,6 +194,19 @@ public class DerivationPathFactory {
                 .build();
     }
 
+    /** provider platform keys derivation path
+     * m/9'/5'/3'/4' (mainnet)
+     * m/9'/1'/3'/4' (testnet, devnets)
+     */
+    public ImmutableList<ChildNumber> masternodePlatformDerivationPath() {
+        return ImmutableList.<ChildNumber>builder()
+                .add(FEATURE_PURPOSE)
+                .add(coinType)
+                .add(new ChildNumber(3, true))
+                .add(new ChildNumber(4, true))
+                .build();
+    }
+
     /** Default wallet derivation path
      * m/44'/5'/@account' (mainnet)
      * m/44'/1'/@account' (testnet, devnets)

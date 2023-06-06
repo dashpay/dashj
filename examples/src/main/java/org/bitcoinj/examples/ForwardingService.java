@@ -72,18 +72,18 @@ public class ForwardingService {
         } else if (args.length > 1 && args[1].equals("regtest")) {
             params = RegTestParams.get();
             filePrefix = "forwarding-service-regtest";
-        } else if (args.length > 1 && args[1].equals("krupnik")) {
-            params = KrupnikDevNetParams.get();
-            filePrefix = "forwarding-service-krupnik";
-        } else if (args.length > 1 && args[1].equals("malort")) {
-            params = MalortDevNetParams.get();
-            filePrefix = "forwarding-service-malort";
-        } else if (args.length > 1 && args[1].equals("cha-cha")) {
-            params = ChaChaDevNetParams.get();
-            filePrefix = "forwarding-service-cha-cha";
-        } else if (args.length > 1 && args[1].equals("jack-daniels")) {
-            params = JackDanielsDevNetParams.get();
-            filePrefix = "forwarding-service-jack-daniels";
+        } else if (args.length > 1 && args[1].equals("white-russian")) {
+            params = WhiteRussianDevNetParams.get();
+            filePrefix = "forwarding-service-white-russian";
+        } else if (args.length > 1 && args[1].equals("two-islands")) {
+            params = TwoIslandsDevNetParams.get();
+            filePrefix = "forwarding-service-two-islands";
+        } else if (args.length > 1 && args[1].equals("bintang")) {
+            params = BinTangDevNetParams.get();
+            filePrefix = "forwarding-service-bintang";
+        } else if (args.length > 1 && args[1].equals("absinthe")) {
+            params = AbsintheDevNetParams.get();
+            filePrefix = "forwarding-service-absinthe";
         } else if( args.length > 6 && args[1].equals("devnet")) {
             String [] dnsSeeds = new String[args.length - 5];
             System.arraycopy(args, 5, dnsSeeds, 0, args.length - 5);
@@ -98,10 +98,10 @@ public class ForwardingService {
 
         String clientPath = "";
         String confPath = "";
-        if (lastArg + 1 <= args.length) {
+        if (lastArg + 1 < args.length) {
             clientPath = args[lastArg];
-            if (lastArg + 2 >= args.length)
-                confPath = args[lastArg + 1];
+            if (lastArg + 2 > args.length)
+                confPath = args[lastArg];
         }
 
         txReport = new TransactionReport(clientPath, confPath, params);
@@ -116,11 +116,11 @@ public class ForwardingService {
         kit = new WalletAppKit(params, new File("."), filePrefix) {
             @Override
             protected void onSetupCompleted() {
-                if(!kit.wallet().hasAuthenticationKeyChains())
-                    kit.wallet().initializeAuthenticationKeyChains(kit.wallet().getKeyChainSeed(), null);
+                //TODO: init auth keychains using AuthenticationGroupExtension
                 kit.peerGroup().setMaxConnections(6); // for small devnets
                 kit.peerGroup().setUseLocalhostPeerWhenPossible(false);
                 kit.peerGroup().setDropPeersAfterBroadcast(params.getDropPeersAfterBroadcast());
+                kit.wallet().getContext().setDebugMode(true);
             }
         };
         kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));

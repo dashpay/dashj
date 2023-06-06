@@ -15,11 +15,12 @@
 package org.bitcoinj.wallet.listeners;
 
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.crypto.IKey;
 
 import java.util.List;
 
 public class AbstractKeyChainEventListener implements KeyChainEventListener {
     @Override
-    public void onKeysAdded(List<ECKey> keys) {
+    public void onKeysAdded(List<IKey> keys) {
     }
 }
