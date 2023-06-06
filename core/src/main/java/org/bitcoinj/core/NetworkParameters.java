@@ -856,6 +856,10 @@ public abstract class NetworkParameters {
         return new String[0];
     }
 
+    public String [] getDefaultHPMasternodeList() {
+        return new String[0];
+    }
+
     protected List<Sha256Hash> assumeValidQuorums = new ArrayList<>();
 
     public List<Sha256Hash> getAssumeValidQuorums() {
