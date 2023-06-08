@@ -86,6 +86,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.evolution.ProviderRegisterTx.LEGACY_BLS_VERSION;
 
 public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension {
+    public static String EXTENSION_ID = "org.dashj.wallet.authentication";
     private static final Logger log = LoggerFactory.getLogger(AuthenticationGroupExtension.class);
     private final AuthenticationKeyChainGroup keyChainGroup;
     private final HashMap<IKey, AuthenticationKeyUsage> keyUsage = Maps.newHashMap();
@@ -213,7 +214,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      */
     @Override
     public String getWalletExtensionID() {
-        return "org.dashj.wallet.authentication";
+        return EXTENSION_ID;
     }
 
     /**
@@ -668,7 +669,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     }
 
     public AuthenticationKeyChain getIdentityFundingKeyChain() {
-        return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
+        return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
     }
 
     public AuthenticationKeyChain getInvitationFundingKeyChain() {

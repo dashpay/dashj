@@ -535,4 +535,8 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
         if (wallet != null)
             wallet.saveLater();
     }
+
+    public void setWallet(Wallet wallet) {
+        this.wallet = wallet;
+    }
 }
