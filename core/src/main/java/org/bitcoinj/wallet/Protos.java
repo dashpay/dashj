@@ -15394,6 +15394,14 @@ public final class Protos {
        * <code>INVITATION_FUNDING = 7;</code>
        */
       INVITATION_FUNDING(7),
+      /**
+       * <code>MASTERNODE_PLATFORM_OPERATOR = 8;</code>
+       */
+      MASTERNODE_PLATFORM_OPERATOR(8),
+      /**
+       * <code>INVALID = 99;</code>
+       */
+      INVALID(99),
       ;
 
       /**
@@ -15428,6 +15436,14 @@ public final class Protos {
        * <code>INVITATION_FUNDING = 7;</code>
        */
       public static final int INVITATION_FUNDING_VALUE = 7;
+      /**
+       * <code>MASTERNODE_PLATFORM_OPERATOR = 8;</code>
+       */
+      public static final int MASTERNODE_PLATFORM_OPERATOR_VALUE = 8;
+      /**
+       * <code>INVALID = 99;</code>
+       */
+      public static final int INVALID_VALUE = 99;
 
 
       @java.lang.Override
@@ -15455,6 +15471,8 @@ public final class Protos {
           case 5: return BLOCKCHAIN_IDENTITY_FUNDING;
           case 6: return BLOCKCHAIN_IDENTITY_TOPUP;
           case 7: return INVITATION_FUNDING;
+          case 8: return MASTERNODE_PLATFORM_OPERATOR;
+          case 99: return INVALID;
           default: return null;
         }
       }
@@ -15508,6 +15526,10 @@ public final class Protos {
        * <code>BLS = 1;</code>
        */
       BLS(1),
+      /**
+       * <code>EDDSA = 2;</code>
+       */
+      EDDSA(2),
       ;
 
       /**
@@ -15518,6 +15540,10 @@ public final class Protos {
        * <code>BLS = 1;</code>
        */
       public static final int BLS_VALUE = 1;
+      /**
+       * <code>EDDSA = 2;</code>
+       */
+      public static final int EDDSA_VALUE = 2;
 
 
       @java.lang.Override
@@ -15539,6 +15565,7 @@ public final class Protos {
         switch (value) {
           case 0: return ECDSA;
           case 1: return BLS;
+          case 2: return EDDSA;
           default: return null;
         }
       }
@@ -16101,6 +16128,1519 @@ public final class Protos {
     }
   }
 
+  public interface AuthenticationKeyUsageOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:wallet.AuthenticationKeyUsage)
+      com.google.protobuf.MessageLiteOrBuilder {
+
+    /**
+     * <code>required bytes keyOrKeyId = 1;</code>
+     * @return Whether the keyOrKeyId field is set.
+     */
+    boolean hasKeyOrKeyId();
+    /**
+     * <code>required bytes keyOrKeyId = 1;</code>
+     * @return The keyOrKeyId.
+     */
+    com.google.protobuf.ByteString getKeyOrKeyId();
+
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+     * @return Whether the keyType field is set.
+     */
+    boolean hasKeyType();
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+     * @return The keyType.
+     */
+    org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType getKeyType();
+
+    /**
+     * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+     * @return Whether the status field is set.
+     */
+    boolean hasStatus();
+    /**
+     * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+     * @return The status.
+     */
+    org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus getStatus();
+
+    /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
+     * <code>required bytes whereUsed = 4;</code>
+     * @return Whether the whereUsed field is set.
+     */
+    boolean hasWhereUsed();
+    /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
+     * <code>required bytes whereUsed = 4;</code>
+     * @return The whereUsed.
+     */
+    com.google.protobuf.ByteString getWhereUsed();
+
+    /**
+     * <code>optional .wallet.PeerAddress address = 5;</code>
+     * @return Whether the address field is set.
+     */
+    boolean hasAddress();
+    /**
+     * <code>optional .wallet.PeerAddress address = 5;</code>
+     * @return The address.
+     */
+    org.bitcoinj.wallet.Protos.PeerAddress getAddress();
+
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @return Whether the legacy field is set.
+     */
+    boolean hasLegacy();
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @return The legacy.
+     */
+    boolean getLegacy();
+  }
+  /**
+   * Protobuf type {@code wallet.AuthenticationKeyUsage}
+   */
+  public  static final class AuthenticationKeyUsage extends
+      com.google.protobuf.GeneratedMessageLite<
+          AuthenticationKeyUsage, AuthenticationKeyUsage.Builder> implements
+      // @@protoc_insertion_point(message_implements:wallet.AuthenticationKeyUsage)
+      AuthenticationKeyUsageOrBuilder {
+    private AuthenticationKeyUsage() {
+      keyOrKeyId_ = com.google.protobuf.ByteString.EMPTY;
+      whereUsed_ = com.google.protobuf.ByteString.EMPTY;
+    }
+    /**
+     * Protobuf enum {@code wallet.AuthenticationKeyUsage.AuthenticationKeyStatus}
+     */
+    public enum AuthenticationKeyStatus
+        implements com.google.protobuf.Internal.EnumLite {
+      /**
+       * <code>UNKNOWN = 0;</code>
+       */
+      UNKNOWN(0),
+      /**
+       * <code>CURRENT = 1;</code>
+       */
+      CURRENT(1),
+      /**
+       * <code>PREVIOUS = 2;</code>
+       */
+      PREVIOUS(2),
+      /**
+       * <code>REVOKED = 3;</code>
+       */
+      REVOKED(3),
+      /**
+       * <code>NEVER = 4;</code>
+       */
+      NEVER(4),
+      ;
+
+      /**
+       * <code>UNKNOWN = 0;</code>
+       */
+      public static final int UNKNOWN_VALUE = 0;
+      /**
+       * <code>CURRENT = 1;</code>
+       */
+      public static final int CURRENT_VALUE = 1;
+      /**
+       * <code>PREVIOUS = 2;</code>
+       */
+      public static final int PREVIOUS_VALUE = 2;
+      /**
+       * <code>REVOKED = 3;</code>
+       */
+      public static final int REVOKED_VALUE = 3;
+      /**
+       * <code>NEVER = 4;</code>
+       */
+      public static final int NEVER_VALUE = 4;
+
+
+      @java.lang.Override
+      public final int getNumber() {
+        return value;
+      }
+
+      /**
+       * @param value The number of the enum to look for.
+       * @return The enum associated with the given number.
+       * @deprecated Use {@link #forNumber(int)} instead.
+       */
+      @java.lang.Deprecated
+      public static AuthenticationKeyStatus valueOf(int value) {
+        return forNumber(value);
+      }
+
+      public static AuthenticationKeyStatus forNumber(int value) {
+        switch (value) {
+          case 0: return UNKNOWN;
+          case 1: return CURRENT;
+          case 2: return PREVIOUS;
+          case 3: return REVOKED;
+          case 4: return NEVER;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<AuthenticationKeyStatus>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static final com.google.protobuf.Internal.EnumLiteMap<
+          AuthenticationKeyStatus> internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<AuthenticationKeyStatus>() {
+              @java.lang.Override
+              public AuthenticationKeyStatus findValueByNumber(int number) {
+                return AuthenticationKeyStatus.forNumber(number);
+              }
+            };
+
+      public static com.google.protobuf.Internal.EnumVerifier 
+          internalGetVerifier() {
+        return AuthenticationKeyStatusVerifier.INSTANCE;
+      }
+
+      private static final class AuthenticationKeyStatusVerifier implements 
+           com.google.protobuf.Internal.EnumVerifier { 
+              static final com.google.protobuf.Internal.EnumVerifier           INSTANCE = new AuthenticationKeyStatusVerifier();
+              @java.lang.Override
+              public boolean isInRange(int number) {
+                return AuthenticationKeyStatus.forNumber(number) != null;
+              }
+            };
+
+      private final int value;
+
+      private AuthenticationKeyStatus(int value) {
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:wallet.AuthenticationKeyUsage.AuthenticationKeyStatus)
+    }
+
+    private int bitField0_;
+    public static final int KEYORKEYID_FIELD_NUMBER = 1;
+    private com.google.protobuf.ByteString keyOrKeyId_;
+    /**
+     * <code>required bytes keyOrKeyId = 1;</code>
+     * @return Whether the keyOrKeyId field is set.
+     */
+    @java.lang.Override
+    public boolean hasKeyOrKeyId() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <code>required bytes keyOrKeyId = 1;</code>
+     * @return The keyOrKeyId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getKeyOrKeyId() {
+      return keyOrKeyId_;
+    }
+    /**
+     * <code>required bytes keyOrKeyId = 1;</code>
+     * @param value The keyOrKeyId to set.
+     */
+    private void setKeyOrKeyId(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000001;
+      keyOrKeyId_ = value;
+    }
+    /**
+     * <code>required bytes keyOrKeyId = 1;</code>
+     */
+    private void clearKeyOrKeyId() {
+      bitField0_ = (bitField0_ & ~0x00000001);
+      keyOrKeyId_ = getDefaultInstance().getKeyOrKeyId();
+    }
+
+    public static final int KEYTYPE_FIELD_NUMBER = 2;
+    private int keyType_;
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+     * @return Whether the keyType field is set.
+     */
+    @java.lang.Override
+    public boolean hasKeyType() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+     * @return The keyType.
+     */
+    @java.lang.Override
+    public org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType getKeyType() {
+      org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType result = org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.forNumber(keyType_);
+      return result == null ? org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.BLOCKCHAIN_IDENTITY : result;
+    }
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+     * @param value The keyType to set.
+     */
+    private void setKeyType(org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType value) {
+      keyType_ = value.getNumber();
+      bitField0_ |= 0x00000002;
+    }
+    /**
+     * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+     */
+    private void clearKeyType() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      keyType_ = 0;
+    }
+
+    public static final int STATUS_FIELD_NUMBER = 3;
+    private int status_;
+    /**
+     * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+     * @return Whether the status field is set.
+     */
+    @java.lang.Override
+    public boolean hasStatus() {
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /**
+     * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+     * @return The status.
+     */
+    @java.lang.Override
+    public org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus getStatus() {
+      org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus result = org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus.forNumber(status_);
+      return result == null ? org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus.UNKNOWN : result;
+    }
+    /**
+     * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+     * @param value The status to set.
+     */
+    private void setStatus(org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus value) {
+      status_ = value.getNumber();
+      bitField0_ |= 0x00000004;
+    }
+    /**
+     * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+     */
+    private void clearStatus() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      status_ = 0;
+    }
+
+    public static final int WHEREUSED_FIELD_NUMBER = 4;
+    private com.google.protobuf.ByteString whereUsed_;
+    /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
+     * <code>required bytes whereUsed = 4;</code>
+     * @return Whether the whereUsed field is set.
+     */
+    @java.lang.Override
+    public boolean hasWhereUsed() {
+      return ((bitField0_ & 0x00000008) != 0);
+    }
+    /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
+     * <code>required bytes whereUsed = 4;</code>
+     * @return The whereUsed.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getWhereUsed() {
+      return whereUsed_;
+    }
+    /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
+     * <code>required bytes whereUsed = 4;</code>
+     * @param value The whereUsed to set.
+     */
+    private void setWhereUsed(com.google.protobuf.ByteString value) {
+      value.getClass();
+  bitField0_ |= 0x00000008;
+      whereUsed_ = value;
+    }
+    /**
+     * <pre>
+     * proTxHash
+     * </pre>
+     *
+     * <code>required bytes whereUsed = 4;</code>
+     */
+    private void clearWhereUsed() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      whereUsed_ = getDefaultInstance().getWhereUsed();
+    }
+
+    public static final int ADDRESS_FIELD_NUMBER = 5;
+    private org.bitcoinj.wallet.Protos.PeerAddress address_;
+    /**
+     * <code>optional .wallet.PeerAddress address = 5;</code>
+     */
+    @java.lang.Override
+    public boolean hasAddress() {
+      return ((bitField0_ & 0x00000010) != 0);
+    }
+    /**
+     * <code>optional .wallet.PeerAddress address = 5;</code>
+     */
+    @java.lang.Override
+    public org.bitcoinj.wallet.Protos.PeerAddress getAddress() {
+      return address_ == null ? org.bitcoinj.wallet.Protos.PeerAddress.getDefaultInstance() : address_;
+    }
+    /**
+     * <code>optional .wallet.PeerAddress address = 5;</code>
+     */
+    private void setAddress(org.bitcoinj.wallet.Protos.PeerAddress value) {
+      value.getClass();
+  address_ = value;
+      bitField0_ |= 0x00000010;
+      }
+    /**
+     * <code>optional .wallet.PeerAddress address = 5;</code>
+     */
+    @java.lang.SuppressWarnings({"ReferenceEquality"})
+    private void mergeAddress(org.bitcoinj.wallet.Protos.PeerAddress value) {
+      value.getClass();
+  if (address_ != null &&
+          address_ != org.bitcoinj.wallet.Protos.PeerAddress.getDefaultInstance()) {
+        address_ =
+          org.bitcoinj.wallet.Protos.PeerAddress.newBuilder(address_).mergeFrom(value).buildPartial();
+      } else {
+        address_ = value;
+      }
+      bitField0_ |= 0x00000010;
+    }
+    /**
+     * <code>optional .wallet.PeerAddress address = 5;</code>
+     */
+    private void clearAddress() {  address_ = null;
+      bitField0_ = (bitField0_ & ~0x00000010);
+    }
+
+    public static final int LEGACY_FIELD_NUMBER = 6;
+    private boolean legacy_;
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @return Whether the legacy field is set.
+     */
+    @java.lang.Override
+    public boolean hasLegacy() {
+      return ((bitField0_ & 0x00000020) != 0);
+    }
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @return The legacy.
+     */
+    @java.lang.Override
+    public boolean getLegacy() {
+      return legacy_;
+    }
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     * @param value The legacy to set.
+     */
+    private void setLegacy(boolean value) {
+      bitField0_ |= 0x00000020;
+      legacy_ = value;
+    }
+    /**
+     * <pre>
+     * for BLS keys, legacy or basic scheme
+     * </pre>
+     *
+     * <code>optional bool legacy = 6;</code>
+     */
+    private void clearLegacy() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      legacy_ = false;
+    }
+
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
+    public static Builder newBuilder(org.bitcoinj.wallet.Protos.AuthenticationKeyUsage prototype) {
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
+    }
+
+    /**
+     * Protobuf type {@code wallet.AuthenticationKeyUsage}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          org.bitcoinj.wallet.Protos.AuthenticationKeyUsage, Builder> implements
+        // @@protoc_insertion_point(builder_implements:wallet.AuthenticationKeyUsage)
+        org.bitcoinj.wallet.Protos.AuthenticationKeyUsageOrBuilder {
+      // Construct using org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.newBuilder()
+      private Builder() {
+        super(DEFAULT_INSTANCE);
+      }
+
+
+      /**
+       * <code>required bytes keyOrKeyId = 1;</code>
+       * @return Whether the keyOrKeyId field is set.
+       */
+      @java.lang.Override
+      public boolean hasKeyOrKeyId() {
+        return instance.hasKeyOrKeyId();
+      }
+      /**
+       * <code>required bytes keyOrKeyId = 1;</code>
+       * @return The keyOrKeyId.
+       */
+      @java.lang.Override
+      public com.google.protobuf.ByteString getKeyOrKeyId() {
+        return instance.getKeyOrKeyId();
+      }
+      /**
+       * <code>required bytes keyOrKeyId = 1;</code>
+       * @param value The keyOrKeyId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setKeyOrKeyId(com.google.protobuf.ByteString value) {
+        copyOnWrite();
+        instance.setKeyOrKeyId(value);
+        return this;
+      }
+      /**
+       * <code>required bytes keyOrKeyId = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearKeyOrKeyId() {
+        copyOnWrite();
+        instance.clearKeyOrKeyId();
+        return this;
+      }
+
+      /**
+       * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+       * @return Whether the keyType field is set.
+       */
+      @java.lang.Override
+      public boolean hasKeyType() {
+        return instance.hasKeyType();
+      }
+      /**
+       * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+       * @return The keyType.
+       */
+      @java.lang.Override
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType getKeyType() {
+        return instance.getKeyType();
+      }
+      /**
+       * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+       * @param value The enum numeric value on the wire for keyType to set.
+       * @return This builder for chaining.
+       */
+      public Builder setKeyType(org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType value) {
+        copyOnWrite();
+        instance.setKeyType(value);
+        return this;
+      }
+      /**
+       * <code>required .wallet.ExtendedKeyChain.ExtendedKeyChainType keyType = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearKeyType() {
+        copyOnWrite();
+        instance.clearKeyType();
+        return this;
+      }
+
+      /**
+       * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+       * @return Whether the status field is set.
+       */
+      @java.lang.Override
+      public boolean hasStatus() {
+        return instance.hasStatus();
+      }
+      /**
+       * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+       * @return The status.
+       */
+      @java.lang.Override
+      public org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus getStatus() {
+        return instance.getStatus();
+      }
+      /**
+       * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+       * @param value The enum numeric value on the wire for status to set.
+       * @return This builder for chaining.
+       */
+      public Builder setStatus(org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus value) {
+        copyOnWrite();
+        instance.setStatus(value);
+        return this;
+      }
+      /**
+       * <code>required .wallet.AuthenticationKeyUsage.AuthenticationKeyStatus status = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearStatus() {
+        copyOnWrite();
+        instance.clearStatus();
+        return this;
+      }
+
+      /**
+       * <pre>
+       * proTxHash
+       * </pre>
+       *
+       * <code>required bytes whereUsed = 4;</code>
+       * @return Whether the whereUsed field is set.
+       */
+      @java.lang.Override
+      public boolean hasWhereUsed() {
+        return instance.hasWhereUsed();
+      }
+      /**
+       * <pre>
+       * proTxHash
+       * </pre>
+       *
+       * <code>required bytes whereUsed = 4;</code>
+       * @return The whereUsed.
+       */
+      @java.lang.Override
+      public com.google.protobuf.ByteString getWhereUsed() {
+        return instance.getWhereUsed();
+      }
+      /**
+       * <pre>
+       * proTxHash
+       * </pre>
+       *
+       * <code>required bytes whereUsed = 4;</code>
+       * @param value The whereUsed to set.
+       * @return This builder for chaining.
+       */
+      public Builder setWhereUsed(com.google.protobuf.ByteString value) {
+        copyOnWrite();
+        instance.setWhereUsed(value);
+        return this;
+      }
+      /**
+       * <pre>
+       * proTxHash
+       * </pre>
+       *
+       * <code>required bytes whereUsed = 4;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearWhereUsed() {
+        copyOnWrite();
+        instance.clearWhereUsed();
+        return this;
+      }
+
+      /**
+       * <code>optional .wallet.PeerAddress address = 5;</code>
+       */
+      @java.lang.Override
+      public boolean hasAddress() {
+        return instance.hasAddress();
+      }
+      /**
+       * <code>optional .wallet.PeerAddress address = 5;</code>
+       */
+      @java.lang.Override
+      public org.bitcoinj.wallet.Protos.PeerAddress getAddress() {
+        return instance.getAddress();
+      }
+      /**
+       * <code>optional .wallet.PeerAddress address = 5;</code>
+       */
+      public Builder setAddress(org.bitcoinj.wallet.Protos.PeerAddress value) {
+        copyOnWrite();
+        instance.setAddress(value);
+        return this;
+        }
+      /**
+       * <code>optional .wallet.PeerAddress address = 5;</code>
+       */
+      public Builder setAddress(
+          org.bitcoinj.wallet.Protos.PeerAddress.Builder builderForValue) {
+        copyOnWrite();
+        instance.setAddress(builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>optional .wallet.PeerAddress address = 5;</code>
+       */
+      public Builder mergeAddress(org.bitcoinj.wallet.Protos.PeerAddress value) {
+        copyOnWrite();
+        instance.mergeAddress(value);
+        return this;
+      }
+      /**
+       * <code>optional .wallet.PeerAddress address = 5;</code>
+       */
+      public Builder clearAddress() {  copyOnWrite();
+        instance.clearAddress();
+        return this;
+      }
+
+      /**
+       * <pre>
+       * for BLS keys, legacy or basic scheme
+       * </pre>
+       *
+       * <code>optional bool legacy = 6;</code>
+       * @return Whether the legacy field is set.
+       */
+      @java.lang.Override
+      public boolean hasLegacy() {
+        return instance.hasLegacy();
+      }
+      /**
+       * <pre>
+       * for BLS keys, legacy or basic scheme
+       * </pre>
+       *
+       * <code>optional bool legacy = 6;</code>
+       * @return The legacy.
+       */
+      @java.lang.Override
+      public boolean getLegacy() {
+        return instance.getLegacy();
+      }
+      /**
+       * <pre>
+       * for BLS keys, legacy or basic scheme
+       * </pre>
+       *
+       * <code>optional bool legacy = 6;</code>
+       * @param value The legacy to set.
+       * @return This builder for chaining.
+       */
+      public Builder setLegacy(boolean value) {
+        copyOnWrite();
+        instance.setLegacy(value);
+        return this;
+      }
+      /**
+       * <pre>
+       * for BLS keys, legacy or basic scheme
+       * </pre>
+       *
+       * <code>optional bool legacy = 6;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearLegacy() {
+        copyOnWrite();
+        instance.clearLegacy();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:wallet.AuthenticationKeyUsage)
+    }
+    private byte memoizedIsInitialized = 2;
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+        com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+        java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new org.bitcoinj.wallet.Protos.AuthenticationKeyUsage();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+            java.lang.Object[] objects = new java.lang.Object[] {
+              "bitField0_",
+              "keyOrKeyId_",
+              "keyType_",
+              org.bitcoinj.wallet.Protos.ExtendedKeyChain.ExtendedKeyChainType.internalGetVerifier(),
+              "status_",
+              org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.AuthenticationKeyStatus.internalGetVerifier(),
+              "whereUsed_",
+              "address_",
+              "legacy_",
+            };
+            java.lang.String info =
+                "\u0001\u0006\u0000\u0001\u0001\u0006\u0006\u0000\u0000\u0005\u0001\u150a\u0000\u0002" +
+                "\u150c\u0001\u0003\u150c\u0002\u0004\u150a\u0003\u0005\u1409\u0004\u0006\u1007\u0005" +
+                "";
+            return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<org.bitcoinj.wallet.Protos.AuthenticationKeyUsage> parser = PARSER;
+          if (parser == null) {
+            synchronized (org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                    new DefaultInstanceBasedParser<org.bitcoinj.wallet.Protos.AuthenticationKeyUsage>(
+                        DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+      }
+      case GET_MEMOIZED_IS_INITIALIZED: {
+        return memoizedIsInitialized;
+      }
+      case SET_MEMOIZED_IS_INITIALIZED: {
+        memoizedIsInitialized = (byte) (arg0 == null ? 0 : 1);
+        return null;
+      }
+      }
+      throw new UnsupportedOperationException();
+    }
+
+
+    // @@protoc_insertion_point(class_scope:wallet.AuthenticationKeyUsage)
+    private static final org.bitcoinj.wallet.Protos.AuthenticationKeyUsage DEFAULT_INSTANCE;
+    static {
+      AuthenticationKeyUsage defaultInstance = new AuthenticationKeyUsage();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+        AuthenticationKeyUsage.class, defaultInstance);
+    }
+
+    public static org.bitcoinj.wallet.Protos.AuthenticationKeyUsage getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<AuthenticationKeyUsage> PARSER;
+
+    public static com.google.protobuf.Parser<AuthenticationKeyUsage> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
+  }
+
+  public interface AuthenticationGroupExtensionOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:wallet.AuthenticationGroupExtension)
+      com.google.protobuf.MessageLiteOrBuilder {
+
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> 
+        getAuthenticationKeyChainsList();
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    org.bitcoinj.wallet.Protos.ExtendedKeyChain getAuthenticationKeyChains(int index);
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    int getAuthenticationKeyChainsCount();
+
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    java.util.List<org.bitcoinj.wallet.Protos.AuthenticationKeyUsage> 
+        getAuthenticationKeyUsageList();
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    org.bitcoinj.wallet.Protos.AuthenticationKeyUsage getAuthenticationKeyUsage(int index);
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    int getAuthenticationKeyUsageCount();
+  }
+  /**
+   * Protobuf type {@code wallet.AuthenticationGroupExtension}
+   */
+  public  static final class AuthenticationGroupExtension extends
+      com.google.protobuf.GeneratedMessageLite<
+          AuthenticationGroupExtension, AuthenticationGroupExtension.Builder> implements
+      // @@protoc_insertion_point(message_implements:wallet.AuthenticationGroupExtension)
+      AuthenticationGroupExtensionOrBuilder {
+    private AuthenticationGroupExtension() {
+      authenticationKeyChains_ = emptyProtobufList();
+      authenticationKeyUsage_ = emptyProtobufList();
+    }
+    public static final int AUTHENTICATIONKEYCHAINS_FIELD_NUMBER = 1;
+    private com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.ExtendedKeyChain> authenticationKeyChains_;
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    @java.lang.Override
+    public java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> getAuthenticationKeyChainsList() {
+      return authenticationKeyChains_;
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    public java.util.List<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder> 
+        getAuthenticationKeyChainsOrBuilderList() {
+      return authenticationKeyChains_;
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    @java.lang.Override
+    public int getAuthenticationKeyChainsCount() {
+      return authenticationKeyChains_.size();
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    @java.lang.Override
+    public org.bitcoinj.wallet.Protos.ExtendedKeyChain getAuthenticationKeyChains(int index) {
+      return authenticationKeyChains_.get(index);
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    public org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder getAuthenticationKeyChainsOrBuilder(
+        int index) {
+      return authenticationKeyChains_.get(index);
+    }
+    private void ensureAuthenticationKeyChainsIsMutable() {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.ExtendedKeyChain> tmp = authenticationKeyChains_;
+      if (!tmp.isModifiable()) {
+        authenticationKeyChains_ =
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+       }
+    }
+
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    private void setAuthenticationKeyChains(
+        int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
+      value.getClass();
+  ensureAuthenticationKeyChainsIsMutable();
+      authenticationKeyChains_.set(index, value);
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    private void addAuthenticationKeyChains(org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
+      value.getClass();
+  ensureAuthenticationKeyChainsIsMutable();
+      authenticationKeyChains_.add(value);
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    private void addAuthenticationKeyChains(
+        int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
+      value.getClass();
+  ensureAuthenticationKeyChainsIsMutable();
+      authenticationKeyChains_.add(index, value);
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    private void addAllAuthenticationKeyChains(
+        java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChain> values) {
+      ensureAuthenticationKeyChainsIsMutable();
+      com.google.protobuf.AbstractMessageLite.addAll(
+          values, authenticationKeyChains_);
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    private void clearAuthenticationKeyChains() {
+      authenticationKeyChains_ = emptyProtobufList();
+    }
+    /**
+     * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+     */
+    private void removeAuthenticationKeyChains(int index) {
+      ensureAuthenticationKeyChainsIsMutable();
+      authenticationKeyChains_.remove(index);
+    }
+
+    public static final int AUTHENTICATIONKEYUSAGE_FIELD_NUMBER = 2;
+    private com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.AuthenticationKeyUsage> authenticationKeyUsage_;
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    @java.lang.Override
+    public java.util.List<org.bitcoinj.wallet.Protos.AuthenticationKeyUsage> getAuthenticationKeyUsageList() {
+      return authenticationKeyUsage_;
+    }
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    public java.util.List<? extends org.bitcoinj.wallet.Protos.AuthenticationKeyUsageOrBuilder> 
+        getAuthenticationKeyUsageOrBuilderList() {
+      return authenticationKeyUsage_;
+    }
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    @java.lang.Override
+    public int getAuthenticationKeyUsageCount() {
+      return authenticationKeyUsage_.size();
+    }
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    @java.lang.Override
+    public org.bitcoinj.wallet.Protos.AuthenticationKeyUsage getAuthenticationKeyUsage(int index) {
+      return authenticationKeyUsage_.get(index);
+    }
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    public org.bitcoinj.wallet.Protos.AuthenticationKeyUsageOrBuilder getAuthenticationKeyUsageOrBuilder(
+        int index) {
+      return authenticationKeyUsage_.get(index);
+    }
+    private void ensureAuthenticationKeyUsageIsMutable() {
+      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.AuthenticationKeyUsage> tmp = authenticationKeyUsage_;
+      if (!tmp.isModifiable()) {
+        authenticationKeyUsage_ =
+            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+       }
+    }
+
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    private void setAuthenticationKeyUsage(
+        int index, org.bitcoinj.wallet.Protos.AuthenticationKeyUsage value) {
+      value.getClass();
+  ensureAuthenticationKeyUsageIsMutable();
+      authenticationKeyUsage_.set(index, value);
+    }
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    private void addAuthenticationKeyUsage(org.bitcoinj.wallet.Protos.AuthenticationKeyUsage value) {
+      value.getClass();
+  ensureAuthenticationKeyUsageIsMutable();
+      authenticationKeyUsage_.add(value);
+    }
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    private void addAuthenticationKeyUsage(
+        int index, org.bitcoinj.wallet.Protos.AuthenticationKeyUsage value) {
+      value.getClass();
+  ensureAuthenticationKeyUsageIsMutable();
+      authenticationKeyUsage_.add(index, value);
+    }
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    private void addAllAuthenticationKeyUsage(
+        java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.AuthenticationKeyUsage> values) {
+      ensureAuthenticationKeyUsageIsMutable();
+      com.google.protobuf.AbstractMessageLite.addAll(
+          values, authenticationKeyUsage_);
+    }
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    private void clearAuthenticationKeyUsage() {
+      authenticationKeyUsage_ = emptyProtobufList();
+    }
+    /**
+     * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+     */
+    private void removeAuthenticationKeyUsage(int index) {
+      ensureAuthenticationKeyUsageIsMutable();
+      authenticationKeyUsage_.remove(index);
+    }
+
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
+    }
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
+    public static Builder newBuilder(org.bitcoinj.wallet.Protos.AuthenticationGroupExtension prototype) {
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
+    }
+
+    /**
+     * Protobuf type {@code wallet.AuthenticationGroupExtension}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          org.bitcoinj.wallet.Protos.AuthenticationGroupExtension, Builder> implements
+        // @@protoc_insertion_point(builder_implements:wallet.AuthenticationGroupExtension)
+        org.bitcoinj.wallet.Protos.AuthenticationGroupExtensionOrBuilder {
+      // Construct using org.bitcoinj.wallet.Protos.AuthenticationGroupExtension.newBuilder()
+      private Builder() {
+        super(DEFAULT_INSTANCE);
+      }
+
+
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      @java.lang.Override
+      public java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> getAuthenticationKeyChainsList() {
+        return java.util.Collections.unmodifiableList(
+            instance.getAuthenticationKeyChainsList());
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      @java.lang.Override
+      public int getAuthenticationKeyChainsCount() {
+        return instance.getAuthenticationKeyChainsCount();
+      }/**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      @java.lang.Override
+      public org.bitcoinj.wallet.Protos.ExtendedKeyChain getAuthenticationKeyChains(int index) {
+        return instance.getAuthenticationKeyChains(index);
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      public Builder setAuthenticationKeyChains(
+          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
+        copyOnWrite();
+        instance.setAuthenticationKeyChains(index, value);
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      public Builder setAuthenticationKeyChains(
+          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
+        copyOnWrite();
+        instance.setAuthenticationKeyChains(index,
+            builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      public Builder addAuthenticationKeyChains(org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
+        copyOnWrite();
+        instance.addAuthenticationKeyChains(value);
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      public Builder addAuthenticationKeyChains(
+          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
+        copyOnWrite();
+        instance.addAuthenticationKeyChains(index, value);
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      public Builder addAuthenticationKeyChains(
+          org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
+        copyOnWrite();
+        instance.addAuthenticationKeyChains(builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      public Builder addAuthenticationKeyChains(
+          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
+        copyOnWrite();
+        instance.addAuthenticationKeyChains(index,
+            builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      public Builder addAllAuthenticationKeyChains(
+          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChain> values) {
+        copyOnWrite();
+        instance.addAllAuthenticationKeyChains(values);
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      public Builder clearAuthenticationKeyChains() {
+        copyOnWrite();
+        instance.clearAuthenticationKeyChains();
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.ExtendedKeyChain authenticationKeyChains = 1;</code>
+       */
+      public Builder removeAuthenticationKeyChains(int index) {
+        copyOnWrite();
+        instance.removeAuthenticationKeyChains(index);
+        return this;
+      }
+
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      @java.lang.Override
+      public java.util.List<org.bitcoinj.wallet.Protos.AuthenticationKeyUsage> getAuthenticationKeyUsageList() {
+        return java.util.Collections.unmodifiableList(
+            instance.getAuthenticationKeyUsageList());
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      @java.lang.Override
+      public int getAuthenticationKeyUsageCount() {
+        return instance.getAuthenticationKeyUsageCount();
+      }/**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      @java.lang.Override
+      public org.bitcoinj.wallet.Protos.AuthenticationKeyUsage getAuthenticationKeyUsage(int index) {
+        return instance.getAuthenticationKeyUsage(index);
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      public Builder setAuthenticationKeyUsage(
+          int index, org.bitcoinj.wallet.Protos.AuthenticationKeyUsage value) {
+        copyOnWrite();
+        instance.setAuthenticationKeyUsage(index, value);
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      public Builder setAuthenticationKeyUsage(
+          int index, org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.Builder builderForValue) {
+        copyOnWrite();
+        instance.setAuthenticationKeyUsage(index,
+            builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      public Builder addAuthenticationKeyUsage(org.bitcoinj.wallet.Protos.AuthenticationKeyUsage value) {
+        copyOnWrite();
+        instance.addAuthenticationKeyUsage(value);
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      public Builder addAuthenticationKeyUsage(
+          int index, org.bitcoinj.wallet.Protos.AuthenticationKeyUsage value) {
+        copyOnWrite();
+        instance.addAuthenticationKeyUsage(index, value);
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      public Builder addAuthenticationKeyUsage(
+          org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.Builder builderForValue) {
+        copyOnWrite();
+        instance.addAuthenticationKeyUsage(builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      public Builder addAuthenticationKeyUsage(
+          int index, org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.Builder builderForValue) {
+        copyOnWrite();
+        instance.addAuthenticationKeyUsage(index,
+            builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      public Builder addAllAuthenticationKeyUsage(
+          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.AuthenticationKeyUsage> values) {
+        copyOnWrite();
+        instance.addAllAuthenticationKeyUsage(values);
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      public Builder clearAuthenticationKeyUsage() {
+        copyOnWrite();
+        instance.clearAuthenticationKeyUsage();
+        return this;
+      }
+      /**
+       * <code>repeated .wallet.AuthenticationKeyUsage authenticationKeyUsage = 2;</code>
+       */
+      public Builder removeAuthenticationKeyUsage(int index) {
+        copyOnWrite();
+        instance.removeAuthenticationKeyUsage(index);
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:wallet.AuthenticationGroupExtension)
+    }
+    private byte memoizedIsInitialized = 2;
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+        com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+        java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new org.bitcoinj.wallet.Protos.AuthenticationGroupExtension();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+            java.lang.Object[] objects = new java.lang.Object[] {
+              "authenticationKeyChains_",
+              org.bitcoinj.wallet.Protos.ExtendedKeyChain.class,
+              "authenticationKeyUsage_",
+              org.bitcoinj.wallet.Protos.AuthenticationKeyUsage.class,
+            };
+            java.lang.String info =
+                "\u0001\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0002\u0002\u0001\u041b\u0002\u041b" +
+                "";
+            return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<org.bitcoinj.wallet.Protos.AuthenticationGroupExtension> parser = PARSER;
+          if (parser == null) {
+            synchronized (org.bitcoinj.wallet.Protos.AuthenticationGroupExtension.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                    new DefaultInstanceBasedParser<org.bitcoinj.wallet.Protos.AuthenticationGroupExtension>(
+                        DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+      }
+      case GET_MEMOIZED_IS_INITIALIZED: {
+        return memoizedIsInitialized;
+      }
+      case SET_MEMOIZED_IS_INITIALIZED: {
+        memoizedIsInitialized = (byte) (arg0 == null ? 0 : 1);
+        return null;
+      }
+      }
+      throw new UnsupportedOperationException();
+    }
+
+
+    // @@protoc_insertion_point(class_scope:wallet.AuthenticationGroupExtension)
+    private static final org.bitcoinj.wallet.Protos.AuthenticationGroupExtension DEFAULT_INSTANCE;
+    static {
+      AuthenticationGroupExtension defaultInstance = new AuthenticationGroupExtension();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+        AuthenticationGroupExtension.class, defaultInstance);
+    }
+
+    public static org.bitcoinj.wallet.Protos.AuthenticationGroupExtension getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<AuthenticationGroupExtension> PARSER;
+
+    public static com.google.protobuf.Parser<AuthenticationGroupExtension> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
+  }
+
   public interface WalletOrBuilder extends
       // @@protoc_insertion_point(interface_extends:wallet.Wallet)
       com.google.protobuf.MessageLiteOrBuilder {
@@ -16351,20 +17891,6 @@ public final class Protos {
     int getTagsCount();
 
     /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> 
-        getExtKeyChainsList();
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    org.bitcoinj.wallet.Protos.ExtendedKeyChain getExtKeyChains(int index);
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    int getExtKeyChainsCount();
-
-    /**
      * <pre>
      *spending, friends send us money
      * </pre>
@@ -16465,7 +17991,6 @@ public final class Protos {
       extension_ = emptyProtobufList();
       description_ = "";
       tags_ = emptyProtobufList();
-      extKeyChains_ = emptyProtobufList();
       keysForFriends_ = emptyProtobufList();
       keysFromFriends_ = emptyProtobufList();
       keysCoinJoin_ = emptyProtobufList();
@@ -17586,100 +19111,6 @@ public final class Protos {
     private void removeTags(int index) {
       ensureTagsIsMutable();
       tags_.remove(index);
-    }
-
-    public static final int EXTKEYCHAINS_FIELD_NUMBER = 29;
-    private com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.ExtendedKeyChain> extKeyChains_;
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    @java.lang.Override
-    public java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> getExtKeyChainsList() {
-      return extKeyChains_;
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    public java.util.List<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder> 
-        getExtKeyChainsOrBuilderList() {
-      return extKeyChains_;
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    @java.lang.Override
-    public int getExtKeyChainsCount() {
-      return extKeyChains_.size();
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    @java.lang.Override
-    public org.bitcoinj.wallet.Protos.ExtendedKeyChain getExtKeyChains(int index) {
-      return extKeyChains_.get(index);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    public org.bitcoinj.wallet.Protos.ExtendedKeyChainOrBuilder getExtKeyChainsOrBuilder(
-        int index) {
-      return extKeyChains_.get(index);
-    }
-    private void ensureExtKeyChainsIsMutable() {
-      com.google.protobuf.Internal.ProtobufList<org.bitcoinj.wallet.Protos.ExtendedKeyChain> tmp = extKeyChains_;
-      if (!tmp.isModifiable()) {
-        extKeyChains_ =
-            com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-       }
-    }
-
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void setExtKeyChains(
-        int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-      value.getClass();
-  ensureExtKeyChainsIsMutable();
-      extKeyChains_.set(index, value);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void addExtKeyChains(org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-      value.getClass();
-  ensureExtKeyChainsIsMutable();
-      extKeyChains_.add(value);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void addExtKeyChains(
-        int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-      value.getClass();
-  ensureExtKeyChainsIsMutable();
-      extKeyChains_.add(index, value);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void addAllExtKeyChains(
-        java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChain> values) {
-      ensureExtKeyChainsIsMutable();
-      com.google.protobuf.AbstractMessageLite.addAll(
-          values, extKeyChains_);
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void clearExtKeyChains() {
-      extKeyChains_ = emptyProtobufList();
-    }
-    /**
-     * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-     */
-    private void removeExtKeyChains(int index) {
-      ensureExtKeyChainsIsMutable();
-      extKeyChains_.remove(index);
     }
 
     public static final int KEYSFORFRIENDS_FIELD_NUMBER = 30;
@@ -19211,108 +20642,6 @@ public final class Protos {
       }
 
       /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      @java.lang.Override
-      public java.util.List<org.bitcoinj.wallet.Protos.ExtendedKeyChain> getExtKeyChainsList() {
-        return java.util.Collections.unmodifiableList(
-            instance.getExtKeyChainsList());
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      @java.lang.Override
-      public int getExtKeyChainsCount() {
-        return instance.getExtKeyChainsCount();
-      }/**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      @java.lang.Override
-      public org.bitcoinj.wallet.Protos.ExtendedKeyChain getExtKeyChains(int index) {
-        return instance.getExtKeyChains(index);
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder setExtKeyChains(
-          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-        copyOnWrite();
-        instance.setExtKeyChains(index, value);
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder setExtKeyChains(
-          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
-        copyOnWrite();
-        instance.setExtKeyChains(index,
-            builderForValue.build());
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addExtKeyChains(org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-        copyOnWrite();
-        instance.addExtKeyChains(value);
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addExtKeyChains(
-          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain value) {
-        copyOnWrite();
-        instance.addExtKeyChains(index, value);
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addExtKeyChains(
-          org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
-        copyOnWrite();
-        instance.addExtKeyChains(builderForValue.build());
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addExtKeyChains(
-          int index, org.bitcoinj.wallet.Protos.ExtendedKeyChain.Builder builderForValue) {
-        copyOnWrite();
-        instance.addExtKeyChains(index,
-            builderForValue.build());
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder addAllExtKeyChains(
-          java.lang.Iterable<? extends org.bitcoinj.wallet.Protos.ExtendedKeyChain> values) {
-        copyOnWrite();
-        instance.addAllExtKeyChains(values);
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder clearExtKeyChains() {
-        copyOnWrite();
-        instance.clearExtKeyChains();
-        return this;
-      }
-      /**
-       * <code>repeated .wallet.ExtendedKeyChain extKeyChains = 29;</code>
-       */
-      public Builder removeExtKeyChains(int index) {
-        copyOnWrite();
-        instance.removeExtKeyChains(index);
-        return this;
-      }
-
-      /**
        * <pre>
        *spending, friends send us money
        * </pre>
@@ -19800,8 +21129,6 @@ public final class Protos {
               org.bitcoinj.wallet.Protos.Script.class,
               "tags_",
               org.bitcoinj.wallet.Protos.Tag.class,
-              "extKeyChains_",
-              org.bitcoinj.wallet.Protos.ExtendedKeyChain.class,
               "keysForFriends_",
               org.bitcoinj.wallet.Protos.Key.class,
               "keysFromFriends_",
@@ -19810,10 +21137,10 @@ public final class Protos {
               org.bitcoinj.wallet.Protos.Key.class,
             };
             java.lang.String info =
-                "\u0001\u0012\u0000\u0001\u0001 \u0012\u0000\t\u000b\u0001\u1508\u0000\u0002\u100a" +
-                "\u0001\u0003\u041b\u0004\u041b\u0005\u100c\u0004\u0006\u1409\u0005\u0007\u1004\u0006" +
-                "\n\u041b\u000b\u1008\u0007\f\u100b\u0002\r\u1003\b\u000e\u1002\u0003\u000f\u041b" +
-                "\u0010\u041b\u001d\u041b\u001e\u041b\u001f\u041b \u041b";
+                "\u0001\u0011\u0000\u0001\u0001 \u0011\u0000\b\n\u0001\u1508\u0000\u0002\u100a\u0001" +
+                "\u0003\u041b\u0004\u041b\u0005\u100c\u0004\u0006\u1409\u0005\u0007\u1004\u0006\n" +
+                "\u041b\u000b\u1008\u0007\f\u100b\u0002\r\u1003\b\u000e\u1002\u0003\u000f\u041b\u0010" +
+                "\u041b\u001e\u041b\u001f\u041b \u041b";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through
