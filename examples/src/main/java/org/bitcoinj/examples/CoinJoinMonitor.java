@@ -30,7 +30,6 @@ import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
@@ -46,12 +45,12 @@ import org.bitcoinj.utils.Threading;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -131,15 +130,15 @@ public class CoinJoinMonitor {
 
         System.out.println("Denominations Mixed ----------------------------");
         for (Map.Entry<Coin, DenomInfo> entry : denoms.entrySet()) {
-            System.out.println(entry.getKey().toFriendlyString() + ": " + entry.getValue().count +
-                    " / " + entry.getValue().total.toFriendlyString() + "; " + entry.getValue().getUsage() + "%" +
-                    "; " + entry.getValue().getRate(hours) + " DASH/hr");
+            System.out.printf("%10s: %d / %s; %.1f %.8f DASH/hr\n", entry.getKey().toFriendlyString(), entry.getValue().count,
+                    entry.getValue().total.toFriendlyString(), entry.getValue().getUsage(),
+                    entry.getValue().getRate(hours));
         }
 
         System.out.println("Network Utilization ----------------------------");
         System.out.println("Masternodes: " + Context.get().masternodeListManager.getMasternodeList().countEnabled());
-        System.out.println("Hours: " + hours);
-        System.out.println("Sessions/hour: " + completedSessions.size() / hours);
+        System.out.printf("Hours: %.1f\n", hours);
+        System.out.printf("Sessions/hour: %.1f\n", (double) completedSessions.size() / hours);
 
 
         System.out.println("Session Times");
@@ -150,7 +149,7 @@ public class CoinJoinMonitor {
     }
 
     public static void main(String[] args) throws Exception {
-        BriefLogFormatter.initVerbose();
+        BriefLogFormatter.initWithSilentBitcoinJ();
         System.out.println("Connecting to node");
         final NetworkParameters params;
         String filePrefix;
@@ -212,8 +211,9 @@ public class CoinJoinMonitor {
                 long currentTime = Utils.currentTimeSeconds();
                 long timeInterval = currentTime - startTime;
                 System.out.println("Time Elapsed: "  + ((double)timeInterval / 3600) + " hrs");
-                System.out.println("dsqCount: " + queueSet.size());
-                System.out.println("txCount:  " + mapDSTX.size());
+                System.out.println("dsqCount:          " + queueSet.size());
+                System.out.println("txCount:           " + mapDSTX.size());
+                System.out.printf("Completed Queues:    %.1f%%%n",(double) mapDSTX.size() * 100  / queueSet.size());
 
                 calculateDSTX(timeInterval);
 
@@ -229,16 +229,13 @@ public class CoinJoinMonitor {
                     dsqCount++;
                     CoinJoinQueue dsq = (CoinJoinQueue) m;
                     if (queueSet.add(dsq)) {
+                        writeTime();
                         System.out.println("dsq:  " + m);
                         // add to the pending sessions
                         pendingSessions.put(dsq.getProTxHash(), SessionInfo.start(dsq));
                     }
-                } else if (m instanceof Transaction) {
-                    //System.out.println("tx: " + m);
-                    // determine the type of transaction here
-                    //Transaction tx = (Transaction) m;
-                    // look for collateral tx and fees?
                 } else if (m instanceof CoinJoinBroadcastTx) {
+                    writeTime();
                     System.out.println("dstx: " + m);
                     CoinJoinBroadcastTx dstx = (CoinJoinBroadcastTx) m;
                     if (mapDSTX.put(dstx.getTx().getTxId(), dstx) == null) {
@@ -250,13 +247,6 @@ public class CoinJoinMonitor {
                         listDSTX.add(dstx);
                     }
                     txCount++;
-                } else if (m instanceof Block) {
-                    //Block block = (Block) m;
-                    //if (!mapBlocks.containsKey(block.getHash())) {
-                    //    if (mapBlocks.containsKey(block.getPrevBlockHash()))
-                    //        System.out.println("New Block Mined: " + m.getHash());
-                    //    mapBlocks.put(block.getHash(), block);
-                    //}
                 }
                 return m;
             }
@@ -268,5 +258,11 @@ public class CoinJoinMonitor {
             Thread.sleep(Long.MAX_VALUE);
         } catch (InterruptedException ignored) {}
 
+    }
+    static DateFormat format = DateFormat.getDateTimeInstance();
+
+    protected static void writeTime() {
+        System.out.print(format.format(new Date(Utils.currentTimeMillis())));
+        System.out.print(" ");
     }
 }
