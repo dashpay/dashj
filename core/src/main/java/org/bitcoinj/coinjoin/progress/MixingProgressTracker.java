@@ -24,13 +24,17 @@ import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-public class MixingProgressTracker implements SessionStartedListener, SessionCompleteListener, MixingCompleteListener {
+public class MixingProgressTracker implements SessionStartedListener, SessionCompleteListener, MixingCompleteListener,
+        NewBestBlockListener {
     protected int completedSessions = 0;
     protected int timedOutSessions = 0;
     private double lastPercent = 0;
@@ -87,6 +91,11 @@ public class MixingProgressTracker implements SessionStartedListener, SessionCom
 
     @Override
     public void onSessionStarted(WalletEx wallet, int sessionId, int denomination, PoolMessage message) {
+
+    }
+
+    @Override
+    public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
 
     }
 }

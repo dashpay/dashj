@@ -21,7 +21,9 @@ import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.PoolMessage;
 import org.bitcoinj.coinjoin.PoolStatus;
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
 
@@ -112,13 +114,13 @@ public class CoinJoinReporter extends MixingProgressTracker {
                 watch.stop();
             if (message == PoolMessage.MSG_SUCCESS) {
                 writer.write("Session Complete: ");
-                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination), denomination));
+                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination));
                 writeWatch(watch);
                 writer.newLine();
                 writeStats(wallet);
             } else {
                 writer.write("Session Failure: ");
-                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination), denomination));
+                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination));
                 writeWatch(watch);
                 writer.write(CoinJoin.getMessageByID(message));
             }
@@ -157,5 +159,17 @@ public class CoinJoinReporter extends MixingProgressTracker {
 
     private void writeWatch(@Nullable Stopwatch watch) throws IOException {
         writer.write(String.format(" - %s ", watch != null ? watch : "N/A"));
+    }
+
+    @Override
+    public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+        super.notifyNewBestBlock(block);
+        try {
+            writeTime();
+            writer.write("Block Mined: " + block.getHeight());
+            writer.newLine();
+        } catch (IOException x) {
+            throw new RuntimeException(x);
+        }
     }
 }
