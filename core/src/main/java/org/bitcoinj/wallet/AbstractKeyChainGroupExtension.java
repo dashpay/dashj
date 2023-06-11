@@ -48,7 +48,7 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
         this.wallet = wallet;
     }
 
-    abstract protected AnyKeyChainGroup getKeyChainGroup();
+    abstract public AnyKeyChainGroup getKeyChainGroup();
 
     boolean isInitialized() {
         return getKeyChainGroup() != null;

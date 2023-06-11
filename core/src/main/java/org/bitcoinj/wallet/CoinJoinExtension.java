@@ -161,7 +161,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     }
 
     @Override
-    protected AnyKeyChainGroup getKeyChainGroup() {
+    public AnyKeyChainGroup getKeyChainGroup() {
         return coinJoinKeyChainGroup;
     }
 

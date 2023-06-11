@@ -107,7 +107,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     }
 
     @Override
-    protected AnyKeyChainGroup getKeyChainGroup() {
+    public AnyKeyChainGroup getKeyChainGroup() {
         return keyChainGroup;
     }
 
