@@ -1297,7 +1297,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             //we already have this qrinfo or doesn't match our current tipBlockHash
             if (mnListAtH.getBlockHash().equals(quorumRotationInfo.getMnListDiffAtH().blockHash)) {
                 log.info("heights are the same: " + x.getMessage(), x);
-                log.info("mnList = {} vs mnlistdiff {}", mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
+                log.info("mnList = {} vs qrinfo {}", mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
                 log.info("mnlistdiff {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
                 log.info("lastRequest: {} -> {}", lastRequest.request.getBaseBlockHashes(), lastRequest.request.getBlockRequestHash());
                 // remove this block from the list
@@ -1313,13 +1313,13 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 log.info("mnList = {} vs qrinfo = {}", mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
                 log.info("qrinfo {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
                 log.info("lastRequest: {} -> {}", lastRequest.request.getBaseBlockHashes(), lastRequest.request.getBlockRequestHash());
-                if (x.requireReset && x.merkleRootMismatch) {
+                log.info("requires reset {}", x.isRequiringReset());
+                log.info("requires new peer {}", x.isRequiringNewPeer());
+                log.info("requires reset {}", x.hasMerkleRootMismatch());
+                incrementFailedAttempts();
+                log.info("failed attempts {}", getFailedAttempts());
+                if (reachedMaxFailedAttempts()) {
                     resetMNList(true);
-                } else {
-                    incrementFailedAttempts();
-                    log.info("failed attempts {}", getFailedAttempts());
-                    if (reachedMaxFailedAttempts())
-                        resetMNList(true);
                 }
             }
         } catch (VerificationException x) {
@@ -1352,5 +1352,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     public boolean isConsistent() {
         return mnListAtH.getBlockHash().equals(quorumListAtH.getBlockHash());
+    }
+
+    public SimplifiedQuorumList getActiveQuorumList() {
+        return activeQuorumLists.values().stream().findFirst().get();
     }
 }
