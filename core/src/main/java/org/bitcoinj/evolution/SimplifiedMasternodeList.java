@@ -54,10 +54,6 @@ public class SimplifiedMasternodeList extends Message {
         this.blockHash = other.blockHash;
         this.height = other.height;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(other.mnMap);
-        // tell all entries to render as version 2 (BLS basic scheme)
-        for (SimplifiedMasternodeListEntry mn : mnMap.values()) {
-            mn.version = version;
-        }
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(other.mnUniquePropertyMap);
         this.storedBlock = other.storedBlock;
     }
