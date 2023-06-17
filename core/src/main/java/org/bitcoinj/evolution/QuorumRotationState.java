@@ -165,9 +165,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     public void applyDiff(Peer peer, AbstractBlockChain headersChain, AbstractBlockChain blockChain,
                           QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap)
             throws BlockStoreException, MasternodeListDiffException {
-        if (quorumRotationInfo.getMnListDiffAtH().getVersion() != SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION) {
-            BLSScheme.setLegacyDefault(false);
-        }
         StoredBlock blockAtTip;
         StoredBlock blockAtH;
         StoredBlock blockMinusC;

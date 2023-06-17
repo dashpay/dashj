@@ -163,10 +163,6 @@ public class SimplifiedMasternodeList extends Message {
 
         lock.lock();
         try {
-            // this should not be necessary since the activation height is hard coded
-            if (diff.getVersion() >= SimplifiedMasternodeListDiff.BASIC_BLS_VERSION) {
-                params.setBasicBLSSchemeActivationHeight((int)((CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject()).height);
-            }
             SimplifiedMasternodeList result = new SimplifiedMasternodeList(this, diff.getVersion());
 
             result.blockHash = diff.blockHash;

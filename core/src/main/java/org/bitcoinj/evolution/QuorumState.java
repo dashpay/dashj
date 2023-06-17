@@ -251,9 +251,6 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     @Override
     public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, AbstractBlockChain headersChain,
                             AbstractBlockChain blockChain, boolean isLoadingBootStrap) throws VerificationException {
-        if (mnlistdiff.getVersion() == SimplifiedMasternodeListDiff.BASIC_BLS_VERSION) {
-            BLSScheme.setLegacyDefault(false);
-        }
         StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);
