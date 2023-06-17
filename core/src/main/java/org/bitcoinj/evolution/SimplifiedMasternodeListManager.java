@@ -75,8 +75,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public static final int DMN_FORMAT_VERSION = 1;
     public static final int LLMQ_FORMAT_VERSION = 2;
     public static final int QUORUM_ROTATION_FORMAT_VERSION = 3;
-
     public static final int BLS_SCHEME_FORMAT_VERSION = 4;
+    public static final int SMLE_VERSION_FORMAT_VERSION = 5;
 
     public static int MAX_CACHE_SIZE = 10;
     public static int MIN_CACHE_SIZE = 1;
@@ -213,8 +213,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         length = cursor - offset;
     }
 
-    private int getProtocolVersion() {
-        if (formatVersion >= 4) {
+    public int getProtocolVersion() {
+        if (formatVersion >= 5) {
+            return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED);
+        } else if (formatVersion == 4) {
             return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME);
         } else {
             return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK);
@@ -315,12 +317,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             processQuorumList(quorumState.getQuorumListAtTip());
 
             unCache();
-            if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() == LLMQ_FORMAT_VERSION && quorumState.quorumList.size() > 0)
-                setFormatVersion(LLMQ_FORMAT_VERSION);
-            if (mnlistdiff.getVersion() == LEGACY_BLS_VERSION)
-                setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
-            else if (mnlistdiff.getVersion() == BASIC_BLS_VERSION)
-                setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
+            // save in the most up-to-date version
+            setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
             if (mnlistdiff.hasChanges() || quorumState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
 

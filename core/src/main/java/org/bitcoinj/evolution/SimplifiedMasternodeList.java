@@ -40,6 +40,7 @@ public class SimplifiedMasternodeList extends Message {
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(5000);
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(5000);
         storedBlock = new StoredBlock(params.getGenesisBlock(), BigInteger.ZERO, 0);
+        protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED);
     }
 
     SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
@@ -49,9 +50,7 @@ public class SimplifiedMasternodeList extends Message {
     SimplifiedMasternodeList(SimplifiedMasternodeList other, short version) {
         super(other.params);
         this.version = version;
-        this.protocolVersion = version == SimplifiedMasternodeListDiff.BASIC_BLS_VERSION ?
-                NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion() :
-                NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
+        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED);
         this.blockHash = other.blockHash;
         this.height = other.height;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(other.mnMap);
