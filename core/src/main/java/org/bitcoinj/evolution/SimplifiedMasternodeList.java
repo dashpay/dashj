@@ -75,7 +75,7 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
             version = (short) readUint16();
         } else {
             version = SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION;
@@ -115,7 +115,7 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
             Utils.uint16ToByteStreamLE(version, stream);
         }
         stream.write(blockHash.getReversedBytes());

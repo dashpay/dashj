@@ -215,11 +215,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public int getProtocolVersion() {
         if (formatVersion >= 5) {
-            return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED);
+            return NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion();
         } else if (formatVersion == 4) {
-            return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME);
+            return NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion();
         } else {
-            return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK);
+            return NetworkParameters.ProtocolVersion.ISDLOCK.getBitcoinProtocolVersion();
         }
     }
 

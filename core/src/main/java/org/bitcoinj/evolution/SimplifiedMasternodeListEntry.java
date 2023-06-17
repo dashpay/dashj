@@ -86,7 +86,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
 
     @Override
     protected void parse() throws ProtocolException {
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
             version = (short) readUint16();
         } else {
             version = LEGACY_BLS_VERSION;
@@ -100,7 +100,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         keyIdVoting = new KeyId(params, payload, cursor);
         cursor += keyIdVoting.getMessageSize();
         isValid = readBytes(1)[0] == 1;
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.DMN_TYPE)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion()) {
             if (version >= BASIC_BLS_VERSION) {
                 type = readUint16();
                 if (type == MasternodeType.HIGHPERFORMANCE.index) {
@@ -119,7 +119,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
             Utils.uint16ToByteStreamLE(version, stream);
         }
         serializeWithoutVersionToStream(stream);
@@ -132,7 +132,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         pubKeyOperator.bitcoinSerialize(stream, version == LEGACY_BLS_VERSION);
         keyIdVoting.bitcoinSerialize(stream);
         stream.write(isValid ? 1 : 0);
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.DMN_TYPE)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion()) {
             if (version >= BASIC_BLS_VERSION) {
                 Utils.uint16ToByteStreamLE(type, stream);
                 if (type == MasternodeType.HIGHPERFORMANCE.index) {

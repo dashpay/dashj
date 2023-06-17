@@ -34,7 +34,7 @@ public class VersionMessageTest {
     public void decode_noRelay_bestHeight_subVer() throws Exception {
         // Test that we can decode version messages which miss data which some old nodes may not include
         // 70227 = 531201 (little endian)
-        String hex = "5312010000000000000000003334a85500000000000000000000000000000000000000000000ffff7f000001479d000000000000000000000000000000000000ffff7f000001479d00000000000000000f2f626974636f696e6a3a302e31332f0004000000";
+        String hex = "5412010000000000000000003334a85500000000000000000000000000000000000000000000ffff7f000001479d000000000000000000000000000000000000ffff7f000001479d00000000000000000f2f626974636f696e6a3a302e31332f0004000000";
         VersionMessage ver = new VersionMessage(UNITTEST, HEX.decode(hex));
         assertFalse(ver.relayTxesBeforeFilter);
         assertEquals(1024, ver.bestHeight);

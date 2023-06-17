@@ -75,7 +75,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
         coinBaseTx = new Transaction(params, payload, cursor);
         cursor += coinBaseTx.getMessageSize();
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
             version = (short) readUint16();
         } else {
             version = CURRENT_VERSION;
@@ -125,7 +125,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         cbTxMerkleTree.bitcoinSerializeToStream(stream);
         coinBaseTx.bitcoinSerialize(stream);
 
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
             Utils.uint16ToByteStreamLE(version, stream);
         }
 
