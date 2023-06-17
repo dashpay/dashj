@@ -302,7 +302,7 @@ public class FinalCommitment extends SpecialTxPayload {
                 memberPubKeys.add(members.get(i).getPubKeyOperator());
             }
 
-            if (!membersSignature.verifySecureAggregated(memberPubKeys, commitmentHash)) {
+            if (!membersSignature.verifySecureAggregated(memberPubKeys, commitmentHash, isLegacy())) {
                 log.error("invalid aggregated members signature");
                 return false;
             }
@@ -310,7 +310,7 @@ public class FinalCommitment extends SpecialTxPayload {
             Context.get().signingManager.logSignature("QUORUM", quorumPublicKey, commitmentHash, quorumSignature);
 
             if(Context.get().masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
-                if (!quorumSignature.verifyInsecure(quorumPublicKey, commitmentHash)) {
+                if (!quorumSignature.verifyInsecure(quorumPublicKey, commitmentHash, isLegacy())) {
                     log.error("invalid quorum signature");
                     return false;
                 }

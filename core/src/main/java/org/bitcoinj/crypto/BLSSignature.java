@@ -202,7 +202,11 @@ public class BLSSignature extends BLSAbstractObject {
         }
     }
 
-    public boolean verifySecureAggregated(ArrayList<BLSPublicKey> pks, Sha256Hash hash)
+    public boolean verifySecureAggregated(ArrayList<BLSPublicKey> pks, Sha256Hash hash) {
+        return verifySecureAggregated(pks, hash, BLSScheme.isLegacyDefault());
+    }
+
+    public boolean verifySecureAggregated(ArrayList<BLSPublicKey> pks, Sha256Hash hash, boolean legacy)
     {
         if (pks.isEmpty()) {
             return false;
@@ -213,10 +217,10 @@ public class BLSSignature extends BLSAbstractObject {
         for (BLSPublicKey pk : pks) {
             vecPublicKeys.add(pk.publicKeyImpl);
         }
-        return BLSScheme.get(BLSScheme.isLegacyDefault()).verifySecure(vecPublicKeys, signatureImpl, hash.getBytes());
+        return BLSScheme.get(legacy).verifySecure(vecPublicKeys, signatureImpl, hash.getBytes());
     }
 
-    boolean recover(ArrayList<BLSSignature> sigs, ArrayList<BLSId> ids)
+    public boolean recover(ArrayList<BLSSignature> sigs, ArrayList<BLSId> ids)
     {
         valid = false;
         updateHash();
