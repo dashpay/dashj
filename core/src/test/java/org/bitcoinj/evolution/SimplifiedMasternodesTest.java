@@ -27,6 +27,7 @@ import static org.junit.Assert.*;
 
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.WhiteRussianDevNetParams;
+import org.bitcoinj.quorums.QuorumRotationInfoTest;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
@@ -35,6 +36,7 @@ import org.bitcoinj.store.MemoryBlockStore;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -139,48 +141,97 @@ public class SimplifiedMasternodesTest {
     @Test
     public void loadFromBootStrapFile() throws BlockStoreException{
         // this is for mainnet
-        URL datafile = Objects.requireNonNull(getClass().getResource("ML1088640.dat"));
+        loadAndTestBootstrap(MAINPARAMS, "ML1088640.dat", null, SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION, 1088640, -1);
+    }
 
-        initContext(MAINPARAMS);
+    private void loadAndTestBootstrap(NetworkParameters params, String mnlistdiffFilename, @Nullable String qrinfoFilename, int version, int heightMnListDiff, int heightQrInfo) throws BlockStoreException {
+        URL mnlistdiffFile = Objects.requireNonNull(getClass().getResource(mnlistdiffFilename));
+        URL qrinfoFile = (qrinfoFilename != null) ? Objects.requireNonNull(QuorumRotationInfoTest.class.getResource(qrinfoFilename)) : null;
+
+        initContext(params);
 
         SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
         context.setMasternodeListManager(manager);
-        manager.setBootstrap(datafile.getPath(), null, SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION);
+        manager.setBootstrap(mnlistdiffFile.getPath(), (qrinfoFile != null) ? qrinfoFile.getPath() : null, version);
 
-        manager.resetQuorumStateMNList(true, true);
+        manager.resetMNList(true, true);
 
         try {
             manager.waitForBootstrapLoaded();
-            assertEquals(1088640, manager.getMasternodeList().getHeight());
+            assertEquals(heightMnListDiff, manager.getMasternodeList().getHeight());
+            if (qrinfoFilename != null)
+                assertEquals(heightQrInfo, manager.quorumRotationState.getMasternodeList().getHeight());
         } catch (InterruptedException | ExecutionException x) {
             fail("unable to load bootstrap file");
         }
     }
 
     @Test
+    public void loadFromBootStrapFiles_70227() throws BlockStoreException{
+        loadAndTestBootstrap(
+                MAINPARAMS,
+                "mnlistdiff-mainnet-0-1888465-70227.dat",
+                "qrinfo-mainnet-0-1888473_70227.dat",
+                SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION,
+                1888465, 1888408
+        );
+    }
+
+    @Test
+    public void loadFromBootStrapFiles_70228() throws BlockStoreException{
+        loadAndTestBootstrap(
+                PARAMS,
+                "mnlistdiff-testnet-0-850798-70228-after19.2HF.dat",
+                "qrinfo-testnet-0-850806-70228-after19.2HF.dat",
+                SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION,
+                850798, 850744
+        );
+    }
+
+    @Test
     public void loadFromFile() throws Exception {
+        loadFromFile("simplifiedmasternodelistmanager.dat", 2);
+    }
+
+    @Test
+    public void loadFromFile_v3_before19_2HardFork() throws Exception {
+        loadFromFile("testnet-before19.2HF_70227.mnlist", 3);
+    }
+
+    @Test
+    public void loadFromFile_v5_before19_2HardFork() throws Exception {
+        loadFromFile("manager-testnet-v5-before19.2HF.mnlist", 5);
+    }
+
+    @Test
+    public void loadFromFile_v5_after19_2HardFork() throws Exception {
+        loadFromFile("testnet-after19.2HF.mnlist", 5);
+    }
+
+    private void loadFromFile(String filename, int fileVersion) throws BlockStoreException {
         initContext(PARAMS);
-        URL datafile = getClass().getResource("simplifiedmasternodelistmanager.dat");
+        URL datafile = Objects.requireNonNull(getClass().getResource(filename));
         FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true);
 
         SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(Context.get());
         context.setMasternodeListManager(managerDefaultNames);
-        assertEquals(db.load(managerDefaultNames), true);
+        assertTrue(db.load(managerDefaultNames));
 
         SimplifiedMasternodeListManager managerSpecific = new SimplifiedMasternodeListManager(Context.get());
         context.setMasternodeListManager(managerSpecific);
-        FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 2);
-        assertEquals(db2.load(managerSpecific), true);
+        FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), fileVersion);
+        assertTrue(db2.load(managerSpecific));
 
         //check to make sure that they have the same number of masternodes
         assertEquals(managerDefaultNames.getMasternodeList().size(), managerSpecific.getMasternodeList().size());
 
-        //load a file with version 1, expecting version 2
+        //load a file with version 6, expecting version 5
         SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(Context.get());
         context.setMasternodeListManager(managerSpecificFail);
-        FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 3);
-        assertEquals(db3.load(managerSpecificFail), false);
+        FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), fileVersion + 1);
+        assertFalse(db3.load(managerSpecificFail));
     }
+
 
     @Test
     public void quorumHashTest() {
