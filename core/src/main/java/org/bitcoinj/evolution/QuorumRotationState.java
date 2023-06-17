@@ -314,7 +314,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 quorumSnapshotCache.put(newMNListAtHMinus4C.getBlockHash(), quorumSnapshotAtHMinus4C);
             }
 
-            // now calculate quorums
+            // now calculate quorums, but do not validate them since they are all old
             SimplifiedQuorumList baseQuorumList;
             SimplifiedQuorumList newQuorumListAtHMinus4C = null;
 
@@ -333,8 +333,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             SimplifiedQuorumList newQuorumListAtHMinusC = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC(), isLoadingBootStrap, chain, true, false);
 
             baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtH().prevBlockHash);
-            // only verify quorums if extraShare == true, otherwise we don't have all the necessary mn lists
-            SimplifiedQuorumList newQuorumListAtH = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, chain, true, quorumRotationInfo.hasExtraShare());
+            SimplifiedQuorumList newQuorumListAtH = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, chain, true, false);
 
             if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM)) {
                 // verify the merkle root of the quorums at H
@@ -1068,6 +1067,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         mnListsCache = new LinkedHashMap<>();
         mnListsCache.put(mnListTip.getBlockHash(), mnListTip);
         mnListsCache.put(mnListAtH.getBlockHash(), mnListAtH);
+        mnListsCache.put(mnListAtHMinusC.getBlockHash(), mnListAtHMinusC);
         mnListsCache.put(mnListAtHMinus2C.getBlockHash(), mnListAtHMinus2C);
         mnListsCache.put(mnListAtHMinus3C.getBlockHash(), mnListAtHMinus3C);
         mnListsCache.put(mnListAtHMinus4C.getBlockHash(), mnListAtHMinus4C);
