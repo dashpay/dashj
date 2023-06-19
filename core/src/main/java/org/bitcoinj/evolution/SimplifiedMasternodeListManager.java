@@ -242,20 +242,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         lock.lock();
         try {
             SimplifiedMasternodeList mnListToSave = null;
-            SimplifiedQuorumList quorumListToSave = null;
             ArrayList<StoredBlock> otherPendingBlocks = new ArrayList<StoredBlock>(MAX_CACHE_SIZE);
             if (getMasternodeListCache().size() > 0) {
                 for (Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry : getMasternodeListCache().entrySet()) {
                     if (mnListToSave == null) {
                         mnListToSave = entry.getValue();
-                        quorumListToSave = getQuorumListCache(params.getLlmqChainLocks()).get(entry.getKey());
                     } else {
                         otherPendingBlocks.add(entry.getValue().getStoredBlock());
                     }
                 }
             } else {
                 mnListToSave = quorumState.mnList;
-                quorumListToSave = quorumState.quorumList;
             }
 
             quorumState.bitcoinSerialize(stream);
@@ -619,35 +616,16 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     /**
-     * Used to determine if DIP24 has been activated.  This method won't be required when the
-     * DIP24 activation height is hardcoded into NetworkParameters
      * @param quorumList the most recent quorum list from a "mnlistdiff" message
      */
+    @Deprecated
     public void processQuorumList(SimplifiedQuorumList quorumList) {
-        int height = (int)quorumList.getHeight();
-        if (!params.isDIP0024Active(height)) {
-            quorumList.forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
-                @Override
-                public void processQuorum(FinalCommitment finalCommitment) {
-                    if (!params.isDIP0024Active(height) && finalCommitment.getLlmqType() == params.getLlmqDIP0024InstantSend()) {
-                        params.setDIP0024Active(height);
-                    }
-                    if (peerGroup != null && params.isDIP0024Active(height)) {
-                        peerGroup.setMinRequiredProtocolVersion(params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));
-                    }
-                }
-            });
-        }
+        // this was previously used to detect hard forks
     }
 
+    @Deprecated
     public void processMasternodeList(SimplifiedMasternodeListDiff mnlistdiff) {
-        int height = (int)mnlistdiff.getHeight();
-        if (!params.isDIP0024Active(height)) {
-            if (mnlistdiff.getVersion() == BASIC_BLS_VERSION) {
-                params.setV19Active(height);
-                setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
-            }
-        }
+        // this was previously used to detect hard forks
     }
 
     public void completeQuorumState(Peer peer) {
