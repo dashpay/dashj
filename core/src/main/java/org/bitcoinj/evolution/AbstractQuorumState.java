@@ -147,10 +147,12 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         this.bootStrapFileFormat = bootStrapFileFormat;
         if (bootStrapFileFormat == SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION) {
             protocolVersion = NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion();
-        } else if (bootStrapFileFormat >= SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION) {
+        } else if (bootStrapFileFormat == SimplifiedMasternodeListManager.BLS_SCHEME_FORMAT_VERSION) {
             protocolVersion = NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion();
-        } else {
+        } else if (bootStrapFileFormat == SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION) {
             protocolVersion = NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
+        } else {
+            protocolVersion = NetworkParameters.ProtocolVersion.CORE17.getBitcoinProtocolVersion();
         }
     }
 
