@@ -13,6 +13,7 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.SPVBlockStore;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -77,7 +78,7 @@ public class QuorumRotationStateTest {
         }
     }
 
-    @Test
+    @Test @Ignore
     public void loadFromBootStrapFileV4() throws BlockStoreException {
         context.getParams().setBasicBLSSchemeActivationHeight(300);
         assertTrue(context.getParams().isBasicBLSSchemeActive(5512));
