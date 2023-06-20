@@ -239,7 +239,7 @@ public class FlatDB<Type extends AbstractManager> {
                 }
                 // de-serialize data into CMasternodeMan object
 
-                object.load(vchData, magicMessage.length()+ 4, fileVersion);
+                object.load(vchData, magicMessageTmp.length()+ 4, fileVersion);
 
             } catch (Exception e){
                 object.clear();
@@ -292,7 +292,7 @@ public class FlatDB<Type extends AbstractManager> {
     public boolean dump(Type objToSave) {
         Stopwatch watch = Stopwatch.createStarted();
 
-        log.info("Writing info to {}...", fileName);
+        log.info("Writing {} to {}...", objToSave.getMagicMessage(), fileName);
         write(objToSave);
         log.info("{} dump finished  {}ms", fileName, watch.elapsed(TimeUnit.MILLISECONDS));
 

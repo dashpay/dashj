@@ -65,7 +65,7 @@ public class InstantSendLock extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.ISDLOCK.getBitcoinProtocolVersion()) {
             version = readBytes(1)[0];
         }
         int countInputs = (int)readVarInt();
@@ -78,7 +78,7 @@ public class InstantSendLock extends Message {
 
         txid = readHash();
 
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.ISDLOCK.getBitcoinProtocolVersion()) {
             cycleHash = readHash();
         }
         signature = new BLSLazySignature(params, payload, cursor);
@@ -88,7 +88,7 @@ public class InstantSendLock extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.ISDLOCK.getBitcoinProtocolVersion()) {
             stream.write(version);
         }
         stream.write(new VarInt(inputs.size()).encode());
@@ -96,7 +96,7 @@ public class InstantSendLock extends Message {
             input.bitcoinSerialize(stream);
         }
         stream.write(txid.getReversedBytes());
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.ISDLOCK.getBitcoinProtocolVersion()) {
             stream.write(cycleHash.getReversedBytes());
         }
         signature.bitcoinSerialize(stream);

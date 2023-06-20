@@ -89,7 +89,7 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
             type = MasternodeType.getMasternodeType(readUint16());
         }
         proTxHash = readHash();
-        address = new MasternodeAddress(params, payload, cursor, NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+        address = new MasternodeAddress(params, payload, cursor, params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));
         cursor += address.getMessageSize();
         scriptOperatorPayout = new Script(readByteArray());
         inputsHash = readHash();

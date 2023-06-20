@@ -165,9 +165,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     public void applyDiff(Peer peer, AbstractBlockChain headersChain, AbstractBlockChain blockChain,
                           QuorumRotationInfo quorumRotationInfo, boolean isLoadingBootStrap)
             throws BlockStoreException, MasternodeListDiffException {
-        if (quorumRotationInfo.getMnListDiffAtH().getVersion() != SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION) {
-            BLSScheme.setLegacyDefault(false);
-        }
         StoredBlock blockAtTip;
         StoredBlock blockAtH;
         StoredBlock blockMinusC;
@@ -317,7 +314,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 quorumSnapshotCache.put(newMNListAtHMinus4C.getBlockHash(), quorumSnapshotAtHMinus4C);
             }
 
-            // now calculate quorums
+            // now calculate quorums, but do not validate them since they are all old
             SimplifiedQuorumList baseQuorumList;
             SimplifiedQuorumList newQuorumListAtHMinus4C = null;
 
@@ -336,8 +333,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             SimplifiedQuorumList newQuorumListAtHMinusC = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC(), isLoadingBootStrap, chain, true, false);
 
             baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtH().prevBlockHash);
-            // only verify quorums if extraShare == true, otherwise we don't have all the necessary mn lists
-            SimplifiedQuorumList newQuorumListAtH = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, chain, true, quorumRotationInfo.hasExtraShare());
+            SimplifiedQuorumList newQuorumListAtH = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, chain, true, false);
 
             if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM)) {
                 // verify the merkle root of the quorums at H
@@ -1071,6 +1067,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         mnListsCache = new LinkedHashMap<>();
         mnListsCache.put(mnListTip.getBlockHash(), mnListTip);
         mnListsCache.put(mnListAtH.getBlockHash(), mnListAtH);
+        mnListsCache.put(mnListAtHMinusC.getBlockHash(), mnListAtHMinusC);
         mnListsCache.put(mnListAtHMinus2C.getBlockHash(), mnListAtHMinus2C);
         mnListsCache.put(mnListAtHMinus3C.getBlockHash(), mnListAtHMinus3C);
         mnListsCache.put(mnListAtHMinus4C.getBlockHash(), mnListAtHMinus4C);
@@ -1300,7 +1297,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             //we already have this qrinfo or doesn't match our current tipBlockHash
             if (mnListAtH.getBlockHash().equals(quorumRotationInfo.getMnListDiffAtH().blockHash)) {
                 log.info("heights are the same: " + x.getMessage(), x);
-                log.info("mnList = {} vs mnlistdiff {}", mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
+                log.info("mnList = {} vs qrinfo {}", mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
                 log.info("mnlistdiff {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
                 log.info("lastRequest: {} -> {}", lastRequest.request.getBaseBlockHashes(), lastRequest.request.getBlockRequestHash());
                 // remove this block from the list
@@ -1316,13 +1313,13 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 log.info("mnList = {} vs qrinfo = {}", mnListTip.getBlockHash(), quorumRotationInfo.getMnListDiffTip().prevBlockHash);
                 log.info("qrinfo {} -> {}", quorumRotationInfo.getMnListDiffTip().prevBlockHash, quorumRotationInfo.getMnListDiffTip().blockHash);
                 log.info("lastRequest: {} -> {}", lastRequest.request.getBaseBlockHashes(), lastRequest.request.getBlockRequestHash());
-                if (x.requireReset && x.merkleRootMismatch) {
+                log.info("requires reset {}", x.isRequiringReset());
+                log.info("requires new peer {}", x.isRequiringNewPeer());
+                log.info("requires reset {}", x.hasMerkleRootMismatch());
+                incrementFailedAttempts();
+                log.info("failed attempts {}", getFailedAttempts());
+                if (reachedMaxFailedAttempts()) {
                     resetMNList(true);
-                } else {
-                    incrementFailedAttempts();
-                    log.info("failed attempts {}", getFailedAttempts());
-                    if (reachedMaxFailedAttempts())
-                        resetMNList(true);
                 }
             }
         } catch (VerificationException x) {
@@ -1355,5 +1352,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     public boolean isConsistent() {
         return mnListAtH.getBlockHash().equals(quorumListAtH.getBlockHash());
+    }
+
+    public SimplifiedQuorumList getActiveQuorumList() {
+        return activeQuorumLists.values().stream().findFirst().get();
     }
 }

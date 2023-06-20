@@ -237,9 +237,9 @@ public class FinalCommitment extends SpecialTxPayload {
     public boolean verify(StoredBlock block, ArrayList<Masternode> members, boolean checkSigs) {
         int expectedVersion = LEGACY_BLS_NON_INDEXED_QUORUM_VERSION;
         if (LLMQUtils.isQuorumRotationEnabled(block, params, LLMQParameters.LLMQType.fromValue(llmqType))) {
-            expectedVersion = params.isBasicBLSSchemeActive(block.getHeight()) ? BASIC_BLS_INDEXED_QUORUM_VERSION : LEGACY_BLS_INDEXED_QUORUM_VERSION;
+            expectedVersion = params.isV19Active(block.getHeight()) ? BASIC_BLS_INDEXED_QUORUM_VERSION : LEGACY_BLS_INDEXED_QUORUM_VERSION;
         } else {
-            expectedVersion = params.isBasicBLSSchemeActive(block.getHeight()) ? BASIC_BLS_NON_INDEXED_QUORUM_VERSION : LEGACY_BLS_NON_INDEXED_QUORUM_VERSION;
+            expectedVersion = params.isV19Active(block.getHeight()) ? BASIC_BLS_NON_INDEXED_QUORUM_VERSION : LEGACY_BLS_NON_INDEXED_QUORUM_VERSION;
         }
         if(getVersion() == 0 || getVersion() != expectedVersion)
             return false;
@@ -302,7 +302,7 @@ public class FinalCommitment extends SpecialTxPayload {
                 memberPubKeys.add(members.get(i).getPubKeyOperator());
             }
 
-            if (!membersSignature.verifySecureAggregated(memberPubKeys, commitmentHash)) {
+            if (!membersSignature.verifySecureAggregated(memberPubKeys, commitmentHash, isLegacy())) {
                 log.error("invalid aggregated members signature");
                 return false;
             }
@@ -310,7 +310,7 @@ public class FinalCommitment extends SpecialTxPayload {
             Context.get().signingManager.logSignature("QUORUM", quorumPublicKey, commitmentHash, quorumSignature);
 
             if(Context.get().masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
-                if (!quorumSignature.verifyInsecure(quorumPublicKey, commitmentHash)) {
+                if (!quorumSignature.verifyInsecure(quorumPublicKey, commitmentHash, isLegacy())) {
                     log.error("invalid quorum signature");
                     return false;
                 }

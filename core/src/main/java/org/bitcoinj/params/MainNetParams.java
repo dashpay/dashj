@@ -348,6 +348,16 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         return instance;
     }
 
+    // TODO: Until 19.2 is released on mainnet, we must use 70227 as the min and current version
+    @Override
+    public int getProtocolVersionNum(ProtocolVersion version) {
+        if (version == ProtocolVersion.CURRENT)
+            return ProtocolVersion.CURRENT.getBitcoinProtocolVersion() - 1;
+        else if (version == ProtocolVersion.MINIMUM)
+            return ProtocolVersion.MINIMUM.getBitcoinProtocolVersion() - 1;
+        return super.getProtocolVersionNum(version);
+    }
+
     @Override
     public String getPaymentProtocolId() {
         return PAYMENT_PROTOCOL_ID_MAINNET;

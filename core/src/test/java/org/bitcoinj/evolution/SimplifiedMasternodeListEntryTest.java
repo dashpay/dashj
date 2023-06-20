@@ -46,13 +46,11 @@ public class SimplifiedMasternodeListEntryTest {
         assertEquals(new BLSLazyPublicKey(UNITTEST, Utils.HEX.decode("08b4c1a8b9c1402ea84afe7c47f7e98d657df873b9747a0e4a497120ec62c81f314ad91a6f3384648e7e60f2734554f7"), 0, false), entry.pubKeyOperator);
         assertFalse(entry.isValid); // this masternode is not valid
         assertEquals(Sha256Hash.wrap("a7fc065ab65f453c4b57c597467f4d126188d5807f08cfab6b1f6d52e30e067e"), entry.getHash());
-        entry.version = 2; // make sure serialization is with basic scheme
-        assertEquals(Sha256Hash.wrap("8a07d7243612fcbeb139b07673c20f63ae701d5508fe1ee8487d2edcb45d3da1"), entry.getHash());
     }
 
     @Test
     public void readBytesV2Test() {
-        byte[] smle = Utils.HEX.decode("e7aef4f585df3def44b855219ae93d6e8cc49a8c96658c5cc0813c48f5384c33e2999069d702d61d852a74b1e07d6f58101e0352d84043e866ff7946bdf5987f00000000000000000000ffff7f0000012f3197fe8172fd3207d71125a053ff32266e11110c06c1184d5be0a8118d0131d6119b138ec4d0398e7eacc5e16a75f718ed796c3a4cab668936c1f6d0945a7b97d7c0fee7cf0101002caa114755a4648d422a5caa5c915597f8c733b8e146");
+        byte[] smle = Utils.HEX.decode("0200e7aef4f585df3def44b855219ae93d6e8cc49a8c96658c5cc0813c48f5384c33e2999069d702d61d852a74b1e07d6f58101e0352d84043e866ff7946bdf5987f00000000000000000000ffff7f0000012f3197fe8172fd3207d71125a053ff32266e11110c06c1184d5be0a8118d0131d6119b138ec4d0398e7eacc5e16a75f718ed796c3a4cab668936c1f6d0945a7b97d7c0fee7cf0101002caa114755a4648d422a5caa5c915597f8c733b8e146");
         SimplifiedMasternodeListEntry entry = new SimplifiedMasternodeListEntry(UNITTEST, smle, 0, NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
         assertEquals(2, entry.version);
         assertEquals(1, entry.type);

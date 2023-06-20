@@ -21,4 +21,8 @@ public class MasternodeListDiffException extends Exception {
     public boolean isRequiringNewPeer() {
         return findNewPeer;
     }
+
+    public boolean hasMerkleRootMismatch() {
+        return merkleRootMismatch;
+    }
 }

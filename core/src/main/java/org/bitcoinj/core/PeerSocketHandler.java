@@ -155,6 +155,7 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
                 Message message;
                 int preSerializePosition = buff.position();
                 try {
+                    // The peer will send us a message based on our protocol version, but theirs may be lower than ours
                     serializer.setProtocolVersion(peerAddress.protocolVersion);
                     message = serializer.deserialize(buff);
                 } catch (BufferUnderflowException e) {
