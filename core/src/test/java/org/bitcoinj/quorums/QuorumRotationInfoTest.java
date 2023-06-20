@@ -18,6 +18,8 @@ package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.crypto.BLSScheme;
+import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
+import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.dashj.bls.BLSJniLibrary;
 import org.junit.Before;
@@ -38,6 +40,7 @@ public class QuorumRotationInfoTest {
     // qrinfo object
     byte [] payloadOne;
     TestNet3Params PARAMS = TestNet3Params.get();
+    MainNetParams MAINNET = MainNetParams.get();
     static {
         BLSJniLibrary.init();
     }
@@ -60,15 +63,50 @@ public class QuorumRotationInfoTest {
         assertEquals(Sha256Hash.wrap("000003227cf2f83a1faa683ece5b875abeb555ebf1252f62cb28a96d459bcc11"), quorumRotationInfo.mnListDiffTip.blockHash);
     }
 
+    // 2023-06-16: mainnet is on 19.1 with protocol 70227
+    //             testnet is on 19.2 with protocol 70228
+
     @Test
-    public void core19RoundTripTest() throws IOException {
-        BLSScheme.setLegacyDefault(true); // the qrinfo will set the scheme to basic
-        payloadOne = loadQRInfo("core19-qrinfo.dat");
-        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70225);
+    public void qrinfo_70227() throws IOException {
+        payloadOne = loadQRInfo("qrinfo-mainnet-0-1888473_70227.dat");
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(MAINNET, payloadOne, 70227);
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
-        assertEquals(Sha256Hash.wrap("0000019a79dadc017ac8b46232602e32a941d29652191cf59524f5ac45bcbe72"), quorumRotationInfo.mnListDiffTip.blockHash);
-        assertFalse(BLSScheme.isLegacyDefault());
+        assertEquals(Sha256Hash.wrap("000000000000000cafc4b174a51768b6216880613ce1ef19add8e84ca48c97d1"), quorumRotationInfo.mnListDiffTip.blockHash);
+        assertEquals(SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION, quorumRotationInfo.mnListDiffAtH.getVersion());
+        assertFalse(quorumRotationInfo.mnListDiffAtH.hasBasicSchemeKeys());
+
+        assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
+    }
+
+    @Test
+    public void qrinfo_70228_beforeActivation() throws IOException {
+        BLSScheme.setLegacyDefault(true); // the qrinfo will set the scheme to basic
+        payloadOne = loadQRInfo("qrinfo-testnet-0-849809_70228-before19.2HF.dat");
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70228);
+        assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
+
+        assertTrue(quorumRotationInfo.hasChanges());
+        assertEquals(Sha256Hash.wrap("000001a7d846454edba8aa61df85ce277980897503e45fcc0c39bd19ff2ccbcf"), quorumRotationInfo.mnListDiffTip.blockHash);
+        assertEquals(1, quorumRotationInfo.mnListDiffAtH.getVersion());
+        assertFalse(quorumRotationInfo.mnListDiffAtH.hasBasicSchemeKeys());
+
+        assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
+    }
+
+    @Test
+    public void qrinfo_70228_afterActivation() throws IOException {
+        BLSScheme.setLegacyDefault(true); // the qrinfo will set the scheme to basic
+        payloadOne = loadQRInfo("qrinfo-testnet-0-850806-70228-after19.2HF.dat");
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70228);
+        assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
+
+        assertTrue(quorumRotationInfo.hasChanges());
+        assertEquals(Sha256Hash.wrap("00000134f050317635efc92333a106c25219c8d0fe3ad8fbccba48b6dd4057d3"), quorumRotationInfo.mnListDiffTip.blockHash);
+        assertEquals(1, quorumRotationInfo.mnListDiffAtH.getVersion());
+        assertTrue(quorumRotationInfo.mnListDiffAtH.hasBasicSchemeKeys());
+
+        assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
     }
 }

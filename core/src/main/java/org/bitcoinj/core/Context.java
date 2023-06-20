@@ -16,6 +16,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.evolution.MasternodeMetaDataManager;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
@@ -28,7 +29,6 @@ import org.bitcoinj.governance.VoteConfidenceTable;
 import org.bitcoinj.quorums.*;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.HashStore;
-import org.dashj.bls.BLS;
 import org.bitcoinj.wallet.SendRequest;
 import org.dashj.bls.BLSJniLibrary;
 import org.slf4j.*;
@@ -462,6 +462,9 @@ public class Context {
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+            if (params.isV19Active(block.getHeight())) {
+                BLSScheme.setLegacyDefault(false);
+            }
             boolean fInitialDownload = blockChain.getChainHead().getHeader().getTimeSeconds() < (Utils.currentTimeSeconds() - 6 * 60 * 60); // ~144 blocks behind -> 2 x fork detection time, was 24 * 60 * 60 in bitcoin
             if(masternodeSync != null)
                 masternodeSync.updateBlockTip(block, fInitialDownload);

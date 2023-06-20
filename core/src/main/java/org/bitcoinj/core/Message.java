@@ -433,4 +433,12 @@ public abstract class Message {
     public String toStringHex() {
         return Utils.HEX.encode(bitcoinSerialize());
     }
+
+    /**
+     *
+     * @return the protocol version of the message
+     */
+    public int getProtocolVersion() {
+        return protocolVersion;
+    }
 }

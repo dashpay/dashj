@@ -146,10 +146,14 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         this.bootstrapFilePath = bootstrapFilePath;
         this.bootstrapStream = bootstrapStream;
         this.bootStrapFileFormat = bootStrapFileFormat;
-        if (bootStrapFileFormat >= SimplifiedMasternodeListManager.BLS_SCHEME_FORMAT_VERSION) {
-            protocolVersion = NetworkParameters.ProtocolVersion.BLS_BASIC.getBitcoinProtocolVersion();
-        } else {
+        if (bootStrapFileFormat == SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION) {
+            protocolVersion = NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion();
+        } else if (bootStrapFileFormat == SimplifiedMasternodeListManager.BLS_SCHEME_FORMAT_VERSION) {
+            protocolVersion = NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion();
+        } else if (bootStrapFileFormat == SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION) {
             protocolVersion = NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
+        } else {
+            protocolVersion = NetworkParameters.ProtocolVersion.CORE17.getBitcoinProtocolVersion();
         }
     }
 
@@ -202,7 +206,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     abstract boolean needsUpdate(StoredBlock nextBlock);
 
-    public abstract void processDiff(@Nullable Peer peer, DiffMessage difference, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap);
+    public abstract void processDiff(@Nullable Peer peer, DiffMessage difference, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap)
+            throws VerificationException;
 
     public abstract void requestReset(Peer peer, StoredBlock block);
 

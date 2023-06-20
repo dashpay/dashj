@@ -319,7 +319,7 @@ public class MainNetParams extends AbstractBitcoinNetParams {
 
         DIP0008BlockHeight = 1088640;
         DIP0024BlockHeight = 1737792 + 4 * 288; // DIP24 activation time + 5 cycles
-        v19BlockHeight = 1874880;
+        v19BlockHeight = Integer.MAX_VALUE;
 
         // long living quorum params
         addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
@@ -350,6 +350,16 @@ public class MainNetParams extends AbstractBitcoinNetParams {
             instance = new MainNetParams();
         }
         return instance;
+    }
+
+    // TODO: Until 19.2 is released on mainnet, we must use 70227 as the min and current version
+    @Override
+    public int getProtocolVersionNum(ProtocolVersion version) {
+        if (version == ProtocolVersion.CURRENT)
+            return ProtocolVersion.CURRENT.getBitcoinProtocolVersion() - 1;
+        else if (version == ProtocolVersion.MINIMUM)
+            return ProtocolVersion.MINIMUM.getBitcoinProtocolVersion() - 1;
+        return super.getProtocolVersionNum(version);
     }
 
     @Override

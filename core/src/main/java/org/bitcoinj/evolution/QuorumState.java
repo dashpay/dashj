@@ -249,10 +249,8 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     }
 
     @Override
-    public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap) {
-        if (mnlistdiff.getVersion() == SimplifiedMasternodeListDiff.BASIC_BLS_VERSION) {
-            BLSScheme.setLegacyDefault(false);
-        }
+    public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, AbstractBlockChain headersChain,
+                            AbstractBlockChain blockChain, boolean isLoadingBootStrap) throws VerificationException {
         StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);
@@ -304,13 +302,14 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 log.info("mnList = {} vs mnlistdiff = {}", getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
-                if (x.requireReset && x.merkleRootMismatch) {
+                log.info("requires reset {}", x.isRequiringReset());
+                log.info("requires new peer {}", x.isRequiringNewPeer());
+                log.info("requires reset {}", x.hasMerkleRootMismatch());
+
+                incrementFailedAttempts();
+                log.info("failed attempts {}", getFailedAttempts());
+                if (reachedMaxFailedAttempts()) {
                     resetMNList(true);
-                } else {
-                    incrementFailedAttempts();
-                    log.info("failed attempts {}", getFailedAttempts());
-                    if (reachedMaxFailedAttempts())
-                        resetMNList(true);
                 }
             }
         } catch(VerificationException x) {

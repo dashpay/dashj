@@ -86,8 +86,8 @@ public class SimplifiedMasternodeListEntry extends Masternode {
 
     @Override
     protected void parse() throws ProtocolException {
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_BASIC)) {
-            version = BASIC_BLS_VERSION;
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
+            version = (short) readUint16();
         } else {
             version = LEGACY_BLS_VERSION;
         }
@@ -100,13 +100,15 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         keyIdVoting = new KeyId(params, payload, cursor);
         cursor += keyIdVoting.getMessageSize();
         isValid = readBytes(1)[0] == 1;
-        if (version == BASIC_BLS_VERSION) {
-            type = readUint16();
-            if (type == MasternodeType.HIGHPERFORMANCE.index) {
-                platformHTTPPort = readUint16();
-                // not in Beta 5
-                platformNodeId = new KeyId(params, payload, cursor);
-                cursor += platformNodeId.getMessageSize();
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion()) {
+            if (version >= BASIC_BLS_VERSION) {
+                type = readUint16();
+                if (type == MasternodeType.HIGHPERFORMANCE.index) {
+                    platformHTTPPort = readUint16();
+                    // not in Beta 5
+                    platformNodeId = new KeyId(params, payload, cursor);
+                    cursor += platformNodeId.getMessageSize();
+                }
             }
         }
 
@@ -117,18 +119,27 @@ public class SimplifiedMasternodeListEntry extends Masternode {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
+            Utils.uint16ToByteStreamLE(version, stream);
+        }
+        serializeWithoutVersionToStream(stream);
+    }
+
+    private void serializeWithoutVersionToStream(OutputStream stream) throws IOException {
         stream.write(proRegTxHash.getReversedBytes());
         stream.write(confirmedHash.getReversedBytes());
         service.bitcoinSerialize(stream);
         pubKeyOperator.bitcoinSerialize(stream, version == LEGACY_BLS_VERSION);
         keyIdVoting.bitcoinSerialize(stream);
         stream.write(isValid ? 1 : 0);
-        if (version == BASIC_BLS_VERSION) {
-            Utils.uint16ToByteStreamLE(type, stream);
-            if (type == MasternodeType.HIGHPERFORMANCE.index) {
-                Utils.uint16ToByteStreamLE(platformHTTPPort, stream);
-                // TODO: not in beta 5
-                platformNodeId.bitcoinSerialize(stream);
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion()) {
+            if (version >= BASIC_BLS_VERSION) {
+                Utils.uint16ToByteStreamLE(type, stream);
+                if (type == MasternodeType.HIGHPERFORMANCE.index) {
+                    Utils.uint16ToByteStreamLE(platformHTTPPort, stream);
+                    // TODO: not in beta 5
+                    platformNodeId.bitcoinSerialize(stream);
+                }
             }
         }
     }
@@ -137,11 +148,15 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         return getHash();
     }
 
+    /**
+     * The hash value doesn't include the version
+     * @return
+     */
     @Override
     public Sha256Hash getHash() {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getMessageSize());
-            bitcoinSerializeToStream(bos);
+            serializeWithoutVersionToStream(bos);
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException x) {
             throw new RuntimeException(x);

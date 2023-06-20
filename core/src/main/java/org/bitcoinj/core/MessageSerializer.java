@@ -39,7 +39,9 @@ public abstract class MessageSerializer {
     }
 
     public void setProtocolVersion(int protocolVersion) {
-        this.protocolVersion = protocolVersion;
+        this.protocolVersion = Math.min(protocolVersion, NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+        // the version we select should >= to MINIMUM
+        this.protocolVersion = Math.max(this.protocolVersion, NetworkParameters.ProtocolVersion.MINIMUM.getBitcoinProtocolVersion());
     }
 
     protected MessageSerializer() {

@@ -31,6 +31,7 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VarInt;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.Quorum;
@@ -74,8 +75,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public static final int DMN_FORMAT_VERSION = 1;
     public static final int LLMQ_FORMAT_VERSION = 2;
     public static final int QUORUM_ROTATION_FORMAT_VERSION = 3;
-
     public static final int BLS_SCHEME_FORMAT_VERSION = 4;
+    public static final int SMLE_VERSION_FORMAT_VERSION = 5;
 
     public static int MAX_CACHE_SIZE = 10;
     public static int MIN_CACHE_SIZE = 1;
@@ -212,11 +213,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         length = cursor - offset;
     }
 
-    private int getProtocolVersion() {
-        if (formatVersion >= 4) {
-            return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME);
+    public int getProtocolVersion() {
+        if (formatVersion >= 5) {
+            return NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion();
+        } else if (formatVersion == 4) {
+            return NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion();
         } else {
-            return params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK);
+            return NetworkParameters.ProtocolVersion.ISDLOCK.getBitcoinProtocolVersion();
         }
     }
 
@@ -239,20 +242,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         lock.lock();
         try {
             SimplifiedMasternodeList mnListToSave = null;
-            SimplifiedQuorumList quorumListToSave = null;
             ArrayList<StoredBlock> otherPendingBlocks = new ArrayList<StoredBlock>(MAX_CACHE_SIZE);
             if (getMasternodeListCache().size() > 0) {
                 for (Map.Entry<Sha256Hash, SimplifiedMasternodeList> entry : getMasternodeListCache().entrySet()) {
                     if (mnListToSave == null) {
                         mnListToSave = entry.getValue();
-                        quorumListToSave = getQuorumListCache(params.getLlmqChainLocks()).get(entry.getKey());
                     } else {
                         otherPendingBlocks.add(entry.getValue().getStoredBlock());
                     }
                 }
             } else {
                 mnListToSave = quorumState.mnList;
-                quorumListToSave = quorumState.quorumList;
             }
 
             quorumState.bitcoinSerialize(stream);
@@ -314,12 +314,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             processQuorumList(quorumState.getQuorumListAtTip());
 
             unCache();
-            if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() == LLMQ_FORMAT_VERSION && quorumState.quorumList.size() > 0)
-                setFormatVersion(LLMQ_FORMAT_VERSION);
-            if (mnlistdiff.getVersion() == LEGACY_BLS_VERSION)
-                setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
-            else if (mnlistdiff.getVersion() == BASIC_BLS_VERSION)
-                setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
+            // save in the most up-to-date version
+            setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
             if (mnlistdiff.hasChanges() || quorumState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
 
@@ -351,17 +347,21 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             threadPool.execute(new Runnable() {
                 @Override
                 public void run() {
-                    quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
-                    processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
-                    unCache();
-                    if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
-                        save();
+                    try {
+                        quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
+                        processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
+                        unCache();
+                        if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
+                            save();
+                    } catch (VerificationException e) {
+                        log.info("qrinfo verification error:", e);
+                    }
                     if (opComplete != null)
                         opComplete.set(true);
                 }
             });
         } catch (RejectedExecutionException x) {
-            x.printStackTrace();
+            log.error("cannot process qrinfo:", x);
         }
     }
 
@@ -616,35 +616,16 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     /**
-     * Used to determine if DIP24 has been activated.  This method won't be required when the
-     * DIP24 activation height is hardcoded into NetworkParameters
      * @param quorumList the most recent quorum list from a "mnlistdiff" message
      */
+    @Deprecated
     public void processQuorumList(SimplifiedQuorumList quorumList) {
-        int height = (int)quorumList.getHeight();
-        if (!params.isDIP0024Active(height)) {
-            quorumList.forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
-                @Override
-                public void processQuorum(FinalCommitment finalCommitment) {
-                    if (!params.isDIP0024Active(height) && finalCommitment.getLlmqType() == params.getLlmqDIP0024InstantSend()) {
-                        params.setDIP0024Active(height);
-                    }
-                    if (peerGroup != null && params.isDIP0024Active(height)) {
-                        peerGroup.setMinRequiredProtocolVersion(params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));
-                    }
-                }
-            });
-        }
+        // this was previously used to detect hard forks
     }
 
+    @Deprecated
     public void processMasternodeList(SimplifiedMasternodeListDiff mnlistdiff) {
-        int height = (int)mnlistdiff.getHeight();
-        if (!params.isDIP0024Active(height)) {
-            if (mnlistdiff.getVersion() == BASIC_BLS_VERSION) {
-                params.setV19Active(height);
-                setFormatVersion(BLS_SCHEME_FORMAT_VERSION);
-            }
-        }
+        // this was previously used to detect hard forks
     }
 
     public void completeQuorumState(Peer peer) {

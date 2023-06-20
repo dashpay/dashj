@@ -593,4 +593,29 @@ public class ProviderTests {
         data.correctlySpends(providerUpdateRegistrarTransaction, 0, ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, inputAddress0)), Script.ALL_VERIFY_FLAGS);
 
     }
+
+    @Test
+    public void providerServiceUpdateTx() {
+        // perform a round trip test
+        ECKey key = new ECKey();
+        BLSSecretKey blsKey = new BLSSecretKey(key.getSecretBytes());
+
+        ProviderUpdateServiceTx proUpdateServiceTx = new ProviderUpdateServiceTx(
+                PARAMS,
+                ProviderUpdateServiceTx.BASIC_BLS_VERSION,
+                Sha256Hash.ZERO_HASH,
+                MasternodeAddress.localhost(PARAMS),
+                ScriptBuilder.createOutputScript(Address.fromKey(PARAMS, key)),
+                Sha256Hash.ZERO_HASH
+        );
+        proUpdateServiceTx.sign(blsKey);
+
+        byte[] payload = proUpdateServiceTx.bitcoinSerialize();
+
+        ProviderUpdateServiceTx proUpdateServiceTxFromPayload = new ProviderUpdateServiceTx(PARAMS, payload, 0);
+        assertEquals(proUpdateServiceTx.version, proUpdateServiceTxFromPayload.version);
+        assertEquals(proUpdateServiceTx.scriptOperatorPayout, proUpdateServiceTxFromPayload.scriptOperatorPayout);
+        assertEquals(proUpdateServiceTx.getSignatureHash(), proUpdateServiceTxFromPayload.getSignatureHash());
+        assertEquals(proUpdateServiceTx.signature, proUpdateServiceTxFromPayload.signature);
+    }
 }

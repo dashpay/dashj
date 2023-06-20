@@ -18,8 +18,11 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
     private static final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeListDiff.class);
     private static final String SHORT_NAME = "mnlistdiff";
+    @Deprecated
     public static final short LEGACY_BLS_VERSION = 1;
+    @Deprecated
     public static final short BASIC_BLS_VERSION = 2;
+    public static final short CURRENT_VERSION = 1;
     private short version;
     public Sha256Hash prevBlockHash;
     public Sha256Hash blockHash;
@@ -72,13 +75,11 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
         coinBaseTx = new Transaction(params, payload, cursor);
         cursor += coinBaseTx.getMessageSize();
-        if (protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
             version = (short) readUint16();
         } else {
-            version = LEGACY_BLS_VERSION;
+            version = CURRENT_VERSION;
         }
-
-        BLSScheme.setLegacyDefault(version == LEGACY_BLS_VERSION);
 
         int size = (int)readVarInt();
         deletedMNs = new HashSet<>(size);
@@ -90,7 +91,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         mnList = new ArrayList<SimplifiedMasternodeListEntry>(size);
         for(int i = 0; i < size; ++i)
         {
-            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, params.getProtocolVersionNum(version == LEGACY_BLS_VERSION ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC));
+            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, protocolVersion);
             cursor += mn.getMessageSize();
             mnList.add(mn);
         }
@@ -124,7 +125,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         cbTxMerkleTree.bitcoinSerializeToStream(stream);
         coinBaseTx.bitcoinSerialize(stream);
 
-        if (version == BASIC_BLS_VERSION || protocolVersion >= params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_SCHEME)) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
             Utils.uint16ToByteStreamLE(version, stream);
         }
 
@@ -209,5 +210,13 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
     public short getVersion() {
         return version;
+    }
+
+    public boolean hasBasicSchemeKeys() {
+        for (SimplifiedMasternodeListEntry entry : mnList) {
+            if (entry.version == SimplifiedMasternodeListEntry.BASIC_BLS_VERSION)
+                return true;
+        }
+        return false;
     }
 }
