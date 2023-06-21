@@ -340,7 +340,7 @@ public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
         }
     }
 
-    protected AuthenticationKeyChain.KeyChainType getKeyChainType(byte [] pubkeyHash) {
+    public AuthenticationKeyChain.KeyChainType getKeyChainType(byte [] pubkeyHash) {
         for (AnyDeterministicKeyChain chain: chains) {
             if (chain.findKeyFromPubHash(pubkeyHash) != null) {
                 return ((AuthenticationKeyChain)chain).getType();

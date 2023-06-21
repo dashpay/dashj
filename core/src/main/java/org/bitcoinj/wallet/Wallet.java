@@ -5347,7 +5347,26 @@ public class Wallet extends BaseTaggableObject
             lock.unlock();
         }
     }
+    
+    /** checks for the existance of an extension */
+    public boolean hasExtension(String id) {
+        lock.lock();
+        try {
+            return extensions.containsKey(id) || keyChainExtensions.containsKey(id);
+        } finally {
+            lock.unlock();
+        }
+    }
 
+    public KeyChainGroupExtension getKeyChainExtension(String id) {
+        lock.lock();
+        try {
+            return keyChainExtensions.get(id);
+        } finally {
+            lock.unlock();
+        }
+    }
+     
     /**
      * Deserialize the wallet extension with the supplied data and then install it, replacing any existing extension
      * that may have existed with the same ID. If an exception is thrown then the extension is removed from the wallet,
