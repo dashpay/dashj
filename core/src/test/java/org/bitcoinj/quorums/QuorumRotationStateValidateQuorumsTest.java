@@ -40,6 +40,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
 
@@ -109,7 +111,7 @@ public class QuorumRotationStateValidateQuorumsTest {
     }
 
     @Test
-    public void processDiffMessage() throws BlockStoreException, IOException, ExecutionException, InterruptedException {
+    public void processDiffMessage() throws BlockStoreException, IOException, ExecutionException, InterruptedException, TimeoutException {
         try {
             // this is for mainnet
             URL datafile = Objects.requireNonNull(getClass().getResource(qrInfoFilename));
@@ -130,13 +132,14 @@ public class QuorumRotationStateValidateQuorumsTest {
 
             SettableFuture<Boolean> qrinfoComplete = SettableFuture.create();
             manager.processDiffMessage(null, qrinfo, false, qrinfoComplete);
-            qrinfoComplete.get();
+            qrinfoComplete.get(120, TimeUnit.SECONDS);
 
             assertEquals(height, manager.getQuorumListAtTip(context.getParams().getLlmqDIP0024InstantSend()).getHeight());
 
             stream.close();
         } finally {
             context.setDebugMode(false);
+            context.close();
             blockChain.getBlockStore().close();
         }
     }
