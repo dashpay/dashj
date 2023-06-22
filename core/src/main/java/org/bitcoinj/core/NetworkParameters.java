@@ -699,6 +699,7 @@ public abstract class NetworkParameters {
     protected int superblockStartBlock;
     protected int superblockCycle; // in blocks
 
+    @Deprecated
     protected boolean supportsV18 = true;
 
     /**
@@ -731,10 +732,11 @@ public abstract class NetworkParameters {
         return superblockStartBlock;
     }
 
+    @Deprecated
     public boolean isSupportingV18() {
         return supportsV18;
     }
-
+    @Deprecated
     public void setSupportsV18(boolean supportsV18) {
         this.supportsV18 = supportsV18;
     }
@@ -808,6 +810,7 @@ public abstract class NetworkParameters {
         return height > DIP0024BlockHeight;
     }
 
+    @Deprecated
     public void setDIP0024Active(int height) {
         if (DIP0024BlockHeight == Integer.MAX_VALUE) {
             DIP0024BlockHeight = height;

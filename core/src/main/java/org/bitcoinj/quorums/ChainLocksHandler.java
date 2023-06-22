@@ -289,7 +289,6 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     void checkActiveState() {
         if (isInitialized()) {
-            //TODO: check if DIP8 is active here
             boolean isDIP0008Active = (blockChain.getBestChainHeight() - 1) > params.getDIP0008BlockHeight();
 
             boolean oldIsEnforced = isEnforced;
