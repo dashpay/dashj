@@ -40,7 +40,14 @@ public class SimplifiedMasternodeList extends Message {
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(5000);
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(5000);
         storedBlock = new StoredBlock(params.getGenesisBlock(), BigInteger.ZERO, 0);
-        protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED);
+        initProtocolVersion();
+    }
+
+    private void initProtocolVersion() {
+        protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
+        if (protocolVersion < NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
+            protocolVersion = NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
+        }
     }
 
     SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
@@ -50,12 +57,12 @@ public class SimplifiedMasternodeList extends Message {
     SimplifiedMasternodeList(SimplifiedMasternodeList other, short version) {
         super(other.params);
         this.version = version;
-        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED);
         this.blockHash = other.blockHash;
         this.height = other.height;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(other.mnMap);
         mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(other.mnUniquePropertyMap);
         this.storedBlock = other.storedBlock;
+        initProtocolVersion();
     }
 
     SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries, int protocolVersion) {

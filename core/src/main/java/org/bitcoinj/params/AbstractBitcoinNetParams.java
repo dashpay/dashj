@@ -348,9 +348,6 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
 
     @Override
     public int getProtocolVersionNum(final ProtocolVersion version) {
-        // TODO: Remove this when we no longer need v17 compatibility
-        if (!supportsV18)
-            return ProtocolVersion.CORE17.getBitcoinProtocolVersion();
         return version.getBitcoinProtocolVersion();
     }
 

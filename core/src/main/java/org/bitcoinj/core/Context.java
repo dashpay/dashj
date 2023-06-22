@@ -401,6 +401,7 @@ public class Context {
         this.headerChain = headerChain;
         hashStore = new HashStore(blockChain.getBlockStore());
         blockChain.addNewBestBlockListener(newBestBlockListener);
+        handleActivations(blockChain.getChainHead());
         if (initializedObjects) {
             sporkManager.setBlockChain(blockChain, peerGroup);
             masternodeSync.setBlockChain(blockChain, netFullfilledRequestManager);
@@ -447,11 +448,20 @@ public class Context {
             if (params.isV19Active(block.getHeight())) {
                 BLSScheme.setLegacyDefault(false);
             }
+            handleActivations(block);
             boolean fInitialDownload = blockChain.getChainHead().getHeader().getTimeSeconds() < (Utils.currentTimeSeconds() - 6 * 60 * 60); // ~144 blocks behind -> 2 x fork detection time, was 24 * 60 * 60 in bitcoin
             if(masternodeSync != null)
                 masternodeSync.updateBlockTip(block, fInitialDownload);
         }
     };
+
+    private void handleActivations(StoredBlock block) {
+        // 24 hours before the hard fork (v19.2) connect only to v19.2 nodes on mainnet
+        if ((params.getV19BlockHeight() - block.getHeight()) < 24 * 24) {
+            params.ignoreCustomProtocolVersions();
+            peerGroup.setMinRequiredProtocolVersionAndDisconnect(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+        }
+    }
 
     /**
      * The default fee per 1000 bytes of transaction data to pay when completing transactions. For details, see {@link SendRequest#feePerKb}.

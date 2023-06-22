@@ -822,6 +822,17 @@ public abstract class NetworkParameters {
         return height >= v19BlockHeight;
     }
 
+    public int getV19BlockHeight() {
+        return v19BlockHeight;
+    }
+
+    // used by derived classes to ignore changes made by getProtocolVersion
+    protected boolean ignoreCustomProtocolVersions = false;
+    public void ignoreCustomProtocolVersions() {
+        this.ignoreCustomProtocolVersions = true;
+    }
+
+    @Deprecated
     public void setV19Active(int height) {
         if (v19BlockHeight == Integer.MAX_VALUE) {
             v19BlockHeight = height;
