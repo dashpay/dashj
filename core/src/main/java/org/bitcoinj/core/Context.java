@@ -457,10 +457,6 @@ public class Context {
         if (params.isV19Active(block.getHeight())) {
             BLSScheme.setLegacyDefault(false);
         }
-//        if ((params.getV19BlockHeight() - block.getHeight()) < 24 * 24) {
-//            params.ignoreCustomProtocolVersions();
-//            peerGroup.setMinRequiredProtocolVersionAndDisconnect(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
-//        }
     }
 
     /**

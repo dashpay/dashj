@@ -46,9 +46,6 @@ public class SimplifiedMasternodeList extends Message {
 
     private void initProtocolVersion() {
         protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
-        if (protocolVersion < NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
-            protocolVersion = NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
-        }
     }
 
     SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
