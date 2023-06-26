@@ -96,7 +96,7 @@ public class QuorumRotationStateValidateQuorumsTest {
                         "mainnet.spvchain",
                         70220,
                         1738936,
-                        SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 },
                 {
                         TESTNETPARAMS,
@@ -128,7 +128,7 @@ public class QuorumRotationStateValidateQuorumsTest {
                         "testnet-849000-70227.spvchain",
                         70227,
                         848728,
-                        SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 }
         });
     }

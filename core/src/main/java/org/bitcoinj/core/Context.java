@@ -445,9 +445,6 @@ public class Context {
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            if (params.isV19Active(block.getHeight())) {
-                BLSScheme.setLegacyDefault(false);
-            }
             handleActivations(block);
             boolean fInitialDownload = blockChain.getChainHead().getHeader().getTimeSeconds() < (Utils.currentTimeSeconds() - 6 * 60 * 60); // ~144 blocks behind -> 2 x fork detection time, was 24 * 60 * 60 in bitcoin
             if(masternodeSync != null)
@@ -457,10 +454,13 @@ public class Context {
 
     private void handleActivations(StoredBlock block) {
         // 24 hours before the hard fork (v19.2) connect only to v19.2 nodes on mainnet
-        if ((params.getV19BlockHeight() - block.getHeight()) < 24 * 24) {
-            params.ignoreCustomProtocolVersions();
-            peerGroup.setMinRequiredProtocolVersionAndDisconnect(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+        if (params.isV19Active(block.getHeight())) {
+            BLSScheme.setLegacyDefault(false);
         }
+//        if ((params.getV19BlockHeight() - block.getHeight()) < 24 * 24) {
+//            params.ignoreCustomProtocolVersions();
+//            peerGroup.setMinRequiredProtocolVersionAndDisconnect(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+//        }
     }
 
     /**

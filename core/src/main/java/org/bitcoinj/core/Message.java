@@ -441,4 +441,11 @@ public abstract class Message {
     public int getProtocolVersion() {
         return protocolVersion;
     }
+
+    /**
+     * Set protocol version for future serialization of the message
+     */
+    public void setProtocolVersion(int protocolVersion) {
+        this.protocolVersion = protocolVersion;
+    }
 }

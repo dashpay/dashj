@@ -205,6 +205,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
         processQuorumList(quorumState.getQuorumListAtTip());
         processQuorumList(quorumRotationState.getQuorumListAtH());
+        // now set protocol version to current and file format version to current for future saves
+        protocolVersion = NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
+        setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
         length = cursor - offset;
     }
 
@@ -310,11 +313,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
             unCache();
             // save in the most up-to-date version
-            if (getMasternodeList().getProtocolVersion() == NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
-                setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
-            } else {
+            //if (getMasternodeList().getProtocolVersion() == NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
+            //    setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
+            //} else {
                 setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
-            }
+            //}
             if (mnlistdiff.hasChanges() || quorumState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
 
@@ -349,11 +352,13 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                         unCache();
 
                         // save in the most up-to-date version
-                        if (getMasternodeList().getProtocolVersion() == NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
-                            setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
-                        } else {
-                            setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
-                        }
+                        setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
+
+//                        if (getMasternodeList().getProtocolVersion() == NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
+//                            setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
+//                        } else {
+//                            setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
+//                        }
 
                         if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
                             save();
