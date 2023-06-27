@@ -17,6 +17,7 @@
 package org.bitcoinj.wallet.authentication;
 
 import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.IKey;
@@ -42,6 +43,7 @@ public class AuthenticationGroupExtensionTest {
     Wallet wallet;
     AuthenticationGroupExtension mnext;
     UnitTestParams UNITTEST = UnitTestParams.get();
+    Context context = new Context(UNITTEST);
 
     @Before
     public void setUp() throws UnreadableWalletException {
@@ -63,7 +65,7 @@ public class AuthenticationGroupExtensionTest {
                 .build();
 
         // The wallet class provides a easy fromSeed() function that loads a new wallet from a given seed.
-        wallet = new Wallet(UNITTEST, keyChainGroup);
+        wallet = new Wallet(context.getParams(), keyChainGroup);
         mnext = new AuthenticationGroupExtension(wallet);
         mnext.addKeyChain(seed, factory.masternodeOwnerDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
         mnext.addKeyChain(seed, factory.masternodeVotingDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);

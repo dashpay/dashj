@@ -1,5 +1,6 @@
 package org.bitcoinj.evolution;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;
 import org.bitcoinj.quorums.LLMQUtils;
@@ -29,7 +30,8 @@ public class SimplifiedMasternodeList extends Message {
     private StoredBlock storedBlock;
     private boolean storedBlockMatchesRequest;
     HashMap<Sha256Hash, SimplifiedMasternodeListEntry> mnMap;
-    HashMap<Sha256Hash, Pair<Sha256Hash, Integer>> mnUniquePropertyMap;
+    @Deprecated
+    HashMap<Sha256Hash, Pair<Sha256Hash, Integer>> mnUniquePropertyMap = new HashMap<>();
 
     private CoinbaseTx coinbaseTxPayload;
 
@@ -38,9 +40,12 @@ public class SimplifiedMasternodeList extends Message {
         blockHash = params.getGenesisBlock().getHash();
         height = -1;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(5000);
-        mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(5000);
         storedBlock = new StoredBlock(params.getGenesisBlock(), BigInteger.ZERO, 0);
-        protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED);
+        initProtocolVersion();
+    }
+
+    private void initProtocolVersion() {
+        protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
     }
 
     SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
@@ -50,22 +55,19 @@ public class SimplifiedMasternodeList extends Message {
     SimplifiedMasternodeList(SimplifiedMasternodeList other, short version) {
         super(other.params);
         this.version = version;
-        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.SMNLE_VERSIONED);
         this.blockHash = other.blockHash;
         this.height = other.height;
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(other.mnMap);
-        mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(other.mnUniquePropertyMap);
         this.storedBlock = other.storedBlock;
+        initProtocolVersion();
     }
 
     SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries, int protocolVersion) {
         super(params);
         this.protocolVersion = protocolVersion;
-        this.version = protocolVersion == NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion() ?
-                SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION : SimplifiedMasternodeListDiff.BASIC_BLS_VERSION;
+        this.version = SimplifiedMasternodeListDiff.CURRENT_VERSION;
         this.blockHash = params.getGenesisBlock().getHash();
         this.height = -1;
-        mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>();
         mnMap = new HashMap<Sha256Hash, SimplifiedMasternodeListEntry>(entries.size());
         for(SimplifiedMasternodeListEntry entry : entries)
             addMN(entry);
@@ -92,15 +94,10 @@ public class SimplifiedMasternodeList extends Message {
             mnMap.put(hash, mn);
         }
 
+        // read the number of properties, which should be zero
         size = (int)readVarInt();
-        mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(size);
-        for(long i = 0; i < size; ++i)
-        {
-            Sha256Hash hash = readHash();
-            Sha256Hash first = readHash();
-            int second = (int)readUint32();
-            mnUniquePropertyMap.put(hash, new Pair<Sha256Hash, Integer>(first, second));
-        }
+        Preconditions.checkArgument(size == 0, "There is an offset error with this data file, rejecting...");
+
         if(Context.get().masternodeListManager.getFormatVersion() >= 2) {
             ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
             buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
@@ -124,8 +121,10 @@ public class SimplifiedMasternodeList extends Message {
         stream.write(new VarInt(mnMap.size()).encode());
         for(Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
             stream.write(entry.getKey().getReversedBytes());
+            entry.getValue().setProtocolVersion(protocolVersion);
             entry.getValue().bitcoinSerializeToStream(stream);
         }
+        // unique properties -- do not save
         stream.write(new VarInt(0).encode());
         ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
         try {
@@ -213,6 +212,7 @@ public class SimplifiedMasternodeList extends Message {
     }
 
 
+    @Deprecated
     <T extends ChildMessage> void addUniqueProperty(SimplifiedMasternodeListEntry dmn, T value)
     {
         lock.lock();
@@ -223,13 +223,14 @@ public class SimplifiedMasternodeList extends Message {
             //assert(oldEntry == null || oldEntry.getFirst().equals(dmn.proRegTxHash));
             if (oldEntry != null)
                 i = oldEntry.getSecond() + 1;
-            Pair<Sha256Hash, Integer> newEntry = new Pair(dmn.proRegTxHash, i);
+            Pair<Sha256Hash, Integer> newEntry = new Pair<>(dmn.proRegTxHash, i);
 
             mnUniquePropertyMap.put(hash, newEntry);
         } finally {
             lock.unlock();
         }
     }
+    @Deprecated
     <T extends ChildMessage>
     void deleteUniqueProperty(SimplifiedMasternodeListEntry dmn, T oldValue)
     {
@@ -241,7 +242,7 @@ public class SimplifiedMasternodeList extends Message {
             if (p.getSecond() == 1) {
                 mnUniquePropertyMap.remove(oldHash);
             } else {
-                mnUniquePropertyMap.put(oldHash, new Pair<Sha256Hash, Integer>(dmn.proRegTxHash, p.getSecond() - 1));
+                mnUniquePropertyMap.put(oldHash, new Pair<>(dmn.proRegTxHash, p.getSecond() - 1));
             }
         } finally {
             lock.unlock();

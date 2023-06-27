@@ -57,13 +57,15 @@ public class QuorumStateValidateQuorumsTest {
     private final String blockchainFile;
     private final int protocolVersion;
     private final int height;
+    private final int fileFormat;
 
-    public QuorumStateValidateQuorumsTest(NetworkParameters params, String qrInfoFilename, String blockchainFile, int protocolVersion, int height) {
+    public QuorumStateValidateQuorumsTest(NetworkParameters params, String qrInfoFilename, String blockchainFile, int protocolVersion, int height, int fileFormat) {
         this.params = params;
         this.mnlistdiffFilename = qrInfoFilename;
         this.blockchainFile = blockchainFile;
         this.protocolVersion = protocolVersion;
         this.height = height;
+        this.fileFormat = fileFormat;
     }
 
     @Parameterized.Parameters(name = "QuorumStateTest {index} (qrinfo={1}, manager={2})")
@@ -81,14 +83,16 @@ public class QuorumStateValidateQuorumsTest {
                         "mnlistdiff-testnet-0-850798-70228-after19.2HF.dat",
                         "testnet-after19.2HF.spvchain",
                         70228,
-                        850798
+                        850798,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 },
                 {
                         TESTNETPARAMS,
                         "mnlistdiff-testnet-0-849810-70228-before19.2HF.dat",
                         "testnet-849810.spvchain",
                         70228,
-                        849810
+                        849810,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 }
         });
     }

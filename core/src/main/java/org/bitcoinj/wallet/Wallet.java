@@ -2016,6 +2016,7 @@ public class Wallet extends BaseTaggableObject
         // in that function for an explanation of why).
     }
 
+    @Deprecated
     public void receiveLock(Transaction tx) throws VerificationException {
         // Can run in a peer thread. This method will only be called if a prior call to isPendingTransactionLockRelevant
         // returned true, so we already know by this point that it sends coins to or from our wallet, or is a double
