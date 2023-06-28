@@ -2275,6 +2275,7 @@ public class Peer extends PeerSocketHandler {
     //
     //Dash Specific Code
     //
+    @Deprecated
     public void notifyLock(Transaction tx)
     {
         for(Wallet wallet : wallets)

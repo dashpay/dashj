@@ -145,8 +145,8 @@ public class CreditFundingTransaction extends Transaction {
         for(int i = 0; i < getOutputs().size(); ++i) {
             Script script = getOutput(i).getScriptPubKey();
             if(ScriptPattern.isCreditBurn(script)) {
-                //TODO:  This doesn't look correct, but matches dashsync-iOS.  Why is the txid reversed?
-                //having a reversed txid will not allow it to be searched or matched.
+                // The lockedOutpoint must be in little endian to match Platform
+                // having a reversed txid will not allow it to be searched or matched.
                 lockedOutpoint = new TransactionOutPoint(params, i, Sha256Hash.wrap(getTxId().getReversedBytes()));
             }
         }

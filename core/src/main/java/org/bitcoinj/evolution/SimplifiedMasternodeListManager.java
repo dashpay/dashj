@@ -57,9 +57,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.evolution.SimplifiedMasternodeListDiff.BASIC_BLS_VERSION;
-import static org.bitcoinj.evolution.SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION;
-
 /**
  * This class manages the state of the masternode lists and quorums.  It does so with help from
  * {@link QuorumState} for DIP4 quorums and {@link QuorumRotationState} for DIP24 quorums
@@ -205,11 +202,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             quorumRotationState.setStateManager(this);
             cursor += quorumRotationState.getMessageSize();
         }
-        if (getFormatVersion() >= BLS_SCHEME_FORMAT_VERSION) {
-            params.setV19Active((int) quorumState.getMasternodeList().getHeight());
-        }
+
         processQuorumList(quorumState.getQuorumListAtTip());
         processQuorumList(quorumRotationState.getQuorumListAtH());
+        // now set protocol version to current and file format version to current for future saves
+        protocolVersion = NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
+        setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
         length = cursor - offset;
     }
 
@@ -314,8 +312,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             processQuorumList(quorumState.getQuorumListAtTip());
 
             unCache();
-            // save in the most up-to-date version
-            setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
+            setFormatVersion(QUORUM_ROTATION_FORMAT_VERSION);
+
             if (mnlistdiff.hasChanges() || quorumState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SaveOptions.SAVE_EVERY_BLOCK)
                 save();
 
@@ -327,10 +325,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     public void requestQuorumStateUpdate(Peer downloadPeer, StoredBlock requestBlock, StoredBlock requestBlockMinus8) {
-        // TODO: reactivate for testnet
-        if (!params.isDIP24Only()) {
-            quorumState.requestMNListDiff(downloadPeer, requestBlockMinus8);
-        }
+        quorumState.requestMNListDiff(downloadPeer, requestBlockMinus8);
         if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
             quorumRotationState.requestMNListDiff(downloadPeer, requestBlock);
         }
@@ -351,6 +346,10 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                         quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
                         processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
                         unCache();
+
+                        // save in the most up-to-date version
+                        setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
+
                         if (quorumRotationInfo.hasChanges() || quorumRotationState.getPendingBlocks().size() < MAX_CACHE_SIZE || saveOptions == SimplifiedMasternodeListManager.SaveOptions.SAVE_EVERY_BLOCK)
                             save();
                     } catch (VerificationException e) {
@@ -408,14 +407,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         quorumState.setBlockChain(headersChain, blockChain);
         quorumRotationState.setBlockChain(headersChain, blockChain);
         if(shouldProcessMNListDiff()) {
-            // TODO: reactivate for testnet
-            if (!params.isDIP24Only()) {
-                quorumState.addEventListeners(blockChain, peerGroup);
-            }
-            // not sure what to do here
-            //if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
-                quorumRotationState.addEventListeners(blockChain, peerGroup);
-            //}
+            quorumState.addEventListeners(blockChain, peerGroup);
+            quorumRotationState.addEventListeners(blockChain, peerGroup);
         }
         if (threadPool.isShutdown()) {
             threadPool = Executors.newFixedThreadPool(1, new ContextPropagatingThreadFactory("process-qrinfo"));
@@ -425,13 +418,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     @Override
     public void close() {
         if (shouldProcessMNListDiff()) {
-            // TODO: reactivate for testnet
-            if (!params.isDIP24Only()) {
-                quorumState.removeEventListeners(blockChain, peerGroup);
-            }
-            if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
-                quorumRotationState.removeEventListeners(blockChain, peerGroup);
-            }
+            quorumState.removeEventListeners(blockChain, peerGroup);
+            quorumRotationState.removeEventListeners(blockChain, peerGroup);
 
             try {
                 threadPool.shutdown();

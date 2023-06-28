@@ -54,6 +54,17 @@ public class QuorumRotationStateValidateQuorumsTest {
     static Context context;
     static final MainNetParams MAINPARAMS = MainNetParams.get();
     static final TestNet3Params TESTNETPARAMS = TestNet3Params.get();
+
+    // to check for a network having a lower protocol version until the HF
+    static final TestNet3Params TESTNETPARAMS_LOWER_PROTOCOL = new TestNet3Params() {
+        @Override
+        public int getProtocolVersionNum(ProtocolVersion version) {
+            if (version.getBitcoinProtocolVersion() == ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
+                return version.getBitcoinProtocolVersion() - 1;
+            }
+            return super.getProtocolVersionNum(version);
+        }
+    };
     static PeerGroup peerGroup;
     static BlockChain blockChain;
 
@@ -62,13 +73,20 @@ public class QuorumRotationStateValidateQuorumsTest {
     private final String blockchainFile;
     private final int protocolVersion;
     private final int height;
+    private final int formatVersion;
 
-    public QuorumRotationStateValidateQuorumsTest(NetworkParameters params, String qrInfoFilename, String blockchainFile, int protocolVersion, int height) {
+    public QuorumRotationStateValidateQuorumsTest(NetworkParameters params,
+                                                  String qrInfoFilename,
+                                                  String blockchainFile,
+                                                  int protocolVersion,
+                                                  int height,
+                                                  int formatVersion) {
         this.params = params;
         this.qrInfoFilename = qrInfoFilename;
         this.blockchainFile = blockchainFile;
         this.protocolVersion = protocolVersion;
         this.height = height;
+        this.formatVersion = formatVersion;
     }
 
     @Parameterized.Parameters(name = "QuorumRotationStateTest {index} (qrinfo={0}, manager={1})")
@@ -79,21 +97,40 @@ public class QuorumRotationStateValidateQuorumsTest {
                         "QRINFO_0_1739226.dat",
                         "mainnet.spvchain",
                         70220,
-                        1738936
+                        1738936,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 },
                 {
-                    TESTNETPARAMS,
+                        TESTNETPARAMS,
                         "qrinfo-testnet-0-850806-70228-after19.2HF.dat",
                         "testnet-after19.2HF.spvchain",
                         70228,
-                        850744
+                        850744,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 },
                 {
                         TESTNETPARAMS,
                         "qrinfo-testnet-0-849809_70228-before19.2HF.dat",
                         "testnet-849810.spvchain",
                         70228,
-                        849592
+                        849592,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
+                },
+                {
+                        TESTNETPARAMS,
+                        "testnet-849000-qrinfo.dat",
+                        "testnet-849000-70227.spvchain",
+                        70227,
+                        848728,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
+                },
+                {
+                        TESTNETPARAMS_LOWER_PROTOCOL,
+                        "testnet-849000-qrinfo.dat",
+                        "testnet-849000-70227.spvchain",
+                        70227,
+                        848728,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 }
         });
     }
@@ -126,7 +163,6 @@ public class QuorumRotationStateValidateQuorumsTest {
 
             SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
             context.setMasternodeListManager(manager);
-            context.setDebugMode(true);
 
             QuorumRotationInfo qrinfo = new QuorumRotationInfo(context.getParams(), buffer, protocolVersion);
 
@@ -137,8 +173,11 @@ public class QuorumRotationStateValidateQuorumsTest {
             assertEquals(height, manager.getQuorumListAtTip(context.getParams().getLlmqDIP0024InstantSend()).getHeight());
 
             stream.close();
+
+            assertEquals(formatVersion, manager.getFormatVersion());
+        } catch (Exception x) {
+            x.printStackTrace();
         } finally {
-            context.setDebugMode(false);
             context.close();
             blockChain.getBlockStore().close();
         }

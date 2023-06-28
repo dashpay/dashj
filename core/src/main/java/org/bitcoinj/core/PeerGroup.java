@@ -441,6 +441,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             if (context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
                 try {
                     this.headerChain = new BlockChain(params, new MemoryBlockStore(params));
+                    StoredBlock cursor = chain.getChainHead();
+                    while (cursor != null) {
+                        this.headerChain.getBlockStore().put(cursor);
+                        cursor = cursor.getPrev(chain.getBlockStore());
+                    }
                 } catch (BlockStoreException x) {
                     // swallow
                     this.headerChain = null;
