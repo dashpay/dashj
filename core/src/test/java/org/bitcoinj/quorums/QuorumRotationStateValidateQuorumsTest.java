@@ -175,7 +175,8 @@ public class QuorumRotationStateValidateQuorumsTest {
             assertEquals(formatVersion, manager.getFormatVersion());
         } catch (Exception x) {
             x.printStackTrace();
-        } {
+        } finally {
+            context.close();
             blockChain.getBlockStore().close();
         }
     }
