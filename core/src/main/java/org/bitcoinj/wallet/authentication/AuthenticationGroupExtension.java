@@ -372,7 +372,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         } else {
             if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
                 CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
-                queueOnCreditFundingEvent(cftx, block, blockType);
+                if (cftx != null)
+                    queueOnCreditFundingEvent(cftx, block, blockType);
             }
         }
     }
@@ -648,8 +649,10 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             Transaction tx = wtx.getTransaction();
             if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
                 CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
-                txs.add(cftx);
-                mapCreditFundingTxs.put(cftx.getTxId(), cftx);
+                if (cftx != null) {
+                    txs.add(cftx);
+                    mapCreditFundingTxs.put(cftx.getTxId(), cftx);
+                }
             }
         }
         return txs;
@@ -703,7 +706,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      * Get a CreditFundingTransaction object for a specific transaction
      */
     public CreditFundingTransaction getCreditFundingTransaction(Transaction tx) {
-        if(mapCreditFundingTxs.containsKey(tx.getTxId()))
+        if (getIdentityFundingKeyChain() == null)
+            return null;
+        if (mapCreditFundingTxs.containsKey(tx.getTxId()))
             return mapCreditFundingTxs.get(tx.getTxId());
 
         CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
