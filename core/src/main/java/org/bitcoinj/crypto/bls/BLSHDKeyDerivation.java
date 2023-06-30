@@ -118,11 +118,9 @@ public final class BLSHDKeyDerivation {
     public static BLSDeterministicKey deriveChildKey(BLSDeterministicKey parent, ChildNumber childNumber) throws HDDerivationException {
         if (!parent.hasPrivKey()) {
             ExtendedPublicKey extendedPublicKey = parent.extendedPublicKey.publicChild(childNumber.getI(), parent.pub.isLegacy());
-            System.out.println("deriving (public): " + childNumber + ": " + Utils.HEX.encode(extendedPublicKey.getPublicKey().serialize()) + " from:" + parent);
             return new BLSDeterministicKey(extendedPublicKey, parent);
         } else {
             ExtendedPrivateKey extendedPrivateKey = parent.extendedPrivateKey.privateChild(childNumber.getI(), parent.pub.isLegacy());
-            System.out.println("deriving (private):" + childNumber + ": " + Utils.HEX.encode(extendedPrivateKey.getPublicKey().serialize()) + " from:" + parent);
             return new BLSDeterministicKey(extendedPrivateKey, parent);
         }
     }
