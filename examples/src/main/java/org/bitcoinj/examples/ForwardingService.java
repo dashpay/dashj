@@ -165,6 +165,7 @@ public class ForwardingService {
                 Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>() {
                     @Override
                     public void onSuccess(TransactionConfidence result) {
+                        Context.propagate(kit.wallet().getContext());
                         System.out.println("Confirmation received.");
                         forwardCoins(tx);
 
