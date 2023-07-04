@@ -1890,7 +1890,7 @@ public final class Protos {
      * @param value The previousChannelContractHash to set.
      */
     private void setPreviousChannelContractHash(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000004;
       previousChannelContractHash_ = value;
     }
@@ -2876,7 +2876,7 @@ public final class Protos {
      * @param value The multisigKey to set.
      */
     private void setMultisigKey(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000001;
       multisigKey_ = value;
     }
@@ -3665,7 +3665,7 @@ public final class Protos {
      * @param value The multisigKey to set.
      */
     private void setMultisigKey(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000001;
       multisigKey_ = value;
     }
@@ -3738,7 +3738,7 @@ public final class Protos {
      * @param value The tx to set.
      */
     private void setTx(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000002;
       tx_ = value;
     }
@@ -4133,7 +4133,7 @@ public final class Protos {
      * @param value The signature to set.
      */
     private void setSignature(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000001;
       signature_ = value;
     }
@@ -4541,7 +4541,7 @@ public final class Protos {
      * @param value The tx to set.
      */
     private void setTx(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000001;
       tx_ = value;
     }
@@ -4693,7 +4693,7 @@ public final class Protos {
      * @param value The clientKey to set.
      */
     private void setClientKey(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000004;
       clientKey_ = value;
     }
@@ -5336,7 +5336,7 @@ public final class Protos {
      * @param value The signature to set.
      */
     private void setSignature(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000002;
       signature_ = value;
     }
@@ -5390,7 +5390,7 @@ public final class Protos {
      * @param value The info to set.
      */
     private void setInfo(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000004;
       info_ = value;
     }
@@ -5843,7 +5843,7 @@ public final class Protos {
      * @param value The info to set.
      */
     private void setInfo(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000001;
       info_ = value;
     }
@@ -6160,7 +6160,7 @@ public final class Protos {
      * @param value The tx to set.
      */
     private void setTx(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000001;
       tx_ = value;
     }
@@ -6767,7 +6767,7 @@ public final class Protos {
      */
     private void setExplanation(
         java.lang.String value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000002;
       explanation_ = value;
     }
