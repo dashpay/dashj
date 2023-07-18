@@ -1662,6 +1662,8 @@ public class WalletTool {
         wallet.getContext().coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
         wallet.getContext().coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);
         wallet.getContext().coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, reporter);
+        wallet.getContext().coinJoinManager.addTransationListener (Threading.SAME_THREAD, reporter);
+        wallet.getContext().blockChain.addNewBestBlockListener(Threading.SAME_THREAD, reporter);
 
         // mix coins
         try {
@@ -1692,6 +1694,7 @@ public class WalletTool {
             wallet.getContext().coinJoinManager.removeSessionCompleteListener(reporter);
             wallet.getContext().coinJoinManager.removeMixingCompleteListener(reporter);
             wallet.getContext().coinJoinManager.removeSessionStartedListener(reporter);
+            wallet.getContext().coinJoinManager.removeTransactionListener(reporter);
             wallet.getContext().coinJoinManager.stop();
         } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);

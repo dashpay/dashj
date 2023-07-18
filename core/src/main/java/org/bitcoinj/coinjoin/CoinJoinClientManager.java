@@ -17,6 +17,7 @@ package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
@@ -47,11 +48,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -95,6 +94,8 @@ public class CoinJoinClientManager {
     private final CopyOnWriteArrayList<ListenerRegistration<MixingStartedListener>> mixingStartedListeners
             = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<MixingCompleteListener>> mixingCompleteListeners
+            = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<CoinJoinTransactionListener>> transactionListeners
             = new CopyOnWriteArrayList<>();
 
     private boolean waitForAnotherBlock() {
@@ -253,11 +254,15 @@ public class CoinJoinClientManager {
         try {
             if (deqSessions.size() < CoinJoinClientOptions.getSessions()) {
                 CoinJoinClientSession newSession = new CoinJoinClientSession(mixingWallet);
+                log.info("creating new session: {}: ", newSession.getId());
                 for (ListenerRegistration<SessionCompleteListener> listener : sessionCompleteListeners) {
                     newSession.addSessionCompleteListener(listener.executor, listener.listener);
                 }
                 for (ListenerRegistration<SessionStartedListener> listener : sessionStartedListeners) {
                     newSession.addSessionStartedListener(listener.executor, listener.listener);
+                }
+                for (ListenerRegistration<CoinJoinTransactionListener> listener : transactionListeners) {
+                    newSession.addTransationListener (listener.executor, listener.listener);
                 }
                 deqSessions.addLast(newSession);
             }
@@ -593,6 +598,37 @@ public class CoinJoinClientManager {
                 }
             });
         }
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addTransationListener (CoinJoinTransactionListener listener) {
+        addTransationListener (Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addTransationListener (Executor executor, CoinJoinTransactionListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        transactionListeners.add(new ListenerRegistration<>(listener, executor));
+        for (CoinJoinClientSession session: deqSessions) {
+            session.addTransationListener (executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeTransationListener(CoinJoinTransactionListener listener) {
+        for (CoinJoinClientSession session: deqSessions) {
+            session.removeTransactionListener(listener);
+        }
+        return ListenerRegistration.removeFromList(listener, transactionListeners);
     }
 
     public List<PoolStatus> getSessionsStatus() {

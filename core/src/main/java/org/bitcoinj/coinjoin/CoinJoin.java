@@ -333,6 +333,8 @@ public class CoinJoin {
                 return "Inputs vs outputs size mismatch.";
             case ERR_TIMEOUT:
                 return "Session has timed out.";
+            case ERR_CONNECTION_TIMEOUT:
+                return "Connection attempt has timed out (" + PendingDsaRequest.TIMEOUT + " ms).";
             default:
                 return "Unknown response.";
         }

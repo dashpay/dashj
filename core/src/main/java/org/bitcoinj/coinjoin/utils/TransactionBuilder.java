@@ -63,6 +63,8 @@ public class TransactionBuilder {
     private final ArrayList<TransactionBuilderOutput> vecOutputs = new ArrayList<>();
     /// Needed by CTransactionBuilderOutput::UpdateAmount to lock cs_outputs
 
+    private Transaction transaction;
+
     public TransactionBuilder(WalletEx wallet, final CompactTallyItem tallyItem) {
         this.wallet = wallet;
         dummyReserveDestination = new ReserveDestination(wallet);
@@ -174,6 +176,7 @@ public class TransactionBuilder {
             SendRequest request = SendRequest.forTx(req.tx);
             request.aesKey = wallet.getContext().coinJoinManager.requestKeyParameter(wallet);
             wallet.sendCoins(request);
+            transaction = request.tx;
         } catch (InsufficientMoneyException x) {
             throw new RuntimeException(x);
         }
@@ -302,4 +305,7 @@ public class TransactionBuilder {
         return tx.getMessageSize();
     }
 
+    public Transaction getTransaction() {
+        return transaction;
+    }
 }

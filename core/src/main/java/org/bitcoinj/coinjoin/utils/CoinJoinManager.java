@@ -29,6 +29,7 @@ import org.bitcoinj.coinjoin.CoinJoinQueue;
 import org.bitcoinj.coinjoin.CoinJoinStatusUpdate;
 import org.bitcoinj.coinjoin.callbacks.RequestDecryptedKey;
 import org.bitcoinj.coinjoin.callbacks.RequestKeyParameter;
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
@@ -186,8 +187,8 @@ public class CoinJoinManager {
         return masternodeGroup.addPendingMasternode(session);
     }
 
-    public boolean forPeer(MasternodeAddress address, MasternodeGroup.ForPeer forPeer) {
-        return masternodeGroup.forPeer(address, forPeer);
+    public boolean forPeer(MasternodeAddress address, MasternodeGroup.ForPeer forPeer, boolean warn) {
+        return masternodeGroup.forPeer(address, forPeer, warn);
     }
     
     public void startAsync() {
@@ -327,6 +328,34 @@ public class CoinJoinManager {
     public void removeMixingCompleteListener(MixingCompleteListener listener) {
         for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
             manager.removeMixingCompleteListener(listener);
+        }
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addTransationListener (CoinJoinTransactionListener listener) {
+        addTransationListener (Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addTransationListener (Executor executor, CoinJoinTransactionListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.addTransationListener (executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public void removeTransactionListener(CoinJoinTransactionListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.removeTransationListener(listener);
         }
     }
 

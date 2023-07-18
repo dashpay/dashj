@@ -15,10 +15,9 @@
  */
 package org.bitcoinj.coinjoin.listeners;
 
-import org.bitcoinj.coinjoin.PoolMessage;
-import org.bitcoinj.core.MasternodeAddress;
-import org.bitcoinj.wallet.WalletEx;
-
-public interface SessionCompleteListener {
-    void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message, MasternodeAddress address);
+public enum CoinJoinTransactionType {
+    CREATE_DENOMINATION,
+    CREATE_COLLATERAL,
+    MIXING_FEE,
+    COINJOIN,
 }

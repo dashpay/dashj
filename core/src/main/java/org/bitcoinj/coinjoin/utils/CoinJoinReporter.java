@@ -20,8 +20,14 @@ import com.google.common.collect.Maps;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.PoolMessage;
 import org.bitcoinj.coinjoin.PoolStatus;
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
+import org.bitcoinj.core.MasternodeAddress;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
 
@@ -34,7 +40,8 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class CoinJoinReporter extends MixingProgressTracker {
 
@@ -103,8 +110,8 @@ public class CoinJoinReporter extends MixingProgressTracker {
     }
 
     @Override
-    public void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message) {
-        super.onSessionComplete(wallet, sessionId, denomination, message);
+    public void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message, MasternodeAddress address) {
+        super.onSessionComplete(wallet, sessionId, denomination, message, address);
         try {
             writeTime();
             Stopwatch watch = sessionMap.get(sessionId);
@@ -112,13 +119,18 @@ public class CoinJoinReporter extends MixingProgressTracker {
                 watch.stop();
             if (message == PoolMessage.MSG_SUCCESS) {
                 writer.write("Session Complete: ");
-                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination), denomination));
+                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination));
                 writeWatch(watch);
                 writer.newLine();
                 writeStats(wallet);
+            } else if (message == PoolMessage.ERR_CONNECTION_TIMEOUT) {
+                writer.write("Session Failure to connect: ");
+                writer.write(String.format("address: %s, denom: %s[%d]", address.getSocketAddress(), CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination));
+                writeWatch(watch);
+                writer.write(CoinJoin.getMessageByID(message));
             } else {
                 writer.write("Session Failure: ");
-                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination), denomination));
+                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination));
                 writeWatch(watch);
                 writer.write(CoinJoin.getMessageByID(message));
             }
@@ -138,7 +150,8 @@ public class CoinJoinReporter extends MixingProgressTracker {
             writer.newLine();
             writer.write("  status: " + Utils.listToString(statusList));
             writer.newLine();
-            writer.write(String.format("  timeouts: %d, completed: %d", timedOutSessions, completedSessions));
+            writer.write(String.format("  connection timeouts: %d, session timeouts: %d, completed: %d",
+                    timedOutConnections, timedOutSessions, completedSessions));
             writer.newLine();
             writeBalance(wallet);
             writer.newLine();
@@ -157,5 +170,44 @@ public class CoinJoinReporter extends MixingProgressTracker {
 
     private void writeWatch(@Nullable Stopwatch watch) throws IOException {
         writer.write(String.format(" - %s ", watch != null ? watch : "N/A"));
+    }
+
+    @Override
+    public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+        super.notifyNewBestBlock(block);
+        try {
+            writeTime();
+            writer.write("Block Mined: " + block.getHeight());
+            writer.newLine();
+        } catch (IOException x) {
+            throw new RuntimeException(x);
+        }
+    }
+
+    @Override
+    public void onTransactionProcessed(Transaction denominationTx, CoinJoinTransactionType type) {
+        super.onTransactionProcessed(denominationTx, type);
+        try {
+            if (type == CoinJoinTransactionType.CREATE_DENOMINATION) {
+                writeTime();
+                writer.write("Denominations Created: " + denominationTx.getTxId());
+                writer.newLine();
+                TreeMap<Integer, Integer> denomMap = Maps.newTreeMap();
+                for (TransactionOutput output : denominationTx.getOutputs()) {
+                    int denom = CoinJoin.amountToDenomination(output.getValue());
+                    denomMap.merge(denom, 1, Integer::sum);
+                }
+                for (Map.Entry<Integer, Integer> entry : denomMap.entrySet()) {
+                    writer.write("  " + CoinJoin.denominationToString(entry.getKey()) + ": " + entry.getValue());
+                    writer.newLine();
+                }
+            } else if (type == CoinJoinTransactionType.CREATE_COLLATERAL) {
+                writeTime();
+                writer.write("Collateral Created: " + denominationTx.getTxId());
+                writer.newLine();
+            }
+        } catch (IOException x) {
+            throw new RuntimeException(x);
+        }
     }
 }

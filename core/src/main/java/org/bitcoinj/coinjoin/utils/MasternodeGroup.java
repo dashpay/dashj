@@ -166,10 +166,7 @@ public class MasternodeGroup extends PeerGroup {
         int maxConnections = getMaxConnections();
         pendingMasternodesLock.lock();
         try {
-            //if (pendingSessions.containsKey(mninfo.getSession()))
-            //    return false;
             log.info("adding masternode for mixing. maxConnections = {}, protx: {}", maxConnections, session.getMixingMasternodeInfo().getProTxHash());
-            log.info("  mixingMasternode match protxhash: {}", session.getMixingMasternodeInfo().getProTxHash().equals(session.getMixingMasternodeInfo().getProTxHash()));
             pendingSessions.add(session);
             masternodeMap.put(session.getMixingMasternodeInfo().getProTxHash(), session);
         } finally {
@@ -251,7 +248,7 @@ public class MasternodeGroup extends PeerGroup {
                 peer.close();
                 return true;
             }
-        });
+        }, true);
     }
 
     @Override
@@ -319,7 +316,7 @@ public class MasternodeGroup extends PeerGroup {
             public boolean process(Peer peer) {
                 return peer.getAddress().equals(address);
             }
-        });
+        }, false);
     }
 
     private boolean isNodePending(PeerAddress address) {
@@ -378,7 +375,7 @@ public class MasternodeGroup extends PeerGroup {
         boolean process(Peer peer);
     }
 
-    public boolean forPeer(MasternodeAddress service, ForPeer predicate) {
+    public boolean forPeer(MasternodeAddress service, ForPeer predicate, boolean warn) {
         Preconditions.checkNotNull(service);
         List<Peer> peerList = getConnectedPeers();
         StringBuilder listOfPeers = new StringBuilder();
@@ -388,7 +385,14 @@ public class MasternodeGroup extends PeerGroup {
                 return predicate.process(peer);
             }
         }
-        log.info("cannot find {} in the list of connected peers: {}", service.getSocketAddress(), listOfPeers);
+        if (warn) {
+            if (!isNodePending(new PeerAddress(params, service.getSocketAddress()))) {
+                log.info("cannot find {} in the list of connected peers: {}", service.getSocketAddress(), listOfPeers);
+                new Exception("cannot find " + service.getSocketAddress()).printStackTrace();
+            } else {
+                log.info("{} in the list of pending peers: {}", service.getSocketAddress(), listOfPeers);
+            }
+        }
         return false;
     }
 

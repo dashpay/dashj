@@ -18,11 +18,17 @@ package org.bitcoinj.wallet;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.protobuf.CodedOutputStream;
+import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptPattern;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +38,8 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -169,10 +177,38 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         this.rounds = rounds;
     }
 
+    public TreeMap<Integer, List<TransactionOutput>> getOutputs() {
+        TreeMap<Integer, List<TransactionOutput>> outputs = Maps.newTreeMap();
+        for (Coin amount : CoinJoin.getStandardDenominations()) {
+            outputs.put(CoinJoin.amountToDenomination(amount), Lists.newArrayList());
+        }
+        outputs.put(0, Lists.newArrayList());
+        for (TransactionOutput output : wallet.getUnspents()) {
+            byte [] pkh = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+            if (getKeyChainGroup().findKeyFromPubKeyHash(pkh, Script.ScriptType.P2PKH) != null) {
+                int denom = CoinJoin.amountToDenomination(output.getValue());
+                List<TransactionOutput> listDenoms = outputs.get(denom);
+                listDenoms.add(output);
+            }
+        }
+        return outputs;
+    }
+
     @Override
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
-        return "COINJOIN:\n Rounds: " + rounds + "\n" +
-                super.toString(includeLookahead, includePrivateKeys, aesKey);
+        StringBuilder builder = new StringBuilder();
+        builder.append("COINJOIN:\n Rounds: ").append(rounds).append("\n");
+        builder.append(super.toString(includeLookahead, includePrivateKeys, aesKey)).append("\n");
+        builder.append("Outputs:\n");
+
+        for (Map.Entry<Integer, List<TransactionOutput>> entry : getOutputs().entrySet()) {
+            int denom = entry.getKey();
+            List<TransactionOutput> outputs = entry.getValue();
+            Coin value = outputs.stream().map(TransactionOutput::getValue).reduce(Coin::add).orElse(Coin.ZERO);
+            builder.append(CoinJoin.denominationToString(denom)).append(" ").append(outputs.size()).append(" ")
+                    .append(value.toFriendlyString()).append("\n");
+        }
+        return builder.toString();
     }
 
     @Override
