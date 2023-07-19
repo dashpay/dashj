@@ -19,12 +19,14 @@ package org.bitcoinj.wallet.authentication;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.ed25519.Ed25519DeterministicKey;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.DerivationPathFactory;
@@ -39,6 +41,11 @@ import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.EnumSet;
 
 import static org.bitcoinj.core.Utils.HEX;
@@ -46,19 +53,20 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class AuthenticationGroupExtensionTest {
     Wallet wallet;
     AuthenticationGroupExtension mnext;
     UnitTestParams UNITTEST = UnitTestParams.get();
-    Context context = new Context(UNITTEST);
+    Context context;// = new Context(UNITTEST);
     String seedCode = "enemy check owner stumble unaware debris suffer peanut good fabric bleak outside";
     String passphrase = "";
     long creationtime = 1547463771L;
 
     @Before
     public void setUp() throws UnreadableWalletException {
-
+        context = new Context(UNITTEST);
 
         DeterministicSeed seed = new DeterministicSeed(seedCode, null, passphrase, creationtime);
         DerivationPathFactory factory = DerivationPathFactory.get(UNITTEST);
@@ -206,5 +214,25 @@ public class AuthenticationGroupExtensionTest {
         assertArrayEquals(Utils.HEX.decode("c9bbba6a3ad5e87fb11af4f10458a52d3160259c"), platformKey.getPubKeyHash());
         String privatePublicBase64 = ((Ed25519DeterministicKey)platformKey).getPrivatePublicBase64();
         assertEquals("eJjbqnq5tVDjvvzVPcJ2d3/8iicST4MMBOF/z3S54HEI4mmP3KoK+EFpZrqTSbDI36qA7X9AlOAylYo0PkX0tg==", privatePublicBase64);
+    }
+
+    @Test
+    public void loadWallet() throws IOException, UnreadableWalletException {
+        TestNet3Params TESTNET = TestNet3Params.get();
+        context = new Context(TESTNET);
+        try (InputStream walletStream = Files.newInputStream(Paths.get(getClass().getResource("enemy-seed.wallet").getPath()))) {
+            AuthenticationGroupExtension authenticationGroupExtension = new AuthenticationGroupExtension(TESTNET);
+            WalletExtension[] walletExtensions = new WalletExtension[]{authenticationGroupExtension};
+            Wallet wallet = new WalletProtobufSerializer().readWallet(walletStream, walletExtensions);
+
+            // make sure this wallet has an authenticationGroupExtension
+            assertTrue(wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID));
+
+            // check that reset() preserves the usage count
+            int usageBefore = authenticationGroupExtension.getKeyUsage().size();
+            authenticationGroupExtension.reset();
+            int usageAfter = authenticationGroupExtension.getKeyUsage().size();
+            assertEquals(usageBefore, usageAfter);
+        }
     }
 }
