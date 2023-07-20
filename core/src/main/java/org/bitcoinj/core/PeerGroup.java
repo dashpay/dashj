@@ -437,7 +437,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 try {
                     this.headerChain = new BlockChain(params, new MemoryBlockStore(params));
                     StoredBlock cursor = chain.getChainHead();
-                    while (cursor != null) {
+                    while (cursor != null && !cursor.getHeader().equals(params.getGenesisBlock())) {
                         this.headerChain.getBlockStore().put(cursor);
                         cursor = cursor.getPrev(chain.getBlockStore());
                     }
