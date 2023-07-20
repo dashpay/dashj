@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Context;
@@ -78,6 +79,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 
@@ -86,6 +89,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.evolution.ProviderRegisterTx.LEGACY_BLS_VERSION;
 
 public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension {
+    public static String EXTENSION_ID = "org.dashj.wallet.authentication";
+
     private static final Logger log = LoggerFactory.getLogger(AuthenticationGroupExtension.class);
     private final AuthenticationKeyChainGroup keyChainGroup;
     private final HashMap<IKey, AuthenticationKeyUsage> keyUsage = Maps.newHashMap();
@@ -213,7 +218,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      */
     @Override
     public String getWalletExtensionID() {
-        return "org.dashj.wallet.authentication";
+        return EXTENSION_ID;
     }
 
     /**
@@ -358,8 +363,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
                     processRegistration(tx, (ProviderRegisterTx) tx.getExtraPayloadObject());
                     break;
                 case TRANSACTION_PROVIDER_UPDATE_SERVICE:
-                    // no keys are updated in this transaction
-                    // TODO -- add IP address to usage!
+                    processUpdateService((ProviderUpdateServiceTx) tx.getExtraPayloadObject());
                     break;
                 case TRANSACTION_PROVIDER_UPDATE_REGISTRAR:
                     processUpdateRegistrar(tx, (ProviderUpdateRegistarTx) tx.getExtraPayloadObject());
@@ -389,6 +393,14 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             log.info("protx revoke: operator key {}", operatorKeyUsage.getKey());
             operatorKeyUsage.setStatus(AuthenticationKeyStatus.REVOKED);
             queueOnUsageEvent(Lists.newArrayList(operatorKeyUsage));
+        }
+    }
+
+    private void processUpdateService(ProviderUpdateServiceTx providerUpdateServiceTx) {
+        for (Map.Entry<IKey, AuthenticationKeyUsage> entry : keyUsage.entrySet()) {
+            if (entry.getValue().getWhereUsed().equals(providerUpdateServiceTx.getProTxHash())) {
+                entry.getValue().setAddress(providerUpdateServiceTx.getAddress());
+            }
         }
     }
 
@@ -870,5 +882,18 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      */
     public boolean removeAuthenticationKeyUsageEventListener(AuthenticationKeyUsageEventListener listener) {
         return ListenerRegistration.removeFromList(listener, usageListeners);
+    }
+
+    public void reset() {
+        keyUsage.clear();
+        if (wallet != null) {
+           Set<Transaction> transactionSet = wallet.getTransactions(false);
+           List<Transaction> transactionList = Lists.newArrayList(transactionSet);
+           transactionList.sort((transaction1, transaction2) -> (int) (transaction1.getUpdateTime().getTime() - transaction2.getUpdateTime().getTime()));
+
+           for (Transaction tx : transactionList) {
+               processTransaction(tx, null, AbstractBlockChain.NewBlockType.BEST_CHAIN);
+           }
+        }
     }
 }

@@ -21,6 +21,7 @@ package org.bitcoinj.crypto.ed25519;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.BaseEncoding;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Base58;
 import org.bitcoinj.core.ECKey;
@@ -776,5 +777,17 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         if (includePrivateKeys) {
             builder.append("  ").append(toStringWithPrivate(aesKey, params)).append("\n");
         }
+    }
+
+    public byte[] getPrivatePublic() {
+        checkNotNull(priv);
+        byte[] result = new byte[64];
+        System.arraycopy(priv.getEncoded(), 0, result, 0, 32);
+        System.arraycopy(pub.getEncoded(), 0, result, 32, 32);
+        return result;
+    }
+
+    public String getPrivatePublicBase64() {
+        return BaseEncoding.base64().encode(getPrivatePublic());
     }
 }
