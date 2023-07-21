@@ -16,9 +16,10 @@
 package org.bitcoinj.coinjoin.listeners;
 
 import org.bitcoinj.coinjoin.PoolMessage;
+import org.bitcoinj.coinjoin.PoolState;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.wallet.WalletEx;
 
 public interface SessionCompleteListener {
-    void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message, MasternodeAddress address);
+    void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolState state, PoolMessage message, MasternodeAddress address, boolean joined);
 }

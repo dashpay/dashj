@@ -19,6 +19,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 
 import org.bitcoinj.coinjoin.PoolMessage;
+import org.bitcoinj.coinjoin.PoolState;
 import org.bitcoinj.coinjoin.PoolStatus;
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType;
@@ -51,7 +52,8 @@ public class MixingProgressTracker implements SessionStartedListener, SessionCom
     }
 
     @Override
-    public void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message, MasternodeAddress address) {
+    public void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolState state,
+                                  PoolMessage message, MasternodeAddress address, boolean joined) {
         if (message == PoolMessage.MSG_SUCCESS) {
             completedSessions++;
             lastPercent = calculatePercentage(wallet);

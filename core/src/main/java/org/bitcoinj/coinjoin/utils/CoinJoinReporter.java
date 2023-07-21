@@ -19,6 +19,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.PoolMessage;
+import org.bitcoinj.coinjoin.PoolState;
 import org.bitcoinj.coinjoin.PoolStatus;
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
@@ -110,8 +111,8 @@ public class CoinJoinReporter extends MixingProgressTracker {
     }
 
     @Override
-    public void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message, MasternodeAddress address) {
-        super.onSessionComplete(wallet, sessionId, denomination, message, address);
+    public void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolState state, PoolMessage message, MasternodeAddress address, boolean joined) {
+        super.onSessionComplete(wallet, sessionId, denomination, state, message, address, joined);
         try {
             writeTime();
             Stopwatch watch = sessionMap.get(sessionId);
@@ -119,18 +120,18 @@ public class CoinJoinReporter extends MixingProgressTracker {
                 watch.stop();
             if (message == PoolMessage.MSG_SUCCESS) {
                 writer.write("Session Complete: ");
-                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination));
+                writer.write(String.format("id: %d, denom: %s[%d], joined: %b", sessionId, CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination, joined));
                 writeWatch(watch);
                 writer.newLine();
                 writeStats(wallet);
             } else if (message == PoolMessage.ERR_CONNECTION_TIMEOUT) {
                 writer.write("Session Failure to connect: ");
-                writer.write(String.format("address: %s, denom: %s[%d]", address.getSocketAddress(), CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination));
+                writer.write(String.format("%s, address: %s, denom: %s[%d], joined: %b", state, address.getSocketAddress(), CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination, joined));
                 writeWatch(watch);
                 writer.write(CoinJoin.getMessageByID(message));
             } else {
                 writer.write("Session Failure: ");
-                writer.write(String.format("id: %d, denom: %s[%d]", sessionId, CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination));
+                writer.write(String.format("%s, id: %d, denom: %s[%d], joined: %b", state, sessionId, CoinJoin.denominationToAmount(denomination).toFriendlyString(), denomination, joined));
                 writeWatch(watch);
                 writer.write(CoinJoin.getMessageByID(message));
             }
