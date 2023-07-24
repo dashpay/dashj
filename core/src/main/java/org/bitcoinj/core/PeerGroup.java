@@ -178,6 +178,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     @GuardedBy("lock") private boolean useLocalhostPeerWhenPossible = true;
     @GuardedBy("lock") private boolean ipv6Unreachable = false;
 
+    protected boolean isIpv6Unreachable() {
+        return ipv6Unreachable;
+    }
+
     @GuardedBy("lock") private long fastCatchupTimeSecs;
     private final CopyOnWriteArrayList<Wallet> wallets;
     private final CopyOnWriteArrayList<PeerFilterProvider> peerFilterProviders;
@@ -340,7 +344,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** The default timeout between when a connection attempt begins and version message exchange completes */
     public static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 5000;
     private volatile int vConnectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
-    
+    protected int getConnectTimeoutMillis() {
+        return vConnectTimeoutMillis;
+    }
+
     /** Whether bloom filter support is enabled when using a non FullPrunedBlockchain*/
     private volatile boolean vBloomFilteringEnabled = true;
 
@@ -611,7 +618,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     };
 
-    private void triggerConnections() {
+    protected void triggerConnections() {
         // Run on a background thread due to the need to potentially retry and back off in the background.
         if (!executor.isShutdown())
             executor.execute(triggerConnectionsJob);
@@ -1169,7 +1176,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         Futures.getUnchecked(executor.submit(Runnables.doNothing()));
     }
 
-    private int countConnectedAndPendingPeers() {
+    protected int countConnectedAndPendingPeers() {
         lock.lock();
         try {
             return peers.size() + pendingPeers.size();

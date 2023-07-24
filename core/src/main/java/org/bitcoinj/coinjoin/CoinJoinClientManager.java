@@ -107,6 +107,10 @@ public class CoinJoinClientManager {
         return cachedBlockHeight - cachedLastSuccessBlock < minBlocksToWait;
     }
 
+    public boolean isWaitingForNewBlock() {
+        return waitForAnotherBlock();
+    }
+
     // Make sure we have enough keys since last backup
     private boolean checkAutomaticBackup() {
         return CoinJoinClientOptions.isEnabled() && isMixing();

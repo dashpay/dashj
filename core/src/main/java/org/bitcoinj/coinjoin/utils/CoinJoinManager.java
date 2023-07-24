@@ -159,6 +159,7 @@ public class CoinJoinManager {
     public void initMasternodeGroup(AbstractBlockChain blockChain) {
         this.blockChain = blockChain;
         masternodeGroup = new MasternodeGroup(context, blockChain);
+        masternodeGroup.setCoinJoinManager(this);
     }
 
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
@@ -373,5 +374,9 @@ public class CoinJoinManager {
 
     public @Nullable ECKey requestDecryptKey(ECKey key) {
         return requestDecryptedKey != null ? requestDecryptedKey.requestDecryptedKey(key) : null;
+    }
+
+    public boolean isWaitingForNewBlock() {
+        return coinJoinClientManagers.values().stream().anyMatch(CoinJoinClientManager::isWaitingForNewBlock);
     }
 }
