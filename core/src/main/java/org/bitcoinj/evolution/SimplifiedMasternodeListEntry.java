@@ -86,8 +86,8 @@ public class SimplifiedMasternodeListEntry extends Masternode {
 
     @Override
     protected void parse() throws ProtocolException {
-        if (protocolVersion >= NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion()) {
-            version = (short) readUint16();
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
+            version = BASIC_BLS_VERSION;
         } else {
             version = LEGACY_BLS_VERSION;
         }

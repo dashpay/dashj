@@ -678,7 +678,7 @@ public abstract class NetworkParameters {
         COINJOIN_PROTX_HASH(70226),
         DMN_TYPE(70227),
         SMNLE_VERSIONED(70228),
-        CURRENT(70228);
+        CURRENT(70227);
 
         private final int bitcoinProtocol;
 

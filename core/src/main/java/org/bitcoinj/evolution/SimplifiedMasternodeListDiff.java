@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSScheme;
+import org.bitcoinj.crypto.LazyECPoint;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.utils.Pair;
@@ -78,7 +79,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
             version = (short) readUint16();
         } else {
-            version = CURRENT_VERSION;
+            version = LEGACY_BLS_VERSION;
         }
 
         int size = (int)readVarInt();
@@ -89,9 +90,12 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
         size = (int)readVarInt();
         mnList = new ArrayList<SimplifiedMasternodeListEntry>(size);
+        int protocolVersionSMLE = version == BASIC_BLS_VERSION ?
+                NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion() :
+                NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
         for(int i = 0; i < size; ++i)
         {
-            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, protocolVersion);
+            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, protocolVersionSMLE);
             cursor += mn.getMessageSize();
             mnList.add(mn);
         }

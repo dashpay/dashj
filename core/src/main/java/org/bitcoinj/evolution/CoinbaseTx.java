@@ -2,18 +2,25 @@ package org.bitcoinj.evolution;
 
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSSignature;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 
 public class CoinbaseTx extends SpecialTxPayload {
-    public static final int CURRENT_VERSION = 2;
+    public static final int CB_V19_VERSION = 2;
+    public static final int CB_V20_VERSION = 3;
+    public static final int CURRENT_VERSION = CB_V19_VERSION;
     private static final int PAYLOAD_SIZE = 2 + 4 + 32 + 32;
 
     long height;
     Sha256Hash merkleRootMasternodeList;
     Sha256Hash merkleRootQuorums; //v2
+    long bestCLHeightDiff;
+    BLSSignature bestCLSignature;
+    Coin assetLockedAmount;
 
     public CoinbaseTx(long height, Sha256Hash merkleRootMasternodeList, Sha256Hash merkleRootQuorums) {
         super(CURRENT_VERSION);
@@ -32,8 +39,15 @@ public class CoinbaseTx extends SpecialTxPayload {
         super.parse();
         height = readUint32();
         merkleRootMasternodeList = readHash();
-        if(version >= 2)
+        if(version >= CB_V19_VERSION) {
             merkleRootQuorums = readHash();
+            if (version >= CB_V20_VERSION) {
+                bestCLHeightDiff = readVarInt();
+                bestCLSignature = new BLSSignature(params, payload, cursor);
+                cursor += bestCLSignature.getMessageSize();
+                assetLockedAmount = Coin.valueOf(readInt64());
+            }
+        }
         length = cursor - offset;
     }
 
@@ -42,8 +56,14 @@ public class CoinbaseTx extends SpecialTxPayload {
         super.bitcoinSerializeToStream(stream);
         Utils.uint32ToByteStreamLE(height, stream);
         stream.write(merkleRootMasternodeList.getReversedBytes());
-        if(version >= 2)
+        if(version >= CB_V19_VERSION) {
             stream.write(merkleRootQuorums.getReversedBytes());
+            if (version >= CB_V20_VERSION) {
+                stream.write(new VarInt(bestCLHeightDiff).encode());
+                bestCLSignature.bitcoinSerialize(stream);
+                Utils.uint64ToByteStreamLE(BigInteger.valueOf(assetLockedAmount.getValue()), stream);
+            }
+        }
     }
 
     public int getCurrentVersion() {
@@ -71,6 +91,13 @@ public class CoinbaseTx extends SpecialTxPayload {
         result.append("height", height);
         result.append("merkleRootMNList", merkleRootMasternodeList);
         result.append("merkleRootQuorums", merkleRootQuorums);
+        if (version >= CB_V19_VERSION) {
+            result.append("merkleRootQuorums", merkleRootQuorums);
+            if (version >= CB_V20_VERSION) {
+                result.append("bestCLHeightDiff", bestCLHeightDiff);
+                result.append("bestCLSignature", bestCLSignature.toString());
+            }
+        }
         return result;
     }
 
