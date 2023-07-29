@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,13 +37,19 @@ public class MasternodeSeedPeers implements PeerDiscovery {
     private String[] seedAddrs;
     private int pnseedIndex;
 
+    private static String[] mergeArrays(String[] array1, String[] array2) {
+        String[] result = Arrays.copyOf(array1, array1.length + array2.length);
+        System.arraycopy(array2, 0, result, array1.length, array2.length);
+        return result;
+    }
+
     /**
      * Supports finding peers by IP addresses
      *
      * @param params Network parameters to be used for port information.
      */
     public MasternodeSeedPeers(NetworkParameters params) {
-        this(params.getDefaultMasternodeList(), params);
+        this(mergeArrays(params.getDefaultMasternodeList(), params.getDefaultHPMasternodeList()), params);
     }
 
     /**
