@@ -52,7 +52,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -141,16 +140,16 @@ public class CoinJoinMonitor {
         System.out.printf("Sessions/hour: %.1f\n", (double) completedSessions.size() / hours);
 
 
-        System.out.println("Session Times");
-        for (SessionInfo sessionInfo : completedSessions) {
-            System.out.println(CoinJoin.denominationToAmount(sessionInfo.dsq.getDenomination()).toFriendlyString() +
-                    ":" + sessionInfo.watch.elapsed(TimeUnit.SECONDS) + "s " + sessionInfo.dstx.getTx().getInputs().size() + "/10");
-        }
+        //System.out.println("Session Times");
+        //for (SessionInfo sessionInfo : completedSessions) {
+        //    System.out.println(CoinJoin.denominationToAmount(sessionInfo.dsq.getDenomination()).toFriendlyString() +
+        //            ":" + sessionInfo.watch.elapsed(TimeUnit.SECONDS) + "s " + sessionInfo.dstx.getTx().getInputs().size() + "/10");
+        //}
     }
 
     public static void main(String[] args) throws Exception {
         BriefLogFormatter.initWithSilentBitcoinJ();
-        System.out.println("Connecting to node");
+        System.out.println("CoinJoinMonitor:");
         final NetworkParameters params;
         String filePrefix;
         String checkpoints = null;
@@ -167,6 +166,8 @@ public class CoinJoinMonitor {
                 checkpoints = "checkpoints.txt";
                 break;
         }
+        System.out.println("Network: " + params.getNetworkName());
+        System.out.println("File Prefix: " + filePrefix);
 
         report = new CoinJoinReport("", "", params);
         kit = new WalletAppKit(params, new File("."), filePrefix) {
