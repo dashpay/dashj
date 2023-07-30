@@ -116,7 +116,7 @@ public class CoinJoinReporter extends MixingProgressTracker {
         try {
             writeTime();
             Stopwatch watch = sessionMap.get(sessionId);
-            if (watch != null)
+            if (watch != null && watch.isRunning())
                 watch.stop();
             if (message == PoolMessage.MSG_SUCCESS) {
                 writer.write("Session Complete: ");
