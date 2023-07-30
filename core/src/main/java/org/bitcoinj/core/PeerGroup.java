@@ -449,7 +449,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 try {
                     this.headerChain = new BlockChain(params, new MemoryBlockStore(params));
                     StoredBlock cursor = chain.getChainHead();
-                    while (cursor != null) {
+                    while (cursor != null && !cursor.getHeader().equals(params.getGenesisBlock())) {
                         this.headerChain.getBlockStore().put(cursor);
                         cursor = cursor.getPrev(chain.getBlockStore());
                     }
@@ -2562,12 +2562,16 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
                 if(transaction.getConfidence().numBroadcastPeers() == 0) {
                     // TODO: this tx was sent to a single peer, should we send it again to make sure or see if there are more connections?
-                    int sentCount = pendingTxSendCounts.get(transaction.getTxId());
+                    Integer sentCount = pendingTxSendCounts.get(transaction.getTxId());
 
-                    if(sentCount <= 2) {
-                        log.info("resending tx {} since it was only sent to 1 peer", tx.getHash());
-                        broadcastTransaction(tx);
-                    } else pendingTxSendCounts.put(tx.getHash(), sentCount + MAX_ATTEMPTS);
+                    if (sentCount != null) {
+                        if (sentCount <= 2) {
+                            log.info("resending tx {} since it was only sent to 1 peer", tx.getHash());
+                            broadcastTransaction(tx);
+                        } else {
+                            pendingTxSendCounts.put(tx.getHash(), sentCount + MAX_ATTEMPTS);
+                        }
+                    }
                 }
                 pendingTxSendCounts.remove(tx.getHash());
             }
