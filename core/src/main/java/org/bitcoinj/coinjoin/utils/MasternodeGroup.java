@@ -571,9 +571,6 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
         if (chain != null) {
             chain.removeNewBestBlockListener(this);
         }
-        if (!executor.isShutdown()) {
-            executor.shutdown();
-        }
         return super.stopAsync();
     }
 }
