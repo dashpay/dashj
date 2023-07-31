@@ -472,7 +472,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
         public void go() {
             if (!isRunning()) return;
 
-            if (coinJoinManager.isWaitingForNewBlock())
+            if (coinJoinManager.isWaitingForNewBlock() || !coinJoinManager.isMixing())
                 return;
  
             boolean doDiscovery = false;

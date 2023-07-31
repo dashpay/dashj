@@ -379,4 +379,8 @@ public class CoinJoinManager {
     public boolean isWaitingForNewBlock() {
         return coinJoinClientManagers.values().stream().anyMatch(CoinJoinClientManager::isWaitingForNewBlock);
     }
+
+    public boolean isMixing() {
+        return coinJoinClientManagers.values().stream().anyMatch(CoinJoinClientManager::isMixing);
+    }
 }
