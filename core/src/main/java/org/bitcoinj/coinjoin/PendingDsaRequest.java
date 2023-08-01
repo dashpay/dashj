@@ -21,7 +21,7 @@ import org.bitcoinj.core.Utils;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class PendingDsaRequest {
-    private static final int TIMEOUT = 15;
+    public static final int TIMEOUT = 15;
     private MasternodeAddress addr;
     private CoinJoinAccept dsa;
     private long nTimeCreated = 0;

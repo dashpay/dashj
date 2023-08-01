@@ -144,10 +144,14 @@ public class CoinJoin {
     }
 
     public static boolean isCollateralValid(Transaction txCollateral, boolean checkInputs) {
-        if (txCollateral.getOutputs().isEmpty())
+        if (txCollateral.getOutputs().isEmpty()) {
+            log.info("coinjoin: Collateral invalid due to no outputs: {}", txCollateral.getTxId());
             return false;
-        if (txCollateral.getLockTime() != 0)
+        }
+        if (txCollateral.getLockTime() != 0) {
+            log.info("coinjoin: Collateral invalid due to lock time != 0: {}", txCollateral.getTxId());
             return false;
+        }
 
         Coin nValueIn = Coin.ZERO;
         Coin nValueOut = Coin.ZERO;
@@ -180,10 +184,13 @@ public class CoinJoin {
             }
         }
 
-        log.info("coinjoin: collateral: {}", txCollateral); /* Continued */
-
         // the collateral tx must not have been seen on the network
-        return txCollateral.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.UNKNOWN;
+        boolean hasBeenSeen = txCollateral.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.UNKNOWN;
+        if (hasBeenSeen) {
+            log.info("coinjoin: collateral has been spent, need to recreate txCollateral={}", txCollateral.getTxId());
+        }
+        log.info("coinjoin: collateral: {}", txCollateral); /* Continued */
+        return hasBeenSeen;
     }
     public static Coin getCollateralAmount() { return getSmallestDenomination().div(10); }
     public static Coin getMaxCollateralAmount() { return getCollateralAmount().multiply(4); }
@@ -333,6 +340,8 @@ public class CoinJoin {
                 return "Inputs vs outputs size mismatch.";
             case ERR_TIMEOUT:
                 return "Session has timed out.";
+            case ERR_CONNECTION_TIMEOUT:
+                return "Connection attempt has timed out (" + PendingDsaRequest.TIMEOUT + " ms).";
             default:
                 return "Unknown response.";
         }

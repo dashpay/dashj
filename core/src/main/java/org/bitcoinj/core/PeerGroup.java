@@ -178,6 +178,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     @GuardedBy("lock") private boolean useLocalhostPeerWhenPossible = true;
     @GuardedBy("lock") private boolean ipv6Unreachable = false;
 
+    protected boolean isIpv6Unreachable() {
+        return ipv6Unreachable;
+    }
+
     @GuardedBy("lock") private long fastCatchupTimeSecs;
     private final CopyOnWriteArrayList<Wallet> wallets;
     private final CopyOnWriteArrayList<PeerFilterProvider> peerFilterProviders;
@@ -340,7 +344,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** The default timeout between when a connection attempt begins and version message exchange completes */
     public static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 5000;
     private volatile int vConnectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
-    
+    protected int getConnectTimeoutMillis() {
+        return vConnectTimeoutMillis;
+    }
+
     /** Whether bloom filter support is enabled when using a non FullPrunedBlockchain*/
     private volatile boolean vBloomFilteringEnabled = true;
 
@@ -442,7 +449,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 try {
                     this.headerChain = new BlockChain(params, new MemoryBlockStore(params));
                     StoredBlock cursor = chain.getChainHead();
-                    while (cursor != null) {
+                    while (cursor != null && !cursor.getHeader().equals(params.getGenesisBlock())) {
                         this.headerChain.getBlockStore().put(cursor);
                         cursor = cursor.getPrev(chain.getBlockStore());
                     }
@@ -611,7 +618,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     };
 
-    private void triggerConnections() {
+    protected void triggerConnections() {
         // Run on a background thread due to the need to potentially retry and back off in the background.
         if (!executor.isShutdown())
             executor.execute(triggerConnectionsJob);
@@ -1169,7 +1176,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         Futures.getUnchecked(executor.submit(Runnables.doNothing()));
     }
 
-    private int countConnectedAndPendingPeers() {
+    protected int countConnectedAndPendingPeers() {
         lock.lock();
         try {
             return peers.size() + pendingPeers.size();
@@ -2555,12 +2562,16 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
                 if(transaction.getConfidence().numBroadcastPeers() == 0) {
                     // TODO: this tx was sent to a single peer, should we send it again to make sure or see if there are more connections?
-                    int sentCount = pendingTxSendCounts.get(transaction.getTxId());
+                    Integer sentCount = pendingTxSendCounts.get(transaction.getTxId());
 
-                    if(sentCount <= 2) {
-                        log.info("resending tx {} since it was only sent to 1 peer", tx.getHash());
-                        broadcastTransaction(tx);
-                    } else pendingTxSendCounts.put(tx.getHash(), sentCount + MAX_ATTEMPTS);
+                    if (sentCount != null) {
+                        if (sentCount <= 2) {
+                            log.info("resending tx {} since it was only sent to 1 peer", tx.getHash());
+                            broadcastTransaction(tx);
+                        } else {
+                            pendingTxSendCounts.put(tx.getHash(), sentCount + MAX_ATTEMPTS);
+                        }
+                    }
                 }
                 pendingTxSendCounts.remove(tx.getHash());
             }

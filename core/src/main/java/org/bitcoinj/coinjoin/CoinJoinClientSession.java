@@ -16,6 +16,8 @@
 package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
@@ -26,6 +28,7 @@ import org.bitcoinj.coinjoin.utils.TransactionBuilder;
 import org.bitcoinj.coinjoin.utils.TransactionBuilderOutput;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
@@ -72,6 +75,7 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_DENOM_OUTPUTS_THR
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_SIGNING_TIMEOUT;
+import static org.bitcoinj.coinjoin.PoolMessage.ERR_CONNECTION_TIMEOUT;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_SESSION;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_TIMEOUT;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_POOL_MAX;
@@ -95,6 +99,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private String strAutoDenomResult;
 
     private Masternode mixingMasternode;
+    private boolean joined; // did we join a session (true), or start a session (false)
     private Transaction txMyCollateral; // client side collateral
     private boolean isMyCollateralValid = false;
     private PendingDsaRequest pendingDsaRequest;
@@ -108,6 +113,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private final CopyOnWriteArrayList<ListenerRegistration<SessionStartedListener>> sessionStartedListeners
             = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<SessionCompleteListener>> sessionCompleteListeners
+            = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<CoinJoinTransactionListener>> transactionListeners
             = new CopyOnWriteArrayList<>();
 
     /// Create denominations
@@ -361,6 +368,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         log.info("coinjoin: txid: {}", strResult);
 
+        queueCreateDenominationListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CREATE_DENOMINATION);
+
         return true;
     }
 
@@ -588,9 +597,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             mixingWallet.getContext().coinJoinManager.addPendingMasternode(this);
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
-            log.info("coinjoin: pending connection (from queue): sessionDenom: {} ({}), addr={}",
+            log.info("coinjoin: join existing queue -> pending connection, sessionDenom: {} ({}), addr={}",
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
             setStatus(PoolStatus.CONNECTING);
+            joined = true;
             return true;
         }
         setStatus(PoolStatus.WARN_NO_MIXING_QUEUES);
@@ -643,7 +653,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 continue;
             }
 
-            log.info("coinjoin: attempt {} connection to Masternode {}, {}", nTries, dmn.getService(), dmn.getProTxHash());
+            log.info("coinjoin: attempt {} connection to masternode {}, protx: {}", nTries + 1, dmn.getService(), dmn.getProTxHash());
 
             // try to get a single random denom out of setAmounts
             while (sessionDenom == 0) {
@@ -665,6 +675,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
             context.coinJoinManager.startAsync();
             setStatus(PoolStatus.CONNECTING);
+            joined = false;
             return true;
         }
         strAutoDenomResult = "Failed to start a new mixing queue";
@@ -817,7 +828,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                    peer.sendMessage(entry);
                    return true;
                }
-           })) {
+           }, true)) {
                log.info("coinjoin: failed to send to {} CoinJoinEntry: {}", mixingMasternode.getService().getSocketAddress(), entry);
            }
         }
@@ -850,7 +861,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 keyHolderStorage.returnAll();
                 switch (statusUpdate.getMessageID()) {
                     case ERR_INVALID_COLLATERAL:
-                        log.error("coinjoin: collateral valid: {}", CoinJoin.isCollateralValid(txMyCollateral));
+                        log.error("coinjoin: collateral invalid: {}", CoinJoin.isCollateralValid(txMyCollateral));
                         isMyCollateralValid = false;
                         setNull(); // for now lets disconnect.  TODO: Why is the collateral invalid?
                         break;
@@ -887,7 +898,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private void completedTransaction(PoolMessage messageID) {
         if (messageID == MSG_SUCCESS) {
             log.info("coinjoin: CompletedTransaction -- success");
-            queueSessionCompleteListeners(MSG_SUCCESS);
+            queueSessionCompleteListeners(getState(), MSG_SUCCESS);
             mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
             keyHolderStorage.keepAll();
         } else {
@@ -898,6 +909,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         lock.lock();
         try {
             setNull(); // this will also disconnect the masternode
+            setStatus(PoolStatus.COMPLETE);
         } finally {
             lock.unlock();
         }
@@ -1066,13 +1078,17 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
         mixingMasternode = null;
         pendingDsaRequest = null;
-        log.info("session zeroed out");
+        log.info("session zeroed out {}; {}", state, status);
         super.setNull();
     }
 
     // internal session id
     static int nextId = 0;
     private final int id;
+
+    public int getId() {
+        return id;
+    }
 
     public CoinJoinClientSession(WalletEx mixingWallet) {
         super(mixingWallet.getContext());
@@ -1245,7 +1261,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 //status.set(PoolStatus.ERR_NO_MASTERNODES_DETECTED);
                 //hasNothingToDo.set(true);
                 setStatus(PoolStatus.ERR_NO_MASTERNODES_DETECTED);
-                queueSessionCompleteListeners(ERR_SESSION);
+                queueSessionCompleteListeners(getState(), ERR_SESSION);
                 return false;
             }
 
@@ -1279,7 +1295,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             // mixable balance is way too small
             if (nBalanceAnonymizable.isLessThan(nValueMin)) {
                 setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
-                queueSessionCompleteListeners(ERR_SESSION);
+                queueSessionCompleteListeners(getState(), ERR_SESSION);
                 return false;
             }
 
@@ -1371,7 +1387,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 }
             } else {
                 if (!isMyCollateralValid || !CoinJoin.isCollateralValid(txMyCollateral)) {
-                    log.info("coinjoin: invalid collateral, recreating...");
+                    log.info("coinjoin: invalid collateral, recreating... [id: {}] ", id);
                     if (!createCollateralTransaction(txMyCollateral, strReason)) {
                         log.info("coinjoin: create collateral error: {}", strReason);
                         return false;
@@ -1482,12 +1498,14 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 log.info("sending {} to {}", pendingDsaRequest.getDsa(), peer);
                 return true;
             }
-        });
+        }, false);
 
         if (sentMessage) {
             pendingDsaRequest = null;
         } else if (pendingDsaRequest.isExpired()) {
-            log.info("coinjoin -- failed to connect to {}", pendingDsaRequest.getAddress());
+            log.info("coinjoin -- failed to connect to {}; reason: expired", pendingDsaRequest.getAddress());
+            setStatus(PoolStatus.CONNECTION_TIMEOUT);
+            queueSessionCompleteListeners(getState(), ERR_CONNECTION_TIMEOUT);
             setNull();
         }
 
@@ -1517,8 +1535,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         log.info("coinjoin: {} {} timed out ({})", (state.get() == POOL_STATE_SIGNING) ? "Signing at session" : "Session", sessionID.get(), nTimeout);
 
+        queueSessionCompleteListeners(getState(), ERR_TIMEOUT);
         setState(POOL_STATE_ERROR);
-        queueSessionCompleteListeners(ERR_TIMEOUT);
+        setStatus(PoolStatus.TIMEOUT);
         unlockCoins();
         keyHolderStorage.returnAll();
         timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
@@ -1531,6 +1550,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     public String toString() {
         return "CoinJoinClientSession{id=" + id +
                 ", mixer=" + (mixingMasternode != null ? mixingMasternode.getService().getSocketAddress() : "none") +
+                ", joined=" + joined +
                 ", msg='" + strLastMessage + '\'' +
                 ", dsa=" + pendingDsaRequest +
                 ", entries=" + entries.size() +
@@ -1621,13 +1641,47 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         return ListenerRegistration.removeFromList(listener, sessionCompleteListeners);
     }
 
-    protected void queueSessionCompleteListeners(PoolMessage message) {
+    protected void queueSessionCompleteListeners(PoolState state, PoolMessage message) {
         //checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<SessionCompleteListener> registration : sessionCompleteListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    registration.listener.onSessionComplete(mixingWallet, getSessionID(), getSessionDenom(), message);
+                    MasternodeAddress address = mixingMasternode.getService();
+                    registration.listener.onSessionComplete(mixingWallet, getSessionID(), getSessionDenom(), state, message, address, joined);
+                }
+            });
+        }
+    }
+
+    public void addTransationListener(CoinJoinTransactionListener listener) {
+        addTransationListener (Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addTransationListener(Executor executor, CoinJoinTransactionListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        transactionListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeTransactionListener(CoinJoinTransactionListener listener) {
+        return ListenerRegistration.removeFromList(listener, transactionListeners);
+    }
+
+    protected void queueCreateDenominationListeners(Transaction denominationTransaction, CoinJoinTransactionType type) {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<CoinJoinTransactionListener> registration : transactionListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onTransactionProcessed(denominationTransaction, type);
                 }
             });
         }
