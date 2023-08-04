@@ -18,6 +18,7 @@
 package org.bitcoinj.tools;
 
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinSendRequest;
@@ -1644,6 +1645,15 @@ public class WalletTool {
             amountToMix = Coin.parseCoin(options.valueOf(mixAmountFlag));
         }
         CoinJoinClientOptions.setAmount(amountToMix);
+
+        if (!amountToMix.isGreaterThanOrEqualTo(ZERO)) {
+            System.err.println("The mixing amount must be larger than zero");
+            return;
+        }
+        if (wallet.getBalance().isZero()) {
+            System.err.println("The wallet has no funds to mix");
+            return;
+        }
 
         if (options.has(sessionsFlag)) {
             CoinJoinClientOptions.setSessions(options.valueOf(sessionsFlag));
