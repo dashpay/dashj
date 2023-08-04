@@ -153,8 +153,10 @@ public class CoinJoinReporter extends MixingProgressTracker {
             writer.newLine();
             writer.write("  status: " + Utils.listToString(statusList));
             writer.newLine();
-            writer.write(String.format("  connection timeouts: %d, session timeouts: %d, completed: %d",
-                    timedOutConnections, timedOutSessions, completedSessions));
+            writer.write(String.format("  connection timeouts: %d, session timeouts: %d, completed: %d\n" +
+                    "      queue timeouts: %d, accepting timeouts: %d, signing timeouts %d",
+                    timedOutConnections, timedOutSessions, completedSessions,
+                    timedOutQueues, timedOutWhileAccepting, timedOutWhileSigning));
             writer.newLine();
             writeBalance(wallet);
             writer.newLine();

@@ -43,6 +43,9 @@ public class MixingProgressTracker implements SessionStartedListener, SessionCom
     protected int completedSessions = 0;
     protected int timedOutSessions = 0;
     protected int timedOutConnections = 0;
+    protected int timedOutQueues = 0;
+    protected int timedOutWhileSigning = 0;
+    protected int timedOutWhileAccepting = 0;
     private double lastPercent = 0;
 
     private final SettableFuture<PoolMessage> future = SettableFuture.create();
@@ -60,6 +63,17 @@ public class MixingProgressTracker implements SessionStartedListener, SessionCom
         } else if (message == PoolMessage.ERR_CONNECTION_TIMEOUT) {
             timedOutConnections++;
         } else {
+            switch (state) {
+                case POOL_STATE_QUEUE:
+                    ++timedOutQueues;
+                    break;
+                case POOL_STATE_SIGNING:
+                    ++timedOutWhileSigning;
+                    break;
+                case POOL_STATE_ACCEPTING_ENTRIES:
+                    ++timedOutWhileAccepting;
+                    break;
+            }
             timedOutSessions++;
         }
     }
