@@ -123,7 +123,7 @@ public class MixingProgressTracker implements SessionStartedListener, SessionCom
     }
 
     @Override
-    public void onTransactionProcessed(Transaction denominationTx, CoinJoinTransactionType type) {
+    public void onTransactionProcessed(Transaction tx, CoinJoinTransactionType type, int sessionId) {
 
     }
 }

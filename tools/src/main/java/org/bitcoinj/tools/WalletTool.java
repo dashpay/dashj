@@ -129,6 +129,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 
+import static org.bitcoinj.core.Coin.ZERO;
 import static org.bitcoinj.core.Coin.parseCoin;
 import static com.google.common.base.Preconditions.checkNotNull;
 
