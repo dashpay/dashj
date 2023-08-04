@@ -17,6 +17,7 @@
 package org.bitcoinj.coinjoin;
 
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
@@ -31,6 +32,7 @@ import static org.junit.Assert.assertTrue;
 
 public class CoinJoinTest {
     static NetworkParameters PARAMS = UnitTestParams.get();
+    static Context context = new Context(PARAMS);
 
     @Test
     public void standardDenominationTest() {
