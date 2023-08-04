@@ -185,12 +185,14 @@ public class CoinJoin {
         }
 
         // the collateral tx must not have been seen on the network
-        boolean hasBeenSeen = txCollateral.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.UNKNOWN;
+        TransactionConfidence confidence = txCollateral.getConfidence();
+        boolean hasBeenSeen = confidence.getConfidenceType() != TransactionConfidence.ConfidenceType.UNKNOWN ||
+                confidence.numBroadcastPeers() > 0 || confidence.getIXType() != TransactionConfidence.IXType.IX_NONE;
         if (hasBeenSeen) {
             log.info("coinjoin: collateral has been spent, need to recreate txCollateral={}", txCollateral.getTxId());
         }
         log.info("coinjoin: collateral: {}", txCollateral); /* Continued */
-        return hasBeenSeen;
+        return !hasBeenSeen;
     }
     public static Coin getCollateralAmount() { return getSmallestDenomination().div(10); }
     public static Coin getMaxCollateralAmount() { return getCollateralAmount().multiply(4); }
