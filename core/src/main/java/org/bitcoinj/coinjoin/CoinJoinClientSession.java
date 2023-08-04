@@ -203,7 +203,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // ****** Add outputs for denoms ************ /
 
         final Result<Boolean> addFinal = new Result<>(true);
-        List<Coin> denoms = CoinJoin.getStandardDenominations();
+        List<Coin> denoms = CoinJoinClientOptions.getDenominations();
 
         HashMap<Coin, Integer> mapDenomCount = new HashMap<>();
         for (Coin denomValue : denoms) {
@@ -1309,7 +1309,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
             // adjust balanceNeedsAnonymized to consume final denom
             if (nBalanceDenominated.subtract(nBalanceAnonymized).isGreaterThan(balanceNeedsAnonymized)) {
-                List<Coin> denoms = CoinJoin.getStandardDenominations();
+                List<Coin> denoms = CoinJoinClientOptions.getDenominations();
                 Coin nAdditionalDenom = Coin.ZERO;
                 for (Coin denom :denoms){
                     if (balanceNeedsAnonymized.isLessThan(denom)) {

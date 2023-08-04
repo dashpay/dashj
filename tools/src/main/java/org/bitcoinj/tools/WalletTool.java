@@ -1636,6 +1636,7 @@ public class WalletTool {
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setSessions(1);
+        CoinJoinClientOptions.removeDenomination(CoinJoin.getSmallestDenomination());
         Coin amountToMix = wallet.getBalance();
 
         // set command line arguments
