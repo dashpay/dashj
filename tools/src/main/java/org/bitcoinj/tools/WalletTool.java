@@ -1632,7 +1632,7 @@ public class WalletTool {
         wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
         syncChain();
         // set defaults
-        CoinJoinReporter reporter = new CoinJoinReporter();
+        CoinJoinReporter reporter = new CoinJoinReporter(params);
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setSessions(1);

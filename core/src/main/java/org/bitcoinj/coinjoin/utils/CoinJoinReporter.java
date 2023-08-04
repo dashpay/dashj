@@ -70,9 +70,11 @@ public class CoinJoinReporter extends MixingProgressTracker {
         );
     }
 
-    public CoinJoinReporter() {
+    public CoinJoinReporter(NetworkParameters params) {
         try {
-            File reportFile = new File("./coinjoin-report.txt");
+            DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.DEFAULT);
+            String fileDate = dateFormat.format(new Date());
+            File reportFile = new File("./coinjoin-report-" + params.getNetworkName() + "-" + fileDate + ".txt");
             fileWriter = new FileWriter(reportFile);
             writer = new BufferedWriter(fileWriter);
             writer.write("CoinJoin Report:");
