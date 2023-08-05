@@ -552,14 +552,12 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         try {
+            // don't set the source to TransactionConfidence.Source.SELF on these collateral transactions
+            // otherwise when the masternodes do submit these transactions to the network, they will be
+            // ignored by DashJ and when they are received
             SendRequest req = SendRequest.forTx(txCollateral);
             req.aesKey = context.coinJoinManager.requestKeyParameter(mixingWallet);
             mixingWallet.signTransaction(req);
-            TransactionConfidence confidence = txCollateral.getConfidence();
-            if (confidence != null) {
-                confidence.setSource(TransactionConfidence.Source.SELF);
-                confidence.setConfidenceType(TransactionConfidence.ConfidenceType.UNKNOWN);
-            }
         } catch (ScriptException x) {
             strReason.append("Unable to sign collateral transaction!");
             return false;
