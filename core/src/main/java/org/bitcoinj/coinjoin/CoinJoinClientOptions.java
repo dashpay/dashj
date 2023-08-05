@@ -18,6 +18,7 @@ package org.bitcoinj.coinjoin;
 
 import org.bitcoinj.core.Coin;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -76,7 +77,7 @@ public class CoinJoinClientOptions {
     private final AtomicInteger coinJoinDenomsHardCap = new AtomicInteger(DEFAULT_COINJOIN_DENOMS_HARDCAP);
     private final AtomicBoolean enableCoinJoin = new AtomicBoolean(false);
     private final AtomicBoolean isCoinJoinMultiSession = new AtomicBoolean(DEFAULT_COINJOIN_MULTISESSION);
-    private final AtomicReference<List<Coin>> allowedDenominations = new AtomicReference<>(CoinJoin.getStandardDenominations());
+    private final AtomicReference<List<Coin>> allowedDenominations = new AtomicReference<>(new ArrayList<>(CoinJoin.getStandardDenominations()));
 
     private CoinJoinClientOptions() {
         coinJoinSessions.set(DEFAULT_COINJOIN_SESSIONS);

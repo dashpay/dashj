@@ -26,8 +26,11 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.params.UnitTestParams;
 import org.junit.Test;
 
+import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 public class CoinJoinTest {
@@ -114,5 +117,13 @@ public class CoinJoinTest {
         txCollateral.addInput(inputWithConnection);
 
         assertTrue(CoinJoin.isCollateralValid(txCollateral));
+    }
+
+    @Test
+    public void attemptToModifyStandardDenominationsTest() {
+        List<Coin> denominations = CoinJoin.getStandardDenominations();
+        // modification of this list is not allowed
+        assertThrows(UnsupportedOperationException.class, () -> denominations.add(Coin.COIN));
+        assertThrows(UnsupportedOperationException.class, () -> denominations.remove(0));
     }
 }

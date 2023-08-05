@@ -32,6 +32,7 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -42,12 +43,16 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 
 public class CoinJoin {
     private static final Logger log = LoggerFactory.getLogger(CoinJoin.class);
-    private static final List<Coin> standardDenominations = Lists.newArrayList(
-            Coin.COIN.multiply(10).add(Coin.valueOf(10000)),
-            Coin.COIN.add(Coin.valueOf(1000)),
-            Coin.COIN.div(10).add(Coin.valueOf(100)),
-            Coin.COIN.div(100).add(Coin.valueOf(10)),
-            Coin.COIN.div(1000).add(Coin.valueOf(1))
+    // this list of standard denominations cannot be modified by DashJ and must remain the same as
+    // CoinJoin::vecStandardDenominations in coinjoin.cpp
+    private static final List<Coin> standardDenominations = Collections.unmodifiableList(
+            Lists.newArrayList(
+                Coin.COIN.multiply(10).add(Coin.valueOf(10000)),
+                Coin.COIN.add(Coin.valueOf(1000)),
+                Coin.COIN.div(10).add(Coin.valueOf(100)),
+                Coin.COIN.div(100).add(Coin.valueOf(10)),
+                Coin.COIN.div(1000).add(Coin.valueOf(1))
+            )
     );
 
     private static final HashMap<Sha256Hash, CoinJoinBroadcastTx> mapDSTX = new HashMap<>();
