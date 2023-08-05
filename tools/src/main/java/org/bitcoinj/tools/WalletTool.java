@@ -1668,6 +1668,8 @@ public class WalletTool {
         if (options.has(multiSessionFlag)) {
             CoinJoinClientOptions.setMultiSessionEnabled(options.valueOf(multiSessionFlag));
         }
+        System.out.println("Mixing Configuration:");
+        System.out.println(CoinJoinClientOptions.getString());
 
         ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));

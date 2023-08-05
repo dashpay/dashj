@@ -105,4 +105,11 @@ public class CoinJoinClientOptions {
     private static void init() {
         instance = new CoinJoinClientOptions();
     }
+
+    public static String getString() {
+        return "amount: " + getAmount() + "\n" +
+                "rounds: " + getRounds() + "\n" +
+                "multi-session: " + isMultiSessionEnabled() + "\n" +
+                "denoms: " + getDenominations().size() + "\n";
+    }
 }
