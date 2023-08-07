@@ -33,7 +33,9 @@ import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
@@ -110,6 +112,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private final AtomicBoolean hasNothingToDo = new AtomicBoolean(false); // is mixing finished?
 
+    private final HashMap<Sha256Hash, Integer> collateralSessionMap = new HashMap<>();
     private final CopyOnWriteArrayList<ListenerRegistration<SessionStartedListener>> sessionStartedListeners
             = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<SessionCompleteListener>> sessionCompleteListeners
@@ -153,6 +156,13 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         log.info("coinjoin: createDenominated({}) -- failed! ", balanceToDenominate.toFriendlyString());
         return false;
+    }
+
+    public void processTransaction(Transaction tx) {
+        log.info("processing tx of {}: {}", tx.getValue(mixingWallet), tx.getTxId());
+        if (collateralSessionMap.containsKey(tx.getTxId())) {
+            queueTransactionListeners(tx, collateralSessionMap.get(tx.getTxId()), CoinJoinTransactionType.MIXING_FEE);
+        }
     }
 
     static class Result<T> {
@@ -203,7 +213,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // ****** Add outputs for denoms ************ /
 
         final Result<Boolean> addFinal = new Result<>(true);
-        List<Coin> denoms = CoinJoin.getStandardDenominations();
+        List<Coin> denoms = CoinJoinClientOptions.getDenominations();
 
         HashMap<Coin, Integer> mapDenomCount = new HashMap<>();
         for (Coin denomValue : denoms) {
@@ -368,7 +378,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         log.info("coinjoin: txid: {}", strResult);
 
-        queueCreateDenominationListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CREATE_DENOMINATION);
+        queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CREATE_DENOMINATION);
 
         return true;
     }
@@ -499,6 +509,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
 
         log.info("coinjoin: txid: {}", strResult);
+        queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CREATE_COLLATERAL);
 
         return true;
     }
@@ -541,6 +552,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         try {
+            // don't set the source to TransactionConfidence.Source.SELF on these collateral transactions
+            // otherwise when the masternodes do submit these transactions to the network, they will be
+            // ignored by DashJ and when they are received
             SendRequest req = SendRequest.forTx(txCollateral);
             req.aesKey = context.coinJoinManager.requestKeyParameter(mixingWallet);
             mixingWallet.signTransaction(req);
@@ -549,6 +563,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
         isMyCollateralValid = true;
+        if (!collateralSessionMap.containsKey(txCollateral.getTxId())) {
+            collateralSessionMap.put(txCollateral.getTxId(), 0);
+        }
         return true;
     }
 
@@ -877,6 +894,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 if (state.get() == statusUpdate.getState() && statusUpdate.getState() == POOL_STATE_QUEUE && sessionID.get() == 0 && statusUpdate.getSessionID() != 0) {
                     // new session id should be set only in POOL_STATE_QUEUE state
                     sessionID.set(statusUpdate.getSessionID());
+                    collateralSessionMap.put(txMyCollateral.getTxId(), statusUpdate.getSessionID());
                     timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
                     strMessageTmp = strMessageTmp + " Set nSessionID to " + sessionID.get();
                     queueSessionStartedListeners(MSG_SUCCESS);
@@ -1309,7 +1327,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
             // adjust balanceNeedsAnonymized to consume final denom
             if (nBalanceDenominated.subtract(nBalanceAnonymized).isGreaterThan(balanceNeedsAnonymized)) {
-                List<Coin> denoms = CoinJoin.getStandardDenominations();
+                List<Coin> denoms = CoinJoinClientOptions.getDenominations();
                 Coin nAdditionalDenom = Coin.ZERO;
                 for (Coin denom :denoms){
                     if (balanceNeedsAnonymized.isLessThan(denom)) {
@@ -1675,15 +1693,24 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         return ListenerRegistration.removeFromList(listener, transactionListeners);
     }
 
-    protected void queueCreateDenominationListeners(Transaction denominationTransaction, CoinJoinTransactionType type) {
+    protected void queueTransactionListeners(Transaction tx, CoinJoinTransactionType type) {
         //checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<CoinJoinTransactionListener> registration : transactionListeners) {
-            registration.executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    registration.listener.onTransactionProcessed(denominationTransaction, type);
-                }
-            });
+            registration.executor.execute(() -> registration.listener.onTransactionProcessed(tx, type, getSessionID()));
+        }
+    }
+
+    /**
+     *
+     * @param tx Transaction used for some purpose
+     * @param sessionId the session ID when the tx was used
+     * @param type CoinJoinTransactionType of tx
+     */
+
+    protected void queueTransactionListeners(Transaction tx, int sessionId, CoinJoinTransactionType type) {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<CoinJoinTransactionListener> registration : transactionListeners) {
+            registration.executor.execute(() -> registration.listener.onTransactionProcessed(tx, type, sessionId));
         }
     }
 }

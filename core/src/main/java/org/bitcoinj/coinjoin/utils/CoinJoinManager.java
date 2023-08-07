@@ -35,14 +35,18 @@ import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
+import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -160,12 +164,25 @@ public class CoinJoinManager {
         this.blockChain = blockChain;
         masternodeGroup = new MasternodeGroup(context, blockChain);
         masternodeGroup.setCoinJoinManager(this);
+        blockChain.addTransactionReceivedListener(transactionReceivedInBlockListener);
     }
 
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
             CoinJoin.updatedBlockTip(block);
+        }
+    };
+
+    TransactionReceivedInBlockListener transactionReceivedInBlockListener = new TransactionReceivedInBlockListener() {
+        @Override
+        public void receiveFromBlock(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
+            processTransaction(tx);
+        }
+
+        @Override
+        public boolean notifyTransactionIsInBlock(Sha256Hash txHash, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
+            return false;
         }
     };
 
@@ -177,6 +194,7 @@ public class CoinJoinManager {
     public void close() {
         if (blockChain != null) {
             blockChain.removeNewBestBlockListener(newBestBlockListener);
+            blockChain.removeTransactionReceivedListener(transactionReceivedInBlockListener);
         }
     }
 
@@ -382,5 +400,9 @@ public class CoinJoinManager {
 
     public boolean isMixing() {
         return coinJoinClientManagers.values().stream().anyMatch(CoinJoinClientManager::isMixing);
+    }
+
+    public void processTransaction(Transaction tx) {
+        coinJoinClientManagers.values().forEach(coinJoinClientManager -> coinJoinClientManager.processTransaction(tx));
     }
 }

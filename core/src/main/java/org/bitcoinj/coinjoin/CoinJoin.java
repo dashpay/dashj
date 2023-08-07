@@ -32,6 +32,7 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -42,12 +43,16 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 
 public class CoinJoin {
     private static final Logger log = LoggerFactory.getLogger(CoinJoin.class);
-    private static final List<Coin> standardDenominations = Lists.newArrayList(
-            Coin.COIN.multiply(10).add(Coin.valueOf(10000)),
-            Coin.COIN.add(Coin.valueOf(1000)),
-            Coin.COIN.div(10).add(Coin.valueOf(100)),
-            Coin.COIN.div(100).add(Coin.valueOf(10)),
-            Coin.COIN.div(1000).add(Coin.valueOf(1))
+    // this list of standard denominations cannot be modified by DashJ and must remain the same as
+    // CoinJoin::vecStandardDenominations in coinjoin.cpp
+    private static final List<Coin> standardDenominations = Collections.unmodifiableList(
+            Lists.newArrayList(
+                Coin.COIN.multiply(10).add(Coin.valueOf(10000)),
+                Coin.COIN.add(Coin.valueOf(1000)),
+                Coin.COIN.div(10).add(Coin.valueOf(100)),
+                Coin.COIN.div(100).add(Coin.valueOf(10)),
+                Coin.COIN.div(1000).add(Coin.valueOf(1))
+            )
     );
 
     private static final HashMap<Sha256Hash, CoinJoinBroadcastTx> mapDSTX = new HashMap<>();
@@ -185,12 +190,14 @@ public class CoinJoin {
         }
 
         // the collateral tx must not have been seen on the network
-        boolean hasBeenSeen = txCollateral.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.UNKNOWN;
+        TransactionConfidence confidence = txCollateral.getConfidence();
+        boolean hasBeenSeen = confidence.getConfidenceType() != TransactionConfidence.ConfidenceType.UNKNOWN ||
+                confidence.numBroadcastPeers() > 0 || confidence.getIXType() != TransactionConfidence.IXType.IX_NONE;
         if (hasBeenSeen) {
             log.info("coinjoin: collateral has been spent, need to recreate txCollateral={}", txCollateral.getTxId());
         }
         log.info("coinjoin: collateral: {}", txCollateral); /* Continued */
-        return hasBeenSeen;
+        return !hasBeenSeen;
     }
     public static Coin getCollateralAmount() { return getSmallestDenomination().div(10); }
     public static Coin getMaxCollateralAmount() { return getCollateralAmount().multiply(4); }

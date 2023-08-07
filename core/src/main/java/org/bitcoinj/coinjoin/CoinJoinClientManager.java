@@ -23,6 +23,7 @@ import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.MasternodeSync;
@@ -30,6 +31,7 @@ import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
@@ -39,6 +41,7 @@ import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
+import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +64,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MAX;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MIN;
 
-public class CoinJoinClientManager {
+public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
     private static final Random random = new Random();
     // Keep track of the used Masternodes
@@ -122,11 +125,13 @@ public class CoinJoinClientManager {
         checkArgument(wallet instanceof WalletEx);
         mixingWallet = (WalletEx) wallet;
         context = wallet.getContext();
+        mixingWallet.addCoinsReceivedEventListener(this);
     }
 
     public CoinJoinClientManager(WalletEx wallet) {
         mixingWallet = wallet;
         context = wallet.getContext();
+        mixingWallet.addCoinsReceivedEventListener(this);
     }
 
     public void processMessage(Peer from, Message message, boolean enable_bip61) {
@@ -409,6 +414,7 @@ public class CoinJoinClientManager {
 
     public void close(AbstractBlockChain blockChain) {
         blockChain.removeNewBestBlockListener(newBestBlockListener);
+        mixingWallet.removeCoinsReceivedEventListener(this);
     }
 
     public void updatedSuccessBlock() {
@@ -649,5 +655,14 @@ public class CoinJoinClientManager {
 
     public void addContinueMixingOnError(PoolStatus error) {
         continueMixingOnStatus.add(error);
+    }
+
+    public void processTransaction(Transaction tx) {
+        deqSessions.forEach(coinJoinClientSession -> coinJoinClientSession.processTransaction(tx));
+    }
+
+    @Override
+    public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
+        processTransaction(tx);
     }
 }

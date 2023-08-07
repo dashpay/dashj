@@ -18,5 +18,5 @@ package org.bitcoinj.coinjoin.listeners;
 import org.bitcoinj.core.Transaction;
 
 public interface CoinJoinTransactionListener {
-    void onTransactionProcessed(Transaction denominationTx, CoinJoinTransactionType type);
+    void onTransactionProcessed(Transaction denominationTx, CoinJoinTransactionType type, int sessionId);
 }

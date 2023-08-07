@@ -24,6 +24,7 @@ import org.bitcoinj.coinjoin.PoolStatus;
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
 import org.bitcoinj.core.MasternodeAddress;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
@@ -70,9 +71,11 @@ public class CoinJoinReporter extends MixingProgressTracker {
         );
     }
 
-    public CoinJoinReporter() {
+    public CoinJoinReporter(NetworkParameters params) {
         try {
-            File reportFile = new File("./coinjoin-report.txt");
+            DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.DEFAULT);
+            String fileDate = dateFormat.format(new Date());
+            File reportFile = new File("./coinjoin-report-" + params.getNetworkName() + "-" + fileDate + ".txt");
             fileWriter = new FileWriter(reportFile);
             writer = new BufferedWriter(fileWriter);
             writer.write("CoinJoin Report:");
@@ -151,8 +154,10 @@ public class CoinJoinReporter extends MixingProgressTracker {
             writer.newLine();
             writer.write("  status: " + Utils.listToString(statusList));
             writer.newLine();
-            writer.write(String.format("  connection timeouts: %d, session timeouts: %d, completed: %d",
-                    timedOutConnections, timedOutSessions, completedSessions));
+            writer.write(String.format("  connection timeouts: %d, session timeouts: %d, completed: %d\n" +
+                    "      queue timeouts: %d, accepting timeouts: %d, signing timeouts %d",
+                    timedOutConnections, timedOutSessions, completedSessions,
+                    timedOutQueues, timedOutWhileAccepting, timedOutWhileSigning));
             writer.newLine();
             writeBalance(wallet);
             writer.newLine();
@@ -186,15 +191,15 @@ public class CoinJoinReporter extends MixingProgressTracker {
     }
 
     @Override
-    public void onTransactionProcessed(Transaction denominationTx, CoinJoinTransactionType type) {
-        super.onTransactionProcessed(denominationTx, type);
+    public void onTransactionProcessed(Transaction tx, CoinJoinTransactionType type, int sessionId) {
+        super.onTransactionProcessed(tx, type, sessionId);
         try {
             if (type == CoinJoinTransactionType.CREATE_DENOMINATION) {
                 writeTime();
-                writer.write("Denominations Created: " + denominationTx.getTxId());
+                writer.write("Denominations Created: " + tx.getTxId());
                 writer.newLine();
                 TreeMap<Integer, Integer> denomMap = Maps.newTreeMap();
-                for (TransactionOutput output : denominationTx.getOutputs()) {
+                for (TransactionOutput output : tx.getOutputs()) {
                     int denom = CoinJoin.amountToDenomination(output.getValue());
                     denomMap.merge(denom, 1, Integer::sum);
                 }
@@ -204,7 +209,11 @@ public class CoinJoinReporter extends MixingProgressTracker {
                 }
             } else if (type == CoinJoinTransactionType.CREATE_COLLATERAL) {
                 writeTime();
-                writer.write("Collateral Created: " + denominationTx.getTxId());
+                writer.write("Collateral Created: " + tx.getTxId());
+                writer.newLine();
+            } else if (type == CoinJoinTransactionType.MIXING_FEE) {
+                writeTime();
+                writer.write("Fee Charged on session: " + sessionId + " txid:" + tx.getTxId());
                 writer.newLine();
             }
         } catch (IOException x) {

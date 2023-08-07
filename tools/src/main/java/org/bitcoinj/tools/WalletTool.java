@@ -18,6 +18,7 @@
 package org.bitcoinj.tools;
 
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinSendRequest;
@@ -128,6 +129,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 
+import static org.bitcoinj.core.Coin.ZERO;
 import static org.bitcoinj.core.Coin.parseCoin;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -1632,10 +1634,11 @@ public class WalletTool {
         wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
         syncChain();
         // set defaults
-        CoinJoinReporter reporter = new CoinJoinReporter();
+        CoinJoinReporter reporter = new CoinJoinReporter(params);
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setSessions(1);
+        CoinJoinClientOptions.removeDenomination(CoinJoin.getSmallestDenomination());
         Coin amountToMix = wallet.getBalance();
 
         // set command line arguments
@@ -1643,6 +1646,15 @@ public class WalletTool {
             amountToMix = Coin.parseCoin(options.valueOf(mixAmountFlag));
         }
         CoinJoinClientOptions.setAmount(amountToMix);
+
+        if (!amountToMix.isGreaterThanOrEqualTo(ZERO)) {
+            System.err.println("The mixing amount must be larger than zero");
+            return;
+        }
+        if (wallet.getBalance().isZero()) {
+            System.err.println("The wallet has no funds to mix");
+            return;
+        }
 
         if (options.has(sessionsFlag)) {
             CoinJoinClientOptions.setSessions(options.valueOf(sessionsFlag));
@@ -1656,6 +1668,8 @@ public class WalletTool {
         if (options.has(multiSessionFlag)) {
             CoinJoinClientOptions.setMultiSessionEnabled(options.valueOf(multiSessionFlag));
         }
+        System.out.println("Mixing Configuration:");
+        System.out.println(CoinJoinClientOptions.getString());
 
         ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
