@@ -296,14 +296,20 @@ public class TransactionBroadcast {
         return count;
     }
 
-    private PeerDisconnectedEventListener disconnectedListener = new PeerDisconnectedEventListener() {
+    private final PeerDisconnectedEventListener disconnectedListener = new PeerDisconnectedEventListener() {
         @Override
         public void onPeerDisconnected(Peer peer, int peerCount) {
-            //log.info(peer + " was disconnected while sending a tx {}", tx.getHash());
             if(sentToPeers.containsKey(peer.getAddress())) {
                 sentToPeers.put(peer.getAddress(), true);
-                log.info(peer + " was disconnected while sending a transaction to it.  tx: {}", tx.getHash());
+                log.info(peer + " was disconnected while sending a transaction to it.  tx: {}", tx.getTxId());
                 int numDisconnectedPeers = getDisconnectedPeers();
+
+                RejectMessage rm = tx.determineRejectMessage();
+                if (rm == null)
+                    rm = new RejectMessage(peer.getVersionMessage().params, RejectMessage.RejectCode.OTHER, tx.getTxId(),"Peer disconnected after receiving this tx", "The transaction is invalid");
+                tx.getConfidence().markRejectedBy(peer.getAddress(), rm);
+                tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.REJECT);
+
                 if(numDisconnectedPeers >= Math.round(numToBroadcastTo / 2.0)) {
                     log.info(peer + " was disconnected, setting exception on this transaction broadcast");
                     future.setException(new PeerException(peer + " was disconnected"));
