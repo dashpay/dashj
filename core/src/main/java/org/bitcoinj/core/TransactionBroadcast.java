@@ -97,32 +97,7 @@ public class TransactionBroadcast {
         this.dropPeersAfterBroadcast = dropPeersAfterBroadcast;
     }
 
-    private PreMessageReceivedEventListener rejectionListener = new PreMessageReceivedEventListener() {
-        @Override
-        public Message onPreMessageReceived(Peer peer, Message m) {
-            if (m instanceof RejectMessage) {
-                RejectMessage rejectMessage = (RejectMessage)m;
-                if (tx.getTxId().equals(rejectMessage.getRejectedObjectHash())) {
-                    rejects.put(peer, rejectMessage);
-                    tx.getConfidence().markRejectedBy(peer.getAddress(), rejectMessage);
-                    tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.REJECT);
-
-                    int size = rejects.size();
-                    long threshold = Math.round(numWaitingFor / 2.0);
-                    if (size > threshold) {
-                        log.warn("Threshold for considering broadcast rejected has been reached ({}/{})", size, threshold);
-                        future.setException(new RejectedTransactionException(tx, rejectMessage));
-                        peerGroup.removePreMessageReceivedEventListener(this);
-                        peerGroup.removeDisconnectedEventListener(disconnectedListener);
-                    }
-                }
-            }
-            return m;
-        }
-    };
-
     public ListenableFuture<Transaction> broadcast() {
-        peerGroup.addPreMessageReceivedEventListener(Threading.SAME_THREAD, rejectionListener);
         peerGroup.addDisconnectedEventListener(Threading.SAME_THREAD, disconnectedListener);
         log.info("Waiting for {} peers required for broadcast, we have {} ...", minConnections, peerGroup.getConnectedPeers().size());
         peerGroup.waitForPeers(minConnections).addListener(new EnoughAvailablePeers(), Threading.SAME_THREAD);
@@ -226,7 +201,6 @@ public class TransactionBroadcast {
                 // We're done! It's important that the PeerGroup lock is not held (by this thread) at this
                 // point to avoid triggering inversions when the Future completes.
                 log.info("broadcastTransaction: {} complete", tx.getTxId());
-                peerGroup.removePreMessageReceivedEventListener(rejectionListener);
                 peerGroup.removeDisconnectedEventListener(disconnectedListener);
                 conf.removeEventListener(this);
                 future.set(tx);  // RE-ENTRANCY POINT
@@ -333,7 +307,6 @@ public class TransactionBroadcast {
                 if(numDisconnectedPeers >= Math.round(numToBroadcastTo / 2.0)) {
                     log.info(peer + " was disconnected, setting exception on this transaction broadcast");
                     future.setException(new PeerException(peer + " was disconnected"));
-                    peerGroup.removePreMessageReceivedEventListener(rejectionListener);
                     peerGroup.removeDisconnectedEventListener(this);
                 }
             }
