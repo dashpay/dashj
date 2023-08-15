@@ -1755,4 +1755,32 @@ public class Transaction extends ChildMessage {
         }
     }
 
+    /**
+     * This method simulates the BIP61 Reject messages from Dash Core prior to v19.
+     * It is not likely that a transaction created by DashJ would have any of these issues.
+     *
+     *
+     * @return RejectMessage corresponding to a reason that the network may reject this transaction
+     */
+    public RejectMessage determineRejectMessage() {
+        try {
+            verify();
+        } catch (VerificationException e) {
+            return new RejectMessage(params, RejectMessage.RejectCode.MALFORMED, getTxId(), e.getMessage(), "");
+        }
+        // do any outputs contain dust?
+        if (getOutputs().stream().anyMatch(TransactionOutput::isDust)) {
+            return new RejectMessage(params, RejectMessage.RejectCode.DUST, getTxId(), "", "");
+        }
+        // is the fee high enough
+        Coin fee = getFee();
+        if (fee != null) {
+            int size = bitcoinSerialize().length;
+            Coin minFee = Coin.valueOf(size).multiply(REFERENCE_DEFAULT_MIN_TX_FEE.value).div(1000);
+            if (minFee.isGreaterThan(fee)) {
+                return new RejectMessage(params, RejectMessage.RejectCode.INSUFFICIENTFEE, getTxId(), "", "");
+            }
+        }
+        return null;
+    }
 }
