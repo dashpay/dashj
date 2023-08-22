@@ -311,7 +311,7 @@ public class WalletEx extends Wallet {
 
     HashMap<TransactionOutPoint, Integer> mapOutpointRoundsCache = new HashMap<>();
     // Recursively determine the rounds of a given input (How deep is the CoinJoin chain for a given input)
-    int getRealOutpointCoinJoinRounds(TransactionOutPoint outPoint) {
+    public int getRealOutpointCoinJoinRounds(TransactionOutPoint outPoint) {
         return getRealOutpointCoinJoinRounds(outPoint, 0);
     }
 
