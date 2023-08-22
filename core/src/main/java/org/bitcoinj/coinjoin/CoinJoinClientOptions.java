@@ -65,6 +65,8 @@ public class CoinJoinClientOptions {
 
     public static boolean removeDenomination(Coin amount) { return CoinJoinClientOptions.get().allowedDenominations.get().remove(amount); }
 
+    public static boolean removeDenomination(Denomination denomination) { return CoinJoinClientOptions.get().allowedDenominations.get().remove(denomination.value); }
+
     public static void resetDenominations() { CoinJoinClientOptions.get().allowedDenominations.set(CoinJoin.getStandardDenominations()); }
     private static CoinJoinClientOptions instance;
     private static boolean onceFlag;

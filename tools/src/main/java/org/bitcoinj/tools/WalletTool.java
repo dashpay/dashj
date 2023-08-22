@@ -22,6 +22,7 @@ import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinSendRequest;
+import org.bitcoinj.coinjoin.Denomination;
 import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
@@ -1638,7 +1639,8 @@ public class WalletTool {
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setSessions(1);
-        CoinJoinClientOptions.removeDenomination(CoinJoin.getSmallestDenomination());
+        CoinJoinClientOptions.removeDenomination(Denomination.SMALLEST);
+        //CoinJoinClientOptions.removeDenomination(CoinJoinClientOptions.getDenominations().stream().min(Coin::compareTo).get());
         Coin amountToMix = wallet.getBalance();
 
         // set command line arguments
