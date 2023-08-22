@@ -6242,4 +6242,9 @@ public class Wallet extends BaseTaggableObject
             addresses.add(Address.fromKey(getParams(), key));
         return addresses;
     }
+
+    @Override
+    public boolean isFullyMixed(TransactionOutput output) {
+        return false;
+    }
 }

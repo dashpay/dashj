@@ -212,8 +212,7 @@ public class WalletEx extends Wallet {
                 List<TransactionOutput> all = calculateAllSpendCandidates(true, balanceType == BalanceType.COINJOIN_SPENDABLE);
                 Coin value = Coin.ZERO;
                 for (TransactionOutput out : all) {
-                    // exclude non coinjoin outputs if isCoinJoinOnly is true
-                    // exclude coinjoin outputs when isCoinJoinOnly is false
+                    // coinjoin outputs must be denominated, using coinjoin keys and fully mixed
                     boolean isCoinJoin = out.isDenominated() && out.isCoinJoin(this) && isFullyMixed(out);
 
                     if (isCoinJoin)
@@ -439,6 +438,7 @@ public class WalletEx extends Wallet {
 
     Sha256Hash coinJoinSalt = Sha256Hash.ZERO_HASH;
 
+    @Override
     public boolean isFullyMixed(TransactionOutput output) {
         return isFullyMixed(new TransactionOutPoint(params, output));
     }
