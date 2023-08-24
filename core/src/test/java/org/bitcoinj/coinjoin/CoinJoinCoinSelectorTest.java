@@ -75,13 +75,20 @@ public class CoinJoinCoinSelectorTest extends TestWithWallet {
         txCoinJoin.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
         walletEx.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.UNSPENT, txCoinJoin));
 
-        assertTrue(coinSelector.shouldSelect(txCoinJoin));
+        // mix for the max number of required rounds to make sure that the coinselecter chooses the transaction
+        int requiredRounds = CoinJoinClientOptions.getRounds() + CoinJoinClientOptions.getRandomRounds();
+        Transaction lastTxCoinJoin = txCoinJoin;
+        for (int i = 1; i < requiredRounds; ++i) {
+            Transaction txNextCoinJoin = new Transaction(UNITTEST);
+            txNextCoinJoin.addInput(lastTxCoinJoin.getOutput(0));
+            txNextCoinJoin.addOutput(CoinJoin.getSmallestDenomination(), (DeterministicKey) walletEx.getCoinJoin().freshReceiveKey());
+            txNextCoinJoin.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
+            walletEx.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.UNSPENT, txNextCoinJoin));
+            lastTxCoinJoin = txNextCoinJoin;
+        }
 
-        Transaction txNotCoinJoin = new Transaction(UNITTEST);
-        txNotCoinJoin.addOutput(COIN, key);
-        txCoinJoin.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
-
-        assertFalse(coinSelector.shouldSelect(txNotCoinJoin));
-
+        assertTrue(coinSelector.shouldSelect(lastTxCoinJoin));
+        // txDenomination is mixed zero rounds, so it should not be selected
+        assertFalse(coinSelector.shouldSelect(txDemonination));
     }
 }
