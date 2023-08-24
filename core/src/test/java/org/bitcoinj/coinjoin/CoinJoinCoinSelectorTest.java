@@ -16,13 +16,15 @@
 
 package org.bitcoinj.coinjoin;
 
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.testing.TestWithWallet;
-import org.bitcoinj.wallet.DerivationPathFactory;
+import org.bitcoinj.wallet.KeyChain;
 import org.bitcoinj.wallet.WalletEx;
+import org.bitcoinj.wallet.WalletTransaction;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,11 +41,13 @@ public class CoinJoinCoinSelectorTest extends TestWithWallet {
     public void setUp() throws Exception {
         super.setUp();
         walletEx = WalletEx.fromSeed(wallet.getParams(), wallet.getKeyChainSeed(), Script.ScriptType.P2PKH);
+        CoinJoinClientOptions.setRounds(1);
     }
 
     @After
     @Override
     public void tearDown() throws Exception {
+        CoinJoinClientOptions.setRounds(CoinJoinConstants.DEFAULT_COINJOIN_ROUNDS);
         super.tearDown();
     }
 
@@ -54,14 +58,22 @@ public class CoinJoinCoinSelectorTest extends TestWithWallet {
 
         CoinJoinCoinSelector coinSelector = new CoinJoinCoinSelector(walletEx);
 
+        Transaction txDeposit = new Transaction(UNITTEST);
+        txDeposit.addInput(Sha256Hash.ZERO_HASH, 0, new Script(new byte[0]));
+        txDeposit.addOutput(COIN, wallet.freshAddress(KeyChain.KeyPurpose.RECEIVE_FUNDS));
+        walletEx.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.SPENT, txDeposit));
+
         Transaction txCoinJoin;
         Transaction txDemonination = new Transaction(UNITTEST);
+        txDemonination.addInput(txDeposit.getOutput(0));
         txDemonination.addOutput(CoinJoin.getSmallestDenomination(), (DeterministicKey) walletEx.getCoinJoin().freshReceiveKey());
+        walletEx.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.SPENT, txDemonination));
 
         txCoinJoin = new Transaction(UNITTEST);
         txCoinJoin.addInput(txDemonination.getOutput(0));
         txCoinJoin.addOutput(CoinJoin.getSmallestDenomination(), (DeterministicKey) walletEx.getCoinJoin().freshReceiveKey());
         txCoinJoin.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
+        walletEx.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.UNSPENT, txCoinJoin));
 
         assertTrue(coinSelector.shouldSelect(txCoinJoin));
 
