@@ -175,10 +175,12 @@ public class TransactionBuilder {
         try {
             SendRequest request = SendRequest.forTx(req.tx);
             request.aesKey = wallet.getContext().coinJoinManager.requestKeyParameter(wallet);
+            request.coinControl = coinControl;
             wallet.sendCoins(request);
             transaction = request.tx;
         } catch (InsufficientMoneyException x) {
-            throw new RuntimeException(x);
+            strResult.append(x);
+            return false;
         }
         keepKeys = true;
 
@@ -228,7 +230,6 @@ public class TransactionBuilder {
     @GuardedBy("lock")
     int getBytesTotal() {
         return bytesBase + vecOutputs.size() * bytesOutput + getSizeOfCompactSizeDiff(vecOutputs.size());
-
     }
     /// Helper to calculate static amount left by simply subtracting an used amount and a fee from a provided initial amount.
     static Coin getAmountLeft(Coin amountInitial, Coin amountUsed, Coin fee) {
