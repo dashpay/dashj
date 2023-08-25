@@ -16,6 +16,8 @@
 
 package org.bitcoinj.coinjoin;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
@@ -26,10 +28,12 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.params.UnitTestParams;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -72,6 +76,11 @@ public class CoinJoinTest {
             Coin value = CoinJoin.getStandardDenominations().get(i);
             assertEquals(value, CoinJoin.denominationToAmount(CoinJoin.amountToDenomination(value)));
         }
+
+        List<Denomination> denominationList = Lists.newArrayList(Denomination.values());
+        denominationList.forEach(denomination -> {
+            assertNotEquals(-1, CoinJoin.getStandardDenominations().indexOf(denomination.value));
+        });
     }
     @Test
     public void collateralTests() {
@@ -125,5 +134,17 @@ public class CoinJoinTest {
         // modification of this list is not allowed
         assertThrows(UnsupportedOperationException.class, () -> denominations.add(Coin.COIN));
         assertThrows(UnsupportedOperationException.class, () -> denominations.remove(0));
+    }
+
+    @Test
+    public void roundsStringTest() {
+        HashMap<Integer, String> map = Maps.newHashMap();
+        map.put(0, "coinjoin");
+        map.put(16, "coinjoin");
+        map.put(-4, "bad index");
+        map.put(-3, "collateral");
+        map.put(-2, "non-denominated");
+        map.put(-1, "no such tx");
+        map.forEach((rounds, str) -> assertEquals(str, CoinJoin.getRoundsString(rounds)));
     }
 }
