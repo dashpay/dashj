@@ -3605,4 +3605,11 @@ public class WalletTest extends TestWithWallet {
         assertEquals(wallet.freshReceiveAddress(Script.ScriptType.P2PKH),
                 clone.freshReceiveAddress(Script.ScriptType.P2PKH));
     }
+
+    @Test
+    public void fullyMixedTest() throws Exception {
+        receiveATransaction(wallet, wallet.freshAddress(KeyPurpose.RECEIVE_FUNDS));
+        Transaction tx = wallet.getWalletTransactions().iterator().next().getTransaction();
+        assertFalse(wallet.isFullyMixed(tx.getOutput(0)));
+    }
 }
