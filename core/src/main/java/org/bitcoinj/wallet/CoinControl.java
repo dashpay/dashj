@@ -24,6 +24,10 @@ import org.bitcoinj.core.TransactionOutPoint;
 import java.util.ArrayList;
 import java.util.HashSet;
 
+/**
+ * CoinControl comes from Dash Core.  Not all functions fields and functions are supported within the Wallet class
+ */
+
 public class CoinControl {
     private TransactionDestination destChange;
     //! If false, allows unselected inputs, but requires all selected inputs be used if fAllowOtherInputs is true (default)
@@ -78,7 +82,7 @@ public class CoinControl {
     }
 
     public boolean hasSelected() {
-        return (setSelected.size() > 0);
+        return (!setSelected.isEmpty());
     }
 
     public boolean isSelected(TransactionOutPoint output) {
@@ -90,7 +94,7 @@ public class CoinControl {
     }
 
     public void unSelect(TransactionOutPoint output) {
-        setSelected.add(output);
+        setSelected.remove(output);
     }
 
     public void unSelectAll() {
