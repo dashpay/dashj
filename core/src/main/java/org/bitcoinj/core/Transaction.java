@@ -1785,6 +1785,9 @@ public class Transaction extends ChildMessage {
                 return false;
         }
 
+        return true;
+    }
+
     /**
      * This method simulates the BIP61 Reject messages from Dash Core prior to v19.
      * It is not likely that a transaction created by DashJ would have any of these issues.
@@ -1812,8 +1815,6 @@ public class Transaction extends ChildMessage {
             }
         }
         return null;
-    }
-        return true;
     }
 
     public boolean isEmpty() {
