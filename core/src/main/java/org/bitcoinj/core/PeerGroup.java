@@ -2510,13 +2510,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
         tx.getConfidence().setPeerInfo(getConnectedPeers().size(), minConnections);
 
-        // keep track of how many times a transaction is sent
-        int sendCount = 0;
-        if(pendingTxSendCounts.containsKey(tx.getHash())) {
-            sendCount = pendingTxSendCounts.get(tx.getHash());
-        }
-        pendingTxSendCounts.put(tx.getHash(), ++sendCount);
-
         final TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
         broadcast.setMinConnections(minConnections);
         broadcast.setDropPeersAfterBroadcast(dropPeersAfterBroadcast && tx.getConfidence().numBroadcastPeers() == 0);
@@ -2546,53 +2539,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             public void onFailure(Throwable throwable) {
                 // This can happen if we get a reject message from a peer.
                 runningBroadcasts.remove(broadcast);
-            }
-        }, MoreExecutors.directExecutor());
-
-        // Handle the case of 0.14.0.x nodes disconnecting dashj when sending transactions
-        // This will resend the transaction one if it was only sent to 1 peer
-        // This will resend the transaction up to 9 times if any one peer was disconnected while sending
-        Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
-            final int MAX_ATTEMPTS = 9;
-            Context context = Context.get();
-            @Override
-            public void onSuccess(Transaction transaction) {
-                log.info("Successfully sent tx {}", transaction.getTxId());
-                Context.propagate(context);
-
-                if(transaction.getConfidence().numBroadcastPeers() == 0) {
-                    // TODO: this tx was sent to a single peer, should we send it again to make sure or see if there are more connections?
-                    Integer sentCount = pendingTxSendCounts.get(transaction.getTxId());
-
-                    if (sentCount != null) {
-                        if (sentCount <= 2) {
-                            log.info("resending tx {} since it was only sent to 1 peer", tx.getHash());
-                            broadcastTransaction(tx);
-                        } else {
-                            pendingTxSendCounts.put(tx.getHash(), sentCount + MAX_ATTEMPTS);
-                        }
-                    }
-                }
-                pendingTxSendCounts.remove(tx.getHash());
-            }
-
-            @Override
-            public void onFailure(Throwable throwable) {
-                Context.propagate(context);
-                int sentCount = pendingTxSendCounts.get(tx.getHash());
-                if(throwable instanceof PeerException) {
-                    log.info("Failed to send tx {} due to disconnects", tx.getHash());
-
-                    if(sentCount <= MAX_ATTEMPTS) {
-                        log.info("resending tx {} due to disconnects", tx.getHash());
-                        broadcastTransaction(tx);
-                    } else {
-                        pendingTxSendCounts.remove(tx.getHash());
-                    }
-                } else {
-                    log.info("Failed to send tx {} due to rejections from peers", tx.getHash());
-                    pendingTxSendCounts.remove(tx.getHash());
-                }
             }
         }, MoreExecutors.directExecutor());
 

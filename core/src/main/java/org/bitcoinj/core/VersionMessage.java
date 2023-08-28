@@ -44,7 +44,7 @@ import java.util.Locale;
 public class VersionMessage extends Message {
 
     /** The version of this library release, as a string. */
-    public static final String BITCOINJ_VERSION = "19.0.3-SNAPSHOT";
+    public static final String BITCOINJ_VERSION = "19.0.5";
     /** The value that is prepended to the subVer field of this application. */
     public static final String LIBRARY_SUBVER = "/DashJ:" + BITCOINJ_VERSION + "/";
 

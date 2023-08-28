@@ -19,6 +19,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.net.discovery.MasternodeSeedPeers;
+import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
@@ -39,17 +40,33 @@ import java.io.File;
 public class RestoreFromSeedThenDump {
 
     public static void main(String[] args) throws Exception {
-        BriefLogFormatter.init();
-        NetworkParameters params = TestNet3Params.get();
-        if (args.length == 0) {
-            System.out.println("Enter a seed phrase");
+        if (args.length < 1) {
+            System.out.println("RestoreFromSeedThenDump network \"seed phrase\"");
+            System.out.println("  missing the network");
         }
+        BriefLogFormatter.initWithSilentBitcoinJ();
+        String network = args[0];
+        NetworkParameters params;
+
+        switch (network) {
+            case "testnet":
+                params = TestNet3Params.get();
+                break;
+            default:
+                params = MainNetParams.get();
+                break;
+        }
+
+        if (args.length <= 1) {
+            System.out.println("RestoreFromSeedThenDump network \"seed phrase\"");
+            System.out.println("  missing the seed phrase");
+        }
+        String seedCode = args[1];
 
         // Bitcoinj supports hierarchical deterministic wallets (or "HD Wallets"): https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
         // HD wallets allow you to restore your wallet simply from a root seed. This seed can be represented using a short mnemonic sentence as described in BIP 39: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
 
         // Here we restore our wallet from a seed with no passphrase. Also have a look at the BackupToMnemonicSeed.java example that shows how to backup a wallet by creating a mnemonic sentence.
-        String seedCode = args[0];
         String passphrase = "";
         long creationtime = 1547463771L;//1409478661L;
 
@@ -77,7 +94,7 @@ public class RestoreFromSeedThenDump {
         // Because we are importing an existing wallet which might already have transactions we must re-download the blockchain to make the wallet picks up these transactions
         // You can find some information about this in the guides: https://bitcoinj.github.io/working-with-the-wallet#setup
         // To do this we clear the transactions of the wallet and delete a possible existing blockchain file before we download the blockchain again further down.
-        System.out.println(wallet.toString());
+        System.out.println(wallet);
         wallet.clearTransactions(0);
         File chainFile = new File("restore-from-seed.spvchain");
         if (chainFile.exists()) {
@@ -108,10 +125,10 @@ public class RestoreFromSeedThenDump {
         bListener.await();
 
         // Print a debug message with the details about the wallet. The correct balance should now be displayed.
-        System.out.println(wallet.toString());
+        System.out.println(wallet);
+        wallet.saveToFile(new File("restored-wallet.wallet"));
 
         // shutting down again
         peerGroup.stop();
-        //System.out.println(wallet.toString(true, false, null, true, true,));
     }
 }

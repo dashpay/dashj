@@ -20,7 +20,6 @@ import org.bitcoinj.net.discovery.SeedPeers;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +33,8 @@ public class PortOpen {
     public static boolean serverListening(String host, int port) {
         Socket s = null;
         try {
-            s = new Socket(host, port);
+            s = new Socket();
+            s.connect(new InetSocketAddress(host, port), 5000);
             return true;
         } catch (Exception e) {
             return false;
@@ -53,14 +53,16 @@ public class PortOpen {
 
         if (args.length > 0 && args[0].equals("testnet"))
             params = TestNet3Params.get();
+        System.out.println("Checking availability of seeds on " + params.getId());
 
         SeedPeers seedPeers = new SeedPeers(params);
         try {
             int index = 0;
             int notAvailable = 0;
             for (InetSocketAddress address : seedPeers.getPeers(0, 10, TimeUnit.SECONDS)) {
+                System.out.print(address.getAddress());
                 boolean available = serverListening(address.getAddress().getHostAddress(), params.getPort());
-                System.out.println(address.getAddress() + " is " + (available ? "available" : "not available"));
+                System.out.println(" is " + (available ? "available" : "not available"));
                 index++;
                 notAvailable += available ? 0 : 1;
             }

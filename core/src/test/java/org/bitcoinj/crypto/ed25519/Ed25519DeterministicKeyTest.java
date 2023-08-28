@@ -20,8 +20,12 @@ import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
 
+import org.bitcoinj.crypto.IDeterministicKey;
+import org.bitcoinj.wallet.DeterministicSeed;
+import org.bitcoinj.wallet.UnreadableWalletException;
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 public class Ed25519DeterministicKeyTest {
@@ -111,5 +115,35 @@ public class Ed25519DeterministicKeyTest {
         assertStringBytesEquals("003c24da049451555d51a7014a37337aa4e12d41e485abccfa46b47dfb2af54b7a", levelFive.getPubKey());
         assertEquals(ImmutableList.of(ChildNumber.ZERO_HARDENED, ChildNumber.ONE_HARDENED, TWO_HARDENED, TWO_HARDENED, BILLION_HARD), levelFive.getPath());
         assertEquals(0xd6322ccd, levelFive.getParentFingerprint());
+    }
+
+    @Test
+    public void testVector2() throws UnreadableWalletException {
+        String seedPhrase = "enemy check owner stumble unaware debris suffer peanut good fabric bleak outside";
+        byte[] seed = new DeterministicSeed(seedPhrase, null, "", 0).getSeedBytes();
+        Ed25519DeterministicKey masterKey = Ed25519HDKeyDerivation.createMasterPrivateKey(seed);
+
+        // Derive
+        IDeterministicKey first = masterKey.deriveChildKey(ChildNumber.NINE_HARDENED);
+        IDeterministicKey second = first.deriveChildKey(ChildNumber.FIVE_HARDENED);
+        IDeterministicKey third = second.deriveChildKey(new ChildNumber(3, true));
+        IDeterministicKey fourth = third.deriveChildKey(new ChildNumber(4, true));
+        IDeterministicKey fifth = fourth.deriveChildKey(new ChildNumber(0, true));
+
+
+        // from rust dash-core-shared
+        // m/9'/5'/3'/4'/0' fingerprint 2497558984
+        // m/9'/5'/3'/4'/0' chaincode 587dc2c7de6d36e06c6de0a2989cd8cb112c1e41b543002a5ff422f3eb1e8cd6
+        // m/9'/5'/3'/4'/0' secret_key 7898dbaa7ab9b550e3befcd53dc276777ffc8a27124f830c04e17fcf74b9e071
+        // m/9'/5'/3'/4'/0' public_key_data 08e2698fdcaa0af8416966ba9349b0c8dfaa80ed7f4094e032958a343e45f4b6
+        // m/9'/5'/3'/4'/0' key_id c9bbba6a3ad5e87fb11af4f10458a52d3160259c
+        // m/9'/5'/3'/4'/0' base64_keys eJjbqnq5tVDjvvzVPcJ2d3/8iicST4MMBOF/z3S54HEI4mmP3KoK+EFpZrqTSbDI36qA7X9AlOAylYo0PkX0tg==
+
+        assertArrayEquals(Utils.HEX.decode("587dc2c7de6d36e06c6de0a2989cd8cb112c1e41b543002a5ff422f3eb1e8cd6"), fifth.getChainCode());
+        assertArrayEquals(Utils.HEX.decode("7898dbaa7ab9b550e3befcd53dc276777ffc8a27124f830c04e17fcf74b9e071"), fifth.getPrivKeyBytes());
+        assertArrayEquals(Utils.HEX.decode("0008e2698fdcaa0af8416966ba9349b0c8dfaa80ed7f4094e032958a343e45f4b6"), fifth.getPubKey());
+        assertArrayEquals(Utils.HEX.decode("c9bbba6a3ad5e87fb11af4f10458a52d3160259c"), fifth.getPubKeyHash());
+        String privatePublicBase64 = ((Ed25519DeterministicKey)fifth).getPrivatePublicBase64();
+        assertEquals("eJjbqnq5tVDjvvzVPcJ2d3/8iicST4MMBOF/z3S54HEI4mmP3KoK+EFpZrqTSbDI36qA7X9AlOAylYo0PkX0tg==", privatePublicBase64);
     }
 }

@@ -20,6 +20,8 @@ import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
 
+import java.util.HashMap;
+
 public class DerivationPathFactory {
 
     private NetworkParameters params;
@@ -227,13 +229,17 @@ public class DerivationPathFactory {
                 .add(new ChildNumber(account, true))
                 .build();
     }
+    // keep once instance per network
+    private static final HashMap<String, DerivationPathFactory> instances = new HashMap<>();
 
-    // Do we need this?
-    private static DerivationPathFactory instance;
     public static DerivationPathFactory get(NetworkParameters params) {
-        if(instance == null) {
-            instance = new DerivationPathFactory(params);
+        if(instances.get(params.getId()) == null) {
+            instances.put(params.getId(), new DerivationPathFactory(params));
         }
-        return instance;
+        return instances.get(params.getId());
+    }
+
+    public NetworkParameters getParams() {
+        return params;
     }
 }
