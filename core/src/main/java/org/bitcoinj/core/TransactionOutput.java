@@ -320,11 +320,13 @@ public class TransactionOutput extends ChildMessage {
     }
 
     /**
-     * Returns true if this output is to a coinjoin related key
+     * Returns true if this output is to a coinjoin related key and is fully mixed
      */
     public boolean isCoinJoin(TransactionBag transactionBag) {
         try {
             if(!isDenominated())
+                return false;
+            if(!transactionBag.isFullyMixed(this))
                 return false;
 
             Script script = getScriptPubKey();
@@ -444,5 +446,9 @@ public class TransactionOutput extends ChildMessage {
 
     public boolean equalsWithoutParent(TransactionOutput output) {
         return value == output.value && Arrays.equals(scriptBytes, output.scriptBytes);
+    }
+
+    public boolean isFullyMixed(TransactionBag transactionBag) {
+        return transactionBag.isFullyMixed(this);
     }
 }

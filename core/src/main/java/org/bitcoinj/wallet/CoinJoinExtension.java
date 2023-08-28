@@ -22,8 +22,10 @@ import com.google.common.collect.Maps;
 import com.google.protobuf.CodedOutputStream;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
@@ -178,6 +180,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     }
 
     public TreeMap<Integer, List<TransactionOutput>> getOutputs() {
+        checkNotNull(wallet);
         TreeMap<Integer, List<TransactionOutput>> outputs = Maps.newTreeMap();
         for (Coin amount : CoinJoin.getStandardDenominations()) {
             outputs.put(CoinJoin.amountToDenomination(amount), Lists.newArrayList());
@@ -205,8 +208,27 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             int denom = entry.getKey();
             List<TransactionOutput> outputs = entry.getValue();
             Coin value = outputs.stream().map(TransactionOutput::getValue).reduce(Coin::add).orElse(Coin.ZERO);
-            builder.append(CoinJoin.denominationToString(denom)).append(" ").append(outputs.size()).append(" ")
+            builder.append(CoinJoin.denominationToString(denom)).append(" outputs:").append(outputs.size()).append(" total:")
                     .append(value.toFriendlyString()).append("\n");
+            outputs.forEach(output -> {
+                TransactionOutPoint outPoint = new TransactionOutPoint(output.getParams(), output.getIndex(), output.getParentTransactionHash());
+                builder.append("  addr:")
+                        .append(Address.fromPubKeyHash(output.getParams(), ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey())))
+                        .append(" outpoint:")
+                        .append(outPoint.toStringShort())
+                        .append(" ");
+                int rounds = ((WalletEx) wallet).getRealOutpointCoinJoinRounds(outPoint);
+                builder.append(CoinJoin.getRoundsString(rounds));
+                if (rounds >= 0) {
+                    builder.append(" ").append(rounds).append(" rounds");
+                    if (((WalletEx) wallet).isFullyMixed(outPoint)) {
+                        builder.append(" (fully mixed)");
+                    }
+                } else {
+                    builder.append(" ").append(output.getValue().toFriendlyString());
+                }
+                builder.append("\n");
+            });
         }
         return builder.toString();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group
+ * Copyright (c) 2023 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,18 @@
 
 package org.bitcoinj.coinjoin;
 
-import org.junit.Test;
+import org.bitcoinj.core.Coin;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+public enum Denomination {
+    TEN(Coin.COIN.multiply(10).add(Coin.valueOf(10000))),
+    ONE(Coin.COIN.add(Coin.valueOf(1000))),
+    TENTH(Coin.COIN.div(10).add(Coin.valueOf(100))),
+    HUNDREDTH(Coin.COIN.div(100).add(Coin.valueOf(10))),
+    THOUSANDTH(Coin.COIN.div(1000).add(Coin.valueOf(1))),
+    SMALLEST(THOUSANDTH.value);
 
-public class CoinJoinCoinSelectorTest extends TestWithCoinJoinWallet {
-
-
-    @Test
-    public void selectable() {
-        CoinJoinCoinSelector coinSelector = new CoinJoinCoinSelector(walletEx);
-
-        assertTrue(coinSelector.shouldSelect(lastTxCoinJoin));
-        // txDenomination is mixed zero rounds, so it should not be selected
-        assertFalse(coinSelector.shouldSelect(txDenomination));
+    final Coin value;
+    Denomination(Coin value) {
+        this.value = value;
     }
 }

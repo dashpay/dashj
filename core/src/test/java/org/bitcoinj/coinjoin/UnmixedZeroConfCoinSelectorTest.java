@@ -21,15 +21,18 @@ import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class CoinJoinCoinSelectorTest extends TestWithCoinJoinWallet {
+public class UnmixedZeroConfCoinSelectorTest extends TestWithCoinJoinWallet {
 
 
     @Test
     public void selectable() {
-        CoinJoinCoinSelector coinSelector = new CoinJoinCoinSelector(walletEx);
+        UnmixedZeroConfCoinSelector coinSelector = new UnmixedZeroConfCoinSelector(walletEx);
 
-        assertTrue(coinSelector.shouldSelect(lastTxCoinJoin));
-        // txDenomination is mixed zero rounds, so it should not be selected
-        assertFalse(coinSelector.shouldSelect(txDenomination));
+        // lastTxCoinJoin is fully mixed and should not be selected
+        assertFalse(coinSelector.shouldSelect(lastTxCoinJoin));
+        // txDenomination, txDeposit is mixed zero rounds, so it should be selected
+        assertTrue(coinSelector.shouldSelect(txDenomination));
+        assertTrue(coinSelector.shouldSelect(txDeposit));
+        assertTrue(coinSelector.shouldSelect(txReceiveZeroConf));
     }
 }

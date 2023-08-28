@@ -170,6 +170,8 @@ public class SendRequest {
     // Tracks if this has been passed to wallet.completeTx already: just a safety check.
     boolean completed;
 
+    public CoinControl coinControl = null;
+
     protected SendRequest() {}
 
     /**
@@ -313,4 +315,8 @@ public class SendRequest {
 
     //Dash Specific
     public boolean useInstantSend;
+
+    public boolean hasCoinControl() {
+        return coinControl != null;
+    }
 }

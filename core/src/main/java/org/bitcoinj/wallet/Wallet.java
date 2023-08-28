@@ -4444,6 +4444,9 @@ public class Wallet extends BaseTaggableObject
             // can customize coin selection policies. The call below will ignore immature coinbases and outputs
             // we don't have the keys for.
             List<TransactionOutput> candidates = calculateAllSpendCandidates(true, req.missingSigsMode == MissingSigsMode.THROW);
+            if (req.hasCoinControl()) {
+                candidates.removeIf(output -> !req.coinControl.isSelected(output.getOutPointFor()));
+            }
 
             CoinSelection bestCoinSelection;
             TransactionOutput bestChangeOutput = null;
@@ -6241,5 +6244,10 @@ public class Wallet extends BaseTaggableObject
         for (ECKey key : keys)
             addresses.add(Address.fromKey(getParams(), key));
         return addresses;
+    }
+
+    @Override
+    public boolean isFullyMixed(TransactionOutput output) {
+        return false;
     }
 }

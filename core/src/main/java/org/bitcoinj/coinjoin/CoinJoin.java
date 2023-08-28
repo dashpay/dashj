@@ -378,4 +378,19 @@ public class CoinJoin {
     public static boolean hasDSTX(Sha256Hash hash) {
         return mapDSTX.containsKey(hash);
     }
+
+    public static String getRoundsString(int rounds) {
+        switch (rounds) {
+            case -4:
+                return "bad index";
+            case -3:
+                return "collateral";
+            case -2:
+                return "non-denominated";
+            case -1:
+                return "no such tx";
+            default:
+                return "coinjoin";
+        }
+    }
 }
