@@ -42,7 +42,6 @@ public class ScrewDriverDevNetParams extends DevNetParams {
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
         DIP0024BlockHeight = 300;
-        isDIP24Only = false;
         basicBLSSchemeActivationHeight = 1200;
 
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;

@@ -129,8 +129,6 @@ public abstract class NetworkParameters {
     /** Used to check for v19 upgrade */
     protected int v19BlockHeight = Integer.MAX_VALUE;
 
-    protected boolean isDIP24Only = false;
-
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
      * by looking at the port number.
