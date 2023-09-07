@@ -684,7 +684,9 @@ public abstract class NetworkParameters {
         COINJOIN_PROTX_HASH(70226),
         DMN_TYPE(70227),
         SMNLE_VERSIONED(70228),
-        CURRENT(70228);
+        MNLISTDIFF_VERSION_ORDER(70229),
+        MNLISTDIFF_CHAINLOCKS(70230),
+        CURRENT(70230); //testnet is still 70228
 
         private final int bitcoinProtocol;
 
