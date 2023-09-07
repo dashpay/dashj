@@ -18,31 +18,42 @@
 package org.bitcoinj.net.discovery;
 
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Utils;
 
 import javax.annotation.Nullable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 /**
- * SeedPeers stores a pre-determined list of Dash node addresses. These nodes are selected based on being
- * active on the network for a long period of time. The intention is to be a last resort way of finding a connection
- * to the network, in case IRC and DNS fail. The list comes from the Bitcoin C++ source code.
+ * MasternodeSeedPeers stores a pre-determined list of Dash node addresses. These nodes are selected based on being
+ * masternodes on the network. The intention is to be a last resort way of finding a connection
+ * to the network, in case other systems fail or are not available.
  */
 public class MasternodeSeedPeers implements PeerDiscovery {
-    private NetworkParameters params;
-    private String[] seedAddrs;
+    private static final int ENOUGH_MASTERNODES = 20;
+    private final NetworkParameters params;
+    private final String[] seedAddrs;
     private int pnseedIndex;
 
+    // if there are more than 20 masternodes, then don't use HP masternodes in peer discovery
+    private static String[] mergeArrays(String[] masternodeArray, String[] hpMasternodeArray) {
+        if (masternodeArray.length > ENOUGH_MASTERNODES || hpMasternodeArray.length == 0) {
+            return masternodeArray;
+        } else {
+            String[] result = Arrays.copyOf(masternodeArray, masternodeArray.length + hpMasternodeArray.length);
+            System.arraycopy(hpMasternodeArray, 0, result, masternodeArray.length, hpMasternodeArray.length);
+            return result;
+        }
+    }
     /**
      * Supports finding peers by IP addresses
      *
      * @param params Network parameters to be used for port information.
      */
     public MasternodeSeedPeers(NetworkParameters params) {
-        this(params.getDefaultMasternodeList(), params);
+        this(mergeArrays(params.getDefaultMasternodeList(), params.getDefaultHPMasternodeList()), params);
     }
 
     /**
@@ -106,6 +117,10 @@ public class MasternodeSeedPeers implements PeerDiscovery {
 
     private InetAddress convertAddress(String seed) throws UnknownHostException {
         return InetAddress.getByName(seed);
+    }
+
+    public String[] getSeedAddrs() {
+        return seedAddrs;
     }
 
     @Override
