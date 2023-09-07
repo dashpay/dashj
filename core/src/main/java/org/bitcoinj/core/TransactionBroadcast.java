@@ -48,7 +48,7 @@ public class TransactionBroadcast {
     private boolean dropPeersAfterBroadcast = false;
     private int numWaitingFor;
     /** stores a boolean value for the disconnect status of a peer during sending **/
-    private HashMap<PeerAddress, Boolean> sentToPeers = new HashMap<>();
+    private final HashMap<PeerAddress, Boolean> sentToPeers = new HashMap<>();
     private int numToBroadcastTo;
 
     /** Used for shuffling the peers before broadcast: unit tests can replace this to make themselves deterministic. */
@@ -98,14 +98,16 @@ public class TransactionBroadcast {
     }
 
     public ListenableFuture<Transaction> broadcast() {
-        peerGroup.addDisconnectedEventListener(Threading.SAME_THREAD, disconnectedListener);
+        if (!dropPeersAfterBroadcast) {
+            peerGroup.addDisconnectedEventListener(Threading.SAME_THREAD, disconnectedListener);
+        }
         log.info("Waiting for {} peers required for broadcast, we have {} ...", minConnections, peerGroup.getConnectedPeers().size());
         peerGroup.waitForPeers(minConnections).addListener(new EnoughAvailablePeers(), Threading.SAME_THREAD);
         return future;
     }
 
     private class EnoughAvailablePeers implements Runnable {
-        private Context context;
+        private final Context context;
 
         public EnoughAvailablePeers() {
             this.context = Context.get();
