@@ -586,6 +586,11 @@ public abstract class NetworkParameters {
     public abstract BitcoinSerializer getSerializer(boolean parseRetain);
 
     /**
+     * Construct and return a custom serializer that parses according to given protocol version.
+     */
+    public abstract BitcoinSerializer getSerializer(boolean parseRetain, int protocolVersion);
+
+    /**
      * The number of blocks in the last {@link #getMajorityWindow()} blocks
      * at which to trigger a notice to the user to upgrade their client, where
      * the client does not understand those blocks.
