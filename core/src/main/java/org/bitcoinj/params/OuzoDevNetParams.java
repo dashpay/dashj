@@ -22,33 +22,39 @@ public class OuzoDevNetParams extends DevNetParams {
     private static final String DEVNET_NAME = "ouzo";
 
     private static final String[] MASTERNODES = new String[] {
-                "35.88.153.100",
-                "35.90.86.5",
-                "54.201.101.166",
-                "34.221.211.13",
-                "34.211.239.27",
-                "34.209.234.219",
-                "34.217.126.166",
-                "54.149.125.171",
-                "34.221.134.128",
-                "35.92.44.96",
-                "54.188.181.173",
-                "35.88.196.32",
-                "52.13.97.221",
-                "34.218.76.191",
-                "34.221.191.53",
-                "35.89.136.16",
-                "34.220.42.33",
-                "18.237.57.152"
-};
+        "34.219.156.87",
+        "34.212.27.111",
+        "34.210.85.44",
+        "34.211.109.220",
+        "35.160.224.143"
+    };
+
+    private static final String[] HP_MASTERNODES = new String[] {
+        "54.191.116.54",
+        "52.12.171.109",
+        "54.68.190.236",
+        "18.237.173.165",
+        "34.216.169.111",
+        "34.212.19.42",
+        "18.237.223.99",
+        "18.236.129.28",
+        "52.88.126.23",
+        "35.88.90.103",
+        "34.222.48.194",
+        "35.93.78.120",
+        "35.88.92.118",
+        "34.217.42.245",
+        "54.148.14.151",
+    };
 
     public OuzoDevNetParams() {
-        super(DEVNET_NAME, "yMu45N9hjWm6YZfonsnasugkiaL5ihrkkc", 20001,
-                MASTERNODES, true, 70220);
+        super(DEVNET_NAME, "ye5hSqkLZkwcx7rJei7pwTNkdCwxAzMDhh", 20001,
+                MASTERNODES, true, 70230);
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
-        DIP0024BlockHeight = -1;
-        isDIP24Only = false;
+        DIP0024BlockHeight = 300;
+        v19BlockHeight = 300;
+        v20BlockHeight = 300;
 
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET;
@@ -71,5 +77,10 @@ public class OuzoDevNetParams extends DevNetParams {
     @Override
     public String[] getDefaultMasternodeList() {
         return MASTERNODES;
+    }
+
+    @Override
+    public String[] getDefaultHPMasternodeList() {
+        return HP_MASTERNODES;
     }
 }
