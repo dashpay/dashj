@@ -23,27 +23,30 @@ public class AbsintheDevNetParams extends DevNetParams {
     private static final String DEVNET_NAME = "absinthe";
 
     private static final String[] MASTERNODES = new String[]{
-        "34.217.90.41",
-        "34.219.142.157",
-        "54.203.57.163",
-        "54.189.147.138",
-        "35.87.141.100",
-        "52.24.16.52",
-        "18.237.105.25",
-        "34.219.194.54",
-        "35.165.169.209",
-        "34.219.134.212",
-        "54.201.12.128",
-        "35.88.132.125",
-        "54.213.67.58",
-        "35.166.147.71",
-        "35.92.129.119",
-        "35.91.168.157",
+            "54.203.248.31",
+            "54.244.207.116",
+    };
+
+    private static final String[] HP_MASTERNODES = new String[]{
+        "52.12.65.230",
+        "35.88.162.148",
+        "35.87.149.127",
+        "34.216.109.34",
+        "52.40.57.30",
+        "54.245.53.222",
+        "54.244.210.173",
+        "34.215.201.219",
+        "35.91.255.242",
+        "54.245.169.72",
+        "54.184.78.233",
+        "35.88.21.135",
+        "52.36.206.44",
+        "34.218.253.121",
     };
 
     public AbsintheDevNetParams() {
         super(DEVNET_NAME, "yQaxrDEMJ7t2d4eDTugn3FY87T78j3fJX3", 20001,
-                MASTERNODES, true, -1);
+                MASTERNODES, true, 70227);
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
         DIP0024BlockHeight = 300;
@@ -69,5 +72,10 @@ public class AbsintheDevNetParams extends DevNetParams {
     @Override
     public String[] getDefaultMasternodeList() {
         return MASTERNODES;
+    }
+
+    @Override
+    public String[] getDefaultHPMasternodeList() {
+        return HP_MASTERNODES;
     }
 }
