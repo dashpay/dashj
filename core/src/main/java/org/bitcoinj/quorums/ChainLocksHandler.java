@@ -56,6 +56,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     boolean isSporkActive;
     boolean isEnforced;
     AbstractBlockChain blockChain;
+    AbstractBlockChain headerChain;
 
     Sha256Hash bestChainLockHash;
     ChainLockSignature bestChainLock;
@@ -77,8 +78,9 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         scheduledExecutorService = Executors.newScheduledThreadPool(1);
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain) {
+    public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headerChain) {
         this.blockChain = blockChain;
+        this.headerChain = headerChain;
         this.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, this.newBestBlockListener);
         this.quorumSigningManager = context.signingManager;
         this.quorumInstantSendManager = context.instantSendManager;

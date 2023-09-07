@@ -104,6 +104,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public int syncInterval;
 
     QuorumStateManager stateManager;
+    ChainLocksHandler chainLocksHandler;
 
     // bootstrap
     String bootstrapFilePath = null;
@@ -139,6 +140,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     public void setStateManager(QuorumStateManager stateManager) {
         this.stateManager = stateManager;
+    }
+
+    public void setChainLocksHandler(ChainLocksHandler chainLocksHandler) {
+        this.chainLocksHandler = chainLocksHandler;
     }
 
     public void setBootstrap(String bootstrapFilePath, InputStream bootstrapStream, int bootStrapFileFormat) {

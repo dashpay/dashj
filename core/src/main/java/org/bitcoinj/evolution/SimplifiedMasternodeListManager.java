@@ -32,6 +32,7 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VarInt;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.quorums.ChainLocksHandler;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.Quorum;
@@ -397,7 +398,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     public void setBlockChain(AbstractBlockChain blockChain, @Nullable AbstractBlockChain headersChain, @Nullable PeerGroup peerGroup,
-                              QuorumManager quorumManager, QuorumSnapshotManager quorumSnapshotManager) {
+                              QuorumManager quorumManager, QuorumSnapshotManager quorumSnapshotManager, ChainLocksHandler chainLocksHandler) {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
         this.headersChain = headersChain;
@@ -406,6 +407,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         AbstractBlockChain activeChain = headersChain != null ? headersChain : blockChain;
         quorumState.setBlockChain(headersChain, blockChain);
         quorumRotationState.setBlockChain(headersChain, blockChain);
+        quorumState.setChainLocksHandler(chainLocksHandler);
+        quorumRotationState.setChainLocksHandler(chainLocksHandler);
         if(shouldProcessMNListDiff()) {
             quorumState.addEventListeners(blockChain, peerGroup);
             quorumRotationState.addEventListeners(blockChain, peerGroup);
