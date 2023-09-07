@@ -128,6 +128,9 @@ public abstract class NetworkParameters {
 
     /** Used to check for v19 upgrade */
     protected int v19BlockHeight = Integer.MAX_VALUE;
+    /** Used to check for v20 upgrade */
+    protected int v20BlockHeight = Integer.MAX_VALUE;
+
 
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
@@ -833,9 +836,21 @@ public abstract class NetworkParameters {
         }
     }
 
-    @Deprecated
-    public boolean isDIP24Only() {
-        return isDIP24Only;
+    public boolean isV20Active(StoredBlock block) {
+        return block.getHeight() >= v20BlockHeight;
+    }
+
+    public boolean isV20Active(int height) {
+        return height >= v20BlockHeight;
+    }
+
+    public int getV20BlockHeight() {
+        return v20BlockHeight;
+    }
+    public void setV20Active(int height) {
+        if (v20BlockHeight == Integer.MAX_VALUE) {
+            v20BlockHeight = height;
+        }
     }
 
     protected int basicBLSSchemeActivationHeight = Integer.MAX_VALUE;
