@@ -1,6 +1,7 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.*;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.store.BlockStore;
@@ -15,7 +16,6 @@ import java.io.OutputStream;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.Sha256Hash.ZERO_HASH;
 import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedQuorumList extends Message {
@@ -118,6 +118,11 @@ public class SimplifiedQuorumList extends Message {
         return builder.toString();
     }
 
+    BLSSignature getSignatureForIndex(HashMap<BLSSignature, HashSet<Integer>> quorumsCLSigs, int index) {
+        Optional<Map.Entry<BLSSignature, HashSet<Integer>>> answer = quorumsCLSigs.entrySet().stream().filter(entry -> entry.getValue().contains(index)).findFirst();
+        return answer.map(Map.Entry::getKey).orElse(null);
+    }
+
     public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, AbstractBlockChain chain, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
         lock.lock();
         try {
@@ -134,7 +139,15 @@ public class SimplifiedQuorumList extends Message {
             for (Pair<Integer, Sha256Hash> quorum : diff.getDeletedQuorums()) {
                 result.removeCommitment(quorum);
             }
-            for (FinalCommitment entry : diff.getNewQuorums()) {
+            for (int i = 0; i < diff.getNewQuorums().size(); ++i) {
+                FinalCommitment entry = diff.getNewQuorums().get(i);
+                BLSSignature signature = diff.getQuorumsCLSigs() != null ?
+                        getSignatureForIndex(diff.getQuorumsCLSigs(), i) : null;
+                if (signature != null)
+                    Context.get().chainLockHandler.addCoinbaseChainLock(entry.quorumHash, 8, signature);
+
+                // find a better way to do this
+                log.info("quorum {}:{} {}", entry.quorumHash, entry.quorumIndex, signature);
                 if ((doDIP24 && entry.llmqType == params.getLlmqDIP0024InstantSend().value) || (!doDIP24 && entry.llmqType != params.getLlmqDIP0024InstantSend().value)) {
                     verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry);
                 }

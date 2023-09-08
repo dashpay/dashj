@@ -36,7 +36,11 @@ import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.core.listeners.ReorganizeListener;
+import org.bitcoinj.crypto.BLSSignature;
+import org.bitcoinj.quorums.ChainLockSignature;
+import org.bitcoinj.quorums.ChainLocksHandler;
 import org.bitcoinj.quorums.LLMQParameters;
+import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
@@ -832,5 +836,62 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 throw new RuntimeException(x);
             }
         }
+    }
+
+    protected StoredBlock getBlockFromHash(Sha256Hash blockHash) {
+        try {
+            StoredBlock block =  blockChain.getBlockStore().get(blockHash);
+            if (block == null) {
+                block = headerChain.getBlockStore().get(blockHash);
+            }
+            return block;
+        } catch (BlockStoreException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected StoredBlock getBlockAncestor(StoredBlock block, int height) {
+        try {
+            StoredBlock ancestor = block.getAncestor(blockStore, height);
+            if (ancestor == null) {
+                ancestor = block.getAncestor(headerStore, height);
+            }
+            return ancestor;
+        } catch (BlockStoreException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    BLSSignature getCoinbaseChainlock(StoredBlock block) {
+        ChainLockSignature clsig = chainLocksHandler.getCoinbaseChainLock(block.getHeader().getHash());
+        if (clsig != null)
+            return clsig.getSignature();
+        else return null;
+    }
+
+    // DIP29 Random Beacon for LLMQ selection is activated with v20
+    Sha256Hash getHashModifier(LLMQParameters llmqParams, StoredBlock quorumBaseBlock) {
+        StoredBlock workBlock = getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 8);
+
+        if (params.isV20Active(workBlock.getHeight())) {
+            // v20 is active: calculate modifier using the new way.
+            BLSSignature bestCLSignature = getCoinbaseChainlock(workBlock);
+            log.info("getHashModifier(..., {})\n  work: {}\n  sig: {}", quorumBaseBlock.getHeader().getHash(), workBlock.getHeader().getHash(), bestCLSignature);
+            if (bestCLSignature != null) {
+                // We have a non-null CL signature: calculate modifier using this CL signature
+
+                return LLMQUtils.buildLLMQBlockHash(llmqParams.getType(), workBlock.getHeight(), bestCLSignature);
+            } else {
+                log.info("cannot find CL for block {}", workBlock.getHeader().getHash());
+            }
+            // No non-null CL signature found in coinbase: calculate modifier using block hash only
+            return LLMQUtils.buildLLMQBlockHash(llmqParams.getType(), workBlock.getHeader().getHash());
+        }
+
+        // v20 isn't active yet: calculate modifier using the usual way
+        if (llmqParams.useRotation()) {
+            return LLMQUtils.buildLLMQBlockHash(llmqParams.getType(), workBlock.getHeader().getHash());
+        }
+        return LLMQUtils.buildLLMQBlockHash(llmqParams.getType(), quorumBaseBlock.getHeader().getHash());
     }
 }

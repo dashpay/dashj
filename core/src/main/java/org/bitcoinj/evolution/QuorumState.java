@@ -17,7 +17,7 @@
 package org.bitcoinj.evolution;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.collect.Lists;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
@@ -27,10 +27,9 @@ import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.crypto.BLSScheme;
+import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.quorums.LLMQParameters;
-import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
@@ -41,14 +40,18 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeListDiff, SimplifiedMasternodeListDiff> {
     private static final Logger log = LoggerFactory.getLogger(QuorumState.class);
 
     SimplifiedMasternodeList mnList;
     SimplifiedQuorumList quorumList;
+
 
     LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> mnListsCache = new LinkedHashMap<Sha256Hash, SimplifiedMasternodeList>() {
         @Override
@@ -143,9 +146,9 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         newMNList.setBlock(block, block != null && block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
 
         SimplifiedQuorumList newQuorumList = quorumList;
-        if(mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
+        if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
             newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, chain, false, true);
-            if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
+            if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
                 newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
         } else {
             quorumList.syncWithMasternodeList(newMNList);
@@ -183,17 +186,27 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 nextBlock.getHeader().getHash());
     }
 
-    public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash) {
-        LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
-        SimplifiedMasternodeList allMns = getListForBlock(blockHash);
-        if (allMns != null) {
-            Sha256Hash modifier = LLMQUtils.buildLLMQBlockHash(llmqType, blockHash);
-            boolean hmpnOnly = (params.getLlmqPlatform() == llmqType) && params.isV19Active(allMns.getStoredBlock());
-            return allMns.calculateQuorum(llmqParameters.getSize(), modifier, hmpnOnly);
-        }
-        return null;
+    public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash quorumBaseBlockHash) {
+        StoredBlock quorumBaseBlock = getBlockFromHash(quorumBaseBlockHash);
+        return computeQuorumMembers(llmqType, quorumBaseBlock);
     }
 
+    protected ArrayList<Masternode> computeQuorumMembers(LLMQParameters.LLMQType llmqType, StoredBlock quorumBaseBlock) {
+        boolean evoOnly = (params.getLlmqPlatform() == llmqType) && params.isV19Active(quorumBaseBlock);
+        LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
+        checkNotNull(llmqParameters);
+        if (llmqParameters.useRotation() || quorumBaseBlock.getHeight() % llmqParameters.getDkgInterval() != 0) {
+            return Lists.newArrayList();
+        }
+
+        StoredBlock workBlock = params.isV20Active(quorumBaseBlock) ?
+                getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 8) :
+                quorumBaseBlock;
+
+        Sha256Hash modifier = getHashModifier(llmqParameters, quorumBaseBlock);
+        SimplifiedMasternodeList allMns = getListForBlock(workBlock.getHeader().getHash());
+        return allMns != null ? allMns.calculateQuorum(llmqParameters.getSize(), modifier, evoOnly) : null;
+    }
 
     public SimplifiedMasternodeList getListForBlock(Sha256Hash blockHash) {
         return mnListsCache.get(blockHash);
