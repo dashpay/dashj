@@ -107,13 +107,13 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     @Override
     public void requestReset(Peer peer, StoredBlock nextBlock) {
         lastRequest = new QuorumUpdateRequest<>(new GetSimplifiedMasternodeListDiff(params.getGenesisBlock().getHash(),
-                nextBlock.getHeader().getHash()));
+                nextBlock.getHeader().getHash()), peer.getAddress());
         sendRequestWithRetry(peer);
     }
 
     @Override
     public void requestUpdate(Peer peer, StoredBlock nextBlock) {
-        lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock));
+        lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock), peer.getAddress());
         sendRequestWithRetry(peer);
     }
 
@@ -261,7 +261,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
     @Override
     public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, AbstractBlockChain headersChain,
-                            AbstractBlockChain blockChain, boolean isLoadingBootStrap) throws VerificationException {
+                            AbstractBlockChain blockChain, boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage) throws VerificationException {
         StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);

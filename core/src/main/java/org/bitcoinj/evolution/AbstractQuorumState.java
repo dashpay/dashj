@@ -214,7 +214,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     abstract boolean needsUpdate(StoredBlock nextBlock);
 
-    public abstract void processDiff(@Nullable Peer peer, DiffMessage difference, AbstractBlockChain headersChain, AbstractBlockChain blockChain, boolean isLoadingBootStrap)
+    public abstract void processDiff(@Nullable Peer peer, DiffMessage difference,
+                                     AbstractBlockChain headersChain, AbstractBlockChain blockChain,
+                                     boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage)
             throws VerificationException;
 
     public abstract void requestReset(Peer peer, StoredBlock block);
@@ -614,6 +616,11 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 downloadPeer = null;
                 chooseRandomDownloadPeer();
             }
+            if (peer.getAddress().equals(lastRequest.getPeerAddress())) {
+                log.warn("Disconnecting from peer {} before processing mnlistdiff", peer.getAddress());
+                // TODO: what else should we do?
+                //   request again?
+            }
         }
     };
 
@@ -749,8 +756,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                     } catch (InterruptedException x) {
                         x.printStackTrace();
                     } catch (NullPointerException x) {
-                        log.info("peergroup is not initialized");
-                        x.printStackTrace();
+                        log.info("peergroup is not initialized", x);
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();

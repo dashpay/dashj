@@ -392,7 +392,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     public void requestReset(Peer peer, StoredBlock block) {
-        lastRequest = new QuorumUpdateRequest<>(getQuorumRotationInfoRequestFromGenesis(block));
+        lastRequest = new QuorumUpdateRequest<>(getQuorumRotationInfoRequestFromGenesis(block), peer.getAddress());
         sendRequestWithRetry(peer);
     }
 
@@ -402,7 +402,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     public void requestUpdate(Peer peer, StoredBlock nextBlock) {
-        lastRequest = new QuorumUpdateRequest<>(getQuorumRotationInfoRequest(nextBlock));
+        lastRequest = new QuorumUpdateRequest<>(getQuorumRotationInfoRequest(nextBlock), peer.getAddress());
         sendRequestWithRetry(peer);
     }
 
@@ -1264,12 +1264,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     public void processDiff(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, AbstractBlockChain headersChain,
-                            AbstractBlockChain blockChain, boolean isLoadingBootStrap) throws VerificationException {
+                            AbstractBlockChain blockChain, boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage) throws VerificationException {
         long newHeight = ((CoinbaseTx) quorumRotationInfo.getMnListDiffTip().coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null)
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffTip());
         Stopwatch watch = Stopwatch.createStarted();
-        boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
+        boolean isSyncingHeadersFirst = syncStage == PeerGroup.SyncStage.MNLIST;
         AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
         headerChain = headersChain;
 
@@ -1284,9 +1284,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             failedAttempts = 0;
 
             if (!pendingBlocks.isEmpty()) {
-                StoredBlock thisBlock = pendingBlocks.get(0);
-                pendingBlocks.remove(0);
-                pendingBlocksMap.remove(thisBlock.getHeader().getHash());
+                popPendingBlock();
             } else log.warn("pendingBlocks is empty");
 
             if (peer != null && isSyncingHeadersFirst)
@@ -1339,7 +1337,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             log.info("processing qrinfo: Total: {} mnlistdiff: {}", watch, quorumRotationInfo.getMnListDiffTip());
             log.info(toString());
             waitingForMNListDiff = false;
-            if (isSyncingHeadersFirst) {
+            if (!initChainTipSyncComplete) {
                 log.info("initChainTipSync=false");
                 initChainTipSyncComplete = true;
                 log.info("initChainTipSync=true");

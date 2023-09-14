@@ -307,7 +307,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public void processMasternodeListDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap) {
         try {
-            quorumState.processDiff(peer, mnlistdiff, headersChain, blockChain, isLoadingBootStrap);
+            quorumState.processDiff(peer, mnlistdiff, headersChain, blockChain, isLoadingBootStrap, context.peerGroup.getSyncStage());
 
             processMasternodeList(mnlistdiff);
             processQuorumList(quorumState.getQuorumListAtTip());
@@ -344,7 +344,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 @Override
                 public void run() {
                     try {
-                        quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
+                        quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap, PeerGroup.SyncStage.BLOCKS);
                         processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
                         unCache();
 

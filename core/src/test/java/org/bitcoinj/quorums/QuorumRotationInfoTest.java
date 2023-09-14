@@ -109,4 +109,19 @@ public class QuorumRotationInfoTest {
 
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
     }
+
+    @Test
+    public void qrinfo_70230_afterActivation() throws IOException {
+        BLSScheme.setLegacyDefault(true); // the qrinfo will set the scheme to basic
+        payloadOne = loadQRInfo("qrinfo-testnet-0-902366-70230-after20HF.dat");
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70230);
+        assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
+
+        assertTrue(quorumRotationInfo.hasChanges());
+        assertEquals(Sha256Hash.wrap("0000009ac5ad44ef57ab79868e0fe8cc2dd6169499116181125428a58da49b7d"), quorumRotationInfo.mnListDiffTip.blockHash);
+        assertEquals(1, quorumRotationInfo.mnListDiffAtH.getVersion());
+        assertTrue(quorumRotationInfo.mnListDiffAtH.hasBasicSchemeKeys());
+
+        assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
+    }
 }
