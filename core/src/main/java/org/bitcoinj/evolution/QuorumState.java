@@ -300,7 +300,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
                 // remove this block from the list
-                if(getPendingBlocks().size() > 0) {
+                if(!pendingBlocks.isEmpty()) {
                     StoredBlock thisBlock = getPendingBlocks().get(0);
                     if(thisBlock.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash) &&
                             thisBlock.getHeader().getHash().equals(mnlistdiff.prevBlockHash)) {
@@ -340,16 +340,11 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             watch.stop();
             log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
             waitingForMNListDiff = false;
-            if (isSyncingHeadersFirst) {
-                if (downloadPeer != null) {
-                    log.info("initChainTipSync=false");
-                    context.peerGroup.triggerMnListDownloadComplete();
-                    log.info("initChainTipSync=true");
-                    initChainTipSyncComplete = true;
-                } else {
-                    context.peerGroup.triggerMnListDownloadComplete();
-                    initChainTipSyncComplete = true;
-                }
+            if (!initChainTipSyncComplete) {
+                log.info("initChainTipSync=false");
+                context.peerGroup.triggerMnListDownloadComplete();
+                initChainTipSyncComplete = true;
+                log.info("initChainTipSync=true");
             }
             requestNextMNListDiff();
             lock.unlock();

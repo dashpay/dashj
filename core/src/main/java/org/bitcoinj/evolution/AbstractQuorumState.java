@@ -175,7 +175,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         }
     }
 
-    public void pushPendingBlock(StoredBlock block) {
+    protected void pushPendingBlock(StoredBlock block) {
         pendingBlocks.add(block);
         pendingBlocksMap.put(block.getHeader().getHash(), block);
     }
@@ -184,7 +184,12 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         return pendingBlocks;
     }
 
-    public void popPendingBlock() {
+    protected void clearPendingBlocks() {
+        pendingBlocks.clear();
+        pendingBlocksMap.clear();
+    }
+
+    protected void popPendingBlock() {
         StoredBlock thisBlock = pendingBlocks.get(0);
         pendingBlocks.remove(0);
         pendingBlocksMap.remove(thisBlock.getHeader().getHash());
@@ -258,8 +263,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             if (force) {
                 log.info("resetting masternode list; force: {}, requestFreshList: {}", force, requestFreshList);
                 clearState();
-                pendingBlocks.clear();
-                pendingBlocksMap.clear();
+                clearPendingBlocks();
                 waitingForMNListDiff = false;
                 unCache();
                 if (notUsingBootstrapFile())
@@ -316,13 +320,19 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         }
 
         if (pendingBlocksMap.put(hash, block) == null) {
-            log.info("adding 1 block to the pending queue of size: {} : {}/{}", pendingBlocks.size(), block.getHeight(), block.getHeader().getHash());
-            pendingBlocks.add(block);
+            log.info("adding 1 block to the {} pending queue of size: {} : {}/{}", lastRequest.request.getClass().getSimpleName(), pendingBlocks.size(), block.getHeight(), block.getHeader().getHash());
+            //pendingBlocks.add(block);
+            pushPendingBlock(block);
+        } else {
+            log.info("block {} at {} is already in the pendingBlocksMap", block.getHeader().getHash(), block.getHeight());
+            log.info("block is at index {} in pendingBlocks", pendingBlocks.indexOf(block));
         }
 
         if (!waitingForMNListDiff) {
             log.info("requesting: next");
             requestNextMNListDiff();
+        } else {
+            log.info("waiting for the last mnlistdiff/qrinfo");
         }
 
         if (lastRequest.getTime() + WAIT_GETMNLISTDIFF * 4 < Utils.currentTimeSeconds()) {
@@ -369,14 +379,15 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                     } while (cursor != null);
 
                     for (StoredBlock block : blocksToAdd) {
-                        pendingBlocks.add(block);
-                        pendingBlocksMap.put(block.getHeader().getHash(), block);
+                        pushPendingBlock(block);
                     }
                 }
             }
 
-            if (pendingBlocks.size() == 0)
+            if (pendingBlocks.isEmpty()) {
+                log.info("There are no pending blocks to request: {}", lastRequest.request);
                 return;
+            }
 
             if (downloadPeer == null) {
                 downloadPeer = downloadPeerBackup;
@@ -395,7 +406,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                     } else break;
                 }
 
-                if (pendingBlocks.size() != 0) {
+                if (!pendingBlocks.isEmpty()) {
                     nextBlock = pendingBlocks.get(0);
                     if (syncInterval > 1 && nextBlock.getHeader().getTimeSeconds() < Utils.currentTimeSeconds() - 60 * 60 && pendingBlocks.size() > syncInterval) {
                         // let's skip up to the next syncInterval blocks
@@ -403,7 +414,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                             nextBlock = blockIterator.next();
                             if (nextBlock.getHeight() % syncInterval == 0) break;
                             blockIterator.remove();
+                            pendingBlocksMap.remove(nextBlock.getHeader().getHash());
                         }
+                        log.info("skipping up to the next syncInterval");
                     }
 
                     log.info("sending {} from {} to {}; \n  From {}\n To {}", lastRequest.request.getClass().getSimpleName(),
@@ -436,7 +449,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         lock.lock();
         try {
             long timePeriod = syncOptions == MasternodeListSyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60;
-            if (pendingBlocks.size() > 0) {
+            if (!pendingBlocks.isEmpty()) {
                 if (!waitingForMNListDiff) {
                     requestNextMNListDiff();
                     return;
@@ -645,8 +658,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                         if (foundSplitPoint)
                             iterator.remove();
                     }
-                    pendingBlocks.clear();
-                    pendingBlocksMap.clear();
+                    clearPendingBlocks();
                     for (StoredBlock newBlock : newBlocks) {
                         pendingBlocks.add(newBlock);
                         pendingBlocksMap.put(newBlock.getHeader().getHash(), newBlock);
