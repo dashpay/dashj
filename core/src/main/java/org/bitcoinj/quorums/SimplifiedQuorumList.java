@@ -149,6 +149,7 @@ public class SimplifiedQuorumList extends Message {
                 // find a better way to do this
                 log.info("quorum {}:{} {}", entry.quorumHash, entry.quorumIndex, signature);
                 if ((doDIP24 && entry.llmqType == params.getLlmqDIP0024InstantSend().value) || (!doDIP24 && entry.llmqType != params.getLlmqDIP0024InstantSend().value)) {
+                    // for now, don't use the return value
                     verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry);
                 }
                 result.addCommitment(entry);
@@ -164,15 +165,19 @@ public class SimplifiedQuorumList extends Message {
     public void verifyQuorums(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums) throws BlockStoreException, ProtocolException{
         lock.lock();
         try {
+            int verifiedCount = 0;
             for (FinalCommitment entry : minableCommitments.values()) {
-                verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry);
+                if (verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry)) {
+                    verifiedCount++;
+                }
             }
+            log.info("verified {} of {} quorums", verifiedCount, minableCommitments.size());
         } finally {
             lock.unlock();
         }
     }
 
-    private void verifyQuorum(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
+    private boolean verifyQuorum(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
         StoredBlock block = chain.getBlockStore().get(entry.getQuorumHash());
         if (block != null) {
             LLMQParameters llmqParameters = params.getLlmqs().get(entry.getLlmqType());
@@ -184,8 +189,9 @@ public class SimplifiedQuorumList extends Message {
                 if (block.getHeight() % dkgInterval != 0)
                     throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
             }
-            checkCommitment(entry, block, Context.get().masternodeListManager, chain, validateOldQuorums);
+            boolean isVerified = checkCommitment(entry, block, Context.get().masternodeListManager, chain, validateOldQuorums);
             isFirstQuorumCheck = false;
+            return isVerified;
         } else {
             int chainHeight = chain.getBestChainHeight();
             //if quorum was created before DIP8 activation, then allow it to be added
@@ -197,6 +203,7 @@ public class SimplifiedQuorumList extends Message {
                     throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
                 }
             }
+            return false;
         }
     }
 
@@ -461,11 +468,11 @@ public class SimplifiedQuorumList extends Message {
         blockHash = masternodeList.getBlockHash();
     }
 
-    void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
+    private boolean checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
                          AbstractBlockChain chain, boolean validateQuorums) throws BlockStoreException
     {
         if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitment.MAX_VERSION) {
-            throw new VerificationException("invalid quorum commitment version" + commitment.getVersion());
+            throw new VerificationException("invalid quorum commitment version: " + commitment.getVersion());
         }
 
         BlockStore blockStore = chain.getBlockStore();
@@ -503,10 +510,10 @@ public class SimplifiedQuorumList extends Message {
             if (members == null) {
                 //no information about this quorum because it is before we were downloading
                 log.warn("masternode list is missing to verify quorum: {}", commitment.quorumHash/*, manager.getBlockHeight(commitment.quorumHash)*/);
-                return;
+                return false;
             }
 
-            log.info("Quorum: {}", commitment.quorumHash);
+            //log.info("Quorum: {}:{}", commitment.quorumHash, commitment.quorumIndex);
             if (Context.get().isDebugMode()) {
                 StringBuilder builder = new StringBuilder();
                 for (Masternode mn : members) {
@@ -519,10 +526,14 @@ public class SimplifiedQuorumList extends Message {
                 // TODO: originally, the exception was thrown here.  For now, report the error to the logs
                 // throw new VerificationException("invalid quorum commitment: " + commitment);
                 log.info("invalid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
+                return false;
             } else {
                 log.info("valid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
+                return true;
             }
         }
+        // skip validation, but return ture
+        return true;
     }
 
     @Override
