@@ -779,6 +779,7 @@ public abstract class NetworkParameters {
     protected LLMQParameters.LLMQType llmqTypePlatform;
     protected LLMQParameters.LLMQType llmqTypeDIP0024InstantSend;
     protected LLMQParameters.LLMQType llmqTypeMnhf;
+    protected LLMQParameters.LLMQType llmqTypeAssetLocks;
 
     public HashMap<LLMQParameters.LLMQType, LLMQParameters> getLlmqs() {
         return llmqs;
