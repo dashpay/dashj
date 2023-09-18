@@ -1284,7 +1284,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             failedAttempts = 0;
 
             if (!pendingBlocks.isEmpty()) {
-                popPendingBlock();
+                pendingBlocks.pop();
             } else log.warn("pendingBlocks is empty");
 
             if (peer != null && isSyncingHeadersFirst)
@@ -1299,7 +1299,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 log.info("lastRequest: {} -> {}", lastRequest.request.getBaseBlockHashes(), lastRequest.request.getBlockRequestHash());
                 // remove this block from the list
                 if (!pendingBlocks.isEmpty()) {
-                    popPendingBlock();
+                    pendingBlocks.pop();
                 }
             } else {
                 log.info("heights are different", x);

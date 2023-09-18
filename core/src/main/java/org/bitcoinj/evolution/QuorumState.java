@@ -286,7 +286,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
             if(!pendingBlocks.isEmpty()) {
                 // remove the first pending block
-                popPendingBlock();
+                pendingBlocks.pop();
             } else log.warn("pendingBlocks is empty");
 
             if (peer != null && isSyncingHeadersFirst)
@@ -301,10 +301,10 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
                 // remove this block from the list
                 if(!pendingBlocks.isEmpty()) {
-                    StoredBlock thisBlock = getPendingBlocks().get(0);
+                    StoredBlock thisBlock = pendingBlocks.peek();
                     if(thisBlock.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash) &&
                             thisBlock.getHeader().getHash().equals(mnlistdiff.prevBlockHash)) {
-                        popPendingBlock();
+                        pendingBlocks.pop();
                     }
                 }
             } else {

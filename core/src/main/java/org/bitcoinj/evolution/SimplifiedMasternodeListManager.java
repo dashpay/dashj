@@ -438,7 +438,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     @Override
     public String toString() {
-        StoredBlock firstPending = !quorumRotationState.pendingBlocks.isEmpty() ? quorumRotationState.pendingBlocks.get(0) : null;
+        StoredBlock firstPending = !quorumRotationState.pendingBlocks.isEmpty() ? quorumRotationState.pendingBlocks.peek() : null;
         int height = firstPending != null ? firstPending.getHeight() : -1;
         return "SimplifiedMNListManager:  {tip:" + getMasternodeList() +
                 ", " + getQuorumListAtTip(params.getLlmqChainLocks()) +
