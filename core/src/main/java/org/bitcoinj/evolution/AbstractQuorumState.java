@@ -90,8 +90,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     Context context;
     AbstractBlockChain headerChain;
     AbstractBlockChain blockChain;
-    BlockStore headerStore;
-    BlockStore blockStore;
+    protected PeerGroup peerGroup;
+    protected BlockStore headerStore;
+    protected BlockStore blockStore;
 
     QuorumUpdateRequest<Request> lastRequest;
 
@@ -164,14 +165,17 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     }
 
     // TODO: Do we need to keep track of the header chain also?
-    public void setBlockChain(AbstractBlockChain headerChain, AbstractBlockChain blockChain) {
+    public void setBlockChain(PeerGroup peerGroup, AbstractBlockChain headerChain, AbstractBlockChain blockChain) {
         this.blockChain = blockChain;
         this.headerChain = headerChain;
         blockStore = blockChain.getBlockStore();
         if (headerChain != null) {
             headerStore = headerChain.getBlockStore();
         }
-        context.peerGroup.addMnListDownloadCompleteListener(() -> initChainTipSyncComplete = true, Threading.SAME_THREAD);
+        if (peerGroup != null) {
+            this.peerGroup = peerGroup;
+            peerGroup.addMnListDownloadCompleteListener(() -> initChainTipSyncComplete = true, Threading.SAME_THREAD);
+        }
     }
 
     protected void pushPendingBlock(StoredBlock block) {

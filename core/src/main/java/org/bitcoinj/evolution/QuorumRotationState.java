@@ -1277,7 +1277,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
         lock.lock();
         try {
-            setBlockChain(headersChain, blockChain);
+            setBlockChain(peerGroup, headersChain, blockChain);
             applyDiff(peer, headersChain, blockChain, quorumRotationInfo, isLoadingBootStrap);
 
             unCache();
