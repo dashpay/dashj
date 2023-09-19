@@ -6,7 +6,6 @@ import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.quorums.FinalCommitment;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.utils.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -204,12 +203,12 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
                 (coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "");
     }
 
-    public String toString(BlockStore blockStore) {
+    public String toString(DualBlockChain blockChain) {
         int height = -1;
         int prevHeight = -1;
         try {
-            height = blockStore.get(blockHash).getHeight();
-            prevHeight = blockStore.get(prevBlockHash).getHeight();
+            height = blockChain.getBlock(blockHash).getHeight();
+            prevHeight = blockChain.getBlock(prevBlockHash).getHeight();
         } catch (Exception x) {
             // swallow
         }

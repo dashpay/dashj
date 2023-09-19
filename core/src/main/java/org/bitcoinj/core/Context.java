@@ -284,7 +284,8 @@ public class Context {
 
     public void setMasternodeListManager(SimplifiedMasternodeListManager masternodeListManager) {
         this.masternodeListManager = masternodeListManager;
-        masternodeListManager.setBlockChain(blockChain, headerChain, peerGroup, quorumManager, quorumSnapshotManager, chainLockHandler);
+        DualBlockChain dualBlockChain = new DualBlockChain(headerChain, blockChain);
+        masternodeListManager.setBlockChain(dualBlockChain, peerGroup, quorumManager, quorumSnapshotManager, chainLockHandler);
     }
 
     public void closeDash() {
@@ -399,6 +400,7 @@ public class Context {
         this.peerGroup = peerGroup;
         this.blockChain = blockChain;
         this.headerChain = headerChain;
+        DualBlockChain dualBlockChain = new DualBlockChain(headerChain, blockChain);
         hashStore = new HashStore(blockChain.getBlockStore());
         blockChain.addNewBestBlockListener(newBestBlockListener);
         handleActivations(blockChain.getChainHead());
@@ -406,8 +408,7 @@ public class Context {
             sporkManager.setBlockChain(blockChain, peerGroup);
             masternodeSync.setBlockChain(blockChain, netFullfilledRequestManager);
             masternodeListManager.setBlockChain(
-                    blockChain,
-                    peerGroup != null ? peerGroup.headerChain : null,
+                    dualBlockChain,
                     peerGroup,
                     quorumManager,
                     quorumSnapshotManager,

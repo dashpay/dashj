@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.BlockQueue;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
@@ -88,11 +89,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     protected final ReentrantLock lock = Threading.lock("AbstractQuorumState");
 
     Context context;
-    AbstractBlockChain headerChain;
-    AbstractBlockChain blockChain;
+    DualBlockChain blockChain;
     protected PeerGroup peerGroup;
-    protected BlockStore headerStore;
-    protected BlockStore blockStore;
+    //protected BlockStore headerStore;
+    //protected BlockStore blockStore;
 
     QuorumUpdateRequest<Request> lastRequest;
 
@@ -165,13 +165,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     }
 
     // TODO: Do we need to keep track of the header chain also?
-    public void setBlockChain(PeerGroup peerGroup, AbstractBlockChain headerChain, AbstractBlockChain blockChain) {
+    public void setBlockChain(PeerGroup peerGroup, DualBlockChain blockChain) {
         this.blockChain = blockChain;
-        this.headerChain = headerChain;
-        blockStore = blockChain.getBlockStore();
-        if (headerChain != null) {
-            headerStore = headerChain.getBlockStore();
-        }
         if (peerGroup != null) {
             this.peerGroup = peerGroup;
             peerGroup.addMnListDownloadCompleteListener(() -> initChainTipSyncComplete = true, Threading.SAME_THREAD);
@@ -211,7 +206,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     abstract boolean needsUpdate(StoredBlock nextBlock);
 
     public abstract void processDiff(@Nullable Peer peer, DiffMessage difference,
-                                     AbstractBlockChain headersChain, AbstractBlockChain blockChain,
+                                     DualBlockChain blockChain,
                                      boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage)
             throws VerificationException;
 
@@ -288,7 +283,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         } else {
             height = currentHeight;
         }
-        StoredBlock resetBlock = blockChain.getBlockStore().get(height);
+        StoredBlock resetBlock = blockChain.getBlock(height);
         if (resetBlock == null)
             resetBlock = blockChain.getChainHead();
         requestMNListDiff(resetBlock != null ? resetBlock : blockChain.getChainHead());
@@ -352,6 +347,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
             //fill up the pending list with recent blocks
             if (syncOptions != MasternodeListSyncOptions.SYNC_MINIMUM) {
+                // TODO: update based on headers first sync
                 Sha256Hash tipHash = blockChain.getChainHead().getHeader().getHash();
                 ArrayList<StoredBlock> blocksToAdd = new ArrayList<>();
                 if (!getMasternodeListCache().containsKey(tipHash) && !pendingBlocks.contains(blockChain.getChainHead())) {
@@ -361,7 +357,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                             blocksToAdd.add(0, cursor);
                         } else break;
                         try {
-                            cursor = cursor.getPrev(blockChain.getBlockStore());
+                            cursor = cursor.getPrev(blockChain.getBlockChain().getBlockStore());
                         } catch (BlockStoreException x) {
                             break;
                         }
@@ -479,16 +475,13 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             }
 
             StoredBlock endBlock = blockChain.getChainHead();
-            try {
-                if (syncOptions == MasternodeListSyncOptions.SYNC_MINIMUM)
-                    endBlock = blockChain.getBlockStore().get(endBlock.getHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
-                if (getMasternodeListCache().containsKey(endBlock.getHeader().getHash()))
-                    endBlock = blockChain.getBlockStore().get((int) getMasternodeListAtTip().getHeight() + 1);
-                if (endBlock == null)
-                    endBlock = blockChain.getChainHead();
-            } catch (BlockStoreException x) {
-                throw new RuntimeException(x);
-            }
+
+            if (syncOptions == MasternodeListSyncOptions.SYNC_MINIMUM)
+                endBlock = blockChain.getBlock(endBlock.getHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
+            if (getMasternodeListCache().containsKey(endBlock.getHeader().getHash()))
+                endBlock = blockChain.getBlock((int) getMasternodeListAtTip().getHeight() + 1);
+            if (endBlock == null)
+                endBlock = blockChain.getChainHead();
 
             requestUpdate(downloadPeer, endBlock);
             waitingForMNListDiff = true;
@@ -508,12 +501,13 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     protected void fillPendingBlocksList(Sha256Hash first, Sha256Hash last) {
         lock.lock();
         try {
-            StoredBlock cursor = blockChain.getBlockStore().get(last);
+            // TODO: update to use DualBlockchain?
+            StoredBlock cursor = blockChain.getBlockChain().getBlockStore().get(last);
             while (cursor != null && !cursor.getHeader().getHash().equals(first)) {
                 if (!pendingBlocks.contains(cursor)) {
                     pendingBlocks.add(cursor);
                 }
-                cursor = cursor.getPrev(blockChain.getBlockStore());
+                cursor = cursor.getPrev(blockChain.getBlockChain().getBlockStore());
             }
         } catch (BlockStoreException x) {
             throw new RuntimeException(x);
@@ -535,7 +529,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     }
 
     public void addEventListeners(AbstractBlockChain blockChain, PeerGroup peerGroup) {
-        this.blockChain = blockChain;
         blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
         blockChain.addReorganizeListener(reorganizeListener);
         if (peerGroup != null) {
@@ -569,14 +562,12 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
                     if (syncOptions == MasternodeListSyncOptions.SYNC_MINIMUM) {
                         try {
-                            StoredBlock requestBlock = getBlockHeightOffset() > 0 ? blockChain.getBlockStore().get(block.getHeight() - getBlockHeightOffset()) : block;
+                            StoredBlock requestBlock = getBlockHeightOffset() > 0 ? blockChain.getBlock(block.getHeight() - getBlockHeightOffset()) : block;
                             if (getMasternodeListAtTip().getHeight() > requestBlock.getHeight())
-                                requestBlock = blockChain.getBlockStore().get((int) getMasternodeListAtTip().getHeight() + 1);
+                                requestBlock = blockChain.getBlock((int) getMasternodeListAtTip().getHeight() + 1);
                             if (requestBlock != null) {
                                 block = requestBlock;
                             }
-                        } catch (BlockStoreException x) {
-                            throw new RuntimeException(x);
                         } catch (NullPointerException x) {
                             log.info("null pointer exception", x);
                         }
@@ -699,15 +690,11 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             long timePeriod = syncOptions == MasternodeListSyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 60L;
             if (Utils.currentTimeSeconds() - block.getHeader().getTimeSeconds() < timePeriod) {
                 if (syncOptions == MasternodeListSyncOptions.SYNC_MINIMUM) {
-                    try {
-                        StoredBlock requestBlock = blockChain.getBlockStore().get(block.getHeight() - getBlockHeightOffset());
-                        if (getMasternodeListAtTip().getHeight() > requestBlock.getHeight())
-                            requestBlock = blockChain.getBlockStore().get((int) getMasternodeListAtTip().getHeight() + 1);
-                        if (requestBlock != null) {
-                            block = requestBlock;
-                        }
-                    } catch (BlockStoreException x) {
-                        //do nothing
+                    StoredBlock requestBlock = blockChain.getBlock(block.getHeight() - getBlockHeightOffset());
+                    if (getMasternodeListAtTip().getHeight() > requestBlock.getHeight())
+                        requestBlock = blockChain.getBlock((int) getMasternodeListAtTip().getHeight() + 1);
+                    if (requestBlock != null) {
+                        block = requestBlock;
                     }
                 }
                 requestMNListDiff(block);
@@ -837,30 +824,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         }
     }
 
-    protected StoredBlock getBlockFromHash(Sha256Hash blockHash) {
-        try {
-            StoredBlock block =  blockChain.getBlockStore().get(blockHash);
-            if (block == null) {
-                block = headerChain.getBlockStore().get(blockHash);
-            }
-            return block;
-        } catch (BlockStoreException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    protected StoredBlock getBlockAncestor(StoredBlock block, int height) {
-        try {
-            StoredBlock ancestor = block.getAncestor(blockStore, height);
-            if (ancestor == null) {
-                ancestor = block.getAncestor(headerStore, height);
-            }
-            return ancestor;
-        } catch (BlockStoreException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     BLSSignature getCoinbaseChainlock(StoredBlock block) {
         ChainLockSignature clsig = chainLocksHandler.getCoinbaseChainLock(block.getHeader().getHash());
         if (clsig != null)
@@ -870,7 +833,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     // DIP29 Random Beacon for LLMQ selection is activated with v20
     Sha256Hash getHashModifier(LLMQParameters llmqParams, StoredBlock quorumBaseBlock) {
-        StoredBlock workBlock = getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 8);
+        StoredBlock workBlock = blockChain.getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 8);
 
         if (params.isV20Active(workBlock.getHeight())) {
             // v20 is active: calculate modifier using the new way.

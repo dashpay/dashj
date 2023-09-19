@@ -17,6 +17,7 @@
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.Utils;
 
@@ -69,7 +70,7 @@ public class QuorumUpdateRequest<T extends AbstractQuorumRequest> {
                 '}';
     }
 
-    public String toString(AbstractBlockChain blockChain) {
+    public String toString(DualBlockChain blockChain) {
         return "QuorumUpdateRequest{" +
                 "request=" + request.toString(blockChain) +
                 ", time=" + time +
