@@ -20,6 +20,7 @@ public class DualBlockChainTest {
     BlockStore blockStore;
 
     TestNet3Params TESTNET = TestNet3Params.get();
+    Context context = new Context(TESTNET);
 
     DualBlockChain dualBlockChain;
 
