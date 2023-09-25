@@ -201,4 +201,14 @@ public class AuthenticationKeyChainGroupTest {
         assertEquals(authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR),
                 authenticationGroupExtensionCopy.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR));
     }
+
+    @Test
+    public void encryptionTest() throws UnreadableWalletException {
+        wallet.encrypt("hello");
+        Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
+        AuthenticationGroupExtension authenticationGroupExtensionCopy = new AuthenticationGroupExtension(wallet.getParams());
+        Wallet walletCopy = new WalletProtobufSerializer().readWallet(PARAMS, new WalletExtension[]{authenticationGroupExtensionCopy}, protos);
+        //walletCopy.encrypt("hello");
+        walletCopy.decrypt("hello");
+    }
 }
