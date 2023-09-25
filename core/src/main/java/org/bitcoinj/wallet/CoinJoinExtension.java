@@ -28,6 +28,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptPattern;
@@ -39,9 +40,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -202,6 +206,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         StringBuilder builder = new StringBuilder();
         builder.append("COINJOIN:\n Rounds: ").append(rounds).append("\n");
         builder.append(super.toString(includeLookahead, includePrivateKeys, aesKey)).append("\n");
+        builder.append("Key Usage:").append(getKeyUsage()).append("\n");
         builder.append("Outputs:\n");
 
         for (Map.Entry<Integer, List<TransactionOutput>> entry : getOutputs().entrySet()) {
@@ -243,5 +248,29 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         // use regular check based TransactionBag is* methods
         // there are no special transactions with CoinJoin
         return false;
+    }
+
+    /**
+     *
+     * @return the percentage of coinjoin keys used in transactions
+     */
+    public int getKeyUsage() {
+        int totalKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedExternalKeys();
+        List<IDeterministicKey> issuedKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedReceiveKeys();
+
+        Set<Transaction> txes = wallet.getTransactions(true);
+
+        Stream<IDeterministicKey> usedKeys = issuedKeys.stream().filter(key ->
+                txes.stream().anyMatch(tx ->
+                        tx.getOutputs().stream().anyMatch(output -> {
+                            if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                                byte[] publicKeyHash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                                return Arrays.equals(publicKeyHash, key.getPubKeyHash());
+                            } else return false;
+                        })
+                )
+        );
+
+        return (int)usedKeys.count() * 100 / totalKeys;
     }
 }
