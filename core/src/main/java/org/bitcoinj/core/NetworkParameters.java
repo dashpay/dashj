@@ -128,8 +128,9 @@ public abstract class NetworkParameters {
 
     /** Used to check for v19 upgrade */
     protected int v19BlockHeight = Integer.MAX_VALUE;
+    /** Used to check for v20 upgrade */
+    protected int v20BlockHeight = Integer.MAX_VALUE;
 
-    protected boolean isDIP24Only = false;
 
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
@@ -585,6 +586,11 @@ public abstract class NetworkParameters {
     public abstract BitcoinSerializer getSerializer(boolean parseRetain);
 
     /**
+     * Construct and return a custom serializer that parses according to given protocol version.
+     */
+    public abstract BitcoinSerializer getSerializer(boolean parseRetain, int protocolVersion);
+
+    /**
      * The number of blocks in the last {@link #getMajorityWindow()} blocks
      * at which to trigger a notice to the user to upgrade their client, where
      * the client does not understand those blocks.
@@ -678,7 +684,9 @@ public abstract class NetworkParameters {
         COINJOIN_PROTX_HASH(70226),
         DMN_TYPE(70227),
         SMNLE_VERSIONED(70228),
-        CURRENT(70228);
+        MNLISTDIFF_VERSION_ORDER(70229),
+        MNLISTDIFF_CHAINLOCKS(70230),
+        CURRENT(70230); //testnet is still 70228
 
         private final int bitcoinProtocol;
 
@@ -771,6 +779,7 @@ public abstract class NetworkParameters {
     protected LLMQParameters.LLMQType llmqTypePlatform;
     protected LLMQParameters.LLMQType llmqTypeDIP0024InstantSend;
     protected LLMQParameters.LLMQType llmqTypeMnhf;
+    protected LLMQParameters.LLMQType llmqTypeAssetLocks;
 
     public HashMap<LLMQParameters.LLMQType, LLMQParameters> getLlmqs() {
         return llmqs;
@@ -835,9 +844,21 @@ public abstract class NetworkParameters {
         }
     }
 
-    @Deprecated
-    public boolean isDIP24Only() {
-        return isDIP24Only;
+    public boolean isV20Active(StoredBlock block) {
+        return block.getHeight() >= v20BlockHeight;
+    }
+
+    public boolean isV20Active(int height) {
+        return height >= v20BlockHeight;
+    }
+
+    public int getV20BlockHeight() {
+        return v20BlockHeight;
+    }
+    public void setV20Active(int height) {
+        if (v20BlockHeight == Integer.MAX_VALUE) {
+            v20BlockHeight = height;
+        }
     }
 
     protected int basicBLSSchemeActivationHeight = Integer.MAX_VALUE;
@@ -861,6 +882,10 @@ public abstract class NetworkParameters {
     }
 
     public String [] getDefaultMasternodeList() {
+        return new String[0];
+    }
+
+    public String [] getDefaultHPMasternodeList() {
         return new String[0];
     }
 

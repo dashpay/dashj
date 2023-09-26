@@ -48,7 +48,6 @@ public class BinTangDevNetParams extends DevNetParams {
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
         DIP0024BlockHeight = -1;
-        isDIP24Only = false;
 
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
         llmqForInstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET;

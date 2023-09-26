@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.params;
+package org.bitcoinj.net.discovery;
 
+import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.quorums.LLMQParameters;
 
 public class OuzoDevNetParams extends DevNetParams {

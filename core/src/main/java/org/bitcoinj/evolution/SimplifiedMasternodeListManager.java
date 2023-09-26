@@ -32,6 +32,7 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VarInt;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.quorums.ChainLocksHandler;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.Quorum;
@@ -306,7 +307,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public void processMasternodeListDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap) {
         try {
-            quorumState.processDiff(peer, mnlistdiff, headersChain, blockChain, isLoadingBootStrap);
+            quorumState.processDiff(peer, mnlistdiff, headersChain, blockChain, isLoadingBootStrap, context.peerGroup.getSyncStage());
 
             processMasternodeList(mnlistdiff);
             processQuorumList(quorumState.getQuorumListAtTip());
@@ -343,7 +344,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 @Override
                 public void run() {
                     try {
-                        quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap);
+                        quorumRotationState.processDiff(peer, quorumRotationInfo, headersChain, blockChain, isLoadingBootStrap, PeerGroup.SyncStage.BLOCKS);
                         processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
                         unCache();
 
@@ -397,15 +398,17 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     public void setBlockChain(AbstractBlockChain blockChain, @Nullable AbstractBlockChain headersChain, @Nullable PeerGroup peerGroup,
-                              QuorumManager quorumManager, QuorumSnapshotManager quorumSnapshotManager) {
+                              QuorumManager quorumManager, QuorumSnapshotManager quorumSnapshotManager, ChainLocksHandler chainLocksHandler) {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
         this.headersChain = headersChain;
         this.quorumManager = quorumManager;
         this.quorumSnapshotManager = quorumSnapshotManager;
         AbstractBlockChain activeChain = headersChain != null ? headersChain : blockChain;
-        quorumState.setBlockChain(headersChain, blockChain);
-        quorumRotationState.setBlockChain(headersChain, blockChain);
+        quorumState.setBlockChain(peerGroup, headersChain, blockChain);
+        quorumRotationState.setBlockChain(peerGroup, headersChain, blockChain);
+        quorumState.setChainLocksHandler(chainLocksHandler);
+        quorumRotationState.setChainLocksHandler(chainLocksHandler);
         if(shouldProcessMNListDiff()) {
             quorumState.addEventListeners(blockChain, peerGroup);
             quorumRotationState.addEventListeners(blockChain, peerGroup);
@@ -435,7 +438,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     @Override
     public String toString() {
-        StoredBlock firstPending = quorumRotationState.pendingBlocks.size() > 0 ? quorumRotationState.pendingBlocks.get(0) : null;
+        StoredBlock firstPending = !quorumRotationState.pendingBlocks.isEmpty() ? quorumRotationState.pendingBlocks.peek() : null;
         int height = firstPending != null ? firstPending.getHeight() : -1;
         return "SimplifiedMNListManager:  {tip:" + getMasternodeList() +
                 ", " + getQuorumListAtTip(params.getLlmqChainLocks()) +

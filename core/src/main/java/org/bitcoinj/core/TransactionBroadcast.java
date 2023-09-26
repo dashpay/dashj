@@ -126,6 +126,7 @@ public class TransactionBroadcast {
             // be seen, 4 peers is probably too little - it doesn't taken many broken peers for tx propagation to have
             // a big effect.
             List<Peer> peers = peerGroup.getConnectedPeers();    // snapshots
+            Peer downloadPeer = peerGroup.getDownloadPeer();     // download peer
             // Prepare to send the transaction by adding a listener that'll be called when confidence changes.
             tx.getConfidence().addEventListener(new ConfidenceChange());
             // Dash Core sends an inv in this case and then lets the peer request the tx data. We just
@@ -155,7 +156,11 @@ public class TransactionBroadcast {
                             public void run() {
                                 Context.propagate(context);
                                 Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
-                                peer.close();
+                                if (peer.equals(downloadPeer)) {
+                                    log.info("not dropping the download peer after sending a transaction");
+                                } else {
+                                    peer.close();
+                                }
                             }
                         }, Threading.THREAD_POOL);
                     }
