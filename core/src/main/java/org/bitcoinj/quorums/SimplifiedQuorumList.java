@@ -4,7 +4,6 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.*;
 import org.bitcoinj.evolution.Masternode;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -123,7 +122,7 @@ public class SimplifiedQuorumList extends Message {
         return answer.map(Map.Entry::getKey).orElse(null);
     }
 
-    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, AbstractBlockChain chain, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
+    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, DualBlockChain chain, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
@@ -162,7 +161,7 @@ public class SimplifiedQuorumList extends Message {
         }
     }
 
-    public void verifyQuorums(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums) throws BlockStoreException, ProtocolException{
+    public void verifyQuorums(boolean isLoadingBootstrap, DualBlockChain chain, boolean validateOldQuorums) throws BlockStoreException, ProtocolException{
         lock.lock();
         try {
             int verifiedCount = 0;
@@ -177,8 +176,8 @@ public class SimplifiedQuorumList extends Message {
         }
     }
 
-    private boolean verifyQuorum(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
-        StoredBlock block = chain.getBlockStore().get(entry.getQuorumHash());
+    private boolean verifyQuorum(boolean isLoadingBootstrap, DualBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
+        StoredBlock block = chain.getBlock(entry.getQuorumHash());
         if (block != null) {
             LLMQParameters llmqParameters = params.getLlmqs().get(entry.getLlmqType());
             if (llmqParameters == null)
@@ -469,14 +468,14 @@ public class SimplifiedQuorumList extends Message {
     }
 
     private boolean checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
-                         AbstractBlockChain chain, boolean validateQuorums) throws BlockStoreException
+                         DualBlockChain chain, boolean validateQuorums) throws BlockStoreException
     {
         if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitment.MAX_VERSION) {
             throw new VerificationException("invalid quorum commitment version: " + commitment.getVersion());
         }
 
-        BlockStore blockStore = chain.getBlockStore();
-        StoredBlock quorumBlock = blockStore.get(commitment.quorumHash);
+        //BlockStore blockStore = chain.getBlockStore();
+        StoredBlock quorumBlock = chain.getBlock(commitment.quorumHash);
         if(quorumBlock == null)
             throw new VerificationException("invalid quorum hash: " + commitment.quorumHash);
 
@@ -484,7 +483,7 @@ public class SimplifiedQuorumList extends Message {
         while(cursor != null) {
             if(cursor.getHeader().getHash().equals(quorumBlock.getHeader().getHash()))
                 break;
-            cursor = cursor.getPrev(blockStore);
+            cursor = chain.getBlock(cursor.getHeader().getHash());
         }
 
         if(cursor == null)

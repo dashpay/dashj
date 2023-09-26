@@ -50,6 +50,7 @@ public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
         private final List<AnyDeterministicKeyChain> chains = new LinkedList<>();
         private int lookaheadSize = -1, lookaheadThreshold = -1;
         private KeyFactory keyFactory;
+        private KeyCrypter keyCrypter;
 
         private Builder(NetworkParameters params, KeyChainGroupStructure structure) {
             this.params = params;
@@ -132,8 +133,18 @@ public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
             return this;
         }
 
+        /**
+         * Set the keyCrypter.
+         * @param keyCrypter to use
+         */
+        public AuthenticationKeyChainGroup.Builder keyCrypter(KeyCrypter keyCrypter) {
+            this.keyCrypter = keyCrypter;
+            return this;
+        }
+
+
         public AuthenticationKeyChainGroup build() {
-            return new AuthenticationKeyChainGroup(params, null, chains, lookaheadSize, lookaheadThreshold, null, null, keyFactory);
+            return new AuthenticationKeyChainGroup(params, null, chains, lookaheadSize, lookaheadThreshold, null, keyCrypter, keyFactory);
         }
     }
 

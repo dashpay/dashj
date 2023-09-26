@@ -18,8 +18,8 @@ package org.bitcoinj.evolution;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
-import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
@@ -27,7 +27,6 @@ import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.SigningManager;
@@ -40,7 +39,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -117,23 +115,15 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         sendRequestWithRetry(peer);
     }
 
-    public void applyDiff(Peer peer, AbstractBlockChain headersChain, AbstractBlockChain blockChain,
+    public void applyDiff(Peer peer, DualBlockChain blockChain,
                           SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap)
             throws BlockStoreException, MasternodeListDiffException {
         StoredBlock block;
         boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
-        AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
 
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
-        block = chain.getBlockStore().get(mnlistdiff.blockHash);
-        if (block == null) {
-            // this should be improved.  isSyncingHeadersFirst could be false, but blockChain may not be synced
-            // so we need to check the headersChain
-            block = headersChain.getBlockStore().get(mnlistdiff.blockHash);
-            if (block != null) {
-                chain = headersChain;
-            }
-        }
+        block = blockChain.getBlock(mnlistdiff.blockHash);
+
         if(!isLoadingBootStrap && block.getHeight() != newHeight)
             throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
 
@@ -147,7 +137,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
         SimplifiedQuorumList newQuorumList = quorumList;
         if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
-            newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, chain, false, true);
+            newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, blockChain, false, true);
             if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
                 newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
         } else {
@@ -187,7 +177,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     }
 
     public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash quorumBaseBlockHash) {
-        StoredBlock quorumBaseBlock = getBlockFromHash(quorumBaseBlockHash);
+        StoredBlock quorumBaseBlock = blockChain.getBlock(quorumBaseBlockHash);
         return computeQuorumMembers(llmqType, quorumBaseBlock);
     }
 
@@ -200,7 +190,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         }
 
         StoredBlock workBlock = params.isV20Active(quorumBaseBlock) ?
-                getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 8) :
+                blockChain.getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 8) :
                 quorumBaseBlock;
 
         Sha256Hash modifier = getHashModifier(llmqParameters, quorumBaseBlock);
@@ -260,8 +250,8 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     }
 
     @Override
-    public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, AbstractBlockChain headersChain,
-                            AbstractBlockChain blockChain, boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage) throws VerificationException {
+    public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, DualBlockChain blockChain,
+                            boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage) throws VerificationException {
         StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);
@@ -269,7 +259,6 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         Stopwatch watchMNList = Stopwatch.createUnstarted();
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
-        this.headerChain = headersChain;
         log.info("processing {} mnlistdiff between : {} & {}; {}",
                 isLoadingBootStrap ? "bootstrap" : "requested",
                 getMnList().getHeight(), newHeight, mnlistdiff);
@@ -278,7 +267,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
         lock.lock();
         try {
-            applyDiff(peer, headersChain, blockChain, mnlistdiff, isLoadingBootStrap);
+            applyDiff(peer, blockChain, mnlistdiff, isLoadingBootStrap);
 
             log.info(this.toString());
             unCache();

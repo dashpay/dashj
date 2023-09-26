@@ -92,7 +92,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     public static String EXTENSION_ID = "org.dashj.wallet.authentication";
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationGroupExtension.class);
-    private final AuthenticationKeyChainGroup keyChainGroup;
+    private AuthenticationKeyChainGroup keyChainGroup;
     private final HashMap<IKey, AuthenticationKeyUsage> keyUsage = Maps.newHashMap();
 
     private final CopyOnWriteArrayList<ListenerRegistration<CreditFundingTransactionEventListener>> creditFundingListeners
@@ -293,6 +293,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         KeyCrypter keyCrypter = wallet.getKeyCrypter();
         AuthenticationKeyChainFactory factory = new AuthenticationKeyChainFactory();
         Protos.AuthenticationGroupExtension walletExtension = Protos.AuthenticationGroupExtension.parseFrom(data);
+        keyChainGroup = AuthenticationKeyChainGroup.authenticationBuilder(wallet.getParams()).keyCrypter(keyCrypter).build();
 
         // extended chains
         for (Protos.ExtendedKeyChain extendedKeyChain : walletExtension.getAuthenticationKeyChainsList()) {
