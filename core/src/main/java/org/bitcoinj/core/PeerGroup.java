@@ -2172,6 +2172,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Complete, null);
     }
 
+    public void addMnListDownloadCompleteListener(Runnable listener, Executor executor) {
+        mnListDownloadedFuture.addListener(listener, executor);
+    }
+
     FutureCallback<Boolean> headersDownloadedCallback;
     FutureCallback<Integer> mnListDownloadedCallback;
     FutureCallback<Boolean> preBlocksDownloadCallback;

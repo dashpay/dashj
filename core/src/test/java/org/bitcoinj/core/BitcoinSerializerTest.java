@@ -254,4 +254,11 @@ public class BitcoinSerializerTest {
         ByteArrayOutputStream bos = new ByteArrayOutputStream(ADDRESS_MESSAGE_BYTES.length);
         serializer.serialize(unknownMessage, bos);
     }
+
+    @Test
+    public void protocolVersionSerializer() {
+        MessageSerializer serializer = MAINNET.getSerializer(false, 70229);
+        assertEquals(70229, serializer.getProtocolVersion());
+        assertNotEquals(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion(), serializer.getProtocolVersion());
+    }
 }

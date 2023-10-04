@@ -667,6 +667,9 @@ public class Peer extends PeerSocketHandler {
         if (peerVersionMessage.bestHeight < 0)
             // In this case, it's a protocol violation.
             throw new ProtocolException("Peer reports invalid best height: " + peerVersionMessage.bestHeight);
+        // set the serializer based on the protocol version
+        setMessageSerializer(params.getSerializer(false, vPeerVersionMessage.clientVersion));
+
         // Now it's our turn ...
         // Send an ACK message stating we accept the peers protocol version.
         sendMessage(new VersionAck());

@@ -127,6 +127,11 @@ public class BitcoinSerializer extends MessageSerializer {
         this.parseRetain = parseRetain;
     }
 
+    public BitcoinSerializer(NetworkParameters params, boolean parseRetain, int protocolVersion) {
+        this(params, parseRetain);
+        setProtocolVersion(protocolVersion);
+    }
+
     /**
      * Writes message to to the output stream.
      */

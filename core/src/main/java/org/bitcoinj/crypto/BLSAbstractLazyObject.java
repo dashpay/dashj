@@ -15,18 +15,12 @@
  */
 package org.bitcoinj.crypto;
 
-import org.bitcoinj.core.ChildMessage;
-import org.bitcoinj.core.Context;
+import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Utils;
-
-import java.io.IOException;
-import java.io.OutputStream;
 
 
-
-public class BLSAbstractLazyObject extends ChildMessage {
+public class BLSAbstractLazyObject extends Message {
 
     byte [] buffer;
     boolean initialized;

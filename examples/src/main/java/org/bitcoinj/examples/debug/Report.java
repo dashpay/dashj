@@ -7,16 +7,21 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 abstract public class Report {
-    File outputFile = new File("tx-report.csv");
+    File outputFile;// = new File("tx-report.csv");
     String dashClientPath;
     String confPath;
+
+    private static final DateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH_mm");
 
     public Report(String prefix, String dashClientPath, String confPath, NetworkParameters params) {
         this.dashClientPath = dashClientPath;
         this.confPath = confPath;
-        outputFile = new File(prefix + params.getId() + ".csv");
+        outputFile = new File(prefix + params.getId() + "-" + format.format(new Date()) + ".csv");
     }
 
     JSONObject runRPCCommand(String command) {

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2018 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
@@ -7,14 +23,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 
-public abstract class SpecialTxPayload extends Message {
+public abstract class SpecialTxPayload extends ChildMessage {
 
     protected int version;
-    Transaction parentTransaction;
 
     public SpecialTxPayload(NetworkParameters params, Transaction tx) {
         super(params, tx.getExtraPayload(), 0);
-        this.parentTransaction = tx;
+        setParent(tx);
     }
 
     public SpecialTxPayload(int version) {
@@ -66,11 +81,11 @@ public abstract class SpecialTxPayload extends Message {
     }
 
     public Transaction getParentTransaction() {
-        return parentTransaction;
+        return (Transaction) parent;
     }
 
     public void setParentTransaction(Transaction parentTransaction) {
-        this.parentTransaction = parentTransaction;
+        setParent(parentTransaction);
     }
 
     public abstract int getCurrentVersion();
@@ -79,5 +94,9 @@ public abstract class SpecialTxPayload extends Message {
 
     public abstract String getName();
 
-    public abstract JSONObject toJson();
+    public JSONObject toJson() {
+        JSONObject result = new JSONObject();
+        result.put("version", version);
+        return result;
+    }
 }

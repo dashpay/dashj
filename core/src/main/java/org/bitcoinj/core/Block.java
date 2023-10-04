@@ -21,6 +21,7 @@ import com.google.common.annotations.*;
 import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.hashengineering.crypto.X11;
+import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.CoinbaseTx;
 import org.bitcoinj.script.*;
 import org.slf4j.*;
@@ -968,7 +969,7 @@ public class Block extends Message {
         coinbase.addOutput(new TransactionOutput(params, coinbase, value,
                 ScriptBuilder.createP2PKOutputScript(ECKey.fromPublicOnly(pubKeyTo)).getProgram()));
         if (merkleRootMasternodeList != null && merkleRootQuorumList != null) {
-            coinbase.setExtraPayload(new CoinbaseTx(height, merkleRootMasternodeList, merkleRootQuorumList));
+            coinbase.setExtraPayload(new CoinbaseTx(params, CoinbaseTx.CB_V20_VERSION, height, merkleRootMasternodeList, merkleRootQuorumList, 1, BLSSignature.dummy(), FIFTY_COINS));
         }
         transactions.add(coinbase);
         coinbase.setParent(this);

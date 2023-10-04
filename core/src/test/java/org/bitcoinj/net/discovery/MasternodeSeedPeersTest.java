@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertThrows;
 
@@ -65,5 +66,32 @@ public class MasternodeSeedPeersTest {
     public void getPeers_empty() {
         MasternodeSeedPeers seedPeers = new MasternodeSeedPeers(new String [0], TESTNET);
         assertThrows(PeerDiscoveryException.class, () -> seedPeers.getPeers(VersionMessage.NODE_NETWORK, 0, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void testnetDefaultLists() {
+        TestNet3Params params = TestNet3Params.get();
+        MasternodeSeedPeers seedPeers = new MasternodeSeedPeers(params);
+        assertEquals(80, params.getDefaultMasternodeList().length);
+        assertEquals(33, params.getDefaultHPMasternodeList().length);
+        assertEquals(80, seedPeers.getSeedAddrs().length);
+    }
+
+    @Test
+    public void devnetOneDefaultLists() {
+        AbsintheDevNetParams params = AbsintheDevNetParams.get();
+        MasternodeSeedPeers seedPeers = new MasternodeSeedPeers(params);
+        assertEquals(2, params.getDefaultMasternodeList().length);
+        assertEquals(14, params.getDefaultHPMasternodeList().length);
+        assertEquals(params.getDefaultMasternodeList().length + params.getDefaultHPMasternodeList().length, seedPeers.getSeedAddrs().length);
+    }
+
+    @Test
+    public void devnetTwoDefaultLists() {
+        OuzoDevNetParams params = OuzoDevNetParams.get();
+        MasternodeSeedPeers seedPeers = new MasternodeSeedPeers(params);
+        assertEquals(5, params.getDefaultMasternodeList().length);
+        assertEquals(15, params.getDefaultHPMasternodeList().length);
+        assertEquals(params.getDefaultMasternodeList().length + params.getDefaultHPMasternodeList().length, seedPeers.getSeedAddrs().length);
     }
 }
