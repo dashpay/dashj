@@ -1,21 +1,21 @@
 import org.gradle.util.GradleVersion
 
-rootProject.name = 'bitcoinj-parent'
+rootProject.name = 'dashj-parent'
 
 include 'core'
-project(':core').name = 'bitcoinj-core'
+project(':core').name = 'dashj-core'
 
 include 'tools'
-project(':tools').name = 'bitcoinj-tools'
+project(':tools').name = 'dashj-tools'
 
 include 'examples'
-project(':examples').name = 'bitcoinj-examples'
+project(':examples').name = 'dashj-examples'
 
 def minGradleVersion = GradleVersion.version("4.10")
 if (GradleVersion.current().compareTo(minGradleVersion) >= 0 && JavaVersion.current().isJava11Compatible()) {
     println "Including wallettemplate because ${GradleVersion.current()} and Java ${JavaVersion.current()}"
     include 'wallettemplate'
-    project(':wallettemplate').name = 'bitcoinj-wallettemplate'
+    project(':wallettemplate').name = 'dashj-wallettemplate'
 } else {
     println "Skipping wallettemplate: ${GradleVersion.current()} and Java ${JavaVersion.current()}"
 }
