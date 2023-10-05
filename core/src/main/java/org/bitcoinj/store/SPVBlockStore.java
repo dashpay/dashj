@@ -288,7 +288,7 @@ public class SPVBlockStore implements BlockStore {
         try {
             buffer.force();
             buffer = null;  // Allow it to be GCd and the underlying file mapping to go away.
-            blockCache.clear();
+            fileLock.release();
             randomAccessFile.close();
             blockCache.clear();
         } catch (IOException e) {
