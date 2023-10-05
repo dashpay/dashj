@@ -29,7 +29,7 @@ public class DnsDiscoveryTest {
 
     @Test
     public void testBuildDiscoveries() throws PeerDiscoveryException {
-        String[] seeds = new String[] { "seed.bitcoin.sipa.be", "dnsseed.bluematt.me" };
+        String[] seeds = new String[] { "dnsseed.dash.org" };
         DnsDiscovery dnsDiscovery = new DnsDiscovery(seeds, MainNetParams.get());
         assertTrue(dnsDiscovery.seeds.size() == 2);
         for (PeerDiscovery peerDiscovery : dnsDiscovery.seeds) {
