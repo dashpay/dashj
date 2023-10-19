@@ -137,6 +137,7 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_60_75;
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
         llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_50_60;
+        llmqTypeAssetLocks = LLMQParameters.LLMQType.LLMQ_50_60;
 
         BIP34Height = 1;
         BIP65Height = 1;

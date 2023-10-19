@@ -107,6 +107,9 @@ public class Transaction extends ChildMessage {
         TRANSACTION_PROVIDER_UPDATE_REVOKE(4),
         TRANSACTION_COINBASE(5),
         TRANSACTION_QUORUM_COMMITMENT(6),
+        TRANSACTION_ASSET_LOCK(8),
+        TRANSACTION_ASSET_UNLOCK(9),
+        TRANSACTION_TYPE_MAX(10),
         TRANSACTION_UNKNOWN(1024);
 
         final int value;
@@ -1710,7 +1713,15 @@ public class Transaction extends ChildMessage {
             case TRANSACTION_QUORUM_COMMITMENT:
                 extraPayloadObject = new FinalCommitmentTxPayload(params, this);
                 break;
+            case TRANSACTION_ASSET_LOCK:
+                extraPayloadObject = new AssetLockPayload(params, this);
+                break;
+            case TRANSACTION_ASSET_UNLOCK:
+                extraPayloadObject = new AssetUnlockPayload(params, this);
+                break;
         }
+        if (extraPayloadObject != null)
+            extraPayloadObject.setParent(this);
     }
 
     /* returns false if inputs > 4 or there are less than the required confirmations */
@@ -1729,6 +1740,7 @@ public class Transaction extends ChildMessage {
     public boolean requiresInputs() {
         switch (getType()) {
             case TRANSACTION_QUORUM_COMMITMENT:
+            case TRANSACTION_ASSET_UNLOCK:
                 return false;
             default:
                 return true;

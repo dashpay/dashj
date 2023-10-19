@@ -288,7 +288,8 @@ public class Context {
 
     public void setMasternodeListManager(SimplifiedMasternodeListManager masternodeListManager) {
         this.masternodeListManager = masternodeListManager;
-        masternodeListManager.setBlockChain(blockChain, headerChain, peerGroup, quorumManager, quorumSnapshotManager);
+        DualBlockChain dualBlockChain = new DualBlockChain(headerChain, blockChain);
+        masternodeListManager.setBlockChain(dualBlockChain, peerGroup, quorumManager, quorumSnapshotManager, chainLockHandler);
     }
 
     public void closeDash() {
@@ -408,22 +409,27 @@ public class Context {
         }
     }
 
-    public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain blockChain, @Nullable AbstractBlockChain headerChain)
-    {
-        if (this.peerGroup == null) {
-            this.peerGroup = peerGroup;
+    public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain blockChain, @Nullable AbstractBlockChain headerChain) {
+        if (this.peerGroup == null/* && initializedObjects*/) {            this.peerGroup = peerGroup;
             this.blockChain = blockChain;
             this.headerChain = headerChain;
+            DualBlockChain dualBlockChain = new DualBlockChain(headerChain, blockChain);
             hashStore = new HashStore(blockChain.getBlockStore());
             blockChain.addNewBestBlockListener(newBestBlockListener);
             handleActivations(blockChain.getChainHead());
             if (initializedObjects) {
                 sporkManager.setBlockChain(blockChain, peerGroup);
                 masternodeSync.setBlockChain(blockChain, netFullfilledRequestManager);
-                masternodeListManager.setBlockChain(blockChain, peerGroup != null ? peerGroup.headerChain : null, peerGroup, quorumManager, quorumSnapshotManager);
+                masternodeListManager.setBlockChain(
+                        dualBlockChain,
+                        peerGroup,
+                        quorumManager,
+                        quorumSnapshotManager,
+                        chainLockHandler
+                );
                 instantSendManager.setBlockChain(blockChain, peerGroup);
                 signingManager.setBlockChain(blockChain, headerChain);
-                chainLockHandler.setBlockChain(blockChain);
+                chainLockHandler.setBlockChain(blockChain, headerChain);
                 blockChain.setChainLocksHandler(chainLockHandler);
                 quorumManager.setBlockChain(blockChain);
                 updatedChainHead(blockChain.getChainHead());

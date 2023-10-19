@@ -14,35 +14,43 @@
  * limitations under the License.
  */
 
-package org.bitcoinj.params;
+package org.bitcoinj.net.discovery;
 
+import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.quorums.LLMQParameters;
 
-public class ScrewDriverDevNetParams extends DevNetParams {
+public class AbsintheDevNetParams extends DevNetParams {
 
-    private static final String DEVNET_NAME = "screwdriver";
+    private static final String DEVNET_NAME = "absinthe";
 
     private static final String[] MASTERNODES = new String[]{
-        "35.92.67.183",
-        "54.244.217.185",
-        "54.149.244.160",
-        "35.93.71.90",
-        "52.34.46.50",
-        "35.160.137.75",
-        "35.92.93.204",
-        "54.70.34.204",
-        "35.91.184.146",
-        "52.35.142.34",
-        "35.89.135.53",
+            "54.203.248.31",
+            "54.244.207.116",
     };
 
-    public ScrewDriverDevNetParams() {
-        super(DEVNET_NAME, "yibwxyuuKsP6kBsq74vu9p6ju97qEb2B4b", 20001,
-                MASTERNODES, true, -1);
+    private static final String[] HP_MASTERNODES = new String[]{
+        "52.12.65.230",
+        "35.88.162.148",
+        "35.87.149.127",
+        "34.216.109.34",
+        "52.40.57.30",
+        "54.245.53.222",
+        "54.244.210.173",
+        "34.215.201.219",
+        "35.91.255.242",
+        "54.245.169.72",
+        "54.184.78.233",
+        "35.88.21.135",
+        "52.36.206.44",
+        "34.218.253.121",
+    };
+
+    public AbsintheDevNetParams() {
+        super(DEVNET_NAME, "yQaxrDEMJ7t2d4eDTugn3FY87T78j3fJX3", 20001,
+                MASTERNODES, true, 70227);
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
         DIP0024BlockHeight = 300;
-        isDIP24Only = false;
         basicBLSSchemeActivationHeight = 1200;
 
         llmqChainLocks = LLMQParameters.LLMQType.LLMQ_DEVNET;
@@ -52,11 +60,11 @@ public class ScrewDriverDevNetParams extends DevNetParams {
         llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_DEVNET;
     }
 
-    private static ScrewDriverDevNetParams instance;
+    private static AbsintheDevNetParams instance;
 
-    public static ScrewDriverDevNetParams get() {
+    public static AbsintheDevNetParams get() {
         if (instance == null) {
-            instance = new ScrewDriverDevNetParams();
+            instance = new AbsintheDevNetParams();
             add(instance);
         }
         return instance;
@@ -65,5 +73,10 @@ public class ScrewDriverDevNetParams extends DevNetParams {
     @Override
     public String[] getDefaultMasternodeList() {
         return MASTERNODES;
+    }
+
+    @Override
+    public String[] getDefaultHPMasternodeList() {
+        return HP_MASTERNODES;
     }
 }

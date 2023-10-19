@@ -271,6 +271,6 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 )
         );
 
-        return (int)usedKeys.count() * 100 / totalKeys;
+        return totalKeys > 0 ? (int)usedKeys.count() * 100 / totalKeys : 0;
     }
 }

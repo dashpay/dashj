@@ -74,27 +74,27 @@ public class LLMQParameters {
 
     @Deprecated
     public static LLMQParameters llmq_test = new LLMQParameters(LLMQType.LLMQ_TEST, "llmq_test",
-            3, 2, 2, 24, 2, 10,
+            false, 3, 2, 2, 24, 2, 10,
             18, 2, 2, 3, 3);
     @Deprecated
     public static LLMQParameters llmq_devnet = new LLMQParameters(LLMQType.LLMQ_DEVNET, "llmq_devnet",
-            10, 7, 6, 24, 2, 10,
+            false, 10, 7, 6, 24, 2, 10,
             18, 7, 3, 4, 6);
     @Deprecated
     public static LLMQParameters llmq50_60 = new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",
-            50, 40, 30, 24, 2, 10,
+            false, 50, 40, 30, 24, 2, 10,
             18,40, 24, 25, 25);
     @Deprecated
     public static LLMQParameters llmq400_60 = new LLMQParameters(LLMQType.LLMQ_400_60, "llmq_400_60",
-            400, 300, 240, 24*12, 4, 20,
+            false, 400, 300, 240, 24*12, 4, 20,
             28, 300, 4, 5, 100);
     @Deprecated
     public static LLMQParameters llmq400_85 = new LLMQParameters(LLMQType.LLMQ_400_85, "llmq_400_85",
-            400, 350, 340, 24 * 24, 4, 20,
+            false, 400, 350, 340, 24 * 24, 4, 20,
             48, 300, 4, 5, 100);
     @Deprecated
     public static LLMQParameters llmq100_67 = new LLMQParameters(LLMQType.LLMQ_100_67, "llmq_100_67",
-            100, 800, 67, 2, 2, 10,
+            false, 100, 800, 67, 2, 2, 10,
             18, 80, 24, 25, 50);
 
     protected static HashMap<LLMQType, LLMQParameters> availableLlmqs;
@@ -102,58 +102,58 @@ public class LLMQParameters {
     static {
         availableLlmqs = new HashMap<>(7);
         availableLlmqs.put(LLMQType.LLMQ_TEST, new LLMQParameters(LLMQType.LLMQ_TEST, "llmq_test",
-                3, 2, 2, 24, 2, 10,
+                false, 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 3, 3));
         availableLlmqs.put(LLMQType.LLMQ_TEST_V17, new LLMQParameters(LLMQType.LLMQ_TEST_V17, "llmq_test_v17",
-                3, 2, 2, 24, 2, 10,
+                false, 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 3, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_DEVNET, new LLMQParameters(LLMQType.LLMQ_DEVNET, "llmq_devnet",
-                12, 7, 6, 24, 2, 10,
+                false, 12, 7, 6, 24, 2, 10,
                 18, 7, 4, 5, 6));
 
         availableLlmqs.put(LLMQType.LLMQ_DEVNET_DIP0024, new LLMQParameters(LLMQType.LLMQ_DEVNET_DIP0024, "llmq_devnet_2",
-                8, 6, 4, 48, 2, 12,
+                true, 8, 6, 4, 48, 2, 12,
                 20, 7, 2, 4, 4));
 
         availableLlmqs.put(LLMQType.LLMQ_DEVNET_PLATFORM, new LLMQParameters(LLMQType.LLMQ_DEVNET_PLATFORM, "llmq_devnet_platform",
-                12, 9, 8, 24, 2, 10,
+                false, 12, 9, 8, 24, 2, 10,
                 18, 7, 4, 5, 6));
 
         availableLlmqs.put(LLMQType.LLMQ_50_60, new LLMQParameters(LLMQType.LLMQ_50_60, "llmq_50_60",
-                50, 40, 30, 24, 2, 10,
+                false, 50, 40, 30, 24, 2, 10,
                 18,40, 24, 25, 25));
 
         availableLlmqs.put(LLMQType.LLMQ_400_60, new LLMQParameters(LLMQType.LLMQ_400_60, "llmq_400_60",
-                400, 300, 240, 24*12, 4, 20,
+                false, 400, 300, 240, 24*12, 4, 20,
                 48, 300, 4, 5, 100));
 
         availableLlmqs.put(LLMQType.LLMQ_400_85, new LLMQParameters(LLMQType.LLMQ_400_85, "llmq_400_85",
-                400, 350, 340, 24 * 24, 4, 20,
+                false, 400, 350, 340, 24 * 24, 4, 20,
                 48, 300, 4, 5, 100));
 
         availableLlmqs.put(LLMQType.LLMQ_100_67, new LLMQParameters(LLMQType.LLMQ_100_67, "llmq_100_67",
-                100, 80, 67, 24, 2, 10,
+                false, 100, 80, 67, 24, 2, 10,
                 18, 80, 24, 25, 50));
 
         availableLlmqs.put(LLMQType.LLMQ_25_67, new LLMQParameters(LLMQType.LLMQ_25_67, "llmq_25_67",
-                25, 22, 17, 24, 2, 10,
+                false, 25, 22, 17, 24, 2, 10,
                 18, 22, 24, 25, 12));
 
         availableLlmqs.put(LLMQType.LLMQ_TEST_DIP0024, new LLMQParameters(LLMQType.LLMQ_TEST_DIP0024, "llmq_test_dip0024",
-                4, 3, 2, 24, 2, 12,
+                false, 4, 3, 2, 24, 2, 12,
                 20, 2, 2, 3, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_TEST_INSTANTSEND, new LLMQParameters(LLMQType.LLMQ_TEST_INSTANTSEND, "llmq_test_instantsend",
-                3, 2, 2, 24, 2, 10,
+                false, 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 4, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_TEST_PLATFORM, new LLMQParameters(LLMQType.LLMQ_TEST_PLATFORM, "llmq_test_platform",
-                3, 2, 2, 24, 2, 10,
+                false, 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 4, 3));
 
         availableLlmqs.put(LLMQType.LLMQ_60_75, new LLMQParameters(LLMQType.LLMQ_60_75, "llmq_60_75",
-                60, 50, 45, 24 * 12, 2, 42,
+                true, 60, 50, 45, 24 * 12, 2, 42,
                 50, 48, 32, 64, 25));
 
     }
@@ -172,6 +172,9 @@ public class LLMQParameters {
 
     // not consensus critical, only used in logging, RPC and UI
     String name;
+
+    // Whether this is a DIP0024 quorum or not
+    boolean useRotation;
 
     // the size of the quorum, e.g. 50 or 400
     int size;
@@ -228,12 +231,13 @@ public class LLMQParameters {
     // How many members should we try to send all sigShares to before we give up.
     int recoveryMembers;
 
-    LLMQParameters(LLMQType type, String name, int size, int minSize, int threshold,
+    LLMQParameters(LLMQType type, String name, boolean useRotation, int size, int minSize, int threshold,
                    int dkgInterval, int dkgPhaseBlocks, int dkgMiningWindowStart,
                    int dkgMiningWindowEnd, int dkgBadVotesThreshold, int signingActiveQuorumCount,
                    int keepOldConnections, int recoveryMembers) {
         this.type = type;
         this.name = name;
+        this.useRotation = useRotation;
         this.size = size;
         this.minSize = minSize;
         this.threshold = threshold;
@@ -253,6 +257,10 @@ public class LLMQParameters {
 
     public String getName() {
         return name;
+    }
+
+    public boolean useRotation() {
+        return useRotation;
     }
 
     public int getSize() {

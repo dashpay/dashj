@@ -255,6 +255,14 @@ public class DefaultRiskAnalysisTest {
         analysis = DefaultRiskAnalysis.FACTORY.create(wallet, tx, NO_DEPS);
         assertEquals(RiskAnalysis.Result.OK, analysis.analyze());
 
+        tx.setVersionAndType(3, Transaction.Type.TRANSACTION_COINBASE);
+        analysis = DefaultRiskAnalysis.FACTORY.create(wallet, tx, NO_DEPS);
+        assertEquals(RiskAnalysis.Result.OK, analysis.analyze());
+
+        tx.setVersionAndType(3, Transaction.Type.TRANSACTION_UNKNOWN);
+        analysis = DefaultRiskAnalysis.FACTORY.create(wallet, tx, NO_DEPS);
+        assertEquals(RiskAnalysis.Result.NON_STANDARD, analysis.analyze());
+
         tx.setVersion(4);
         analysis = DefaultRiskAnalysis.FACTORY.create(wallet, tx, NO_DEPS);
         assertEquals(RiskAnalysis.Result.NON_STANDARD, analysis.analyze());
