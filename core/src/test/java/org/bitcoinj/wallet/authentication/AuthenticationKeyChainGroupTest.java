@@ -208,7 +208,6 @@ public class AuthenticationKeyChainGroupTest {
         Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
         AuthenticationGroupExtension authenticationGroupExtensionCopy = new AuthenticationGroupExtension(wallet.getParams());
         Wallet walletCopy = new WalletProtobufSerializer().readWallet(PARAMS, new WalletExtension[]{authenticationGroupExtensionCopy}, protos);
-        //walletCopy.encrypt("hello");
         walletCopy.decrypt("hello");
     }
 }

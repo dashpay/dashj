@@ -474,7 +474,6 @@ public class SimplifiedQuorumList extends Message {
             throw new VerificationException("invalid quorum commitment version: " + commitment.getVersion());
         }
 
-        //BlockStore blockStore = chain.getBlockStore();
         StoredBlock quorumBlock = chain.getBlock(commitment.quorumHash);
         if(quorumBlock == null)
             throw new VerificationException("invalid quorum hash: " + commitment.quorumHash);
@@ -512,7 +511,6 @@ public class SimplifiedQuorumList extends Message {
                 return false;
             }
 
-            //log.info("Quorum: {}:{}", commitment.quorumHash, commitment.quorumIndex);
             if (Context.get().isDebugMode()) {
                 StringBuilder builder = new StringBuilder();
                 for (Masternode mn : members) {
