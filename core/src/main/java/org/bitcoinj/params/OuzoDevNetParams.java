@@ -48,7 +48,7 @@ public class OuzoDevNetParams extends DevNetParams {
     };
 
     public OuzoDevNetParams() {
-        super(DEVNET_NAME, "ye5hSqkLZkwcx7rJei7pwTNkdCwxAzMDhh", 20001,
+        super(DEVNET_NAME, "yWfSU4uop7rSncc21BWTDQSq8JvvK98qch", 20001,
                 MASTERNODES, true, 70230);
         dnsSeeds = MASTERNODES;
         dropPeersAfterBroadcast = false; // this network is too small
