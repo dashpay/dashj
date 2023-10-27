@@ -90,7 +90,6 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         seenChainLocks = new HashMap<>();
         lastCleanupTime = 0;
         chainLockListeners = new CopyOnWriteArrayList<>();
-        scheduledExecutorService = Executors.newScheduledThreadPool(1);
     }
 
     public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headerChain) {
@@ -121,13 +120,20 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     public void start()
     {
         quorumSigningManager.addRecoveredSignatureListener(this);
-        //TODO: start the scheduler here:
+        // TODO: start the scheduler here:
         //  processChainLock();
+        scheduledExecutorService = Executors.newScheduledThreadPool(1);
     }
 
-    public void stop()
-    {
-        quorumSigningManager.removeRecoveredSignatureListener(this);
+    public void stop() {
+        try {
+            quorumSigningManager.removeRecoveredSignatureListener(this);
+            scheduledExecutorService.shutdown();
+            scheduledExecutorService.awaitTermination(5, TimeUnit.SECONDS);
+            scheduledExecutorService = null;
+        } catch (InterruptedException e) {
+            // do nothing
+        }
     }
 
     void processChainLock() {
