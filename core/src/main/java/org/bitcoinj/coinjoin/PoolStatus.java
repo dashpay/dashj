@@ -27,7 +27,8 @@ public enum PoolStatus {
     TIMEOUT(0x0107),
     CONNECTION_TIMEOUT(0x0108),
     // Errors
-    ERR_NO_INPUTS(0x2100),
+    /** can't create more denominations, possibly due to denom goal limits */
+    ERR_NO_INPUTS(0x3100),
     ERR_MASTERNODE_NOT_FOUND(0x2101),
     ERR_NO_MASTERNODES_DETECTED(0x2102),
     ERR_WALLET_LOCKED(0x3103),

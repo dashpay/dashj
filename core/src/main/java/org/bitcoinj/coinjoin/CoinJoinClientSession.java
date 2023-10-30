@@ -99,6 +99,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private final ArrayList<TransactionOutPoint> outPointLocked = Lists.newArrayList();
     private String strLastMessage;
     private String strAutoDenomResult;
+    private Boolean lastCreateDenominatedResult = true;
 
     private Masternode mixingMasternode;
     private boolean joined; // did we join a session (true), or start a session (false)
@@ -637,8 +638,11 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // find available denominated amounts
         HashSet<Coin> setAmounts = new HashSet<>();
         if (!mixingWallet.selectDenominatedAmounts(balanceNeedsAnonymized, setAmounts)) {
-            // this should never happen
-            setStatus(PoolStatus.ERR_NO_INPUTS);
+            // this should never happen according to Dash Core
+            // but this does happen if there is are coins that can be denominated, but cannot be cause of the denom goals
+            // so if the last denom result was false and there are no inputs, lets trigger the end.
+            if (!lastCreateDenominatedResult)
+                setStatus(PoolStatus.ERR_NO_INPUTS);
             return false;
         }
 
@@ -1312,8 +1316,17 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
             // mixable balance is way too small
             if (nBalanceAnonymizable.isLessThan(nValueMin)) {
-                setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
-                queueSessionCompleteListeners(getState(), ERR_SESSION);
+                //TODO: let us leave the previous code in this block for now
+                // we don't yet have a way to precalculate if we have funds that can be anonomized
+                // reliably
+                //setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
+                //queueSessionCompleteListeners(getState(), ERR_SESSION);
+                //return false;
+                Coin balanceLeftToMix = mixingWallet.getAnonymizableBalance(false, false);
+                if (!balanceLeftToMix.isGreaterThanOrEqualTo(nValueMin)) {
+                    setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
+                    queueSessionCompleteListeners(getState(), ERR_SESSION);
+                }
                 return false;
             }
 
@@ -1369,8 +1382,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             // Check if we have should create more denominated inputs i.e.
             // there are funds to denominate and denominated balance does not exceed
             // max amount to mix yet.
+            lastCreateDenominatedResult = true;
             if (nBalanceAnonimizableNonDenom.isGreaterThanOrEqualTo(nValueMin.add(CoinJoin.getCollateralAmount())) && nBalanceToDenominate.isGreaterThan(Coin.ZERO)) {
-                createDenominated(nBalanceToDenominate);
+                lastCreateDenominatedResult = createDenominated(nBalanceToDenominate);
             }
 
             //check if we have the collateral sized inputs
@@ -1445,8 +1459,12 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             log.info("coinjoin: {}", strAutoDenomResult);
 
         status.set(poolStatus);
-        if (poolStatus.shouldStop())
+        if (poolStatus.shouldStop()) {
+            log.info("Session has nothing to do: {}", poolStatus);
+            if (poolStatus.isError())
+                log.error("Session has an error: {}", poolStatus);
             hasNothingToDo.set(true);
+        }
     }
 
     /// As a client, submit part of a future mixing transaction to a Masternode to start the process
@@ -1521,7 +1539,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         if (sentMessage) {
             pendingDsaRequest = null;
         } else if (pendingDsaRequest.isExpired()) {
-            log.info("coinjoin -- failed to connect to {}; reason: expired", pendingDsaRequest.getAddress());
+            log.info("coinjoin: failed to connect to {}; reason: cannot find peer", pendingDsaRequest.getAddress());
             setStatus(PoolStatus.CONNECTION_TIMEOUT);
             queueSessionCompleteListeners(getState(), ERR_CONNECTION_TIMEOUT);
             setNull();
@@ -1662,12 +1680,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     protected void queueSessionCompleteListeners(PoolState state, PoolMessage message) {
         //checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<SessionCompleteListener> registration : sessionCompleteListeners) {
-            registration.executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    MasternodeAddress address = mixingMasternode.getService();
-                    registration.listener.onSessionComplete(mixingWallet, getSessionID(), getSessionDenom(), state, message, address, joined);
-                }
+            registration.executor.execute(() -> {
+                MasternodeAddress address = mixingMasternode != null ? mixingMasternode.getService() : null;
+                registration.listener.onSessionComplete(mixingWallet, getSessionID(), getSessionDenom(), state, message, address, joined);
             });
         }
     }
