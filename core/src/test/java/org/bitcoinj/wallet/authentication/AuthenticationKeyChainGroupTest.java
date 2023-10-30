@@ -189,7 +189,7 @@ public class AuthenticationKeyChainGroupTest {
         Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
         AuthenticationGroupExtension authenticationGroupExtensionCopy = new AuthenticationGroupExtension(wallet.getParams());
         Wallet walletCopy = new WalletProtobufSerializer().readWallet(PARAMS, new WalletExtension[]{authenticationGroupExtensionCopy}, protos);
-        assertTrue(walletCopy.getExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID));
+        assertTrue(walletCopy.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID));
 
         assertEquals(authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER),
                 authenticationGroupExtensionCopy.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER));
