@@ -255,22 +255,26 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
      * @return the percentage of coinjoin keys used in transactions
      */
     public int getKeyUsage() {
-        int totalKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedExternalKeys();
-        List<IDeterministicKey> issuedKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedReceiveKeys();
+        if (coinJoinKeyChainGroup.hasKeyChains()) {
+            int totalKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedExternalKeys();
+            List<IDeterministicKey> issuedKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedReceiveKeys();
 
-        Set<Transaction> txes = wallet.getTransactions(true);
+            Set<Transaction> txes = wallet.getTransactions(true);
 
-        Stream<IDeterministicKey> usedKeys = issuedKeys.stream().filter(key ->
-                txes.stream().anyMatch(tx ->
-                        tx.getOutputs().stream().anyMatch(output -> {
-                            if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
-                                byte[] publicKeyHash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
-                                return Arrays.equals(publicKeyHash, key.getPubKeyHash());
-                            } else return false;
-                        })
-                )
-        );
+            Stream<IDeterministicKey> usedKeys = issuedKeys.stream().filter(key ->
+                    txes.stream().anyMatch(tx ->
+                            tx.getOutputs().stream().anyMatch(output -> {
+                                if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                                    byte[] publicKeyHash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                                    return Arrays.equals(publicKeyHash, key.getPubKeyHash());
+                                } else return false;
+                            })
+                    )
+            );
 
-        return totalKeys > 0 ? (int)usedKeys.count() * 100 / totalKeys : 0;
+            return totalKeys > 0 ? (int) usedKeys.count() * 100 / totalKeys : 0;
+        } else {
+            return 0;
+        }
     }
 }
