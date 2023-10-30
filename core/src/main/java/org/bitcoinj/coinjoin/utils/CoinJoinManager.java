@@ -118,8 +118,7 @@ public class CoinJoinManager {
             // report masternode group
             if (masternodeGroup != null) {
                 tick++;
-                if (tick % 10 == 0) {
-                    log.info(masternodeGroup.toString());
+                if (tick % 15 == 0) {
                     log.info(masternodeGroup.toString());
                 }
             }

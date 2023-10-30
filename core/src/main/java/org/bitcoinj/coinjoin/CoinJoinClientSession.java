@@ -685,7 +685,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             mixingMasternode = dmn;
             context.coinJoinManager.addPendingMasternode(this);
             pendingDsaRequest = new PendingDsaRequest(dmn.getService(), new CoinJoinAccept(context.getParams(), sessionDenom, txMyCollateral));
-            log.info("coinjoin test: {}\n  {}", pendingDsaRequest.getDsa(), pendingDsaRequest.getDsa().toStringHex());
+            // log.info("coinjoin test: {}\n  {}", pendingDsaRequest.getDsa(), pendingDsaRequest.getDsa().toStringHex());
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: start new queue -> pending connection, nSessionDenom: {} ({}), addr={}",

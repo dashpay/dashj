@@ -563,8 +563,11 @@ public class WalletEx extends Wallet {
                         if (CoinJoin.isCollateralAmount(wtx.getOutput(i).getValue())) continue;
                         // ignore outputs that are 10 times smaller than the smallest denomination
                         // otherwise they will just lead to higher fee / lower priority
-                        if (wtx.getOutput(i).getValue().isLessThan(smallestDenom.div(10)) ||
-                                wtx.getOutput(i).getValue().equals(smallestDenom.div(10))) continue;
+
+                        // TODO: lets see what this trouble causes by ignoring this condition
+                        if (wtx.getOutput(i).getValue().isLessThanOrEqualTo(smallestDenom.div(10)))
+                            continue;
+
                         // ignore mixed
                         if (isFullyMixed(new TransactionOutPoint(params, i, outpoint.getParentTransactionHash()))) continue;
                     }
@@ -583,7 +586,9 @@ public class WalletEx extends Wallet {
             // NOTE: vecTallyRet is "sorted" by txdest (i.e. address), just like mapTally
             ArrayList<CompactTallyItem> vecTallyRet = Lists.newArrayList();
             for (Map.Entry<TransactionDestination, CompactTallyItem> item : mapTally.entrySet()) {
-                if (anonymizable && item.getValue().amount.isLessThan(smallestDenom)) continue;
+                //TODO: ignore this to get this dust back in
+                if (anonymizable && item.getValue().amount.isLessThan(smallestDenom))
+                    continue;
                 vecTallyRet.add(item.getValue());
             }
 
@@ -601,10 +606,10 @@ public class WalletEx extends Wallet {
 
             // debug
 
-            StringBuilder strMessage = new StringBuilder("vecTallyRet:\n");
-            for (CompactTallyItem item :vecTallyRet)
-                strMessage.append(String.format("  %s %s\n", item.txDestination, item.amount.toFriendlyString()));
-            log.info(strMessage.toString()); /* Continued */
+//            StringBuilder strMessage = new StringBuilder("vecTallyRet:\n");
+//            for (CompactTallyItem item :vecTallyRet)
+//                strMessage.append(String.format("  %s %s\n", item.txDestination, item.amount.toFriendlyString()));
+//            log.info(strMessage.toString()); /* Continued */
 
             return vecTallyRet;
         } finally {
@@ -861,7 +866,6 @@ public class WalletEx extends Wallet {
 
             nValueTotal = nValueTotal.add(nValue);
             vecTxDSInRet.add(new CoinJoinTransactionInput(txin, scriptPubKey, nRounds));
-            log.info("coinjoin test {}\n  {}", new CoinJoinTransactionInput(txin, scriptPubKey, nRounds), new CoinJoinTransactionInput(txin, scriptPubKey, nRounds).toStringHex());
             setRecentTxIds.add(txHash);
             log.info("coinjoin:  -- hash: {}, nValue: {}", txHash, nValue.toFriendlyString());
         }

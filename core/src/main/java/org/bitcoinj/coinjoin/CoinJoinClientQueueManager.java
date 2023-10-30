@@ -45,7 +45,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                     }
                     if (q.isReady() == dsq.isReady() && q.getProTxHash().equals(dsq.getProTxHash())) {
                         // no way the same mn can send another dsq with the same readiness this soon
-                        log.info("coinjoin: DSQUEUE -- Peer {} is sending WAY too many dsq messages for a masternode {}", from.getAddress().getAddr(), dsq.getProTxHash());
+                        log.debug("coinjoin: DSQUEUE -- Peer {} is sending WAY too many dsq messages for a masternode {}", from.getAddress().getAddr(), dsq.getProTxHash());
                         return;
                     }
                 }

@@ -32,6 +32,7 @@ import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
@@ -211,6 +212,9 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         }
     }
 
+    private long lastTimeReportTooRecent = 0;
+    private long lastMasternodesUsed = 0;
+
     /// Passively run mixing in the background according to the configuration in settings
     public boolean doAutomaticDenominating() {
         return doAutomaticDenominating(false);
@@ -234,7 +238,13 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         // If we've used 90% of the Masternode list then drop the oldest first ~30%
         int thresholdHigh = (int) (mnCountEnabled * 0.9);
         int thresholdLow = (int) (thresholdHigh * 0.7);
-        log.info("Checking masternodesUsed: size: {}, threshold: {}", masternodesUsed.size(), thresholdHigh);
+
+        if (!waitForAnotherBlock()) {
+            if (masternodesUsed.size() != lastMasternodesUsed) {
+                log.info("Checking masternodesUsed: size: {}, threshold: {}", masternodesUsed.size(), thresholdHigh);
+                lastMasternodesUsed = masternodesUsed.size();
+            }
+        }
 
         if (masternodesUsed.size() > thresholdHigh) {
             // remove the first masternodesUsed.size() - thresholdLow masternodes
@@ -279,8 +289,11 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
                 if (!checkAutomaticBackup()) return false;
 
                 if (waitForAnotherBlock()) {
-                    strAutoDenomResult = "Last successful action was too recent.";
-                    log.info("DoAutomaticDenominating -- {}", strAutoDenomResult);
+                    if (Utils.currentTimeMillis() - lastTimeReportTooRecent > 15000 ) {
+                        strAutoDenomResult = "Last successful action was too recent.";
+                        log.info("DoAutomaticDenominating -- {}", strAutoDenomResult);
+                        lastTimeReportTooRecent = Utils.currentTimeMillis();
+                    }
                     return false;
                 }
 
