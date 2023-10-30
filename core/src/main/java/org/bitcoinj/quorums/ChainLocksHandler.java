@@ -638,7 +638,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                         log.info("doesn't match previous value: {} vs current:{}", previous, signature);
                     }
                     ChainLockSignature clsig = new ChainLockSignature(height, block.getHeader().getHash(), signature);
-                    log.info("clsig: {} {} {}", block.getHeight(), block.getHeader().getHash(), signature);
+                    log.debug("clsig: {} {} {}", block.getHeight(), block.getHeader().getHash(), signature);
                     coinbaseChainlockMap.put(block.getHeader().getHash(), clsig);
                 }
             } else {
@@ -650,8 +650,6 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     }
 
     public ChainLockSignature getCoinbaseChainLock(Sha256Hash blockHash) {
-        System.out.println("ChainLock Map");
-        coinbaseChainlockMap.values().forEach(System.out::println);
         return coinbaseChainlockMap.get(blockHash);
     }
 }
