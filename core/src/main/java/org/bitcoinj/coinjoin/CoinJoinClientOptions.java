@@ -58,6 +58,9 @@ public class CoinJoinClientOptions {
         get().coinJoinAmount.set(amount);
     }
 
+    public static void setDenomsGoal(int goal) { get().coinJoinDenomsGoal.set(goal); }
+    public static void setDenomsHardCap(int hardCap) { get().coinJoinDenomsHardCap.set(hardCap); }
+
     public static boolean isEnabled() { return CoinJoinClientOptions.get().enableCoinJoin.get(); }
     public static boolean isMultiSessionEnabled() { return CoinJoinClientOptions.get().isCoinJoinMultiSession.get(); }
 
