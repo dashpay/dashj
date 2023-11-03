@@ -35,7 +35,6 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -43,16 +42,19 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
 
+/**
+ * Manages ChainLocks
+ */
 public class ChainLocksHandler extends AbstractManager implements RecoveredSignatureListener {
 
     static final long CLEANUP_INTERVAL = 1000 * 30;
     static final long CLEANUP_SEEN_TIMEOUT = 24 * 60 * 60 * 1000;
 
-    SigningManager quorumSigningManager;
-    InstantSendManager quorumInstantSendManager;
+    private SigningManager quorumSigningManager;
+    private InstantSendManager quorumInstantSendManager;
 
     private static final Logger log = LoggerFactory.getLogger(ChainLocksHandler.class);
-    ReentrantLock lock = Threading.lock("ChainLocksHandler");
+    private final ReentrantLock lock = Threading.lock("ChainLocksHandler");
     boolean tryLockChainTipScheduled;
     boolean isSporkActive;
     boolean isEnforced;
@@ -65,16 +67,16 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     StoredBlock bestChainLockBlock;
     StoredBlock lastNotifyChainLockBlock;
 
-    HashMap<Sha256Hash, Long> seenChainLocks;
+    private final HashMap<Sha256Hash, Long> seenChainLocks;
 
     // keep track of block hashes and clsig
-    LinkedHashMap<Sha256Hash, ChainLockSignature> chainlockMap = new LinkedHashMap<Sha256Hash, ChainLockSignature>() {
+    private final LinkedHashMap<Sha256Hash, ChainLockSignature> chainlockMap = new LinkedHashMap<Sha256Hash, ChainLockSignature>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry entry) {
             return size() > 5000;
         }
     };
-    LinkedHashMap<Sha256Hash, ChainLockSignature> coinbaseChainlockMap = new LinkedHashMap<Sha256Hash, ChainLockSignature>() {
+    private final LinkedHashMap<Sha256Hash, ChainLockSignature> coinbaseChainlockMap = new LinkedHashMap<Sha256Hash, ChainLockSignature>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry entry) {
             return size() > 5000;
@@ -211,15 +213,14 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                     scheduledProcessChainLock.cancel(true);
 
                 log.info("ChainLock not verified due to missing quorum, try again in 5 seconds");
-                //schedule this to be checked again in 1 second
-                scheduledProcessChainLock = scheduledExecutorService.schedule(new Runnable() {
-                                                              public void run() {
-                                                                  // clear the clsig from the seen list
-                                                                  seenChainLocks.remove(hash);
-                                                                  processNewChainLock(null, clsig, hash);
-                                                              }
-                                                          }, 5, TimeUnit.SECONDS);
-
+                // schedule this to be checked again in 1 second
+                if (scheduledExecutorService != null) {
+                    scheduledProcessChainLock = scheduledExecutorService.schedule(() -> {
+                        // clear the clsig from the seen list
+                        seenChainLocks.remove(hash);
+                        processNewChainLock(null, clsig, hash);
+                    }, 5, TimeUnit.SECONDS);
+                }
                 return;
             }
         }
@@ -333,10 +334,6 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                 }
             }
         }
-    }
-
-    public boolean isNewInstantSendEnabled() {
-        return context.sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
     }
 
     void enforceBestChainLock() {
@@ -477,13 +474,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
         lock.lock();
         try {
-            Iterator<Map.Entry<Sha256Hash, Long>> it = seenChainLocks.entrySet().iterator();
-            while(it.hasNext()) {
-                Map.Entry<Sha256Hash, Long> entry = it.next();
-                if (Utils.currentTimeMillis() - entry.getValue() >= CLEANUP_SEEN_TIMEOUT) {
-                    it.remove();
-                }
-            }
+            seenChainLocks.entrySet().removeIf(entry -> Utils.currentTimeMillis() - entry.getValue() >= CLEANUP_SEEN_TIMEOUT);
 
             lastCleanupTime = Utils.currentTimeMillis();
         } finally {
@@ -492,14 +483,9 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     }
 
-    NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
-        @Override
-        public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            updatedBlockTip(block, null);
-        }
-    };
+    private final NewBestBlockListener newBestBlockListener = block -> updatedBlockTip(block, null);
 
-    private transient CopyOnWriteArrayList<ListenerRegistration<ChainLockListener>> chainLockListeners;
+    private final transient CopyOnWriteArrayList<ListenerRegistration<ChainLockListener>> chainLockListeners;
 
     /**
      * Adds an event listener object. Methods on this object are called when something interesting happens,
@@ -515,7 +501,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
      */
     public void addChainLockListener(ChainLockListener listener, Executor executor) {
         // This is thread safe, so we don't need to take the lock.
-        chainLockListeners.add(new ListenerRegistration<ChainLockListener>(listener, executor));
+        chainLockListeners.add(new ListenerRegistration<>(listener, executor));
     }
 
     /**
@@ -532,12 +518,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
             if (registration.executor == Threading.SAME_THREAD) {
                 registration.listener.onNewChainLock(block);
             } else {
-                registration.executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        registration.listener.onNewChainLock(block);
-                    }
-                });
+                registration.executor.execute(() -> registration.listener.onNewChainLock(block));
             }
         }
     }
@@ -622,7 +603,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     public void addCoinbaseChainLock(Sha256Hash blockHash, int ancestor, BLSSignature signature) {
         try {
-            int height = -1;
+            int height;
             StoredBlock block = blockChain.getBlockStore().get(blockHash);
             BlockStore blockStore = blockChain.getBlockStore();
             if (block == null) {
@@ -649,7 +630,21 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         }
     }
 
+    /**
+     * get the coinbase CL for a block
+     * @param blockHash block hash of the block
+     * @return the ChainLockSignature or null if not found
+     */
     public ChainLockSignature getCoinbaseChainLock(Sha256Hash blockHash) {
         return coinbaseChainlockMap.get(blockHash);
+    }
+
+    /**
+     * get the CL for a block
+     * @param blockHash block hash of the block
+     * @return the ChainLockSignature or null if not found
+     */
+    public ChainLockSignature getChainLock(Sha256Hash blockHash) {
+        return chainlockMap.get(blockHash);
     }
 }

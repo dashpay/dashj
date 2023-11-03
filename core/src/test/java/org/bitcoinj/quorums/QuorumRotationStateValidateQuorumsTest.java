@@ -132,10 +132,10 @@ public class QuorumRotationStateValidateQuorumsTest {
                 },
                 {
                         TESTNETPARAMS,
-                        "qrinfo-testnet-0-902366-70230-after20HF.dat",
-                        "testnet-after20HF_90230.spvchain",
+                        "qrinfo-testnet-0-905558-70230-after20HF.dat",
+                        "testnet-with-tip-905558.spvchain",
                         70230,
-                        902296,
+                        905464,
                         SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 }
         });
