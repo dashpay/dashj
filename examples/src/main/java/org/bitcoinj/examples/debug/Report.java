@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 abstract public class Report {
-    File outputFile;// = new File("tx-report.csv");
+    File outputFile;
     String dashClientPath;
     String confPath;
 

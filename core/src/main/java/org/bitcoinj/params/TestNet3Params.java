@@ -78,6 +78,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         checkpoints.put(794950, Sha256Hash.wrap("000001860e4c7248a9c5cc3bc7106041750560dc5cd9b3a2641b49494bcff5f2"));
         checkpoints.put(808000, Sha256Hash.wrap("00000104cb60a2b5e00a8a4259582756e5bf0dca201c0993c63f0e54971ea91a"));
         checkpoints.put(850100, Sha256Hash.wrap("000004728b8ff2a16b9d4eebb0fd61eeffadc9c7fe4b0ec0b5a739869401ab5b"));
+        checkpoints.put(899760, Sha256Hash.wrap("000007b169cbf75796ee1147b24f6cdf627c189490d7472187408e0902413a68"));
 
         // updated with Dash Core 0.17.0.3 seed list
         addrSeeds = new int[]{
@@ -125,7 +126,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         DIP0008BlockHeight = 78800;
         DIP0024BlockHeight = 769700 + 4 * 288;
         v19BlockHeight = 850100;
-        v20BlockHeight = 900700;
+        v20BlockHeight = 905100;
 
         //LLMQ parameters
         addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);

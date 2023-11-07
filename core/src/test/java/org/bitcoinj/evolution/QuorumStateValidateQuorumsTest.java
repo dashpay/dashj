@@ -93,6 +93,14 @@ public class QuorumStateValidateQuorumsTest {
                         70228,
                         849810,
                         SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
+                },
+                {
+                        TESTNETPARAMS,
+                        "mnlistdiff-testnet-0-905762-after20.HF.dat",
+                        "testnet-with-tip-905775.spvchain",
+                        70230,
+                        905762,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 }
         });
     }
