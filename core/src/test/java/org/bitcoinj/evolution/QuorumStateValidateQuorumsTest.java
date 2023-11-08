@@ -106,15 +106,15 @@ public class QuorumStateValidateQuorumsTest {
     }
 
     private void initContext() throws BlockStoreException {
-        if (context == null || !context.getParams().equals(params))
-            context = new Context(params);
+        //if (context == null || !context.getParams().equals(params))
+        context = new Context(params);
 
         blockChain = new BlockChain(context, new SPVBlockStore(params, new File(Objects.requireNonNull(SimplifiedMasternodesTest.class.getResource(blockchainFile)).getPath())));
 
-        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         context.initDash(true, true);
+        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
-        context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
+        //context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain, true);
     }
 
     @Test

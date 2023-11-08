@@ -60,9 +60,8 @@ public class ChainLocksHandlerTest {
         blockStore = new SPVBlockStore(params, new File(Objects.requireNonNull(getClass().getResource(blockchainFile)).getPath()));
 
         blockChain = new BlockChain(context, blockStore);
-
-        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         context.initDash(true, true);
+        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
         InputStream stream = null;
 
