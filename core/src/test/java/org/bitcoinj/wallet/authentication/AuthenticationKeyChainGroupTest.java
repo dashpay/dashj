@@ -77,8 +77,6 @@ public class AuthenticationKeyChainGroupTest {
     IDeterministicKey platformKeyMaster;
     IDeterministicKey platformKey;
     KeyId platformKeyId;
-    AuthenticationKeyChainGroup authGroup;
-
     DerivationPathFactory derivationPathFactory;
     AuthenticationGroupExtension authenticationGroupExtension;
     @Before
@@ -191,6 +189,7 @@ public class AuthenticationKeyChainGroupTest {
         Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
         AuthenticationGroupExtension authenticationGroupExtensionCopy = new AuthenticationGroupExtension(wallet.getParams());
         Wallet walletCopy = new WalletProtobufSerializer().readWallet(PARAMS, new WalletExtension[]{authenticationGroupExtensionCopy}, protos);
+        assertTrue(walletCopy.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID));
 
         assertEquals(authenticationGroupExtension.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER),
                 authenticationGroupExtensionCopy.currentKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER));
@@ -208,7 +207,6 @@ public class AuthenticationKeyChainGroupTest {
         Protos.Wallet protos = new WalletProtobufSerializer().walletToProto(wallet);
         AuthenticationGroupExtension authenticationGroupExtensionCopy = new AuthenticationGroupExtension(wallet.getParams());
         Wallet walletCopy = new WalletProtobufSerializer().readWallet(PARAMS, new WalletExtension[]{authenticationGroupExtensionCopy}, protos);
-        //walletCopy.encrypt("hello");
         walletCopy.decrypt("hello");
     }
 }

@@ -172,12 +172,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffTip());
 
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
-        //AbstractBlockChain chain = isSyncingHeadersFirst ? headersChain : blockChain;
-
-        // in the event that we don't know that DIP24 is active, then isSyncingHeadersFirst is false
-        //if (chain.getBestChainHeight() <= 1 || (headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight())) {
-            //chain = (headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight()) ? headersChain : blockChain;
-        //}
 
         log.info("processing {} qrinfo between (atH): {} & {}; {}",
                 isLoadingBootStrap ? "bootstrap" : "requested",

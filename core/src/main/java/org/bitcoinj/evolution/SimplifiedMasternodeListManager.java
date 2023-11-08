@@ -121,9 +121,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     long tipHeight;
     Sha256Hash tipBlockHash;
 
-    //AbstractBlockChain blockChain;
-    //AbstractBlockChain headersChain;
-
     DualBlockChain blockChain;
 
     boolean loadedFromFile;
@@ -394,7 +391,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         this.peerGroup = peerGroup;
         this.quorumManager = quorumManager;
         this.quorumSnapshotManager = quorumSnapshotManager;
-        //AbstractBlockChain activeChain = headersChain != null ? headersChain : blockChain;
         quorumState.setBlockChain(peerGroup, blockChain);
         quorumRotationState.setBlockChain(peerGroup, blockChain);
         quorumState.setChainLocksHandler(chainLocksHandler);
