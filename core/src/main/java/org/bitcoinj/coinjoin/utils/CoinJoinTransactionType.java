@@ -21,6 +21,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.script.ScriptPattern;
 
 public enum CoinJoinTransactionType {
     None,
@@ -73,15 +74,19 @@ public enum CoinJoinTransactionType {
     */
     private static boolean isCoinJoinSend(Transaction tx) {
         boolean inputsAreDenominated = tx.getInputs()
-                .stream().allMatch(input -> CoinJoin.isDenominatedAmount(input.getValue()));
+                .stream().allMatch(input -> input.getValue() != null && CoinJoin.isDenominatedAmount(input.getValue()));
         Coin fee = tx.getFee();
         return inputsAreDenominated && (fee != null && !fee.isZero());
     }
 
-    private static boolean isMixingFee(Transaction tx) {
+    public static boolean isMixingFee(Transaction tx) {
         Coin inputsValue = tx.getInputSum();
         Coin outputsValue = tx.getOutputSum();
         Coin netValue = inputsValue.subtract(outputsValue);
+        // check for the tx with OP_RETURN
+        if (outputsValue.isZero() && tx.getInputs().size() == 1 && tx.getOutputs().size() == 1 && ScriptPattern.isOpReturn(tx.getOutputs().get(0).getScriptPubKey())) {
+            return true;
+        }
         return tx.getInputs().size() == 1 && tx.getOutputs().size() == 1
                 && CoinJoin.isCollateralAmount(inputsValue)
                 && CoinJoin.isCollateralAmount(outputsValue)

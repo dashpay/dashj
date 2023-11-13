@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.coinjoin.listeners;
 
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.core.Transaction;
 
 public interface CoinJoinTransactionListener {

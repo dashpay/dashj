@@ -22,11 +22,11 @@ import org.bitcoinj.coinjoin.PoolMessage;
 import org.bitcoinj.coinjoin.PoolState;
 import org.bitcoinj.coinjoin.PoolStatus;
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
-import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;

@@ -17,9 +17,9 @@ package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
-import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
 import org.bitcoinj.coinjoin.utils.KeyHolderStorage;
 import org.bitcoinj.coinjoin.utils.MasternodeGroup;
@@ -35,7 +35,6 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
@@ -162,7 +161,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     public void processTransaction(Transaction tx) {
         log.info("processing tx of {}: {}", tx.getValue(mixingWallet), tx.getTxId());
         if (collateralSessionMap.containsKey(tx.getTxId())) {
-            queueTransactionListeners(tx, collateralSessionMap.get(tx.getTxId()), CoinJoinTransactionType.MIXING_FEE);
+            queueTransactionListeners(tx, collateralSessionMap.get(tx.getTxId()), CoinJoinTransactionType.MixingFee);
         }
     }
 
@@ -379,7 +378,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         log.info("coinjoin: txid: {}", strResult);
 
-        queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CREATE_DENOMINATION);
+        queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CreateDenomination);
 
         return true;
     }
@@ -510,7 +509,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
 
         log.info("coinjoin: txid: {}", strResult);
-        queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CREATE_COLLATERAL);
+        queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.MakeCollateralInputs);
 
         return true;
     }

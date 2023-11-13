@@ -21,7 +21,6 @@ import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.PoolMessage;
 import org.bitcoinj.coinjoin.PoolState;
 import org.bitcoinj.coinjoin.PoolStatus;
-import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.NetworkParameters;
@@ -194,7 +193,7 @@ public class CoinJoinReporter extends MixingProgressTracker {
     public void onTransactionProcessed(Transaction tx, CoinJoinTransactionType type, int sessionId) {
         super.onTransactionProcessed(tx, type, sessionId);
         try {
-            if (type == CoinJoinTransactionType.CREATE_DENOMINATION) {
+            if (type == CoinJoinTransactionType.CreateDenomination) {
                 writeTime();
                 writer.write("Denominations Created: " + tx.getTxId());
                 writer.newLine();
@@ -207,11 +206,11 @@ public class CoinJoinReporter extends MixingProgressTracker {
                     writer.write("  " + CoinJoin.denominationToString(entry.getKey()) + ": " + entry.getValue());
                     writer.newLine();
                 }
-            } else if (type == CoinJoinTransactionType.CREATE_COLLATERAL) {
+            } else if (type == CoinJoinTransactionType.MakeCollateralInputs) {
                 writeTime();
                 writer.write("Collateral Created: " + tx.getTxId());
                 writer.newLine();
-            } else if (type == CoinJoinTransactionType.MIXING_FEE) {
+            } else if (type == CoinJoinTransactionType.MixingFee) {
                 writeTime();
                 writer.write("Fee Charged on session: " + sessionId + " txid:" + tx.getTxId());
                 writer.newLine();
