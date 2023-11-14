@@ -199,187 +199,186 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
 
-        TransactionBuilder txBuilder = new TransactionBuilder(mixingWallet, tallyItem);
+        try (TransactionBuilder txBuilder = new TransactionBuilder(mixingWallet, tallyItem)) {
+            log.info("coinjoin: Start {}", txBuilder);
 
-        log.info("coinjoin: Start {}", txBuilder);
+            // ****** Add an output for mixing collaterals ************ /
 
-        // ****** Add an output for mixing collaterals ************ /
+            if (fCreateMixingCollaterals && txBuilder.addOutput(CoinJoin.getMaxCollateralAmount()) == null) {
+                log.info("coinjoin: Failed to add collateral output");
+                return false;
+            }
 
-        if (fCreateMixingCollaterals && txBuilder.addOutput(CoinJoin.getMaxCollateralAmount()) == null) {
-            log.info("coinjoin: Failed to add collateral output");
-            return false;
-        }
+            // ****** Add outputs for denoms ************ /
 
-        // ****** Add outputs for denoms ************ /
+            final Result<Boolean> addFinal = new Result<>(true);
+            List<Coin> denoms = CoinJoinClientOptions.getDenominations();
 
-        final Result<Boolean> addFinal = new Result<>(true);
-        List<Coin> denoms = CoinJoinClientOptions.getDenominations();
+            HashMap<Coin, Integer> mapDenomCount = new HashMap<>();
+            for (Coin denomValue : denoms) {
+                mapDenomCount.put(denomValue, mixingWallet.countInputsWithAmount(denomValue));
+            }
 
-        HashMap<Coin, Integer> mapDenomCount = new HashMap<>();
-        for (Coin denomValue : denoms) {
-            mapDenomCount.put(denomValue, mixingWallet.countInputsWithAmount(denomValue));
-        }
+            // Will generate outputs for the createdenoms up to coinjoinmaxdenoms per denom
 
-        // Will generate outputs for the createdenoms up to coinjoinmaxdenoms per denom
+            // This works in the way creating PS denoms has traditionally worked, assuming enough funds,
+            // it will start with the smallest denom then create 11 of those, then go up to the next biggest denom create 11
+            // and repeat. Previously, once the largest denom was reached, as many would be created were created as possible and
+            // then any remaining was put into a change address and denominations were created in the same manner a block later.
+            // Now, in this system, so long as we don't reach COINJOIN_DENOM_OUTPUTS_THRESHOLD outputs the process repeats in
+            // the same transaction, creating up to nCoinJoinDenomsHardCap per denomination in a single transaction.
 
-        // This works in the way creating PS denoms has traditionally worked, assuming enough funds,
-        // it will start with the smallest denom then create 11 of those, then go up to the next biggest denom create 11
-        // and repeat. Previously, once the largest denom was reached, as many would be created were created as possible and
-        // then any remaining was put into a change address and denominations were created in the same manner a block later.
-        // Now, in this system, so long as we don't reach COINJOIN_DENOM_OUTPUTS_THRESHOLD outputs the process repeats in
-        // the same transaction, creating up to nCoinJoinDenomsHardCap per denomination in a single transaction.
+            while (txBuilder.couldAddOutput(CoinJoin.getSmallestDenomination()) && txBuilder.countOutputs() < COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
+                for (int it = denoms.size() - 1; it >= 0; --it) {
+                    Coin denomValue = denoms.get(it);
+                    Integer currentDenomIt = mapDenomCount.get(denomValue);
 
-        while (txBuilder.couldAddOutput(CoinJoin.getSmallestDenomination()) && txBuilder.countOutputs() < COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
-            for (int it = denoms.size() - 1; it >= 0; --it) {
-                Coin denomValue = denoms.get(it);
-                Integer currentDenomIt = mapDenomCount.get(denomValue);
-
-                int nOutputs = 0;
+                    int nOutputs = 0;
 
 
-                NeedMoreOutputs needMoreOutputs = new NeedMoreOutputs() {
+                    NeedMoreOutputs needMoreOutputs = new NeedMoreOutputs() {
+                        @Override
+                        public boolean process(Coin balanceToDenominate, int outputs, Result<Boolean> addFinal) {
+                            if (txBuilder.couldAddOutput(denomValue)) {
+                                if (addFinal.get() && balanceToDenominate.isPositive() && balanceToDenominate.isLessThan(denomValue)) {
+                                    addFinal.set(false); // add final denom only once, only the smalest possible one
+                                    log.info("coinjoin: 1 - FINAL - denomValue: {}, balanceToDenominate: {}, outputs: {}, {}",
+                                            denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), outputs, txBuilder);
+                                    return true;
+                                } else if (balanceToDenominate.isGreaterThanOrEqualTo(denomValue)) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        }
+                    };
+
+                    // add each output up to 11 times or until it can't be added again or until we reach nCoinJoinDenomsGoal
+                    while (needMoreOutputs.process(balanceToDenominate, nOutputs, addFinal) && nOutputs <= 10 && currentDenomIt < CoinJoinClientOptions.getDenomsGoal()) {
+                        // Add output and subtract denomination amount
+                        if (txBuilder.addOutput(denomValue) != null) {
+                            ++nOutputs;
+                            ++currentDenomIt;
+                            balanceToDenominate = balanceToDenominate.subtract(denomValue);
+                            log.info("coinjoin: 1 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
+                                    denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
+                        } else {
+                            log.info("coinjoin: 1 - Error: AddOutput failed for denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
+                                    denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
+                            return false;
+                        }
+
+                    }
+
+                    if (txBuilder.getAmountLeft().isZero() || balanceToDenominate.isLessThanOrEqualTo(Coin.ZERO)) break;
+                }
+
+                boolean finished = true;
+                for (Map.Entry<Coin, Integer> entry : mapDenomCount.entrySet()) {
+                    // Check if this specific denom could use another loop, check that there aren't nCoinJoinDenomsGoal of this
+                    // denom and that our nValueLeft/balanceToDenominate is enough to create one of these denoms, if so, loop again.
+                    if (entry.getValue() < CoinJoinClientOptions.getDenomsGoal() && txBuilder.couldAddOutput(entry.getKey()) && balanceToDenominate.isGreaterThan(Coin.ZERO)) {
+                        finished = false;
+                        log.info("coinjoin: 1 - NOT finished - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
+                                entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
+                        break;
+                    }
+                    log.info("coinjoin: 1 - FINISHED - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
+                            entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
+                }
+
+                if (finished) break;
+            }
+
+            // Now that nCoinJoinDenomsGoal worth of each denom have been created or the max number of denoms given the value of the input, do something with the remainder.
+            if (txBuilder.couldAddOutput(CoinJoin.getSmallestDenomination()) && balanceToDenominate.isGreaterThanOrEqualTo(CoinJoin.getSmallestDenomination()) && txBuilder.countOutputs() < COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
+                Coin largestDenomValue = denoms.get(0);
+
+                log.info("coinjoin: 2 - Process remainder: {}", txBuilder);
+
+                CountPossibleOutputs countPossibleOutputs = new CountPossibleOutputs() {
                     @Override
-                    public boolean process(Coin balanceToDenominate, int outputs, Result<Boolean> addFinal) {
-                        if (txBuilder.couldAddOutput(denomValue)) {
-                            if (addFinal.get() && balanceToDenominate.isPositive() && balanceToDenominate.isLessThan(denomValue)) {
-                                addFinal.set(false); // add final denom only once, only the smalest possible one
-                                log.info("coinjoin: 1 - FINAL - denomValue: {}, balanceToDenominate: {}, outputs: {}, {}",
-                                        denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), outputs, txBuilder);
-                                return true;
-                            } else if (balanceToDenominate.isGreaterThanOrEqualTo(denomValue)) {
-                                return true;
+                    public int process(Coin amount) {
+                        ArrayList<Coin> vecOutputs = new ArrayList<>();
+                        while (true) {
+                            // Create a potential output
+                            vecOutputs.add(amount);
+                            if (!txBuilder.couldAddOutputs(vecOutputs) || txBuilder.countOutputs() + vecOutputs.size() > COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
+                                // If it's not possible to add it due to insufficient amount left or total number of outputs exceeds
+                                // COINJOIN_DENOM_OUTPUTS_THRESHOLD drop the output again and stop trying.
+                                vecOutputs.remove(vecOutputs.size() - 1);
+                                break;
                             }
                         }
-                        return false;
+                        return vecOutputs.size();
                     }
                 };
 
-                // add each output up to 11 times or until it can't be added again or until we reach nCoinJoinDenomsGoal
-                while (needMoreOutputs.process(balanceToDenominate, nOutputs, addFinal) && nOutputs <= 10 && currentDenomIt < CoinJoinClientOptions.getDenomsGoal()) {
-                    // Add output and subtract denomination amount
-                    if (txBuilder.addOutput(denomValue) != null) {
-                        ++nOutputs;
-                        ++currentDenomIt;
-                        balanceToDenominate = balanceToDenominate.subtract(denomValue);
-                        log.info("coinjoin: 1 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
-                                denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
-                    } else {
-                        log.info("coinjoin: 1 - Error: AddOutput failed for denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
-                                denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
-                        return false;
-                    }
+                // Go big to small
+                for (Coin denomValue : denoms) {
+                    if (balanceToDenominate.isGreaterThanOrEqualTo(Coin.ZERO)) break;
+                    int nOutputs = 0;
 
-                }
+                    // Number of denoms we can create given our denom and the amount of funds we have left
+                    int denomsToCreateValue = countPossibleOutputs.process(denomValue);
+                    // Prefer overshooting the target balance by larger denoms (hence `+1`) instead of a more
+                    // accurate approximation by many smaller denoms. This is ok because when we get here we
+                    // should have nCoinJoinDenomsGoal of each smaller denom already. Also, without `+1`
+                    // we can end up in a situation when there is already nCoinJoinDenomsHardCap of smaller
+                    // denoms, yet we can't mix the remaining balanceToDenominate because it's smaller than
+                    // denomValue (and thus denomsToCreateBal == 0), so the target would never get reached
+                    // even when there is enough funds for that.
+                    int denomsToCreateBal = (int) (balanceToDenominate.value / denomValue.value + 1);
+                    // Use the smaller value
+                    int denomsToCreate = Math.min(denomsToCreateValue, denomsToCreateBal);
+                    log.info("coinjoin: 2 - balanceToDenominate: {}, denomValue: {}, denomsToCreateValue: {}, denomsToCreateBal: {}",
+                            balanceToDenominate.toFriendlyString(), denomValue.toFriendlyString(), denomsToCreateValue, denomsToCreateBal);
+                    Integer it = mapDenomCount.get(denomValue);
+                    for (int i = 0; i < denomsToCreate; ++i) {
+                        // Never go above the cap unless it's the largest denom
+                        if (denomValue != largestDenomValue && it >= CoinJoinClientOptions.getDenomsHardCap()) break;
 
-                if (txBuilder.getAmountLeft().isZero() || balanceToDenominate.isLessThanOrEqualTo(Coin.ZERO)) break;
-            }
-
-            boolean finished = true;
-            for (Map.Entry<Coin, Integer> entry : mapDenomCount.entrySet()) {
-                // Check if this specific denom could use another loop, check that there aren't nCoinJoinDenomsGoal of this
-                // denom and that our nValueLeft/balanceToDenominate is enough to create one of these denoms, if so, loop again.
-                if (entry.getValue() < CoinJoinClientOptions.getDenomsGoal() && txBuilder.couldAddOutput(entry.getKey()) && balanceToDenominate.isGreaterThan(Coin.ZERO)) {
-                    finished = false;
-                    log.info("coinjoin: 1 - NOT finished - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
-                            entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
-                    break;
-                }
-                log.info("coinjoin: 1 - FINISHED - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
-                        entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
-            }
-
-            if (finished) break;
-        }
-
-        // Now that nCoinJoinDenomsGoal worth of each denom have been created or the max number of denoms given the value of the input, do something with the remainder.
-        if (txBuilder.couldAddOutput(CoinJoin.getSmallestDenomination()) && balanceToDenominate.isGreaterThanOrEqualTo(CoinJoin.getSmallestDenomination()) && txBuilder.countOutputs() < COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
-            Coin largestDenomValue = denoms.get(0);
-
-            log.info("coinjoin: 2 - Process remainder: {}", txBuilder);
-
-            CountPossibleOutputs countPossibleOutputs = new CountPossibleOutputs() {
-                @Override
-                public int process(Coin amount) {
-                    ArrayList<Coin> vecOutputs = new ArrayList<>();
-                    while (true) {
-                        // Create a potential output
-                        vecOutputs.add(amount);
-                        if (!txBuilder.couldAddOutputs(vecOutputs) || txBuilder.countOutputs() + vecOutputs.size() > COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
-                            // If it's not possible to add it due to insufficient amount left or total number of outputs exceeds
-                            // COINJOIN_DENOM_OUTPUTS_THRESHOLD drop the output again and stop trying.
-                            vecOutputs.remove(vecOutputs.size() -1);
+                        // Increment helpers, add output and subtract denomination amount
+                        if (txBuilder.addOutput(denomValue) != null) {
+                            nOutputs++;
+                            mapDenomCount.put(denomValue, ++it);
+                            balanceToDenominate = balanceToDenominate.subtract(denomValue);
+                        } else {
+                            log.info("coinjoin: 2 - Error: AddOutput failed at {}/{}, {}", i + 1, denomsToCreate, txBuilder);
                             break;
                         }
+                        log.info("coinjoin: 2 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
+                                denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
+                        if (txBuilder.countOutputs() >= COINJOIN_DENOM_OUTPUTS_THRESHOLD) break;
                     }
-                    return vecOutputs.size();
-                }
-            };
-
-            // Go big to small
-            for (Coin denomValue : denoms) {
-                if (balanceToDenominate.isGreaterThanOrEqualTo(Coin.ZERO)) break;
-                int nOutputs = 0;
-
-                // Number of denoms we can create given our denom and the amount of funds we have left
-                int denomsToCreateValue = countPossibleOutputs.process(denomValue);
-                // Prefer overshooting the target balance by larger denoms (hence `+1`) instead of a more
-                // accurate approximation by many smaller denoms. This is ok because when we get here we
-                // should have nCoinJoinDenomsGoal of each smaller denom already. Also, without `+1`
-                // we can end up in a situation when there is already nCoinJoinDenomsHardCap of smaller
-                // denoms, yet we can't mix the remaining balanceToDenominate because it's smaller than
-                // denomValue (and thus denomsToCreateBal == 0), so the target would never get reached
-                // even when there is enough funds for that.
-                int denomsToCreateBal = (int)(balanceToDenominate.value / denomValue.value + 1);
-                // Use the smaller value
-                int denomsToCreate = Math.min(denomsToCreateValue, denomsToCreateBal);
-                log.info("coinjoin: 2 - balanceToDenominate: {}, denomValue: {}, denomsToCreateValue: {}, denomsToCreateBal: {}",
-                        balanceToDenominate.toFriendlyString(), denomValue.toFriendlyString(), denomsToCreateValue, denomsToCreateBal);
-                Integer it = mapDenomCount.get(denomValue);
-                for (int i = 0; i < denomsToCreate; ++i) {
-                    // Never go above the cap unless it's the largest denom
-                    if (denomValue != largestDenomValue && it >= CoinJoinClientOptions.getDenomsHardCap()) break;
-
-                    // Increment helpers, add output and subtract denomination amount
-                    if (txBuilder.addOutput(denomValue) != null) {
-                        nOutputs++;
-                        mapDenomCount.put(denomValue, ++it);
-                        balanceToDenominate = balanceToDenominate.subtract(denomValue);
-                    } else {
-                        log.info("coinjoin: 2 - Error: AddOutput failed at {}/{}, {}", i + 1, denomsToCreate, txBuilder);
-                        break;
-                    }
-                    log.info("coinjoin: 2 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
-                            denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
                     if (txBuilder.countOutputs() >= COINJOIN_DENOM_OUTPUTS_THRESHOLD) break;
                 }
-                if (txBuilder.countOutputs() >= COINJOIN_DENOM_OUTPUTS_THRESHOLD) break;
             }
+
+            log.info("coinjoin: 3 - balanceToDenominate: {}, {}", balanceToDenominate.toFriendlyString(), txBuilder);
+
+            for (Map.Entry<Coin, Integer> it : mapDenomCount.entrySet()) {
+                log.info("coinjoin: 3 - DONE - denomValue: {}, count: {}", it.getKey().toFriendlyString(), it.getValue());
+            }
+
+            // No reasons to create mixing collaterals if we can't create denoms to mix
+            if ((fCreateMixingCollaterals && txBuilder.countOutputs() == 1) || txBuilder.countOutputs() == 0) {
+                return false;
+            }
+
+            StringBuilder strResult = new StringBuilder();
+            if (!txBuilder.commit(strResult)) {
+                log.info("coinjoin: Commit failed: {}", strResult.toString());
+                return false;
+            }
+
+            // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
+            mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
+
+            log.info("coinjoin: txid: {}", strResult);
+
+            queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CreateDenomination);
         }
-
-        log.info("coinjoin: 3 - balanceToDenominate: {}, {}", balanceToDenominate.toFriendlyString(), txBuilder);
-
-        for (Map.Entry<Coin, Integer> it : mapDenomCount.entrySet()) {
-            log.info("coinjoin: 3 - DONE - denomValue: {}, count: {}", it.getKey().toFriendlyString(), it.getValue());
-        }
-
-        // No reasons to create mixing collaterals if we can't create denoms to mix
-        if ((fCreateMixingCollaterals && txBuilder.countOutputs() == 1) || txBuilder.countOutputs() == 0) {
-            return false;
-        }
-
-        StringBuilder strResult = new StringBuilder();
-        if (!txBuilder.commit(strResult)) {
-            log.info("coinjoin: Commit failed: {}", strResult.toString());
-            return false;
-        }
-
-        // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
-        mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
-
-        log.info("coinjoin: txid: {}", strResult);
-
-        queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CreateDenomination);
-
         return true;
     }
 
@@ -444,74 +443,73 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
 
-        TransactionBuilder txBuilder = new TransactionBuilder(wallet, tallyItem);
+        try (TransactionBuilder txBuilder = new TransactionBuilder(wallet, tallyItem)) {
+            log.info("coinjoin: Start {}", txBuilder);
 
-        log.info("coinjoin: Start {}",txBuilder);
+            // Skip way too tiny amounts. Smallest we want is minimum collateral amount in a one output tx
+            if (!txBuilder.couldAddOutput(CoinJoin.getCollateralAmount())) {
+                return false;
+            }
 
-        // Skip way too tiny amounts. Smallest we want is minimum collateral amount in a one output tx
-        if (!txBuilder.couldAddOutput(CoinJoin.getCollateralAmount())) {
-            return false;
+            int nCase; // Just for debug logs
+            if (txBuilder.couldAddOutputs(Arrays.asList(CoinJoin.getMaxCollateralAmount(), CoinJoin.getCollateralAmount()))) {
+                nCase = 1;
+                // <case1>, see TransactionRecord::decomposeTransaction
+                // Out1 == CoinJoin.GetMaxCollateralAmount()
+                // Out2 >= CoinJoin.GetCollateralAmount()
+
+                txBuilder.addOutput(CoinJoin.getMaxCollateralAmount());
+                // Note, here we first add a zero amount output to get the remainder after all fees and then assign it
+                TransactionBuilderOutput out = txBuilder.addOutput();
+                Coin nAmountLeft = txBuilder.getAmountLeft();
+                // If remainder is denominated add one duff to the fee
+                out.updateAmount(CoinJoin.isDenominatedAmount(nAmountLeft) ? nAmountLeft.subtract(Coin.valueOf(1, 0)) : nAmountLeft);
+
+            } else if (txBuilder.couldAddOutputs(Arrays.asList(CoinJoin.getCollateralAmount(), CoinJoin.getCollateralAmount()))) {
+                nCase = 2;
+                // <case2>, see TransactionRecord::decomposeTransaction
+                // Out1 CoinJoin.isCollateralAmount()
+                // Out2 CoinJoin.isCollateralAmount()
+
+                // First add two outputs to get the available value after all fees
+                TransactionBuilderOutput out1 = txBuilder.addOutput();
+                TransactionBuilderOutput out2 = txBuilder.addOutput();
+
+                // Create two equal outputs from the available value. This adds one duff to the fee if txBuilder.GetAmountLeft() is odd.
+                Coin nAmountOutputs = txBuilder.getAmountLeft().div(2);
+
+                assert (CoinJoin.isCollateralAmount(nAmountOutputs));
+
+                out1.updateAmount(nAmountOutputs);
+                out2.updateAmount(nAmountOutputs);
+
+            } else { // still at least possible to add one CoinJoin.GetCollateralAmount() output
+                nCase = 3;
+                // <case3>, see TransactionRecord::decomposeTransaction
+                // Out1 CoinJoin.isCollateralAmount()
+                // Out2 Skipped
+                TransactionBuilderOutput out = txBuilder.addOutput();
+                out.updateAmount(txBuilder.getAmountLeft());
+
+                assert (CoinJoin.isCollateralAmount(out.getAmount()));
+            }
+
+            log.info("coinjoin: Done with case {}: {}", nCase, txBuilder);
+
+            assert (txBuilder.isDust(txBuilder.getAmountLeft()));
+
+            StringBuilder strResult = new StringBuilder();
+            if (!txBuilder.commit(strResult)) {
+                log.info("coinjoin: Commit failed: {}", strResult);
+                return false;
+            }
+
+            mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
+
+            log.info("coinjoin: txid: {}", strResult);
+            queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.MakeCollateralInputs);
+            return true;
         }
-
-        int nCase; // Just for debug logs
-        if (txBuilder.couldAddOutputs(Arrays.asList(CoinJoin.getMaxCollateralAmount(), CoinJoin.getCollateralAmount()))) {
-            nCase = 1;
-            // <case1>, see TransactionRecord::decomposeTransaction
-            // Out1 == CoinJoin.GetMaxCollateralAmount()
-            // Out2 >= CoinJoin.GetCollateralAmount()
-
-            txBuilder.addOutput(CoinJoin.getMaxCollateralAmount());
-            // Note, here we first add a zero amount output to get the remainder after all fees and then assign it
-            TransactionBuilderOutput out = txBuilder.addOutput();
-            Coin nAmountLeft = txBuilder.getAmountLeft();
-            // If remainder is denominated add one duff to the fee
-            out.updateAmount(CoinJoin.isDenominatedAmount(nAmountLeft) ? nAmountLeft.subtract(Coin.valueOf(1, 0)) : nAmountLeft);
-
-        } else if (txBuilder.couldAddOutputs(Arrays.asList(CoinJoin.getCollateralAmount(), CoinJoin.getCollateralAmount()))) {
-            nCase = 2;
-            // <case2>, see TransactionRecord::decomposeTransaction
-            // Out1 CoinJoin.isCollateralAmount()
-            // Out2 CoinJoin.isCollateralAmount()
-
-            // First add two outputs to get the available value after all fees
-            TransactionBuilderOutput out1 = txBuilder.addOutput();
-            TransactionBuilderOutput out2 = txBuilder.addOutput();
-
-            // Create two equal outputs from the available value. This adds one duff to the fee if txBuilder.GetAmountLeft() is odd.
-            Coin nAmountOutputs = txBuilder.getAmountLeft().div(2);
-
-            assert(CoinJoin.isCollateralAmount(nAmountOutputs));
-
-            out1.updateAmount(nAmountOutputs);
-            out2.updateAmount(nAmountOutputs);
-
-        } else { // still at least possible to add one CoinJoin.GetCollateralAmount() output
-            nCase = 3;
-            // <case3>, see TransactionRecord::decomposeTransaction
-            // Out1 CoinJoin.isCollateralAmount()
-            // Out2 Skipped
-            TransactionBuilderOutput out = txBuilder.addOutput();
-            out.updateAmount(txBuilder.getAmountLeft());
-
-            assert(CoinJoin.isCollateralAmount(out.getAmount()));
-        }
-
-        log.info("coinjoin: Done with case {}: {}", nCase, txBuilder);
-
-        assert(txBuilder.isDust(txBuilder.getAmountLeft()));
-
-        StringBuilder strResult = new StringBuilder();
-        if (!txBuilder.commit(strResult)) {
-            log.info("coinjoin: Commit failed: {}", strResult);
-            return false;
-        }
-
-        mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
-
-        log.info("coinjoin: txid: {}", strResult);
-        queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.MakeCollateralInputs);
-
-        return true;
     }
 
     private boolean createCollateralTransaction(Transaction txCollateral, StringBuilder strReason){

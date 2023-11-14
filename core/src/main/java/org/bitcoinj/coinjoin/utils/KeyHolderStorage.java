@@ -18,7 +18,6 @@ package org.bitcoinj.coinjoin.utils;
 import com.google.common.collect.Lists;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +39,7 @@ public class KeyHolderStorage {
         lock.lock();
         try {
             storage.add(keyHolder);
-            log.info("CKeyHolderStorage::addKey -- storage size {}", storage.size());
+            log.info("KeyHolderStorage.addKey -- storage size {}", storage.size());
         } finally {
             lock.unlock();
         }

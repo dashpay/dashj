@@ -39,7 +39,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
 
-public class TransactionBuilder {
+public class TransactionBuilder implements AutoCloseable {
     /// Wallet the transaction will be build for
     private final WalletEx wallet;
     /// See CTransactionBuilder() for initialization
@@ -94,11 +94,6 @@ public class TransactionBuilder {
         // Calculate the output size
         bytesOutput = new TransactionOutput(wallet.getParams(), null, Coin.ZERO, dummyScript.getProgram()).getMessageSize();
         // Just to make sure..
-        clear();
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
         clear();
     }
 
@@ -204,7 +199,7 @@ public class TransactionBuilder {
     }
 
     /// Clear the output vector and keep/return the included keys depending on the value of fKeepKeys
-    void clear() {
+    private void clear() {
         ArrayList<TransactionBuilderOutput> vecOutputsTmp;
 
         // Don't hold cs_outputs while clearing the outputs which might indirectly call lock cs_wallet
@@ -223,7 +218,8 @@ public class TransactionBuilder {
                 key.returnKey();
             }
         }
-        // Always return this key just to make sure..
+        System.out.println("returning: " + dummyReserveDestination.address);
+        // Always return this key
         dummyReserveDestination.returnDestination();
     }
     /// Get the total number of bytes used already by this transaction
@@ -308,5 +304,10 @@ public class TransactionBuilder {
 
     public Transaction getTransaction() {
         return transaction;
+    }
+
+    @Override
+    public void close() {
+        clear();
     }
 }

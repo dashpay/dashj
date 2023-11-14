@@ -20,18 +20,25 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.CodedOutputStream;
+import net.jcip.annotations.GuardedBy;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.KeyId;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptPattern;
+import org.bitcoinj.utils.Threading;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,15 +47,20 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static org.dashj.bls.Utils.HexUtils.HEX;
 
 /**
  * Handles the CoinJoin related KeyChain
@@ -60,6 +72,14 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     protected AnyKeyChainGroup coinJoinKeyChainGroup;
 
     protected int rounds = CoinJoinClientOptions.getRounds();
+
+    private final ReentrantLock unusedKeysLock = Threading.lock("unusedKeysLock");
+    @GuardedBy("unusedKeysLock")
+    protected final HashMap<KeyId, DeterministicKey> unusedKeys = Maps.newHashMapWithExpectedSize(1024);
+    // TODO: we may not need keyUsage, it is used as a way to audit unusedKeys
+    @GuardedBy("unusedKeysLock")
+    protected final HashMap<IDeterministicKey, Boolean> keyUsage = Maps.newHashMap();
+    private boolean loadedKeys = false;
 
     public CoinJoinExtension(Wallet wallet) {
         super(wallet);
@@ -133,6 +153,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         }
         rounds = coinJoinProto.getRounds();
         CoinJoinClientOptions.setRounds(rounds);
+        loadedKeys = true;
     }
 
     public boolean hasKeyChain(ImmutableList<ChildNumber> path) {
@@ -155,6 +176,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 coinJoinKeyChainGroup = AnyKeyChainGroup.builder(wallet.getParams(), ECKeyFactory.get()).build();
             }
             coinJoinKeyChainGroup.addAndActivateHDChain(AnyDeterministicKeyChain.builder().seed(seed).accountPath(path).build());
+            //coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadSize(300);
         }
     }
 
@@ -171,6 +193,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             AnyDeterministicKeyChain chain = AnyDeterministicKeyChain.builder().seed(seed).accountPath(path).build();
             AnyDeterministicKeyChain encryptedChain = chain.toEncrypted(wallet.getKeyCrypter(), keyParameter);
             coinJoinKeyChainGroup.addAndActivateHDChain(encryptedChain);
+            //coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadSize(300);
         }
     }
 
@@ -181,6 +204,15 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
 
     public void setRounds(int rounds) {
         this.rounds = rounds;
+    }
+
+    public Coin getUnmixableTotal() {
+        Coin sum = Coin.ZERO;
+        getOutputs().get(-1).forEach(outPoint -> {
+            if (((WalletEx) wallet).getRealOutpointCoinJoinRounds(outPoint.getOutPointFor()) == -2)
+                sum.add(outPoint.getValue());
+        });
+        return sum;
     }
 
     public TreeMap<Integer, List<TransactionOutput>> getOutputs() {
@@ -235,6 +267,18 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 builder.append("\n");
             });
         }
+        builder.append(getUnusedKeyReport());
+        builder.append(getKeyUsageReport());
+
+        return builder.toString();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("COINJOIN:\n Rounds: ").append(rounds).append("\n");
+        builder.append("Key Usage:").append(getKeyUsage()).append("\n");
+        builder.append("Total Keys: ").append(getActiveKeyChain().issuedExternalKeys);
         return builder.toString();
     }
 
@@ -275,6 +319,245 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             return totalKeys > 0 ? (int) usedKeys.count() * 100 / totalKeys : 0;
         } else {
             return 0;
+        }
+    }
+
+    public void addUnusedKey(DeterministicKey key) {
+        unusedKeysLock.lock();
+        try {
+            unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), key);
+            keyUsage.put(key, false);
+            log.info("adding unused key: {} / {} ", HEX.encode(key.getPubKeyHash()), key.getPath());
+        } finally {
+            unusedKeysLock.unlock();
+        }
+    }
+
+    public void addUnusedKey(KeyId keyId) {
+        unusedKeysLock.lock();
+        try {
+            DeterministicKey key = (DeterministicKey) findKeyFromPubKey(keyId.getBytes());
+            unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), key);
+            keyUsage.put(key, false);
+            log.info("adding unused key: {} / {}", HEX.encode(key.getPubKeyHash()), key.getPath());
+        } finally {
+            unusedKeysLock.unlock();
+        }
+    }
+
+    public DeterministicKey getUnusedKey() {
+        unusedKeysLock.lock();
+        try {
+            if (unusedKeys.isEmpty()) {
+                log.info("obtaining fresh key");
+                log.info("keyUsage map has unused keys: {}", keyUsage.values().stream().noneMatch(used -> used));
+                return (DeterministicKey) freshReceiveKey();
+            } else {
+                DeterministicKey key = unusedKeys.values().stream().findFirst().get();
+                log.info("reusing key: {} / {}", HEX.encode(key.getPubKeyHash()), key);
+                log.info("keyUsage map says this key is used: {}", keyUsage.get(key));
+
+                // remove the key
+                unusedKeys.remove(KeyId.fromBytes(key.getPubKeyHash()));
+                keyUsage.put(key, true);
+
+                return key;
+            }
+        } finally {
+            unusedKeysLock.unlock();
+        }
+    }
+
+    public void removeUnusedKey(KeyId keyId) {
+        unusedKeysLock.lock();
+        try {
+            unusedKeys.remove(keyId);
+            IDeterministicKey key = (IDeterministicKey) findKeyFromPubKeyHash(keyId.getBytes(), Script.ScriptType.P2PKH);
+            keyUsage.put(key, true);
+            log.info("remove unused key: {} / {}", HEX.encode(keyId.getBytes()), key);
+        } finally {
+            unusedKeysLock.unlock();
+        }
+    }
+
+    @Override
+    public void processTransaction(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType) {
+        tx.getOutputs().forEach(output -> {
+            if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                byte[] pubKeyHash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                IDeterministicKey key = (IDeterministicKey) findKeyFromPubKeyHash(pubKeyHash, Script.ScriptType.P2PKH);
+                if (loadedKeys) {
+                    keyUsage.put(key, true);
+                    unusedKeys.remove(KeyId.fromBytes(pubKeyHash));
+                }
+            }
+        });
+    }
+
+    @Override
+    public IDeterministicKey freshReceiveKey() {
+        IDeterministicKey freshKey = super.freshReceiveKey();
+        log.info("fresh key: {} / {}", HEX.encode(freshKey.getPubKeyHash()), freshKey);
+        keyUsage.put(freshKey, true);
+        return freshKey;
+    }
+
+    boolean isKeyUsed(byte[] pubKeyHash) {
+        return wallet.getTransactions(false).stream().anyMatch(tx ->
+                tx.getOutputs().stream().anyMatch(output -> {
+                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                        byte[] publicKeyHashFromTx = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                        return Arrays.equals(publicKeyHashFromTx, pubKeyHash);
+                    } else return false;
+                })
+        );
+    }
+
+    public void refreshUnusedKeys() {
+        List<IDeterministicKey> issuedKeys;
+        unusedKeysLock.lock();
+        try {
+            keyChainGroupLock.lock();
+            try {
+                unusedKeys.clear();
+                issuedKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedReceiveKeys();
+            } finally {
+                keyChainGroupLock.unlock();
+            }
+
+            issuedKeys.forEach(key -> {
+                unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), (DeterministicKey) key);
+                keyUsage.put(key, false);
+            });
+
+            Set<Transaction> txes = wallet.getTransactions(true);
+
+            Stream<IDeterministicKey> usedKeys = issuedKeys.stream().filter(key -> {
+                        boolean found = txes.stream().anyMatch(tx ->
+                                tx.getOutputs().stream().anyMatch(output -> {
+                                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                                        byte[] publicKeyHash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                                        return Arrays.equals(publicKeyHash, key.getPubKeyHash());
+                                    } else return false;
+                                })
+                        );
+                        if (found) {
+                            keyUsage.put(key, true);
+                        }
+                        return found;
+                    }
+            );
+
+            usedKeys.forEach(key -> unusedKeys.remove(KeyId.fromBytes(key.getPubKeyHash())));
+
+            unusedKeys.forEach((keyId, key) -> log.info("unused key: {}", key));
+            keyUsage.forEach((key, used) -> {
+                if (!used)
+                    log.info("unused key: {}", key);
+            });
+            loadedKeys = true;
+        } finally {
+            unusedKeysLock.unlock();
+        }
+    }
+
+    public String getUnusedKeyReport() {
+        List<IDeterministicKey> issuedKeys;
+        HashMap<ImmutableList<ChildNumber>, IDeterministicKey> unusedKeyMap = Maps.newHashMap();
+        unusedKeysLock.lock();
+        try {
+            keyChainGroupLock.lock();
+            try {
+                issuedKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedReceiveKeys();
+            } finally {
+                keyChainGroupLock.unlock();
+            }
+
+            issuedKeys.forEach(key -> unusedKeyMap.put(key.getPath(), key));
+
+            Set<Transaction> txes = wallet.getTransactions(true);
+
+            Stream<IDeterministicKey> usedKeys = issuedKeys.stream().filter(key ->
+                    txes.stream().anyMatch(tx ->
+                            tx.getOutputs().stream().anyMatch(output -> {
+                                if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                                    byte[] publicKeyHash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                                    return Arrays.equals(publicKeyHash, key.getPubKeyHash());
+                                } else return false;
+                            })
+                    )
+            );
+
+            usedKeys.forEach(key -> unusedKeyMap.remove(key.getPath()));
+
+            StringBuilder builder = new StringBuilder();
+            Stream<ImmutableList<ChildNumber>> sortedPaths = unusedKeyMap.keySet().stream().sorted(new Comparator<ImmutableList<ChildNumber>>() {
+                @Override
+                public int compare(ImmutableList<ChildNumber> a, ImmutableList<ChildNumber> b) {
+                    int size1 = a.size();
+                    int size2 =  b.size();
+                    for (int i = 0; i < Math.min(size1, size2); i++) {
+                        int comparison = a.get(i).compareTo(b.get(i));
+                        if (comparison != 0) {
+                            return comparison;
+                        }
+                    }
+                    // If we haven't returned, the common prefix of both lists is identical.
+                    // The shorter list should be considered less than the longer one.
+                    return Integer.compare(size1, size2);
+                }
+            });
+
+            builder.append("Unused Key List: ");
+            sortedPaths.forEach(path -> {
+                builder.append("  ").append(path).append("\n");
+            });
+            return builder.toString();
+
+        } finally {
+            unusedKeysLock.unlock();
+        }
+    }
+
+    public String getKeyUsageReport() {
+        List<IDeterministicKey> issuedKeys;
+        HashMap<DeterministicKey, Integer> usedKeyMap = Maps.newHashMap();
+        unusedKeysLock.lock();
+        try {
+            keyChainGroupLock.lock();
+            try {
+                issuedKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedReceiveKeys();
+            } finally {
+                keyChainGroupLock.unlock();
+            }
+
+            Set<Transaction> txes = wallet.getTransactions(true);
+
+            issuedKeys.forEach(key -> txes.forEach(tx -> {
+                Stream<TransactionOutput> keyUsage = tx.getOutputs().stream().filter(output -> {
+                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                        byte[] publicKeyHash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                        return Arrays.equals(publicKeyHash, key.getPubKeyHash());
+                    } else return false;
+                });
+                int count = (int) keyUsage.count();
+                if (count > 0) {
+                    Integer currentCount = usedKeyMap.get((DeterministicKey) key);
+                    usedKeyMap.put((DeterministicKey) key, currentCount == null ? 1 : currentCount + 1);
+                }
+            }));
+
+
+            StringBuilder builder = new StringBuilder();
+            builder.append("Duplicate Used Key List: \n");
+            usedKeyMap.forEach((key, count) -> {
+                if (count > 1)
+                    builder.append("  ").append("hash160:").append(Utils.HEX.encode(key.getPubKeyHash())).append(":").append(count).append("\n");
+            });
+            return builder.toString();
+
+        } finally {
+            unusedKeysLock.unlock();
         }
     }
 }
