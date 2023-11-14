@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-public abstract class TransactionDestination extends ChildMessage {
+public abstract class TransactionDestination extends Message {
     public static final int MESSAGE_SIZE = 20;
 
     protected byte [] bytes;
