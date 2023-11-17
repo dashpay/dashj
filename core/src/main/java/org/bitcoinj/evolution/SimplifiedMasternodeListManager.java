@@ -407,8 +407,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     @Override
     public void close() {
         if (shouldProcessMNListDiff()) {
+            // TODO: refactor the next several lines into AbstractQuorumState.close(...)
             quorumState.removeEventListeners(blockChain.getBlockChain(), peerGroup);
             quorumRotationState.removeEventListeners(blockChain.getBlockChain(), peerGroup);
+            // reset state of chain sync
+            quorumState.initChainTipSyncComplete = false;
+            quorumRotationState.initChainTipSyncComplete = false;
 
             try {
                 threadPool.shutdown();
