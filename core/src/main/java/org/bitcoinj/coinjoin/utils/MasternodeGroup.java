@@ -310,7 +310,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
 
         // TODO: this is considered a hack to get around the default behavior of PeerGroup
         if (isNodeConnected(address) || isNodePending(address)) {
-            log.info("attempting to connect to the same peer again: {}", address);
+            log.info("attempting to connect to the same masternode again: {}", address);
             return null; // do not connect to the same peer again
         }
 
@@ -325,7 +325,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
         }
 
         // TODO: this is considered a hack to get around the default behavior of PeerGroup
-        if (session.getMixingMasternodeInfo() == null) {
+        if (session == null || session.getMixingMasternodeInfo() == null) {
             log.warn("session is not connected to a masternode: {}", session);
             return null;
         }
