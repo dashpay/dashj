@@ -337,9 +337,13 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         unusedKeysLock.lock();
         try {
             DeterministicKey key = (DeterministicKey) findKeyFromPubKey(keyId.getBytes());
-            unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), key);
-            keyUsage.put(key, false);
-            log.info("adding unused key: {} / {}", HEX.encode(key.getPubKeyHash()), key.getPath());
+            if (key != null) {
+                unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), key);
+                keyUsage.put(key, false);
+                log.info("adding unused key: {} / {}", HEX.encode(key.getPubKeyHash()), key.getPath());
+            } else {
+                log.warn("cannot find {}", keyId);
+            }
         } finally {
             unusedKeysLock.unlock();
         }
