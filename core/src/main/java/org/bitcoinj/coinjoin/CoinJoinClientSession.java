@@ -687,7 +687,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             mixingMasternode = dmn;
             context.coinJoinManager.addPendingMasternode(this);
             pendingDsaRequest = new PendingDsaRequest(dmn.getService(), new CoinJoinAccept(context.getParams(), sessionDenom, txMyCollateral));
-            // log.info("coinjoin test: {}\n  {}", pendingDsaRequest.getDsa(), pendingDsaRequest.getDsa().toStringHex());
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: start new queue -> pending connection, nSessionDenom: {} ({}), addr={}",
@@ -720,7 +719,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         boolean fSelected = mixingWallet.selectTxDSInsByDenomination(sessionDenom, CoinJoin.getMaxPoolAmount(), vecTxDSInRet);
         if (!fSelected) {
-            strErrorRet.append("Can't select current denominated inputs");
+            strErrorRet.append("Can't select current denominated inputs: ").append(CoinJoin.denominationToAmount(sessionDenom).toFriendlyString()).append(" for session ").append(sessionID.get());
+            vecTxDSInRet.forEach(input -> strErrorRet.append("\n").append(input));
             return false;
         }
 
@@ -822,7 +822,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             tx.addOutput(pair.getSecond());
         }
 
-        log.info("coinjoin:  -- Submitting partial tx {}", tx); /* Continued */
+        log.info("coinjoin:  -- Submitting partial tx {} to session {}", tx, sessionID.get()); /* Continued */
 
         // store our entry for later use
         lock.lock();
@@ -840,7 +840,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private void relay(CoinJoinEntry entry) {
         if (mixingMasternode != null) {
-            log.info("Sending {}", entry.toString(true));
+            log.info("Sending {} to {}", entry.toString(true), sessionID);
            if(!context.coinJoinManager.forPeer(mixingMasternode.getService(), new MasternodeGroup.ForPeer() {
                @Override
                public boolean process(Peer peer) {

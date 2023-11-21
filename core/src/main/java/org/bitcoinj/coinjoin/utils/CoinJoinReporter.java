@@ -50,7 +50,7 @@ public class CoinJoinReporter extends MixingProgressTracker {
     BufferedWriter writer;
 
     HashMap<Integer, Stopwatch> sessionMap = Maps.newHashMap();
-
+    HashMap<Integer, PoolState> sessionState = Maps.newHashMap();
     static DateFormat format = DateFormat.getDateTimeInstance();
 
     protected void writeTime() throws IOException {
@@ -139,6 +139,7 @@ public class CoinJoinReporter extends MixingProgressTracker {
             }
             writer.newLine();
             writer.flush();
+            sessionState.put(sessionId, state);
         } catch (IOException x) {
             throw new RuntimeException(x);
         }
@@ -171,6 +172,10 @@ public class CoinJoinReporter extends MixingProgressTracker {
     private void writeStats(WalletEx wallet) throws IOException {
         double percentComplete = 100.0 * wallet.getBalance(Wallet.BalanceType.COINJOIN_SPENDABLE).value / wallet.getBalance(Wallet.BalanceType.DENOMINATED_SPENDABLE).value;
         writer.write(String.format("  Session Stats: %d sessions, %.02f%%", completedSessions, percentComplete));
+        writer.newLine();
+        writer.write("------");
+        writer.newLine();
+        writer.write(wallet.getCoinJoin().toString());
     }
 
     private void writeWatch(@Nullable Stopwatch watch) throws IOException {
@@ -212,7 +217,8 @@ public class CoinJoinReporter extends MixingProgressTracker {
                 writer.newLine();
             } else if (type == CoinJoinTransactionType.MixingFee) {
                 writeTime();
-                writer.write("Fee Charged on session: " + sessionId + " txid:" + tx.getTxId());
+                PoolState state = sessionState.get(sessionId);
+                writer.write("Fee Charged on session: " + sessionId +  " state: " + state + " txid:" + tx.getTxId());
                 writer.newLine();
             }
         } catch (IOException x) {
