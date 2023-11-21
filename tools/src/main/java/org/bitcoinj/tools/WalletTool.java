@@ -30,11 +30,10 @@ import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
-import org.bitcoinj.params.BinTangDevNetParams;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.WhiteRussianDevNetParams;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
@@ -344,8 +343,8 @@ public class WalletTool {
                 chainFileName = new File("regtest.chain");
                 break;
             case DEVNET:
-                params = BinTangDevNetParams.get();
-                chainFileName = new File("jack-daniels.chain");
+                params = OuzoDevNetParams.get();
+                chainFileName = new File("devnet.chain");
                 break;
             default:
                 throw new RuntimeException("Unreachable.");
@@ -1316,8 +1315,8 @@ public class WalletTool {
             store = new SPVBlockStore(params, chainFileName);
             if (reset) {
                 try {
-                    CheckpointManager.checkpoint(params, CheckpointManager.openStream(params), store,
-                            wallet.getEarliestKeyCreationTime());
+                    long creationTime = Math.max(wallet.getEarliestKeyCreationTime(), params.getGenesisBlock().getTimeSeconds());
+                    CheckpointManager.checkpoint(params, CheckpointManager.openStream(params), store, creationTime);
                     StoredBlock head = store.getChainHead();
                     System.out.println("Skipped to checkpoint " + head.getHeight() + " at "
                             + Utils.dateTimeFormat(head.getHeader().getTimeSeconds() * 1000));
@@ -1427,6 +1426,7 @@ public class WalletTool {
                 throw new RuntimeException(e);
             }
             wallet = WalletEx.fromSeed(params, seed, outputScriptType);
+            wallet.initializeCoinJoin();
         } else if (options.has(watchFlag)) {
             wallet = WalletEx.fromWatchingKeyB58(params, options.valueOf(watchFlag), creationTimeSecs);
         } else {
@@ -1600,6 +1600,9 @@ public class WalletTool {
 
         final boolean dumpPrivkeys = options.has("dump-privkeys");
         final boolean dumpLookahead = options.has("dump-lookahead");
+        if (options.has(roundsFlag)) {
+            CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
+        }
 
         if (dumpPrivkeys && wallet.isEncrypted()) {
             if (password != null) {
@@ -1639,7 +1642,7 @@ public class WalletTool {
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setSessions(1);
-        CoinJoinClientOptions.removeDenomination(Denomination.SMALLEST);
+        //CoinJoinClientOptions.removeDenomination(Denomination.SMALLEST);
         //CoinJoinClientOptions.removeDenomination(CoinJoinClientOptions.getDenominations().stream().min(Coin::compareTo).get());
         Coin amountToMix = wallet.getBalance();
 
@@ -1668,7 +1671,7 @@ public class WalletTool {
         wallet.getCoinJoin().setRounds(CoinJoinClientOptions.getRounds());
 
         if (options.has(multiSessionFlag)) {
-            CoinJoinClientOptions.setMultiSessionEnabled(options.valueOf(multiSessionFlag));
+            CoinJoinClientOptions.setMultiSessionEnabled(true);
         }
         System.out.println("Mixing Configuration:");
         System.out.println(CoinJoinClientOptions.getString());
@@ -1684,6 +1687,7 @@ public class WalletTool {
         // mix coins
         try {
             CoinJoinClientManager it = wallet.getContext().coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
+            wallet.getCoinJoin().refreshUnusedKeys();
             it.setStopOnNothingToDo(true);
             it.setBlockChain(wallet.getContext().blockChain);
 
