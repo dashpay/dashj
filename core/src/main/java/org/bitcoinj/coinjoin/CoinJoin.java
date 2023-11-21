@@ -148,6 +148,7 @@ public class CoinJoin {
         return isCollateralValid(txCollateral, true);
     }
 
+    // TODO: consider IS Locks with InstantSendManager.isLocked(input)?
     public static boolean isCollateralValid(Transaction txCollateral, boolean checkInputs) {
         if (txCollateral.getOutputs().isEmpty()) {
             log.info("coinjoin: Collateral invalid due to no outputs: {}", txCollateral.getTxId());
@@ -175,6 +176,10 @@ public class CoinJoin {
             for (TransactionInput txin : txCollateral.getInputs()) {
                 Transaction tx = txin.getConnectedTransaction();
                 if (tx != null) {
+                    if (tx.getOutput(txin.getOutpoint().getIndex()).getSpentBy() != null) {
+                        log.info("coinjoin: spent or non-locked mempool input! txin={}", txin);
+                        return false;
+                    }
                     nValueIn = nValueIn.add(tx.getOutput(txin.getOutpoint().getIndex()).getValue());
                 } else {
                     log.info("coinjoin: -- Unknown inputs in collateral transaction, txCollateral={}", txCollateral); /* Continued */
@@ -189,15 +194,7 @@ public class CoinJoin {
             }
         }
 
-        // the collateral tx must not have been seen on the network
-        TransactionConfidence confidence = txCollateral.getConfidence();
-        boolean hasBeenSeen = confidence.getConfidenceType() != TransactionConfidence.ConfidenceType.UNKNOWN ||
-                confidence.numBroadcastPeers() > 0 || confidence.getIXType() != TransactionConfidence.IXType.IX_NONE;
-        if (hasBeenSeen) {
-            log.info("coinjoin: collateral has been spent, need to recreate txCollateral={}", txCollateral.getTxId());
-        }
-        log.info("coinjoin: collateral: {}", txCollateral); /* Continued */
-        return !hasBeenSeen;
+        return true;
     }
     public static Coin getCollateralAmount() { return getSmallestDenomination().div(10); }
     public static Coin getMaxCollateralAmount() { return getCollateralAmount().multiply(4); }

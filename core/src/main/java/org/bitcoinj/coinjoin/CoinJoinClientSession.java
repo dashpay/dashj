@@ -28,6 +28,7 @@ import org.bitcoinj.coinjoin.utils.TransactionBuilder;
 import org.bitcoinj.coinjoin.utils.TransactionBuilderOutput;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Message;
@@ -1417,6 +1418,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             } else {
                 if (!isMyCollateralValid || !CoinJoin.isCollateralValid(txMyCollateral)) {
                     log.info("coinjoin: invalid collateral, recreating... [id: {}] ", id);
+                    TransactionOutput output = txMyCollateral.getOutput(0);
+                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                        mixingWallet.getCoinJoin().addUnusedKey(KeyId.fromBytes(ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey()), false));
+                    }
                     if (!createCollateralTransaction(txMyCollateral, strReason)) {
                         log.info("coinjoin: create collateral error: {}", strReason);
                         return false;
