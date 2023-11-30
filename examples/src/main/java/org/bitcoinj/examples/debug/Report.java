@@ -1,6 +1,7 @@
 package org.bitcoinj.examples.debug;
 
 import org.bitcoinj.core.NetworkParameters;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -47,6 +48,9 @@ abstract public class Report {
             return new JSONObject(output.toString());
 
         } catch (IOException e) {
+            return null;
+        } catch (JSONException e) {
+            System.out.println("There is a problem parsing the output" + e);
             return null;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
