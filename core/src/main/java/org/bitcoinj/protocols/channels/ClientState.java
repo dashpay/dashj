@@ -629,7 +629,7 @@ public final class ClientState {
      * @param value The id to set.
      */
     private void setId(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000001;
       id_ = value;
     }
@@ -664,7 +664,7 @@ public final class ClientState {
      * @param value The contractTransaction to set.
      */
     private void setContractTransaction(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000002;
       contractTransaction_ = value;
     }
@@ -699,7 +699,7 @@ public final class ClientState {
      * @param value The refundTransaction to set.
      */
     private void setRefundTransaction(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000004;
       refundTransaction_ = value;
     }
@@ -734,7 +734,7 @@ public final class ClientState {
      * @param value The myPublicKey to set.
      */
     private void setMyPublicKey(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000008;
       myPublicKey_ = value;
     }
@@ -781,7 +781,7 @@ public final class ClientState {
      * @param value The myKey to set.
      */
     private void setMyKey(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000010;
       myKey_ = value;
     }
@@ -922,7 +922,7 @@ public final class ClientState {
      * @param value The closeTransactionHash to set.
      */
     private void setCloseTransactionHash(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000080;
       closeTransactionHash_ = value;
     }
@@ -1059,7 +1059,7 @@ public final class ClientState {
      * @param value The serverKey to set.
      */
     private void setServerKey(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000400;
       serverKey_ = value;
     }

@@ -591,7 +591,7 @@ public final class ServerState {
      * @param value The bestValueSignature to set.
      */
     private void setBestValueSignature(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000002;
       bestValueSignature_ = value;
     }
@@ -660,7 +660,7 @@ public final class ServerState {
      * @param value The contractTransaction to set.
      */
     private void setContractTransaction(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000008;
       contractTransaction_ = value;
     }
@@ -695,7 +695,7 @@ public final class ServerState {
      * @param value The clientOutput to set.
      */
     private void setClientOutput(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000010;
       clientOutput_ = value;
     }
@@ -730,7 +730,7 @@ public final class ServerState {
      * @param value The myKey to set.
      */
     private void setMyKey(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000020;
       myKey_ = value;
     }
@@ -811,7 +811,7 @@ public final class ServerState {
      * @param value The clientKey to set.
      */
     private void setClientKey(com.google.protobuf.ByteString value) {
-      value.getClass();
+      java.lang.Class<?> valueClass = value.getClass();
   bitField0_ |= 0x00000080;
       clientKey_ = value;
     }
