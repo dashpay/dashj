@@ -5,7 +5,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'jacoco'
 apply plugin: 'signing'
 
-version = '20.0.0-SNAPSHOT'
+version = '20.0.0'
 archivesBaseName = 'dashj-core'
 eclipse.project.name = 'dashj-core'
 
@@ -40,7 +40,7 @@ javadoc.options.encoding = 'UTF-8'
 
 protobuf {
     protoc {
-        artifact = 'com.google.protobuf:protoc:3.14.0'
+        artifact = 'com.google.protobuf:protoc:3.17.3'
     }
     generateProtoTasks {
         all().each { task ->
