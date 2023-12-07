@@ -331,6 +331,7 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         DIP0008BlockHeight = 1088640;
         DIP0024BlockHeight = 1737792 + 4 * 288; // DIP24 activation time + 4 cycles
         v19BlockHeight = 1899072;
+        v20BlockHeight = 1987776;
 
         // long living quorum params
         addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
