@@ -260,7 +260,7 @@ public class SimplifiedMasternodeList extends Message {
 
         if(mnlistdiff.mnList.isEmpty() && mnlistdiff.deletedMNs.isEmpty() &&
                 prevList != null && prevList.coinbaseTxPayload != null) {
-            if (cbtx.merkleRootMasternodeList.equals(prevList.coinbaseTxPayload.merkleRootMasternodeList))
+            if (cbtx.getMerkleRootMasternodeList().equals(prevList.coinbaseTxPayload.getMerkleRootMasternodeList()))
                 return true;
         }
 
@@ -285,7 +285,7 @@ public class SimplifiedMasternodeList extends Message {
             if (smnlHashes.size() == 0)
                 return true;
 
-            if (!cbtx.merkleRootMasternodeList.equals(calculateMerkleRoot(smnlHashes)))
+            if (!cbtx.getMerkleRootMasternodeList().equals(calculateMerkleRoot(smnlHashes)))
                 throw new MasternodeListDiffException("MerkleRoot of masternode list does not match coinbaseTx", true, false, false, true);
             return true;
         } finally {

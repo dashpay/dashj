@@ -1,9 +1,9 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.*;
 import org.bitcoinj.evolution.Masternode;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -15,7 +15,6 @@ import java.io.OutputStream;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.bitcoinj.core.Sha256Hash.ZERO_HASH;
 import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedQuorumList extends Message {
@@ -118,7 +117,12 @@ public class SimplifiedQuorumList extends Message {
         return builder.toString();
     }
 
-    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, AbstractBlockChain chain, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
+    BLSSignature getSignatureForIndex(HashMap<BLSSignature, HashSet<Integer>> quorumsCLSigs, int index) {
+        Optional<Map.Entry<BLSSignature, HashSet<Integer>>> answer = quorumsCLSigs.entrySet().stream().filter(entry -> entry.getValue().contains(index)).findFirst();
+        return answer.map(Map.Entry::getKey).orElse(null);
+    }
+
+    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, DualBlockChain chain, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
@@ -134,8 +138,16 @@ public class SimplifiedQuorumList extends Message {
             for (Pair<Integer, Sha256Hash> quorum : diff.getDeletedQuorums()) {
                 result.removeCommitment(quorum);
             }
-            for (FinalCommitment entry : diff.getNewQuorums()) {
+            for (int i = 0; i < diff.getNewQuorums().size(); ++i) {
+                FinalCommitment entry = diff.getNewQuorums().get(i);
+                BLSSignature signature = diff.getQuorumsCLSigs() != null ?
+                        getSignatureForIndex(diff.getQuorumsCLSigs(), i) : null;
+                if (signature != null)
+                    Context.get().chainLockHandler.addCoinbaseChainLock(entry.quorumHash, 8, signature);
+
+                // find a better way to do this
                 if ((doDIP24 && entry.llmqType == params.getLlmqDIP0024InstantSend().value) || (!doDIP24 && entry.llmqType != params.getLlmqDIP0024InstantSend().value)) {
+                    // for now, don't use the return value
                     verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry);
                 }
                 result.addCommitment(entry);
@@ -148,19 +160,23 @@ public class SimplifiedQuorumList extends Message {
         }
     }
 
-    public void verifyQuorums(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums) throws BlockStoreException, ProtocolException{
+    public void verifyQuorums(boolean isLoadingBootstrap, DualBlockChain chain, boolean validateOldQuorums) throws BlockStoreException, ProtocolException{
         lock.lock();
         try {
+            int verifiedCount = 0;
             for (FinalCommitment entry : minableCommitments.values()) {
-                verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry);
+                if (verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry)) {
+                    verifiedCount++;
+                }
             }
+            log.info("verified {} of {} quorums", verifiedCount, minableCommitments.size());
         } finally {
             lock.unlock();
         }
     }
 
-    private void verifyQuorum(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
-        StoredBlock block = chain.getBlockStore().get(entry.getQuorumHash());
+    private boolean verifyQuorum(boolean isLoadingBootstrap, DualBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
+        StoredBlock block = chain.getBlock(entry.getQuorumHash());
         if (block != null) {
             LLMQParameters llmqParameters = params.getLlmqs().get(entry.getLlmqType());
             if (llmqParameters == null)
@@ -171,8 +187,9 @@ public class SimplifiedQuorumList extends Message {
                 if (block.getHeight() % dkgInterval != 0)
                     throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
             }
-            checkCommitment(entry, block, Context.get().masternodeListManager, chain, validateOldQuorums);
+            boolean isVerified = checkCommitment(entry, block, Context.get().masternodeListManager, chain, validateOldQuorums);
             isFirstQuorumCheck = false;
+            return isVerified;
         } else {
             int chainHeight = chain.getBestChainHeight();
             //if quorum was created before DIP8 activation, then allow it to be added
@@ -184,6 +201,7 @@ public class SimplifiedQuorumList extends Message {
                     throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
                 }
             }
+            return false;
         }
     }
 
@@ -448,15 +466,14 @@ public class SimplifiedQuorumList extends Message {
         blockHash = masternodeList.getBlockHash();
     }
 
-    void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
-                         AbstractBlockChain chain, boolean validateQuorums) throws BlockStoreException
+    private boolean checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
+                         DualBlockChain chain, boolean validateQuorums) throws BlockStoreException
     {
         if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitment.MAX_VERSION) {
-            throw new VerificationException("invalid quorum commitment version" + commitment.getVersion());
+            throw new VerificationException("invalid quorum commitment version: " + commitment.getVersion());
         }
 
-        BlockStore blockStore = chain.getBlockStore();
-        StoredBlock quorumBlock = blockStore.get(commitment.quorumHash);
+        StoredBlock quorumBlock = chain.getBlock(commitment.quorumHash);
         if(quorumBlock == null)
             throw new VerificationException("invalid quorum hash: " + commitment.quorumHash);
 
@@ -464,7 +481,7 @@ public class SimplifiedQuorumList extends Message {
         while(cursor != null) {
             if(cursor.getHeader().getHash().equals(quorumBlock.getHeader().getHash()))
                 break;
-            cursor = cursor.getPrev(blockStore);
+            cursor = chain.getBlock(cursor.getHeader().getHash());
         }
 
         if(cursor == null)
@@ -490,10 +507,9 @@ public class SimplifiedQuorumList extends Message {
             if (members == null) {
                 //no information about this quorum because it is before we were downloading
                 log.warn("masternode list is missing to verify quorum: {}", commitment.quorumHash/*, manager.getBlockHeight(commitment.quorumHash)*/);
-                return;
+                return false;
             }
 
-            log.info("Quorum: {}", commitment.quorumHash);
             if (Context.get().isDebugMode()) {
                 StringBuilder builder = new StringBuilder();
                 for (Masternode mn : members) {
@@ -506,10 +522,14 @@ public class SimplifiedQuorumList extends Message {
                 // TODO: originally, the exception was thrown here.  For now, report the error to the logs
                 // throw new VerificationException("invalid quorum commitment: " + commitment);
                 log.info("invalid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
+                return false;
             } else {
                 log.info("valid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
+                return true;
             }
         }
+        // skip validation, but return ture
+        return true;
     }
 
     @Override

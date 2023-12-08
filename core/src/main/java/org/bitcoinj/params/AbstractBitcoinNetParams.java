@@ -357,6 +357,11 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     }
 
     @Override
+    public BitcoinSerializer getSerializer(boolean parseRetain, int protocolVersion) {
+        return new BitcoinSerializer(this, parseRetain, protocolVersion);
+    }
+
+    @Override
     public String getUriScheme() {
         return BITCOIN_SCHEME;
     }

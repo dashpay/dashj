@@ -26,6 +26,7 @@ public class ThreeMethodPeerDiscovery implements PeerDiscovery {
     private PeerDiscovery normalPeerDiscovery;
     private MasternodeSeedPeers masternodeSeedDiscovery;
     private SeedPeers seedPeerDiscovery;
+    private boolean includeDNS = true;
 
     /**
      * Instantiates a new Three method peer discovery.
@@ -66,11 +67,13 @@ public class ThreeMethodPeerDiscovery implements PeerDiscovery {
                                         final TimeUnit timeoutUnit) throws PeerDiscoveryException {
         final List<InetSocketAddress> peers = new LinkedList<InetSocketAddress>();
 
-        try {
-            peers.addAll(
-                    Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
-        } catch (PeerDiscoveryException x) {
-            //swallow and continue with another method of connection.
+        if (includeDNS) {
+            try {
+                peers.addAll(
+                        Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+            } catch (PeerDiscoveryException x) {
+                //swallow and continue with another method of connection.
+            }
         }
         if(peers.size() < 10) {
             log.info("DNS seeders have failed to return enough peers.  Now attempting to access the DML");
@@ -104,5 +107,13 @@ public class ThreeMethodPeerDiscovery implements PeerDiscovery {
     @Override
     public void shutdown() {
         normalPeerDiscovery.shutdown();
+    }
+
+    public void setIncludeDNS(boolean includeDNS) {
+        this.includeDNS = includeDNS;
+    }
+
+    public boolean includeDNS() {
+        return includeDNS;
     }
 }

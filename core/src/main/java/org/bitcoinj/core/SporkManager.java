@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.core;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
 import org.bitcoinj.utils.ListenerRegistration;
@@ -188,7 +189,7 @@ public class SporkManager {
         }
     }
 
-    @Deprecated
+    @VisibleForTesting
     public void processSporkForUnitTesting(SporkId spork) {
         SporkMessage sporkMessage = new SporkMessage(context.getParams(), spork, 0, 0);
         mapSporksByHash.put(Sha256Hash.ZERO_HASH, sporkMessage);

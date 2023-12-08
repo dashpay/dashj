@@ -151,6 +151,11 @@ public class SimplifiedMasternodesTest {
         loadFromFile("testnet-after19.2HF.mnlist", 5);
     }
 
+    @Test
+    public void loadFromFile_v5_after20_HardFork() throws Exception {
+        loadFromFile("testnet-905558-70230.mnlist", 5);
+    }
+
     private void loadFromFile(String filename, int fileVersion) throws BlockStoreException {
         initContext(PARAMS);
         URL datafile = Objects.requireNonNull(getClass().getResource(filename));

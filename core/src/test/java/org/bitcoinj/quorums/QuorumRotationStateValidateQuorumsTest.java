@@ -129,6 +129,14 @@ public class QuorumRotationStateValidateQuorumsTest {
                         70227,
                         848728,
                         SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
+                },
+                {
+                        TESTNETPARAMS,
+                        "qrinfo-testnet-0-905558-70230-after20HF.dat",
+                        "testnet-with-tip-905558.spvchain",
+                        70230,
+                        905464,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 }
         });
     }

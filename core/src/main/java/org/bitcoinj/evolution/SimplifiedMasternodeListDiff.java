@@ -1,11 +1,11 @@
 package org.bitcoinj.evolution;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.BLSScheme;
+import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.quorums.FinalCommitment;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.utils.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +33,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
     protected ArrayList<Pair<Integer, Sha256Hash>> deletedQuorums;
     protected ArrayList<FinalCommitment> newQuorums;
+    protected HashMap<BLSSignature, HashSet<Integer>> quorumsCLSigs;
 
 
     public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int protocolVersion) {
@@ -63,10 +64,14 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         this.deletedQuorums = Lists.newArrayList();
         this.newQuorums = Lists.newArrayList(quorumList);
         this.version = version;
+        this.quorumsCLSigs = Maps.newHashMap();
     }
 
     @Override
     protected void parse() throws ProtocolException {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.MNLISTDIFF_VERSION_ORDER.getBitcoinProtocolVersion()) {
+            version = (short) readUint16();
+        }
         prevBlockHash = readHash();
         blockHash = readHash();
 
@@ -75,10 +80,11 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
         coinBaseTx = new Transaction(params, payload, cursor);
         cursor += coinBaseTx.getMessageSize();
-        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion() &&
+            protocolVersion < NetworkParameters.ProtocolVersion.MNLISTDIFF_VERSION_ORDER.getBitcoinProtocolVersion()) {
             version = (short) readUint16();
-        } else {
-            version = CURRENT_VERSION;
+        } else if (protocolVersion <= NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion()) {
+            version = 0;
         }
 
         int size = (int)readVarInt();
@@ -88,29 +94,43 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         }
 
         size = (int)readVarInt();
-        mnList = new ArrayList<SimplifiedMasternodeListEntry>(size);
-        for(int i = 0; i < size; ++i)
-        {
+        mnList = new ArrayList<>(size);
+        for (int i = 0; i < size; ++i) {
             SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, protocolVersion);
             cursor += mn.getMessageSize();
             mnList.add(mn);
         }
 
-        //0.14 format include quorum information
-        if(payload.length > cursor - offset) {
-            size = (int)readVarInt();
-            deletedQuorums = new ArrayList<Pair<Integer, Sha256Hash>>(size);
-            for(int i = 0; i < size; ++i) {
-                deletedQuorums.add(new Pair<>((int)readBytes(1)[0], readHash()));
-            }
+        // process quorum changes
+        size = (int)readVarInt();
+        deletedQuorums = new ArrayList<>(size);
+        for(int i = 0; i < size; ++i) {
+            deletedQuorums.add(new Pair<>((int)readBytes(1)[0], readHash()));
+        }
 
-            size = (int)readVarInt();
-            newQuorums = new ArrayList<FinalCommitment>(size);
-            for(int i = 0; i < size; ++i) {
-                FinalCommitment commitment = new FinalCommitment(params, payload, cursor);
-                cursor += commitment.getMessageSize();
-                newQuorums.add(commitment);
+        size = (int)readVarInt();
+        newQuorums = new ArrayList<>(size);
+        for(int i = 0; i < size; ++i) {
+            FinalCommitment commitment = new FinalCommitment(params, payload, cursor);
+            cursor += commitment.getMessageSize();
+            newQuorums.add(commitment);
+        }
 
+        // process quorum ChainlockSignatures
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.MNLISTDIFF_CHAINLOCKS.getBitcoinProtocolVersion()) {
+            size = (int)readVarInt();
+            quorumsCLSigs = new HashMap<>(size);
+            for (int i = 0; i < size; ++i) {
+                BLSSignature signature = new BLSSignature(params, payload, cursor);
+                cursor += signature.getMessageSize();
+
+                int setSize = (int)readVarInt();
+                HashSet<Integer> heightSet = new HashSet<>(setSize);
+                for (int j = 0; j < setSize; ++j) {
+                    int height = readUint16();
+                    heightSet.add(height);
+                }
+                quorumsCLSigs.put(signature, heightSet);
             }
         }
 
@@ -119,13 +139,17 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.MNLISTDIFF_VERSION_ORDER.getBitcoinProtocolVersion()) {
+            Utils.uint16ToByteStreamLE(version, stream);
+        }
         stream.write(prevBlockHash.getReversedBytes());
         stream.write(blockHash.getReversedBytes());
 
         cbTxMerkleTree.bitcoinSerializeToStream(stream);
         coinBaseTx.bitcoinSerialize(stream);
 
-        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion() &&
+            protocolVersion < NetworkParameters.ProtocolVersion.MNLISTDIFF_VERSION_ORDER.getBitcoinProtocolVersion()) {
             Utils.uint16ToByteStreamLE(version, stream);
         }
 
@@ -149,10 +173,23 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         for(FinalCommitment entry : newQuorums) {
             entry.bitcoinSerialize(stream);
         }
+
+        // process quorum ChainLockSignatures
+        if (protocolVersion >= NetworkParameters.ProtocolVersion.MNLISTDIFF_CHAINLOCKS.getBitcoinProtocolVersion()) {
+            stream.write(new VarInt(quorumsCLSigs.size()).encode());
+            for (Map.Entry<BLSSignature, HashSet<Integer>> entry : quorumsCLSigs.entrySet()) {
+                entry.getKey().bitcoinSerialize(stream);
+                HashSet<Integer> heightSet = entry.getValue();
+                stream.write(new VarInt(heightSet.size()).encode());
+                for (Integer height : heightSet) {
+                    Utils.uint16ToByteStreamLE(height, stream);
+                }
+            }
+        }
     }
 
     public boolean hasChanges() {
-        return !mnList.isEmpty() || !deletedMNs.isEmpty();
+        return !mnList.isEmpty() || !deletedMNs.isEmpty() || hasQuorumChanges();
     }
 
     boolean verify() {
@@ -166,12 +203,12 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
                 (coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "");
     }
 
-    public String toString(BlockStore blockStore) {
+    public String toString(DualBlockChain blockChain) {
         int height = -1;
         int prevHeight = -1;
         try {
-            height = blockStore.get(blockHash).getHeight();
-            prevHeight = blockStore.get(prevBlockHash).getHeight();
+            height = blockChain.getBlock(blockHash).getHeight();
+            prevHeight = blockChain.getBlock(prevBlockHash).getHeight();
         } catch (Exception x) {
             // swallow
         }
@@ -218,5 +255,9 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
                 return true;
         }
         return false;
+    }
+
+    public HashMap<BLSSignature, HashSet<Integer>> getQuorumsCLSigs() {
+        return quorumsCLSigs;
     }
 }

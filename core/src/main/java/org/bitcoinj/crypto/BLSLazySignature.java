@@ -1,6 +1,5 @@
 package org.bitcoinj.crypto;
 
-import org.bitcoinj.core.ChildMessage;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
@@ -18,12 +17,14 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
     Logger log = LoggerFactory.getLogger(BLSLazySignature.class);
     BLSSignature signature;
 
+    @Deprecated
     public BLSLazySignature() {
         super(Context.get().getParams());
     }
 
     public BLSLazySignature(NetworkParameters params) {
         super(params);
+        length = BLSSignature.BLS_CURVE_SIG_SIZE;
     }
 
     public BLSLazySignature(BLSLazySignature signature) {

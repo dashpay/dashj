@@ -85,6 +85,7 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_100_67;
         llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_60_75;
         llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_50_60;
+        llmqTypeAssetLocks = LLMQParameters.LLMQType.LLMQ_50_60;
 
         BIP65Height = 2431; // 0000039cf01242c7f921dcb4806a5994bc003b48c1973ae0c89b67809c2bb2ab
 

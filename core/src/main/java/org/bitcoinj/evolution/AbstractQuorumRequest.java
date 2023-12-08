@@ -16,14 +16,14 @@
 
 package org.bitcoinj.evolution;
 
-import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 
 /**
  * The abstract base class for messages that are for requesting masternode list and quorum list updates
  *
- * This class requires that subclasses implement {@link #toString(AbstractBlockChain)}
+ * This class requires that subclasses implement {@link #toString(DualBlockChain)}
  */
 
 public abstract class AbstractQuorumRequest extends Message {
@@ -45,5 +45,5 @@ public abstract class AbstractQuorumRequest extends Message {
      * @param blockChain the blockChain that will convert block hashes to heights
      * @return the string representation of this object with block heights next to all block hashes
      */
-    public abstract String toString(AbstractBlockChain blockChain);
+    public abstract String toString(DualBlockChain blockChain);
 }

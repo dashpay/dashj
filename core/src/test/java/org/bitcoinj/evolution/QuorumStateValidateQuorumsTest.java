@@ -93,20 +93,28 @@ public class QuorumStateValidateQuorumsTest {
                         70228,
                         849810,
                         SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
+                },
+                {
+                        TESTNETPARAMS,
+                        "mnlistdiff-testnet-0-905762-after20.HF.dat",
+                        "testnet-with-tip-905775.spvchain",
+                        70230,
+                        905762,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 }
         });
     }
 
     private void initContext() throws BlockStoreException {
-        if (context == null || !context.getParams().equals(params))
-            context = new Context(params);
+        //if (context == null || !context.getParams().equals(params))
+        context = new Context(params);
 
         blockChain = new BlockChain(context, new SPVBlockStore(params, new File(Objects.requireNonNull(SimplifiedMasternodesTest.class.getResource(blockchainFile)).getPath())));
 
-        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         context.initDash(true, true);
+        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
-        context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
+        //context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain, true);
     }
 
     @Test

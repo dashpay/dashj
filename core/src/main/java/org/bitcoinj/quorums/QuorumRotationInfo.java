@@ -16,7 +16,7 @@
 
 package org.bitcoinj.quorums;
 
-import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
@@ -24,14 +24,9 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VarInt;
 import org.bitcoinj.evolution.AbstractDiffMessage;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -58,6 +53,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
     ArrayList<QuorumSnapshot> quorumSnapshotList;
     ArrayList<SimplifiedMasternodeListDiff> mnListDiffLists;
 
+    @Deprecated
     QuorumRotationInfo(NetworkParameters params) {
         super(params);
     }
@@ -227,29 +223,24 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
                 '}';
     }
 
-    private static int getHeight(Sha256Hash hash, AbstractBlockChain chain) {
-        try {
-            StoredBlock block = chain.getBlockStore().get(hash);
-            return block != null ? block.getHeight() : -1;
-        } catch (BlockStoreException x) {
-            throw new RuntimeException(x);
-        }
+    private static int getHeight(Sha256Hash hash, DualBlockChain chain) {
+        StoredBlock block = chain.getBlock(hash);
+        return block != null ? block.getHeight() : -1;
     }
 
-    public String toString(AbstractBlockChain chain) {
-        BlockStore blockStore = chain.getBlockStore();
+    public String toString(DualBlockChain chain) {
         StringBuilder builder = new StringBuilder();
         builder.append("QuorumRotationInfo{" +
                 ",\n quorumSnapshotAtHMinusC=" + quorumSnapshotAtHMinusC +
                 ",\n quorumSnapshotAtHMinus2C=" + quorumSnapshotAtHMinus2C +
                 ",\n quorumSnapshotAtHMinus3C=" + quorumSnapshotAtHMinus3C +
-                ",\n mnListDiffTip=" + mnListDiffTip.toString(blockStore) +
-                ",\n mnListDiffAtH=" + mnListDiffAtH.toString(blockStore) +
-                ",\n mnListDiffAtHMinusC=" + mnListDiffAtHMinusC.toString(blockStore) +
-                ",\n mnListDiffAtHMinus2C=" + mnListDiffAtHMinus2C.toString(blockStore) +
-                ",\n mnListDiffAtHMinus3C=" + mnListDiffAtHMinus3C.toString(blockStore));
+                ",\n mnListDiffTip=" + mnListDiffTip.toString(chain) +
+                ",\n mnListDiffAtH=" + mnListDiffAtH.toString(chain) +
+                ",\n mnListDiffAtHMinusC=" + mnListDiffAtHMinusC.toString(chain) +
+                ",\n mnListDiffAtHMinus2C=" + mnListDiffAtHMinus2C.toString(chain) +
+                ",\n mnListDiffAtHMinus3C=" + mnListDiffAtHMinus3C.toString(chain));
         if (mnListDiffAtHMinus4C != null) {
-            builder.append(",\n mnListDiffAtHMinus4C=").append(mnListDiffAtHMinus4C.toString(blockStore));
+            builder.append(",\n mnListDiffAtHMinus4C=").append(mnListDiffAtHMinus4C.toString(chain));
         }
         builder.append("------------------------------\n");
 
@@ -262,7 +253,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         }
 
         for (SimplifiedMasternodeListDiff mnlistdiff : mnListDiffLists) {
-            builder.append("mnlistdiff: ").append(mnlistdiff.toString(chain.getBlockStore())).append("\n");
+            builder.append("mnlistdiff: ").append(mnlistdiff.toString(chain)).append("\n");
         }
         builder.append('}');
         return builder.toString();
