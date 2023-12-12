@@ -146,7 +146,6 @@ public class SimplifiedQuorumList extends Message {
                     Context.get().chainLockHandler.addCoinbaseChainLock(entry.quorumHash, 8, signature);
 
                 // find a better way to do this
-                log.info("quorum {}:{} {}", entry.quorumHash, entry.quorumIndex, signature);
                 if ((doDIP24 && entry.llmqType == params.getLlmqDIP0024InstantSend().value) || (!doDIP24 && entry.llmqType != params.getLlmqDIP0024InstantSend().value)) {
                     // for now, don't use the return value
                     verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry);

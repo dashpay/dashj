@@ -93,8 +93,8 @@ public class CoinbaseTx extends SpecialTxPayload {
     }
 
     public String toString() {
-        return String.format("CoinbaseTx(height=%d, merkleRootMNList=%s, merkleRootQuorums=%s)",
-                height, merkleRootMasternodeList.toString(), merkleRootQuorums);
+        return String.format("CoinbaseTx(v%d, height=%d, merkleRootMNList=%s, merkleRootQuorums=%s)",
+               version, height, merkleRootMasternodeList.toString(), merkleRootQuorums);
     }
 
     @Override
