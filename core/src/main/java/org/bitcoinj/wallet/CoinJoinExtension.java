@@ -176,7 +176,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 coinJoinKeyChainGroup = AnyKeyChainGroup.builder(wallet.getParams(), ECKeyFactory.get()).build();
             }
             coinJoinKeyChainGroup.addAndActivateHDChain(AnyDeterministicKeyChain.builder().seed(seed).accountPath(path).build());
-            //coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadSize(300);
+            coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadSize(300);
         }
     }
 
@@ -193,7 +193,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             AnyDeterministicKeyChain chain = AnyDeterministicKeyChain.builder().seed(seed).accountPath(path).build();
             AnyDeterministicKeyChain encryptedChain = chain.toEncrypted(wallet.getKeyCrypter(), keyParameter);
             coinJoinKeyChainGroup.addAndActivateHDChain(encryptedChain);
-            //coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadSize(300);
+            coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadSize(300);
         }
     }
 
