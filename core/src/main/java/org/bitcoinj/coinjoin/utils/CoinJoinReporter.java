@@ -21,7 +21,6 @@ import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.PoolMessage;
 import org.bitcoinj.coinjoin.PoolState;
 import org.bitcoinj.coinjoin.PoolStatus;
-import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.NetworkParameters;
@@ -51,7 +50,7 @@ public class CoinJoinReporter extends MixingProgressTracker {
     BufferedWriter writer;
 
     HashMap<Integer, Stopwatch> sessionMap = Maps.newHashMap();
-
+    HashMap<Integer, PoolState> sessionState = Maps.newHashMap();
     static DateFormat format = DateFormat.getDateTimeInstance();
 
     protected void writeTime() throws IOException {
@@ -140,6 +139,7 @@ public class CoinJoinReporter extends MixingProgressTracker {
             }
             writer.newLine();
             writer.flush();
+            sessionState.put(sessionId, state);
         } catch (IOException x) {
             throw new RuntimeException(x);
         }
@@ -172,6 +172,10 @@ public class CoinJoinReporter extends MixingProgressTracker {
     private void writeStats(WalletEx wallet) throws IOException {
         double percentComplete = 100.0 * wallet.getBalance(Wallet.BalanceType.COINJOIN_SPENDABLE).value / wallet.getBalance(Wallet.BalanceType.DENOMINATED_SPENDABLE).value;
         writer.write(String.format("  Session Stats: %d sessions, %.02f%%", completedSessions, percentComplete));
+        writer.newLine();
+        writer.write("------");
+        writer.newLine();
+        writer.write(wallet.getCoinJoin().toString());
     }
 
     private void writeWatch(@Nullable Stopwatch watch) throws IOException {
@@ -194,7 +198,7 @@ public class CoinJoinReporter extends MixingProgressTracker {
     public void onTransactionProcessed(Transaction tx, CoinJoinTransactionType type, int sessionId) {
         super.onTransactionProcessed(tx, type, sessionId);
         try {
-            if (type == CoinJoinTransactionType.CREATE_DENOMINATION) {
+            if (type == CoinJoinTransactionType.CreateDenomination) {
                 writeTime();
                 writer.write("Denominations Created: " + tx.getTxId());
                 writer.newLine();
@@ -207,13 +211,14 @@ public class CoinJoinReporter extends MixingProgressTracker {
                     writer.write("  " + CoinJoin.denominationToString(entry.getKey()) + ": " + entry.getValue());
                     writer.newLine();
                 }
-            } else if (type == CoinJoinTransactionType.CREATE_COLLATERAL) {
+            } else if (type == CoinJoinTransactionType.MakeCollateralInputs) {
                 writeTime();
                 writer.write("Collateral Created: " + tx.getTxId());
                 writer.newLine();
-            } else if (type == CoinJoinTransactionType.MIXING_FEE) {
+            } else if (type == CoinJoinTransactionType.MixingFee) {
                 writeTime();
-                writer.write("Fee Charged on session: " + sessionId + " txid:" + tx.getTxId());
+                PoolState state = sessionState.get(sessionId);
+                writer.write("Fee Charged on session: " + sessionId +  " state: " + state + " txid:" + tx.getTxId());
                 writer.newLine();
             }
         } catch (IOException x) {

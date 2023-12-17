@@ -20,6 +20,16 @@ import org.bitcoinj.coinjoin.PoolState;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.wallet.WalletEx;
 
+import javax.annotation.Nullable;
+
 public interface SessionCompleteListener {
-    void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolState state, PoolMessage message, MasternodeAddress address, boolean joined);
+    void onSessionComplete(
+            WalletEx wallet,
+            int sessionId,
+            int denomination,
+            PoolState state,
+            PoolMessage message,
+            @Nullable MasternodeAddress address,
+            boolean joined
+    );
 }

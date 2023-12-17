@@ -134,7 +134,7 @@ public class Context {
         this.ensureMinRequiredFee = ensureMinRequiredFee;
         this.feePerKb = feePerKb;
         lastConstructed = this;
-        scheduledExecutorService = Executors.newScheduledThreadPool(1, new ContextPropagatingThreadFactory("context-thread-pool"));
+        scheduledExecutorService = Executors.newScheduledThreadPool(2, new ContextPropagatingThreadFactory("context-thread-pool"));
         slot.set(this);
         BLSJniLibrary.init(false);
     }
