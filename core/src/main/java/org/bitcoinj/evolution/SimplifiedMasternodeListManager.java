@@ -411,8 +411,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             quorumState.removeEventListeners(blockChain.getBlockChain(), peerGroup);
             quorumRotationState.removeEventListeners(blockChain.getBlockChain(), peerGroup);
             // reset state of chain sync
-            quorumState.initChainTipSyncComplete = false;
-            quorumRotationState.initChainTipSyncComplete = false;
+            quorumState.close();
+            quorumRotationState.close();
 
             try {
                 threadPool.shutdown();
