@@ -450,12 +450,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         return params.getLlmqDIP0024InstantSend() == type && quorumRotationActive;
     }
 
-    // TODO: this needs an argument for LLMQType
     public SimplifiedMasternodeList getListAtChainTip() {
-        return getMasternodeList();
+        if (quorumState.getMasternodeListAtTip() != null) {
+            return quorumState.getMasternodeListAtTip();
+        } else {
+            return quorumRotationState.getMnListAtH();
+        }
     }
 
-    // TODO: this needs an argument for LLMQType
     public SimplifiedQuorumList getQuorumListAtTip(LLMQParameters.LLMQType llmqType) {
         if (!isQuorumRotationEnabled(llmqType)) {
             return quorumState.quorumList;
