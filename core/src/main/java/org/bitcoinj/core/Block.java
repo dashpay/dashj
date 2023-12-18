@@ -267,7 +267,8 @@ public class Block extends Message {
         }
 
         // Hard fork to reduce the block reward by 10 extra percent (allowing budget/superblocks)
-        Coin nSuperblockPart = (nPrevHeight > params.getBudgetPaymentsStartBlock()) ? nSubsidy.div(10) : Coin.ZERO;
+        int treasuryPart = params.isV20Active(nPrevHeight) ? 20 : 10; // parts per 100, 20 is 20%
+        Coin nSuperblockPart = (nPrevHeight > params.getBudgetPaymentsStartBlock()) ? nSubsidy.multiply(treasuryPart).div(100) : Coin.ZERO;
 
         return fSuperblockPartOnly ? nSuperblockPart : nSubsidy.minus(nSuperblockPart);
     }
