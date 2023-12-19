@@ -5,7 +5,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'jacoco'
 apply plugin: 'signing'
 
-version = '20.0.1-SNAPSHOT'
+version = '20.0.0'
 archivesBaseName = 'dashj-core'
 eclipse.project.name = 'dashj-core'
 
