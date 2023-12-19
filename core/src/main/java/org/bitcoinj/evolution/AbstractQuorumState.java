@@ -857,4 +857,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         }
         return LLMQUtils.buildLLMQBlockHash(llmqParams.getType(), quorumBaseBlock.getHeader().getHash());
     }
+
+    public void close() {
+        // reset the state of any sync operation
+        initChainTipSyncComplete = false;
+        waitingForMNListDiff = false;
+    }
 }

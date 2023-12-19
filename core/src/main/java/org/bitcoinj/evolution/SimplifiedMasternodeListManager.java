@@ -411,8 +411,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             quorumState.removeEventListeners(blockChain.getBlockChain(), peerGroup);
             quorumRotationState.removeEventListeners(blockChain.getBlockChain(), peerGroup);
             // reset state of chain sync
-            quorumState.initChainTipSyncComplete = false;
-            quorumRotationState.initChainTipSyncComplete = false;
+            quorumState.close();
+            quorumRotationState.close();
 
             try {
                 threadPool.shutdown();
@@ -450,12 +450,14 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         return params.getLlmqDIP0024InstantSend() == type && quorumRotationActive;
     }
 
-    // TODO: this needs an argument for LLMQType
     public SimplifiedMasternodeList getListAtChainTip() {
-        return getMasternodeList();
+        if (quorumState.getMasternodeListAtTip() != null) {
+            return quorumState.getMasternodeListAtTip();
+        } else {
+            return quorumRotationState.getMnListAtH();
+        }
     }
 
-    // TODO: this needs an argument for LLMQType
     public SimplifiedQuorumList getQuorumListAtTip(LLMQParameters.LLMQType llmqType) {
         if (!isQuorumRotationEnabled(llmqType)) {
             return quorumState.quorumList;

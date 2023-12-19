@@ -206,6 +206,22 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         return confirmedHashWithProRegTxHash;
     }
 
+    public int getType() {
+        return type;
+    }
+
+    public boolean isHPMN() {
+        return type == MasternodeType.HIGHPERFORMANCE.index;
+    }
+
+    public int getPlatformHTTPPort() {
+        return platformHTTPPort;
+    }
+
+    public KeyId getPlatformNodeId() {
+        return platformNodeId;
+    }
+
     void updateConfirmedHashWithProRegTxHash() {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(64);
