@@ -61,7 +61,7 @@ public class TestWithCoinJoinWallet extends TestWithWallet {
     }
 
     public void setupWallet() {
-        walletEx.initializeCoinJoin();
+        walletEx.initializeCoinJoin(0);
         DeterministicKey key = (DeterministicKey) walletEx.getCoinJoin().freshReceiveKey();
 
         txDeposit = new Transaction(UNITTEST);

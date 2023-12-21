@@ -1425,7 +1425,7 @@ public class WalletTool {
                 throw new RuntimeException(e);
             }
             wallet = WalletEx.fromSeed(params, seed, outputScriptType);
-            wallet.initializeCoinJoin();
+            wallet.initializeCoinJoin(0);
         } else if (options.has(watchFlag)) {
             wallet = WalletEx.fromWatchingKeyB58(params, options.valueOf(watchFlag), creationTimeSecs);
         } else {
@@ -1634,7 +1634,7 @@ public class WalletTool {
     }
 
     private static void mix() {
-        wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath(0));
         syncChain();
         // set defaults
         CoinJoinReporter reporter = new CoinJoinReporter(params);

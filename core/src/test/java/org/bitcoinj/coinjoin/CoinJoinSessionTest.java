@@ -180,7 +180,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Ignore
     public void sessionTest() throws Exception {
         System.out.println("Session test started...");
-        mixingWallet.initializeCoinJoin();
+        mixingWallet.initializeCoinJoin(0);
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);
@@ -351,7 +351,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Test(timeout = 30000) // Exception: test timed out after 100 milliseconds
     public void sessionTestTwo() throws Exception {
         System.out.println("Session test started...");
-        mixingWallet.initializeCoinJoin();
+        mixingWallet.initializeCoinJoin(0);
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);
@@ -595,7 +595,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
     @Test
     public void sessionAttemptWithEmptyWalletTest() throws Exception {
-        mixingWallet.initializeCoinJoin();
+        mixingWallet.initializeCoinJoin(0);
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);

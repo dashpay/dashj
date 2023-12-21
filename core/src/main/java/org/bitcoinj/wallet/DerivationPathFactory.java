@@ -185,14 +185,15 @@ public class DerivationPathFactory {
     }
 
     /** mixed coins derivation path
-     * m/9'/5'/4' (mainnet)
-     * m/9'/1'/4' (testnet, devnets)
+     * m/9'/5'/4'/account' (mainnet)
+     * m/9'/1'/4'/account (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> coinJoinDerivationPath() {
+    public ImmutableList<ChildNumber> coinJoinDerivationPath(int account) {
         return ImmutableList.<ChildNumber>builder()
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
                 .add(new ChildNumber(4, true))
+                .add(ChildNumber.ZERO_HARDENED)
                 .build();
     }
 

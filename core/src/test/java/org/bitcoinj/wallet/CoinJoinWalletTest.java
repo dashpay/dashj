@@ -69,7 +69,7 @@ public class CoinJoinWalletTest {
                 .build();
 
         wallet.addAndActivateHDChain(bip44);
-        wallet.initializeCoinJoin();
+        wallet.initializeCoinJoin(0);
         wallet.coinjoin.getActiveKeyChain().getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 3000);
         wallet.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.SPENT, new Transaction(TESTNET, inputTx)));
         ArrayList<Transaction> unspentTxList = Lists.newArrayList();
@@ -113,11 +113,12 @@ public class CoinJoinWalletTest {
 
     @Test
     public void keyTest() {
-        ECKey key661 = ECKey.fromPublicOnly(HEX.decode("034382c0cd973ee81e6bf63f9f52bf892e451a4b67ca966de4d9974bc295244f77"));
+        System.out.println(wallet.toString(true, false, true, null));
+        ECKey key661 = ECKey.fromPublicOnly(HEX.decode("026097b3f8a2884383df50a9f48f2f5477c871e0c1c54732c8e22a4a9be9803ae5"));
         ECKey key = (ECKey) wallet.coinjoin.findKeyFromPubKey(key661.getPubKey());
         assertNotNull(key);
 
-        ECKey key2317 = wallet.findKeyFromPubKeyHash(HEX.decode("f6863a7856dbc547d26f03e6ebb8c3db3eb12f9d"), Script.ScriptType.P2PKH);
+        ECKey key2317 = wallet.findKeyFromPubKeyHash(HEX.decode("43a51a896f7197cdc539bc65a8f29eddc9571751"), Script.ScriptType.P2PKH);
         assertNotNull(key2317);
     }
 
@@ -155,7 +156,7 @@ public class CoinJoinWalletTest {
                 .build();
         WalletEx encryptedWallet = new WalletEx(DEVNET, keyChainGroup);
         DeterministicKey keyBip44 = encryptedWallet.currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
-        encryptedWallet.initializeCoinJoin();
+        encryptedWallet.initializeCoinJoin(0);
         DeterministicKey coinJoinKey = (DeterministicKey) encryptedWallet.coinjoin.currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         encryptedWallet.encrypt(PASSWORD1);
         encryptedWallet.decrypt(PASSWORD1);
