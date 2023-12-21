@@ -25,7 +25,6 @@ import org.bitcoinj.coinjoin.CoinJoinSendRequest;
 import org.bitcoinj.coinjoin.Denomination;
 import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
-import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
@@ -1676,7 +1675,6 @@ public class WalletTool {
         System.out.println("Mixing Configuration:");
         System.out.println(CoinJoinClientOptions.getString());
 
-        ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
         wallet.getContext().coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
         wallet.getContext().coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);

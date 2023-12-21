@@ -19,7 +19,6 @@ import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.coinjoin.utils.CoinJoinResult;
-import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.coinjoin.utils.RelayTransaction;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
@@ -112,7 +111,6 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         BriefLogFormatter.initVerbose();
         Utils.setMockClock(); // Use mock clock
-        ProTxToOutpoint.initialize(UNITTEST);
         wallet.freshReceiveKey();
 
         coinbaseTo = Address.fromKey(UNITTEST, wallet.currentReceiveKey());
