@@ -228,9 +228,9 @@ public class AuthenticationGroupExtensionTest {
             // make sure this wallet has an authenticationGroupExtension
             assertTrue(wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID));
 
-            // check that reset() preserves the usage count
+            // check that rescanWallet() preserves the usage count
             int usageBefore = authenticationGroupExtension.getKeyUsage().size();
-            authenticationGroupExtension.reset();
+            authenticationGroupExtension.rescanWallet();
             int usageAfter = authenticationGroupExtension.getKeyUsage().size();
             assertEquals(usageBefore, usageAfter);
         }
