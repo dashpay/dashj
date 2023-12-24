@@ -40,6 +40,7 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
@@ -108,7 +109,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-
+        BLSScheme.setLegacyDefault(false);
         BriefLogFormatter.initVerbose();
         Utils.setMockClock(); // Use mock clock
         wallet.freshReceiveKey();
@@ -164,6 +165,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         globalTimeout = Timeout.seconds(30);
         mixingWallet = (WalletEx) wallet;
+        wallet.getContext().coinJoinManager.start();
     }
 
     protected Wallet createWallet(KeyChainGroup keyChainGroup) {
@@ -173,6 +175,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Override
     @After
     public void tearDown() {
+        wallet.getContext().coinJoinManager.stop();
         super.tearDown();
     }
 

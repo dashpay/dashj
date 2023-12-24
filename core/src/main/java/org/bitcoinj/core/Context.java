@@ -282,7 +282,7 @@ public class Context {
         chainLockHandler = new ChainLocksHandler(this);
         llmqBackgroundThread = new LLMQBackgroundThread(this);
         masternodeMetaDataManager = new MasternodeMetaDataManager(this);
-        coinJoinManager = new CoinJoinManager(this);
+        coinJoinManager = new CoinJoinManager(this, scheduledExecutorService);
         initializedObjects = true;
     }
 
@@ -531,9 +531,6 @@ public class Context {
 
             scheduledGovernance = scheduledExecutorService.scheduleWithFixedDelay(
                     () -> governanceManager.doMaintenance(), 60, 5, TimeUnit.MINUTES);
-        }
-        if (initializedObjects) {
-            coinJoinManager.start(scheduledExecutorService);
         }
     }
 

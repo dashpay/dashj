@@ -151,7 +151,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         boolean fCreateMixingCollaterals = !mixingWallet.hasCollateralInputs();
 
         for (CompactTallyItem item : vecTally) {
-            if (!createDenominated(balanceToDenominate, item, fCreateMixingCollaterals)) continue;
+            if (!createDenominated(balanceToDenominate, item, fCreateMixingCollaterals, dryRun)) continue;
             return true;
         }
 

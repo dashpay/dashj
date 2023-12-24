@@ -1682,6 +1682,7 @@ public class WalletTool {
         wallet.getContext().coinJoinManager.addTransationListener (Threading.SAME_THREAD, reporter);
         wallet.getContext().blockChain.addNewBestBlockListener(Threading.SAME_THREAD, reporter);
 
+        wallet.getContext().coinJoinManager.start();
         // mix coins
         try {
             CoinJoinClientManager it = wallet.getContext().coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
