@@ -75,6 +75,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -887,14 +888,18 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
     public void reset() {
         keyUsage.clear();
-        if (wallet != null) {
-           Set<Transaction> transactionSet = wallet.getTransactions(false);
-           List<Transaction> transactionList = Lists.newArrayList(transactionSet);
-           transactionList.sort((transaction1, transaction2) -> (int) (transaction1.getUpdateTime().getTime() - transaction2.getUpdateTime().getTime()));
+    }
 
-           for (Transaction tx : transactionList) {
+    public void rescanWallet() {
+        if (wallet != null) {
+            keyUsage.clear();
+            Set<Transaction> transactionSet = wallet.getTransactions(false);
+            List<Transaction> transactionList = Lists.newArrayList(transactionSet);
+            transactionList.sort(Comparator.comparingLong(transaction -> transaction.getUpdateTime().getTime()));
+
+            for (Transaction tx : transactionList) {
                processTransaction(tx, null, AbstractBlockChain.NewBlockType.BEST_CHAIN);
-           }
+            }
         }
     }
 }
