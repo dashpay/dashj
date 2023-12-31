@@ -161,6 +161,7 @@ public class CoinJoinManager {
             clientManager.stopMixing();
             clientManager.close(context.blockChain);
         }
+        stopAsync();
     }
 
     public boolean isRunning() {
@@ -227,8 +228,10 @@ public class CoinJoinManager {
 
     public void stopAsync() {
         if (masternodeGroup.isRunning()) {
-            context.peerGroup.shouldSendDsq(false);
+            if (context.peerGroup != null)
+                context.peerGroup.shouldSendDsq(false);
             masternodeGroup.stopAsync();
+            masternodeGroup = null;
         }
     }
 
