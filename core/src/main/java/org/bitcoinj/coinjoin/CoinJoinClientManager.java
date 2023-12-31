@@ -117,7 +117,8 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
 
     // Make sure we have enough keys since last backup
     private boolean checkAutomaticBackup() {
-        return CoinJoinClientOptions.isEnabled() && isMixing();
+        // Let the KeyChain classes handle this
+        return true;
     }
 
     public int cachedNumBlocks = Integer.MAX_VALUE;    // used for the overview screen
