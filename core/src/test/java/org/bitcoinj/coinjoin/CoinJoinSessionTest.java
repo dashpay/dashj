@@ -345,6 +345,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         CoinJoinBroadcastTx broadcastTx = CoinJoin.getDSTX(mixingTx.getTxId());
         assertNotNull(broadcastTx);
 
+        assertTrue(clientManager.doAutomaticDenominating(true));
+
         if (clientManager.isMixing()) {
             clientManager.stopMixing();
         }
