@@ -227,7 +227,7 @@ public class CoinJoinManager {
     }
 
     public void stopAsync() {
-        if (masternodeGroup.isRunning()) {
+        if (masternodeGroup != null && masternodeGroup.isRunning()) {
             if (context.peerGroup != null)
                 context.peerGroup.shouldSendDsq(false);
             masternodeGroup.stopAsync();
