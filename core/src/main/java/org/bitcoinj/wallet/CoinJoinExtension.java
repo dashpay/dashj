@@ -47,9 +47,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -96,7 +94,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     /**
      * If this returns true, the mandatory flag is set when the wallet is serialized and attempts to load it without
      * the extension being in the wallet will throw an exception. This method should not change its result during
-     * the objects lifetime.
+     * the object's lifetime.
      */
     @Override
     public boolean isWalletExtensionMandatory() {
@@ -473,6 +471,8 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             keyChainGroupLock.lock();
             try {
                 issuedKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedReceiveKeys();
+            } catch (DeterministicUpgradeRequiredException e) {
+                return "No unused keys\n";
             } finally {
                 keyChainGroupLock.unlock();
             }
@@ -495,27 +495,22 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             usedKeys.forEach(key -> unusedKeyMap.remove(key.getPath()));
 
             StringBuilder builder = new StringBuilder();
-            Stream<ImmutableList<ChildNumber>> sortedPaths = unusedKeyMap.keySet().stream().sorted(new Comparator<ImmutableList<ChildNumber>>() {
-                @Override
-                public int compare(ImmutableList<ChildNumber> a, ImmutableList<ChildNumber> b) {
-                    int size1 = a.size();
-                    int size2 =  b.size();
-                    for (int i = 0; i < Math.min(size1, size2); i++) {
-                        int comparison = a.get(i).compareTo(b.get(i));
-                        if (comparison != 0) {
-                            return comparison;
-                        }
+            Stream<ImmutableList<ChildNumber>> sortedPaths = unusedKeyMap.keySet().stream().sorted((a, b) -> {
+                int size1 = a.size();
+                int size2 =  b.size();
+                for (int i = 0; i < Math.min(size1, size2); i++) {
+                    int comparison = a.get(i).compareTo(b.get(i));
+                    if (comparison != 0) {
+                        return comparison;
                     }
-                    // If we haven't returned, the common prefix of both lists is identical.
-                    // The shorter list should be considered less than the longer one.
-                    return Integer.compare(size1, size2);
                 }
+                // If we haven't returned, the common prefix of both lists is identical.
+                // The shorter list should be considered less than the longer one.
+                return Integer.compare(size1, size2);
             });
 
             builder.append("Unused Key List: ");
-            sortedPaths.forEach(path -> {
-                builder.append("  ").append(path).append("\n");
-            });
+            sortedPaths.forEach(path -> builder.append("  ").append(path).append("\n"));
             return builder.toString();
 
         } finally {
@@ -531,6 +526,8 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             keyChainGroupLock.lock();
             try {
                 issuedKeys = coinJoinKeyChainGroup.getActiveKeyChain().getIssuedReceiveKeys();
+            } catch (DeterministicUpgradeRequiredException e) {
+                return "No keys reused\n";
             } finally {
                 keyChainGroupLock.unlock();
             }

@@ -76,11 +76,13 @@ public class CoinJoinManager {
 
     private RequestKeyParameter requestKeyParameter;
     private RequestDecryptedKey requestDecryptedKey;
+    private final ScheduledExecutorService scheduledExecutorService;
 
-    public CoinJoinManager(Context context) {
+    public CoinJoinManager(Context context, ScheduledExecutorService scheduledExecutorService) {
         this.context = context;
         coinJoinClientManagers = new HashMap<>();
         coinJoinClientQueueManager = new CoinJoinClientQueueManager(context);
+        this.scheduledExecutorService = scheduledExecutorService;
     }
 
     public static boolean isCoinJoinMessage(Message message) {
@@ -141,12 +143,14 @@ public class CoinJoinManager {
         }
     };
 
-    public void start(ScheduledExecutorService scheduledExecutorService) {
+    public void start() {
+        log.info("CoinJoinManager starting...");
         schedule = scheduledExecutorService.scheduleWithFixedDelay(
                 maintenanceRunnable, 1, 1, TimeUnit.SECONDS);
     }
 
     public void stop() {
+        log.info("CoinJoinManager stopping...");
         if (schedule != null) {
             schedule.cancel(false);
             schedule = null;
@@ -157,6 +161,11 @@ public class CoinJoinManager {
             clientManager.stopMixing();
             clientManager.close(context.blockChain);
         }
+        stopAsync();
+    }
+
+    public boolean isRunning() {
+        return schedule != null && !schedule.isCancelled();
     }
 
     public void initMasternodeGroup(AbstractBlockChain blockChain) {
@@ -218,9 +227,11 @@ public class CoinJoinManager {
     }
 
     public void stopAsync() {
-        if (masternodeGroup.isRunning()) {
-            context.peerGroup.shouldSendDsq(false);
+        if (masternodeGroup != null && masternodeGroup.isRunning()) {
+            if (context.peerGroup != null)
+                context.peerGroup.shouldSendDsq(false);
             masternodeGroup.stopAsync();
+            masternodeGroup = null;
         }
     }
 
@@ -231,6 +242,7 @@ public class CoinJoinManager {
     @VisibleForTesting
     public void setMasternodeGroup(MasternodeGroup masternodeGroup) {
         this.masternodeGroup = masternodeGroup;
+        masternodeGroup.setCoinJoinManager(this);
     }
 
     public SettableFuture<Boolean> getMixingFinishedFuture(Wallet wallet) {

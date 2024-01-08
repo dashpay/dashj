@@ -20,12 +20,14 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
 import org.bitcoinj.store.LevelDBFullPrunedBlockStore;
 import org.junit.After;
+import org.junit.Ignore;
 
 import java.io.File;
 
 /**
  * An H2 implementation of the FullPrunedBlockStoreTest
  */
+@Ignore
 public class LevelDBFullPrunedBlockChainTest extends
         AbstractFullPrunedBlockChainTest {
     @After

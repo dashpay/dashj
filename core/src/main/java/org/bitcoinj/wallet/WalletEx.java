@@ -180,8 +180,8 @@ public class WalletEx extends Wallet {
      * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
      */
     @VisibleForTesting
-    public void initializeCoinJoin() {
-        getCoinJoin().addKeyChain(getKeyChainSeed(), derivationPathFactory.coinJoinDerivationPath());
+    public void initializeCoinJoin(int account) {
+        getCoinJoin().addKeyChain(getKeyChainSeed(), derivationPathFactory.coinJoinDerivationPath(account));
     }
 
     public Coin getDenominatedBalance() {
@@ -871,6 +871,10 @@ public class WalletEx extends Wallet {
         }
 
         log.info("coinjoin:   -- setRecentTxIds.size(): {}", setRecentTxIds.size());
+        if (setRecentTxIds.isEmpty()) {
+            log.info("No results found for {}", CoinJoin.denominationToAmount(nDenom).toFriendlyString());
+            vCoins.forEach(output -> log.info("  output: {}", output));
+        }
 
         return nValueTotal.isPositive();
     }
@@ -950,8 +954,8 @@ public class WalletEx extends Wallet {
         return result;
     }
 
-    public void initializeCoinJoin(@Nullable KeyParameter keyParameter) {
-        ImmutableList<ChildNumber> path = DerivationPathFactory.get(getParams()).coinJoinDerivationPath();
+    public void initializeCoinJoin(@Nullable KeyParameter keyParameter, int account) {
+        ImmutableList<ChildNumber> path = DerivationPathFactory.get(getParams()).coinJoinDerivationPath(account);
         if (keyParameter != null) {
             getCoinJoin().addEncryptedKeyChain(getKeyChainSeed(), path, keyParameter);
         } else {

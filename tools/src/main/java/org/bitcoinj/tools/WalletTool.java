@@ -25,7 +25,6 @@ import org.bitcoinj.coinjoin.CoinJoinSendRequest;
 import org.bitcoinj.coinjoin.Denomination;
 import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
-import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
@@ -1426,7 +1425,7 @@ public class WalletTool {
                 throw new RuntimeException(e);
             }
             wallet = WalletEx.fromSeed(params, seed, outputScriptType);
-            wallet.initializeCoinJoin();
+            wallet.initializeCoinJoin(0);
         } else if (options.has(watchFlag)) {
             wallet = WalletEx.fromWatchingKeyB58(params, options.valueOf(watchFlag), creationTimeSecs);
         } else {
@@ -1635,7 +1634,7 @@ public class WalletTool {
     }
 
     private static void mix() {
-        wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath(0));
         syncChain();
         // set defaults
         CoinJoinReporter reporter = new CoinJoinReporter(params);
@@ -1676,7 +1675,6 @@ public class WalletTool {
         System.out.println("Mixing Configuration:");
         System.out.println(CoinJoinClientOptions.getString());
 
-        ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
         wallet.getContext().coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
         wallet.getContext().coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);
@@ -1684,6 +1682,7 @@ public class WalletTool {
         wallet.getContext().coinJoinManager.addTransationListener (Threading.SAME_THREAD, reporter);
         wallet.getContext().blockChain.addNewBestBlockListener(Threading.SAME_THREAD, reporter);
 
+        wallet.getContext().coinJoinManager.start();
         // mix coins
         try {
             CoinJoinClientManager it = wallet.getContext().coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());

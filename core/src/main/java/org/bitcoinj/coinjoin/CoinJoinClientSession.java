@@ -122,7 +122,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             = new CopyOnWriteArrayList<>();
 
     /// Create denominations
-    private boolean createDenominated(Coin balanceToDenominate) {
+    private boolean createDenominated(Coin balanceToDenominate, boolean dryRun) {
 
         if (!CoinJoinClientOptions.isEnabled()) return false;
 
@@ -137,21 +137,18 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         // Start from the largest balances first to speed things up by creating txes with larger/largest denoms included
-        vecTally.sort(new Comparator<CompactTallyItem>() {
-            @Override
-            public int compare(CompactTallyItem o, CompactTallyItem t1) {
-                if (o.amount.isGreaterThan(t1.amount))
-                    return 1;
-                if (o.amount.equals(t1.amount))
-                    return 0;
-                return -1;
-            }
+        vecTally.sort((a, b) -> {
+            if (a.amount.isGreaterThan(b.amount))
+                return 1;
+            if (a.amount.equals(b.amount))
+                return 0;
+            return -1;
         });
 
         boolean fCreateMixingCollaterals = !mixingWallet.hasCollateralInputs();
 
         for (CompactTallyItem item : vecTally) {
-            if (!createDenominated(balanceToDenominate, item, fCreateMixingCollaterals)) continue;
+            if (!createDenominated(balanceToDenominate, item, fCreateMixingCollaterals, dryRun)) continue;
             return true;
         }
 
@@ -190,9 +187,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         int process(Coin amount);
     }
 
-    private boolean createDenominated(Coin balanceToDenominate, CompactTallyItem tallyItem, boolean fCreateMixingCollaterals) {
+    private boolean createDenominated(Coin balanceToDenominate, CompactTallyItem tallyItem, boolean fCreateMixingCollaterals, boolean dryRun) {
 
-        if (!CoinJoinClientOptions.isEnabled()) 
+        if (!CoinJoinClientOptions.isEnabled())
             return false;
 
         // denominated input is always a single one, so we can check its amount directly and return early
@@ -200,7 +197,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
 
-        try (TransactionBuilder txBuilder = new TransactionBuilder(mixingWallet, tallyItem)) {
+        try (TransactionBuilder txBuilder = new TransactionBuilder(mixingWallet, tallyItem, dryRun)) {
             log.info("coinjoin: Start {}", txBuilder);
 
             // ****** Add an output for mixing collaterals ************ /
@@ -367,18 +364,20 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 return false;
             }
 
-            StringBuilder strResult = new StringBuilder();
-            if (!txBuilder.commit(strResult)) {
-                log.info("coinjoin: Commit failed: {}", strResult.toString());
-                return false;
+            if (!dryRun) {
+                StringBuilder strResult = new StringBuilder();
+                if (!txBuilder.commit(strResult)) {
+                    log.info("coinjoin: Commit failed: {}", strResult);
+                    return false;
+                }
+
+                // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
+                mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
+
+                log.info("coinjoin: txid: {}", strResult);
+
+                queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CreateDenomination);
             }
-
-            // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
-            mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
-
-            log.info("coinjoin: txid: {}", strResult);
-
-            queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CreateDenomination);
         }
         return true;
     }
@@ -444,7 +443,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
 
-        try (TransactionBuilder txBuilder = new TransactionBuilder(wallet, tallyItem)) {
+        try (TransactionBuilder txBuilder = new TransactionBuilder(wallet, tallyItem, false)) {
             log.info("coinjoin: Start {}", txBuilder);
 
             // Skip way too tiny amounts. Smallest we want is minimum collateral amount in a one output tx
@@ -1264,7 +1263,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         if (getEntriesCount() > 0) {
-            setStatus(PoolStatus.MIXING);
+            if (!fDryRun)
+                setStatus(PoolStatus.MIXING);
             return false;
         }
 
@@ -1274,7 +1274,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
         try {
-            if (mixingWallet.getContext().masternodeListManager.getListAtChainTip().getValidMNsCount() == 0 &&
+            if (!fDryRun && mixingWallet.getContext().masternodeListManager.getListAtChainTip().getValidMNsCount() == 0 &&
                     !mixingWallet.getContext().getParams().getId().equals(NetworkParameters.ID_REGTEST)) {
                 strAutoDenomResult = "No Masternodes detected.";
                 log.info("coinjoin: {}", strAutoDenomResult);
@@ -1292,11 +1292,13 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             balanceNeedsAnonymized = CoinJoinClientOptions.getAmount().subtract(nBalanceAnonymized);
 
             if (balanceNeedsAnonymized.isLessThanOrEqualTo(Coin.ZERO)) {
-                log.info("coinjoin: Nothing to do");
+                log.info("coinjoin: Nothing to do {}", fDryRun);
                 // nothing to do, just keep it in idle mode
                 //status.set(PoolStatus.FINISHED);
                 //hasNothingToDo.set(true);
-                setStatus(PoolStatus.FINISHED);
+                if (!fDryRun) {
+                    setStatus(PoolStatus.FINISHED);
+                }
                 return false;
             }
             hasNothingToDo.set(false);
@@ -1321,10 +1323,11 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 //queueSessionCompleteListeners(getState(), ERR_SESSION);
                 //return false;
                 Coin balanceLeftToMix = mixingWallet.getAnonymizableBalance(false, false);
-                if (!balanceLeftToMix.isGreaterThanOrEqualTo(nValueMin)) {
+                if (!fDryRun && !balanceLeftToMix.isGreaterThanOrEqualTo(nValueMin)) {
                     setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
                     queueSessionCompleteListeners(getState(), ERR_SESSION);
                 }
+                log.info("coinjoin: balance to low: {}", fDryRun);
                 return false;
             }
 
@@ -1375,14 +1378,17 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     nBalanceToDenominate.toFriendlyString()
             );
 
-            if (fDryRun) return true;
-
             // Check if we have should create more denominated inputs i.e.
             // there are funds to denominate and denominated balance does not exceed
             // max amount to mix yet.
             lastCreateDenominatedResult = true;
             if (nBalanceAnonimizableNonDenom.isGreaterThanOrEqualTo(nValueMin.add(CoinJoin.getCollateralAmount())) && nBalanceToDenominate.isGreaterThan(Coin.ZERO)) {
-                lastCreateDenominatedResult = createDenominated(nBalanceToDenominate);
+                lastCreateDenominatedResult = createDenominated(nBalanceToDenominate, fDryRun);
+            }
+
+            if (fDryRun) {
+                log.info("coinjoin: create denominations {}, {}", lastCreateDenominatedResult, fDryRun);
+                return lastCreateDenominatedResult;
             }
 
             //check if we have the collateral sized inputs

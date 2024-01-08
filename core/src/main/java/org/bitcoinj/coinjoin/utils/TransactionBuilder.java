@@ -19,6 +19,7 @@ import com.google.common.collect.Lists;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.InsufficientMoneyException;
+import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
@@ -34,6 +35,7 @@ import org.bitcoinj.wallet.WalletEx;
 
 import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -56,6 +58,8 @@ public class TransactionBuilder implements AutoCloseable {
     private int bytesOutput = 0;
     /// Call KeepKey for all keys in destructor if fKeepKeys is true, call ReturnKey for all key if its false.
     private boolean keepKeys = false;
+
+    final private boolean dryRun;
     /// Protect vecOutputs
     private final ReentrantLock lock = Threading.lock("outputs");
     /// Contains all outputs already added to the transaction
@@ -65,7 +69,8 @@ public class TransactionBuilder implements AutoCloseable {
 
     private Transaction transaction;
 
-    public TransactionBuilder(WalletEx wallet, final CompactTallyItem tallyItem) {
+    public TransactionBuilder(WalletEx wallet, final CompactTallyItem tallyItem, boolean dryRun) {
+        this.dryRun = dryRun;
         this.wallet = wallet;
         dummyReserveDestination = new ReserveDestination(wallet);
         this.tallyItem = tallyItem;
@@ -130,7 +135,7 @@ public class TransactionBuilder implements AutoCloseable {
         if (couldAddOutput(amountOutput)) {
             lock.lock();
             try {
-                vecOutputs.add(new TransactionBuilderOutput(this, wallet, amountOutput));
+                vecOutputs.add(new TransactionBuilderOutput(this, wallet, amountOutput, dryRun));
                 return vecOutputs.get(vecOutputs.size() - 1);
             } finally {
                 lock.unlock();
@@ -157,6 +162,10 @@ public class TransactionBuilder implements AutoCloseable {
         try {
             vecSend = Lists.newArrayListWithExpectedSize(vecOutputs.size());
             for (TransactionBuilderOutput out : vecOutputs) {
+                // make sure the output is not invalid
+                if(ScriptPattern.isP2PKH(out.getScript()) && Arrays.equals(ScriptPattern.extractHashFromP2PKH(out.getScript()), new byte[20])) {
+                    return false;
+                }
                 vecSend.add(new Recipient(out.getScript(), out.getAmount(), false));
             }
         } finally {

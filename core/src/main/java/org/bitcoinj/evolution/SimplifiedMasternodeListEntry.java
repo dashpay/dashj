@@ -190,18 +190,6 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         return isValid;
     }
 
-    public int getType() {
-        return type;
-    }
-
-    public int getPlatformHTTPPort() {
-        return platformHTTPPort;
-    }
-
-    public KeyId getPlatformNodeId() {
-        return platformNodeId;
-    }
-
     public Sha256Hash getConfirmedHashWithProRegTxHash() {
         return confirmedHashWithProRegTxHash;
     }

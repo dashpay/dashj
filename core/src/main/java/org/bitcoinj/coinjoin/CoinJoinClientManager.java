@@ -117,7 +117,8 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
 
     // Make sure we have enough keys since last backup
     private boolean checkAutomaticBackup() {
-        return CoinJoinClientOptions.isEnabled() && isMixing();
+        // Let the KeyChain classes handle this
+        return true;
     }
 
     public int cachedNumBlocks = Integer.MAX_VALUE;    // used for the overview screen
@@ -220,7 +221,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         return doAutomaticDenominating(false);
     }
     public boolean doAutomaticDenominating(boolean dryRun) {
-        if (!CoinJoinClientOptions.isEnabled() || !isMixing())
+        if (!CoinJoinClientOptions.isEnabled() || (!dryRun && !isMixing()))
             return false;
 
         if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !mixingWallet.getContext().masternodeSync.isBlockchainSynced()) {
@@ -288,7 +289,8 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
             for (CoinJoinClientSession session: deqSessions) {
                 if (!checkAutomaticBackup()) return false;
 
-                if (waitForAnotherBlock()) {
+                // we may not need this
+                if (!dryRun && waitForAnotherBlock()) {
                     if (Utils.currentTimeMillis() - lastTimeReportTooRecent > 15000 ) {
                         strAutoDenomResult = "Last successful action was too recent.";
                         log.info("DoAutomaticDenominating -- {}", strAutoDenomResult);
