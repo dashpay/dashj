@@ -508,7 +508,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         Message broadcastTxMessage = outbound(spvClient);
         assertEquals(CoinJoinBroadcastTx.class, broadcastTxMessage.getClass());
         mixingTx = ((CoinJoinBroadcastTx) broadcastTxMessage).getTx();
-        memPool.add(mixingTx);//        wallet.receivePending(mixingTx, Lists.newArrayList());
+        memPool.add(mixingTx);
 
         CoinJoinBroadcastTx broadcastTxTwo = CoinJoin.getDSTX(mixingTx.getTxId());
         assertNotNull(broadcastTxTwo);
@@ -574,6 +574,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         // assertEquals(initialDenominatedBalance.subtract(mixingFee).subtract(mixed), wallet.getBalanceInfo().getDenominatedTrusted());
 
         // TODO: check wallet balance types here
+        assertTrue(clientManager.doAutomaticDenominating(true));
 
         if (clientManager.isMixing()) {
             clientManager.stopMixing();
