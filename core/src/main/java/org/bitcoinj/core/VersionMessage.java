@@ -73,6 +73,8 @@ public class VersionMessage extends Message {
      * @see <a href="https://github.com/dashpay/dips/blob/master/dip-0025.md">DIP-0025</a>
      */
     public static final int NODE_HEADERS_COMPRESSED = 1 << 11;
+    /** Indicates the node supports BIP324 transport. */
+    public static final int NODE_P2P_V2 = 1 << 12;
 
     /**
      * The version number of the protocol spoken.
@@ -332,37 +334,41 @@ public class VersionMessage extends Message {
     }
 
     public static String toStringServices(long services) {
-        List<String> a = new LinkedList<>();
+        List<String> strings = new LinkedList<>();
         if ((services & VersionMessage.NODE_NETWORK) == VersionMessage.NODE_NETWORK) {
-            a.add("NETWORK");
+            strings.add("NETWORK");
             services &= ~VersionMessage.NODE_NETWORK;
         }
         if ((services & VersionMessage.NODE_GETUTXOS) == VersionMessage.NODE_GETUTXOS) {
-            a.add("GETUTXOS");
+            strings.add("GETUTXOS");
             services &= ~VersionMessage.NODE_GETUTXOS;
         }
         if ((services & VersionMessage.NODE_BLOOM) == VersionMessage.NODE_BLOOM) {
-            a.add("BLOOM");
+            strings.add("BLOOM");
             services &= ~VersionMessage.NODE_BLOOM;
         }
         if ((services & VersionMessage.NODE_NETWORK_LIMITED) == VersionMessage.NODE_NETWORK_LIMITED) {
-            a.add("NETWORK_LIMITED");
+            strings.add("NETWORK_LIMITED");
             services &= ~VersionMessage.NODE_NETWORK_LIMITED;
         }
         if ((services & VersionMessage.NODE_COMPACT_FILTERS) == VersionMessage.NODE_COMPACT_FILTERS) {
-            a.add("COMPACT_FILTERS");
+            strings.add("COMPACT_FILTERS");
             services &= ~VersionMessage.NODE_NETWORK_LIMITED;
         }
         if ((services & VersionMessage.NODE_XTHIN) == VersionMessage.NODE_XTHIN) {
-            a.add("XTHIN");
+            strings.add("XTHIN");
             services &= ~VersionMessage.NODE_XTHIN;
         }
         if ((services & VersionMessage.NODE_HEADERS_COMPRESSED) == VersionMessage.NODE_HEADERS_COMPRESSED) {
-            a.add("HEADERS_COMPRESSED");
+            strings.add("HEADERS_COMPRESSED");
             services &= ~VersionMessage.NODE_HEADERS_COMPRESSED;
         }
+        if ((services & NODE_P2P_V2) == NODE_P2P_V2) {
+            strings.add("P2P_V2");
+            services &= ~NODE_P2P_V2;
+        }
         if (services != 0)
-            a.add("remaining: " + Long.toBinaryString(services));
-        return Joiner.on(", ").join(a);
+            strings.add("remaining: " + Long.toBinaryString(services));
+        return Joiner.on(", ").join(strings);
     }
 }
