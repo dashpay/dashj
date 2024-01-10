@@ -15,17 +15,15 @@
  */
 package org.bitcoinj.evolution;
 
+import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.script.ScriptChunk;
 import org.bitcoinj.script.ScriptPattern;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-
-import static org.bitcoinj.script.ScriptOpCodes.OP_RETURN;
 
 /**
  * This class extends Transaction and is used to create a funding
@@ -33,48 +31,56 @@ import static org.bitcoinj.script.ScriptOpCodes.OP_RETURN;
  * that is not stored in the blockchain transaction which includes
  * the public or private key's associated with this transaction.
  */
-public class CreditFundingTransaction extends Transaction {
+public class AssetLockTransaction extends Transaction {
 
     TransactionOutput lockedOutput;
     TransactionOutPoint lockedOutpoint;
     Coin fundingAmount;
-    Sha256Hash creditBurnIdentityIdentifier;
-    ECKey creditBurnPublicKey;
-    KeyId creditBurnPublicKeyId;
+    Sha256Hash identityId;
+    ECKey assetLockPublicKey;
+    KeyId assetLockPublicKeyId;
+    // in memory
     int usedDerivationPathIndex;
+    AssetLockPayload assetLockPayload;
 
 
-    public CreditFundingTransaction(NetworkParameters params) {
+
+    public AssetLockTransaction(NetworkParameters params) {
         super(params);
     }
 
     /**
-     * Create a credit funding transaction from an existing transaction.
-     * This should only be called if {@link CreditFundingTransaction#isCreditFundingTransaction(Transaction)}
+     * Create an asset lock transaction from an existing transaction.
+     * This should only be called if {@link AssetLockTransaction#isAssetLockTransaction(Transaction)}
      * returns true.
      * @param tx this transaction should be a credit funding transaction
      */
-    public CreditFundingTransaction(Transaction tx) {
+    public AssetLockTransaction(Transaction tx) {
         super(tx.getParams(), tx.bitcoinSerialize(), 0);
     }
 
     /**
      * Creates a credit funding transaction.
      * @param params
-     * @param creditBurnKey The key from which the hash160 will be placed in the OP_RETURN output
+     * @param assetLockPublicKey The key from which the hash160 will be placed in the OP_RETURN output
      * @param fundingAmount The amount of dash that will be locked in the OP_RETURN output
      */
-    public CreditFundingTransaction(NetworkParameters params, ECKey creditBurnKey, Coin fundingAmount) {
+    public AssetLockTransaction(NetworkParameters params, ECKey assetLockPublicKey, Coin fundingAmount) {
         super(params);
+        setVersionAndType(SPECIAL_VERSION, Type.TRANSACTION_ASSET_LOCK);
         this.fundingAmount = fundingAmount;
-        this.creditBurnPublicKey = creditBurnKey;
-        this.creditBurnPublicKeyId = KeyId.fromBytes(creditBurnPublicKey.getPubKeyHash());
-        this.creditBurnIdentityIdentifier = Sha256Hash.ZERO_HASH;
-        if (creditBurnKey instanceof DeterministicKey) {
-            this.usedDerivationPathIndex = ((DeterministicKey)creditBurnKey).getChildNumber().num();
+        this.assetLockPublicKey = assetLockPublicKey;
+        this.assetLockPublicKeyId = KeyId.fromBytes(this.assetLockPublicKey.getPubKeyHash());
+        this.identityId = Sha256Hash.ZERO_HASH;
+        if (assetLockPublicKey instanceof DeterministicKey) {
+            this.usedDerivationPathIndex = ((DeterministicKey)assetLockPublicKey).getChildNumber().num();
         } else this.usedDerivationPathIndex = -1;
-        ScriptBuilder builder = new ScriptBuilder().addChunk(new ScriptChunk(OP_RETURN, null)).data(creditBurnPublicKey.getPubKeyHash());
-        lockedOutput = new TransactionOutput(params, null, fundingAmount, builder.build().getProgram());
+
+        TransactionOutput realOutput = new TransactionOutput(params, this, fundingAmount, Address.fromKey(params, this.assetLockPublicKey));
+
+        lockedOutput = new TransactionOutput(params, null, fundingAmount, ScriptBuilder.createAssetLockOutput().getProgram());
+        assetLockPayload = new AssetLockPayload(params, Lists.newArrayList(realOutput));
+        setExtraPayload(assetLockPayload);
         addOutput(lockedOutput);
     }
 
@@ -83,7 +89,7 @@ public class CreditFundingTransaction extends Transaction {
      * Length of a transaction is fixed.
      */
 
-    public CreditFundingTransaction(NetworkParameters params, byte [] payload) {
+    public AssetLockTransaction(NetworkParameters params, byte [] payload) {
         super(params, payload, 0);
     }
 
@@ -100,10 +106,9 @@ public class CreditFundingTransaction extends Transaction {
     protected void unCache() {
         super.unCache();
         lockedOutpoint = null;
-        lockedOutpoint = null;
-        creditBurnIdentityIdentifier = Sha256Hash.ZERO_HASH;
+        identityId = Sha256Hash.ZERO_HASH;
         fundingAmount = Coin.ZERO;
-        creditBurnPublicKeyId = KeyId.KEYID_ZERO;
+        assetLockPublicKeyId = KeyId.KEYID_ZERO;
     }
 
     /**
@@ -111,11 +116,12 @@ public class CreditFundingTransaction extends Transaction {
      * credit burn key
      */
     private void parseTransaction() {
+        assetLockPayload = (AssetLockPayload) getExtraPayloadObject();
         getLockedOutput();
         getLockedOutpoint();
         fundingAmount = lockedOutput.getValue();
-        getCreditBurnPublicKeyId();
-        creditBurnIdentityIdentifier = getCreditBurnIdentityIdentifier();
+        getAssetLockPublicKeyId();
+        identityId = getIdentityId();
     }
 
     /**
@@ -124,15 +130,8 @@ public class CreditFundingTransaction extends Transaction {
     public TransactionOutput getLockedOutput() {
         if(lockedOutput != null)
             return lockedOutput;
-
-        for(TransactionOutput output : getOutputs()) {
-            Script script = output.getScriptPubKey();
-            if(ScriptPattern.isCreditBurn(script)) {
-                lockedOutput = output;
-                return output;
-            }
-        }
-        return null;
+        lockedOutput = assetLockPayload.getCreditOutputs().get(0);
+        return lockedOutput;
     }
 
     /**
@@ -142,14 +141,7 @@ public class CreditFundingTransaction extends Transaction {
         if(lockedOutpoint != null)
             return lockedOutpoint;
 
-        for(int i = 0; i < getOutputs().size(); ++i) {
-            Script script = getOutput(i).getScriptPubKey();
-            if(ScriptPattern.isCreditBurn(script)) {
-                // The lockedOutpoint must be in little endian to match Platform
-                // having a reversed txid will not allow it to be searched or matched.
-                lockedOutpoint = new TransactionOutPoint(params, i, Sha256Hash.wrap(getTxId().getReversedBytes()));
-            }
-        }
+        lockedOutpoint = new TransactionOutPoint(params, 0, Sha256Hash.wrap(getTxId().getReversedBytes()));
 
         return lockedOutpoint;
     }
@@ -161,38 +153,36 @@ public class CreditFundingTransaction extends Transaction {
     /**
      * Returns the credit burn identifier, which is the sha256(sha256(outpoint))
      */
-    public Sha256Hash getCreditBurnIdentityIdentifier() {
-        if(creditBurnIdentityIdentifier == null || creditBurnIdentityIdentifier.isZero()) {
+    public Sha256Hash getIdentityId() {
+        if(identityId == null || identityId.isZero()) {
             try {
                 ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(36);
                 getLockedOutpoint().bitcoinSerialize(bos);
-                creditBurnIdentityIdentifier = Sha256Hash.twiceOf(bos.toByteArray());
+                identityId = Sha256Hash.twiceOf(bos.toByteArray());
             } catch (IOException x) {
                 throw new RuntimeException(x);
             }
         }
-        return creditBurnIdentityIdentifier;
+        return identityId;
     }
 
-    public ECKey getCreditBurnPublicKey() {
-        return creditBurnPublicKey;
+    public ECKey getAssetLockPublicKey() {
+        return assetLockPublicKey;
     }
 
-    public KeyId getCreditBurnPublicKeyId() {
-        if(creditBurnPublicKeyId == null || creditBurnPublicKeyId.equals(KeyId.KEYID_ZERO)) {
-            byte [] opReturnBytes = lockedOutput.getScriptPubKey().getChunks().get(1).data;
-            if(opReturnBytes.length == 20)
-                creditBurnPublicKeyId = KeyId.fromBytes(opReturnBytes);
+    public KeyId getAssetLockPublicKeyId() {
+        if(assetLockPublicKeyId == null || assetLockPublicKeyId.equals(KeyId.KEYID_ZERO)) {
+            assetLockPublicKeyId = KeyId.fromBytes(ScriptPattern.extractHashFromP2PKH(assetLockPayload.getCreditOutputs().get(0).getScriptPubKey()));
         }
-        return creditBurnPublicKeyId;
+        return assetLockPublicKeyId;
     }
 
     public int getUsedDerivationPathIndex() {
         return usedDerivationPathIndex;
     }
 
-    public void setCreditBurnPublicKeyAndIndex(ECKey creditBurnPublicKey, int usedDerivationPathIndex) {
-        this.creditBurnPublicKey = creditBurnPublicKey;
+    public void setAssetLockPublicKeyAndIndex(ECKey assetLockPublicKey, int usedDerivationPathIndex) {
+        this.assetLockPublicKey = assetLockPublicKey;
         this.usedDerivationPathIndex = usedDerivationPathIndex;
     }
 
@@ -200,14 +190,9 @@ public class CreditFundingTransaction extends Transaction {
      * Determines if a transaction has one or more credit burn outputs
      * and therefore is a is credit funding transaction
      */
-    public static boolean isCreditFundingTransaction(Transaction tx) {
-        for(TransactionOutput output : tx.getOutputs()) {
-            Script script = output.getScriptPubKey();
-            if(ScriptPattern.isCreditBurn(script)) {
-                return true;
-            }
-        }
-        return false;
+    public static boolean isAssetLockTransaction(Transaction tx) {
+        return tx.getVersionShort() == SPECIAL_VERSION && tx.getType() == Type.TRANSACTION_ASSET_LOCK &&
+                tx.getOutputs().stream().anyMatch(output -> ScriptPattern.isAssetLock(output.getScriptPubKey()));
     }
 
     /**
@@ -217,7 +202,7 @@ public class CreditFundingTransaction extends Transaction {
     public long getOutputIndex() {
         int outputCount = getOutputs().size();
         for (int i = 0; i < outputCount; ++i) {
-            if (ScriptPattern.isCreditBurn(getOutput(i).getScriptPubKey()))
+            if (ScriptPattern.isAssetLock(getOutput(i).getScriptPubKey()))
                 return i;
         }
         return -1;
