@@ -347,7 +347,7 @@ public class VersionMessage extends Message {
             strings.add("BLOOM");
             services &= ~VersionMessage.NODE_BLOOM;
         }
-        if ((services & VersionMessage.NODE_NETWORK_LIMITED) == VersionMessage.NODE_NETWORK_LIMITED) {
+        if ((services & NODE_NETWORK_LIMITED) == NODE_NETWORK_LIMITED) {
             strings.add("NETWORK_LIMITED");
             services &= ~VersionMessage.NODE_NETWORK_LIMITED;
         }
