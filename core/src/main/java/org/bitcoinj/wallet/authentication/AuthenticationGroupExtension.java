@@ -737,7 +737,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             publicKey = (DeterministicKey) getInvitationFundingKeyChain().getKeyByPubKeyHash(cftx.getAssetLockPublicKeyId().getBytes());
 
         if(publicKey != null)
-            cftx.setAssetLockPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
+            cftx.setAssetLockPublicKey(publicKey);
         else log.error("Cannot find " + KeyId.fromBytes(cftx.getAssetLockPublicKeyId().getBytes()) + " in the wallet");
 
         mapCreditFundingTxs.put(cftx.getTxId(), cftx);

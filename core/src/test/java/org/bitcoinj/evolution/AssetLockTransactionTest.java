@@ -54,13 +54,13 @@ public class AssetLockTransactionTest {
     public void testIdentityAssetLockTransactionUniqueId() {
         AssetLockTransaction fundingTransaction = new AssetLockTransaction(PARAMS, transactionData);
 
-        String lockedOutpoint = fundingTransaction.lockedOutpoint.toStringBase64();
+        String lockedOutpoint = fundingTransaction.getLockedOutpoint().toStringBase64();
         assertEquals("Locked outpoint is incorrect", "nQxmWXkiwGZ6VzBk72ukhBKuTZH/AZgfx8pAvPbVbPIAAAAA", lockedOutpoint);
-        String identityIdentifier = fundingTransaction.identityId.toStringBase58();
+        String identityIdentifier = fundingTransaction.getIdentityId().toStringBase58();
         assertEquals("Identity Identifier is incorrect", "451RMdWKovJWbfx5Q84oihL3n2J1N4p5E8SxCarT1ijF", identityIdentifier);
 
         ECKey privateKey = ECKey.fromPrivate(Utils.HEX.decode("8cfb151eceb7540e42da177cfbe3a1580e97edf96a699e40d100cea669abb002"),true);
-        assertArrayEquals("The private key doesn't match the funding transaction", privateKey.getPubKeyHash(), fundingTransaction.assetLockPublicKeyId.getBytes());
+        assertArrayEquals("The private key doesn't match the funding transaction", privateKey.getPubKeyHash(), fundingTransaction.getAssetLockPublicKeyId().getBytes());
 
     }
 

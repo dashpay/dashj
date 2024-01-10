@@ -16,14 +16,20 @@
 package org.bitcoinj.evolution;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptPattern;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.TreeMap;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * This class extends Transaction and is used to create a funding
@@ -33,15 +39,11 @@ import java.io.IOException;
  */
 public class AssetLockTransaction extends Transaction {
 
-    TransactionOutput lockedOutput;
-    TransactionOutPoint lockedOutpoint;
-    Coin fundingAmount;
-    Sha256Hash identityId;
-    ECKey assetLockPublicKey;
-    KeyId assetLockPublicKeyId;
-    // in memory
-    int usedDerivationPathIndex;
-    AssetLockPayload assetLockPayload;
+    private ArrayList<TransactionOutPoint> lockedOutpoints;
+    private ArrayList<Sha256Hash> identityIds;
+    private TreeMap<Integer, ECKey> assetLockPublicKeys;
+    private ArrayList<KeyId> assetLockPublicKeyIds;
+    private AssetLockPayload assetLockPayload;
 
 
 
@@ -60,7 +62,7 @@ public class AssetLockTransaction extends Transaction {
     }
 
     /**
-     * Creates a credit funding transaction.
+     * Creates a credit funding transaction with a single credit output.
      * @param params
      * @param assetLockPublicKey The key from which the hash160 will be placed in the OP_RETURN output
      * @param fundingAmount The amount of dash that will be locked in the OP_RETURN output
@@ -68,20 +70,20 @@ public class AssetLockTransaction extends Transaction {
     public AssetLockTransaction(NetworkParameters params, ECKey assetLockPublicKey, Coin fundingAmount) {
         super(params);
         setVersionAndType(SPECIAL_VERSION, Type.TRANSACTION_ASSET_LOCK);
-        this.fundingAmount = fundingAmount;
-        this.assetLockPublicKey = assetLockPublicKey;
-        this.assetLockPublicKeyId = KeyId.fromBytes(this.assetLockPublicKey.getPubKeyHash());
-        this.identityId = Sha256Hash.ZERO_HASH;
-        if (assetLockPublicKey instanceof DeterministicKey) {
-            this.usedDerivationPathIndex = ((DeterministicKey)assetLockPublicKey).getChildNumber().num();
-        } else this.usedDerivationPathIndex = -1;
+        this.assetLockPublicKeys = Maps.newTreeMap();
+        assetLockPublicKeys.put(0, assetLockPublicKey);
+        this.assetLockPublicKeyIds = Lists.newArrayList();
+        assetLockPublicKeyIds.add(KeyId.fromBytes(assetLockPublicKey.getPubKeyHash()));
+        this.identityIds = Lists.newArrayList();
+        identityIds.add(Sha256Hash.ZERO_HASH);
 
-        TransactionOutput realOutput = new TransactionOutput(params, this, fundingAmount, Address.fromKey(params, this.assetLockPublicKey));
+        TransactionOutput realOutput = new TransactionOutput(params, this, fundingAmount, Address.fromKey(params, assetLockPublicKey));
 
-        lockedOutput = new TransactionOutput(params, null, fundingAmount, ScriptBuilder.createAssetLockOutput().getProgram());
+        lockedOutpoints = Lists.newArrayList();
+        TransactionOutput assetLockOutput = new TransactionOutput(params, null, fundingAmount, ScriptBuilder.createAssetLockOutput().getProgram());
         assetLockPayload = new AssetLockPayload(params, Lists.newArrayList(realOutput));
         setExtraPayload(assetLockPayload);
-        addOutput(lockedOutput);
+        addOutput(assetLockOutput);
     }
 
     /**
@@ -105,85 +107,120 @@ public class AssetLockTransaction extends Transaction {
     @Override
     protected void unCache() {
         super.unCache();
-        lockedOutpoint = null;
-        identityId = Sha256Hash.ZERO_HASH;
-        fundingAmount = Coin.ZERO;
-        assetLockPublicKeyId = KeyId.KEYID_ZERO;
+        lockedOutpoints.clear();
+        identityIds.clear();
+        assetLockPublicKeyIds.clear();
     }
 
     /**
-     * Initializes lockedOutput, lockedOutpoint, fundingAmount and the hash160
-     * credit burn key
+     * Initializes lockedOutpoints and the hash160
+     * assetlock key
      */
     private void parseTransaction() {
         assetLockPayload = (AssetLockPayload) getExtraPayloadObject();
-        getLockedOutput();
+        lockedOutpoints = Lists.newArrayList();
+        assetLockPublicKeyIds = Lists.newArrayList();
+        assetLockPublicKeys = Maps.newTreeMap();
+        identityIds = Lists.newArrayList();
         getLockedOutpoint();
-        fundingAmount = lockedOutput.getValue();
         getAssetLockPublicKeyId();
-        identityId = getIdentityId();
+        getIdentityId();
     }
 
     /**
      * Sets lockedOutput and returns output that has the OP_RETURN script
      */
+
     public TransactionOutput getLockedOutput() {
-        if(lockedOutput != null)
-            return lockedOutput;
-        lockedOutput = assetLockPayload.getCreditOutputs().get(0);
-        return lockedOutput;
+        return getLockedOutput(0);
+    }
+
+    public TransactionOutput getLockedOutput(int outputIndex) {
+        return assetLockPayload.getCreditOutputs().get(outputIndex);
+    }
+
+    public TransactionOutPoint getLockedOutpoint() {
+        return getLockedOutpoint(0);
+    }
+
+    public AssetLockPayload getAssetLockPayload() {
+        return assetLockPayload;
     }
 
     /**
      * Sets lockedOutpoint and returns outpoint that has the OP_RETURN script
      */
-    public TransactionOutPoint getLockedOutpoint() {
-        if(lockedOutpoint != null)
-            return lockedOutpoint;
 
-        lockedOutpoint = new TransactionOutPoint(params, 0, Sha256Hash.wrap(getTxId().getReversedBytes()));
 
-        return lockedOutpoint;
+
+    public TransactionOutPoint getLockedOutpoint(int outputIndex) {
+        if (lockedOutpoints.isEmpty()) {
+            for (int i = 0; i < assetLockPayload.getCreditOutputs().size(); ++i) {
+               lockedOutpoints.add(new TransactionOutPoint(params, i, Sha256Hash.wrap(getTxId().getReversedBytes())));
+            }
+        }
+        return lockedOutpoints.get(outputIndex);
     }
 
     public Coin getFundingAmount() {
-        return fundingAmount;
+        return assetLockPayload.getFundingAmount();
     }
 
     /**
      * Returns the credit burn identifier, which is the sha256(sha256(outpoint))
      */
     public Sha256Hash getIdentityId() {
-        if(identityId == null || identityId.isZero()) {
-            try {
-                ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(36);
-                getLockedOutpoint().bitcoinSerialize(bos);
-                identityId = Sha256Hash.twiceOf(bos.toByteArray());
-            } catch (IOException x) {
-                throw new RuntimeException(x);
-            }
+        return getIdentityId(0);
+    }
+
+    public Sha256Hash getIdentityId(int outputIndex) {
+        if(identityIds.isEmpty()) {
+            assetLockPayload.getCreditOutputs().forEach(transactionOutput -> {
+                try {
+                    ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(36);
+                    getLockedOutpoint(outputIndex).bitcoinSerialize(bos);
+                    identityIds.add(Sha256Hash.twiceOf(bos.toByteArray()));
+
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
-        return identityId;
+        return identityIds.get(0);
     }
 
     public ECKey getAssetLockPublicKey() {
-        return assetLockPublicKey;
+        return getAssetLockPublicKey(0);
     }
+
+    public ECKey getAssetLockPublicKey(int outputIndex) {
+        return assetLockPublicKeys.get(outputIndex);
+    }
+
 
     public KeyId getAssetLockPublicKeyId() {
-        if(assetLockPublicKeyId == null || assetLockPublicKeyId.equals(KeyId.KEYID_ZERO)) {
-            assetLockPublicKeyId = KeyId.fromBytes(ScriptPattern.extractHashFromP2PKH(assetLockPayload.getCreditOutputs().get(0).getScriptPubKey()));
+        return getAssetLockPublicKeyId(0);
+    }
+    public KeyId getAssetLockPublicKeyId(int outputIndex) {
+        if(assetLockPublicKeyIds.isEmpty()) {
+            assetLockPayload.getCreditOutputs().forEach(transactionOutput -> assetLockPublicKeyIds.add(KeyId.fromBytes(ScriptPattern.extractHashFromP2PKH(assetLockPayload.getCreditOutputs().get(0).getScriptPubKey()))));
         }
-        return assetLockPublicKeyId;
+        return assetLockPublicKeyIds.get(outputIndex);
     }
 
-    public int getUsedDerivationPathIndex() {
-        return usedDerivationPathIndex;
+    public int getUsedDerivationPathIndex(int outputIndex) {
+        ECKey key = getAssetLockPublicKey(0);
+        if (key instanceof IDeterministicKey) {
+            IDeterministicKey deterministicKey = (IDeterministicKey) key;
+            return deterministicKey.getPath().get(deterministicKey.getDepth() - 1).num();
+        }
+        return -1;
     }
 
-    public void setAssetLockPublicKeyAndIndex(ECKey assetLockPublicKey, int usedDerivationPathIndex) {
-        this.assetLockPublicKey = assetLockPublicKey;
-        this.usedDerivationPathIndex = usedDerivationPathIndex;
+    public void setAssetLockPublicKey(ECKey assetLockPublicKey) {
+        int index = assetLockPublicKeyIds.indexOf(KeyId.fromBytes(assetLockPublicKey.getPubKeyHash()));
+        checkState(index != -1, "cannot find public key hash for " + assetLockPublicKey);
+        assetLockPublicKeys.put(index, assetLockPublicKey);
     }
 
     /**
@@ -199,7 +236,7 @@ public class AssetLockTransaction extends Transaction {
      * Determines the first output that is a credit burn output
      * or returns -1.
      */
-    public long getOutputIndex() {
+    public long getAssetLockOutputIndex() {
         int outputCount = getOutputs().size();
         for (int i = 0; i < outputCount; ++i) {
             if (ScriptPattern.isAssetLock(getOutput(i).getScriptPubKey()))

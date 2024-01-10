@@ -18,29 +18,22 @@ package org.bitcoinj.evolution;
 
 
 import com.google.common.collect.Lists;
-import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VarInt;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptPattern;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collector;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.bitcoinj.core.Transaction.Type.TRANSACTION_ASSET_LOCK;
-import static org.bitcoinj.core.Utils.HEX;
 
 public class AssetLockPayload extends SpecialTxPayload {
 
@@ -117,6 +110,13 @@ public class AssetLockPayload extends SpecialTxPayload {
     public List<TransactionOutput> getCreditOutputs() {
         return creditOutputs;
     }
+
+    public Coin getFundingAmount() {
+        return creditOutputs.stream()
+                .map(TransactionOutput::getValue)
+                .reduce(Coin.ZERO, Coin::add);
+    }
+
 
     @Override
     public JSONObject toJson() {
