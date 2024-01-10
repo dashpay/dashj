@@ -9,8 +9,10 @@ import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinConstants;
 import org.bitcoinj.coinjoin.CoinJoinTransactionInput;
 import org.bitcoinj.coinjoin.DenominatedCoinSelector;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
 import org.bitcoinj.coinjoin.utils.InputCoin;
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
@@ -42,6 +44,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -978,5 +981,38 @@ public class WalletEx extends Wallet {
                 result.add(out);
         }
         return result;
+    }
+
+    public String getTransactionReport() {
+        MonetaryFormat format = MonetaryFormat.BTC.noCode();
+        StringBuilder s = new StringBuilder("Transaction History Report");
+        s.append("\n-----------------------------------------------\n");
+
+        ArrayList<Transaction> sortedTxes = Lists.newArrayList();
+        getWalletTransactions().forEach(tx -> sortedTxes.add(tx.getTransaction()));
+        sortedTxes.sort(Transaction.SORT_TX_BY_UPDATE_TIME);
+
+        sortedTxes.forEach(tx -> {
+            final Coin value = tx.getValue(this);
+            s.append(Utils.dateTimeFormat(tx.getUpdateTime())).append(" ");
+            s.append(String.format("%14s", format.format(value))).append(" ");
+            final CoinJoinTransactionType type = CoinJoinTransactionType.fromTx(tx, this);
+            if (type != CoinJoinTransactionType.None) {
+                s.append(type);
+            } else {
+                if (value.isGreaterThan(Coin.ZERO)) {
+                    s.append("Received");
+                } else {
+                    s.append("Sent");
+                }
+            }
+            s.append("\n");
+        });
+        return s.toString();
+    }
+
+    @Override
+    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain) {
+        return super.toString(includeLookahead, includePrivateKeys, aesKey, includeTransactions, includeExtensions, chain) + getTransactionReport();
     }
 }
