@@ -29,6 +29,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicHierarchy;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.MonetaryFormat;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -618,23 +619,28 @@ public class WalletEx extends Wallet {
     }
 
 
+    /**
+     * Count the number of unspent outputs that have a certain value
+     */
     public int countInputsWithAmount(Coin inputValue) {
         int count = 0;
         for (Transaction tx : getTransactionPool(WalletTransaction.Pool.UNSPENT).values()) {
             for (TransactionOutput output : tx.getOutputs()) {
-                if (output.getValue().equals(inputValue) && output.isMine(this))
+                if (output.getValue().equals(inputValue) && output.isMine(this) && output.getSpentBy() == null)
                     count++;
             }
         }
         return count;
     }
 
+    /** locks an unspent outpoint so that it cannot be spent */
     public boolean lockCoin(TransactionOutPoint outPoint) {
-        lockedCoinsSet.add(outPoint);
+        boolean added = lockedCoinsSet.add(outPoint);
         clearAnonymizableCaches();
-        return false;
+        return added;
     }
 
+    /** unlocks an outpoint so that it cannot be spent */
     public void unlockCoin(TransactionOutPoint outPoint) {
         lockedCoinsSet.remove(outPoint);
         clearAnonymizableCaches();
