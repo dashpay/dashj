@@ -217,7 +217,7 @@ public class AssetLockTransaction extends Transaction {
         return -1;
     }
 
-    public void setAssetLockPublicKey(ECKey assetLockPublicKey) {
+    public void addAssetLockPublicKey(ECKey assetLockPublicKey) {
         int index = assetLockPublicKeyIds.indexOf(KeyId.fromBytes(assetLockPublicKey.getPubKeyHash()));
         checkState(index != -1, "cannot find public key hash for " + assetLockPublicKey);
         assetLockPublicKeys.put(index, assetLockPublicKey);
