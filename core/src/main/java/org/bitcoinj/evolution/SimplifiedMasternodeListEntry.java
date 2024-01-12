@@ -168,6 +168,10 @@ public class SimplifiedMasternodeListEntry extends Masternode {
             proRegTxHash.toString(), service.toString(), pubKeyOperator, keyIdVoting, isValid, platformHTTPPort, platformNodeId);
     }
 
+    public short getVersion() {
+        return version;
+    }
+
     public Sha256Hash getConfirmedHash() {
         return confirmedHash;
     }
