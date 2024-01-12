@@ -61,6 +61,7 @@ public class FinalCommitment extends SpecialTxPayload {
 
     BLSSignature quorumSignature;
     BLSSignature membersSignature;
+    private boolean verified = false;
 
     public FinalCommitment(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
@@ -316,7 +317,7 @@ public class FinalCommitment extends SpecialTxPayload {
                 }
             }
         }
-
+        verified = true;
         return true;
     }
 
@@ -413,6 +414,10 @@ public class FinalCommitment extends SpecialTxPayload {
 
     public ArrayList<Boolean> getValidMembers() {
         return validMembers;
+    }
+
+    public boolean isVerified() {
+        return verified;
     }
 
     @Override
