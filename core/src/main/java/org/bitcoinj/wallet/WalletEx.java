@@ -627,10 +627,14 @@ public class WalletEx extends Wallet {
      */
     public int countInputsWithAmount(Coin inputValue) {
         int count = 0;
-        for (Transaction tx : getTransactionPool(WalletTransaction.Pool.UNSPENT).values()) {
-            for (TransactionOutput output : tx.getOutputs()) {
-                if (output.getValue().equals(inputValue) && output.isMine(this) && output.getSpentBy() == null)
+        for (TransactionOutput output : myUnspents) {
+            TransactionConfidence confidence = output.getParentTransaction().getConfidence();
+            // confirmations must be 0 or higher, not conflicted or dead
+            if (confidence != null && (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING || confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)) {
+                // inputValue must match, the TX is mine and is not spent
+                if (output.getValue().equals(inputValue) && output.getSpentBy() == null) {
                     count++;
+                }
             }
         }
         return count;
@@ -997,15 +1001,21 @@ public class WalletEx extends Wallet {
             s.append(Utils.dateTimeFormat(tx.getUpdateTime())).append(" ");
             s.append(String.format("%14s", format.format(value))).append(" ");
             final CoinJoinTransactionType type = CoinJoinTransactionType.fromTx(tx, this);
+
+            // TX type
+            String txType;
             if (type != CoinJoinTransactionType.None) {
-                s.append(type);
+                txType = type.toString();
             } else {
                 if (value.isGreaterThan(Coin.ZERO)) {
-                    s.append("Received");
+                    txType = "Received";
                 } else {
-                    s.append("Sent");
+                    txType = "Sent";
                 }
             }
+            s.append(String.format("%-20s", txType));
+            s.append(" ");
+            s.append(tx.getTxId());
             s.append("\n");
         });
         return s.toString();
