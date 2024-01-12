@@ -314,7 +314,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
                 // Go big to small
                 for (Coin denomValue : denoms) {
-                    if (balanceToDenominate.isGreaterThanOrEqualTo(Coin.ZERO)) break;
+                    if (balanceToDenominate.isLessThanOrEqualTo(Coin.ZERO)) break;
                     int nOutputs = 0;
 
                     // Number of denoms we can create given our denom and the amount of funds we have left
