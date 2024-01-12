@@ -6,8 +6,8 @@ import org.bitcoinj.crypto.BLSPublicKey;
 
 public class Quorum {
 
-    LLMQParameters llmqParameters;
-    FinalCommitment commitment;
+    private LLMQParameters llmqParameters;
+    private FinalCommitment commitment;
 
     public Quorum(FinalCommitment commitment) {
         this.commitment = commitment;
