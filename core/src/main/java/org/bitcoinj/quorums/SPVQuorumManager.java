@@ -74,7 +74,7 @@ public class SPVQuorumManager extends QuorumManager {
         // fail while we are on the brink of a new quorum
         ArrayList<Quorum> quorums = scanQuorums(llmqType, (int)llmqParameters.signingActiveQuorumCount + 1);
         for (Quorum q : quorums) {
-            if (q.commitment.quorumHash.equals(quorumHash)) {
+            if (q.getCommitment().quorumHash.equals(quorumHash)) {
                 return true;
             }
         }

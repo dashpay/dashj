@@ -413,7 +413,7 @@ public class SimplifiedQuorumList extends Message {
     }
 
     public void addQuorum(Quorum quorum) {
-        addCommitment(quorum.commitment);
+        addCommitment(quorum.getCommitment());
     }
 
     public void setBlock(StoredBlock block) {
