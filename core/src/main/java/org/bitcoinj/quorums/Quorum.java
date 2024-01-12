@@ -2,6 +2,7 @@ package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSPublicKey;
 
 public class Quorum {
@@ -22,7 +23,7 @@ public class Quorum {
     public Quorum(NetworkParameters params, LLMQParameters llmqParameters, Sha256Hash quorumHash, BLSPublicKey publicKey) {
         this.llmqParameters = llmqParameters;
         this.commitment = new FinalCommitment(params, llmqParameters, quorumHash);
-        this.commitment.quorumPublicKey = publicKey;
+        this.commitment.quorumPublicKey = new BLSLazyPublicKey(publicKey);
     }
 
     @Override

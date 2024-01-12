@@ -21,7 +21,6 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSLazySignature;
 import org.bitcoinj.crypto.BLSPublicKey;
-import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SpecialTxPayload;
@@ -56,11 +55,11 @@ public class FinalCommitment extends SpecialTxPayload {
     ArrayList<Boolean> signers;
     ArrayList<Boolean> validMembers;
 
-    BLSPublicKey quorumPublicKey;
+    BLSLazyPublicKey quorumPublicKey;
     Sha256Hash quorumVvecHash;
 
-    BLSSignature quorumSignature;
-    BLSSignature membersSignature;
+    BLSLazySignature quorumSignature;
+    BLSLazySignature membersSignature;
     private boolean verified = false;
 
     public FinalCommitment(NetworkParameters params, byte [] payload, int offset) {
@@ -90,10 +89,10 @@ public class FinalCommitment extends SpecialTxPayload {
         int quorumSize = LLMQParameters.fromType(LLMQParameters.LLMQType.fromValue(llmqType)).size;
         this.signers = Utils.booleanArrayList(quorumSize, signers);
         this.validMembers = Utils.booleanArrayList(quorumSize, validMembers);
-        this.quorumPublicKey = new BLSPublicKey(params, quorumPublicKey, 0, isLegacy());
+        this.quorumPublicKey = new BLSLazyPublicKey(params, quorumPublicKey, 0, isLegacy());
         this.quorumVvecHash = quorumVvecHash;
-        this.quorumSignature = signature.getSignature();
-        this.membersSignature = membersSignature.getSignature();
+        this.quorumSignature = new BLSLazySignature(signature);
+        this.membersSignature = new BLSLazySignature(membersSignature);
         length = 1 + 32 +
                 (isIndexed() ? 2 : 0) +
                 VarInt.sizeOf(quorumSize) * 2 +
@@ -115,15 +114,15 @@ public class FinalCommitment extends SpecialTxPayload {
         signers = readBooleanArrayList();
         validMembers = readBooleanArrayList();
 
-        quorumPublicKey = new BLSPublicKey(params, payload, cursor, isLegacy());
+        quorumPublicKey = new BLSLazyPublicKey(params, payload, cursor, isLegacy());
         cursor += quorumPublicKey.getMessageSize();
 
         quorumVvecHash = readHash();
 
-        quorumSignature = new BLSSignature(params, payload, cursor, isLegacy());
+        quorumSignature = new BLSLazySignature(params, payload, cursor, isLegacy());
         cursor += quorumSignature.getMessageSize();
 
-        membersSignature = new BLSSignature(params, payload, cursor, isLegacy());
+        membersSignature = new BLSLazySignature(params, payload, cursor, isLegacy());
         cursor += membersSignature.getMessageSize();
 
         length = cursor - offset;
@@ -293,7 +292,7 @@ public class FinalCommitment extends SpecialTxPayload {
 
         // sigs are only checked when the block is processed
         if (checkSigs) {
-            Sha256Hash commitmentHash = LLMQUtils.buildCommitmentHash(llmqParameters.type, quorumHash, validMembers, quorumPublicKey, quorumVvecHash);
+            Sha256Hash commitmentHash = LLMQUtils.buildCommitmentHash(llmqParameters.type, quorumHash, validMembers, quorumPublicKey.getPublicKey(), quorumVvecHash);
 
             ArrayList<BLSPublicKey> memberPubKeys = Lists.newArrayList();
             for (int i = 0; i < members.size(); i++) {
@@ -303,15 +302,15 @@ public class FinalCommitment extends SpecialTxPayload {
                 memberPubKeys.add(members.get(i).getPubKeyOperator());
             }
 
-            if (!membersSignature.verifySecureAggregated(memberPubKeys, commitmentHash, isLegacy())) {
+            if (!membersSignature.getSignature().verifySecureAggregated(memberPubKeys, commitmentHash, isLegacy())) {
                 log.error("invalid aggregated members signature");
                 return false;
             }
 
-            Context.get().signingManager.logSignature("QUORUM", quorumPublicKey, commitmentHash, quorumSignature);
+            Context.get().signingManager.logSignature("QUORUM", quorumPublicKey.getPublicKey(), commitmentHash, quorumSignature.getSignature());
 
             if(Context.get().masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
-                if (!quorumSignature.verifyInsecure(quorumPublicKey, commitmentHash, isLegacy())) {
+                if (!quorumSignature.getSignature().verifyInsecure(quorumPublicKey.getPublicKey(), commitmentHash, isLegacy())) {
                     log.error("invalid quorum signature");
                     return false;
                 }
@@ -393,7 +392,7 @@ public class FinalCommitment extends SpecialTxPayload {
     }
 
     public BLSPublicKey getQuorumPublicKey() {
-        return quorumPublicKey;
+        return quorumPublicKey.getPublicKey();
     }
 
     public Sha256Hash getQuorumVvecHash() {
@@ -401,11 +400,11 @@ public class FinalCommitment extends SpecialTxPayload {
     }
 
     public BLSSignature getMembersSignature() {
-        return membersSignature;
+        return membersSignature.getSignature();
     }
 
     public BLSSignature getQuorumSignature() {
-        return quorumSignature;
+        return quorumSignature.getSignature();
     }
 
     public ArrayList<Boolean> getSigners() {

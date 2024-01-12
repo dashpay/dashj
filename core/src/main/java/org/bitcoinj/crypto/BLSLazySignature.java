@@ -64,6 +64,22 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
         }
     }
 
+    protected void bitcoinSerializeToStream(OutputStream stream, boolean legacy) throws IOException {
+        lock.lock();
+        try {
+            if (!initialized && buffer == null) {
+                log.warn("signature and buffer are not initialized");
+                buffer = invalidSignature.getBuffer();
+            }
+            if (buffer == null) {
+                buffer = signature.getBuffer(BLSSignature.BLS_CURVE_SIG_SIZE, legacy);
+            }
+            stream.write(buffer);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public BLSLazySignature assign(BLSLazySignature blsLazySignature) {
         lock.lock();
         try {
@@ -120,5 +136,13 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
     @Override
     public String toString() {
         return initialized ? signature.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
+    }
+
+    public boolean isValid() {
+        if (initialized) {
+            return signature.isValid();
+        } else {
+            return buffer != null;
+        }
     }
 }

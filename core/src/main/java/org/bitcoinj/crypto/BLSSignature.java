@@ -255,7 +255,7 @@ public class BLSSignature extends BLSAbstractObject {
 
     public boolean checkMalleable(byte [] buf, int size)
     {
-        byte [] buf2 = getBuffer(serializedSize);
+        byte [] buf2 = getBuffer(serializedSize, legacy);
         if (!Arrays.equals(buf, buf2)) {
             // TODO not sure if this is actually possible with the BLS libs. I'm assuming here that somewhere deep inside
             // these libs masking might happen, so that 2 different binary representations could result in the same object
