@@ -19,8 +19,11 @@ import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 
+import java.io.IOException;
+import java.io.OutputStream;
 
-public class BLSAbstractLazyObject extends Message {
+
+public abstract class BLSAbstractLazyObject extends Message {
 
     byte [] buffer;
     boolean initialized;
@@ -46,6 +49,11 @@ public class BLSAbstractLazyObject extends Message {
         initialized = false;
     }
 
+    abstract protected void bitcoinSerializeToStream(OutputStream stream, boolean legacy) throws IOException;
+
+    public void bitcoinSerialize(OutputStream stream, boolean legacy) throws IOException {
+        bitcoinSerializeToStream(stream, legacy);
+    }
 
     public boolean isInitialized() {
         return initialized;

@@ -85,7 +85,7 @@ public class FinalCommitmentTest {
         assertEquals(49, commitment.countValidMembers());
 
         BLSPublicKey quorumPublickKey = new BLSPublicKey(PARAMS, Utils.HEX.decode("160b120058893acc8b6622dfd210f7d00aed97a43b364da4073b791c23b1e8b4b4c7943bf5b3b4c62c0108b391351a43"), 0, true);
-        assertEquals(quorumPublickKey, commitment.quorumPublicKey);
+        assertEquals(quorumPublickKey, commitment.quorumPublicKey.getPublicKey());
 
         UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(txdata.length);
         assertArrayEquals(commitmentTx.getExtraPayload(), payload.getPayload());
@@ -152,7 +152,7 @@ public class FinalCommitmentTest {
         assertEquals(322, commitment.countValidMembers());
 
         BLSPublicKey quorumPublickKey = new BLSPublicKey(PARAMS, Utils.HEX.decode("03a3fbbe99d80a9be8fc59fd4fe43dfbeba9119b688e97493664716cdf15ae47fad70fea7cb93f20fba10d689f9e3c02"), 0, true);
-        assertEquals(quorumPublickKey, commitment.quorumPublicKey);
+        assertEquals(quorumPublickKey, commitment.quorumPublicKey.getPublicKey());
 
         assertArrayEquals(commitmentTx.getExtraPayload(), payload.getPayload());
         // round trip
@@ -184,7 +184,7 @@ public class FinalCommitmentTest {
         assertEquals(10, commitment.countValidMembers());
 
         BLSPublicKey quorumPublickKey = new BLSPublicKey(PARAMS, Utils.HEX.decode("0e22ac5b7c87076a03b1e4bee58c8404aaed183dd2c3114cea3ac1cbf85218a6196a19073789e9a12fc439b773842368"), 0, true);
-        assertEquals(quorumPublickKey, commitment.quorumPublicKey);
+        assertEquals(quorumPublickKey, commitment.quorumPublicKey.getPublicKey());
 
         // round trip
         assertArrayEquals(qfcommit, commitment.bitcoinSerialize());
