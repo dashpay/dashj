@@ -542,7 +542,7 @@ public class Block extends Message {
         StringBuilder s = new StringBuilder();
         s.append(" block: \n");
         s.append("   hash: ").append(getHashAsString()).append('\n');
-        s.append("   version: ").append(version);
+        s.append("   version: ").append(version).append(String.format(" (0x%08x)", version));
         String bips = Joiner.on(", ").skipNulls().join(isBIP34() ? "BIP34" : null, isBIP66() ? "BIP66" : null,
                 isBIP65() ? "BIP65" : null);
         if (!bips.isEmpty())

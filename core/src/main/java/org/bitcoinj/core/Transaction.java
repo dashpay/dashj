@@ -761,10 +761,15 @@ public class Transaction extends ChildMessage {
         s.append('\n');
         if (updatedAt != null)
             s.append(indent).append("updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
-        if (version != MIN_STANDARD_VERSION)
-            s.append(indent).append("version ").append(version).append('\n');
-        Type type = (getVersionShort() == SPECIAL_VERSION) ? getType() : Type.TRANSACTION_NORMAL;
-        s.append("  type ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
+        if (version != MIN_STANDARD_VERSION) {
+            if (getVersionShort() == SPECIAL_VERSION) {
+                s.append(indent).append("version: ").append(getVersionShort()).append('\n');
+                Type type = (getVersionShort() == SPECIAL_VERSION) ? getType() : Type.TRANSACTION_NORMAL;
+                s.append("   type: ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
+            } else {
+                s.append(indent).append("version: ").append(version).append('\n');
+            }
+        }
         if (isTimeLocked()) {
             s.append(indent).append("time locked until ");
             if (lockTime < LOCKTIME_THRESHOLD) {
@@ -867,8 +872,8 @@ public class Transaction extends ChildMessage {
             s.append(indent).append("   fee  ").append(fee.multiply(1000).divide(size).toFriendlyString()).append("/kB, ")
                     .append(fee.toFriendlyString()).append(" for ").append(size).append(" bytes\n");
         }
-        if (getVersionShort() == SPECIAL_VERSION && type.isSpecial())
-            s.append(indent).append("  payload ").append(getExtraPayloadObject()).append('\n');
+        if (getVersionShort() == SPECIAL_VERSION && getType().isSpecial())
+            s.append(indent).append("payload: ").append(getExtraPayloadObject()).append('\n');
         return s.toString();
     }
 
