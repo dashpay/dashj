@@ -16,14 +16,15 @@
 
 package org.bitcoinj.wallet.authentication;
 
+import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Context;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
+import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bitcoinj.crypto.ed25519.Ed25519DeterministicKey;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -38,10 +39,10 @@ import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -51,6 +52,7 @@ import java.util.EnumSet;
 import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -59,7 +61,7 @@ public class AuthenticationGroupExtensionTest {
     Wallet wallet;
     AuthenticationGroupExtension mnext;
     UnitTestParams UNITTEST = UnitTestParams.get();
-    Context context;// = new Context(UNITTEST);
+    Context context;
     String seedCode = "enemy check owner stumble unaware debris suffer peanut good fabric bleak outside";
     String passphrase = "";
     long creationtime = 1547463771L;
@@ -88,6 +90,10 @@ public class AuthenticationGroupExtensionTest {
         mnext.addKeyChain(seed, factory.masternodeVotingDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
         mnext.addKeyChain(seed, factory.masternodeOperatorDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
         mnext.addKeyChain(seed, factory.masternodePlatformDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
+        mnext.addKeyChain(seed, factory.blockchainIdentityECDSADerivationPath(), AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
+        mnext.addKeyChain(seed, factory.blockchainIdentityRegistrationFundingDerivationPath(), AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
+        mnext.addKeyChain(seed, factory.blockchainIdentityTopupFundingDerivationPath(), AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
+        mnext.addKeyChain(seed, factory.identityInvitationFundingDerivationPath(), AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING);
         wallet.addExtension(mnext);
     }
 
@@ -129,6 +135,7 @@ public class AuthenticationGroupExtensionTest {
         // process the ProRegTx
         byte[] providerRegTxData = HEX.decode("0300010001ca9a43051750da7c5f858008f2ff7732d15691e48eb7f845c791e5dca78bab58010000006b483045022100fe8fec0b3880bcac29614348887769b0b589908e3f5ec55a6cf478a6652e736502202f30430806a6690524e4dd599ba498e5ff100dea6a872ebb89c2fd651caa71ed012103d85b25d6886f0b3b8ce1eef63b720b518fad0b8e103eba4e85b6980bfdda2dfdffffffff018e37807e090000001976a9144ee1d4e5d61ac40a13b357ac6e368997079678c888ac00000000fd1201010000000000ca9a43051750da7c5f858008f2ff7732d15691e48eb7f845c791e5dca78bab580000000000000000000000000000ffff010205064e1f3dd03f9ec192b5f275a433bfc90f468ee1a3eb4c157b10706659e25eb362b5d902d809f9160b1688e201ee6e94b40f9b5062d7074683ef05a2d5efb7793c47059c878dfad38a30fafe61575db40f05ab0a08d55119b0aad300001976a9144fbc8fb6e11e253d77e5a9c987418e89cf4a63d288ac3477990b757387cb0406168c2720acf55f83603736a314a37d01b135b873a27b411fb37e49c1ff2b8057713939a5513e6e711a71cff2e517e6224df724ed750aef1b7f9ad9ec612b4a7250232e1e400da718a9501e1d9a5565526e4b1ff68c028763");
         Transaction proRegTx = new Transaction(UNITTEST, providerRegTxData);
+        assertTrue(mnext.isTransactionRevelant(proRegTx));
         mnext.processTransaction(proRegTx, null, AbstractBlockChain.NewBlockType.BEST_CHAIN);
 
         // save and load the wallet
@@ -174,11 +181,19 @@ public class AuthenticationGroupExtensionTest {
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
-                AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR));
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
+                AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING));
         IDeterministicKey votingKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING).getKey(0);
         IDeterministicKey ownerKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER).getKey(0);
         IDeterministicKey operatorKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR).getKey(0);
         IDeterministicKey platformKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR).getKey(0, true);
+        IDeterministicKey identityKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY).getKey(0, true);
+        IDeterministicKey identityAssetLockKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING).getKey(0);
+        IDeterministicKey topupAssetLockKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP).getKey(0);
+        IDeterministicKey inviteAssetLockKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).getKey(0);
 
         // owner keys
         assertArrayEquals(Utils.HEX.decode("9e2dd89b24a63cc1e8b6d63d651c4bf5f90a4acb83cd5b2028f042c5a8653d05"), ownerKey.getChainCode());
@@ -214,6 +229,62 @@ public class AuthenticationGroupExtensionTest {
         assertArrayEquals(Utils.HEX.decode("c9bbba6a3ad5e87fb11af4f10458a52d3160259c"), platformKey.getPubKeyHash());
         String privatePublicBase64 = ((Ed25519DeterministicKey)platformKey).getPrivatePublicBase64();
         assertEquals("eJjbqnq5tVDjvvzVPcJ2d3/8iicST4MMBOF/z3S54HEI4mmP3KoK+EFpZrqTSbDI36qA7X9AlOAylYo0PkX0tg==", privatePublicBase64);
+
+        // identity keys
+        assertArrayEquals(Utils.HEX.decode("4faf0c59063fb862e051b0691ced1403b93c49090333125e777801afd982523f"), identityKey.getChainCode());
+        assertArrayEquals(Utils.HEX.decode("e9d761e24bfac24a226814e514ae8edb32d153c343dd9c97a4711e28374af45b"), identityKey.getPrivKeyBytes());
+        assertArrayEquals(Utils.HEX.decode("0274406ba086e5cd5627cdc86f0ddd26208b01a431d2f3bc85adfebfb986427068"), identityKey.getPubKey());
+        assertArrayEquals(Utils.HEX.decode("b7f3790853a273580035f5073eb32d0f6f0d8cd7"), identityKey.getPubKeyHash());
+        assertEquals("XsTVA9JcVatZNZaDFQLyiU6esnSJctMk61", Address.fromKey(MainNetParams.get(), identityKey).toBase58());
+
+        // identity funding keys
+        assertArrayEquals(Utils.HEX.decode("e0e19e2f2737248d52c83da8b4975bde14c8ed0b4791b7761abe4c752df1e04d"), identityAssetLockKey.getChainCode());
+        assertArrayEquals(Utils.HEX.decode("7373b7b3972f7a6aaf724f4e995848964aa64f352a1e176ef112a875d132bcc2"), identityAssetLockKey.getPrivKeyBytes());
+        assertArrayEquals(Utils.HEX.decode("0385e1776ea0b87ffbc22ddfb43b23bb55d172589f7d3658d81d3031409f952c54"), identityAssetLockKey.getPubKey());
+        assertArrayEquals(Utils.HEX.decode("e02011931ed41d1d723e1e6499eb08c1a33cfad5"), identityAssetLockKey.getPubKeyHash());
+        assertEquals("Xw7ucPiM7wsWFbQaj4W4DmXqtceJGPhA92", Address.fromKey(MainNetParams.get(), identityAssetLockKey).toBase58());
+
+        // topup funding keys
+        assertArrayEquals(Utils.HEX.decode("2ee94cdfc5dba90ceb6dd89e79fce8a949fbdf8daedfe25889c3d5a287930662"), topupAssetLockKey.getChainCode());
+        assertArrayEquals(Utils.HEX.decode("e54482d56dd010d166c933af6a45424be897d9ea1079da2ab8238fad9e25fc4b"), topupAssetLockKey.getPrivKeyBytes());
+        assertArrayEquals(Utils.HEX.decode("03e674116b1f9b79fe0f84c5668c195d2f84bce98f549a3b7e5e2b3019d4975673"), topupAssetLockKey.getPubKey());
+        assertArrayEquals(Utils.HEX.decode("68498b3f25500320becdfd0c7867d7dcc79903eb"), topupAssetLockKey.getPubKeyHash());
+        assertEquals("XkCGD8FX7HMQ1yYnHswNMikHu4sLJgVfWG", Address.fromKey(MainNetParams.get(), topupAssetLockKey).toBase58());
+
+        // invite funding keys
+        assertArrayEquals(Utils.HEX.decode("89deb042babf138e2e3c08dae5612d3f24464642af13159547fe6665d0217457"), inviteAssetLockKey.getChainCode());
+        assertArrayEquals(Utils.HEX.decode("f176cb92188a8fa6364c3f5459ea2513d424d24c4707685a355f0a60c9a4c288"), inviteAssetLockKey.getPrivKeyBytes());
+        assertArrayEquals(Utils.HEX.decode("03c6c4b06e4b0899d8e80f8ccb24a6294277d913835cbd6615ea665b8969535e1e"), inviteAssetLockKey.getPubKey());
+        assertArrayEquals(Utils.HEX.decode("b347814060b91175e609b5262fcc83a5c722110c"), inviteAssetLockKey.getPubKeyHash());
+        assertEquals("Xs2nSqYpwb7cvyWikp5j8LHwEVo7ovCp96", Address.fromKey(MainNetParams.get(), inviteAssetLockKey).toBase58());
+    }
+
+    @Test
+    public void encryptedSeedTest() throws UnreadableWalletException {
+        KeyCrypterScrypt keyCrypterScrypt = new KeyCrypterScrypt(16);
+        KeyParameter aesKey = keyCrypterScrypt.deriveKey("password");
+        DeterministicSeed seed = new DeterministicSeed(seedCode, null, passphrase, creationtime);
+        seed = seed.encrypt(keyCrypterScrypt, aesKey);
+
+        wallet.encrypt(keyCrypterScrypt, aesKey);
+
+        AuthenticationGroupExtension mnext = new AuthenticationGroupExtension(wallet);
+        mnext.addEncryptedKeyChains(MainNetParams.get(), seed, aesKey, EnumSet.of(
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
+                AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING));
+
+        // owner keys
+        IDeterministicKey ownerKey = mnext.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER).getKey(0);
+        assertArrayEquals(Utils.HEX.decode("9e2dd89b24a63cc1e8b6d63d651c4bf5f90a4acb83cd5b2028f042c5a8653d05"), ownerKey.getChainCode());
+        assertArrayEquals(Utils.HEX.decode("03877e1b244bea3d8428bb1d295b1a17a7970ed0c11b735b07536ef2e48b77c0fc"), ownerKey.getPubKey());
+        assertArrayEquals(Utils.HEX.decode("9660052877ef6f3b5d1ed740b594a67f351352f3"), ownerKey.getPubKeyHash());
+        assertEquals("XpPxDdCV5is57YvZyDejDchDH4GjUHrBc8", Address.fromKey(MainNetParams.get(), ownerKey).toBase58());
     }
 
     @Test
@@ -234,5 +305,27 @@ public class AuthenticationGroupExtensionTest {
             int usageAfter = authenticationGroupExtension.getKeyUsage().size();
             assertEquals(usageBefore, usageAfter);
         }
+    }
+
+    @Test
+    public void missingChainTypesTest() {
+        assertFalse(mnext.missingAnyKeyChainTypes(EnumSet.of(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING)));
+        assertFalse(mnext.missingAnyKeyChainTypes(EnumSet.of(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
+                AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP)));
+        assertTrue(mnext.missingAnyKeyChainTypes(EnumSet.of(AuthenticationKeyChain.KeyChainType.INVALID_KEY_CHAIN)));
+    }
+
+    @Test
+    public void hasKeyChainTest() {
+        assertFalse(mnext.hasKeyChain(ImmutableList.of())); // path: m
+        assertFalse(mnext.hasKeyChain(DerivationPathFactory.get(UNITTEST).masternodeHoldingsDerivationPath()));
+        assertTrue(mnext.hasKeyChain(DerivationPathFactory.get(UNITTEST).masternodeOperatorDerivationPath()));
+    }
+
+    @Test
+    public void supportsBloomFiltersTest() {
+        assertTrue(mnext.supportsBloomFilters());
     }
 }
