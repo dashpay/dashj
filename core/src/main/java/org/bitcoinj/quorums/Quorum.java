@@ -45,4 +45,8 @@ public class Quorum {
     public int getQuorumIndex() {
         return commitment.quorumIndex;
     }
+
+    public boolean isVerified() {
+        return commitment.isVerified();
+    }
 }
