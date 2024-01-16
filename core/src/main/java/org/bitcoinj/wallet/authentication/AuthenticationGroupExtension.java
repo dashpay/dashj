@@ -42,12 +42,12 @@ import org.bitcoinj.crypto.factory.BLSKeyFactory;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.crypto.factory.Ed25519KeyFactory;
 import org.bitcoinj.crypto.factory.KeyFactory;
-import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.evolution.AssetLockTransaction;
 import org.bitcoinj.evolution.ProviderRegisterTx;
 import org.bitcoinj.evolution.ProviderUpdateRegistarTx;
 import org.bitcoinj.evolution.ProviderUpdateRevocationTx;
 import org.bitcoinj.evolution.ProviderUpdateServiceTx;
-import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
+import org.bitcoinj.evolution.listeners.AssetLockTransactionEventListener;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
@@ -96,7 +96,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     private AuthenticationKeyChainGroup keyChainGroup;
     private final HashMap<IKey, AuthenticationKeyUsage> keyUsage = Maps.newHashMap();
 
-    private final CopyOnWriteArrayList<ListenerRegistration<CreditFundingTransactionEventListener>> creditFundingListeners
+    private final CopyOnWriteArrayList<ListenerRegistration<AssetLockTransactionEventListener>> creditFundingListeners
             = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<AuthenticationKeyUsageEventListener>> usageListeners
             = new CopyOnWriteArrayList<>();
@@ -376,8 +376,8 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
                     break;
             }
         } else {
-            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
-                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
+            if(AssetLockTransaction.isAssetLockTransaction(tx)) {
+                AssetLockTransaction cftx = getAssetLockTransaction(tx);
                 if (cftx != null)
                     queueOnCreditFundingEvent(cftx, block, blockType);
             }
@@ -650,19 +650,19 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         }
     }
 
-    HashMap<Sha256Hash, CreditFundingTransaction> mapCreditFundingTxs = new HashMap<>();
+    HashMap<Sha256Hash, AssetLockTransaction> mapCreditFundingTxs = new HashMap<>();
 
     /**
      * @return list of credit funding transactions found in the wallet.
      */
 
-    public List<CreditFundingTransaction> getCreditFundingTransactions() {
+    public List<AssetLockTransaction> getAssetLockTransactions() {
         mapCreditFundingTxs.clear();
-        ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
+        ArrayList<AssetLockTransaction> txs = new ArrayList<>(1);
         for(WalletTransaction wtx : wallet.getWalletTransactions()) {
             Transaction tx = wtx.getTransaction();
-            if(CreditFundingTransaction.isCreditFundingTransaction(tx)) {
-                CreditFundingTransaction cftx = getCreditFundingTransaction(tx);
+            if(AssetLockTransaction.isAssetLockTransaction(tx)) {
+                AssetLockTransaction cftx = getAssetLockTransaction(tx);
                 if (cftx != null) {
                     txs.add(cftx);
                     mapCreditFundingTxs.put(cftx.getTxId(), cftx);
@@ -692,24 +692,24 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         return keyChainGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING);
     }
 
-    public List<CreditFundingTransaction> getIdentityFundingTransactions() {
-        return getFundingTransactions(getIdentityFundingKeyChain());
+    public List<AssetLockTransaction> getIdentityFundingTransactions() {
+        return getAssetLockTransactions(getIdentityFundingKeyChain());
     }
 
-    public List<CreditFundingTransaction> getTopupFundingTransactions() {
-        return getFundingTransactions(getIdentityTopupKeyChain());
+    public List<AssetLockTransaction> getTopupFundingTransactions() {
+        return getAssetLockTransactions(getIdentityTopupKeyChain());
     }
 
-    public List<CreditFundingTransaction> getInvitationFundingTransactions() {
-        return getFundingTransactions(getInvitationFundingKeyChain());
+    public List<AssetLockTransaction> getInvitationFundingTransactions() {
+        return getAssetLockTransactions(getInvitationFundingKeyChain());
     }
 
-    private List<CreditFundingTransaction> getFundingTransactions(AuthenticationKeyChain chain) {
-        ArrayList<CreditFundingTransaction> txs = new ArrayList<>(1);
-        List<CreditFundingTransaction> allTxs = getCreditFundingTransactions();
+    private List<AssetLockTransaction> getAssetLockTransactions(AuthenticationKeyChain chain) {
+        ArrayList<AssetLockTransaction> txs = new ArrayList<>(1);
+        List<AssetLockTransaction> allTxs = getAssetLockTransactions();
 
-        for (CreditFundingTransaction cftx : allTxs) {
-            if(chain.findKeyFromPubHash(cftx.getCreditBurnPublicKeyId().getBytes()) != null) {
+        for (AssetLockTransaction cftx : allTxs) {
+            if(chain.findKeyFromPubHash(cftx.getAssetLockPublicKeyId().getBytes()) != null) {
                 txs.add(cftx);
             }
         }
@@ -719,34 +719,34 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     /**
      * Get a CreditFundingTransaction object for a specific transaction
      */
-    public CreditFundingTransaction getCreditFundingTransaction(Transaction tx) {
+    public AssetLockTransaction getAssetLockTransaction(Transaction tx) {
         if (getIdentityFundingKeyChain() == null)
             return null;
         if (mapCreditFundingTxs.containsKey(tx.getTxId()))
             return mapCreditFundingTxs.get(tx.getTxId());
 
-        CreditFundingTransaction cftx = new CreditFundingTransaction(tx);
+        AssetLockTransaction cftx = new AssetLockTransaction(tx);
 
         // set some internal data for the transaction
-        DeterministicKey publicKey = (DeterministicKey) getIdentityFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+        DeterministicKey publicKey = (DeterministicKey) getIdentityFundingKeyChain().getKeyByPubKeyHash(cftx.getAssetLockPublicKeyId().getBytes());
 
         if (publicKey == null)
-            publicKey = (DeterministicKey) getIdentityTopupKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+            publicKey = (DeterministicKey) getIdentityTopupKeyChain().getKeyByPubKeyHash(cftx.getAssetLockPublicKeyId().getBytes());
 
         if (publicKey == null)
-            publicKey = (DeterministicKey) getInvitationFundingKeyChain().getKeyByPubKeyHash(cftx.getCreditBurnPublicKeyId().getBytes());
+            publicKey = (DeterministicKey) getInvitationFundingKeyChain().getKeyByPubKeyHash(cftx.getAssetLockPublicKeyId().getBytes());
 
         if(publicKey != null)
-            cftx.setCreditBurnPublicKeyAndIndex(publicKey, publicKey.getChildNumber().num());
-        else log.error("Cannot find " + KeyId.fromBytes(cftx.getCreditBurnPublicKeyId().getBytes()) + " in the wallet");
+            cftx.addAssetLockPublicKey(publicKey);
+        else log.error("Cannot find " + KeyId.fromBytes(cftx.getAssetLockPublicKeyId().getBytes()) + " in the wallet");
 
         mapCreditFundingTxs.put(cftx.getTxId(), cftx);
         return cftx;
     }
 
-    protected void queueOnCreditFundingEvent(final CreditFundingTransaction tx, StoredBlock block,
+    protected void queueOnCreditFundingEvent(final AssetLockTransaction tx, StoredBlock block,
                                              BlockChain.NewBlockType blockType) {
-        for (final ListenerRegistration<CreditFundingTransactionEventListener> registration : creditFundingListeners) {
+        for (final ListenerRegistration<AssetLockTransactionEventListener> registration : creditFundingListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
                 public void run() {
@@ -760,7 +760,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      * Adds an credit funding event listener object. Methods on this object are called when
      * a credit funding transaction is created or received.
      */
-    public void addCreditFundingEventListener(CreditFundingTransactionEventListener listener) {
+    public void addCreditFundingEventListener(AssetLockTransactionEventListener listener) {
         addCreditFundingEventListener(Threading.USER_THREAD, listener);
     }
 
@@ -768,7 +768,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      * Adds an credit funding event listener object. Methods on this object are called when
      * a credit funding transaction is created or received.
      */
-    public void addCreditFundingEventListener(Executor executor, CreditFundingTransactionEventListener listener) {
+    public void addCreditFundingEventListener(Executor executor, AssetLockTransactionEventListener listener) {
         // This is thread safe, so we don't need to take the lock.
         creditFundingListeners.add(new ListenerRegistration<>(listener, executor));
     }
@@ -777,7 +777,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
      * Removes the given event listener object. Returns true if the listener was removed, false if that listener
      * was never added.
      */
-    public boolean removeCreditFundingEventListener(CreditFundingTransactionEventListener listener) {
+    public boolean removeCreditFundingEventListener(AssetLockTransactionEventListener listener) {
         return ListenerRegistration.removeFromList(listener, creditFundingListeners);
     }
 

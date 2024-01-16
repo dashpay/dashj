@@ -19,7 +19,7 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.coinjoin.*;
 import org.bitcoinj.crypto.BLSScheme;
-import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.evolution.AssetLockTransaction;
 import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.governance.GovernanceObject;
@@ -101,7 +101,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(SendHeadersMessage.class, "sendheaders");
         names.put(SendAddressMessageV2.class, "sendaddrv2");
         names.put(GetMasternodePaymentRequestSyncMessage.class, "mnget");
-        names.put(CreditFundingTransaction.class, "tx");
+        names.put(AssetLockTransaction.class, "tx");
         names.put(GetQuorumRotationInfo.class, "getqrinfo");
         names.put(QuorumRotationInfo.class, "qrinfo");
         // CoinJoin

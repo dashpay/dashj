@@ -285,6 +285,7 @@ public class WalletTool {
         parser.accepts("locktime").withRequiredArg();
         parser.accepts("allow-unconfirmed");
         parser.accepts("coinjoin");
+        parser.accepts("return-change");
         parser.accepts("offline");
         parser.accepts("ignore-mandatory-extensions");
         OptionSpec<String> passwordFlag = parser.accepts("password").withRequiredArg();
@@ -447,7 +448,8 @@ public class WalletTool {
                     }
                     boolean allowUnconfirmed = options.has("allow-unconfirmed");
                     boolean isCoinJoin = options.has("coinjoin");
-                    send(outputFlag.values(options), feePerKb, lockTime, allowUnconfirmed, isCoinJoin);
+                    boolean returnChange = options.has("return-change");
+                    send(outputFlag.values(options), feePerKb, lockTime, allowUnconfirmed, isCoinJoin, returnChange);
                 } else if (options.has(paymentRequestLocation)) {
                     sendPaymentRequest(paymentRequestLocation.value(options), !options.has("no-pki"));
                 } else {
@@ -692,7 +694,7 @@ public class WalletTool {
         }
     }
 
-    private static void send(List<String> outputs, Coin feePerKb, String lockTimeStr, boolean allowUnconfirmed, boolean isCoinJoin) throws VerificationException {
+    private static void send(List<String> outputs, Coin feePerKb, String lockTimeStr, boolean allowUnconfirmed, boolean isCoinJoin, boolean returnChange) throws VerificationException {
         try {
             // Convert the input strings to outputs.
             Transaction t = new Transaction(params);
@@ -718,7 +720,7 @@ public class WalletTool {
                     return;
                 }
             }
-            SendRequest req = isCoinJoin ? CoinJoinSendRequest.forTx(wallet, t) : SendRequest.forTx(t);
+            SendRequest req = isCoinJoin ? CoinJoinSendRequest.forTx(wallet, t, returnChange) : SendRequest.forTx(t);
             if (!isCoinJoin)
                 req.coinSelector = UnmixedZeroConfCoinSelector.get();
             if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) :wallet.getBalance())) {
@@ -1351,7 +1353,9 @@ public class WalletTool {
         } else {
             //TODO: peerGroup.setRequiredServices(0); was used here previously, which is better
             //for now, however peerGroup doesn't work with masternodeListManager, but it should
-            peerGroup.addPeerDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
+            ThreeMethodPeerDiscovery peerDiscovery = new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager);
+            peerDiscovery.setIncludeDNS(false);
+            peerGroup.addPeerDiscovery(peerDiscovery);
         }
     }
 

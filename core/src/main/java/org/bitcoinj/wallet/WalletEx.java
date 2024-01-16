@@ -9,8 +9,10 @@ import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinConstants;
 import org.bitcoinj.coinjoin.CoinJoinTransactionInput;
 import org.bitcoinj.coinjoin.DenominatedCoinSelector;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
 import org.bitcoinj.coinjoin.utils.InputCoin;
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
@@ -29,6 +31,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicHierarchy;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.MonetaryFormat;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +44,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -618,23 +622,32 @@ public class WalletEx extends Wallet {
     }
 
 
+    /**
+     * Count the number of unspent outputs that have a certain value
+     */
     public int countInputsWithAmount(Coin inputValue) {
         int count = 0;
-        for (Transaction tx : getTransactionPool(WalletTransaction.Pool.UNSPENT).values()) {
-            for (TransactionOutput output : tx.getOutputs()) {
-                if (output.getValue().equals(inputValue) && output.isMine(this))
+        for (TransactionOutput output : myUnspents) {
+            TransactionConfidence confidence = output.getParentTransaction().getConfidence();
+            // confirmations must be 0 or higher, not conflicted or dead
+            if (confidence != null && (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING || confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)) {
+                // inputValue must match, the TX is mine and is not spent
+                if (output.getValue().equals(inputValue) && output.getSpentBy() == null) {
                     count++;
+                }
             }
         }
         return count;
     }
 
+    /** locks an unspent outpoint so that it cannot be spent */
     public boolean lockCoin(TransactionOutPoint outPoint) {
-        lockedCoinsSet.add(outPoint);
+        boolean added = lockedCoinsSet.add(outPoint);
         clearAnonymizableCaches();
-        return false;
+        return added;
     }
 
+    /** unlocks an outpoint so that it cannot be spent */
     public void unlockCoin(TransactionOutPoint outPoint) {
         lockedCoinsSet.remove(outPoint);
         clearAnonymizableCaches();
@@ -972,5 +985,44 @@ public class WalletEx extends Wallet {
                 result.add(out);
         }
         return result;
+    }
+
+    public String getTransactionReport() {
+        MonetaryFormat format = MonetaryFormat.BTC.noCode();
+        StringBuilder s = new StringBuilder("Transaction History Report");
+        s.append("\n-----------------------------------------------\n");
+
+        ArrayList<Transaction> sortedTxes = Lists.newArrayList();
+        getWalletTransactions().forEach(tx -> sortedTxes.add(tx.getTransaction()));
+        sortedTxes.sort(Transaction.SORT_TX_BY_UPDATE_TIME);
+
+        sortedTxes.forEach(tx -> {
+            final Coin value = tx.getValue(this);
+            s.append(Utils.dateTimeFormat(tx.getUpdateTime())).append(" ");
+            s.append(String.format("%14s", format.format(value))).append(" ");
+            final CoinJoinTransactionType type = CoinJoinTransactionType.fromTx(tx, this);
+
+            // TX type
+            String txType;
+            if (type != CoinJoinTransactionType.None) {
+                txType = type.toString();
+            } else {
+                if (value.isGreaterThan(Coin.ZERO)) {
+                    txType = "Received";
+                } else {
+                    txType = "Sent";
+                }
+            }
+            s.append(String.format("%-20s", txType));
+            s.append(" ");
+            s.append(tx.getTxId());
+            s.append("\n");
+        });
+        return s.toString();
+    }
+
+    @Override
+    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain) {
+        return super.toString(includeLookahead, includePrivateKeys, aesKey, includeTransactions, includeExtensions, chain) + getTransactionReport();
     }
 }

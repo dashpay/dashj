@@ -56,6 +56,8 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerFilterProvider;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.evolution.AssetLockPayload;
+import org.bitcoinj.evolution.SpecialTxPayload;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.TransactionConfidence.*;
 import org.bitcoinj.crypto.*;
@@ -1352,9 +1354,9 @@ public class Wallet extends BaseTaggableObject
                         byte[] pubkey = ScriptPattern.extractKeyFromP2PK(script);
                         keyChainGroup.markPubKeyAsUsed(pubkey);
                         if (receivingFromFriendsGroup != null)
-                        receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
+                            receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
                         if (sendingToFriendsGroup != null)
-                        sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
+                            sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
                         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                             extension.markPubKeyAsUsed(pubkey);
                         }
@@ -1363,9 +1365,9 @@ public class Wallet extends BaseTaggableObject
                         byte[] pubkeyHash = ScriptPattern.extractHashFromP2PKH(script);
                         keyChainGroup.markPubKeyHashAsUsed(pubkeyHash);
                         if (receivingFromFriendsGroup != null)
-                        receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                            receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
                         if (sendingToFriendsGroup != null)
-                        sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                            sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
                         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                             extension.markPubKeyHashAsUsed(pubkeyHash);
                         }
@@ -1374,21 +1376,28 @@ public class Wallet extends BaseTaggableObject
                                 ScriptPattern.extractHashFromP2SH(script));
                         keyChainGroup.markP2SHAddressAsUsed(a);
                         if (receivingFromFriendsGroup != null)
-                        receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
+                            receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
                         if (sendingToFriendsGroup != null)
-                        sendingToFriendsGroup.markP2SHAddressAsUsed(a);
+                            sendingToFriendsGroup.markP2SHAddressAsUsed(a);
                         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                             extension.markP2SHAddressAsUsed(a);
-                        }
-                    } else if (ScriptPattern.isCreditBurn(script)) {
-                        byte [] h = ScriptPattern.extractCreditBurnKeyId(script);
-                        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
-                            extension.markPubKeyHashAsUsed(h);
                         }
                     }
                 } catch (ScriptException e) {
                     // Just means we didn't understand the output of this transaction: ignore it.
                     log.warn("Could not parse tx output script: {}", e.toString());
+                }
+            }
+
+            // handle special transactions
+            SpecialTxPayload payload = tx.getExtraPayloadObject();
+            if (payload instanceof AssetLockPayload) {
+                AssetLockPayload assetLockPayload = (AssetLockPayload) payload;
+                for (TransactionOutput output : assetLockPayload.getCreditOutputs()) {
+                    byte [] h = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                    for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                        extension.markPubKeyHashAsUsed(h);
+                    }
                 }
             }
         } finally {
@@ -5429,6 +5438,8 @@ public class Wallet extends BaseTaggableObject
             result = new FeeCalculation();
             Transaction tx = new Transaction(params);
             addSuppliedInputs(tx, req.tx.getInputs());
+            tx.setVersion(req.tx.getVersion());
+            tx.setExtraPayload(req.tx.getExtraPayload());
 
             Coin valueNeeded = value;
             if (!req.recipientsPayFees) {

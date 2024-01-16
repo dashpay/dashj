@@ -1,6 +1,9 @@
 package org.bitcoinj.evolution;
 
 import com.google.common.collect.Lists;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -9,20 +12,25 @@ import org.bitcoinj.crypto.BLSLazySignature;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
+import org.bitcoinj.wallet.SendRequest;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
 
 import static org.bitcoinj.core.Coin.CENT;
+import static org.bitcoinj.core.Coin.COIN;
 import static org.bitcoinj.core.Utils.HEX;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 public class AssetLockTest {
     UnitTestParams PARAMS = UnitTestParams.get();
+    Context context = new Context(PARAMS);
     ArrayList<Transaction> dummyTransactions;
     ArrayList<TransactionOutput> dummyOutputs;
 
@@ -125,6 +133,22 @@ public class AssetLockTest {
         assertEquals(1, assetLockPayload.getVersion());
         assertEquals(Transaction.Type.TRANSACTION_ASSET_LOCK, assetLockPayload.getType());
         assertEquals(2, assetLockPayload.getCreditOutputs().size());
+        assertEquals(Coin.COIN, assetLockPayload.getCreditOutputs().get(0).getValue());
+        assertEquals(ScriptBuilder.createOutputScript(Address.fromBase58(PARAMS, "yRM7hdX9SoP5giL37oX11fdWofFf2t9kUv")), assetLockPayload.getCreditOutputs().get(0).getScriptPubKey());
+        assertTrue(tx.getOutputs().stream().anyMatch(output -> ScriptPattern.isAssetLock(output.getScriptPubKey())));
+    }
+
+    @Test
+    public void createAssetLockTransaction() {
+        ECKey privateKey = new ECKey();
+        Coin credits = COIN;
+        SendRequest request = SendRequest.assetLock(PARAMS, privateKey, credits);
+        AssetLockPayload payload = (AssetLockPayload) request.tx.getExtraPayloadObject();
+        assertEquals(AssetLockPayload.CURRENT_VERSION, payload.getVersion());
+        assertEquals(1, payload.getCreditOutputs().size());
+        assertEquals(COIN, payload.getCreditOutputs().get(0).getValue());
+        assertArrayEquals(privateKey.getPubKeyHash(), ScriptPattern.extractHashFromP2PKH(payload.getCreditOutputs().get(0).getScriptPubKey()));
+        assertTrue(request.tx.getOutputs().stream().anyMatch(output -> ScriptPattern.isAssetLock(output.getScriptPubKey())));
     }
 
     @Test
