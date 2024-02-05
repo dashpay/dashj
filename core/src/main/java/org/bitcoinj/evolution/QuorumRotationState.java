@@ -451,6 +451,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         if(mnListAtH.getHeight() == -1)
             return false;
 
+        if (context.peerGroup == null)
+            return false;
+
         int mostCommonHeight = context.peerGroup.getMostCommonHeight();
 
         // determine when the last QR height was
