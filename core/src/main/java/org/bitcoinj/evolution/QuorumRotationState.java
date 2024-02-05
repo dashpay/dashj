@@ -30,7 +30,6 @@ import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.QuorumSnapshot;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.quorums.SnapshotSkipMode;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -1305,11 +1304,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             log.info("processing qrinfo: Total: {} mnlistdiff: {}", watch, quorumRotationInfo.getMnListDiffTip());
             log.info(toString());
             waitingForMNListDiff = false;
-            if (!initChainTipSyncComplete) {
-                log.info("initChainTipSync=false");
-                initChainTipSyncComplete = true;
-                log.info("initChainTipSync=true");
-            }
             requestNextMNListDiff();
             lock.unlock();
         }

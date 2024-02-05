@@ -329,10 +329,9 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             watch.stop();
             log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
             waitingForMNListDiff = false;
-            if (!initChainTipSyncComplete) {
+            if (!initChainTipSyncComplete()) {
                 log.info("initChainTipSync=false");
                 context.peerGroup.triggerMnListDownloadComplete();
-                initChainTipSyncComplete = true;
                 log.info("initChainTipSync=true");
             }
             requestNextMNListDiff();
