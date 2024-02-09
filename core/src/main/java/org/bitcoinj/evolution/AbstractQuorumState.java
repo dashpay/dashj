@@ -91,15 +91,16 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     Context context;
     DualBlockChain blockChain;
     protected PeerGroup peerGroup;
-    //protected BlockStore headerStore;
-    //protected BlockStore blockStore;
 
     QuorumUpdateRequest<Request> lastRequest;
 
     static final long WAIT_GETMNLISTDIFF = 5;
     Peer downloadPeer;
     boolean waitingForMNListDiff;
-    boolean initChainTipSyncComplete = false;
+    /** is the Sync Stage on past HEADERS and MNLIST */
+    boolean initChainTipSyncComplete() {
+        return context.peerGroup != null && context.peerGroup.getSyncStage().value > PeerGroup.SyncStage.MNLIST.value;
+    }
     BlockQueue pendingBlocks = new BlockQueue();
 
     int failedAttempts;
@@ -169,7 +170,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         this.blockChain = blockChain;
         if (peerGroup != null) {
             this.peerGroup = peerGroup;
-            peerGroup.addMnListDownloadCompleteListener(() -> initChainTipSyncComplete = true, Threading.SAME_THREAD);
+            // peerGroup.addMnListDownloadCompleteListener(() -> initChainTipSyncComplete = true, Threading.SAME_THREAD);
         }
     }
 
@@ -407,9 +408,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                     waitingForMNListDiff = true;
                 } else {
                     log.info("there are no pending blocks to process");
-                    if (!initChainTipSyncComplete) {
-                        initChainTipSyncComplete = true;
-                    }
+                    //if (!initChainTipSyncComplete) {
+                    //    initChainTipSyncComplete = true;
+                    //}
                 }
             } else {
                 log.warn("downloadPeer is null, not requesting update");
@@ -555,7 +556,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public final NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            boolean value = initChainTipSyncComplete || !context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+            boolean value = initChainTipSyncComplete() || !context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
             boolean needsUpdate = needsUpdate(block);
             if (needsUpdate && value && getMasternodeListAtTip().getHeight() < block.getHeight() && isDeterministicMNsSporkActive() && stateManager.isLoadedFromFile()) {
                 long timePeriod = syncOptions == MasternodeListSyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 600L;
@@ -859,7 +860,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     public void close() {
         // reset the state of any sync operation
-        initChainTipSyncComplete = false;
+        // initChainTipSyncComplete = false;
         waitingForMNListDiff = false;
     }
 }

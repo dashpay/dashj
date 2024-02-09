@@ -2,6 +2,7 @@ package org.bitcoinj.quorums;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
@@ -541,6 +542,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     blockIndex = blockChain.getBlockStore().get(islock.cycleHash);
                 } catch (BlockStoreException e) {
                     throw new RuntimeException(e);
+                } catch (NullPointerException e) {
+                    // blockchain is now null?
+                    if (isInitialized()) {
+                        throw e;
+                    } else {
+                        return Sets.newHashSet();
+                    }
                 }
 
                 if (blockIndex == null) {

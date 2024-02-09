@@ -30,7 +30,6 @@ import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.QuorumSnapshot;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.quorums.SnapshotSkipMode;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -306,11 +305,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             // now calculate quorums, but do not validate them since they are all old
             SimplifiedQuorumList baseQuorumList;
-            SimplifiedQuorumList newQuorumListAtHMinus4C = null;
+            SimplifiedQuorumList newQuorumListAtHMinus4C = new SimplifiedQuorumList(params);
 
             if (quorumRotationInfo.hasExtraShare()) {
                 baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus4C().prevBlockHash);
-                newQuorumListAtHMinus4C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C(), isLoadingBootStrap, blockChain, true, false);
+                if (baseQuorumList != null)
+                    newQuorumListAtHMinus4C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C(), isLoadingBootStrap, blockChain, true, false);
             }
 
             baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash);
@@ -448,6 +448,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             return true;
 
         if(mnListAtH.getHeight() == -1)
+            return false;
+
+        if (context.peerGroup == null)
             return false;
 
         int mostCommonHeight = context.peerGroup.getMostCommonHeight();
@@ -1301,11 +1304,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             log.info("processing qrinfo: Total: {} mnlistdiff: {}", watch, quorumRotationInfo.getMnListDiffTip());
             log.info(toString());
             waitingForMNListDiff = false;
-            if (!initChainTipSyncComplete) {
-                log.info("initChainTipSync=false");
-                initChainTipSyncComplete = true;
-                log.info("initChainTipSync=true");
-            }
             requestNextMNListDiff();
             lock.unlock();
         }
