@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
@@ -560,5 +561,25 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         } finally {
             unusedKeysLock.unlock();
         }
+    }
+
+    public double getMixingProgress() {
+        double requiredRounds = rounds + 0.875; // 1 x 50% + 1 x 50%^2 + 1 x 50%^3
+        AtomicInteger totalInputs = new AtomicInteger();
+        AtomicInteger totalRounds = new AtomicInteger();
+        getOutputs().forEach((denom, outputs) -> {
+            outputs.forEach(output -> {
+                // do not count mixing collateral for fees
+                if (denom != -1) {
+                    totalInputs.addAndGet(1);
+                    TransactionOutPoint outPoint = new TransactionOutPoint(output.getParams(), output.getIndex(), output.getParentTransactionHash());
+                    int rounds = ((WalletEx) wallet).getRealOutpointCoinJoinRounds(outPoint);
+                    totalRounds.addAndGet(rounds);
+                }
+            });
+        });
+        double progress = totalRounds.get() / (requiredRounds * totalInputs.get());
+        log.info("getMixingProgress: {} = {} / ({} * {})", progress, totalRounds.get(), requiredRounds, totalInputs.get());
+        return Math.min(progress, 1.0);
     }
 }
