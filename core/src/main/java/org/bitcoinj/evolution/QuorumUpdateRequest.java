@@ -30,6 +30,7 @@ import org.bitcoinj.core.Utils;
 public class QuorumUpdateRequest<T extends AbstractQuorumRequest> {
     T request;
     long time;
+    private boolean fulfilled = false;
 
     private PeerAddress peerAddress;
     public QuorumUpdateRequest(T request) {
@@ -75,5 +76,13 @@ public class QuorumUpdateRequest<T extends AbstractQuorumRequest> {
                 "request=" + request.toString(blockChain) +
                 ", time=" + time +
                 '}';
+    }
+
+    public void setFulfilled() {
+        this.fulfilled = true;
+    }
+
+    public boolean isFullfilled() {
+        return fulfilled;
     }
 }

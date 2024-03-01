@@ -155,7 +155,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         this.bootstrapStream = bootstrapStream;
         this.bootStrapFileFormat = bootStrapFileFormat;
         if (bootStrapFileFormat == SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION) {
-            protocolVersion = NetworkParameters.ProtocolVersion.SMNLE_VERSIONED.getBitcoinProtocolVersion();
+            protocolVersion = NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
         } else if (bootStrapFileFormat == SimplifiedMasternodeListManager.BLS_SCHEME_FORMAT_VERSION) {
             protocolVersion = NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion();
         } else if (bootStrapFileFormat == SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION) {
@@ -170,7 +170,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         this.blockChain = blockChain;
         if (peerGroup != null) {
             this.peerGroup = peerGroup;
-            // peerGroup.addMnListDownloadCompleteListener(() -> initChainTipSyncComplete = true, Threading.SAME_THREAD);
         }
     }
 
@@ -408,9 +407,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                     waitingForMNListDiff = true;
                 } else {
                     log.info("there are no pending blocks to process");
-                    //if (!initChainTipSyncComplete) {
-                    //    initChainTipSyncComplete = true;
-                    //}
                 }
             } else {
                 log.warn("downloadPeer is null, not requesting update");
@@ -530,7 +526,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     }
 
     public void addEventListeners(AbstractBlockChain blockChain, PeerGroup peerGroup) {
-        blockChain.addNewBestBlockListener(Threading.SAME_THREAD, newBestBlockListener);
+        blockChain.addNewBestBlockListener(newBestBlockListener);
         blockChain.addReorganizeListener(reorganizeListener);
         if (peerGroup != null) {
             peerGroup.addConnectedEventListener(peerConnectedEventListener);
@@ -605,7 +601,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 downloadPeer = null;
                 chooseRandomDownloadPeer();
             }
-            if (peer.getAddress().equals(lastRequest.getPeerAddress())) {
+            if (peer.getAddress().equals(lastRequest.getPeerAddress()) && lastRequest.isFullfilled()) {
                 log.warn("Disconnecting from peer {} before processing mnlistdiff", peer.getAddress());
                 // TODO: what else should we do?
                 //   request again?
@@ -716,14 +712,14 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 } catch (ExecutionException e) {
                     // send the message again
                     try {
-                        log.info("Exception when sending {}", lastRequest.getRequestMessage().getClass().getSimpleName(), e);
+                        log.info("Exception when sending {} to {}", lastRequest.getRequestMessage().getClass().getSimpleName(), peer, e);
 
                         // use tryLock to avoid deadlocks
                         boolean isLocked = context.peerGroup.getLock().tryLock(500, TimeUnit.MILLISECONDS);
                         try {
                             if (isLocked) {
-                                log.info(Thread.currentThread().getName() + ": lock acquired");
                                 downloadPeer = context.peerGroup.getDownloadPeer();
+                                log.info(Thread.currentThread().getName() + ": lock acquired, obtaining downloadPeer from peerGroup: {}", downloadPeer);
                                 if (downloadPeer == null) {
                                     chooseRandomDownloadPeer();
                                 }
@@ -735,12 +731,12 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                             }
                         }
                     } catch (InterruptedException x) {
-                        x.printStackTrace();
+                        log.info("sendMessageFuture interrupted", x);
                     } catch (NullPointerException x) {
                         log.info("peergroup is not initialized", x);
                     }
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    log.info("sendMessageFuture interrupted", e);
                 }
             }
         }, Threading.THREAD_POOL);
