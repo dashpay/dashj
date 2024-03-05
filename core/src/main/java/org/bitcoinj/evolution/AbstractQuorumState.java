@@ -46,7 +46,6 @@ import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -335,9 +334,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         if (!shouldProcessMNListDiff())
             return;
 
-        log.info("download peer = {}", downloadPeer);
+        log.info("download peer = {}, but obtaining backup from peerGroup downloadPeer", downloadPeer);
         Peer downloadPeerBackup = downloadPeer == null ? context.peerGroup.getDownloadPeer() : downloadPeer;
-
+        log.info("backup download peer = {}", downloadPeerBackup);
         lock.lock();
         try {
             if (waitingForMNListDiff)
@@ -421,7 +420,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             return;
 
         if (downloadPeer == null) {
+            log.info("using peerGroup downloadPeer in maybeGetMNListDiffFresh ");
             downloadPeer = context.peerGroup.getDownloadPeer();
+            log.info("using peerGroup downloadPeer in maybeGetMNListDiffFresh {}", downloadPeer);
         }
 
         lock.lock();
@@ -584,13 +585,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public final PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
-            lock.lock();
-            try {
-                if (downloadPeer == null)
-                    downloadPeer = peer;
-            } finally {
-                lock.unlock();
-            }
+            downloadPeer = context.peerGroup.getDownloadPeer();
+            log.info("peer connected and setting download peer to {} with onPeerConnected", downloadPeer);
         }
     };
 
@@ -598,8 +594,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         @Override
         public void onPeerDisconnected(Peer peer, int peerCount) {
             if (downloadPeer == peer) {
-                downloadPeer = null;
-                chooseRandomDownloadPeer();
+                downloadPeer = context.peerGroup.getDownloadPeer();
+                log.info("setting download peer to {} with onPeerDisconnected, previously was {}", downloadPeer, peer);
+                if (downloadPeer == null)
+                    chooseRandomDownloadPeer();
             }
             if (peer.getAddress().equals(lastRequest.getPeerAddress()) && lastRequest.isFullfilled()) {
                 log.warn("Disconnecting from peer {} before processing mnlistdiff", peer.getAddress());
@@ -646,6 +644,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         List<Peer> peers = context.peerGroup.getConnectedPeers();
         if (peers != null && !peers.isEmpty()) {
             downloadPeer = peers.get(new Random().nextInt(peers.size()));
+            log.info("setting download peer with chooseRandomDownloadPeer: {}", downloadPeer);
         }
     }
 
@@ -655,6 +654,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             lock.lock();
             try {
                 downloadPeer = peer;
+                log.info("setting download peer with onChainDownloadStarted {}", peer);
                 // perhaps this is not required with headers first sync
                 // does this need to be in the next listener?
                 if (stateManager.isLoadedFromFile())
@@ -671,6 +671,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         public void onHeadersDownloadStarted(Peer peer, int blocksLeft) {
             lock.lock();
             try {
+                log.info("setting download peer with onHeadersDownloadStarted: {}", peer);
                 downloadPeer = peer;
             } finally {
                 lock.unlock();
@@ -835,7 +836,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         if (params.isV20Active(workBlock.getHeight())) {
             // v20 is active: calculate modifier using the new way.
             BLSSignature bestCLSignature = getCoinbaseChainlock(workBlock);
-            log.info("getHashModifier(..., {})\n  work: {}\n  sig: {}", quorumBaseBlock.getHeader().getHash(), workBlock.getHeader().getHash(), bestCLSignature);
             if (bestCLSignature != null) {
                 // We have a non-null CL signature: calculate modifier using this CL signature
 
