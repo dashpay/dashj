@@ -2110,7 +2110,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
         @Override
         public void onMasterNodeListDiffDownloaded(Stage stage, SimplifiedMasternodeListDiff mnlistdiff) {
-            if (stage == Stage.Finished) {
+            if (stage == Stage.Received) {
                 masternodeListsInLastSecond++;
                 bytesInLastSecond += mnlistdiff.getMessageSize();
             }

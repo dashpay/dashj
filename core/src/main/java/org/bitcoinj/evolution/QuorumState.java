@@ -259,9 +259,9 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         Stopwatch watchMNList = Stopwatch.createUnstarted();
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
-        log.info("processing {} mnlistdiff between : {} & {}; {}",
-                isLoadingBootStrap ? "bootstrap" : "requested",
-                getMnList().getHeight(), newHeight, mnlistdiff);
+        log.info("processing {} mnlistdiff (headersFirst={}) between : {} & {}; {} from {}",
+                isLoadingBootStrap ? "bootstrap" : "requested", isSyncingHeadersFirst,
+                getMnList().getHeight(), newHeight, mnlistdiff, peer);
 
         mnlistdiff.dump(mnList.getHeight(), newHeight);
 
@@ -270,6 +270,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             applyDiff(peer, blockChain, mnlistdiff, isLoadingBootStrap);
 
             log.info(this.toString());
+            lastRequest.setFulfilled();
             unCache();
             clearFailedAttempts();
 
@@ -329,7 +330,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             watch.stop();
             log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
             waitingForMNListDiff = false;
-            if (!initChainTipSyncComplete()) {
+            if (!initChainTipSyncComplete() && !isLoadingBootStrap) {
                 log.info("initChainTipSync=false");
                 context.peerGroup.triggerMnListDownloadComplete();
                 log.info("initChainTipSync=true");
