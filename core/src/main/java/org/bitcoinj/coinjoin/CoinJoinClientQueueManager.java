@@ -18,16 +18,20 @@ package org.bitcoinj.coinjoin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.function.Predicate;
 
 public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
     private final Context context;
     private final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
+    private final HashMap<Sha256Hash, Long> spammingMasternodes = new HashMap();
 
     public CoinJoinClientQueueManager(Context context) {
         super();
@@ -45,7 +49,10 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                     }
                     if (q.isReady() == dsq.isReady() && q.getProTxHash().equals(dsq.getProTxHash())) {
                         // no way the same mn can send another dsq with the same readiness this soon
-                        log.debug("coinjoin: DSQUEUE -- Peer {} is sending WAY too many dsq messages for a masternode {}", from.getAddress().getAddr(), dsq.getProTxHash());
+                        if (!spammingMasternodes.containsKey(dsq.getProTxHash())) {
+                            spammingMasternodes.put(dsq.getProTxHash(), Utils.currentTimeMillis());
+                            log.info("coinjoin: DSQUEUE -- Peer {} is sending WAY too many dsq messages for a masternode {}", from.getAddress().getAddr(), dsq.getProTxHash());
+                        }
                         return;
                     }
                 }
@@ -79,7 +86,10 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                 log.info("coinjoin: DSQUEUE -- lastDsq: {}  dsqThreshold: {}  dsqCount: {}", nLastDsq, nDsqThreshold, context.masternodeMetaDataManager.getDsqCount());
                 // don't allow a few nodes to dominate the queuing process
                 if (nLastDsq != 0 && nDsqThreshold > context.masternodeMetaDataManager.getDsqCount()) {
-                    log.info("coinjoin: DSQUEUE -- Masternode {} is sending too many dsq messages", dmn.getProTxHash());
+                    if (!spammingMasternodes.containsKey(dsq.getProTxHash())) {
+                        spammingMasternodes.put(dsq.getProTxHash(), Utils.currentTimeMillis());
+                        log.info("coinjoin: DSQUEUE -- Masternode {} is sending too many dsq messages", dmn.getProTxHash());
+                    }
                     return;
                 }
 
@@ -127,5 +137,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
             return;
 
         checkQueue();
+
+        spammingMasternodes.entrySet().removeIf(entry -> entry.getValue() + CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT * 1000 < Utils.currentTimeMillis());
     }
 }

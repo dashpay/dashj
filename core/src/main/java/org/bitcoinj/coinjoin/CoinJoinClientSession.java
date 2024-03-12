@@ -1356,16 +1356,16 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             log.info("coinjoin: wallet stats:\n{}", bal);
 
             log.info("coinjoin: current stats:\n" +
-                    "    nValueMin: {}\n" +
+                    "    min: {}\n" +
                     "    myTrusted: {}\n" +
-                    "    nBalanceAnonymizable: {}\n" +
-                    "    nBalanceAnonymized: {}\n" +
+                    "    balanceAnonymizable: {}\n" +
+                    "    balanceAnonymized: {}\n" +
                     "    balanceNeedsAnonymized: {}\n" +
-                    "    nBalanceAnonimizableNonDenom: {}\n" +
-                    "    nBalanceDenominatedConf: {}\n" +
-                    "    nBalanceDenominatedUnconf: {}\n" +
-                    "    nBalanceDenominated: {}\n" +
-                    "    nBalanceToDenominate: {}\n",
+                    "    balanceAnonimizableNonDenom: {}\n" +
+                    "    balanceDenominatedConf: {}\n" +
+                    "    balanceDenominatedUnconf: {}\n" +
+                    "    balanceDenominated: {}\n" +
+                    "    balanceToDenominate: {}\n",
                     nValueMin.toFriendlyString(),
                     bal.getMyTrusted().toFriendlyString(),
                     nBalanceAnonymizable.toFriendlyString(),

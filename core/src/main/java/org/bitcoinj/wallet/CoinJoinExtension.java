@@ -53,11 +53,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.lang.Math.max;
 import static org.dashj.bls.Utils.HexUtils.HEX;
 
 /**
@@ -352,12 +354,12 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         try {
             if (unusedKeys.isEmpty()) {
                 log.info("obtaining fresh key");
-                log.info("keyUsage map has unused keys: {}", keyUsage.values().stream().noneMatch(used -> used));
+                log.info("keyUsage map has unused keys: {}", keyUsage.values().stream().noneMatch(used -> used), getUnusedKeyCount());
                 return (DeterministicKey) freshReceiveKey();
             } else {
                 DeterministicKey key = unusedKeys.values().stream().findFirst().get();
                 log.info("reusing key: {} / {}", HEX.encode(key.getPubKeyHash()), key);
-                log.info("keyUsage map says this key is used: {}", keyUsage.get(key));
+                log.info("keyUsage map says this key is used: {}, unused key count: {}", keyUsage.get(key), getUnusedKeyCount());
 
                 // remove the key
                 unusedKeys.remove(KeyId.fromBytes(key.getPubKeyHash()));
@@ -509,8 +511,28 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 return Integer.compare(size1, size2);
             });
 
+            // add the sorted list of unused keys
             builder.append("Unused Key List: ");
-            sortedPaths.forEach(path -> builder.append("  ").append(path).append("\n"));
+            AtomicInteger largestGap = new AtomicInteger(0);
+            AtomicInteger currentGap = new AtomicInteger(0);
+            AtomicInteger lastIndex = new AtomicInteger(-1);
+            sortedPaths.forEach(path -> {
+                builder.append("  ").append(path).append("\n");
+                int index = path.get(path.size() -1).i();
+                if (lastIndex.get() != -1) {
+                    if (lastIndex.get() + 1 == index) {
+                        currentGap.getAndIncrement();
+                    } else {
+                        largestGap.set(max(largestGap.get(), currentGap.getAndSet(0)));
+                    }
+                } else {
+                    currentGap.set(0);
+                }
+                lastIndex.set(index);
+            });
+
+            // add gap information
+            builder.append("Largest Gap: ").append(largestGap.get()).append("\n");
             return builder.toString();
 
         } finally {
@@ -560,5 +582,32 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         } finally {
             unusedKeysLock.unlock();
         }
+    }
+
+    public double getMixingProgress() {
+        double requiredRounds = rounds + 0.875; // 1 x 50% + 1 x 50%^2 + 1 x 50%^3
+        AtomicInteger totalInputs = new AtomicInteger();
+        AtomicInteger totalRounds = new AtomicInteger();
+        getOutputs().forEach((denom, outputs) -> {
+            outputs.forEach(output -> {
+                // do not count mixing collateral for fees
+                if (denom != -1) {
+                    // getOutputs has a bug where non-denominated items are marked as denominated
+                    TransactionOutPoint outPoint = new TransactionOutPoint(output.getParams(), output.getIndex(), output.getParentTransactionHash());
+                    int rounds = ((WalletEx) wallet).getRealOutpointCoinJoinRounds(outPoint);
+                    if (rounds >= 0) {
+                        totalInputs.addAndGet(1);
+                        totalRounds.addAndGet(rounds);
+                    }
+                }
+            });
+        });
+        double progress = totalRounds.get() / (requiredRounds * totalInputs.get());
+        log.info("getMixingProgress: {} = {} / ({} * {})", progress, totalRounds.get(), requiredRounds, totalInputs.get());
+        return Math.max(0.0, Math.min(progress, 1.0));
+    }
+
+    public int getUnusedKeyCount() {
+        return unusedKeys.size();
     }
 }
