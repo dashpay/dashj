@@ -123,7 +123,7 @@ public class CoinJoinQueue extends Message {
         BLSSignature sig = new BLSSignature(signature.getBytes(), BLSScheme.isLegacyDefault());
 
         if (!sig.verifyInsecure(pubKey, hash)) {
-            log.info("CoinJoinQueue-CheckSignature -- VerifyInsecure() failed\n");
+            log.info("CoinJoinQueue-CheckSignature: verifyInsecure failed\n");
             return false;
         }
 
@@ -145,13 +145,13 @@ public class CoinJoinQueue extends Message {
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinQueue(denomination=%s[%d], time=%d[expired=%s], ready=%s, proTxHash=%s)",
+                "CoinJoinQueue(denom=%s[%d], t=%d[exp=%s], ready=%s, proTxHash=%s)",
                 CoinJoin.denominationToString(denomination),
                 denomination,
                 time,
                 isTimeOutOfBounds(),
                 ready,
-                proTxHash
+                proTxHash.toString().substring(0, 16)
         );
     }
 

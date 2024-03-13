@@ -75,6 +75,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_DENOM_OUTPUTS_THRESHOLD;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_SIGNING_TIMEOUT;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_CONNECTION_TIMEOUT;
@@ -152,12 +153,12 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return true;
         }
 
-        log.info("coinjoin: createDenominated({}) -- failed! ", balanceToDenominate.toFriendlyString());
+        log.info("coinjoin: createDenominated({}) failed! ", balanceToDenominate.toFriendlyString());
         return false;
     }
 
     public void processTransaction(Transaction tx) {
-        log.info("processing tx of {}: {}", tx.getValue(mixingWallet), tx.getTxId());
+        log.info(COINJOIN_EXTRA, "processing tx of {}: {}", tx.getValue(mixingWallet), tx.getTxId());
         if (collateralSessionMap.containsKey(tx.getTxId())) {
             queueTransactionListeners(tx, collateralSessionMap.get(tx.getTxId()), CoinJoinTransactionType.MixingFee);
         }
@@ -393,7 +394,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // This still leaves more than enough room for another data of typical MakeCollateralAmounts tx.
         List<CompactTallyItem> vecTally = mixingWallet.selectCoinsGroupedByAddresses(false, false, true, 400);
         if (vecTally.isEmpty()) {
-            log.info("coinjoin -- SelectCoinsGroupedByAddresses can't find any inputs!\n");
+            log.info("coinjoin: selectCoinsGroupedByAddresses can't find any inputs!\n");
             return false;
         }
 
@@ -418,7 +419,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         // If we got here then something is terribly broken actually
-        log.info("coinjoin -- ERROR: Can't make collaterals!\n");
+        log.error("coinjoin: ERROR: Can't make collaterals!\n");
         return false;
     }
     private boolean makeCollateralAmounts(CompactTallyItem tallyItem, boolean fTryDenominated) {
@@ -612,7 +613,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             mixingWallet.getContext().coinJoinManager.addPendingMasternode(this);
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
-            log.info("coinjoin: join existing queue -> pending connection, sessionDenom: {} ({}), addr={}",
+            log.info("coinjoin: join existing queue -> pending connection, denom: {} ({}), addr={}",
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
             setStatus(PoolStatus.CONNECTING);
             joined = true;
@@ -671,7 +672,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 continue;
             }
 
-            log.info("coinjoin: attempt {} connection to masternode {}, protx: {}", nTries + 1, dmn.getService(), dmn.getProTxHash());
+            log.info("coinjoin: attempt {} connection to mn {}, protx: {}", nTries + 1, dmn.getService(), dmn.getProTxHash().toString().substring(0, 16));
 
             // try to get a single random denom out of setAmounts
             while (sessionDenom == 0) {
@@ -768,7 +769,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         if (vecPSInOutPairsRet.isEmpty()) {
             keyHolderStorage.returnAll();
-            strErrorRet.append("Can't prepare current denominated outputs");
+            if (strErrorRet.length() == 0)
+                strErrorRet.append("Can't prepare current denominated outputs");
             return false;
         }
 
@@ -787,7 +789,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private boolean sendDenominate(List<Pair<CoinJoinTransactionInput, TransactionOutput>> vecPSInOutPairs) {
 
         if (txMyCollateral.getInputs().isEmpty()) {
-            log.info("coinjoin:  -- CoinJoin collateral not set");
+            log.info("coinjoin: CoinJoin collateral not set");
             return false;
         }
 
@@ -808,7 +810,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         setState(POOL_STATE_ACCEPTING_ENTRIES);
         strLastMessage = "";
 
-        log.info("coinjoin: -- Added transaction to pool.");
+        log.info("coinjoin: Added transaction to pool.");
 
         Transaction tx = new Transaction(context.getParams()); // for debug purposes only
         ArrayList<CoinJoinTransactionInput> vecTxDSInTmp = Lists.newArrayList();
@@ -821,7 +823,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             tx.addOutput(pair.getSecond());
         }
 
-        log.info("coinjoin:  -- Submitting partial tx {} to session {}", tx, sessionID.get()); /* Continued */
+        log.info(COINJOIN_EXTRA, "coinjoin:  Submitting partial tx {} to session {}", tx, sessionID.get()); /* Continued */
 
         // store our entry for later use
         lock.lock();
@@ -897,7 +899,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     sessionID.set(statusUpdate.getSessionID());
                     collateralSessionMap.put(txMyCollateral.getTxId(), statusUpdate.getSessionID());
                     timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
-                    strMessageTmp = strMessageTmp + " Set nSessionID to " + sessionID.get();
+                    strMessageTmp = strMessageTmp + " Set SID to " + sessionID.get();
                     queueSessionStartedListeners(MSG_SUCCESS);
                 }
                 log.info("coinjoin session: accepted by Masternode: {}", strMessageTmp);
@@ -916,12 +918,12 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private void completedTransaction(PoolMessage messageID) {
         if (messageID == MSG_SUCCESS) {
-            log.info("coinjoin: CompletedTransaction -- success");
+            log.info("coinjoin: completedTransaction -- success");
             queueSessionCompleteListeners(getState(), MSG_SUCCESS);
             mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
             keyHolderStorage.keepAll();
         } else {
-            log.info("coinjoin: CompletedTransaction -- error");
+            log.info("coinjoin: completedTransaction -- error");
             keyHolderStorage.returnAll();
         }
         unlockCoins();
@@ -971,7 +973,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             for (TransactionOutput output : finalTransactionNew.getOutputs()) {
                 finalMutableTransaction.addOutput(output);
             }
-            log.info("coinjoin:  finalMutableTransaction={}", finalMutableTransaction); /* Continued */
+            log.info(COINJOIN_EXTRA, "coinjoin:  finalMutableTx={}", finalMutableTransaction); /* Continued */
 
             // STEP 1: check final transaction general rules
 
@@ -981,7 +983,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             finalMutableTransaction.sortOutputs();
 
             if (!finalMutableTransaction.getTxId().equals(finalTransactionNew.getTxId())) {
-                log.info("coinjoin:  ERROR! Masternode {} is not BIP69 compliant!", mixingMasternode.getProTxHash());
+                log.info(COINJOIN_EXTRA, "coinjoin:  ERROR! Masternode {} is not BIP69 compliant!", mixingMasternode.getProTxHash());
                 //unlockCoins();
                 //keyHolderStorage.returnAll();
                 //setNull();
@@ -1041,7 +1043,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     if (nMyInputIndex == -1) {
                         // Can't find one of my own inputs, refuse to sign. It's possible we'll be charged collateral. But that's
                         // better than signing if the transaction doesn't look like what we wanted.
-                        log.info("coinjoin:  missing input! txdsin={}\n", txdsin);
+                        log.info("coinjoin: missing input! txdsin={}\n", txdsin);
                         unlockCoins();
                         keyHolderStorage.returnAll();
                         setNull();
@@ -1049,7 +1051,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     }
 
                     sigs.add(finalMutableTransaction.getInput(nMyInputIndex));
-                    log.info("coinjoin:  nMyInputIndex: {}, sigs.size(): {}, scriptSig={}",
+                    log.info("coinjoin: myInputIndex: {}, sigs.size: {}, scriptSig={}",
                             nMyInputIndex, sigs.size(), finalMutableTransaction.getInput(nMyInputIndex).getScriptSig());
                 }
             }
@@ -1072,7 +1074,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
 
             // push all of our signatures to the Masternode
-            log.info("coinjoin:  pushing sigs to the masternode, finalMutableTransaction={}", finalMutableTransaction); /* Continued */
+            log.info("coinjoin:  pushing sigs to the masternode, finalMutableTx={}", finalMutableTransaction); /* Continued */
             node.sendMessage(new CoinJoinSignedInputs(mixingWallet.getContext().getParams(), sigs));
             setState(POOL_STATE_SIGNING);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
@@ -1129,7 +1131,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private void processStatusUpdate(Peer peer, CoinJoinStatusUpdate statusUpdate) {
         if (mixingMasternode == null) {
-            log.info("mixingMaster node is null, ignoring status update");
+            log.info(COINJOIN_EXTRA, "mixingMaster node is null, ignoring status update");
             return;
         }
         if (!mixingMasternode.getService().getAddr().equals(peer.getAddress().getAddr()))
@@ -1145,12 +1147,12 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return;
 
         if (sessionID.get() != finalTransaction.getMsgSessionID()) {
-            log.info("DSFINALTX -- message doesn't match current CoinJoin session: sessionID: {}  msgSessionID: {}",
+            log.info("DSFINALTX: message doesn't match current CoinJoin session: sessionID: {}  msgSessionID: {}",
                     sessionID, finalTransaction.getMsgSessionID());
             return;
         }
 
-        log.info("DSFINALTX -- txNew {}", finalTransaction.getTransaction()); /* Continued */
+        log.info(COINJOIN_EXTRA, "DSFINALTX: txNew {}", finalTransaction.getTransaction()); /* Continued */
 
         // check to see if input is spent already? (and probably not confirmed)
         signFinalTransaction(finalTransaction.getTransaction(), peer);
@@ -1163,16 +1165,18 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return;
 
         if (completeMessage.getMsgMessageID().value < MSG_POOL_MIN.value || completeMessage.getMsgMessageID().value > MSG_POOL_MAX.value) {
-            log.info("DSCOMPLETE -- nMsgMessageID is out of bounds: {}", completeMessage.getMsgMessageID());
+            log.info("DSCOMPLETE: msgID is out of bounds: {}", completeMessage.getMsgMessageID());
             return;
         }
 
         if (sessionID.get() != completeMessage.getMsgSessionID()) {
-            log.info("DSCOMPLETE -- message doesn't match current CoinJoin session: nSessionID: {}  nMsgSessionID: {}", sessionID.get(), completeMessage.getMsgSessionID());
+            log.info("DSCOMPLETE: message doesn't match current CoinJoin session: SID: {}  msgID: {}  ({})",
+                    sessionID.get(), completeMessage.getMsgSessionID(),
+                    CoinJoin.getMessageByID(completeMessage.getMsgMessageID()));
             return;
         }
 
-        log.info("DSCOMPLETE -- nMsgSessionID {}  nMsgMessageID {} ({})", completeMessage.getMsgSessionID(),
+        log.info("DSCOMPLETE: msgSID {}  msg {} ({})", completeMessage.getMsgSessionID(),
                 completeMessage.getMsgMessageID(), CoinJoin.getMessageByID(completeMessage.getMsgMessageID()));
 
         completedTransaction(completeMessage.getMsgMessageID());
@@ -1327,7 +1331,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
                     queueSessionCompleteListeners(getState(), ERR_SESSION);
                 }
-                log.info("coinjoin: balance to low: {}", fDryRun);
+                log.info("coinjoin: balance too low: dryRun: {}", fDryRun);
                 return false;
             }
 
@@ -1353,9 +1357,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 balanceNeedsAnonymized = balanceNeedsAnonymized.add(nAdditionalDenom);
             }
 
-            log.info("coinjoin: wallet stats:\n{}", bal);
+            log.info(COINJOIN_EXTRA, "coinjoin: wallet stats:\n{}", bal);
 
-            log.info("coinjoin: current stats:\n" +
+            log.info(COINJOIN_EXTRA, "coinjoin: current stats:\n" +
                     "    min: {}\n" +
                     "    myTrusted: {}\n" +
                     "    balanceAnonymizable: {}\n" +
@@ -1490,10 +1494,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         for (int i = 0; i < CoinJoinClientOptions.getRounds() + CoinJoinClientOptions.getRandomRounds(); ++i) {
             if (prepareDenominate(i, i, strError, vecTxDSIn, vecPSInOutPairsTmp, true)) {
-               log.info("coinjoin:  Running CoinJoin denominate for {} rounds, success", i);
+               log.info("coinjoin: Running CoinJoin denominate for {} rounds, success", i);
                 vecInputsByRounds.add(new Pair<>(i, vecPSInOutPairsTmp.size()));
             } else {
-               log.info("coinjoin:  Running CoinJoin denominate for {} rounds, error: {}", i, strError);
+               log.info(COINJOIN_EXTRA, "coinjoin: Running CoinJoin denominate for {} rounds, error: {}", i, strError);
             }
         }
 
@@ -1507,23 +1511,23 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         log.info("coinjoin: vecInputsByRounds(size={}) for denom {}", vecInputsByRounds.size(), sessionDenom);
         for (Pair<Integer, Integer> pair : vecInputsByRounds) {
-            log.info("coinjoin: vecInputsByRounds: rounds: {}, inputs: {}", pair.getFirst(), pair.getSecond());
+            log.info(COINJOIN_EXTRA, "coinjoin: vecInputsByRounds: rounds: {}, inputs: {}", pair.getFirst(), pair.getSecond());
         }
 
         int nRounds = vecInputsByRounds.get(0).getFirst();
         if (prepareDenominate(nRounds, nRounds, strError, vecTxDSIn, vecPSInOutPairsTmp)) {
-           log.info("coinjoin:  Running CoinJoin denominate for {} rounds, success", nRounds);
+            log.info("coinjoin: Running CoinJoin denominate for {} rounds, success", nRounds);
             return sendDenominate(vecPSInOutPairsTmp);
         }
 
         // We failed? That's strange but let's just make final attempt and try to mix everything
         if (prepareDenominate(0, CoinJoinClientOptions.getRounds() - 1, strError, vecTxDSIn, vecPSInOutPairsTmp)) {
-           log.info("coinjoin:  Running CoinJoin denominate for all rounds, success\n");
+            log.info("coinjoin: Running CoinJoin denominate for all rounds, success\n");
             return sendDenominate(vecPSInOutPairsTmp);
         }
 
         // Should never actually get here but just in case
-       log.info("coinjoin:  Running CoinJoin denominate for all rounds, error: {}", strError);
+        log.info("coinjoin: Running CoinJoin denominate for all rounds, error: {}", strError);
         strAutoDenomResult = strError.toString();
         return false;
     }
@@ -1538,7 +1542,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             public boolean process(Peer peer) {
                 timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
                 peer.sendMessage(pendingDsaRequest.getDsa());
-                log.info("coinjoin: valid collateral before sending: {}", CoinJoin.isCollateralValid(pendingDsaRequest.getDsa().getTxCollateral()));
+                log.info(COINJOIN_EXTRA, "coinjoin: valid collateral before sending: {}", CoinJoin.isCollateralValid(pendingDsaRequest.getDsa().getTxCollateral()));
                 log.info("sending {} to {}", pendingDsaRequest.getDsa(), peer);
                 return true;
             }
@@ -1599,8 +1603,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 ", dsa=" + pendingDsaRequest +
                 ", entries=" + entries.size() +
                 ", state=" + state +
-                ", sessionID=" + sessionID +
-                ", sessionDenom=" + CoinJoin.denominationToString(sessionDenom) + "[" + sessionDenom + "]" +
+                ", SID=" + sessionID +
+                ", denom=" + CoinJoin.denominationToString(sessionDenom) + "[" + sessionDenom + "]" +
                 '}';
     }
 

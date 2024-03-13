@@ -64,6 +64,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MAX;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MIN;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 
 public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
@@ -293,7 +294,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
                 if (!dryRun && waitForAnotherBlock()) {
                     if (Utils.currentTimeMillis() - lastTimeReportTooRecent > 15000 ) {
                         strAutoDenomResult = "Last successful action was too recent.";
-                        log.info("DoAutomaticDenominating -- {}", strAutoDenomResult);
+                        log.info("DoAutomaticDenominating: {}", strAutoDenomResult);
                         lastTimeReportTooRecent = Utils.currentTimeMillis();
                     }
                     return false;
@@ -317,7 +318,8 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
                     session.submitDenominate();
                     return true;
                 } else {
-                    log.info("mixingMasternode {} != mnAddr {} or {} != {}", mnMixing != null ? mnMixing.getService().getSocketAddress() : "null", mnAddr.getSocketAddress(),
+                    log.info(COINJOIN_EXTRA, "mixingMasternode {} != mnAddr {} or {} != {}",
+                            mnMixing != null ? mnMixing.getService().getSocketAddress() : "null", mnAddr.getSocketAddress(),
                             session.getState(), PoolState.POOL_STATE_QUEUE);
                 }
             }
@@ -407,7 +409,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
                 continue;
             }
 
-            log.info("coinjoin:  found, masternode={}", dmn.getProTxHash());
+            log.info("coinjoin: found, masternode={}", dmn.getProTxHash().toString().substring(0, 16));
             return dmn;
         }
 

@@ -79,7 +79,7 @@ public class CoinJoinStatusUpdate extends Message {
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinStatusUpdate(sessionID=%d, state=%s, statusUpdate=%s, messageID=%s)",
+                "CoinJoinStatusUpdate(sID=%d, state=%s, statusUpdate=%s, msgID=%s)",
                 sessionID,
                 state,
                 statusUpdate,

@@ -56,6 +56,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 import static java.lang.Math.min;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 
 
 public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
@@ -79,7 +80,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
                     if (session.getMixingMasternodeInfo() != null && !pendingClosingMasternodes.contains(session.getMixingMasternodeInfo())) {
                         addresses.add(session.getMixingMasternodeInfo().getService().getSocketAddress());
                         addressMap.put(session.getMixingMasternodeInfo().getService(), session);
-                        log.info("discovery: {} -> {}", session.getMixingMasternodeInfo().getService().getSocketAddress(), session);
+                        log.info("discovery: {} -> {}", session.getMixingMasternodeInfo().getService().getAddr(), session);
                     }
                 }
             } finally {
@@ -226,7 +227,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
             pendingMasternodesLock.unlock();
         }
         try {
-            log.info("updating max connections to min({}, {})", maxConnections, min(maxConnections, CoinJoinClientOptions.getSessions()));
+            log.info(COINJOIN_EXTRA, "updating max connections to min({}, {})", maxConnections, min(maxConnections, CoinJoinClientOptions.getSessions()));
             setMaxConnections(min(maxConnections, CoinJoinClientOptions.getSessions()));
         } catch (NoSuchElementException e) {
             // swallow, though this is not good, which
@@ -331,7 +332,8 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
         }
 
         Peer peer = super.connectTo(address, incrementMaxConnections, connectTimeoutMillis);
-        log.info("masternode[connecting] {}: {}; {}", peer.getAddress().getSocketAddress(), session.getMixingMasternodeInfo().getProTxHash(), session);
+        log.info("masternode[connecting] {}: {}; {}", peer.getAddress().getSocketAddress(),
+                session.getMixingMasternodeInfo().getProTxHash().toString().substring(0, 16), session);
         return peer;
 
     }
@@ -370,7 +372,8 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
                             found = true;
                         }
                     } else {
-                        log.info("session is not connected to a masternode: {}", session);
+                        // TODO: we may not need this anymore
+                        log.info(COINJOIN_EXTRA, "session is not connected to a masternode: {}", session);
                     }
                 }
                 if (!found) {
@@ -382,14 +385,11 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
             pendingMasternodesLock.unlock();
         }
         log.info("need to drop {} masternodes", masternodesToDrop.size());
-        masternodesToDrop.forEach(new Consumer<Peer>() {
-            @Override
-            public void accept(Peer peer) {
-                Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByAddress(peer.getAddress().getSocketAddress());
-                //pendingSessions.remove(mn.getProTxHash());
-                log.info("masternode will be disconnected: {}: {}", peer, mn.getProTxHash());
-                peer.close();
-            }
+        masternodesToDrop.forEach(peer -> {
+            Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByAddress(peer.getAddress().getSocketAddress());
+            //pendingSessions.remove(mn.getProTxHash());
+            log.info("masternode will be disconnected: {}: {}", peer, mn.getProTxHash());
+            peer.close();
         });
     }
 
