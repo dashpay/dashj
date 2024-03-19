@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.function.Predicate;
 
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
+
 public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
     private final Context context;
     private final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
@@ -51,7 +53,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                         // no way the same mn can send another dsq with the same readiness this soon
                         if (!spammingMasternodes.containsKey(dsq.getProTxHash())) {
                             spammingMasternodes.put(dsq.getProTxHash(), Utils.currentTimeMillis());
-                            log.info("coinjoin: DSQUEUE -- Peer {} is sending WAY too many dsq messages for a masternode {}", from.getAddress().getAddr(), dsq.getProTxHash());
+                            log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: Peer {} is sending WAY too many dsq messages for a masternode {}", from.getAddress().getAddr(), dsq.getProTxHash());
                         }
                         return;
                     }
@@ -62,7 +64,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
             }
 
 
-            log.info("coinjoin: DSQUEUE -- {} new", dsq);
+            log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE -- {} new", dsq);
 
             if (dsq.isTimeOutOfBounds())
                 return;
@@ -79,24 +81,24 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
 
             // if the queue is ready, submit if we can
             if (dsq.isReady() && isTrySubmitDenominate(dmn)) {
-                log.info("coinjoin: DSQUEUE -- CoinJoin queue ({}) is ready on masternode {}", dsq, dmn.getService());
+                log.info("coinjoin: DSQUEUE: {} is ready on masternode {}", dsq, dmn.getService());
             } else {
                 long nLastDsq = context.masternodeMetaDataManager.getMetaInfo(dmn.getProTxHash()).getLastDsq();
                 long nDsqThreshold = context.masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), mnList.getValidMNsCount());
-                log.info("coinjoin: DSQUEUE -- lastDsq: {}  dsqThreshold: {}  dsqCount: {}", nLastDsq, nDsqThreshold, context.masternodeMetaDataManager.getDsqCount());
+                log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE -- lastDsq: {}  dsqThreshold: {}  dsqCount: {}",
+                        nLastDsq, nDsqThreshold, context.masternodeMetaDataManager.getDsqCount());
                 // don't allow a few nodes to dominate the queuing process
                 if (nLastDsq != 0 && nDsqThreshold > context.masternodeMetaDataManager.getDsqCount()) {
                     if (!spammingMasternodes.containsKey(dsq.getProTxHash())) {
                         spammingMasternodes.put(dsq.getProTxHash(), Utils.currentTimeMillis());
-                        log.info("coinjoin: DSQUEUE -- Masternode {} is sending too many dsq messages", dmn.getProTxHash());
+                        log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: Masternode {} is sending too many dsq messages", dmn.getProTxHash());
                     }
                     return;
                 }
 
                 context.masternodeMetaDataManager.allowMixing(dmn.getProTxHash());
 
-                log.info("coinjoin: DSQUEUE -- new CoinJoin queue ({}) from masternode {}", dsq, dmn.getService());
-
+                log.info("coinjoin: DSQUEUE: new {} from masternode {}", dsq, dmn.getService().getAddr());
 
                 context.coinJoinManager.coinJoinClientManagers.values().stream().anyMatch(new Predicate<CoinJoinClientManager>() {
                     @Override

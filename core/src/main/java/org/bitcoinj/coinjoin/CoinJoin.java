@@ -182,14 +182,14 @@ public class CoinJoin {
                     }
                     nValueIn = nValueIn.add(tx.getOutput(txin.getOutpoint().getIndex()).getValue());
                 } else {
-                    log.info("coinjoin: -- Unknown inputs in collateral transaction, txCollateral={}", txCollateral); /* Continued */
+                    log.info("coinjoin: Unknown inputs in collateral transaction, txCollateral={}", txCollateral); /* Continued */
                     return false;
                 }
             }
 
             //collateral transactions are required to pay out a small fee to the miners
             if (nValueIn.minus(nValueOut).isLessThan(getCollateralAmount())) {
-                log.info("coinjoin:  did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut.minus(nValueIn), txCollateral); /* Continued */
+                log.info("coinjoin: did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut.minus(nValueIn), txCollateral); /* Continued */
                 return false;
             }
         }

@@ -137,7 +137,7 @@ public class CoinJoinTransactionSigner implements TransactionSigner {
                     txIn.setScriptSig(inputScript);
 
                     sigs.add(tx.getInput(i));
-                    log.info("coinjoin:  nMyInputIndex: {}, sigs.size(): {}, scriptSig={}", i, sigs.size(), tx.getInput(i).getScriptSig());
+                    log.info("coinjoin: myInputIndex: {}, sigs.size: {}, scriptSig={}", i, sigs.size(), tx.getInput(i).getScriptSig());
                 } else {
                     throw new IllegalStateException(Utils.HEX.encode(script));
                 }

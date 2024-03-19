@@ -26,6 +26,8 @@ import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
+
 public class KeyHolderStorage {
     static final Logger log = LoggerFactory.getLogger(KeyHolderStorage.class);
     private final ReentrantLock lock = Threading.lock("storage");
@@ -39,7 +41,7 @@ public class KeyHolderStorage {
         lock.lock();
         try {
             storage.add(keyHolder);
-            log.info("KeyHolderStorage.addKey -- storage size {}", storage.size());
+            log.info(COINJOIN_EXTRA, "KeyHolderStorage.addKey: storage size {}", storage.size());
         } finally {
             lock.unlock();
         }
@@ -60,7 +62,7 @@ public class KeyHolderStorage {
             for (KeyHolder key : tmp) {
                 key.keepKey();
             }
-            log.info("keepAll -- {} keys kept", tmp.size());
+            log.info(COINJOIN_EXTRA, "keepAll: {} keys kept", tmp.size());
         }
     }
 
@@ -78,7 +80,7 @@ public class KeyHolderStorage {
             for (KeyHolder key : tmp) {
                 key.returnKey();
             }
-            log.info("returnAll -- {} keys returned", tmp.size());
+            log.info(COINJOIN_EXTRA, "returnAll: {} keys returned", tmp.size());
         }
     }
 }

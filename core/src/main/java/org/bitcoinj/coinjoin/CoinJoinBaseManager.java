@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
+
 public class CoinJoinBaseManager {
 
     private final Logger log = LoggerFactory.getLogger(CoinJoinBaseManager.class);
@@ -50,7 +52,7 @@ public class CoinJoinBaseManager {
                 while (it.hasNext()) {
                     CoinJoinQueue queue = it.next();
                     if (queue.isTimeOutOfBounds(Utils.currentTimeSeconds())) {
-                        log.info("Removing a queue {}", queue);
+                        log.info(COINJOIN_EXTRA, "Removing a queue {}", queue);
                         it.remove();
                     }
                 }

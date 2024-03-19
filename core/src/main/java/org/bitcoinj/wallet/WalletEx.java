@@ -24,7 +24,6 @@ import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.UTXOProvider;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
@@ -44,11 +43,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 import static org.bitcoinj.core.NetworkParameters.MAX_MONEY;
 
 public class WalletEx extends Wallet {
@@ -392,7 +391,7 @@ public class WalletEx extends Wallet {
                 roundsRef = -3;
                 mapOutpointRoundsCache.put(outpoint, roundsRef);
 
-                log.info(String.format("UPDATED   %-70s %3d (collateral)", outpoint.toStringCpp(), roundsRef));
+                log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (collateral)", outpoint.toStringCpp(), roundsRef));
                 return roundsRef;
             }
 
@@ -401,7 +400,7 @@ public class WalletEx extends Wallet {
                 roundsRef = -2;
                 mapOutpointRoundsCache.put(outpoint, roundsRef);
 
-                log.info(String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
+                log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
                 return roundsRef;
             }
 
@@ -411,7 +410,7 @@ public class WalletEx extends Wallet {
                     roundsRef = 0;
                     mapOutpointRoundsCache.put(outpoint, roundsRef);
 
-                    log.info(String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
+                    log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
                     return roundsRef;
                 }
             }
@@ -433,7 +432,7 @@ public class WalletEx extends Wallet {
                     ? (nShortest >= roundsMax - 1 ? roundsMax : nShortest + 1) // good, we a +1 to the shortest one but only roundsMax rounds max allowed
                     : 0;            // too bad, we are the fist one in that chain
             mapOutpointRoundsCache.put(outpoint, roundsRef);
-            log.info(String.format("UPDATED   %-70s %3d (coinjoin)", outpoint.toStringCpp(), roundsRef));
+            log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (coinjoin)", outpoint.toStringCpp(), roundsRef));
             return roundsRef;
         } finally {
             lock.unlock();
@@ -859,7 +858,7 @@ public class WalletEx extends Wallet {
         CoinControl coin_control = new CoinControl();
         coin_control.setCoinType(CoinType.ONLY_READY_TO_MIX);
         availableCoins(vCoins, true, coin_control);
-        log.info("-- vCoins.size(): {}", vCoins.size());
+        log.info("available Coins returns [vCoins.size()]: {}", vCoins.size());
 
         Collections.shuffle(vCoins);
 
@@ -880,13 +879,13 @@ public class WalletEx extends Wallet {
             nValueTotal = nValueTotal.add(nValue);
             vecTxDSInRet.add(new CoinJoinTransactionInput(txin, scriptPubKey, nRounds));
             setRecentTxIds.add(txHash);
-            log.info("coinjoin:  -- hash: {}, nValue: {}", txHash, nValue.toFriendlyString());
+            log.info(COINJOIN_EXTRA, "coinjoin: hash: {}, nValue: {}", txHash, nValue.toFriendlyString());
         }
 
-        log.info("coinjoin:   -- setRecentTxIds.size(): {}", setRecentTxIds.size());
+        log.info("coinjoin: setRecentTxIds.size(): {}", setRecentTxIds.size());
         if (setRecentTxIds.isEmpty()) {
-            log.info("No results found for {}", CoinJoin.denominationToAmount(nDenom).toFriendlyString());
-            vCoins.forEach(output -> log.info("  output: {}", output));
+            log.info(COINJOIN_EXTRA, "No results found for {}", CoinJoin.denominationToAmount(nDenom).toFriendlyString());
+            vCoins.forEach(output -> log.info(COINJOIN_EXTRA, "  output: {}", output));
         }
 
         return nValueTotal.isPositive();

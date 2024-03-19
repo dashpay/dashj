@@ -18,6 +18,8 @@ package org.bitcoinj.coinjoin;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 public class CoinJoinConstants {
     public static final int COINJOIN_AUTO_TIMEOUT_MIN = 5;
@@ -63,4 +65,7 @@ public class CoinJoinConstants {
     public static final int COINJOIN_KEYS_THRESHOLD_STOP = 50;
     // Pseudorandomly mix up to this many times in addition to base round count
     public static final int COINJOIN_RANDOM_ROUNDS = 3;
+
+    public static Marker COINJOIN_EXTRA = MarkerFactory.getMarker("coinjoin-extra");
+    public static Marker COINJOIN = MarkerFactory.getMarker("coinjoin-extra");
 }

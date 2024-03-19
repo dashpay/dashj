@@ -23,6 +23,7 @@ import com.google.protobuf.CodedOutputStream;
 import net.jcip.annotations.GuardedBy;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.coinjoin.CoinJoinConstants;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Coin;
@@ -60,6 +61,7 @@ import java.util.stream.Stream;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.Math.max;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 import static org.dashj.bls.Utils.HexUtils.HEX;
 
 /**
@@ -327,7 +329,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         try {
             unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), key);
             keyUsage.put(key, false);
-            log.info("adding unused key: {} / {} ", HEX.encode(key.getPubKeyHash()), key.getPath());
+            log.info(COINJOIN_EXTRA, "adding unused key: {} / {} ", HEX.encode(key.getPubKeyHash()), key.getPath());
         } finally {
             unusedKeysLock.unlock();
         }
@@ -340,9 +342,9 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             if (key != null) {
                 unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), key);
                 keyUsage.put(key, false);
-                log.info("adding unused key: {} / {}", HEX.encode(key.getPubKeyHash()), key.getPath());
+                log.info(COINJOIN_EXTRA, "adding unused key: {} / {}", HEX.encode(key.getPubKeyHash()), key.getPath());
             } else {
-                log.warn("cannot find {}", keyId);
+                log.warn(COINJOIN_EXTRA, "cannot find {}", keyId);
             }
         } finally {
             unusedKeysLock.unlock();
@@ -353,13 +355,13 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         unusedKeysLock.lock();
         try {
             if (unusedKeys.isEmpty()) {
-                log.info("obtaining fresh key");
-                log.info("keyUsage map has unused keys: {}", keyUsage.values().stream().noneMatch(used -> used), getUnusedKeyCount());
+                log.info(COINJOIN_EXTRA, "obtaining fresh key");
+                log.info(COINJOIN_EXTRA, "keyUsage map has unused keys: {}, unused key count: {}", keyUsage.values().stream().noneMatch(used -> used), getUnusedKeyCount());
                 return (DeterministicKey) freshReceiveKey();
             } else {
                 DeterministicKey key = unusedKeys.values().stream().findFirst().get();
-                log.info("reusing key: {} / {}", HEX.encode(key.getPubKeyHash()), key);
-                log.info("keyUsage map says this key is used: {}, unused key count: {}", keyUsage.get(key), getUnusedKeyCount());
+                log.info(COINJOIN_EXTRA, "reusing key: {} / {}", HEX.encode(key.getPubKeyHash()), key);
+                log.info(COINJOIN_EXTRA, "keyUsage map says this key is used: {}, unused key count: {}", keyUsage.get(key), getUnusedKeyCount());
 
                 // remove the key
                 unusedKeys.remove(KeyId.fromBytes(key.getPubKeyHash()));
@@ -378,7 +380,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             unusedKeys.remove(keyId);
             IDeterministicKey key = (IDeterministicKey) findKeyFromPubKeyHash(keyId.getBytes(), Script.ScriptType.P2PKH);
             keyUsage.put(key, true);
-            log.info("remove unused key: {} / {}", HEX.encode(keyId.getBytes()), key);
+            log.info(COINJOIN_EXTRA, "remove unused key: {} / {}", HEX.encode(keyId.getBytes()), key);
         } finally {
             unusedKeysLock.unlock();
         }
@@ -401,7 +403,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     @Override
     public IDeterministicKey freshReceiveKey() {
         IDeterministicKey freshKey = super.freshReceiveKey();
-        log.info("fresh key: {} / {}", HEX.encode(freshKey.getPubKeyHash()), freshKey);
+        log.info(COINJOIN_EXTRA, "fresh key: {} / {}", HEX.encode(freshKey.getPubKeyHash()), freshKey);
         keyUsage.put(freshKey, true);
         return freshKey;
     }
@@ -454,10 +456,10 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
 
             usedKeys.forEach(key -> unusedKeys.remove(KeyId.fromBytes(key.getPubKeyHash())));
 
-            unusedKeys.forEach((keyId, key) -> log.info("unused key: {}", key));
+            unusedKeys.forEach((keyId, key) -> log.info(COINJOIN_EXTRA, "unused key: {}", key));
             keyUsage.forEach((key, used) -> {
                 if (!used)
-                    log.info("unused key: {}", key);
+                    log.info(COINJOIN_EXTRA, "unused key: {}", key);
             });
             loadedKeys = true;
         } finally {
