@@ -193,7 +193,7 @@ public class DerivationPathFactory {
                 .add(FEATURE_PURPOSE)
                 .add(coinType)
                 .add(new ChildNumber(4, true))
-                .add(ChildNumber.ZERO_HARDENED)
+                .add(new ChildNumber(account, true))
                 .build();
     }
 
