@@ -55,6 +55,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
@@ -217,12 +218,19 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         return sum;
     }
 
+    /** returns a tree associating denominations with their outputs
+     * Denomination of -1 are collaterals
+     * Denomination of -2 are other undenominated outputs
+     *
+     * @return
+     */
     public TreeMap<Integer, List<TransactionOutput>> getOutputs() {
         checkNotNull(wallet);
         TreeMap<Integer, List<TransactionOutput>> outputs = Maps.newTreeMap();
         for (Coin amount : CoinJoin.getStandardDenominations()) {
             outputs.put(CoinJoin.amountToDenomination(amount), Lists.newArrayList());
         }
+        outputs.put(-2, Lists.newArrayList());
         outputs.put(0, Lists.newArrayList());
         for (TransactionOutput output : wallet.getUnspents()) {
             byte [] pkh = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
@@ -230,6 +238,9 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 int denom = CoinJoin.amountToDenomination(output.getValue());
                 List<TransactionOutput> listDenoms = outputs.get(denom);
                 listDenoms.add(output);
+            } else {
+                // non-denominated and non-collateral coins
+                outputs.get(-2).add(output);
             }
         }
         return outputs;
@@ -593,7 +604,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         getOutputs().forEach((denom, outputs) -> {
             outputs.forEach(output -> {
                 // do not count mixing collateral for fees
-                if (denom != -1) {
+                if (denom >= 0) {
                     // getOutputs has a bug where non-denominated items are marked as denominated
                     TransactionOutPoint outPoint = new TransactionOutPoint(output.getParams(), output.getIndex(), output.getParentTransactionHash());
                     int rounds = ((WalletEx) wallet).getRealOutpointCoinJoinRounds(outPoint);
@@ -601,10 +612,21 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                         totalInputs.addAndGet(1);
                         totalRounds.addAndGet(rounds);
                     }
+                } else if (denom == -2) {
+                    // estimate what the denominations would be: use greedy algorithm
+                    AtomicInteger unmixedInputs = new AtomicInteger(0);
+                    AtomicReference<Coin> outputValue = new AtomicReference<>(output.getValue().subtract(CoinJoin.getCollateralAmount()));
+                    CoinJoinClientOptions.getDenominations().forEach(coin -> {
+                        while (outputValue.get().subtract(coin).isGreaterThan(Coin.ZERO)) {
+                            unmixedInputs.getAndIncrement();
+                            outputValue.set(outputValue.get().subtract(coin));
+                        }
+                    });
+                    totalInputs.set(totalInputs.get() + unmixedInputs.get());
                 }
             });
         });
-        double progress = totalRounds.get() / (requiredRounds * totalInputs.get());
+        double progress = totalInputs.get() != 0 ? totalRounds.get() / (requiredRounds * totalInputs.get()) : 0.0;
         log.info("getMixingProgress: {} = {} / ({} * {})", progress, totalRounds.get(), requiredRounds, totalInputs.get());
         return Math.max(0.0, Math.min(progress, 1.0));
     }

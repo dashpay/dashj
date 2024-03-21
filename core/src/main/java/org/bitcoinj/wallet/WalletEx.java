@@ -396,7 +396,7 @@ public class WalletEx extends Wallet {
             }
 
             // make sure the final output is non-denominate
-            if (!CoinJoin.isDenominatedAmount (txOut.getValue())){ //NOT DENOM
+            if (!CoinJoin.isDenominatedAmount (txOut.getValue())) { //NOT DENOM
                 roundsRef = -2;
                 mapOutpointRoundsCache.put(outpoint, roundsRef);
 
@@ -404,7 +404,7 @@ public class WalletEx extends Wallet {
                 return roundsRef;
             }
 
-            for (TransactionOutput out :wtx.getTransaction().getOutputs()){
+            for (TransactionOutput out :wtx.getTransaction().getOutputs()) {
                 if (!CoinJoin.isDenominatedAmount (out.getValue())){
                     // this one is denominated but there is another non-denominated output found in the same tx
                     roundsRef = 0;
@@ -418,7 +418,7 @@ public class WalletEx extends Wallet {
             int nShortest = -10; // an initial value, should be no way to get this by calculations
             boolean fDenomFound = false;
             // only denoms here so let's look up
-            for (TransactionInput txinNext :wtx.getTransaction().getInputs()){
+            for (TransactionInput txinNext :wtx.getTransaction().getInputs()) {
                 if (isMine(txinNext)) {
                     int n = getRealOutpointCoinJoinRounds(txinNext.getOutpoint(), rounds + 1);
                     // denom found, find the shortest chain or initially assign nShortest with the first found value
