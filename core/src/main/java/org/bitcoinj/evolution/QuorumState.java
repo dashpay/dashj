@@ -267,6 +267,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
         lock.lock();
         try {
+            log.info("lock acquired when processing mnlistdiff");
             applyDiff(peer, blockChain, mnlistdiff, isLoadingBootStrap);
 
             log.info(this.toString());
