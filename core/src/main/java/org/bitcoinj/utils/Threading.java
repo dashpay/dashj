@@ -149,12 +149,17 @@ public class Threading {
 
     private static CycleDetectingLockFactory.Policy policy;
     public static CycleDetectingLockFactory factory;
+    private static boolean useDefaultAndroidPolicy = true;
 
     public static ReentrantLock lock(String name) {
-        if (Utils.isAndroidRuntime())
+        if (Utils.isAndroidRuntime() && useDefaultAndroidPolicy)
             return new ReentrantLock(true);
         else
             return factory.newReentrantLock(name);
+    }
+
+    public static void setUseDefaultAndroidPolicy(boolean use) {
+        useDefaultAndroidPolicy = use;
     }
 
     public static void warnOnLockCycles() {
