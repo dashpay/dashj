@@ -1056,10 +1056,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 }
             }
 
-            //KeyBag maybeDecryptingKeyBag = new DecryptingKeyBag(mixingWallet, req.aesKey);
-
             TransactionSigner.ProposedTransaction proposal = new TransactionSigner.ProposedTransaction(finalMutableTransaction);
-            CoinJoinTransactionSigner signer = new CoinJoinTransactionSigner(sigs);
+            CoinJoinTransactionSigner signer = new CoinJoinTransactionSigner(sigs, true);
 
             if (!signer.signInputs(proposal, mixingWallet))
                 log.info("{} returned false for the tx", signer.getClass().getName());
