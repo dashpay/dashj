@@ -11,7 +11,7 @@ archivesBaseName = 'dashj-core'
 eclipse.project.name = 'dashj-core'
 
 dependencies {
-    compile 'org.bouncycastle:bcprov-jdk15to18:1.68'
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation 'com.google.guava:guava:30.0-jre'
     implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
     implementation 'com.squareup.okhttp3:okhttp:3.12.8'
@@ -30,7 +30,7 @@ dependencies {
     implementation 'de.sfuhrm:saphir-hash-core:3.0.10'
     implementation 'org.dashj:dashj-bls:1.0.0'
     implementation 'com.lambdaworks:scrypt:1.4.0'
-    implementation 'org.json:json:20220320'
+    implementation 'org.json:json:20231013'
 
 }
 
