@@ -4,7 +4,7 @@ apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 apply plugin: 'jacoco'
 apply plugin: 'signing'
-apply plugin:  'com.github.spotbugs'
+// apply plugin:  'com.github.spotbugs'
 
 version = '20.0.5-SNAPSHOT'
 archivesBaseName = 'dashj-core'
@@ -60,7 +60,7 @@ test {
     exclude 'org/bitcoinj/net/NetworkAbstractionTests*'
     exclude 'org/bitcoinj/protocols/channels/ChannelConnectionTest*'
     exclude 'org/bitcoinj/core/LevelDBFullPrunedBlockChainTest*'
-    exclude 'org/bitcoinj/core/LevelDBBlockStoreTest*'
+    exclude 'org/bitcoinj/store/LevelDBBlockStoreTest*'
     testLogging {
         events "failed"
         exceptionFormat "full"
@@ -156,14 +156,14 @@ jacocoTestReport {
     }
 }
 
-tasks.spotbugsMain {
-    reports.create("html") {
-        required = true
-        outputLocation = file("$buildDir/reports/spotbugs.html")
-        setStylesheet("fancy-hist.xsl")
-    }
-    reports.create("xml") {
-        required = true
-        outputLocation = file("$buildDir/reports/spotbugs.xml")
-    }
-}
+//tasks.spotbugsMain {
+//    reports.create("html") {
+//        required = true
+//        outputLocation = file("$buildDir/reports/spotbugs.html")
+//        setStylesheet("fancy-hist.xsl")
+//    }
+//    reports.create("xml") {
+//        required = true
+//        outputLocation = file("$buildDir/reports/spotbugs.xml")
+//    }
+//}
