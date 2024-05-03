@@ -35,7 +35,7 @@ import java.util.Arrays;
  */
 
 public class BLSPublicKey extends BLSAbstractObject {
-    public static int BLS_CURVE_PUBKEY_SIZE  = 48;
+    public static final int BLS_CURVE_PUBKEY_SIZE  = 48;
     G1Element publicKeyImpl;
 
     public BLSPublicKey() {
@@ -216,6 +216,7 @@ public class BLSPublicKey extends BLSAbstractObject {
         return publicKeyImpl.getFingerprint(legacy);
     }
 
+    @Override
     public boolean isLegacy() {
         return legacy;
     }

@@ -18,9 +18,8 @@ import static com.google.common.base.Preconditions.checkState;
  */
 
 public class BLSSignature extends BLSAbstractObject {
-
-    public static int BLS_CURVE_SIG_SIZE   = 96;
-    static byte [] emptySignatureBytes = new byte[BLS_CURVE_SIG_SIZE];
+    public static final int BLS_CURVE_SIG_SIZE = 96;
+    static final byte [] emptySignatureBytes = new byte[BLS_CURVE_SIG_SIZE];
     G2Element signatureImpl;
 
     BLSSignature() {
@@ -220,8 +219,7 @@ public class BLSSignature extends BLSAbstractObject {
         return BLSScheme.get(legacy).verifySecure(vecPublicKeys, signatureImpl, hash.getBytes());
     }
 
-    public boolean recover(ArrayList<BLSSignature> sigs, ArrayList<BLSId> ids)
-    {
+    public boolean recover(List<BLSSignature> sigs, List<BLSId> ids) {
         valid = false;
         updateHash();
 
@@ -253,8 +251,7 @@ public class BLSSignature extends BLSAbstractObject {
         return true;
     }
 
-    public boolean checkMalleable(byte [] buf, int size)
-    {
+    public boolean checkMalleable(byte [] buf, int size) {
         byte [] buf2 = getBuffer(serializedSize, legacy);
         if (!Arrays.equals(buf, buf2)) {
             // TODO not sure if this is actually possible with the BLS libs. I'm assuming here that somewhere deep inside

@@ -102,11 +102,11 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
         }
     }
 
-    public static BLSPublicKey invalidSignature = new BLSPublicKey();
+    public static final BLSPublicKey invalidKey = new BLSPublicKey();
 
     public BLSPublicKey getPublicKey() {
         if(buffer == null && !initialized)
-            return invalidSignature;
+            return invalidKey;
         if(!initialized) {
             publicKey = new BLSPublicKey(params, buffer, 0, legacy);
             buffer = null;  //save memory
@@ -117,7 +117,7 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
 
     @Override
     public String toString() {
-        return initialized ? publicKey.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
+        return initialized ? publicKey.toString() : (buffer == null ? invalidKey.toString() : Utils.HEX.encode(buffer));
     }
 
     @Deprecated

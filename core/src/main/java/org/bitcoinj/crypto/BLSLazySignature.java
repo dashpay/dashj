@@ -99,7 +99,7 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
         return this;
     }
 
-    public static BLSSignature invalidSignature = new BLSSignature();
+    public static final BLSSignature invalidSignature = new BLSSignature();
 
     public void setSignature(BLSSignature signature) {
         lock.lock();

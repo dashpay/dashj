@@ -24,7 +24,7 @@ import org.dashj.bls.DASHJBLS;
 import org.dashj.bls.PrivateKey;
 import org.dashj.bls.PrivateKeyVector;
 
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class wraps a PrivateKey in the BLS library
@@ -32,7 +32,7 @@ import java.util.ArrayList;
 
 public class BLSSecretKey extends BLSAbstractObject
 {
-    public static int BLS_CURVE_SECKEY_SIZE = 32;
+    public static final int BLS_CURVE_SECKEY_SIZE = 32;
     PrivateKey privateKey;
 
     BLSSecretKey() {
@@ -110,7 +110,7 @@ public class BLSSecretKey extends BLSAbstractObject
         updateHash();
     }
 
-    public static BLSSecretKey aggregateInsecure(ArrayList<BLSSecretKey> sks) {
+    public static BLSSecretKey aggregateInsecure(List<BLSSecretKey> sks) {
         if(sks.isEmpty()) {
             return new BLSSecretKey();
         }
@@ -125,8 +125,7 @@ public class BLSSecretKey extends BLSAbstractObject
         return new BLSSecretKey(agg);
     }
 
-    static public BLSSecretKey makeNewKey()
-    {
+    public static BLSSecretKey makeNewKey() {
         byte [] buf = new byte[32];
         while (true) {
             new LinuxSecureRandom().engineNextBytes(buf);
@@ -138,8 +137,7 @@ public class BLSSecretKey extends BLSAbstractObject
         }
     }
 
-    boolean secretKeyShare(ArrayList<BLSSecretKey> msk, BLSId id)
-    {
+    public boolean secretKeyShare(List<BLSSecretKey> msk, BLSId id) {
         valid = false;
         updateHash();
 
