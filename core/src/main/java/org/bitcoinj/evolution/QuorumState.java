@@ -32,6 +32,7 @@ import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,6 +114,11 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     public void requestUpdate(Peer peer, StoredBlock nextBlock) {
         lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock), peer.getAddress());
         sendRequestWithRetry(peer);
+//        try {
+//            Thread.sleep(100000);
+//        } catch (InterruptedException x) {
+//            // none
+//        }
     }
 
     public void applyDiff(Peer peer, DualBlockChain blockChain,
@@ -264,7 +270,10 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 getMnList().getHeight(), newHeight, mnlistdiff, peer);
 
         mnlistdiff.dump(mnList.getHeight(), newHeight);
-
+        lastRequest.setReceived();
+        if (lock.isLocked() && !initChainTipSyncComplete()) {
+            Threading.dump();
+        }
         lock.lock();
         try {
             log.info("lock acquired when processing mnlistdiff");
@@ -282,7 +291,10 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
             if (peer != null && isSyncingHeadersFirst)
                 peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, mnlistdiff);
-
+            watch.stop();
+            log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
+            log.info(toString());
+            finishDiff(isLoadingBootStrap);
         } catch(MasternodeListDiffException x) {
             // we already have this mnlistdiff or doesn't match our current tipBlockHash
             if(getMnList().getBlockHash().equals(mnlistdiff.blockHash)) {
@@ -314,30 +326,35 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                     resetMNList(true);
                 }
             }
+            finishDiff(isLoadingBootStrap);
         } catch(VerificationException x) {
             //request this block again and close this peer
             log.info("verification error: close this peer" + x.getMessage());
             incrementFailedAttempts();
+            finishDiff(isLoadingBootStrap);
             throw x;
         } catch(NullPointerException x) {
             log.info("NPE: close this peer", x);
             incrementFailedAttempts();
+            finishDiff(isLoadingBootStrap);
             throw new VerificationException("verification error: " + x.getMessage());
         } catch(BlockStoreException x) {
             log.info(x.getMessage());
             incrementFailedAttempts();
+            finishDiff(isLoadingBootStrap);
             throw new ProtocolException(x);
         } finally {
-            watch.stop();
-            log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
-            waitingForMNListDiff = false;
-            if (!initChainTipSyncComplete() && !isLoadingBootStrap) {
-                log.info("initChainTipSync=false");
-                context.peerGroup.triggerMnListDownloadComplete();
-                log.info("initChainTipSync=true");
-            }
-            requestNextMNListDiff();
             lock.unlock();
+        }
+        requestNextMNListDiff();
+    }
+
+    protected void finishDiff(boolean isLoadingBootStrap) {
+        waitingForMNListDiff = false;
+        if (!initChainTipSyncComplete() && !isLoadingBootStrap) {
+            log.info("initChainTipSync=false");
+            context.peerGroup.triggerMnListDownloadComplete();
+            log.info("initChainTipSync=true");
         }
     }
 

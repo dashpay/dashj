@@ -26,6 +26,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -42,6 +45,7 @@ public class Threading {
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private static Logger log = LoggerFactory.getLogger(Threading.class);
     /**
      * An executor with one thread that is intended for running event listeners on. This ensures all event listener code
      * runs without any locks being held. It's intended for the API user to run things on. Callbacks registered by
@@ -201,4 +205,12 @@ public class Threading {
                 }
             })
     );
+
+    public static void dump() {
+        ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+        ThreadInfo[] threadInfos = threadMXBean.dumpAllThreads(true, true);
+        for (ThreadInfo threadInfo : threadInfos) {
+            log.info(threadInfo.toString());
+        }
+    }
 }

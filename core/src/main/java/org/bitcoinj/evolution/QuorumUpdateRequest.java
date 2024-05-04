@@ -16,10 +16,11 @@
 
 package org.bitcoinj.evolution;
 
-import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.Utils;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A utility class that keeps track of a request message and a timestamp
@@ -30,7 +31,8 @@ import org.bitcoinj.core.Utils;
 public class QuorumUpdateRequest<T extends AbstractQuorumRequest> {
     T request;
     long time;
-    private boolean fulfilled = false;
+    private AtomicBoolean fulfilled = new AtomicBoolean(false);
+    private AtomicBoolean received = new AtomicBoolean(false);
 
     private PeerAddress peerAddress;
     public QuorumUpdateRequest(T request) {
@@ -79,10 +81,18 @@ public class QuorumUpdateRequest<T extends AbstractQuorumRequest> {
     }
 
     public void setFulfilled() {
-        this.fulfilled = true;
+        this.fulfilled.set(true);
     }
 
-    public boolean isFullfilled() {
-        return fulfilled;
+    public boolean isFulfilled() {
+        return fulfilled.get();
+    }
+
+    public void setReceived() {
+        this.received.set(true);
+    }
+
+    public boolean getReceived() {
+        return received.get();
     }
 }
