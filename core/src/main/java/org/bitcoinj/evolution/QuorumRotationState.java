@@ -1246,6 +1246,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         boolean isSyncingHeadersFirst = syncStage == PeerGroup.SyncStage.MNLIST;
 
         quorumRotationInfo.dump(getMnListTip().getHeight(), newHeight);
+        lastRequest.setReceived();
 
         lock.lock();
         try {

@@ -17,7 +17,6 @@
 package org.bitcoinj.evolution;
 
 import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.BlockQueue;
@@ -47,6 +46,7 @@ import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,6 +63,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
@@ -701,22 +704,28 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         }
     }
 
+    private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(
+            1,
+            new ContextPropagatingThreadFactory("quorum-state-" + getClass().getSimpleName())
+    );
+    ScheduledFuture<?> retryFuture = null;
+
     protected void sendRequestWithRetry(Peer peer) {
-        ListenableFuture sendMessageFuture = peer.sendMessage(lastRequest.getRequestMessage());
-        sendMessageFuture.addListener(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    // throws an exception if there was a problem sending
-                    sendMessageFuture.get(10, TimeUnit.SECONDS);
-                } catch (ExecutionException | TimeoutException e) {
-                    // send the message again
-                    retryLastRequest(peer, e);
-                } catch (InterruptedException e) {
-                    log.info("sendMessageFuture interrupted", e);
-                }
+        peer.sendMessage(lastRequest.getRequestMessage());
+
+        if (retryFuture != null) {
+            log.info("sendMessageFuture cancel: {}", lastRequest.request.getClass().getSimpleName());
+            retryFuture.cancel(true);
+            retryFuture = null;
+        }
+        retryFuture = scheduledExecutorService.schedule(() -> {
+            if (!lastRequest.getReceived()) {
+                log.info("sendMessageFuture check: last request not received {}", lastRequest.request.getClass().getSimpleName());
+                retryLastRequest(peer, new TimeoutException("last request not received"));
+            } else {
+                log.info("sendMessageFuture check: last request received {}", lastRequest.request.getClass().getSimpleName());
             }
-        }, Threading.THREAD_POOL);
+        }, 10, TimeUnit.SECONDS);
     }
 
     private void retryLastRequest(Peer peer, Exception e) {
@@ -865,5 +874,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public void close() {
         // reset the state of any sync operation
         waitingForMNListDiff = false;
+        if (retryFuture != null) {
+            log.info("cancel: {}", lastRequest.request.getClass().getSimpleName());
+            retryFuture.cancel(true);
+            retryFuture = null;
+        }
     }
 }

@@ -114,11 +114,6 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     public void requestUpdate(Peer peer, StoredBlock nextBlock) {
         lastRequest = new QuorumUpdateRequest<>(getMasternodeListDiffRequest(nextBlock), peer.getAddress());
         sendRequestWithRetry(peer);
-//        try {
-//            Thread.sleep(100000);
-//        } catch (InterruptedException x) {
-//            // none
-//        }
     }
 
     public void applyDiff(Peer peer, DualBlockChain blockChain,
@@ -271,9 +266,10 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
         mnlistdiff.dump(mnList.getHeight(), newHeight);
         lastRequest.setReceived();
-        if (lock.isLocked() && !initChainTipSyncComplete()) {
-            Threading.dump();
-        }
+        // TODO: remove this
+//        if (lock.isLocked() && !initChainTipSyncComplete()) {
+//            Threading.dump();
+//        }
         lock.lock();
         try {
             log.info("lock acquired when processing mnlistdiff");
@@ -326,6 +322,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                     resetMNList(true);
                 }
             }
+            lastRequest.setFulfilled();
             finishDiff(isLoadingBootStrap);
         } catch(VerificationException x) {
             //request this block again and close this peer
