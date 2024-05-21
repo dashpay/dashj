@@ -6,10 +6,10 @@ import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptException;
 import org.json.JSONObject;
-import org.bouncycastle.util.encoders.Base64;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Locale;
 
 public class ProviderRegisterTx extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 1;
@@ -18,6 +18,7 @@ public class ProviderRegisterTx extends SpecialTxPayload {
 
     public static final int MESSAGE_SIZE = 274;
     public static final int MESSAGE_SIZE_WITHOUT_SIGNATURE = 209;
+    public static final String SEPARATOR_CHAR = "|";
 
 
     int type; //short
@@ -203,10 +204,10 @@ public class ProviderRegisterTx extends SpecialTxPayload {
             strPayout = Utils.HEX.encode(scriptPayout.getProgram());
         }
 
-        s.append(strPayout + "|");
-        s.append(String.format("%d", operatorReward) + "|");
-        s.append(Address.fromPubKeyHash(params, keyIDOwner.getBytes()).toString() + "|");
-        s.append(Address.fromPubKeyHash(params, keyIDVoting.getBytes()).toString() + "|");
+        s.append(strPayout).append(SEPARATOR_CHAR);
+        s.append(String.format(Locale.US, "%d", operatorReward)).append(SEPARATOR_CHAR);
+        s.append(Address.fromPubKeyHash(params, keyIDOwner.getBytes())).append(SEPARATOR_CHAR);
+        s.append(Address.fromPubKeyHash(params, keyIDVoting.getBytes())).append(SEPARATOR_CHAR);
 
         // ... and also the full hash of the payload as a protection against malleability and replays
         s.append(Utils.HEX.encode(getHash().getBytes()));
