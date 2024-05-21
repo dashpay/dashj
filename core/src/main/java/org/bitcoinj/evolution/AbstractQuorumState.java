@@ -718,6 +718,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             retryFuture.cancel(true);
             retryFuture = null;
         }
+        Context.propagate(context);
         retryFuture = scheduledExecutorService.schedule(() -> {
             if (!lastRequest.getReceived()) {
                 log.info("sendMessageFuture check: last request not received {}", lastRequest.request.getClass().getSimpleName());
