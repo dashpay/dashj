@@ -1246,6 +1246,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         boolean isSyncingHeadersFirst = syncStage == PeerGroup.SyncStage.MNLIST;
 
         quorumRotationInfo.dump(getMnListTip().getHeight(), newHeight);
+        lastRequest.setReceived();
 
         lock.lock();
         try {
@@ -1262,7 +1263,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             if (peer != null && isSyncingHeadersFirst)
                 peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, quorumRotationInfo.getMnListDiffTip());
-
+            watch.stop();
+            log.info("processing qrinfo: Total: {} mnlistdiff: {}", watch, quorumRotationInfo.getMnListDiffTip());
+            log.info(toString());
         } catch (MasternodeListDiffException x) {
             //we already have this qrinfo or doesn't match our current tipBlockHash
             if (mnListAtH.getBlockHash().equals(quorumRotationInfo.getMnListDiffAtH().blockHash)) {
@@ -1290,27 +1293,31 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                     resetMNList(true);
                 }
             }
+            finishDiff(isLoadingBootStrap);
         } catch (VerificationException x) {
             //request this block again and close this peer
             log.info("verification error: close this peer" + x.getMessage());
             failedAttempts++;
+            finishDiff(isLoadingBootStrap);
             throw x;
         } catch (NullPointerException x) {
             log.info("NPE: close this peer: ", x);
             failedAttempts++;
+            finishDiff(isLoadingBootStrap);
             throw new VerificationException("verification error: NPE", x);
         } catch (BlockStoreException x) {
             log.info(x.getMessage(), x);
             failedAttempts++;
+            finishDiff(isLoadingBootStrap);
             throw new ProtocolException(x);
         } finally {
-            watch.stop();
-            log.info("processing qrinfo: Total: {} mnlistdiff: {}", watch, quorumRotationInfo.getMnListDiffTip());
-            log.info(toString());
-            waitingForMNListDiff = false;
-            requestNextMNListDiff();
             lock.unlock();
         }
+        requestNextMNListDiff();
+    }
+
+    protected void finishDiff(boolean isLoadingBootStrap) {
+        waitingForMNListDiff = false;
     }
 
     public boolean isConsistent() {

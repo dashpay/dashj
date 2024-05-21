@@ -40,8 +40,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by hashengineering on 11/26/18.
@@ -132,10 +134,10 @@ public class QuorumRotationStateValidateQuorumsTest {
                 },
                 {
                         TESTNETPARAMS,
-                        "qrinfo-testnet-0-905558-70230-after20HF.dat",
-                        "testnet-with-tip-905558.spvchain",
+                        "qrinfo-testnet-0-947248-70230-after20HF.dat",
+                        "testnet-with-tip-947248.spvchain",
                         70230,
-                        905464,
+                        947224,
                         SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 }
         });
@@ -176,6 +178,15 @@ public class QuorumRotationStateValidateQuorumsTest {
             manager.processDiffMessage(null, qrinfo, false, qrinfoComplete);
             qrinfoComplete.get();
 
+            // check verification and other items
+            AtomicBoolean verified = new AtomicBoolean(true);
+            manager.getQuorumListAtTip(params.getLlmqDIP0024InstantSend()).forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
+                @Override
+                public void processQuorum(FinalCommitment finalCommitment) {
+                    verified.set(verified.get() && finalCommitment.isVerified());
+                }
+            });
+            assertTrue(verified.get());
             assertEquals(height, manager.getQuorumListAtTip(context.getParams().getLlmqDIP0024InstantSend()).getHeight());
 
             stream.close();

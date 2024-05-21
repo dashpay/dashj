@@ -225,6 +225,10 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         return coinBaseTx;
     }
 
+    public ArrayList<SimplifiedMasternodeListEntry> getMnList() {
+        return mnList;
+    }
+
     public ArrayList<Pair<Integer, Sha256Hash>> getDeletedQuorums() {
         return deletedQuorums;
     }

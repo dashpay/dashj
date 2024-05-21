@@ -571,14 +571,14 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 return badISLocks;
             }
-            Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.commitment.quorumHash, id, islock.txid);
+            Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.getCommitment().quorumHash, id, islock.txid);
 
             // debug
             islock.setQuorum(quorum.getQuorumHash(), quorum.getQuorumIndex());
-            batchVerifier.pushMessage(nodeId, hash, signHash, islock.signature.getSignature(), quorum.commitment.quorumPublicKey);
+            batchVerifier.pushMessage(nodeId, hash, signHash, islock.signature.getSignature(), quorum.getCommitment().quorumPublicKey.getPublicKey());
             verifyCount++;
 
-            quorumSigningManager.logSignature("ISLOCK", quorum.commitment.quorumPublicKey, signHash, islock.signature.getSignature());
+            quorumSigningManager.logSignature("ISLOCK", quorum.getCommitment().quorumPublicKey.getPublicKey(), signHash, islock.signature.getSignature());
 
             // We can reconstruct the RecoveredSignature objects from the islock and pass it to the signing manager, which
             // avoids unnecessary double-verification of the signature. We however only do this when verification here
@@ -586,7 +586,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (!quorumSigningManager.hasRecoveredSigForId(llmqType, id)) {
                 RecoveredSignature recSig = new RecoveredSignature();
                 recSig.llmqType = llmqType.getValue();
-                recSig.quorumHash = quorum.commitment.quorumHash;
+                recSig.quorumHash = quorum.getCommitment().quorumHash;
                 recSig.id = id;
                 recSig.msgHash = islock.txid;
                 recSig.signature = islock.signature;

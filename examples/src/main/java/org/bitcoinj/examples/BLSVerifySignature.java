@@ -33,12 +33,12 @@ import java.util.Random;
 
 public class BLSVerifySignature {
 
+    private static final Random rand = new Random();
     static {
         BLS.Init();
     }
 
     private static byte [] getRandomSeed(int size) {
-        Random rand = new Random();
         BigInteger result = new BigInteger((size) *8 - 1, rand); // (2^4-1) = 15 is the maximum value
         byte [] bytes = new byte [32];
         System.arraycopy(result.toByteArray(), 0, bytes, 0, result.toByteArray().length);
