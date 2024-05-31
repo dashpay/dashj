@@ -30,7 +30,6 @@ import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.QuorumSnapshot;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.quorums.SnapshotSkipMode;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
@@ -168,14 +167,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         StoredBlock blockMinus3C;
         StoredBlock blockMinus4C = null;
         long newHeight = ((CoinbaseTx) quorumRotationInfo.getMnListDiffAtH().coinBaseTx.getExtraPayloadObject()).getHeight();
-        if (peer != null)
-            peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffTip());
 
         boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
 
-        log.info("processing {} qrinfo between (atH): {} & {}; {}",
+        log.info("processing {} qrinfo between (atH): {} & {}; {} from {}",
                 isLoadingBootStrap ? "bootstrap" : "requested",
-                mnListAtH.getHeight(), newHeight, quorumRotationInfo.toString(blockChain));
+                mnListAtH.getHeight(), newHeight, quorumRotationInfo.toString(blockChain), peer);
 
         blockAtTip = blockChain.getBlock(quorumRotationInfo.getMnListDiffTip().blockHash);
         blockAtH = blockChain.getBlock(quorumRotationInfo.getMnListDiffAtH().blockHash);
@@ -306,11 +303,12 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             // now calculate quorums, but do not validate them since they are all old
             SimplifiedQuorumList baseQuorumList;
-            SimplifiedQuorumList newQuorumListAtHMinus4C = null;
+            SimplifiedQuorumList newQuorumListAtHMinus4C = new SimplifiedQuorumList(params);
 
             if (quorumRotationInfo.hasExtraShare()) {
                 baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus4C().prevBlockHash);
-                newQuorumListAtHMinus4C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C(), isLoadingBootStrap, blockChain, true, false);
+                if (baseQuorumList != null)
+                    newQuorumListAtHMinus4C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C(), isLoadingBootStrap, blockChain, true, false);
             }
 
             baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus3C().prevBlockHash);
@@ -448,6 +446,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             return true;
 
         if(mnListAtH.getHeight() == -1)
+            return false;
+
+        if (context.peerGroup == null)
             return false;
 
         int mostCommonHeight = context.peerGroup.getMostCommonHeight();
@@ -1234,12 +1235,18 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     public void processDiff(@Nullable Peer peer, QuorumRotationInfo quorumRotationInfo, DualBlockChain blockChain,
                             boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage) throws VerificationException {
         long newHeight = ((CoinbaseTx) quorumRotationInfo.getMnListDiffTip().coinBaseTx.getExtraPayloadObject()).getHeight();
-        if (peer != null)
+        if (peer != null) {
             peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffTip());
+            peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffAtH());
+            peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffAtHMinusC());
+            peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffAtHMinus2C());
+            peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, quorumRotationInfo.getMnListDiffAtHMinus3C());
+        }
         Stopwatch watch = Stopwatch.createStarted();
         boolean isSyncingHeadersFirst = syncStage == PeerGroup.SyncStage.MNLIST;
 
         quorumRotationInfo.dump(getMnListTip().getHeight(), newHeight);
+        lastRequest.setReceived();
 
         lock.lock();
         try {
@@ -1248,6 +1255,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             unCache();
             failedAttempts = 0;
+            lastRequest.setFulfilled();
 
             if (!pendingBlocks.isEmpty()) {
                 pendingBlocks.pop();
@@ -1255,7 +1263,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             if (peer != null && isSyncingHeadersFirst)
                 peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, quorumRotationInfo.getMnListDiffTip());
-
+            watch.stop();
+            log.info("processing qrinfo: Total: {} mnlistdiff: {}", watch, quorumRotationInfo.getMnListDiffTip());
+            log.info(toString());
         } catch (MasternodeListDiffException x) {
             //we already have this qrinfo or doesn't match our current tipBlockHash
             if (mnListAtH.getBlockHash().equals(quorumRotationInfo.getMnListDiffAtH().blockHash)) {
@@ -1283,32 +1293,31 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                     resetMNList(true);
                 }
             }
+            finishDiff(isLoadingBootStrap);
         } catch (VerificationException x) {
             //request this block again and close this peer
             log.info("verification error: close this peer" + x.getMessage());
             failedAttempts++;
+            finishDiff(isLoadingBootStrap);
             throw x;
         } catch (NullPointerException x) {
             log.info("NPE: close this peer: ", x);
             failedAttempts++;
+            finishDiff(isLoadingBootStrap);
             throw new VerificationException("verification error: NPE", x);
         } catch (BlockStoreException x) {
             log.info(x.getMessage(), x);
             failedAttempts++;
+            finishDiff(isLoadingBootStrap);
             throw new ProtocolException(x);
         } finally {
-            watch.stop();
-            log.info("processing qrinfo: Total: {} mnlistdiff: {}", watch, quorumRotationInfo.getMnListDiffTip());
-            log.info(toString());
-            waitingForMNListDiff = false;
-            if (!initChainTipSyncComplete) {
-                log.info("initChainTipSync=false");
-                initChainTipSyncComplete = true;
-                log.info("initChainTipSync=true");
-            }
-            requestNextMNListDiff();
             lock.unlock();
         }
+        requestNextMNListDiff();
+    }
+
+    protected void finishDiff(boolean isLoadingBootStrap) {
+        waitingForMNListDiff = false;
     }
 
     public boolean isConsistent() {

@@ -95,4 +95,19 @@ public class SimplifiedMasternodeListDiffTest {
 
         assertArrayEquals(payloadOne, mnlistdiff.bitcoinSerialize());
     }
+
+    @Test
+    public void mnlistdiff_70230() throws IOException {
+        BLSScheme.setLegacyDefault(true); // the qrinfo will set the scheme to basic
+        payloadOne = loadMnListDiff("mnlistdiff-mainnet-0-2028691-70230.dat");
+        SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(PARAMS, payloadOne, 70230);
+        assertArrayEquals(payloadOne, mnlistdiff.bitcoinSerialize());
+
+        assertTrue(mnlistdiff.hasChanges());
+        assertEquals(Sha256Hash.wrap("000000000000000f78a0addf3f9a4c65a4d0f2ca8e63d5893f8227e1585ef3d8"), mnlistdiff.blockHash);
+        assertEquals(1, mnlistdiff.getVersion());
+        assertTrue(mnlistdiff.hasBasicSchemeKeys());
+
+        assertArrayEquals(payloadOne, mnlistdiff.bitcoinSerialize());
+    }
 }

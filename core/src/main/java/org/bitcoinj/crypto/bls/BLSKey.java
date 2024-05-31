@@ -812,7 +812,6 @@ public class BLSKey implements IKey {
             BLSKey decryptedKey = isEncrypted() ? decrypt(checkNotNull(aesKey)) : this;
             try {
                 helper.add("priv HEX", decryptedKey.getPrivateKeyAsHex());
-                //helper.add("priv WIF", decryptedKey.getPrivateKeyAsWiF(params));
             } catch (IllegalStateException e) {
                 // TODO: Make hasPrivKey() work for deterministic keys and fix this.
             } catch (Exception e) {
@@ -834,11 +833,7 @@ public class BLSKey implements IKey {
     public void formatKeyWithAddress(boolean includePrivateKeys, @Nullable KeyParameter aesKey, StringBuilder builder,
                                      NetworkParameters params, Script.ScriptType outputScriptType, @Nullable String comment) {
         builder.append("  addr:");
-        if (outputScriptType != null) {
-            builder.append(Address.fromPubKeyHash(params, getPubKeyHash()));
-        } else {
-            builder.append(Address.fromPubKeyHash(params, getPubKeyHash()));
-        }
+        builder.append(Address.fromPubKeyHash(params, getPubKeyHash()));
 
         builder.append("  hash160:");
         builder.append(Utils.HEX.encode(getPubKeyHash()));

@@ -19,24 +19,28 @@ import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 
+import java.io.IOException;
+import java.io.OutputStream;
 
-public class BLSAbstractLazyObject extends Message {
+
+public abstract class BLSAbstractLazyObject extends Message {
 
     byte [] buffer;
     boolean initialized;
     boolean legacy;
 
-    public BLSAbstractLazyObject(NetworkParameters params) {
+    protected BLSAbstractLazyObject(NetworkParameters params) {
         super(params);
     }
 
-    public BLSAbstractLazyObject(BLSAbstractLazyObject lazyObject) {
+    protected BLSAbstractLazyObject(BLSAbstractLazyObject lazyObject) {
         super(lazyObject.params);
         this.buffer = lazyObject.buffer;
         this.initialized = lazyObject.initialized;
+        this.legacy = lazyObject.legacy;
     }
 
-    public BLSAbstractLazyObject(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
+    protected BLSAbstractLazyObject(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
         super(params, payload, offset, params.getProtocolVersionNum(legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC));
     }
 
@@ -46,6 +50,11 @@ public class BLSAbstractLazyObject extends Message {
         initialized = false;
     }
 
+    protected abstract void bitcoinSerializeToStream(OutputStream stream, boolean legacy) throws IOException;
+
+    public void bitcoinSerialize(OutputStream stream, boolean legacy) throws IOException {
+        bitcoinSerializeToStream(stream, legacy);
+    }
 
     public boolean isInitialized() {
         return initialized;
