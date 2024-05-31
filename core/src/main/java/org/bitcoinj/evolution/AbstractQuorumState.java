@@ -123,7 +123,6 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public SettableFuture<Boolean> bootStrapLoaded;
 
     boolean isLoadingBootstrap = false;
-    protected static Random random = new Random();
 
     public AbstractQuorumState(Context context) {
         super(context.getParams());
