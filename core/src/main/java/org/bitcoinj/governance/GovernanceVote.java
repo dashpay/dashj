@@ -44,22 +44,18 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         VOTE_OUTCOME_NO(2),
         VOTE_OUTCOME_ABSTAIN(3);
 
-        int value;
+        final int value;
         VoteOutcome(int value) {
             this.value = value;
             getMappings().put(value, this);
         }
 
-        private static java.util.HashMap<Integer, VoteOutcome> mappings;
+        private static final class MappingsHolder {
+            static final java.util.HashMap<Integer, VoteOutcome> mappings = new java.util.HashMap<>();
+        }
+
         private static java.util.HashMap<Integer, VoteOutcome> getMappings() {
-            if (mappings == null) {
-                synchronized (VoteOutcome.class) {
-                    if (mappings == null) {
-                        mappings = new java.util.HashMap<Integer, VoteOutcome>();
-                    }
-                }
-            }
-            return mappings;
+            return MappingsHolder.mappings;
         }
 
         public int getValue() {
@@ -69,7 +65,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         public static VoteOutcome fromValue(int value) {
             return getMappings().get(value);
         }
-    };
+    }
 
 
     // SIGNAL VARIOUS THINGS TO HAPPEN:
@@ -111,22 +107,18 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         VOTE_SIGNAL_CUSTOM19(34),
         VOTE_SIGNAL_CUSTOM20(35);
 
-        int value;
+        final int value;
         VoteSignal(int value) {
             this.value = value;
             getMappings().put(value, this);
         }
 
-        private static java.util.HashMap<Integer, VoteSignal> mappings;
+        private static final class MappingsHolder {
+            static final java.util.HashMap<Integer, VoteSignal> mappings = new java.util.HashMap<>();
+        }
+
         private static java.util.HashMap<Integer, VoteSignal> getMappings() {
-            if (mappings == null) {
-                synchronized (VoteSignal.class) {
-                    if (mappings == null) {
-                        mappings = new java.util.HashMap<Integer, VoteSignal>();
-                    }
-                }
-            }
-            return mappings;
+            return MappingsHolder.mappings;
         }
 
         public int getValue() {
@@ -136,7 +128,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         public static VoteSignal fromValue(int value) {
             return getMappings().get(value);
         }
-    };
+    }
 
 
     static final int MAX_SUPPORTED_VOTE_SIGNAL = VOTE_SIGNAL_ENDORSED.getValue();
@@ -411,7 +403,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         String strMessage = masternodeOutpoint.toStringShort() + "|" + nParentHash.toString() + "|" + nVoteSignal + "|" + nVoteOutcome + "|" + nTime;
 
         if (!MessageSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-            log.info("gobject", "CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
+            log.info("CGovernanceVote::IsValid -- VerifyMessage() failed, error: {}", strError);
             return false;
         }
 
