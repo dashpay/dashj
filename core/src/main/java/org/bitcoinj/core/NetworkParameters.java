@@ -686,7 +686,9 @@ public abstract class NetworkParameters {
         SMNLE_VERSIONED(70228),
         MNLISTDIFF_VERSION_ORDER(70229),
         MNLISTDIFF_CHAINLOCKS(70230),
-        CURRENT(70230); //testnet is still 70228
+        CORE_20_1(70231),
+        CORE_21(70232),
+        CURRENT(70232); //testnet is still 70228
 
         private final int bitcoinProtocol;
 
