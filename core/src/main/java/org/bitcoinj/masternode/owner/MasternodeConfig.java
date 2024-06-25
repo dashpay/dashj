@@ -9,12 +9,12 @@ import org.bitcoinj.utils.Pair;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Hash Engineering on 7/8/2018.
  */
 public class MasternodeConfig {
-
 
     public static class MasternodeEntry {
 
@@ -76,7 +76,7 @@ public class MasternodeConfig {
     protected File masternodeConfigFile;
 
     public MasternodeConfig(File configFile) {
-        entries = new ArrayList<MasternodeEntry>();
+        entries = new ArrayList<>();
         masternodeConfigFile = configFile;
     }
 
@@ -94,7 +94,7 @@ public class MasternodeConfig {
         entries.add(cme);
     }
 
-    public ArrayList<MasternodeEntry> getEntries() {
+    public List<MasternodeEntry> getEntries() {
         return entries;
     }
 
@@ -102,7 +102,7 @@ public class MasternodeConfig {
         return entries.size();
     }
 
-    private ArrayList<MasternodeEntry> entries;
+    private final ArrayList<MasternodeEntry> entries;
 
     public boolean importFromFile(String fileToImport, StringBuilder strError) {
         try {
@@ -190,8 +190,7 @@ public class MasternodeConfig {
         } catch (FileNotFoundException x) {
             strError.append(x.getMessage());
 
-            try {
-                FileOutputStream configFile = new FileOutputStream(masternodeConfigFile, true);
+            try (FileOutputStream configFile = new FileOutputStream(masternodeConfigFile, true)) {
                 String strHeader = "# Masternode config file\n" + "# Format: alias IP:port masternodeprivkey collateral_output_txid collateral_output_index\n" + "# Example: mn1 127.0.0.2:19999 93HaYBVUCYjEMeeH1Y4sBGLALQZE1Yc1K64xiqgX37tGBDQL8Xg 2bcd3c84c84f87eaa86e4e56834c92927a07f9e18718810b92e0d0324456a67c 0\n";
                 configFile.write(strHeader.getBytes());
                 return true; // Nothing to read, so just return

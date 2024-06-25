@@ -56,7 +56,7 @@ public class LLMQBackgroundThread extends Thread {
 
                 debugTimer++;
                 if(debugTimer % 400 == 0) {
-                    log.info(context.instantSendManager.toString());
+                    log.info("{}", context.instantSendManager);
                     if(debugTimer == 2000)
                         debugTimer = 0;
                 }

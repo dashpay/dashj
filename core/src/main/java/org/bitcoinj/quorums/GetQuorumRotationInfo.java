@@ -40,7 +40,7 @@ public class GetQuorumRotationInfo extends AbstractQuorumRequest {
     }
 
     public GetQuorumRotationInfo(NetworkParameters params,
-                                 ArrayList<Sha256Hash> baseBlockHashes, Sha256Hash blockRequestHash, boolean extraShare) {
+                                 List<Sha256Hash> baseBlockHashes, Sha256Hash blockRequestHash, boolean extraShare) {
         super(params);
         this.baseBlockHashes = new ArrayList<>(baseBlockHashes.size());
         this.baseBlockHashes.addAll(baseBlockHashes);
@@ -73,7 +73,7 @@ public class GetQuorumRotationInfo extends AbstractQuorumRequest {
         return blockRequestHash;
     }
 
-    public ArrayList<Sha256Hash> getBaseBlockHashes() {
+    public List<Sha256Hash> getBaseBlockHashes() {
         return baseBlockHashes;
     }
 

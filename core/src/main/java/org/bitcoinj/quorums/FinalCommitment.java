@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 public class FinalCommitment extends SpecialTxPayload {
     @Deprecated
@@ -128,6 +129,7 @@ public class FinalCommitment extends SpecialTxPayload {
         length = cursor - offset;
     }
 
+    @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException{
         bitcoinSerializeToStream(stream, isLegacy());
     }
@@ -189,6 +191,7 @@ public class FinalCommitment extends SpecialTxPayload {
      *     }
      */
 
+    @Override
     public JSONObject toJson() {
         JSONObject result = new JSONObject();
         result.put("version", getVersion());
@@ -245,7 +248,7 @@ public class FinalCommitment extends SpecialTxPayload {
             return false;
 
         if(!params.getLlmqs().containsKey(LLMQParameters.LLMQType.fromValue(llmqType))) {
-            log.error("invalid llmqType " + llmqType);
+            log.error("invalid llmqType: {}", llmqType);
             return false;
         }
 
@@ -325,13 +328,10 @@ public class FinalCommitment extends SpecialTxPayload {
             countValidMembers() > 0) {
             return false;
         }
-        if (quorumPublicKey.isValid() ||
-                !quorumVvecHash.isZero() ||
-                membersSignature.isValid() ||
-                quorumSignature.isValid()) {
-            return false;
-        }
-        return true;
+        return !quorumPublicKey.isValid() &&
+                quorumVvecHash.isZero() &&
+                !membersSignature.isValid() &&
+                !quorumSignature.isValid();
     }
 
     public boolean verifyNull()
@@ -342,11 +342,7 @@ public class FinalCommitment extends SpecialTxPayload {
         }
         LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(llmqType));
 
-        if (!isNull() || !verifySizes(llmqParameters)) {
-            return false;
-        }
-
-        return true;
+        return isNull() && verifySizes(llmqParameters);
     }
 
     public boolean verifySizes(LLMQParameters llmqParameters) {
@@ -361,6 +357,7 @@ public class FinalCommitment extends SpecialTxPayload {
         return true;
     }
 
+    @Override
     public Sha256Hash getHash() {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getMessageSize());
@@ -407,11 +404,11 @@ public class FinalCommitment extends SpecialTxPayload {
         return quorumSignature.getSignature();
     }
 
-    public ArrayList<Boolean> getSigners() {
+    public List<Boolean> getSigners() {
         return signers;
     }
 
-    public ArrayList<Boolean> getValidMembers() {
+    public List<Boolean> getValidMembers() {
         return validMembers;
     }
 

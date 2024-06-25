@@ -8,20 +8,20 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-abstract public class Report {
+public abstract class Report {
     File outputFile;
     String dashClientPath;
     String confPath;
 
-    private static final DateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH_mm");
-
-    public Report(String prefix, String dashClientPath, String confPath, NetworkParameters params) {
+    protected Report(String prefix, String dashClientPath, String confPath, NetworkParameters params) {
         this.dashClientPath = dashClientPath;
         this.confPath = confPath;
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH_mm");
         outputFile = new File(prefix + params.getId() + "-" + format.format(new Date()) + ".csv");
     }
 
@@ -34,19 +34,19 @@ abstract public class Report {
                 config = String.format("-conf=%s", confPath);
             }
             Process process = Runtime.getRuntime().exec(String.format("%s %s %s", dashClientPath, config, command));
-            int result = process.waitFor();
+            process.waitFor();
 
-            BufferedReader stdInput = new BufferedReader(new
-                    InputStreamReader(process.getInputStream()));
+            try (BufferedReader stdInput = new BufferedReader(new
+                    InputStreamReader(process.getInputStream(), Charset.defaultCharset()))) {
 
-            String s;
-            StringBuilder output = new StringBuilder();
-            while ((s = stdInput.readLine()) != null) {
-                output.append(s);
+                String s;
+                StringBuilder output = new StringBuilder();
+                while ((s = stdInput.readLine()) != null) {
+                    output.append(s);
+                }
+                return new JSONObject(output.toString());
+
             }
-
-            return new JSONObject(output.toString());
-
         } catch (IOException e) {
             return null;
         } catch (JSONException e) {
