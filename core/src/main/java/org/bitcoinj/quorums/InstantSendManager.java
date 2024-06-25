@@ -165,9 +165,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
             }
 
             log.info("received islock:  txid={}, islock={} , peer={}",
-                    isLock.txid.toString(), hash.toString(), peer.hashCode());
+                    isLock.txid, hash, peer.hashCode());
 
-            pendingInstantSendLocks.put(hash, new Pair((long)peer.hashCode(), isLock));
+            pendingInstantSendLocks.put(hash, new Pair<>((long)peer.hashCode(), isLock));
 
             if(runWithoutThread) {
                 try {
@@ -208,9 +208,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
         try {
             boolean haslock = db.getInstantSendLockByHash(inv.hash) != null || pendingInstantSendLocks.containsKey(inv.hash);
             TransactionConfidence confidence = context.getConfidenceTable().get(inv.hash);
-            if(confidence != null) {
-                if(confidence.getIXType() != TransactionConfidence.IXType.IX_NONE)
-                    return true;
+            if (confidence != null && confidence.getIXType() != TransactionConfidence.IXType.IX_NONE) {
+                return true;
             }
             if(!invalidInstantSendLocks.isEmpty()) {
                 for(InstantSendLock islock : invalidInstantSendLocks.keySet()) {
@@ -238,7 +237,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             } catch (InterruptedException x) {
                 //let the thread stop
             } catch (BlockStoreException x) {
-
+                throw new RuntimeException(x);
             }
         }
     };
@@ -294,7 +293,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         BlockStore blockStore = blockChain.getBlockStore();
         Coin value = Coin.valueOf(0);
         for (TransactionInput  in : tx.getInputs()) {
-            if (!checkCanLock(in.getOutpoint(), printDebug, tx.getHash())) {
+            if (!checkCanLock(in.getOutpoint(), printDebug, tx.getTxId())) {
                 return false;
             }
 
@@ -317,8 +316,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         return true;
     }
 
-    boolean checkCanLock(TransactionOutPoint outpoint, boolean printDebug, Sha256Hash txHash)
-    {
+    boolean checkCanLock(TransactionOutPoint outpoint, boolean printDebug, Sha256Hash txHash) {
         int nInstantSendConfirmationsRequired = context.getParams().getInstantSendConfirmationsRequired();
 
         if (isLocked(outpoint.getHash())) {
@@ -330,8 +328,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         TransactionConfidence mempoolTx = mempool.get(outpoint.getHash());
         if (mempoolTx != null) {
             if (printDebug) {
-                log.info("txid={}: parent mempool TX {} is not locked",
-                        txHash.toString(), outpoint.getHash().toString());
+                log.info("txid={}: parent mempool TX {} is not locked", txHash, outpoint.getHash());
             }
             return false;
         }
@@ -349,12 +346,12 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     hashBlock = block.getHeader().getHash();
                 if (printDebug) {
                     log.info("txid={}: failed to find parent TX {}",
-                            txHash.toString(), outpoint.getHash().toString());
+                            txHash, outpoint.getHash());
                     return false;
                 }
 
             } catch (BlockStoreException x) {
-                log.error("BlockStoreException:  "+ x.getMessage());
+                log.error("BlockStoreException:  {}", x.getMessage());
                 return false;
             }
 
@@ -369,7 +366,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     if (context.chainLockHandler.hasChainLock(utxo.getHeight(), block.getHash())) {
                         if (printDebug) {
                             log.info("txid={}: outpoint {} too new and not ChainLocked. nTxAge={}, nInstantSendConfirmationsRequired={}",
-                                    txHash.toString(), outpoint.toStringShort(), txAge, nInstantSendConfirmationsRequired);
+                                    txHash, outpoint.toStringShort(), txAge, nInstantSendConfirmationsRequired);
                         }
                         return false;
                     }
@@ -391,7 +388,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                             {
                                 if (printDebug) {
                                     log.info("txid={}: outpoint {} too new and not ChainLocked. nTxAge={}, nInstantSendConfirmationsRequired={}",
-                                            txHash.toString(), outpoint.toStringShort(), confidence.getDepthInBlocks(), nInstantSendConfirmationsRequired);
+                                            txHash, outpoint.toStringShort(), confidence.getDepthInBlocks(), nInstantSendConfirmationsRequired);
                                 }
                                 return false;
                             }
@@ -413,7 +410,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 return processPendingInstantSendLocks(true);
             } else {
                 // Don't short circuit. Try to process deterministic and not deterministic islocks
-                return processPendingInstantSendLocks(false) & processPendingInstantSendLocks(true);
+                return processPendingInstantSendLocks(false) && processPendingInstantSendLocks(true);
             }
         }
         return false;
@@ -517,12 +514,12 @@ public class InstantSendManager implements RecoveredSignatureListener {
             InstantSendLock islock = p.getValue().getSecond();
     
             if (batchVerifier.getBadSources().contains(nodeId)) {
-                log.info("islock: bad sources contains this node: " + nodeId);
+                log.info("islock: bad sources contains this node: {}", nodeId);
                 continue;
             }
     
             if (!islock.signature.getSignature().isValid()) {
-                log.info("islock: signature is not valid: " + islock.signature);
+                log.info("islock: signature is not valid: {}", islock.signature);
                 batchVerifier.getBadSources().add(nodeId);
                 continue;
             }
@@ -531,7 +528,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
     
             // no need to verify an ISLOCK if we already have verified the recovered sig that belongs to it
             if (quorumSigningManager.hasRecoveredSig(llmqType, id, islock.txid)) {
-                log.info("islock: signature has already been verified: " + islock.txid);
+                log.info("islock: signature has already been verified: {}", islock.txid);
                 continue;
             }
 
@@ -565,7 +562,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
             quorum = quorumSigningManager.selectQuorumForSigning(llmqType, signHeight, id, signOffset);
             if (quorum == null) {
                 // should not happen, but if one fails to select, all others will also fail to select
-                log.info("islock: quorum not found to verify signature [tipHeight: " + tipHeight + " vs " + context.masternodeListManager.getQuorumListAtTip(llmqType).getHeight() + "]");
+                log.info("islock: quorum not found to verify signature [tipHeight: {} vs {}]", tipHeight,
+                        context.masternodeListManager.getQuorumListAtTip(llmqType).getHeight());
                 log.info("islock: signHeight: {}, id: {}", signHeight, id);
                 log.info("islock: dash-cli quorum selectquorum {} {}", llmqType.getValue(), Sha256Hash.wrap(id.getReversedBytes()));
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
@@ -616,7 +614,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
             if (batchVerifier.getBadMessages().contains(hash)) {
                 log.info("islock: -- txid={}, islock={}: invalid sig in islock, peer={}",
-                        islock.txid.toString(), hash.toString(), nodeId);
+                        islock.txid, hash, nodeId);
                 badISLocks.add(hash);
 
                 // report invalid signature to the logs
@@ -651,7 +649,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 if (!quorumSigningManager.hasRecoveredSigForId(llmqType, recSig.id)) {
                     recSig.updateHash();
                     log.info("passing reconstructed recSig to signing mgr -- txid={}, islock={}: peer={}",
-                            islock.txid.toString(), hash.toString(), nodeId);
+                            islock.txid, hash, nodeId);
                     quorumSigningManager.pushReconstructedRecoveredSig(recSig, quorum);
                 }
             }
@@ -665,25 +663,22 @@ public class InstantSendManager implements RecoveredSignatureListener {
         StoredBlock minedBlock = null;
 
         TransactionConfidence confidence = context.getConfidenceTable().get(hash);
-        if(confidence != null) {
-            if(confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)
-            {
-                long height = confidence.getAppearedAtChainHeight();
+        if(confidence != null && confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
+            long height = confidence.getAppearedAtChainHeight();
 
-                try {
-                    StoredBlock block = blockChain.getBlockStore().get((int)height);
-                    if(block != null) {
-                        // Let's see if the TX that was locked by this islock is already mined in a ChainLocked block. If yes,
-                        // we can simply ignore the islock, as the ChainLock implies locking of all TXs in that chain
-                        if (context.chainLockHandler.hasChainLock(height, block.getHeader().getHash())) {
-                            log.info("txlock={}, islock={}: dropping islock as it already got a ChainLock in block {}, peer={}",
-                                    islock.txid.toString(), hash.toString(), block.getHeader().getHash().toString(), from);
-                            return;
-                        }
+            try {
+                StoredBlock block = blockChain.getBlockStore().get((int)height);
+                if(block != null) {
+                    // Let's see if the TX that was locked by this islock is already mined in a ChainLocked block. If yes,
+                    // we can simply ignore the islock, as the ChainLock implies locking of all TXs in that chain
+                    if (context.chainLockHandler.hasChainLock(height, block.getHeader().getHash())) {
+                        log.info("txlock={}, islock={}: dropping islock as it already got a ChainLock in block {}, peer={}",
+                                islock.txid, hash, block.getHeader().getHash(), from);
+                        return;
                     }
-                } catch (BlockStoreException x) {
-                    //swallow
                 }
+            } catch (BlockStoreException x) {
+                //swallow
             }
         }
 
@@ -691,7 +686,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         try
         {
             log.info("processing islock txid={}, islock={}:  peer={}",
-                    islock.txid.toString(), hash.toString(), from);
+                    islock.txid, hash, from);
 
             InstantSendLock otherIsLock;
             if (db.getInstantSendLockByHash(hash) != null) {
@@ -700,13 +695,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
             otherIsLock = db.getInstantSendLockByTxid(islock.txid);
             if (otherIsLock != null) {
                 log.info("duplicate islock:  txid={}, islock={}: other islock={}, peer={}",
-                        islock.txid.toString(), hash, otherIsLock.getHash().toString(), from);
+                        islock.txid, hash, otherIsLock, from);
             }
             for (TransactionOutPoint in : islock.inputs) {
                 otherIsLock = db.getInstantSendLockByInput(in);
                 if (otherIsLock != null) {
                     log.info("processInstantSendLock -- txid={}, islock={}: conflicting input in islock. input={}, other islock={}, peer={}",
-                            islock.txid.toString(), hash, in.toStringShort(), otherIsLock.getHash(), from);
+                            islock.txid, hash, in.toStringShort(), otherIsLock.getHash(), from);
                 }
             }
 
@@ -782,11 +777,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
     }
 
-    ChainLockListener chainLockListener = new ChainLockListener() {
-        public void onNewChainLock(StoredBlock block) {
-            handleFullyConfirmedBlock(block.getHeight());
-        }
-    };
+    ChainLockListener chainLockListener = block -> handleFullyConfirmedBlock(block.getHeight());
 
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
@@ -817,7 +808,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 Sha256Hash islockHash = p.getKey();
                 InstantSendLock islock = p.getValue();
                 log.info("removed islock as it got fully confirmed -- txid={}, islock={}",
-                        islock.txid.toString(), islockHash.toString());
+                        islock.txid, islockHash);
             }
 
             // Keep invalid ISLocks for 1 hour
@@ -945,7 +936,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     continue;
                 }
 
-                if (otherIsLock.txid.equals(tx.getHash())) {
+                if (otherIsLock.txid.equals(tx.getTxId())) {
                     return otherIsLock.txid;
                 }
             }
