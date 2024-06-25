@@ -21,7 +21,6 @@ package org.bitcoinj.crypto.bls;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.io.BaseEncoding;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.DumpedPrivateKey;
@@ -52,6 +51,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.util.Arrays;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -764,11 +764,11 @@ public class BLSKey implements IKey {
         if (this == o) return true;
         if (o == null || !(o instanceof BLSKey)) return false;
         BLSKey other = (BLSKey) o;
-        return Objects.equal(this.priv, other.priv)
-                && Objects.equal(this.pub, other.pub)
-                && Objects.equal(this.creationTimeSeconds, other.creationTimeSeconds)
-                && Objects.equal(this.keyCrypter, other.keyCrypter)
-                && Objects.equal(this.encryptedPrivateKey, other.encryptedPrivateKey);
+        return Objects.equals(this.priv, other.priv)
+                && Objects.equals(this.pub, other.pub)
+                && Objects.equals(this.creationTimeSeconds, other.creationTimeSeconds)
+                && Objects.equals(this.keyCrypter, other.keyCrypter)
+                && Objects.equals(this.encryptedPrivateKey, other.encryptedPrivateKey);
     }
 
     @Override

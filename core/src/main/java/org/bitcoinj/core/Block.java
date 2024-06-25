@@ -366,11 +366,9 @@ public class Block extends Message {
             return;
         }
 
-        if (transactions != null) {
-            stream.write(new VarInt(transactions.size()).encode());
-            for (Transaction tx : transactions) {
-                tx.bitcoinSerialize(stream);
-            }
+        stream.write(new VarInt(transactions.size()).encode());
+        for (Transaction tx : transactions) {
+            tx.bitcoinSerialize(stream);
         }
         //writeMasterNodeVotes(stream);
     }

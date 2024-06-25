@@ -25,7 +25,6 @@ import org.bitcoinj.script.Script;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.UnsignedBytes;
 import org.bitcoin.NativeSecp256k1;
@@ -62,6 +61,7 @@ import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -611,7 +611,7 @@ public class ECKey implements IKey {
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(r, s);
+            return Objects.hash(r, s);
         }
     }
 
@@ -1340,11 +1340,11 @@ public class ECKey implements IKey {
         if (this == o) return true;
         if (o == null || !(o instanceof ECKey)) return false;
         ECKey other = (ECKey) o;
-        return Objects.equal(this.priv, other.priv)
-                && Objects.equal(this.pub, other.pub)
-                && Objects.equal(this.creationTimeSeconds, other.creationTimeSeconds)
-                && Objects.equal(this.keyCrypter, other.keyCrypter)
-                && Objects.equal(this.encryptedPrivateKey, other.encryptedPrivateKey);
+        return Objects.equals(this.priv, other.priv)
+                && Objects.equals(this.pub, other.pub)
+                && Objects.equals(this.creationTimeSeconds, other.creationTimeSeconds)
+                && Objects.equals(this.keyCrypter, other.keyCrypter)
+                && Objects.equals(this.encryptedPrivateKey, other.encryptedPrivateKey);
     }
 
     @Override

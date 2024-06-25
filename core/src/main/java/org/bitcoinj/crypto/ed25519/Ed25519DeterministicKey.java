@@ -19,7 +19,6 @@
 package org.bitcoinj.crypto.ed25519;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import org.bitcoinj.core.Address;
@@ -44,6 +43,7 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -744,12 +744,12 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         Ed25519DeterministicKey other = (Ed25519DeterministicKey) o;
         return super.equals(other)
                 && Arrays.equals(this.chainCode, other.chainCode)
-                && Objects.equal(this.childNumberPath, other.childNumberPath);
+                && Objects.equals(this.childNumberPath, other.childNumberPath);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(super.hashCode(), Arrays.hashCode(chainCode), childNumberPath);
+        return Objects.hash(super.hashCode(), Arrays.hashCode(chainCode), childNumberPath);
     }
 
     @Override
