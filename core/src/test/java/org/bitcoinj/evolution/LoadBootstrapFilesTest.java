@@ -88,12 +88,12 @@ public class LoadBootstrapFilesTest {
                         1888408
                 },
                 {
-                        TESTNETPARAMS,
-                        "mnlistdiff-testnet-0-850798-70228-after19.2HF.dat",
-                        "qrinfo-testnet-0-850806-70228-after19.2HF.dat",
+                        MAINPARAMS,
+                        "mnlistdiff-mainnet-0-2028691-70230.dat",
+                        "qrinfo-mainnet-0-2028764-70230.dat",
                         SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION,
-                        850798,
-                        850744
+                        2028691,
+                        2028664
                 }
         });
     }
@@ -103,8 +103,9 @@ public class LoadBootstrapFilesTest {
         if (blockChain == null) {
             blockChain = new BlockChain(context, new MemoryBlockStore(params));
         }
-        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
+
         context.initDash(true, true);
+        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
         context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
     }

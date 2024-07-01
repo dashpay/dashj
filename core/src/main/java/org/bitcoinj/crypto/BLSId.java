@@ -5,14 +5,13 @@ import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
 
 public class BLSId extends BLSAbstractObject {
-    public static int BLS_CURVE_ID_SIZE  = 32;
-    Sha256Hash hash;
+    public static final int BLS_CURVE_ID_SIZE  = 32;
 
     BLSId() {
         super(BLS_CURVE_ID_SIZE);
     }
 
-    BLSId(Sha256Hash hash) {
+    public BLSId(Sha256Hash hash) {
         super(BLS_CURVE_ID_SIZE);
         valid = true;
         this.hash = Sha256Hash.wrap(hash.getBytes());

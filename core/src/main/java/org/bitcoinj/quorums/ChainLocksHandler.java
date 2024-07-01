@@ -97,7 +97,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headerChain) {
         this.blockChain = blockChain;
         this.headerChain = headerChain;
-        this.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, this.newBestBlockListener);
+        this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
         this.quorumSigningManager = context.signingManager;
         this.quorumInstantSendManager = context.instantSendManager;
     }

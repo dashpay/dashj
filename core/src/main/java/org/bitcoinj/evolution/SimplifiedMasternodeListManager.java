@@ -313,11 +313,12 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         }
     }
 
-    public void requestQuorumStateUpdate(Peer downloadPeer, StoredBlock requestBlock, StoredBlock requestBlockMinus8) {
-        quorumState.requestMNListDiff(downloadPeer, requestBlockMinus8);
+    public boolean requestQuorumStateUpdate(Peer downloadPeer, StoredBlock requestBlock, StoredBlock requestBlockMinus8) {
+        boolean isWaitingForRequest = quorumState.requestMNListDiff(downloadPeer, requestBlockMinus8);
         if (isQuorumRotationEnabled(params.getLlmqDIP0024InstantSend())) {
             quorumRotationState.requestMNListDiff(downloadPeer, requestBlock);
         }
+        return isWaitingForRequest;
     }
 
     public void processDiffMessage(Peer peer, QuorumRotationInfo qrinfo, boolean isLoadingBootStrap, @Nullable SettableFuture<Boolean> opComplete) {

@@ -2,6 +2,7 @@ package org.bitcoinj.quorums;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
@@ -66,11 +67,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
     public void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup) {
         this.blockChain = blockChain;
         this.blockChain.addTransactionReceivedListener(this.transactionReceivedInBlockListener);
-        this.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, this.newBestBlockListener);
+        this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
         if (peerGroup != null) {
             peerGroup.addOnTransactionBroadcastListener(this.transactionBroadcastListener);
         }
-        context.chainLockHandler.addChainLockListener(this.chainLockListener, Threading.SAME_THREAD);
+        context.chainLockHandler.addChainLockListener(this.chainLockListener);
     }
 
     public void close(PeerGroup peerGroup) {
@@ -541,6 +542,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     blockIndex = blockChain.getBlockStore().get(islock.cycleHash);
                 } catch (BlockStoreException e) {
                     throw new RuntimeException(e);
+                } catch (NullPointerException e) {
+                    // blockchain is now null?
+                    if (isInitialized()) {
+                        throw e;
+                    } else {
+                        return Sets.newHashSet();
+                    }
                 }
 
                 if (blockIndex == null) {
@@ -563,14 +571,14 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
                 return badISLocks;
             }
-            Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.commitment.quorumHash, id, islock.txid);
+            Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.getCommitment().quorumHash, id, islock.txid);
 
             // debug
             islock.setQuorum(quorum.getQuorumHash(), quorum.getQuorumIndex());
-            batchVerifier.pushMessage(nodeId, hash, signHash, islock.signature.getSignature(), quorum.commitment.quorumPublicKey);
+            batchVerifier.pushMessage(nodeId, hash, signHash, islock.signature.getSignature(), quorum.getCommitment().quorumPublicKey.getPublicKey());
             verifyCount++;
 
-            quorumSigningManager.logSignature("ISLOCK", quorum.commitment.quorumPublicKey, signHash, islock.signature.getSignature());
+            quorumSigningManager.logSignature("ISLOCK", quorum.getCommitment().quorumPublicKey.getPublicKey(), signHash, islock.signature.getSignature());
 
             // We can reconstruct the RecoveredSignature objects from the islock and pass it to the signing manager, which
             // avoids unnecessary double-verification of the signature. We however only do this when verification here
@@ -578,7 +586,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (!quorumSigningManager.hasRecoveredSigForId(llmqType, id)) {
                 RecoveredSignature recSig = new RecoveredSignature();
                 recSig.llmqType = llmqType.getValue();
-                recSig.quorumHash = quorum.commitment.quorumHash;
+                recSig.quorumHash = quorum.getCommitment().quorumHash;
                 recSig.id = id;
                 recSig.msgHash = islock.txid;
                 recSig.signature = islock.signature;

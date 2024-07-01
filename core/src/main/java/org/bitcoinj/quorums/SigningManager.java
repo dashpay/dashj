@@ -223,7 +223,7 @@ public class SigningManager {
 
             Quorum itQuorum = null;
             for (Quorum quorum : quorums) {
-                if (signer == quorum.commitment.quorumIndex) {
+                if (signer == quorum.getCommitment().quorumIndex) {
                     itQuorum = quorum;
                 }
             }
@@ -245,7 +245,7 @@ public class SigningManager {
                 try {
                     UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(1 + 32 + 32);
                     bos.write(llmqType.getValue());
-                    bos.write(quorums.get(i).commitment.quorumHash.getReversedBytes());
+                    bos.write(quorums.get(i).getCommitment().quorumHash.getReversedBytes());
                     bos.write(selectionHash.getBytes());
                     Sha256Hash hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
                     scores.add(new Pair<>(hash, i));
@@ -320,7 +320,7 @@ public class SigningManager {
                         it.remove();
                         continue;
                     }
-                    if (quorumManager.isQuorumActive(llmqType, quorum.commitment.quorumHash)) {
+                    if (quorumManager.isQuorumActive(llmqType, quorum.getCommitment().quorumHash)) {
                         log.info("quorum {} not active anymore, node={}",
                                 recSig.quorumHash.toString(), nodeId);
                         it.remove();
@@ -381,10 +381,10 @@ public class SigningManager {
                 }
 
                 Quorum quorum = quorums.get(new Pair<>(recSig.llmqType, recSig.quorumHash));
-                batchVerifier.pushMessage(nodeId, recSig.getHash(), LLMQUtils.buildSignHash(recSig), recSig.signature.getSignature(), quorum.commitment.quorumPublicKey);
+                batchVerifier.pushMessage(nodeId, recSig.getHash(), LLMQUtils.buildSignHash(recSig), recSig.signature.getSignature(), quorum.getCommitment().quorumPublicKey.getPublicKey());
                 verifyCount++;
 
-                logSignature("RECSIG", quorum.commitment.quorumPublicKey, LLMQUtils.buildSignHash(recSig), recSig.signature.getSignature());
+                logSignature("RECSIG", quorum.getCommitment().quorumPublicKey.getPublicKey(), LLMQUtils.buildSignHash(recSig), recSig.signature.getSignature());
             }
         }
 
@@ -489,12 +489,12 @@ public class SigningManager {
                     QuorumNotFoundException.Reason.MISSING_QUORUM);
         }
 
-        Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.commitment.quorumHash, id, msgHash);
+        Sha256Hash signHash = LLMQUtils.buildSignHash(llmqType, quorum.getCommitment().quorumHash, id, msgHash);
 
-        logSignature("RECSIG", quorum.commitment.quorumPublicKey, signHash, sig);
+        logSignature("RECSIG", quorum.getCommitment().quorumPublicKey.getPublicKey(), signHash, sig);
 
         if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
-            boolean result = sig.verifyInsecure(quorum.commitment.quorumPublicKey, signHash);
+            boolean result = sig.verifyInsecure(quorum.getCommitment().quorumPublicKey.getPublicKey(), signHash);
             if (!result) {
                 log.info("signature not validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, Sha256Hash.wrap(id.getReversedBytes()), signHash);
                 log.info("dash-cli quorum selectquorum {} {}", llmqType.value, Sha256Hash.wrap(id.getReversedBytes()));
@@ -503,7 +503,7 @@ public class SigningManager {
                 if (block == null)
                     headerChain.getBlockStore().get((int) (signedAtHeight - SIGN_HEIGHT_OFFSET));
                 for (Quorum q : context.masternodeListManager.getAllQuorums(llmqType)) {
-                    log.info("attempting verification of {}: {} with {}", Sha256Hash.wrap(id.getReversedBytes()), sig.verifyInsecure(q.commitment.quorumPublicKey, signHash), q);
+                    log.info("attempting verification of {}: {} with {}", Sha256Hash.wrap(id.getReversedBytes()), sig.verifyInsecure(q.getCommitment().quorumPublicKey.getPublicKey(), signHash), q);
                 }
             } else {
                 log.info("signature was validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, Sha256Hash.wrap(id.getReversedBytes()), signHash);

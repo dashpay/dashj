@@ -156,7 +156,7 @@ public class AssetLockTransaction extends Transaction {
     public TransactionOutPoint getLockedOutpoint(int outputIndex) {
         if (lockedOutpoints.isEmpty()) {
             for (int i = 0; i < assetLockPayload.getCreditOutputs().size(); ++i) {
-               lockedOutpoints.add(new TransactionOutPoint(params, i, Sha256Hash.wrap(getTxId().getReversedBytes())));
+               lockedOutpoints.add(new TransactionOutPoint(params, i, Sha256Hash.wrap(getTxId().getBytes())));
             }
         }
         return lockedOutpoints.get(outputIndex);

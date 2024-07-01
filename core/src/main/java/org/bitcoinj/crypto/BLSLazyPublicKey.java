@@ -73,6 +73,7 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
         length = cursor - offset;
     }
 
+
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         if (!initialized && buffer == null) {
@@ -85,7 +86,8 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
         }
     }
 
-    public void bitcoinSerialize(OutputStream stream, boolean legacy) throws IOException {
+    @Override
+    protected void bitcoinSerializeToStream(OutputStream stream, boolean legacy) throws IOException {
         if (!initialized && buffer == null) {
             throw new IOException("public key and buffer are not initialized");
         }
@@ -100,11 +102,11 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
         }
     }
 
-    public static BLSPublicKey invalidSignature = new BLSPublicKey();
+    public static final BLSPublicKey invalidKey = new BLSPublicKey();
 
     public BLSPublicKey getPublicKey() {
         if(buffer == null && !initialized)
-            return invalidSignature;
+            return invalidKey;
         if(!initialized) {
             publicKey = new BLSPublicKey(params, buffer, 0, legacy);
             buffer = null;  //save memory
@@ -115,7 +117,7 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
 
     @Override
     public String toString() {
-        return initialized ? publicKey.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
+        return initialized ? publicKey.toString() : (buffer == null ? invalidKey.toString() : Utils.HEX.encode(buffer));
     }
 
     @Deprecated
@@ -146,5 +148,13 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
     @Override
     public int hashCode() {
         return publicKey != null ? publicKey.hashCode() : 0;
+    }
+
+    public boolean isValid() {
+        if (initialized) {
+            return publicKey.isValid();
+        } else {
+            return buffer != null;
+        }
     }
 }
