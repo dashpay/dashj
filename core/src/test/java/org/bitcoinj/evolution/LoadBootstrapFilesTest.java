@@ -103,8 +103,9 @@ public class LoadBootstrapFilesTest {
         if (blockChain == null) {
             blockChain = new BlockChain(context, new MemoryBlockStore(params));
         }
-        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
+
         context.initDash(true, true);
+        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
         context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
     }
