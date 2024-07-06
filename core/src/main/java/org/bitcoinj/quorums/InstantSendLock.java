@@ -118,6 +118,7 @@ public class InstantSendLock extends Message {
         }
     }
 
+    @Override
     public Sha256Hash getHash() {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getMessageSize());
