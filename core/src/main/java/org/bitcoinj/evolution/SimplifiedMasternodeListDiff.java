@@ -24,8 +24,8 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
     public static final short BASIC_BLS_VERSION = 2;
     public static final short CURRENT_VERSION = 1;
     private short version;
-    public Sha256Hash prevBlockHash;
-    public Sha256Hash blockHash;
+    private Sha256Hash prevBlockHash;
+    private Sha256Hash blockHash;
     PartialMerkleTree cbTxMerkleTree;
     Transaction coinBaseTx;
     protected HashSet<Sha256Hash> deletedMNs;
@@ -188,6 +188,14 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         }
     }
 
+    public Sha256Hash getPrevBlockHash() {
+        return prevBlockHash;
+    }
+
+    public Sha256Hash getBlockHash() {
+        return blockHash;
+    }
+
     public boolean hasChanges() {
         return !mnList.isEmpty() || !deletedMNs.isEmpty() || hasQuorumChanges();
     }
@@ -197,10 +205,14 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         return true;
     }
 
+    private String getAddRemovedString() {
+        return String.format("adding %d and removing %d masternodes%s", mnList.size(), deletedMNs.size(),
+                (coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (String.format(" while adding %d and removing %d quorums", newQuorums.size(), deletedQuorums.size())) : ""));
+    }
+
     @Override
     public String toString() {
-        return "Simplified MNList Diff:  adding " + mnList.size() + " and removing " + deletedMNs.size() + " masternodes" +
-                (coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "");
+        return String.format("Simplified MNList Diff{ %s }", getAddRemovedString());
     }
 
     public String toString(DualBlockChain blockChain) {
@@ -212,28 +224,22 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         } catch (Exception x) {
             // swallow
         }
-        StringBuilder builder = new StringBuilder();
-        builder.append("Simplified MNList Diff: ").append(prevHeight).append(" -> ").append(height).append("/").append(getHeight())
-                .append(" [adding ").append(mnList.size()).append(" and removing ").append(deletedMNs.size()).append(" masternodes")
-                .append(coinBaseTx.getExtraPayloadObject().getVersion() >= 2 ? (" while adding " + newQuorums.size() + " and removing " + deletedQuorums.size() + " quorums") : "")
-                .append("]");
-
-        return builder.toString();
+        return String.format("Simplified MNList Diff{ %d -> %d/%d; %s }", prevHeight, height, getHeight(), getAddRemovedString());
     }
 
     public Transaction getCoinBaseTx() {
         return coinBaseTx;
     }
 
-    public ArrayList<SimplifiedMasternodeListEntry> getMnList() {
+    public List<SimplifiedMasternodeListEntry> getMnList() {
         return mnList;
     }
 
-    public ArrayList<Pair<Integer, Sha256Hash>> getDeletedQuorums() {
+    public List<Pair<Integer, Sha256Hash>> getDeletedQuorums() {
         return deletedQuorums;
     }
 
-    public ArrayList<FinalCommitment> getNewQuorums() {
+    public List<FinalCommitment> getNewQuorums() {
         return newQuorums;
     }
 
