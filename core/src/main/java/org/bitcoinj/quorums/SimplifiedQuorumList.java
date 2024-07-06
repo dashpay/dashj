@@ -126,12 +126,12 @@ public class SimplifiedQuorumList extends Message {
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
-            if(!diff.prevBlockHash.equals(blockHash))
+            if(!diff.getPrevBlockHash().equals(blockHash))
                 throw new MasternodeListDiffException("The mnlistdiff does not connect to this quorum.  height: " +
                         height + " vs " + cbtx.getHeight(), false, false, height == cbtx.getHeight(), false);
 
             SimplifiedQuorumList result = new SimplifiedQuorumList(this);
-            result.blockHash = diff.blockHash;
+            result.blockHash = diff.getBlockHash();
             result.height = cbtx.getHeight();
             result.coinbaseTxPayload = cbtx;
 

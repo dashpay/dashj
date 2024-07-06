@@ -152,7 +152,7 @@ public class SimplifiedMasternodeList extends Message {
     public SimplifiedMasternodeList applyDiff(SimplifiedMasternodeListDiff diff) throws MasternodeListDiffException
     {
         CoinbaseTx cbtx = (CoinbaseTx)diff.coinBaseTx.getExtraPayloadObject();
-        if(!diff.prevBlockHash.equals(blockHash) && !(diff.prevBlockHash.isZero() && blockHash.equals(params.getGenesisBlock().getHash())))
+        if(!diff.getPrevBlockHash().equals(blockHash) && !(diff.getPrevBlockHash().isZero() && blockHash.equals(params.getGenesisBlock().getHash())))
             throw new MasternodeListDiffException("The mnlistdiff does not connect to this list.  height: " +
                     height + " -> " + cbtx.getHeight(), false, false, height == cbtx.getHeight(), false);
 
@@ -160,7 +160,7 @@ public class SimplifiedMasternodeList extends Message {
         try {
             SimplifiedMasternodeList result = new SimplifiedMasternodeList(this, diff.getVersion());
 
-            result.blockHash = diff.blockHash;
+            result.blockHash = diff.getBlockHash();
             result.height = cbtx.getHeight();
             result.coinbaseTxPayload = cbtx;
 

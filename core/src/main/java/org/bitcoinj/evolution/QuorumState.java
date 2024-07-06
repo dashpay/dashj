@@ -123,7 +123,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
 
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
-        block = blockChain.getBlock(mnlistdiff.blockHash);
+        block = blockChain.getBlock(mnlistdiff.getBlockHash());
 
         if(!isLoadingBootStrap && block.getHeight() != newHeight)
             throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
@@ -134,7 +134,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST))
             newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
-        newMNList.setBlock(block, block != null && block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
+        newMNList.setBlock(block, block != null && block.getHeader().getPrevBlockHash().equals(mnlistdiff.getPrevBlockHash()));
 
         SimplifiedQuorumList newQuorumList = quorumList;
         if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
@@ -293,24 +293,24 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             finishDiff(isLoadingBootStrap);
         } catch(MasternodeListDiffException x) {
             // we already have this mnlistdiff or doesn't match our current tipBlockHash
-            if(getMnList().getBlockHash().equals(mnlistdiff.blockHash)) {
-                log.info("heights are the same:  " + x.getMessage());
-                log.info("mnList = {} vs mnlistdiff {}", getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
-                log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
+            if(getMnList().getBlockHash().equals(mnlistdiff.getBlockHash())) {
+                log.info("heights are the same: {}", x.getMessage());
+                log.info("mnList = {} vs mnlistdiff {}", getMnList().getBlockHash(), mnlistdiff.getPrevBlockHash());
+                log.info("mnlistdiff {} -> {}", mnlistdiff.getPrevBlockHash(), mnlistdiff.getBlockHash());
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
                 // remove this block from the list
                 if(!pendingBlocks.isEmpty()) {
                     StoredBlock thisBlock = pendingBlocks.peek();
-                    if(thisBlock.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash) &&
-                            thisBlock.getHeader().getHash().equals(mnlistdiff.prevBlockHash)) {
+                    if(thisBlock.getHeader().getPrevBlockHash().equals(mnlistdiff.getPrevBlockHash()) &&
+                            thisBlock.getHeader().getHash().equals(mnlistdiff.getPrevBlockHash())) {
                         pendingBlocks.pop();
                     }
                 }
             } else {
-                log.info("heights are different " + x.getMessage());
+                log.info("heights are different {}", x.getMessage());
                 log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, getMnList().getHeight(), quorumList.getHeight());
-                log.info("mnList = {} vs mnlistdiff = {}", getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
-                log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
+                log.info("mnList = {} vs mnlistdiff = {}", getMnList().getBlockHash(), mnlistdiff.getPrevBlockHash());
+                log.info("mnlistdiff {} -> {}", mnlistdiff.getPrevBlockHash(), mnlistdiff.getBlockHash());
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
                 log.info("requires reset {}", x.isRequiringReset());
                 log.info("requires new peer {}", x.isRequiringNewPeer());
