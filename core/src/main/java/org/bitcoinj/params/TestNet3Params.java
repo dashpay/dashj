@@ -80,7 +80,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         checkpoints.put(850100, Sha256Hash.wrap("000004728b8ff2a16b9d4eebb0fd61eeffadc9c7fe4b0ec0b5a739869401ab5b"));
         checkpoints.put(899760, Sha256Hash.wrap("000007b169cbf75796ee1147b24f6cdf627c189490d7472187408e0902413a68"));
 
-        // updated with Dash Core 20.0.0 seed list
+        // updated with Dash Core 21.0.0 seed list
         addrSeeds = new int[] {
                 0x2e4de52b,
                 0xf7a74d2d,
