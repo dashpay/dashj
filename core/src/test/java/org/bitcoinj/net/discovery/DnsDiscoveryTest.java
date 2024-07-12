@@ -31,7 +31,7 @@ public class DnsDiscoveryTest {
     public void testBuildDiscoveries() throws PeerDiscoveryException {
         String[] seeds = new String[] { "dnsseed.dash.org" };
         DnsDiscovery dnsDiscovery = new DnsDiscovery(seeds, MainNetParams.get());
-        assertTrue(dnsDiscovery.seeds.size() == 2);
+        assertTrue(dnsDiscovery.seeds.size() == 1);
         for (PeerDiscovery peerDiscovery : dnsDiscovery.seeds) {
             assertTrue(peerDiscovery.getPeers(0, 100, TimeUnit.MILLISECONDS).length > 0);
         }
