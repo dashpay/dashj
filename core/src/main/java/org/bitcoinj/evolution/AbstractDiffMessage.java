@@ -39,11 +39,11 @@ import java.io.OutputStream;
 public abstract class AbstractDiffMessage extends Message {
     private static final Logger log = LoggerFactory.getLogger(AbstractDiffMessage.class);
 
-    public AbstractDiffMessage(NetworkParameters params) {
+    protected AbstractDiffMessage(NetworkParameters params) {
         super(params);
     }
 
-    public AbstractDiffMessage(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
+    protected AbstractDiffMessage(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
         super(params, payload, offset, protocolVersion);
     }
 
@@ -51,11 +51,9 @@ public abstract class AbstractDiffMessage extends Message {
 
     public void dump(long startHeight, long endHeight) {
         if (!Utils.isAndroidRuntime() && Context.get().isDebugMode()) {
-            try {
-                File dumpFile = new File(getShortName() + "-" + params.getNetworkName() + "-" + startHeight + "-" + endHeight + ".dat");
-                OutputStream stream = new FileOutputStream(dumpFile);
+            File dumpFile = new File(getShortName() + "-" + params.getNetworkName() + "-" + startHeight + "-" + endHeight + ".dat");
+            try (OutputStream stream = new FileOutputStream(dumpFile)) {
                 stream.write(bitcoinSerialize());
-                stream.close();
                 log.info("dump successful");
             } catch (FileNotFoundException x) {
                 log.warn("could not dump {} - file not found.", getShortName(), x);
