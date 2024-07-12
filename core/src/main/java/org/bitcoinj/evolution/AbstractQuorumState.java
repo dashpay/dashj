@@ -119,19 +119,19 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     String bootstrapFilePath = null;
     InputStream bootstrapStream = null;
     int bootStrapFileFormat = 0;
-    public SettableFuture<Boolean> bootStrapLoaded;
+    private SettableFuture<Boolean> bootStrapLoaded;
 
     boolean isLoadingBootstrap = false;
     protected static Random random = new Random();
 
-    public AbstractQuorumState(Context context) {
+    protected AbstractQuorumState(Context context) {
         super(context.getParams());
         this.context = context;
         initializeOnce();
         initialize();
     }
 
-    public AbstractQuorumState(NetworkParameters params, byte[] payload, int offset, int protocolVersion) {
+    protected AbstractQuorumState(NetworkParameters params, byte[] payload, int offset, int protocolVersion) {
         super(params, payload, offset, protocolVersion);
         initialize();
     }
@@ -200,6 +200,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         return failedAttempts > MAX_ATTEMPTS;
     }
 
+    public SettableFuture<Boolean> getBootStrapLoadedFuture() {
+        return bootStrapLoaded;
+    }
+
     abstract int getBlockHeightOffset();
 
     public abstract int getUpdateInterval();
@@ -231,13 +235,13 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     public abstract SimplifiedMasternodeList getMasternodeListAtTip();
 
-    public abstract LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache();
+    public abstract Map<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache();
 
-    public abstract LinkedHashMap<Sha256Hash, SimplifiedQuorumList> getQuorumsCache();
+    public abstract Map<Sha256Hash, SimplifiedQuorumList> getQuorumsCache();
 
     public abstract SimplifiedQuorumList getQuorumListAtTip();
 
-    public abstract ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash);
+    public abstract List<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash);
 
     public void resetMNList() {
         resetMNList(false, true);

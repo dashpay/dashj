@@ -103,11 +103,11 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     public void waitForBootstrapLoaded() throws ExecutionException, InterruptedException {
-        if (quorumState.bootStrapLoaded != null) {
-            quorumState.bootStrapLoaded.get();
+        if (quorumState.getBootStrapLoadedFuture() != null) {
+            quorumState.getBootStrapLoadedFuture().get();
         }
-        if (quorumRotationState.bootStrapLoaded != null) {
-            quorumRotationState.bootStrapLoaded.get();
+        if (quorumRotationState.getBootStrapLoadedFuture() != null) {
+            quorumRotationState.getBootStrapLoadedFuture().get();
         }
     }
 
