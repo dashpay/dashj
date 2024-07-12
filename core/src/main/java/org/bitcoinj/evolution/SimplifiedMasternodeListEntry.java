@@ -20,7 +20,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     int type;
     int platformHTTPPort;
     KeyId platformNodeId;
-    static int MESSAGE_SIZE = 151;
+    static final int MESSAGE_SIZE = 151;
     //In Memory
     Sha256Hash confirmedHashWithProRegTxHash;
 
@@ -137,7 +137,6 @@ public class SimplifiedMasternodeListEntry extends Masternode {
                 Utils.uint16ToByteStreamLE(type, stream);
                 if (type == MasternodeType.HIGHPERFORMANCE.index) {
                     Utils.uint16ToByteStreamLE(platformHTTPPort, stream);
-                    // TODO: not in beta 5
                     platformNodeId.bitcoinSerialize(stream);
                 }
             }
