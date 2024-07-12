@@ -31,8 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class QuorumUpdateRequest<T extends AbstractQuorumRequest> {
     T request;
     long time;
-    private AtomicBoolean fulfilled = new AtomicBoolean(false);
-    private AtomicBoolean received = new AtomicBoolean(false);
+    private final AtomicBoolean fulfilled = new AtomicBoolean(false);
+    private final AtomicBoolean received = new AtomicBoolean(false);
 
     private PeerAddress peerAddress;
     public QuorumUpdateRequest(T request) {
