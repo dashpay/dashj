@@ -14,7 +14,7 @@ public class GetSimplifiedMasternodeListDiff extends AbstractQuorumRequest {
     Sha256Hash baseBlockHash;
     Sha256Hash blockHash;
 
-    public static int MESSAGE_SIZE = 64;
+    public static final int MESSAGE_SIZE = 64;
 
     public GetSimplifiedMasternodeListDiff(Sha256Hash baseBlockHash, Sha256Hash blockHash) {
         super();
