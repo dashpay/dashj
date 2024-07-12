@@ -75,8 +75,8 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public static final int BLS_SCHEME_FORMAT_VERSION = 4;
     public static final int SMLE_VERSION_FORMAT_VERSION = 5;
 
-    public static int MAX_CACHE_SIZE = 10;
-    public static int MIN_CACHE_SIZE = 1;
+    public static final int MAX_CACHE_SIZE = 10;
+    public static final int MIN_CACHE_SIZE = 1;
     private ExecutorService threadPool = Executors.newFixedThreadPool(1, new ContextPropagatingThreadFactory("process-qrinfo"));
 
     public List<Quorum> getAllQuorums(LLMQParameters.LLMQType llmqType) {
@@ -249,7 +249,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             if (getFormatVersion() >= LLMQ_FORMAT_VERSION) {
                 quorumState.serializeQuorumsToStream(stream);
                 if (quorumState.syncOptions != MasternodeListSyncOptions.SYNC_MINIMUM) {
-                    stream.write(new VarInt(quorumState.getPendingBlocks().size() + otherPendingBlocks.size()).encode());
+                    stream.write(new VarInt((long)quorumState.getPendingBlocks().size() + otherPendingBlocks.size()).encode());
                     ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
                     log.info("saving {} blocks to catch up mnList", otherPendingBlocks.size());
                     for (StoredBlock block : otherPendingBlocks) {
@@ -438,11 +438,6 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 quorumRotationState.getPendingBlocks().size() + (height != -1?  ("-->height: "+height+")") : "" ) +"}";
     }
 
-    @Deprecated
-    public long getSpork15Value() {
-        return 0;
-    }
-
     public boolean isQuorumRotationEnabled(LLMQParameters.LLMQType type) {
         if (blockChain == null) {
             return formatVersion == QUORUM_ROTATION_FORMAT_VERSION;
@@ -514,7 +509,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         }
     }
 
-    public ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
+    public List<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
     {
         if (isQuorumRotationEnabled(llmqType)) {
             return quorumRotationState.getAllQuorumMembers(llmqType, blockHash);
