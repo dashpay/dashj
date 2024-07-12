@@ -90,11 +90,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     private ReentrantLock memberLock = Threading.lock("memberLock");
     @GuardedBy("memberLock")
-    HashMap<LLMQParameters.LLMQType, HashMap<Sha256Hash, ArrayList<Masternode>>> mapQuorumMembers = new HashMap<>();
+    EnumMap<LLMQParameters.LLMQType, HashMap<Sha256Hash, ArrayList<Masternode>>> mapQuorumMembers = new EnumMap<>(LLMQParameters.LLMQType.class);
 
     private ReentrantLock indexedMemberLock = Threading.lock("indexedMemberLock");
     @GuardedBy("indexedMemberLock")
-    HashMap<LLMQParameters.LLMQType, HashMap<Pair<Sha256Hash, Integer>, ArrayList<Masternode>>> mapIndexedQuorumMembers = new HashMap<>();
+    EnumMap<LLMQParameters.LLMQType, HashMap<Pair<Sha256Hash, Integer>, ArrayList<Masternode>>> mapIndexedQuorumMembers = new EnumMap<>(LLMQParameters.LLMQType.class);
 
     public QuorumRotationState(Context context) {
         super(context);
@@ -598,7 +598,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                     builder.append(m.getProTxHash().toString().substring(0, 4)).append("|");
                 }
                 builder.append(" ]");
-                log.info("QuarterComposition h[{}] i[{}]:{}", quorumBaseBlock.getHeight(), i, builder.toString());
+                log.info("QuarterComposition h[{}] i[{}]:{}", quorumBaseBlock.getHeight(), i, builder);
             }
         }
 
@@ -662,7 +662,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             builder.append("  ").append(mn.getProTxHash()).append("\n");
         }
 
-        log.info(builder.toString());
+        log.info("{}", builder);
     }
 
     private static ArrayList<ArrayList<SimplifiedMasternodeListEntry>> createNewQuarterQuorumMembers(LLMQParameters llmqParameters) {
@@ -792,72 +792,6 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         return quarterQuorumMembers;
     }
 
-    @Deprecated
-    private QuorumSnapshot buildQuorumSnapshot(LLMQParameters llmqParameters, SimplifiedMasternodeList allMns, SimplifiedMasternodeList mnUsedAtH, ArrayList<Masternode> sortedCombinedMns, ArrayList<Integer> skipList) {
-        QuorumSnapshot quorumSnapshot = new QuorumSnapshot(allMns.getAllMNsCount());
-
-        AtomicInteger index = new AtomicInteger();
-        allMns.forEachMN(true, mn -> {
-            if (mnUsedAtH.containsMN(mn.getProTxHash())) {
-                quorumSnapshot.setActiveQuorumMember(index.get(), true);
-            }
-            index.getAndIncrement();
-        });
-
-        // TODO: do we need this?
-        // buildQuorumSnapshotSkipList(llmqParameters, mnUsedAtH, sortedCombinedMns, quorumSnapshot);
-        if (skipList.isEmpty()) {
-            quorumSnapshot.setSkipListMode(SnapshotSkipMode.MODE_NO_SKIPPING);
-            quorumSnapshot.getSkipList().clear();
-        } else {
-            quorumSnapshot.setSkipListMode(SnapshotSkipMode.MODE_SKIPPING_ENTRIES);
-            quorumSnapshot.setSkipList(skipList);
-        }
-        return quorumSnapshot;
-    }
-
-
-    @Deprecated // this method is not used, may not be required"
-    void buildQuorumSnapshotSkipList(LLMQParameters llmqParameters, SimplifiedMasternodeList mnUsedAtH, ArrayList<Masternode> sortedCombinedMns, QuorumSnapshot quorumSnapshot) {
-        if (mnUsedAtH.getAllMNsCount() == 0) {
-            quorumSnapshot.setSkipListMode(SnapshotSkipMode.MODE_NO_SKIPPING);
-            quorumSnapshot.getSkipList().clear();
-        } else if (mnUsedAtH.getAllMNsCount() < sortedCombinedMns.size() / 2) {
-            quorumSnapshot.setSkipListMode(SnapshotSkipMode.MODE_SKIPPING_ENTRIES);
-
-            int first_entry_index = 0;
-            int index = 0;
-
-            for (Masternode mn : sortedCombinedMns) {
-                if (mnUsedAtH.containsMN(sortedCombinedMns.get(index).getProTxHash())) {
-                    if (first_entry_index == 0) {
-                        first_entry_index = index;
-                        quorumSnapshot.getSkipList().add(index);
-                    } else
-                        quorumSnapshot.getSkipList().add(index - first_entry_index);
-                }
-                index++;
-            }
-        } else {
-            //Mode 2: Non-Skipping entries
-            quorumSnapshot.setSkipListMode(SnapshotSkipMode.MODE_NO_SKIPPING_ENTRIES);
-
-            int first_entry_index = 0;
-            int index = 0;
-
-            for (Masternode mn : sortedCombinedMns) {
-                if (!mnUsedAtH.containsMN(sortedCombinedMns.get(index).getProTxHash())) {
-                    if (first_entry_index == 0) {
-                        first_entry_index = index;
-                        quorumSnapshot.getSkipList().add(index);
-                    } else
-                        quorumSnapshot.getSkipList().add(index - first_entry_index);
-                }
-                index++;
-            }
-        }
-    }
-
     PreviousQuorumQuarters getPreviousQuorumQuarterMembers(LLMQParameters llmqParameters, StoredBlock blockHMinusC, StoredBlock blockHMinus2C, StoredBlock blockHMinus3C,
                                                            int height) {
         PreviousQuorumQuarters quarters = new PreviousQuorumQuarters();
@@ -888,87 +822,83 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     ArrayList<ArrayList<SimplifiedMasternodeListEntry>> getQuorumQuarterMembersBySnapshot(LLMQParameters llmqParameters, StoredBlock cycleQuorumBaseBlock, QuorumSnapshot snapshot, int height) {
         checkArgument(llmqParameters.useRotation());
         checkArgument(cycleQuorumBaseBlock.getHeight() % llmqParameters.getDkgInterval() == 0);
-        //try {
-            int numQuorums = llmqParameters.getSigningActiveQuorumCount();
-            int quorumSize = llmqParameters.getSize();
-            int quarterSize = quorumSize / 4;
 
-            ArrayList<ArrayList<SimplifiedMasternodeListEntry>> quarterQuorumMembers = Lists.newArrayListWithCapacity(numQuorums);
-            for (int i = 0; i < numQuorums; ++i) {
-                quarterQuorumMembers.add(Lists.newArrayList());
+        int numQuorums = llmqParameters.getSigningActiveQuorumCount();
+        int quorumSize = llmqParameters.getSize();
+        int quarterSize = quorumSize / 4;
+
+        ArrayList<ArrayList<SimplifiedMasternodeListEntry>> quarterQuorumMembers = Lists.newArrayListWithCapacity(numQuorums);
+        for (int i = 0; i < numQuorums; ++i) {
+            quarterQuorumMembers.add(Lists.newArrayList());
+        }
+
+        Sha256Hash modifier = getHashModifier(llmqParameters, cycleQuorumBaseBlock);
+
+        Pair<SimplifiedMasternodeList, SimplifiedMasternodeList> result = getMNUsageBySnapshot(llmqParameters, cycleQuorumBaseBlock, snapshot, height);
+        SimplifiedMasternodeList mnsUsedAtH = result.getFirst();
+        SimplifiedMasternodeList mnsNotUsedAtH = result.getSecond();
+        ArrayList<Masternode> sortedMnsUsedAtH = mnsUsedAtH.calculateQuorum(mnsUsedAtH.getAllMNsCount(), modifier);
+        ArrayList<Masternode> sortedMnsNotUsedAtH = mnsNotUsedAtH.calculateQuorum(mnsNotUsedAtH.getAllMNsCount(), modifier);
+        ArrayList<Masternode> sortedCombinedMnsList = new ArrayList<>(sortedMnsNotUsedAtH);
+
+        for (Masternode m1 : sortedMnsUsedAtH) {
+            for (Masternode m2 : sortedMnsNotUsedAtH) {
+                if (m1.equals(m2)) {
+                    log.info("{} is in both lists", m1);
+                }
             }
+        }
+        sortedCombinedMnsList.addAll(sortedMnsUsedAtH);
 
-            Sha256Hash modifier = getHashModifier(llmqParameters, cycleQuorumBaseBlock);
-
-            Pair<SimplifiedMasternodeList, SimplifiedMasternodeList> result = getMNUsageBySnapshot(llmqParameters, cycleQuorumBaseBlock, snapshot, height);
-            SimplifiedMasternodeList mnsUsedAtH = result.getFirst();
-            SimplifiedMasternodeList mnsNotUsedAtH = result.getSecond();
-            ArrayList<Masternode> sortedMnsUsedAtH = mnsUsedAtH.calculateQuorum(mnsUsedAtH.getAllMNsCount(), modifier);
-            ArrayList<Masternode> sortedMnsNotUsedAtH = mnsNotUsedAtH.calculateQuorum(mnsNotUsedAtH.getAllMNsCount(), modifier);
-            ArrayList<Masternode> sortedCombinedMnsList = new ArrayList<>(sortedMnsNotUsedAtH);
-
-            for (Masternode m1 : sortedMnsUsedAtH) {
-                for (Masternode m2 : sortedMnsNotUsedAtH) {
-                    if (m1.equals(m2)) {
-                        log.info("{} is in both lists", m1);
+        //Mode 0: No skipping
+        if (snapshot.getSkipListMode() == SnapshotSkipMode.MODE_NO_SKIPPING.getValue()) {
+            Iterator<Masternode> itm = sortedCombinedMnsList.iterator();
+            for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
+                //Iterate over the first quarterSize elements
+                while (quarterQuorumMembers.get(i).size() < quarterSize) {
+                    Masternode m = itm.next();
+                    quarterQuorumMembers.get(i).add((SimplifiedMasternodeListEntry) m);
+                    if (!itm.hasNext()) {
+                        itm = sortedCombinedMnsList.iterator();
                     }
                 }
             }
-            sortedCombinedMnsList.addAll(sortedMnsUsedAtH);
-
-            //Mode 0: No skipping
-            if (snapshot.getSkipListMode() == SnapshotSkipMode.MODE_NO_SKIPPING.getValue()) {
-                Iterator<Masternode> itm = sortedCombinedMnsList.iterator();
-                for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
-                    //Iterate over the first quarterSize elements
-                    while (quarterQuorumMembers.get(i).size() < quarterSize) {
-                        Masternode m = itm.next();
-                        quarterQuorumMembers.get(i).add((SimplifiedMasternodeListEntry) m);
-                        if (!itm.hasNext()) {
-                            itm = sortedCombinedMnsList.iterator();
-                        }
-                    }
+        }
+        //Mode 1: List holds entries to be skipped
+        else if (snapshot.getSkipListMode() == SnapshotSkipMode.MODE_SKIPPING_ENTRIES.getValue()) {
+            int firstEntryIndex = 0;
+            ArrayList<Integer> processedSkipList = Lists.newArrayList();
+            for (int s : snapshot.getSkipList()) {
+                if (firstEntryIndex == 0) {
+                    firstEntryIndex = s;
+                    processedSkipList.add(s);
+                } else {
+                    processedSkipList.add(firstEntryIndex + s);
                 }
             }
-            //Mode 1: List holds entries to be skipped
-            else if (snapshot.getSkipListMode() == SnapshotSkipMode.MODE_SKIPPING_ENTRIES.getValue()) {
-                int first_entry_index = 0;
-                ArrayList<Integer> processedSkipList = Lists.newArrayList();
-                for (int s : snapshot.getSkipList()) {
-                    if (first_entry_index == 0) {
-                        first_entry_index = s;
-                        processedSkipList.add(s);
-                    } else {
-                        processedSkipList.add(first_entry_index + s);
-                    }
-                }
 
-                int idx = 0;
-                int idxk = 0;
-                for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
-                    //Iterate over the first quarterSize elements
-                    while (quarterQuorumMembers.get(i).size() < quarterSize) {
-                        if (idxk != processedSkipList.size() && idx == processedSkipList.get(idxk))
-                            idxk++;
-                        else
-                            quarterQuorumMembers.get(i).add((SimplifiedMasternodeListEntry) sortedCombinedMnsList.get(idx));
-                        idx++;
-                        if (idx == sortedCombinedMnsList.size())
-                            idx = 0;
-                    }
+            int idx = 0;
+            int idxk = 0;
+            for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
+                //Iterate over the first quarterSize elements
+                while (quarterQuorumMembers.get(i).size() < quarterSize) {
+                    if (idxk != processedSkipList.size() && idx == processedSkipList.get(idxk))
+                        idxk++;
+                    else
+                        quarterQuorumMembers.get(i).add((SimplifiedMasternodeListEntry) sortedCombinedMnsList.get(idx));
+                    idx++;
+                    if (idx == sortedCombinedMnsList.size())
+                        idx = 0;
                 }
             }
-            //Mode 2: List holds entries to be kept
-            else if (snapshot.getSkipListMode() == SnapshotSkipMode.MODE_NO_SKIPPING_ENTRIES.getValue()) {
-                // Mode 2 will be written later
-            }
-            //Mode 3: Every node was skipped. Returning empty quarterQuorumMembers
+        }
+        //Mode 2: List holds entries to be kept
+        else if (snapshot.getSkipListMode() == SnapshotSkipMode.MODE_NO_SKIPPING_ENTRIES.getValue()) {
+            // Mode 2 will be written later
+        }
+        //Mode 3: Every node was skipped. Returning empty quarterQuorumMembers
 
-            return quarterQuorumMembers;
-       // }
-        /*catch (BlockStoreException x) {
-            throw new RuntimeException(x);
-        }*/
+        return quarterQuorumMembers;
     }
 
     Pair<SimplifiedMasternodeList, SimplifiedMasternodeList> getMNUsageBySnapshot(LLMQParameters llmqParameters,
@@ -1001,13 +931,13 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             return new Pair<>(usedMNs, nonUsedMNs);
     }
 
-    void initIndexedQuorumsCache(HashMap<LLMQParameters.LLMQType, HashMap<Pair<Sha256Hash, Integer>, ArrayList<Masternode>>> cache) {
+    void initIndexedQuorumsCache(EnumMap<LLMQParameters.LLMQType, HashMap<Pair<Sha256Hash, Integer>, ArrayList<Masternode>>> cache) {
         for (Map.Entry<LLMQParameters.LLMQType, LLMQParameters> llmq : params.getLlmqs().entrySet()) {
             cache.put(llmq.getKey(), new HashMap<>(llmq.getValue().getSigningActiveQuorumCount() + 1));
         }
     }
 
-    void initQuorumsCache(HashMap<LLMQParameters.LLMQType, HashMap<Sha256Hash, ArrayList<Masternode>>> cache) {
+    void initQuorumsCache(EnumMap<LLMQParameters.LLMQType, HashMap<Sha256Hash, ArrayList<Masternode>>> cache) {
         for (Map.Entry<LLMQParameters.LLMQType, LLMQParameters> llmq : params.getLlmqs().entrySet()) {
             cache.put(llmq.getKey(), new HashMap<>(llmq.getValue().getSigningActiveQuorumCount() + 1));
         }
@@ -1265,7 +1195,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
                 peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, quorumRotationInfo.getMnListDiffTip());
             watch.stop();
             log.info("processing qrinfo: Total: {} mnlistdiff: {}", watch, quorumRotationInfo.getMnListDiffTip());
-            log.info(toString());
+            log.info("{}", this);
         } catch (MasternodeListDiffException x) {
             //we already have this qrinfo or doesn't match our current tipBlockHash
             if (mnListAtH.getBlockHash().equals(quorumRotationInfo.getMnListDiffAtH().getBlockHash())) {
@@ -1296,7 +1226,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             finishDiff(isLoadingBootStrap);
         } catch (VerificationException x) {
             //request this block again and close this peer
-            log.info("verification error: close this peer" + x.getMessage());
+            log.info("verification error: close this peer: {}", x.getMessage());
             failedAttempts++;
             finishDiff(isLoadingBootStrap);
             throw x;
