@@ -7,8 +7,6 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.quorums.FinalCommitment;
 import org.bitcoinj.utils.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -16,12 +14,7 @@ import java.util.*;
 
 public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
-    private static final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeListDiff.class);
     private static final String SHORT_NAME = "mnlistdiff";
-    @Deprecated
-    public static final short LEGACY_BLS_VERSION = 1;
-    @Deprecated
-    public static final short BASIC_BLS_VERSION = 2;
     public static final short CURRENT_VERSION = 1;
     private short version;
     private Sha256Hash prevBlockHash;
@@ -267,7 +260,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         return false;
     }
 
-    public HashMap<BLSSignature, HashSet<Integer>> getQuorumsCLSigs() {
+    public Map<BLSSignature, HashSet<Integer>> getQuorumsCLSigs() {
         return quorumsCLSigs;
     }
 }
