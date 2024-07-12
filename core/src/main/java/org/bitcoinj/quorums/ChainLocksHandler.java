@@ -15,6 +15,7 @@
  */
 package org.bitcoinj.quorums;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.crypto.BLSSecretKey;
@@ -47,11 +48,10 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class ChainLocksHandler extends AbstractManager implements RecoveredSignatureListener {
 
-    static final long CLEANUP_INTERVAL = 1000 * 30;
-    static final long CLEANUP_SEEN_TIMEOUT = 24 * 60 * 60 * 1000;
+    static final long CLEANUP_INTERVAL = 1000L * 30;
+    static final long CLEANUP_SEEN_TIMEOUT = 24 * 60 * 60 * 1000L;
 
     private SigningManager quorumSigningManager;
-    private InstantSendManager quorumInstantSendManager;
 
     private static final Logger log = LoggerFactory.getLogger(ChainLocksHandler.class);
     private final ReentrantLock lock = Threading.lock("ChainLocksHandler");
@@ -99,9 +99,9 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         this.headerChain = headerChain;
         this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
         this.quorumSigningManager = context.signingManager;
-        this.quorumInstantSendManager = context.instantSendManager;
     }
 
+    @Override
     public void close() {
         if (blockChain != null) {
             blockChain.removeNewBestBlockListener(this.newBestBlockListener);
@@ -119,14 +119,15 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         //do nothing.  In Dash Core, this handles signing CLSIG's
     }
 
-    public void start()
-    {
+    @VisibleForTesting
+    public void start() {
         quorumSigningManager.addRecoveredSignatureListener(this);
         // TODO: start the scheduler here:
         //  processChainLock();
         scheduledExecutorService = Executors.newScheduledThreadPool(1);
     }
 
+    @VisibleForTesting
     public void stop() {
         try {
             quorumSigningManager.removeRecoveredSignatureListener(this);
@@ -150,8 +151,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         return seenChainLocks.containsKey(inv.hash);
     }
 
-    public ChainLockSignature getChainLockByHash(Sha256Hash hash)
-    {
+    public ChainLockSignature getChainLockByHash(Sha256Hash hash) {
         lock.lock();
         try {
             if (hash != bestChainLockHash) {
@@ -273,7 +273,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         try {
 
             if (newBlock.getHeader().getHash().equals(bestChainLock.blockHash)) {
-                log.info("block header {} came in late, updating and enforcing", newBlock.getHeader().getHash().toString());
+                log.info("block header {} came in late, updating and enforcing", newBlock.getHeader().getHash());
 
                 if (bestChainLock.height != newBlock.getHeight()) {
                     // Should not happen, same as the conflict check from ProcessNewChainLock.
@@ -415,10 +415,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                 return blockHash == bestChainLockBlock.getHeader().getHash();
             }
 
-            StoredBlock cursor = bestChainLockBlock;
-            while(cursor != null) {
-                cursor = cursor.getPrev(blockChain.getBlockStore());
-            }
+            StoredBlock cursor = bestChainLockBlock.getAncestor(blockChain.getBlockStore(), (int) height);
             return cursor != null && cursor.getHeader().getHash().equals(blockHash);
         } catch (BlockStoreException x) {
             return false;
@@ -452,11 +449,8 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
                 return blockHash != bestChainLockBlock.getHeader().getHash();
             }
 
-            StoredBlock cursor = bestChainLockBlock;
-            while(cursor != null) {
-                cursor = cursor.getPrev(blockChain.getBlockStore());
-            }
-            return cursor != null && !cursor.getHeader().getHash().equals(blockHash);
+            StoredBlock cursor = bestChainLockBlock.getAncestor(blockChain.getBlockStore(), (int) height);
+            return cursor != null && cursor.getHeader().getHash().equals(blockHash);
         } catch (BlockStoreException x) {
             return false;
         }
@@ -485,7 +479,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     private final NewBestBlockListener newBestBlockListener = block -> updatedBlockTip(block, null);
 
-    private final transient CopyOnWriteArrayList<ListenerRegistration<ChainLockListener>> chainLockListeners;
+    private final CopyOnWriteArrayList<ListenerRegistration<ChainLockListener>> chainLockListeners;
 
     /**
      * Adds an event listener object. Methods on this object are called when something interesting happens,
@@ -542,12 +536,12 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     @Override
     public void checkAndRemove() {
-
+        // there is nothing to check in this class
     }
 
     @Override
     public void clear() {
-
+        // there is nothing to clear in this class
     }
 
     @Override
