@@ -32,7 +32,6 @@ import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -253,7 +252,6 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     @Override
     public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, DualBlockChain blockChain,
                             boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage) throws VerificationException {
-        StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);
         Stopwatch watch = Stopwatch.createStarted();
@@ -266,16 +264,13 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
         mnlistdiff.dump(mnList.getHeight(), newHeight);
         lastRequest.setReceived();
-        // TODO: remove this
-//        if (lock.isLocked() && !initChainTipSyncComplete()) {
-//            Threading.dump();
-//        }
+
         lock.lock();
         try {
             log.info("lock acquired when processing mnlistdiff");
             applyDiff(peer, blockChain, mnlistdiff, isLoadingBootStrap);
 
-            log.info(this.toString());
+            log.info("{}", this);
             lastRequest.setFulfilled();
             unCache();
             clearFailedAttempts();
@@ -288,8 +283,8 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             if (peer != null && isSyncingHeadersFirst)
                 peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, mnlistdiff);
             watch.stop();
-            log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
-            log.info(toString());
+            log.info("processing mnlistdiff times : Total: {} mnList: {} quorums: {} mnlistdiff: {}", watch, watchMNList, watchQuorums, mnlistdiff);
+            log.info("{}", this);
             finishDiff(isLoadingBootStrap);
         } catch(MasternodeListDiffException x) {
             // we already have this mnlistdiff or doesn't match our current tipBlockHash
@@ -326,7 +321,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             finishDiff(isLoadingBootStrap);
         } catch(VerificationException x) {
             //request this block again and close this peer
-            log.info("verification error: close this peer" + x.getMessage());
+            log.info("verification error: close this peer: {}", x.getMessage());
             incrementFailedAttempts();
             finishDiff(isLoadingBootStrap);
             throw x;
@@ -336,7 +331,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             finishDiff(isLoadingBootStrap);
             throw new VerificationException("verification error: " + x.getMessage());
         } catch(BlockStoreException x) {
-            log.info(x.getMessage());
+            log.info("{}", x.getMessage());
             incrementFailedAttempts();
             finishDiff(isLoadingBootStrap);
             throw new ProtocolException(x);
