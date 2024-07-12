@@ -136,7 +136,7 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
             if (that.isInitialized())
                 return Objects.equals(publicKey, that.publicKey);
             else
-                return Objects.equals(publicKey.getBuffer(), that.buffer);
+                return Arrays.equals(publicKey.getBuffer(), that.buffer);
         } else {
             if (that.isInitialized())
                 return Arrays.equals(buffer, that.publicKey.getBuffer());
@@ -156,5 +156,9 @@ public class BLSLazyPublicKey extends BLSAbstractLazyObject {
         } else {
             return buffer != null;
         }
+    }
+
+    public byte [] getBuffer() {
+        return buffer != null ? buffer : publicKey.getBuffer();
     }
 }
