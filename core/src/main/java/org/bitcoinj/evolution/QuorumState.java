@@ -265,6 +265,27 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         mnlistdiff.dump(mnList.getHeight(), newHeight);
         lastRequest.setReceived();
 
+        // TODO: Remove with v21.0.1
+        if (lock.isLocked()) {
+            log.warn("the lock is held. holdCount {}, queue length {}, held by this thread {}", lock.getHoldCount(), lock.getQueueLength(), lock.isHeldByCurrentThread());
+            log.warn("the current thread is {} with stack trace:", Thread.currentThread().getName());
+            StackTraceElement [] trace = lock.getOwner().getStackTrace();
+            for (StackTraceElement e : trace) {
+                log.info("  {}", e);
+            }
+            log.warn("the lock is held by {} with stack trace:", lock.getOwner());
+            trace = lock.getOwner().getStackTrace();
+            for (StackTraceElement e : trace) {
+                log.info("  {}", e);
+            }
+            for (Thread thread : lock.getQueuedThreads()) {
+                log.info("queued thread: {}\n stack trace:", thread.getName());
+                trace = thread.getStackTrace();
+                for (StackTraceElement e : trace) {
+                    log.info("  {}", e);
+                }
+            }
+        }
         lock.lock();
         try {
             log.info("lock acquired when processing mnlistdiff");

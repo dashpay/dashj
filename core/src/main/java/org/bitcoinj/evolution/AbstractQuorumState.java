@@ -47,6 +47,7 @@ import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
+import org.bitcoinj.utils.DebugReentrantLock;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,7 +90,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public static final int MIN_CACHE_SIZE = 1;
 
     private static final Logger log = LoggerFactory.getLogger(AbstractQuorumState.class);
-    protected final ReentrantLock lock = Threading.lock("AbstractQuorumState");
+    // TODO: Revert to ReentrantLock with 21.0.1
+    protected final DebugReentrantLock lock = Threading.debugLock("AbstractQuorumState");
 
     Context context;
     DualBlockChain blockChain;
@@ -222,6 +224,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public abstract void requestUpdate(Peer peer, StoredBlock block);
 
     public void retryLastUpdate(Peer peer) {
+        log.info("retryLastUpdate: {}", lastRequest.getRequestMessage());
         if (peer != null) {
             peer.sendMessage(lastRequest.getRequestMessage());
         } else {
@@ -409,7 +412,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                     log.info("sending {} from {} to {}; \n  From {}\n To {}", lastRequest.request.getClass().getSimpleName(),
                             getMasternodeListAtTip().getHeight(), nextBlock.getHeight(), getMasternodeListAtTip().getBlockHash(), nextBlock.getHeader().getHash());
                     requestUpdate(downloadPeer, nextBlock);
-                    log.info("message = {}", lastRequest.getRequestMessage().toString(blockChain));
+                    // This was causing a dead lock when using toString(DualBlockchain).  Use toString() instead.
+                    log.info("message = {}", lastRequest.getRequestMessage());
                     waitingForMNListDiff = true;
                     return true;
                 } else {
@@ -745,7 +749,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             try {
                 if (isLocked) {
                     downloadPeer = context.peerGroup.getDownloadPeer();
-                    log.info("{}: lock acquired, obtaining downloadPeer from peerGroup: {}",
+                    log.info("{}: peergroup lock acquired, obtaining downloadPeer from peerGroup: {}",
                             Thread.currentThread().getName(), downloadPeer);
                     if (downloadPeer == null) {
                         chooseRandomDownloadPeer();

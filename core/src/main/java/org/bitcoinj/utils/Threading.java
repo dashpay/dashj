@@ -162,6 +162,11 @@ public class Threading {
             return factory.newReentrantLock(name);
     }
 
+    /** creates a lock that gives access to the owner thread **/
+    public static DebugReentrantLock debugLock(String name) {
+        return new DebugReentrantLock(name);
+    }
+
     public static void setUseDefaultAndroidPolicy(boolean use) {
         useDefaultAndroidPolicy = use;
     }
