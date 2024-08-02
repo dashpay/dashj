@@ -862,7 +862,7 @@ public class GovernanceManager extends AbstractManager {
     public void updateCachesAndClean() {
         log.info("gobject--CGovernanceManager::UpdateCachesAndClean");
 
-        ArrayList<Sha256Hash> vecDirtyHashes = context.masternodeMetaDataManager.getAndClearDirtyGovernanceObjectHashes();
+        List<Sha256Hash> vecDirtyHashes = context.masternodeMetaDataManager.getAndClearDirtyGovernanceObjectHashes();
         
         lock.lock();
         try {

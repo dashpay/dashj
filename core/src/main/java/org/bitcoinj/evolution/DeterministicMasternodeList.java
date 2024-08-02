@@ -24,7 +24,7 @@ public class DeterministicMasternodeList extends Message {
         this.blockHash = other.blockHash;
         this.height = other.height;
 
-        mnMap = new HashMap<Sha256Hash, DeterministicMasternode>(other.mnMap.size());
+        mnMap = new HashMap<>(other.mnMap.size());
         for(Map.Entry<Sha256Hash, DeterministicMasternode> entry : mnMap.entrySet()) {
             mnMap.put(entry.getKey(), new DeterministicMasternode(entry.getValue()));
         }
@@ -35,7 +35,7 @@ public class DeterministicMasternodeList extends Message {
         blockHash = readHash();
         height = (int)readUint32();
         int size = (int)readVarInt();
-        mnMap = new HashMap<Sha256Hash, DeterministicMasternode>(size);
+        mnMap = new HashMap<>(size);
         for(int i = 0; i < size; ++i)
         {
             Sha256Hash hash = readHash();
@@ -45,13 +45,13 @@ public class DeterministicMasternodeList extends Message {
         }
 
         size = (int)readVarInt();
-        mnUniquePropertyMap = new HashMap<Sha256Hash, Pair<Sha256Hash, Integer>>(size);
+        mnUniquePropertyMap = new HashMap<>(size);
         for(long i = 0; i < size; ++i)
         {
             Sha256Hash hash = readHash();
             Sha256Hash first = readHash();
             int second = (int)readUint32();
-            mnUniquePropertyMap.put(hash, new Pair<Sha256Hash, Integer>(first, second));
+            mnUniquePropertyMap.put(hash, new Pair<>(first, second));
         }
     }
 
@@ -158,7 +158,7 @@ public class DeterministicMasternodeList extends Message {
         if (p.getSecond() == 1) {
             mnUniquePropertyMap.remove(oldHash);
         } else {
-            mnUniquePropertyMap.put(oldHash, new Pair<Sha256Hash, Integer>(dmn.proRegTxHash, p.getSecond() - 1));
+            mnUniquePropertyMap.put(oldHash, new Pair<>(dmn.proRegTxHash, p.getSecond() - 1));
         }
     }
     @Deprecated

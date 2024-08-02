@@ -10,12 +10,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class BLSLazySignature extends BLSAbstractLazyObject {
     ReentrantLock lock = Threading.lock("BLSLazySignature");
-    Logger log = LoggerFactory.getLogger(BLSLazySignature.class);
-    BLSSignature signature;
+    private static final Logger log = LoggerFactory.getLogger(BLSLazySignature.class);
+    private BLSSignature signature;
 
     @Deprecated
     public BLSLazySignature() {
@@ -80,6 +81,7 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
         }
     }
 
+    @Deprecated
     public BLSLazySignature assign(BLSLazySignature blsLazySignature) {
         lock.lock();
         try {
@@ -135,7 +137,11 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
 
     @Override
     public String toString() {
-        return initialized ? signature.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
+        if (initialized) {
+            return signature.toString();
+        } else {
+            return buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer);
+        }
     }
 
     public boolean isValid() {
@@ -144,5 +150,20 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
         } else {
             return buffer != null;
         }
+    }
+
+    public byte [] getBuffer() {
+        return buffer != null ? buffer : signature.getBuffer();
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BLSLazySignature)) return false;
+
+        BLSLazySignature that = (BLSLazySignature) o;
+        byte[] thisBuffer = getBuffer();
+        byte[] thatBuffer = that.getBuffer();
+        return legacy == that.legacy && Arrays.equals(thisBuffer, thatBuffer);
     }
 }

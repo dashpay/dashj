@@ -60,7 +60,7 @@ public class QuorumRotationInfoTest {
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
-        assertEquals(Sha256Hash.wrap("000003227cf2f83a1faa683ece5b875abeb555ebf1252f62cb28a96d459bcc11"), quorumRotationInfo.mnListDiffTip.blockHash);
+        assertEquals(Sha256Hash.wrap("000003227cf2f83a1faa683ece5b875abeb555ebf1252f62cb28a96d459bcc11"), quorumRotationInfo.mnListDiffTip.getBlockHash());
     }
 
     // 2023-06-16: mainnet is on 19.1 with protocol 70227
@@ -73,8 +73,8 @@ public class QuorumRotationInfoTest {
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
-        assertEquals(Sha256Hash.wrap("000000000000000cafc4b174a51768b6216880613ce1ef19add8e84ca48c97d1"), quorumRotationInfo.mnListDiffTip.blockHash);
-        assertEquals(SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION, quorumRotationInfo.mnListDiffAtH.getVersion());
+        assertEquals(Sha256Hash.wrap("000000000000000cafc4b174a51768b6216880613ce1ef19add8e84ca48c97d1"), quorumRotationInfo.mnListDiffTip.getBlockHash());
+        assertEquals(SimplifiedMasternodeListDiff.CURRENT_VERSION, quorumRotationInfo.mnListDiffAtH.getVersion());
         assertFalse(quorumRotationInfo.mnListDiffAtH.hasBasicSchemeKeys());
 
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
@@ -88,7 +88,7 @@ public class QuorumRotationInfoTest {
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
-        assertEquals(Sha256Hash.wrap("000001a7d846454edba8aa61df85ce277980897503e45fcc0c39bd19ff2ccbcf"), quorumRotationInfo.mnListDiffTip.blockHash);
+        assertEquals(Sha256Hash.wrap("000001a7d846454edba8aa61df85ce277980897503e45fcc0c39bd19ff2ccbcf"), quorumRotationInfo.mnListDiffTip.getBlockHash());
         assertEquals(1, quorumRotationInfo.mnListDiffAtH.getVersion());
         assertFalse(quorumRotationInfo.mnListDiffAtH.hasBasicSchemeKeys());
 
@@ -103,7 +103,7 @@ public class QuorumRotationInfoTest {
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
-        assertEquals(Sha256Hash.wrap("00000134f050317635efc92333a106c25219c8d0fe3ad8fbccba48b6dd4057d3"), quorumRotationInfo.mnListDiffTip.blockHash);
+        assertEquals(Sha256Hash.wrap("00000134f050317635efc92333a106c25219c8d0fe3ad8fbccba48b6dd4057d3"), quorumRotationInfo.mnListDiffTip.getBlockHash());
         assertEquals(1, quorumRotationInfo.mnListDiffAtH.getVersion());
         assertTrue(quorumRotationInfo.mnListDiffAtH.hasBasicSchemeKeys());
 
@@ -119,7 +119,7 @@ public class QuorumRotationInfoTest {
 
         assertTrue(quorumRotationInfo.hasChanges());
         // 905770
-        assertEquals(Sha256Hash.wrap("000002920ed0a1295fbd27e0acbdc5451200040fafb5fecd56f355cd7d7b9b73"), quorumRotationInfo.mnListDiffTip.blockHash);
+        assertEquals(Sha256Hash.wrap("000002920ed0a1295fbd27e0acbdc5451200040fafb5fecd56f355cd7d7b9b73"), quorumRotationInfo.mnListDiffTip.getBlockHash());
         assertEquals(1, quorumRotationInfo.mnListDiffAtH.getVersion());
         assertTrue(quorumRotationInfo.mnListDiffAtH.hasBasicSchemeKeys());
 
@@ -133,8 +133,8 @@ public class QuorumRotationInfoTest {
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
-        assertEquals(Sha256Hash.wrap("00000000000000239004bad185d58602b8b90cc8211d29f55b93d72bdaa3a098"), quorumRotationInfo.mnListDiffTip.blockHash);
-        assertEquals(SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION, quorumRotationInfo.mnListDiffAtH.getVersion());
+        assertEquals(Sha256Hash.wrap("00000000000000239004bad185d58602b8b90cc8211d29f55b93d72bdaa3a098"), quorumRotationInfo.mnListDiffTip.getBlockHash());
+        assertEquals(SimplifiedMasternodeListDiff.CURRENT_VERSION, quorumRotationInfo.mnListDiffAtH.getVersion());
         assertTrue(quorumRotationInfo.mnListDiffAtH.hasBasicSchemeKeys());
 
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());

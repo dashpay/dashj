@@ -24,16 +24,14 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VarInt;
 import org.bitcoinj.evolution.AbstractDiffMessage;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.List;
 
 public class QuorumRotationInfo extends AbstractDiffMessage {
 
-    private static final Logger log = LoggerFactory.getLogger(QuorumRotationInfo.class);
     private static final String SHORT_NAME = "qrinfo";
 
     QuorumSnapshot quorumSnapshotAtHMinusC;
@@ -52,11 +50,6 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
     ArrayList<FinalCommitment> lastCommitmentPerIndex;
     ArrayList<QuorumSnapshot> quorumSnapshotList;
     ArrayList<SimplifiedMasternodeListDiff> mnListDiffLists;
-
-    @Deprecated
-    QuorumRotationInfo(NetworkParameters params) {
-        super(params);
-    }
 
     public QuorumRotationInfo(NetworkParameters params, byte [] payload, int protocolVersion) {
         super(params, payload, 0, protocolVersion);
@@ -193,15 +186,15 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         return quorumSnapshotAtHMinus4C;
     }
 
-    public ArrayList<FinalCommitment> getLastCommitmentPerIndex() {
+    public List<FinalCommitment> getLastCommitmentPerIndex() {
         return lastCommitmentPerIndex;
     }
 
-    public ArrayList<SimplifiedMasternodeListDiff> getMnListDiffLists() {
+    public List<SimplifiedMasternodeListDiff> getMnListDiffLists() {
         return mnListDiffLists;
     }
 
-    public ArrayList<QuorumSnapshot> getQuorumSnapshotList() {
+    public List<QuorumSnapshot> getQuorumSnapshotList() {
         return quorumSnapshotList;
     }
 
@@ -257,43 +250,6 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         }
         builder.append('}');
         return builder.toString();
-    }
-
-    // these are for tests so they have package level access
-    void setQuorumSnapshotAtHMinusC(QuorumSnapshot quorumSnapshotAtHMinusC) {
-        this.quorumSnapshotAtHMinusC = quorumSnapshotAtHMinusC;
-    }
-
-    void setQuorumSnapshotAtHMinus2C(QuorumSnapshot quorumSnapshotAtHMinusC) {
-        this.quorumSnapshotAtHMinus2C = quorumSnapshotAtHMinusC;
-    }
-
-    public void setQuorumSnapshotAtHMinus3C(QuorumSnapshot quorumSnapshotAtHMinus3C) {
-        this.quorumSnapshotAtHMinus3C = quorumSnapshotAtHMinus3C;
-    }
-
-    public void setQuorumSnapshotAtHMinus34(QuorumSnapshot quorumSnapshotAtHMinus4C) {
-        this.quorumSnapshotAtHMinus4C = quorumSnapshotAtHMinus4C;
-    }
-
-    public void setMnListDiffTip(SimplifiedMasternodeListDiff mnListDiffTip) {
-        this.mnListDiffTip = mnListDiffTip;
-    }
-
-    public void setMnListDiffAtHMinusC(SimplifiedMasternodeListDiff mnListDiffAtHMinusC) {
-        this.mnListDiffAtHMinusC = mnListDiffAtHMinusC;
-    }
-
-    public void setMnListDiffAtHMinus2C(SimplifiedMasternodeListDiff mnListDiffAtHMinus2C) {
-        this.mnListDiffAtHMinus2C = mnListDiffAtHMinus2C;
-    }
-
-    public void setMnListDiffAtHMinus3C(SimplifiedMasternodeListDiff mnListDiffAtHMinus3C) {
-        this.mnListDiffAtHMinus3C = mnListDiffAtHMinus3C;
-    }
-
-    public void setMnListDiffAtHMinus4C(SimplifiedMasternodeListDiff mnListDiffAtHMinus4C) {
-        this.mnListDiffAtHMinus4C = mnListDiffAtHMinus4C;
     }
 
     public boolean hasChanges() {

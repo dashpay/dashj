@@ -1501,7 +1501,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         // The New InstantSendLock (ISLOCK)
-        if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled() &&
+        if(context.instantSendManager != null && context.instantSendManager.isInstantSendEnabled() &&
                 context.masternodeSync != null && context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             it = instantSendLocks.iterator();
             while (it.hasNext()) {

@@ -27,21 +27,21 @@ public abstract class SpecialTxPayload extends ChildMessage {
 
     protected int version;
 
-    public SpecialTxPayload(NetworkParameters params, Transaction tx) {
+    protected SpecialTxPayload(NetworkParameters params, Transaction tx) {
         super(params, tx.getExtraPayload(), 0);
         setParent(tx);
     }
 
-    public SpecialTxPayload(int version) {
+    protected SpecialTxPayload(int version) {
         this.version = version;
     }
 
-    SpecialTxPayload(NetworkParameters params, int version) {
+    protected SpecialTxPayload(NetworkParameters params, int version) {
         super(params);
         this.version = version;
     }
 
-    public SpecialTxPayload(NetworkParameters params, byte [] payload, int offset) {
+    protected SpecialTxPayload(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
     }
 
