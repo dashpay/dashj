@@ -32,6 +32,7 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.MemoryBlockStore;
 
+import org.bitcoinj.utils.MerkleRoot;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -197,7 +198,7 @@ public class SimplifiedMasternodesTest {
             hashes.add(Sha256Hash.wrapReversed(Utils.HEX.decode(hashesAsStrings[i])));
         }
 
-        System.out.println(SimplifiedQuorumList.calculateMerkleRoot(hashes));
+        System.out.println(MerkleRoot.calculateMerkleRoot(hashes));
     }
 
 }

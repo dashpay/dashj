@@ -21,7 +21,7 @@ import org.bitcoinj.core.ProtocolException;
 
 import java.io.IOException;
 import java.io.OutputStream;
-
+import java.util.Arrays;
 
 public abstract class BLSAbstractLazyObject extends Message {
 
@@ -58,5 +58,12 @@ public abstract class BLSAbstractLazyObject extends Message {
 
     public boolean isInitialized() {
         return initialized;
+    }
+
+    public abstract byte[] getBuffer();
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(getBuffer());
     }
 }

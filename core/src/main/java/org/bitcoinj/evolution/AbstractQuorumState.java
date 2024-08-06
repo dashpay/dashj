@@ -47,6 +47,7 @@ import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
+import org.bitcoinj.utils.DebugReentrantLock;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,7 +90,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public static final int MIN_CACHE_SIZE = 1;
 
     private static final Logger log = LoggerFactory.getLogger(AbstractQuorumState.class);
-    protected final ReentrantLock lock = Threading.lock("AbstractQuorumState");
+    // TODO: Revert to ReentrantLock with 21.0.1
+    protected final DebugReentrantLock lock = Threading.debugLock("AbstractQuorumState");
 
     Context context;
     DualBlockChain blockChain;
@@ -119,19 +121,19 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     String bootstrapFilePath = null;
     InputStream bootstrapStream = null;
     int bootStrapFileFormat = 0;
-    public SettableFuture<Boolean> bootStrapLoaded;
+    private SettableFuture<Boolean> bootStrapLoaded;
 
     boolean isLoadingBootstrap = false;
     protected static Random random = new Random();
 
-    public AbstractQuorumState(Context context) {
+    protected AbstractQuorumState(Context context) {
         super(context.getParams());
         this.context = context;
         initializeOnce();
         initialize();
     }
 
-    public AbstractQuorumState(NetworkParameters params, byte[] payload, int offset, int protocolVersion) {
+    protected AbstractQuorumState(NetworkParameters params, byte[] payload, int offset, int protocolVersion) {
         super(params, payload, offset, protocolVersion);
         initialize();
     }
@@ -200,6 +202,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         return failedAttempts > MAX_ATTEMPTS;
     }
 
+    public SettableFuture<Boolean> getBootStrapLoadedFuture() {
+        return bootStrapLoaded;
+    }
+
     abstract int getBlockHeightOffset();
 
     public abstract int getUpdateInterval();
@@ -218,6 +224,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public abstract void requestUpdate(Peer peer, StoredBlock block);
 
     public void retryLastUpdate(Peer peer) {
+        log.info("retryLastUpdate: {}", lastRequest.getRequestMessage());
         if (peer != null) {
             peer.sendMessage(lastRequest.getRequestMessage());
         } else {
@@ -231,13 +238,13 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
     public abstract SimplifiedMasternodeList getMasternodeListAtTip();
 
-    public abstract LinkedHashMap<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache();
+    public abstract Map<Sha256Hash, SimplifiedMasternodeList> getMasternodeListCache();
 
-    public abstract LinkedHashMap<Sha256Hash, SimplifiedQuorumList> getQuorumsCache();
+    public abstract Map<Sha256Hash, SimplifiedQuorumList> getQuorumsCache();
 
     public abstract SimplifiedQuorumList getQuorumListAtTip();
 
-    public abstract ArrayList<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash);
+    public abstract List<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash);
 
     public void resetMNList() {
         resetMNList(false, true);
@@ -405,7 +412,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                     log.info("sending {} from {} to {}; \n  From {}\n To {}", lastRequest.request.getClass().getSimpleName(),
                             getMasternodeListAtTip().getHeight(), nextBlock.getHeight(), getMasternodeListAtTip().getBlockHash(), nextBlock.getHeader().getHash());
                     requestUpdate(downloadPeer, nextBlock);
-                    log.info("message = {}", lastRequest.getRequestMessage().toString(blockChain));
+                    // This was causing a dead lock when using toString(DualBlockchain).  Use toString() instead.
+                    log.info("message = {}", lastRequest.getRequestMessage());
                     waitingForMNListDiff = true;
                     return true;
                 } else {
@@ -741,7 +749,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             try {
                 if (isLocked) {
                     downloadPeer = context.peerGroup.getDownloadPeer();
-                    log.info("{}: lock acquired, obtaining downloadPeer from peerGroup: {}",
+                    log.info("{}: peergroup lock acquired, obtaining downloadPeer from peerGroup: {}",
                             Thread.currentThread().getName(), downloadPeer);
                     if (downloadPeer == null) {
                         chooseRandomDownloadPeer();

@@ -28,15 +28,15 @@ import org.bitcoinj.core.NetworkParameters;
 
 public abstract class AbstractQuorumRequest extends Message {
 
-    public AbstractQuorumRequest() {
+    protected AbstractQuorumRequest() {
         super();
     }
 
-    public AbstractQuorumRequest(NetworkParameters params) {
+    protected AbstractQuorumRequest(NetworkParameters params) {
         super(params);
     }
 
-    public AbstractQuorumRequest(NetworkParameters params, byte [] payload, int offset) {
+    protected AbstractQuorumRequest(NetworkParameters params, byte [] payload, int offset) {
         super(params, payload, offset);
     }
 

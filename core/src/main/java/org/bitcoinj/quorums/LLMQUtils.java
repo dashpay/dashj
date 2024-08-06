@@ -21,7 +21,7 @@ import static org.bitcoinj.quorums.LLMQParameters.LLMQType.LLMQ_400_60;
 import static org.bitcoinj.quorums.LLMQParameters.LLMQType.LLMQ_400_85;
 
 public class LLMQUtils {
-    static public Sha256Hash buildCommitmentHash(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash, ArrayList<Boolean> validMembers, BLSPublicKey pubKey, Sha256Hash vvecHash)
+    public static Sha256Hash buildCommitmentHash(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash, ArrayList<Boolean> validMembers, BLSPublicKey pubKey, Sha256Hash vvecHash)
     {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
@@ -37,7 +37,7 @@ public class LLMQUtils {
     }
 
 
-    static public Sha256Hash buildSignHash(int llmqType, Sha256Hash quorumHash, Sha256Hash id, Sha256Hash msgHash)
+    public static Sha256Hash buildSignHash(int llmqType, Sha256Hash quorumHash, Sha256Hash id, Sha256Hash msgHash)
     {
         try {
             UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
@@ -51,7 +51,7 @@ public class LLMQUtils {
         }
     }
 
-    static public Sha256Hash buildSignHash(LLMQParameters.LLMQType llmqType, Sha256Hash quorumHash, Sha256Hash id, Sha256Hash msgHash)
+    public static Sha256Hash buildSignHash(LLMQParameters.LLMQType llmqType, Sha256Hash quorumHash, Sha256Hash id, Sha256Hash msgHash)
     {
         return buildSignHash(llmqType.getValue(), quorumHash, id, msgHash);
     }
