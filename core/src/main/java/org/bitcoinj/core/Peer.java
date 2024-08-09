@@ -16,12 +16,10 @@
 
 package org.bitcoinj.core;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
-import org.bitcoinj.coinjoin.CoinJoinQueue;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;

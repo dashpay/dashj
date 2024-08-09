@@ -17,7 +17,6 @@
 
 package org.bitcoinj.core;
 
-import com.google.common.base.Objects;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.script.*;
 import org.bitcoinj.wallet.Wallet;
