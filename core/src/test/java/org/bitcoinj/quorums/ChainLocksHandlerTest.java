@@ -6,10 +6,8 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.SporkId;
-import org.bitcoinj.core.SporkMessage;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
-import org.bitcoinj.evolution.SimplifiedMasternodesTest;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -20,10 +18,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Files;
 import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
@@ -43,7 +38,7 @@ public class ChainLocksHandlerTest {
     ChainLockSignature clsig;
 
     @Before
-    public void setUp() throws BlockStoreException, IOException {
+    public void setUp() throws BlockStoreException {
         initContext();
         clsig = new ChainLockSignature(params, clsigData, false);
     }
@@ -54,7 +49,7 @@ public class ChainLocksHandlerTest {
         blockStore.close();
     }
 
-    void initContext() throws BlockStoreException, IOException {
+    void initContext() throws BlockStoreException {
         if (context == null || !context.getParams().equals(params))
             context = new Context(params);
         blockStore = new SPVBlockStore(params, new File(Objects.requireNonNull(getClass().getResource(blockchainFile)).getPath()));
@@ -62,8 +57,6 @@ public class ChainLocksHandlerTest {
         blockChain = new BlockChain(context, blockStore);
         context.initDash(true, true);
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
-
-        InputStream stream = null;
 
         SimplifiedMasternodeListManager manager = context.masternodeListManager;
         URL mnlistManagerFile = Objects.requireNonNull(getClass().getResource(mnlistFile));
@@ -87,7 +80,7 @@ public class ChainLocksHandlerTest {
     }
 
     @Test
-    public void serializationTest() throws IOException {
+    public void serializationTest() {
         URL datafile = Objects.requireNonNull(getClass().getResource("testnet-block-905773.chainlocks"));
         FlatDB<ChainLocksHandler> clh = new FlatDB<>(context, datafile.getFile(), true);
         clh.load(chainLocksHandler);

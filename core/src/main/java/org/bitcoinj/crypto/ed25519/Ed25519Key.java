@@ -21,7 +21,6 @@ package org.bitcoinj.crypto.ed25519;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -55,6 +54,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.util.Arrays;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -785,9 +785,9 @@ public class Ed25519Key implements IKey {
             privateKeysEqual = true;
         }
         return privateKeysEqual && Arrays.equals(this.pub.getEncoded(), other.pub.getEncoded())
-                && Objects.equal(this.creationTimeSeconds, other.creationTimeSeconds)
-                && Objects.equal(this.keyCrypter, other.keyCrypter)
-                && Objects.equal(this.encryptedPrivateKey, other.encryptedPrivateKey);
+                && Objects.equals(this.creationTimeSeconds, other.creationTimeSeconds)
+                && Objects.equals(this.keyCrypter, other.keyCrypter)
+                && Objects.equals(this.encryptedPrivateKey, other.encryptedPrivateKey);
     }
 
     @Override

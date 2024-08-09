@@ -32,7 +32,6 @@ import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.SigningManager;
 import org.bitcoinj.quorums.SimplifiedQuorumList;
 import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -123,7 +122,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
 
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
-        block = blockChain.getBlock(mnlistdiff.blockHash);
+        block = blockChain.getBlock(mnlistdiff.getBlockHash());
 
         if(!isLoadingBootStrap && block.getHeight() != newHeight)
             throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
@@ -134,7 +133,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST))
             newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
-        newMNList.setBlock(block, block != null && block.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash));
+        newMNList.setBlock(block, block != null && block.getHeader().getPrevBlockHash().equals(mnlistdiff.getPrevBlockHash()));
 
         SimplifiedQuorumList newQuorumList = quorumList;
         if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
@@ -253,7 +252,6 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     @Override
     public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, DualBlockChain blockChain,
                             boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage) throws VerificationException {
-        StoredBlock block = null;
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);
         Stopwatch watch = Stopwatch.createStarted();
@@ -266,16 +264,34 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
         mnlistdiff.dump(mnList.getHeight(), newHeight);
         lastRequest.setReceived();
-        // TODO: remove this
-//        if (lock.isLocked() && !initChainTipSyncComplete()) {
-//            Threading.dump();
-//        }
+
+        // TODO: Remove with v21.0.1
+        if (lock.isLocked()) {
+            log.warn("the lock is held. holdCount {}, queue length {}, held by this thread {}", lock.getHoldCount(), lock.getQueueLength(), lock.isHeldByCurrentThread());
+            log.warn("the current thread is {} with stack trace:", Thread.currentThread().getName());
+            StackTraceElement [] trace = lock.getOwner().getStackTrace();
+            for (StackTraceElement e : trace) {
+                log.info("  {}", e);
+            }
+            log.warn("the lock is held by {} with stack trace:", lock.getOwner());
+            trace = lock.getOwner().getStackTrace();
+            for (StackTraceElement e : trace) {
+                log.info("  {}", e);
+            }
+            for (Thread thread : lock.getQueuedThreads()) {
+                log.info("queued thread: {}\n stack trace:", thread.getName());
+                trace = thread.getStackTrace();
+                for (StackTraceElement e : trace) {
+                    log.info("  {}", e);
+                }
+            }
+        }
         lock.lock();
         try {
             log.info("lock acquired when processing mnlistdiff");
             applyDiff(peer, blockChain, mnlistdiff, isLoadingBootStrap);
 
-            log.info(this.toString());
+            log.info("{}", this);
             lastRequest.setFulfilled();
             unCache();
             clearFailedAttempts();
@@ -288,29 +304,29 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             if (peer != null && isSyncingHeadersFirst)
                 peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Finished, mnlistdiff);
             watch.stop();
-            log.info("processing mnlistdiff times : Total: " + watch + "mnList: " + watchMNList + " quorums" + watchQuorums + "mnlistdiff" + mnlistdiff);
-            log.info(toString());
+            log.info("processing mnlistdiff times : Total: {} mnList: {} quorums: {} mnlistdiff: {}", watch, watchMNList, watchQuorums, mnlistdiff);
+            log.info("{}", this);
             finishDiff(isLoadingBootStrap);
         } catch(MasternodeListDiffException x) {
             // we already have this mnlistdiff or doesn't match our current tipBlockHash
-            if(getMnList().getBlockHash().equals(mnlistdiff.blockHash)) {
-                log.info("heights are the same:  " + x.getMessage());
-                log.info("mnList = {} vs mnlistdiff {}", getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
-                log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
+            if(getMnList().getBlockHash().equals(mnlistdiff.getBlockHash())) {
+                log.info("heights are the same: {}", x.getMessage());
+                log.info("mnList = {} vs mnlistdiff {}", getMnList().getBlockHash(), mnlistdiff.getPrevBlockHash());
+                log.info("mnlistdiff {} -> {}", mnlistdiff.getPrevBlockHash(), mnlistdiff.getBlockHash());
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
                 // remove this block from the list
                 if(!pendingBlocks.isEmpty()) {
                     StoredBlock thisBlock = pendingBlocks.peek();
-                    if(thisBlock.getHeader().getPrevBlockHash().equals(mnlistdiff.prevBlockHash) &&
-                            thisBlock.getHeader().getHash().equals(mnlistdiff.prevBlockHash)) {
+                    if(thisBlock.getHeader().getPrevBlockHash().equals(mnlistdiff.getPrevBlockHash()) &&
+                            thisBlock.getHeader().getHash().equals(mnlistdiff.getPrevBlockHash())) {
                         pendingBlocks.pop();
                     }
                 }
             } else {
-                log.info("heights are different " + x.getMessage());
+                log.info("heights are different {}", x.getMessage());
                 log.info("mnlistdiff height = {}; mnList: {}; quorumList: {}", newHeight, getMnList().getHeight(), quorumList.getHeight());
-                log.info("mnList = {} vs mnlistdiff = {}", getMnList().getBlockHash(), mnlistdiff.prevBlockHash);
-                log.info("mnlistdiff {} -> {}", mnlistdiff.prevBlockHash, mnlistdiff.blockHash);
+                log.info("mnList = {} vs mnlistdiff = {}", getMnList().getBlockHash(), mnlistdiff.getPrevBlockHash());
+                log.info("mnlistdiff {} -> {}", mnlistdiff.getPrevBlockHash(), mnlistdiff.getBlockHash());
                 log.info("lastRequest {} -> {}", lastRequest.request.baseBlockHash, lastRequest.request.blockHash);
                 log.info("requires reset {}", x.isRequiringReset());
                 log.info("requires new peer {}", x.isRequiringNewPeer());
@@ -326,7 +342,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             finishDiff(isLoadingBootStrap);
         } catch(VerificationException x) {
             //request this block again and close this peer
-            log.info("verification error: close this peer" + x.getMessage());
+            log.info("verification error: close this peer: {}", x.getMessage());
             incrementFailedAttempts();
             finishDiff(isLoadingBootStrap);
             throw x;
@@ -336,7 +352,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
             finishDiff(isLoadingBootStrap);
             throw new VerificationException("verification error: " + x.getMessage());
         } catch(BlockStoreException x) {
-            log.info(x.getMessage());
+            log.info("{}", x.getMessage());
             incrementFailedAttempts();
             finishDiff(isLoadingBootStrap);
             throw new ProtocolException(x);

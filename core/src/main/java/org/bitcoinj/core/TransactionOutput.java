@@ -27,6 +27,7 @@ import javax.annotation.*;
 import java.io.*;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -441,7 +442,7 @@ public class TransactionOutput extends ChildMessage {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(value, parent, Arrays.hashCode(scriptBytes));
+        return Objects.hash(value, parent, Arrays.hashCode(scriptBytes));
     }
 
     public boolean equalsWithoutParent(TransactionOutput output) {

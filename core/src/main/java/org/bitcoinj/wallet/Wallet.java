@@ -18,9 +18,7 @@
 package org.bitcoinj.wallet;
 
 import com.google.common.annotations.*;
-import com.google.common.base.*;
 import com.google.common.collect.*;
-import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
@@ -1217,6 +1215,8 @@ public class Wallet extends BaseTaggableObject
             return isPubKeyHashMine(address.getHash(), scriptType);
         else if (scriptType == ScriptType.P2SH)
             return isPayToScriptHashMine(address.getHash());
+        else if (scriptType == ScriptType.P2WSH)
+            return false;
         else
             throw new IllegalArgumentException(address.toString());
     }
@@ -4488,8 +4488,7 @@ public class Wallet extends BaseTaggableObject
             }
 
             if (req.emptyWallet) {
-                final Coin feePerKb = req.feePerKb == null ? Coin.ZERO : req.feePerKb;
-                if (!adjustOutputDownwardsForFee(req.tx, bestCoinSelection, feePerKb, req.ensureMinRequiredFee, req.useInstantSend))
+                if (!adjustOutputDownwardsForFee(req.tx, bestCoinSelection, req.feePerKb, req.ensureMinRequiredFee, req.useInstantSend))
                     throw new CouldNotAdjustDownwards();
             }
 
@@ -4875,7 +4874,7 @@ public class Wallet extends BaseTaggableObject
 
         @Override public int compareTo(TxOffsetPair o) {
             // note that in this implementation compareTo() is not consistent with equals()
-            return Ints.compare(offset, o.offset);
+            return Integer.compare(offset, o.offset);
         }
     }
 
@@ -5165,6 +5164,10 @@ public class Wallet extends BaseTaggableObject
         try {
             if (!watchedScripts.isEmpty())
                 return true;
+            if (keyChainGroup.chains != null)
+                for (DeterministicKeyChain chain : keyChainGroup.chains)
+                    if (chain.getOutputScriptType() == Script.ScriptType.P2WPKH)
+                        return true;
             return false;
         } finally {
             keyChainGroupLock.unlock();
@@ -5261,6 +5264,8 @@ public class Wallet extends BaseTaggableObject
     public boolean checkForFilterExhaustion(FilteredBlock block) {
         keyChainGroupLock.lock();
         try {
+            if (!keyChainGroup.isSupportsDeterministicChains())
+                return false;
             int epoch = keyChainGroup.getCombinedKeyLookaheadEpochs();
             for (Transaction tx : block.getAssociatedTransactions().values()) {
                 markKeysAsUsed(tx);
@@ -5401,7 +5406,7 @@ public class Wallet extends BaseTaggableObject
                 keyChainExtensions.remove(extension.getWalletExtensionID());
             else
             extensions.remove(extension.getWalletExtensionID());
-            Throwables.propagate(throwable);
+            throw throwable;
         } finally {
             keyChainGroupLock.unlock();
             lock.unlock();

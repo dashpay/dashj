@@ -17,8 +17,10 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.VerificationException;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.*;
 import org.bitcoinj.script.*;
@@ -298,7 +300,7 @@ public abstract class NetworkParameters {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(getId());
+        return Objects.hash(getId());
     }
 
     /** Returns the network parameters for the given string ID or NULL if not recognized. */
@@ -686,7 +688,9 @@ public abstract class NetworkParameters {
         SMNLE_VERSIONED(70228),
         MNLISTDIFF_VERSION_ORDER(70229),
         MNLISTDIFF_CHAINLOCKS(70230),
-        CURRENT(70230); //testnet is still 70228
+        CORE_20_1(70231),
+        CORE_21(70232),
+        CURRENT(70232); //testnet is still 70228
 
         private final int bitcoinProtocol;
 

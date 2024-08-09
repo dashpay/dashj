@@ -30,7 +30,7 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.Script.ScriptType;
 import org.bitcoinj.script.ScriptPattern;
 
-import com.google.common.base.Objects;
+import java.util.Objects;
 
 /**
  * <p>A Bitcoin address looks like 1MsScoe2fTJoq4ZPdQgqyhgWeoNamYPevy and is derived from an elliptic curve public key
@@ -284,7 +284,7 @@ public class Address extends AbstractAddress {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(super.hashCode(), p2sh);
+        return Objects.hash(super.hashCode(), p2sh);
     }
 
     @Override

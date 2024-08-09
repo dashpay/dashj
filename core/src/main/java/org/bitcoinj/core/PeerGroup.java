@@ -20,7 +20,6 @@ package org.bitcoinj.core;
 import com.google.common.annotations.*;
 import com.google.common.base.*;
 import com.google.common.collect.*;
-import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import net.jcip.annotations.*;
 import org.bitcoinj.coinjoin.SendCoinJoinQueue;
@@ -421,13 +420,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             public int compare(PeerAddress a, PeerAddress b) {
                 checkState(lock.isHeldByCurrentThread());
                 int result = backoffMap.get(a).compareTo(backoffMap.get(b));
-                if (result != 0)
-                    return result;
-                result = Ints.compare(getPriority(a), getPriority(b));
-                if (result != 0)
-                    return result;
                 // Sort by port if otherwise equals - for testing
-                result = Ints.compare(a.getPort(), b.getPort());
+                if (result == 0)
+                    result = Integer.compare(a.getPort(), b.getPort());
                 return result;
             }
         });
@@ -569,8 +564,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 discoverySuccess = discoverPeers() > 0;
             }
 
-            long retryTime;
-            PeerAddress addrToTry;
             lock.lock();
             try {
                 if (doDiscovery) {
@@ -594,12 +587,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                         // were given a fixed set of addresses in some test scenario.
                     }
                     return;
-                } else {
-                    do {
-                        addrToTry = inactives.poll();
-                    } while (ipv6Unreachable && addrToTry.getAddr() instanceof Inet6Address);
-                    retryTime = backoffMap.get(addrToTry).getRetryTime();
                 }
+                PeerAddress addrToTry;
+                do {
+                    addrToTry = inactives.poll();
+                } while (ipv6Unreachable && addrToTry.getAddr() instanceof Inet6Address);
+                long retryTime = backoffMap.get(addrToTry).getRetryTime();
                 retryTime = Math.max(retryTime, groupBackoff.getRetryTime());
                 if (retryTime > now) {
                     long delay = retryTime - now;

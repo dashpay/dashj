@@ -59,7 +59,7 @@ public class SimplifiedMasternodeListDiffTest {
         assertArrayEquals(payloadOne, mnlistdiff.bitcoinSerialize());
 
         assertTrue(mnlistdiff.hasChanges());
-        assertEquals(Sha256Hash.wrap("0000000000000011a67470334158a97a99867e7969343ee871b6ea1c7733e510"), mnlistdiff.blockHash);
+        assertEquals(Sha256Hash.wrap("0000000000000011a67470334158a97a99867e7969343ee871b6ea1c7733e510"), mnlistdiff.getBlockHash());
 
         assertFalse(mnlistdiff.hasBasicSchemeKeys());
 
@@ -74,7 +74,7 @@ public class SimplifiedMasternodeListDiffTest {
         assertArrayEquals(payloadOne, mnlistdiff.bitcoinSerialize());
 
         assertTrue(mnlistdiff.hasChanges());
-        assertEquals(Sha256Hash.wrap("0000001e0b53d7e4e2dea97b0cb8b705fd8b4a6e6d51470f13b56d6588a61f77"), mnlistdiff.blockHash);
+        assertEquals(Sha256Hash.wrap("0000001e0b53d7e4e2dea97b0cb8b705fd8b4a6e6d51470f13b56d6588a61f77"), mnlistdiff.getBlockHash());
         assertEquals(1, mnlistdiff.getVersion());
         assertFalse(mnlistdiff.hasBasicSchemeKeys());
 
@@ -89,7 +89,7 @@ public class SimplifiedMasternodeListDiffTest {
         assertArrayEquals(payloadOne, mnlistdiff.bitcoinSerialize());
 
         assertTrue(mnlistdiff.hasChanges());
-        assertEquals(Sha256Hash.wrap("000001a505e030a10fa15b0f1abfe3314886ab8080f5c777321f55749457c7a6"), mnlistdiff.blockHash);
+        assertEquals(Sha256Hash.wrap("000001a505e030a10fa15b0f1abfe3314886ab8080f5c777321f55749457c7a6"), mnlistdiff.getBlockHash());
         assertEquals(1, mnlistdiff.getVersion());
         assertTrue(mnlistdiff.hasBasicSchemeKeys());
 
@@ -104,7 +104,7 @@ public class SimplifiedMasternodeListDiffTest {
         assertArrayEquals(payloadOne, mnlistdiff.bitcoinSerialize());
 
         assertTrue(mnlistdiff.hasChanges());
-        assertEquals(Sha256Hash.wrap("000000000000000f78a0addf3f9a4c65a4d0f2ca8e63d5893f8227e1585ef3d8"), mnlistdiff.blockHash);
+        assertEquals(Sha256Hash.wrap("000000000000000f78a0addf3f9a4c65a4d0f2ca8e63d5893f8227e1585ef3d8"), mnlistdiff.getBlockHash());
         assertEquals(1, mnlistdiff.getVersion());
         assertTrue(mnlistdiff.hasBasicSchemeKeys());
 
