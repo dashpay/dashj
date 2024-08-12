@@ -9,8 +9,10 @@ import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinConstants;
 import org.bitcoinj.coinjoin.CoinJoinTransactionInput;
 import org.bitcoinj.coinjoin.DenominatedCoinSelector;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
 import org.bitcoinj.coinjoin.utils.InputCoin;
+import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
@@ -22,13 +24,13 @@ import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.UTXOProvider;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicHierarchy;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.MonetaryFormat;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 import static org.bitcoinj.core.NetworkParameters.MAX_MONEY;
 
 public class WalletEx extends Wallet {
@@ -180,8 +183,8 @@ public class WalletEx extends Wallet {
      * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
      */
     @VisibleForTesting
-    public void initializeCoinJoin() {
-        getCoinJoin().addKeyChain(getKeyChainSeed(), derivationPathFactory.coinJoinDerivationPath());
+    public void initializeCoinJoin(int account) {
+        getCoinJoin().addKeyChain(getKeyChainSeed(), derivationPathFactory.coinJoinDerivationPath(account));
     }
 
     public Coin getDenominatedBalance() {
@@ -212,8 +215,7 @@ public class WalletEx extends Wallet {
                 List<TransactionOutput> all = calculateAllSpendCandidates(true, balanceType == BalanceType.COINJOIN_SPENDABLE);
                 Coin value = Coin.ZERO;
                 for (TransactionOutput out : all) {
-                    // exclude non coinjoin outputs if isCoinJoinOnly is true
-                    // exclude coinjoin outputs when isCoinJoinOnly is false
+                    // coinjoin outputs must be denominated, using coinjoin keys and fully mixed
                     boolean isCoinJoin = out.isDenominated() && out.isCoinJoin(this) && isFullyMixed(out);
 
                     if (isCoinJoin)
@@ -312,7 +314,7 @@ public class WalletEx extends Wallet {
 
     HashMap<TransactionOutPoint, Integer> mapOutpointRoundsCache = new HashMap<>();
     // Recursively determine the rounds of a given input (How deep is the CoinJoin chain for a given input)
-    int getRealOutpointCoinJoinRounds(TransactionOutPoint outPoint) {
+    public int getRealOutpointCoinJoinRounds(TransactionOutPoint outPoint) {
         return getRealOutpointCoinJoinRounds(outPoint, 0);
     }
 
@@ -389,26 +391,26 @@ public class WalletEx extends Wallet {
                 roundsRef = -3;
                 mapOutpointRoundsCache.put(outpoint, roundsRef);
 
-                log.info(String.format("UPDATED   %-70s %3d (collateral)", outpoint.toStringCpp(), roundsRef));
+                log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (collateral)", outpoint.toStringCpp(), roundsRef));
                 return roundsRef;
             }
 
             // make sure the final output is non-denominate
-            if (!CoinJoin.isDenominatedAmount (txOut.getValue())){ //NOT DENOM
+            if (!CoinJoin.isDenominatedAmount (txOut.getValue())) { //NOT DENOM
                 roundsRef = -2;
                 mapOutpointRoundsCache.put(outpoint, roundsRef);
 
-                log.info(String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
+                log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
                 return roundsRef;
             }
 
-            for (TransactionOutput out :wtx.getTransaction().getOutputs()){
+            for (TransactionOutput out :wtx.getTransaction().getOutputs()) {
                 if (!CoinJoin.isDenominatedAmount (out.getValue())){
                     // this one is denominated but there is another non-denominated output found in the same tx
                     roundsRef = 0;
                     mapOutpointRoundsCache.put(outpoint, roundsRef);
 
-                    log.info(String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
+                    log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
                     return roundsRef;
                 }
             }
@@ -416,7 +418,7 @@ public class WalletEx extends Wallet {
             int nShortest = -10; // an initial value, should be no way to get this by calculations
             boolean fDenomFound = false;
             // only denoms here so let's look up
-            for (TransactionInput txinNext :wtx.getTransaction().getInputs()){
+            for (TransactionInput txinNext :wtx.getTransaction().getInputs()) {
                 if (isMine(txinNext)) {
                     int n = getRealOutpointCoinJoinRounds(txinNext.getOutpoint(), rounds + 1);
                     // denom found, find the shortest chain or initially assign nShortest with the first found value
@@ -430,7 +432,7 @@ public class WalletEx extends Wallet {
                     ? (nShortest >= roundsMax - 1 ? roundsMax : nShortest + 1) // good, we a +1 to the shortest one but only roundsMax rounds max allowed
                     : 0;            // too bad, we are the fist one in that chain
             mapOutpointRoundsCache.put(outpoint, roundsRef);
-            log.info(String.format("UPDATED   %-70s %3d (coinjoin)", outpoint.toStringCpp(), roundsRef));
+            log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (coinjoin)", outpoint.toStringCpp(), roundsRef));
             return roundsRef;
         } finally {
             lock.unlock();
@@ -439,6 +441,7 @@ public class WalletEx extends Wallet {
 
     Sha256Hash coinJoinSalt = Sha256Hash.ZERO_HASH;
 
+    @Override
     public boolean isFullyMixed(TransactionOutput output) {
         return isFullyMixed(new TransactionOutPoint(params, output));
     }
@@ -563,8 +566,11 @@ public class WalletEx extends Wallet {
                         if (CoinJoin.isCollateralAmount(wtx.getOutput(i).getValue())) continue;
                         // ignore outputs that are 10 times smaller than the smallest denomination
                         // otherwise they will just lead to higher fee / lower priority
-                        if (wtx.getOutput(i).getValue().isLessThan(smallestDenom.div(10)) ||
-                                wtx.getOutput(i).getValue().equals(smallestDenom.div(10))) continue;
+
+                        // TODO: lets see what this trouble causes by ignoring this condition
+                        if (wtx.getOutput(i).getValue().isLessThanOrEqualTo(smallestDenom.div(10)))
+                            continue;
+
                         // ignore mixed
                         if (isFullyMixed(new TransactionOutPoint(params, i, outpoint.getParentTransactionHash()))) continue;
                     }
@@ -583,7 +589,9 @@ public class WalletEx extends Wallet {
             // NOTE: vecTallyRet is "sorted" by txdest (i.e. address), just like mapTally
             ArrayList<CompactTallyItem> vecTallyRet = Lists.newArrayList();
             for (Map.Entry<TransactionDestination, CompactTallyItem> item : mapTally.entrySet()) {
-                if (anonymizable && item.getValue().amount.isLessThan(smallestDenom)) continue;
+                //TODO: ignore this to get this dust back in
+                if (anonymizable && item.getValue().amount.isLessThan(smallestDenom))
+                    continue;
                 vecTallyRet.add(item.getValue());
             }
 
@@ -601,10 +609,10 @@ public class WalletEx extends Wallet {
 
             // debug
 
-            StringBuilder strMessage = new StringBuilder("vecTallyRet:\n");
-            for (CompactTallyItem item :vecTallyRet)
-                strMessage.append(String.format("  %s %s\n", item.txDestination, item.amount.toFriendlyString()));
-            log.info(strMessage.toString()); /* Continued */
+//            StringBuilder strMessage = new StringBuilder("vecTallyRet:\n");
+//            for (CompactTallyItem item :vecTallyRet)
+//                strMessage.append(String.format("  %s %s\n", item.txDestination, item.amount.toFriendlyString()));
+//            log.info(strMessage.toString()); /* Continued */
 
             return vecTallyRet;
         } finally {
@@ -613,23 +621,32 @@ public class WalletEx extends Wallet {
     }
 
 
+    /**
+     * Count the number of unspent outputs that have a certain value
+     */
     public int countInputsWithAmount(Coin inputValue) {
         int count = 0;
-        for (Transaction tx : getTransactionPool(WalletTransaction.Pool.UNSPENT).values()) {
-            for (TransactionOutput output : tx.getOutputs()) {
-                if (output.getValue().equals(inputValue) && output.isMine(this))
+        for (TransactionOutput output : myUnspents) {
+            TransactionConfidence confidence = output.getParentTransaction().getConfidence();
+            // confirmations must be 0 or higher, not conflicted or dead
+            if (confidence != null && (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING || confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)) {
+                // inputValue must match, the TX is mine and is not spent
+                if (output.getValue().equals(inputValue) && output.getSpentBy() == null) {
                     count++;
+                }
             }
         }
         return count;
     }
 
+    /** locks an unspent outpoint so that it cannot be spent */
     public boolean lockCoin(TransactionOutPoint outPoint) {
-        lockedCoinsSet.add(outPoint);
+        boolean added = lockedCoinsSet.add(outPoint);
         clearAnonymizableCaches();
-        return false;
+        return added;
     }
 
+    /** unlocks an outpoint so that it cannot be spent */
     public void unlockCoin(TransactionOutPoint outPoint) {
         lockedCoinsSet.remove(outPoint);
         clearAnonymizableCaches();
@@ -841,7 +858,7 @@ public class WalletEx extends Wallet {
         CoinControl coin_control = new CoinControl();
         coin_control.setCoinType(CoinType.ONLY_READY_TO_MIX);
         availableCoins(vCoins, true, coin_control);
-        log.info("-- vCoins.size(): {}", vCoins.size());
+        log.info("available Coins returns [vCoins.size()]: {}", vCoins.size());
 
         Collections.shuffle(vCoins);
 
@@ -861,12 +878,15 @@ public class WalletEx extends Wallet {
 
             nValueTotal = nValueTotal.add(nValue);
             vecTxDSInRet.add(new CoinJoinTransactionInput(txin, scriptPubKey, nRounds));
-            log.info("coinjoin test {}\n  {}", new CoinJoinTransactionInput(txin, scriptPubKey, nRounds), new CoinJoinTransactionInput(txin, scriptPubKey, nRounds).toStringHex());
             setRecentTxIds.add(txHash);
-            log.info("coinjoin:  -- hash: {}, nValue: {}", txHash, nValue.toFriendlyString());
+            log.info(COINJOIN_EXTRA, "coinjoin: hash: {}, nValue: {}", txHash, nValue.toFriendlyString());
         }
 
-        log.info("coinjoin:   -- setRecentTxIds.size(): {}", setRecentTxIds.size());
+        log.info("coinjoin: setRecentTxIds.size(): {}", setRecentTxIds.size());
+        if (setRecentTxIds.isEmpty()) {
+            log.info(COINJOIN_EXTRA, "No results found for {}", CoinJoin.denominationToAmount(nDenom).toFriendlyString());
+            vCoins.forEach(output -> log.info(COINJOIN_EXTRA, "  output: {}", output));
+        }
 
         return nValueTotal.isPositive();
     }
@@ -946,8 +966,8 @@ public class WalletEx extends Wallet {
         return result;
     }
 
-    public void initializeCoinJoin(@Nullable KeyParameter keyParameter) {
-        ImmutableList<ChildNumber> path = DerivationPathFactory.get(getParams()).coinJoinDerivationPath();
+    public void initializeCoinJoin(@Nullable KeyParameter keyParameter, int account) {
+        ImmutableList<ChildNumber> path = DerivationPathFactory.get(getParams()).coinJoinDerivationPath(account);
         if (keyParameter != null) {
             getCoinJoin().addEncryptedKeyChain(getKeyChainSeed(), path, keyParameter);
         } else {
@@ -964,5 +984,44 @@ public class WalletEx extends Wallet {
                 result.add(out);
         }
         return result;
+    }
+
+    public String getTransactionReport() {
+        MonetaryFormat format = MonetaryFormat.BTC.noCode();
+        StringBuilder s = new StringBuilder("Transaction History Report");
+        s.append("\n-----------------------------------------------\n");
+
+        ArrayList<Transaction> sortedTxes = Lists.newArrayList();
+        getWalletTransactions().forEach(tx -> sortedTxes.add(tx.getTransaction()));
+        sortedTxes.sort(Transaction.SORT_TX_BY_UPDATE_TIME);
+
+        sortedTxes.forEach(tx -> {
+            final Coin value = tx.getValue(this);
+            s.append(Utils.dateTimeFormat(tx.getUpdateTime())).append(" ");
+            s.append(String.format("%14s", format.format(value))).append(" ");
+            final CoinJoinTransactionType type = CoinJoinTransactionType.fromTx(tx, this);
+
+            // TX type
+            String txType;
+            if (type != CoinJoinTransactionType.None) {
+                txType = type.toString();
+            } else {
+                if (value.isGreaterThan(Coin.ZERO)) {
+                    txType = "Received";
+                } else {
+                    txType = "Sent";
+                }
+            }
+            s.append(String.format("%-20s", txType));
+            s.append(" ");
+            s.append(tx.getTxId());
+            s.append("\n");
+        });
+        return s.toString();
+    }
+
+    @Override
+    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain) {
+        return super.toString(includeLookahead, includePrivateKeys, aesKey, includeTransactions, includeExtensions, chain) + getTransactionReport();
     }
 }

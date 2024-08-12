@@ -16,6 +16,7 @@
 package org.bitcoinj.coinjoin.utils;
 
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.wallet.WalletEx;
@@ -30,11 +31,11 @@ public class TransactionBuilderOutput {
     /// ScriptPubKey of this output
     Script script;
 
-    public TransactionBuilderOutput(TransactionBuilder txBuilder, WalletEx wallet, Coin amount) {
+    public TransactionBuilderOutput(TransactionBuilder txBuilder, WalletEx wallet, Coin amount, boolean dryRun) {
         this.txBuilder = txBuilder;
         this.amount = amount;
         this.dest = new ReserveDestination(wallet);
-        TransactionDestination txdest = dest.getReservedDestination(false);
+        TransactionDestination txdest = !dryRun ? dest.getReservedDestination(false) : KeyId.fromBytes(new byte[20]);
         script = txdest.getScript();
     }
 

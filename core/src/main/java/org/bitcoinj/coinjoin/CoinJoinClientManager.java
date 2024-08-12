@@ -17,11 +17,13 @@ package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.MasternodeSync;
@@ -29,6 +31,8 @@ import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
@@ -38,6 +42,7 @@ import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
+import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,11 +52,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -61,8 +64,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MAX;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_AUTO_TIMEOUT_MIN;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 
-public class CoinJoinClientManager {
+public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
     private static final Random random = new Random();
     // Keep track of the used Masternodes
@@ -96,6 +100,8 @@ public class CoinJoinClientManager {
             = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<MixingCompleteListener>> mixingCompleteListeners
             = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<CoinJoinTransactionListener>> transactionListeners
+            = new CopyOnWriteArrayList<>();
 
     private boolean waitForAnotherBlock() {
         if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) &&
@@ -106,9 +112,14 @@ public class CoinJoinClientManager {
         return cachedBlockHeight - cachedLastSuccessBlock < minBlocksToWait;
     }
 
+    public boolean isWaitingForNewBlock() {
+        return waitForAnotherBlock();
+    }
+
     // Make sure we have enough keys since last backup
     private boolean checkAutomaticBackup() {
-        return CoinJoinClientOptions.isEnabled() && isMixing();
+        // Let the KeyChain classes handle this
+        return true;
     }
 
     public int cachedNumBlocks = Integer.MAX_VALUE;    // used for the overview screen
@@ -117,11 +128,13 @@ public class CoinJoinClientManager {
         checkArgument(wallet instanceof WalletEx);
         mixingWallet = (WalletEx) wallet;
         context = wallet.getContext();
+        mixingWallet.addCoinsReceivedEventListener(this);
     }
 
     public CoinJoinClientManager(WalletEx wallet) {
         mixingWallet = wallet;
         context = wallet.getContext();
+        mixingWallet.addCoinsReceivedEventListener(this);
     }
 
     public void processMessage(Peer from, Message message, boolean enable_bip61) {
@@ -201,12 +214,15 @@ public class CoinJoinClientManager {
         }
     }
 
+    private long lastTimeReportTooRecent = 0;
+    private long lastMasternodesUsed = 0;
+
     /// Passively run mixing in the background according to the configuration in settings
     public boolean doAutomaticDenominating() {
         return doAutomaticDenominating(false);
     }
     public boolean doAutomaticDenominating(boolean dryRun) {
-        if (!CoinJoinClientOptions.isEnabled() || !isMixing())
+        if (!CoinJoinClientOptions.isEnabled() || (!dryRun && !isMixing()))
             return false;
 
         if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !mixingWallet.getContext().masternodeSync.isBlockchainSynced()) {
@@ -224,7 +240,13 @@ public class CoinJoinClientManager {
         // If we've used 90% of the Masternode list then drop the oldest first ~30%
         int thresholdHigh = (int) (mnCountEnabled * 0.9);
         int thresholdLow = (int) (thresholdHigh * 0.7);
-        log.info("Checking masternodesUsed: size: {}, threshold: {}", masternodesUsed.size(), thresholdHigh);
+
+        if (!waitForAnotherBlock()) {
+            if (masternodesUsed.size() != lastMasternodesUsed) {
+                log.info("Checking masternodesUsed: size: {}, threshold: {}", masternodesUsed.size(), thresholdHigh);
+                lastMasternodesUsed = masternodesUsed.size();
+            }
+        }
 
         if (masternodesUsed.size() > thresholdHigh) {
             // remove the first masternodesUsed.size() - thresholdLow masternodes
@@ -253,20 +275,28 @@ public class CoinJoinClientManager {
         try {
             if (deqSessions.size() < CoinJoinClientOptions.getSessions()) {
                 CoinJoinClientSession newSession = new CoinJoinClientSession(mixingWallet);
+                log.info("creating new session: {}: ", newSession.getId());
                 for (ListenerRegistration<SessionCompleteListener> listener : sessionCompleteListeners) {
                     newSession.addSessionCompleteListener(listener.executor, listener.listener);
                 }
                 for (ListenerRegistration<SessionStartedListener> listener : sessionStartedListeners) {
                     newSession.addSessionStartedListener(listener.executor, listener.listener);
                 }
+                for (ListenerRegistration<CoinJoinTransactionListener> listener : transactionListeners) {
+                    newSession.addTransationListener (listener.executor, listener.listener);
+                }
                 deqSessions.addLast(newSession);
             }
             for (CoinJoinClientSession session: deqSessions) {
                 if (!checkAutomaticBackup()) return false;
 
-                if (waitForAnotherBlock()) {
-                    strAutoDenomResult = "Last successful action was too recent.";
-                    log.info("DoAutomaticDenominating -- {}", strAutoDenomResult);
+                // we may not need this
+                if (!dryRun && waitForAnotherBlock()) {
+                    if (Utils.currentTimeMillis() - lastTimeReportTooRecent > 15000 ) {
+                        strAutoDenomResult = "Last successful action was too recent.";
+                        log.info("DoAutomaticDenominating: {}", strAutoDenomResult);
+                        lastTimeReportTooRecent = Utils.currentTimeMillis();
+                    }
                     return false;
                 }
 
@@ -288,7 +318,8 @@ public class CoinJoinClientManager {
                     session.submitDenominate();
                     return true;
                 } else {
-                    log.info("mixingMasternode {} != mnAddr {} or {} != {}", mnMixing != null ? mnMixing.getService().getSocketAddress() : "null", mnAddr.getSocketAddress(),
+                    log.info(COINJOIN_EXTRA, "mixingMasternode {} != mnAddr {} or {} != {}",
+                            mnMixing != null ? mnMixing.getService().getSocketAddress() : "null", mnAddr.getSocketAddress(),
                             session.getState(), PoolState.POOL_STATE_QUEUE);
                 }
             }
@@ -378,7 +409,7 @@ public class CoinJoinClientManager {
                 continue;
             }
 
-            log.info("coinjoin:  found, masternode={}", dmn.getProTxHash());
+            log.info("coinjoin: found, masternode={}", dmn.getProTxHash().toString().substring(0, 16));
             return dmn;
         }
 
@@ -400,6 +431,7 @@ public class CoinJoinClientManager {
 
     public void close(AbstractBlockChain blockChain) {
         blockChain.removeNewBestBlockListener(newBestBlockListener);
+        mixingWallet.removeCoinsReceivedEventListener(this);
     }
 
     public void updatedSuccessBlock() {
@@ -595,6 +627,37 @@ public class CoinJoinClientManager {
         }
     }
 
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addTransationListener (CoinJoinTransactionListener listener) {
+        addTransationListener (Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addTransationListener (Executor executor, CoinJoinTransactionListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        transactionListeners.add(new ListenerRegistration<>(listener, executor));
+        for (CoinJoinClientSession session: deqSessions) {
+            session.addTransationListener (executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeTransationListener(CoinJoinTransactionListener listener) {
+        for (CoinJoinClientSession session: deqSessions) {
+            session.removeTransactionListener(listener);
+        }
+        return ListenerRegistration.removeFromList(listener, transactionListeners);
+    }
+
     public List<PoolStatus> getSessionsStatus() {
         ArrayList<PoolStatus> sessionsStatus = Lists.newArrayList();
         for (CoinJoinClientSession session : deqSessions) {
@@ -609,5 +672,14 @@ public class CoinJoinClientManager {
 
     public void addContinueMixingOnError(PoolStatus error) {
         continueMixingOnStatus.add(error);
+    }
+
+    public void processTransaction(Transaction tx) {
+        deqSessions.forEach(coinJoinClientSession -> coinJoinClientSession.processTransaction(tx));
+    }
+
+    @Override
+    public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
+        processTransaction(tx);
     }
 }

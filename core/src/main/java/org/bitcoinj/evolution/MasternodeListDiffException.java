@@ -1,11 +1,11 @@
 package org.bitcoinj.evolution;
 
 public class MasternodeListDiffException extends Exception {
-    boolean requireReset;
-    boolean findNewPeer;
+    private final boolean requireReset;
+    private final boolean findNewPeer;
 
-    boolean sameHeight;
-    boolean merkleRootMismatch;
+    private final boolean sameHeight;
+    private final boolean merkleRootMismatch;
     public MasternodeListDiffException(String message, boolean requireReset, boolean findNewPeer, boolean sameHeight, boolean merkleRootMismatch) {
         super(message);
         this.requireReset = requireReset;
@@ -24,5 +24,9 @@ public class MasternodeListDiffException extends Exception {
 
     public boolean hasMerkleRootMismatch() {
         return merkleRootMismatch;
+    }
+
+    public boolean isSameHeight() {
+        return sameHeight;
     }
 }

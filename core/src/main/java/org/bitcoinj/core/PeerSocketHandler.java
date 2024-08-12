@@ -46,7 +46,7 @@ import static com.google.common.base.Preconditions.*;
 public abstract class PeerSocketHandler extends AbstractTimeoutHandler implements StreamConnection {
     private static final Logger log = LoggerFactory.getLogger(PeerSocketHandler.class);
 
-    private final MessageSerializer serializer;
+    private MessageSerializer serializer;
     protected PeerAddress peerAddress;
     // If we close() before we know our writeTarget, set this to true to call writeTarget.closeConnection() right away.
     private boolean closePending = false;
@@ -241,5 +241,9 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
         }
 
         close();
+    }
+
+    protected void setMessageSerializer(MessageSerializer messageSerializer) {
+        this.serializer = messageSerializer;
     }
 }

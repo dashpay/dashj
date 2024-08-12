@@ -19,7 +19,7 @@ public class CoinJoinSendRequest {
     }
 
     /**
-     * <p>Creates a new SCoinJoin endRequest to the given pubkey for the given value.</p>
+     * <p>Creates a new CoinJoin SendRequest to the given pubkey for the given value.</p>
      */
     public static SendRequest to(Wallet wallet, ECKey destination, Coin value) {
         SendRequest req = SendRequest.to(wallet.getParams(), destination, value);
@@ -28,10 +28,10 @@ public class CoinJoinSendRequest {
         return req;
     }
     /** Simply wraps a pre-built incomplete CoinJoin transaction provided by you. */
-    public static SendRequest forTx(Wallet wallet, Transaction tx) {
+    public static SendRequest forTx(Wallet wallet, Transaction tx, boolean returnChange) {
         SendRequest req = SendRequest.forTx(tx);
         req.coinSelector = new CoinJoinCoinSelector(wallet);
-        req.returnChange = false;
+        req.returnChange = returnChange;
         return req;
     }
 }

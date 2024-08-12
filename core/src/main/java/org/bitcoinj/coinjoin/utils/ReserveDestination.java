@@ -20,13 +20,14 @@ import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.NoDestination;
 import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ReserveDestination extends ReserveScript {
+    private static Logger log = LoggerFactory.getLogger(ReserveDestination.class);
     //! The wallet to reserve from
     protected final WalletEx wallet;
-    //LegacyScriptPubKeyMan* m_spk_man{nullptr};
 
     //! The index of the address's key in the keypool
     protected long index = -1;
@@ -42,15 +43,10 @@ public class ReserveDestination extends ReserveScript {
         this.wallet = wallet;
     }
 
-    //! Destructor. If a key has been reserved and not KeepKey'ed, it will be returned to the keypool
-    protected void finalize() {
-        returnDestination();
-    }
-
     //! Reserve an address
     public TransactionDestination getReservedDestination(boolean internal) {
         if (index == -1) {
-            DeterministicKey key = (DeterministicKey) wallet.getCoinJoin().freshReceiveKey();
+            DeterministicKey key = wallet.getCoinJoin().getUnusedKey();
             if (key == null) {
                 return null;
             }
@@ -59,12 +55,24 @@ public class ReserveDestination extends ReserveScript {
             this.internal = true;
         }
 
-        return KeyId.fromBytes(vchPubKey.getPubKeyHash());
+        address = KeyId.fromBytes(vchPubKey.getPubKeyHash());
+        return address;
     }
 
     //! Return reserved address
     void returnDestination() {
         // TODO tell the wallet to reserve the destination
+        if (vchPubKey != null) {
+            if (vchPubKey instanceof DeterministicKey) {
+                wallet.getCoinJoin().addUnusedKey((DeterministicKey) vchPubKey);
+            } else {
+                log.warn("cannot return key: {}", vchPubKey);
+            }
+        } else if (address instanceof KeyId){
+            wallet.getCoinJoin().addUnusedKey((KeyId) address);
+        } else if (!(address instanceof NoDestination)) {
+            log.warn("cannot return key: {}", address);
+        }
         index = -1;
         vchPubKey = null;
         address = NoDestination.get();
@@ -72,6 +80,16 @@ public class ReserveDestination extends ReserveScript {
     //! Keep the address. Do not return it's key to the keypool when this object goes out of scope
     public void keepDestination() {
         // TODO: tell the wallet to keep the destination
+        // TODO tell the wallet to reserve the destination
+        if (vchPubKey != null) {
+            if (vchPubKey instanceof DeterministicKey) {
+                wallet.getCoinJoin().removeUnusedKey(KeyId.fromBytes(vchPubKey.getPubKeyHash()));
+            }
+        } else if (address instanceof KeyId){
+            wallet.getCoinJoin().removeUnusedKey((KeyId) address);
+        } else if (!(address instanceof NoDestination)) {
+            log.warn("cannot keep key: {}", address);
+        }
         index = -1;
         vchPubKey = null;
         address = NoDestination.get();

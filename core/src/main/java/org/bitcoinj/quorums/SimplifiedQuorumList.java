@@ -1,10 +1,27 @@
+/*
+ * Copyright 2019 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.*;
 import org.bitcoinj.evolution.Masternode;
-import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.utils.MerkleRoot;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -14,9 +31,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
-
-import static org.bitcoinj.core.Sha256Hash.ZERO_HASH;
-import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 public class SimplifiedQuorumList extends Message {
 
@@ -36,8 +50,8 @@ public class SimplifiedQuorumList extends Message {
         super(params);
         blockHash = params.getGenesisBlock().getHash();
         height = -1;
-        minableCommitmentsByQuorum = new HashMap<Pair<Integer, Sha256Hash>, Sha256Hash>(10);
-        minableCommitments = new LinkedHashMap<Sha256Hash, FinalCommitment>(10);
+        minableCommitmentsByQuorum = new HashMap<>(10);
+        minableCommitments = new LinkedHashMap<>(10);
         isFirstQuorumCheck = true;
     }
 
@@ -49,8 +63,8 @@ public class SimplifiedQuorumList extends Message {
         super(other.params);
         this.blockHash = other.blockHash;
         this.height = other.height;
-        minableCommitmentsByQuorum = new HashMap<Pair<Integer, Sha256Hash>, Sha256Hash>(other.minableCommitmentsByQuorum);
-        minableCommitments = new LinkedHashMap<Sha256Hash, FinalCommitment>(other.minableCommitments);
+        minableCommitmentsByQuorum = new HashMap<>(other.minableCommitmentsByQuorum);
+        minableCommitments = new LinkedHashMap<>(other.minableCommitments);
         this.isFirstQuorumCheck = other.isFirstQuorumCheck;
     }
 
@@ -59,7 +73,7 @@ public class SimplifiedQuorumList extends Message {
         blockHash = readHash();
         height = (int)readUint32();
         int size = (int)readVarInt();
-        minableCommitmentsByQuorum = new HashMap<Pair<Integer, Sha256Hash>, Sha256Hash>(size);
+        minableCommitmentsByQuorum = new HashMap<>(size);
         for(int i = 0; i < size; ++i)
         {
             int type = readBytes(1)[0];
@@ -69,7 +83,7 @@ public class SimplifiedQuorumList extends Message {
         }
 
         size = (int)readVarInt();
-        minableCommitments = new LinkedHashMap<Sha256Hash, FinalCommitment>(size);
+        minableCommitments = new LinkedHashMap<>(size);
         for(long i = 0; i < size; ++i)
         {
             Sha256Hash hash = readHash();
@@ -118,24 +132,37 @@ public class SimplifiedQuorumList extends Message {
         return builder.toString();
     }
 
-    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, AbstractBlockChain chain, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
+    BLSSignature getSignatureForIndex(Map<BLSSignature, HashSet<Integer>> quorumsCLSigs, int index) {
+        Optional<Map.Entry<BLSSignature, HashSet<Integer>>> answer = quorumsCLSigs.entrySet().stream().filter(entry -> entry.getValue().contains(index)).findFirst();
+        return answer.map(Map.Entry::getKey).orElse(null);
+    }
+
+    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, DualBlockChain chain, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
-            if(!diff.prevBlockHash.equals(blockHash))
+            if(!diff.getPrevBlockHash().equals(blockHash))
                 throw new MasternodeListDiffException("The mnlistdiff does not connect to this quorum.  height: " +
                         height + " vs " + cbtx.getHeight(), false, false, height == cbtx.getHeight(), false);
 
             SimplifiedQuorumList result = new SimplifiedQuorumList(this);
-            result.blockHash = diff.blockHash;
+            result.blockHash = diff.getBlockHash();
             result.height = cbtx.getHeight();
             result.coinbaseTxPayload = cbtx;
 
             for (Pair<Integer, Sha256Hash> quorum : diff.getDeletedQuorums()) {
                 result.removeCommitment(quorum);
             }
-            for (FinalCommitment entry : diff.getNewQuorums()) {
+            for (int i = 0; i < diff.getNewQuorums().size(); ++i) {
+                FinalCommitment entry = diff.getNewQuorums().get(i);
+                BLSSignature signature = diff.getQuorumsCLSigs() != null ?
+                        getSignatureForIndex(diff.getQuorumsCLSigs(), i) : null;
+                if (signature != null)
+                    Context.get().chainLockHandler.addCoinbaseChainLock(entry.quorumHash, 8, signature);
+
+                // find a better way to do this
                 if ((doDIP24 && entry.llmqType == params.getLlmqDIP0024InstantSend().value) || (!doDIP24 && entry.llmqType != params.getLlmqDIP0024InstantSend().value)) {
+                    // for now, don't use the return value
                     verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry);
                 }
                 result.addCommitment(entry);
@@ -148,19 +175,23 @@ public class SimplifiedQuorumList extends Message {
         }
     }
 
-    public void verifyQuorums(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums) throws BlockStoreException, ProtocolException{
+    public void verifyQuorums(boolean isLoadingBootstrap, DualBlockChain chain, boolean validateOldQuorums) throws BlockStoreException, ProtocolException{
         lock.lock();
         try {
+            int verifiedCount = 0;
             for (FinalCommitment entry : minableCommitments.values()) {
-                verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry);
+                if (verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry)) {
+                    verifiedCount++;
+                }
             }
+            log.info("verified {} of {} quorums", verifiedCount, minableCommitments.size());
         } finally {
             lock.unlock();
         }
     }
 
-    private void verifyQuorum(boolean isLoadingBootstrap, AbstractBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
-        StoredBlock block = chain.getBlockStore().get(entry.getQuorumHash());
+    private boolean verifyQuorum(boolean isLoadingBootstrap, DualBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
+        StoredBlock block = chain.getBlock(entry.getQuorumHash());
         if (block != null) {
             LLMQParameters llmqParameters = params.getLlmqs().get(entry.getLlmqType());
             if (llmqParameters == null)
@@ -171,8 +202,9 @@ public class SimplifiedQuorumList extends Message {
                 if (block.getHeight() % dkgInterval != 0)
                     throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
             }
-            checkCommitment(entry, block, Context.get().masternodeListManager, chain, validateOldQuorums);
+            boolean isVerified = checkCommitment(entry, block, Context.get().masternodeListManager, chain, validateOldQuorums);
             isFirstQuorumCheck = false;
+            return isVerified;
         } else {
             int chainHeight = chain.getBestChainHeight();
             //if quorum was created before DIP8 activation, then allow it to be added
@@ -184,6 +216,7 @@ public class SimplifiedQuorumList extends Message {
                     throw new ProtocolException("QuorumHash not found: " + entry.quorumHash);
                 }
             }
+            return false;
         }
     }
 
@@ -193,7 +226,7 @@ public class SimplifiedQuorumList extends Message {
 
         lock.lock();
         try {
-            Pair<Integer, Sha256Hash> pair = new Pair(commitment.llmqType, commitment.quorumHash);
+            Pair<Integer, Sha256Hash> pair = new Pair<>(commitment.llmqType, commitment.quorumHash);
             minableCommitmentsByQuorum.put(pair, commitmentHash);
             minableCommitments.put(commitmentHash, commitment);
         } finally {
@@ -260,28 +293,23 @@ public class SimplifiedQuorumList extends Message {
 
             CoinbaseTx cbtx = (CoinbaseTx) coinbaseTx.getExtraPayloadObject();
 
-            if(mnlistdiff.getNewQuorums().isEmpty() && mnlistdiff.getDeletedQuorums().isEmpty() &&
-                    prevList != null && prevList.coinbaseTxPayload != null) {
-                if(cbtx.getMerkleRootQuorums().equals(prevList.coinbaseTxPayload.getMerkleRootQuorums()))
-                    return true;
+            if (mnlistdiff.getNewQuorums().isEmpty() && mnlistdiff.getDeletedQuorums().isEmpty() &&
+                    prevList != null && prevList.coinbaseTxPayload != null &&
+                    cbtx.getMerkleRootQuorums().equals(prevList.coinbaseTxPayload.getMerkleRootQuorums())) {
+                return true;
             }
 
-            ArrayList<Sha256Hash> commitmentHashes = new ArrayList<Sha256Hash>();
+            ArrayList<Sha256Hash> commitmentHashes = new ArrayList<>();
 
             for (FinalCommitment commitment : minableCommitments.values()) {
                 commitmentHashes.add(commitment.getHash());
             }
 
-            commitmentHashes.sort(new Comparator<Sha256Hash>() {
-                @Override
-                public int compare(Sha256Hash o1, Sha256Hash o2) {
-                    return o1.compareTo(o2);
-                }
-            });
+            commitmentHashes.sort(Comparator.naturalOrder());
 
             if (!cbtx.getMerkleRootQuorums().isZero() &&
                     !commitmentHashes.isEmpty() &&
-                    !cbtx.getMerkleRootQuorums().equals(calculateMerkleRoot(commitmentHashes)))
+                    !cbtx.getMerkleRootQuorums().equals(MerkleRoot.calculateMerkleRoot(commitmentHashes)))
                 throw new MasternodeListDiffException("MerkleRoot of quorum list does not match coinbaseTx - " + commitmentHashes.size(), true, false, false, true);
 
             return true;
@@ -290,112 +318,40 @@ public class SimplifiedQuorumList extends Message {
         }
     }
 
-    public static boolean verifyMerkleRoot(ArrayList<FinalCommitment> minableCommitments, Sha256Hash merkleRootQuorums) {
+    public static boolean verifyMerkleRoot(List<FinalCommitment> minableCommitments, Sha256Hash merkleRootQuorums) {
 
-        ArrayList<Sha256Hash> commitmentHashes = new ArrayList<Sha256Hash>();
+        ArrayList<Sha256Hash> commitmentHashes = new ArrayList<>();
 
         for (FinalCommitment commitment : minableCommitments) {
             commitmentHashes.add(commitment.getHash());
         }
 
-        commitmentHashes.sort(new Comparator<Sha256Hash>() {
-            @Override
-            public int compare(Sha256Hash o1, Sha256Hash o2) {
-                return o1.compareTo(o2);
-            }
-        });
+        commitmentHashes.sort(Comparator.naturalOrder());
 
-        if (!merkleRootQuorums.isZero() &&
-                !commitmentHashes.isEmpty() &&
-                !merkleRootQuorums.equals(calculateMerkleRoot(commitmentHashes)))
-            return false;
-
-        return true;
+        return merkleRootQuorums.isZero() ||
+                commitmentHashes.isEmpty() ||
+                merkleRootQuorums.equals(MerkleRoot.calculateMerkleRoot(commitmentHashes));
     }
 
     public Sha256Hash calculateMerkleRoot() {
         lock.lock();
         try {
-            ArrayList<Sha256Hash> commitmentHashes = new ArrayList<Sha256Hash>();
+            ArrayList<Sha256Hash> commitmentHashes = new ArrayList<>();
 
             for(FinalCommitment commitment : minableCommitments.values()) {
                 commitmentHashes.add(commitment.getHash());
             }
 
-            Collections.sort(commitmentHashes, new Comparator<Sha256Hash>() {
-                @Override
-                public int compare(Sha256Hash o1, Sha256Hash o2) {
-                    return o1.compareTo(o2);
-                }
-            });
+            commitmentHashes.sort(Comparator.naturalOrder());
 
-            return calculateMerkleRoot(commitmentHashes);
+            return MerkleRoot.calculateMerkleRoot(commitmentHashes);
         } finally {
             lock.unlock();
         }
     }
 
-    public static Sha256Hash calculateMerkleRoot(List<Sha256Hash> hashes) {
-        List<byte[]> tree = buildMerkleTree(hashes);
-        return Sha256Hash.wrap(tree.get(tree.size() - 1));
-    }
-
-    private static List<byte[]> buildMerkleTree(List<Sha256Hash> hashes) {
-        // The Merkle root is based on a tree of hashes calculated from the masternode list proRegHash:
-        //
-        //     root
-        //      / \
-        //   A      B
-        //  / \    / \
-        // t1 t2 t3 t4
-        //
-        // The tree is represented as a list: t1,t2,t3,t4,A,B,root where each
-        // entry is a hash.
-        //
-        // The hashing algorithm is double SHA-256. The leaves are a hash of the serialized contents of the transaction.
-        // The interior nodes are hashes of the concenation of the two child hashes.
-        //
-        // This structure allows the creation of proof that a transaction was included into a block without having to
-        // provide the full block contents. Instead, you can provide only a Merkle branch. For example to prove tx2 was
-        // in a block you can just provide tx2, the hash(tx1) and B. Now the other party has everything they need to
-        // derive the root, which can be checked against the block header. These proofs aren't used right now but
-        // will be helpful later when we want to download partial block contents.
-        //
-        // Note that if the number of transactions is not even the last tx is repeated to make it so (see
-        // tx3 above). A tree with 5 transactions would look like this:
-        //
-        //         root
-        //        /     \
-        //       1        5
-        //     /   \     / \
-        //    2     3    4  4
-        //  / \   / \   / \
-        // t1 t2 t3 t4 t5 t5
-        ArrayList<byte[]> tree = new ArrayList<byte[]>();
-        // Start by adding all the hashes of the transactions as leaves of the tree.
-        for (Sha256Hash hash : hashes) {
-            tree.add(hash.getBytes());
-        }
-        int levelOffset = 0; // Offset in the list where the currently processed level starts.
-        // Step through each level, stopping when we reach the root (levelSize == 1).
-        for (int levelSize = hashes.size(); levelSize > 1; levelSize = (levelSize + 1) / 2) {
-            // For each pair of nodes on that level:
-            for (int left = 0; left < levelSize; left += 2) {
-                // The right hand node can be the same as the left hand, in the case where we don't have enough
-                // transactions.
-                int right = Math.min(left + 1, levelSize - 1);
-                byte[] leftBytes = Utils.reverseBytes(tree.get(levelOffset + left));
-                byte[] rightBytes = Utils.reverseBytes(tree.get(levelOffset + right));
-                tree.add(Utils.reverseBytes(hashTwice(leftBytes, 0, 32, rightBytes, 0, 32)));
-            }
-            // Move to the next level.
-            levelOffset += levelSize;
-        }
-        return tree;
-    }
-
     public void addQuorum(Quorum quorum) {
-        addCommitment(quorum.commitment);
+        addCommitment(quorum.getCommitment());
     }
 
     public void setBlock(StoredBlock block) {
@@ -415,13 +371,11 @@ public class SimplifiedQuorumList extends Message {
         }
     }
 
-    public int getCount()
-    {
+    public int getCount() {
         return minableCommitments.size();
     }
 
-    public int getValidCount()
-    {
+    public int getValidCount() {
         int count = 0;
         for (Map.Entry<Sha256Hash, FinalCommitment> p : minableCommitments.entrySet()) {
             if (isCommitmentValid(p.getValue())) {
@@ -448,15 +402,14 @@ public class SimplifiedQuorumList extends Message {
         blockHash = masternodeList.getBlockHash();
     }
 
-    void checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
-                         AbstractBlockChain chain, boolean validateQuorums) throws BlockStoreException
+    private boolean checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, SimplifiedMasternodeListManager manager,
+                         DualBlockChain chain, boolean validateQuorums) throws BlockStoreException
     {
         if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitment.MAX_VERSION) {
-            throw new VerificationException("invalid quorum commitment version" + commitment.getVersion());
+            throw new VerificationException("invalid quorum commitment version: " + commitment.getVersion());
         }
 
-        BlockStore blockStore = chain.getBlockStore();
-        StoredBlock quorumBlock = blockStore.get(commitment.quorumHash);
+        StoredBlock quorumBlock = chain.getBlock(commitment.quorumHash);
         if(quorumBlock == null)
             throw new VerificationException("invalid quorum hash: " + commitment.quorumHash);
 
@@ -464,7 +417,7 @@ public class SimplifiedQuorumList extends Message {
         while(cursor != null) {
             if(cursor.getHeader().getHash().equals(quorumBlock.getHeader().getHash()))
                 break;
-            cursor = cursor.getPrev(blockStore);
+            cursor = chain.getBlock(cursor.getHeader().getHash());
         }
 
         if(cursor == null)
@@ -478,38 +431,39 @@ public class SimplifiedQuorumList extends Message {
         LLMQParameters llmqParameters = params.getLlmqs().get(LLMQParameters.LLMQType.fromValue(commitment.llmqType));
 
 
-        if (commitment.isNull()) {
-            if (!commitment.verifyNull()) {
-                throw new VerificationException("invalid commitment: null value");
-            }
+        if (commitment.isNull() && !commitment.verifyNull()) {
+            throw new VerificationException("invalid commitment: null value");
         }
 
         if (validateQuorums) {
-            ArrayList<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
+            List<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
 
             if (members == null) {
                 //no information about this quorum because it is before we were downloading
                 log.warn("masternode list is missing to verify quorum: {}", commitment.quorumHash/*, manager.getBlockHeight(commitment.quorumHash)*/);
-                return;
+                return false;
             }
 
-            log.info("Quorum: {}", commitment.quorumHash);
             if (Context.get().isDebugMode()) {
                 StringBuilder builder = new StringBuilder();
                 for (Masternode mn : members) {
                     builder.append("\n ").append(mn.getProTxHash());
                 }
-                log.info(builder.toString());
+                log.info("{}", builder);
             }
 
             if (!commitment.verify(quorumBlock, members, true)) {
                 // TODO: originally, the exception was thrown here.  For now, report the error to the logs
                 // throw new VerificationException("invalid quorum commitment: " + commitment);
                 log.info("invalid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
+                return false;
             } else {
                 log.info("valid quorum commitment: {}:{}: quorumPublicKey = {}, membersSignature = {}", commitment.quorumHash, commitment.quorumIndex, commitment.quorumPublicKey, commitment.membersSignature);
+                return true;
             }
         }
+        // skip validation, but return ture
+        return true;
     }
 
     @Override

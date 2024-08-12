@@ -41,7 +41,8 @@ public enum PoolMessage {
     MSG_POOL_MAX(ERR_SIZE_MISMATCH.value),
 
     // extra values for DASHJ Reporting
-    ERR_TIMEOUT(23);
+    ERR_TIMEOUT(23),
+    ERR_CONNECTION_TIMEOUT(24);
 
     public final int value;
 

@@ -21,6 +21,7 @@ import com.google.common.annotations.*;
 import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.hashengineering.crypto.X11;
+import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.CoinbaseTx;
 import org.bitcoinj.script.*;
 import org.slf4j.*;
@@ -268,7 +269,8 @@ public class Block extends Message {
         }
 
         // Hard fork to reduce the block reward by 10 extra percent (allowing budget/superblocks)
-        Coin nSuperblockPart = (nPrevHeight > params.getBudgetPaymentsStartBlock()) ? nSubsidy.div(10) : Coin.ZERO;
+        int treasuryPart = params.isV20Active(nPrevHeight) ? 20 : 10; // parts per 100, 20 is 20%
+        Coin nSuperblockPart = (nPrevHeight > params.getBudgetPaymentsStartBlock()) ? nSubsidy.multiply(treasuryPart).div(100) : Coin.ZERO;
 
         return fSuperblockPartOnly ? nSuperblockPart : nSubsidy.minus(nSuperblockPart);
     }
@@ -366,11 +368,9 @@ public class Block extends Message {
             return;
         }
 
-        if (transactions != null) {
-            stream.write(new VarInt(transactions.size()).encode());
-            for (Transaction tx : transactions) {
-                tx.bitcoinSerialize(stream);
-            }
+        stream.write(new VarInt(transactions.size()).encode());
+        for (Transaction tx : transactions) {
+            tx.bitcoinSerialize(stream);
         }
         //writeMasterNodeVotes(stream);
     }
@@ -542,7 +542,7 @@ public class Block extends Message {
         StringBuilder s = new StringBuilder();
         s.append(" block: \n");
         s.append("   hash: ").append(getHashAsString()).append('\n');
-        s.append("   version: ").append(version);
+        s.append("   version: ").append(version).append(String.format(" (0x%08x)", version));
         String bips = Joiner.on(", ").skipNulls().join(isBIP34() ? "BIP34" : null, isBIP66() ? "BIP66" : null,
                 isBIP65() ? "BIP65" : null);
         if (!bips.isEmpty())
@@ -968,7 +968,7 @@ public class Block extends Message {
         coinbase.addOutput(new TransactionOutput(params, coinbase, value,
                 ScriptBuilder.createP2PKOutputScript(ECKey.fromPublicOnly(pubKeyTo)).getProgram()));
         if (merkleRootMasternodeList != null && merkleRootQuorumList != null) {
-            coinbase.setExtraPayload(new CoinbaseTx(height, merkleRootMasternodeList, merkleRootQuorumList));
+            coinbase.setExtraPayload(new CoinbaseTx(params, CoinbaseTx.CB_V20_VERSION, height, merkleRootMasternodeList, merkleRootQuorumList, 1, BLSSignature.dummy(), FIFTY_COINS));
         }
         transactions.add(coinbase);
         coinbase.setParent(this);

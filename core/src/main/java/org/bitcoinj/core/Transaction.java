@@ -36,8 +36,7 @@ import org.bitcoinj.wallet.WalletTransaction.Pool;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.bouncycastle.crypto.params.KeyParameter;
@@ -77,7 +76,7 @@ public class Transaction extends ChildMessage {
         public int compare(final Transaction tx1, final Transaction tx2) {
             final long time1 = tx1.getUpdateTime().getTime();
             final long time2 = tx2.getUpdateTime().getTime();
-            final int updateTimeComparison = -(Longs.compare(time1, time2));
+            final int updateTimeComparison = -(Long.compare(time1, time2));
             //If time1==time2, compare by tx hash to make comparator consistent with equals
             return updateTimeComparison != 0 ? updateTimeComparison : tx1.getTxId().compareTo(tx2.getTxId());
         }
@@ -92,7 +91,7 @@ public class Transaction extends ChildMessage {
             final TransactionConfidence confidence2 = tx2.getConfidence();
             final int height2 = confidence2.getConfidenceType() == ConfidenceType.BUILDING
                     ? confidence2.getAppearedAtChainHeight() : Block.BLOCK_HEIGHT_UNKNOWN;
-            final int heightComparison = -(Ints.compare(height1, height2));
+            final int heightComparison = -(Integer.compare(height1, height2));
             //If height1==height2, compare by tx hash to make comparator consistent with equals
             return heightComparison != 0 ? heightComparison : tx1.getTxId().compareTo(tx2.getTxId());
         }
@@ -107,6 +106,9 @@ public class Transaction extends ChildMessage {
         TRANSACTION_PROVIDER_UPDATE_REVOKE(4),
         TRANSACTION_COINBASE(5),
         TRANSACTION_QUORUM_COMMITMENT(6),
+        TRANSACTION_ASSET_LOCK(8),
+        TRANSACTION_ASSET_UNLOCK(9),
+        TRANSACTION_TYPE_MAX(10),
         TRANSACTION_UNKNOWN(1024);
 
         final int value;
@@ -758,10 +760,15 @@ public class Transaction extends ChildMessage {
         s.append('\n');
         if (updatedAt != null)
             s.append(indent).append("updated: ").append(Utils.dateTimeFormat(updatedAt)).append('\n');
-        if (version != MIN_STANDARD_VERSION)
-            s.append(indent).append("version ").append(version).append('\n');
-        Type type = (getVersionShort() == SPECIAL_VERSION) ? getType() : Type.TRANSACTION_NORMAL;
-        s.append("  type ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
+        if (version != MIN_STANDARD_VERSION) {
+            if (getVersionShort() == SPECIAL_VERSION) {
+                s.append(indent).append("version: ").append(getVersionShort()).append('\n');
+                Type type = (getVersionShort() == SPECIAL_VERSION) ? getType() : Type.TRANSACTION_NORMAL;
+                s.append("   type: ").append(type.toString()).append('(').append(type.getValue()).append(")\n");
+            } else {
+                s.append(indent).append("version: ").append(version).append('\n');
+            }
+        }
         if (isTimeLocked()) {
             s.append(indent).append("time locked until ");
             if (lockTime < LOCKTIME_THRESHOLD) {
@@ -836,11 +843,10 @@ public class Transaction extends ChildMessage {
                 s.append(indent).append("        ");
                 ScriptType scriptType = scriptPubKey.getScriptType();
                 if (scriptType != null) {
-                    if (scriptType != ScriptType.CREDITBURN)
+                    if (scriptType != ScriptType.ASSETLOCK)
                         s.append(scriptType).append(" addr:").append(scriptPubKey.getToAddress(params));
-                    else if (ScriptPattern.isCreditBurn(scriptPubKey)) {
-                        byte [] hash160 = ScriptPattern.extractCreditBurnKeyId(scriptPubKey);
-                        s.append(scriptType).append(" addr:").append(Address.fromPubKeyHash(params, hash160));
+                    else if (ScriptPattern.isAssetLock(scriptPubKey) && getType() == Type.TRANSACTION_ASSET_LOCK) {
+                        s.append(scriptType);
                     }
                 } else
                     s.append("unknown script type");
@@ -864,8 +870,8 @@ public class Transaction extends ChildMessage {
             s.append(indent).append("   fee  ").append(fee.multiply(1000).divide(size).toFriendlyString()).append("/kB, ")
                     .append(fee.toFriendlyString()).append(" for ").append(size).append(" bytes\n");
         }
-        if (getVersionShort() == SPECIAL_VERSION && type.isSpecial())
-            s.append(indent).append("  payload ").append(getExtraPayloadObject()).append('\n');
+        if (getVersionShort() == SPECIAL_VERSION && getType().isSpecial())
+            s.append(indent).append("payload: ").append(getExtraPayloadObject()).append('\n');
         return s.toString();
     }
 
@@ -1710,7 +1716,15 @@ public class Transaction extends ChildMessage {
             case TRANSACTION_QUORUM_COMMITMENT:
                 extraPayloadObject = new FinalCommitmentTxPayload(params, this);
                 break;
+            case TRANSACTION_ASSET_LOCK:
+                extraPayloadObject = new AssetLockPayload(params, this);
+                break;
+            case TRANSACTION_ASSET_UNLOCK:
+                extraPayloadObject = new AssetUnlockPayload(params, this);
+                break;
         }
+        if (extraPayloadObject != null)
+            extraPayloadObject.setParent(this);
     }
 
     /* returns false if inputs > 4 or there are less than the required confirmations */
@@ -1729,6 +1743,7 @@ public class Transaction extends ChildMessage {
     public boolean requiresInputs() {
         switch (getType()) {
             case TRANSACTION_QUORUM_COMMITMENT:
+            case TRANSACTION_ASSET_UNLOCK:
                 return false;
             default:
                 return true;
@@ -1786,6 +1801,35 @@ public class Transaction extends ChildMessage {
         }
 
         return true;
+    }
+
+    /**
+     * This method simulates the BIP61 Reject messages from Dash Core prior to v19.
+     * It is not likely that a transaction created by DashJ would have any of these issues.
+     *
+     *
+     * @return RejectMessage corresponding to a reason that the network may reject this transaction
+     */
+    public RejectMessage determineRejectMessage() {
+        try {
+            verify();
+        } catch (VerificationException e) {
+            return new RejectMessage(params, RejectMessage.RejectCode.MALFORMED, getTxId(), e.getMessage(), "");
+        }
+        // do any outputs contain dust?
+        if (getOutputs().stream().anyMatch(TransactionOutput::isDust)) {
+            return new RejectMessage(params, RejectMessage.RejectCode.DUST, getTxId(), "", "");
+        }
+        // is the fee high enough
+        Coin fee = getFee();
+        if (fee != null) {
+            int size = bitcoinSerialize().length;
+            Coin minFee = Coin.valueOf(size).multiply(REFERENCE_DEFAULT_MIN_TX_FEE.value).div(1000);
+            if (minFee.isGreaterThan(fee)) {
+                return new RejectMessage(params, RejectMessage.RejectCode.INSUFFICIENTFEE, getTxId(), "", "");
+            }
+        }
+        return null;
     }
 
     public boolean isEmpty() {

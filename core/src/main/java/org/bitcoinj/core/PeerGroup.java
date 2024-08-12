@@ -20,7 +20,6 @@ package org.bitcoinj.core;
 import com.google.common.annotations.*;
 import com.google.common.base.*;
 import com.google.common.collect.*;
-import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import net.jcip.annotations.*;
 import org.bitcoinj.coinjoin.SendCoinJoinQueue;
@@ -177,6 +176,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     @GuardedBy("lock") private boolean useLocalhostPeerWhenPossible = true;
     @GuardedBy("lock") private boolean ipv6Unreachable = false;
+
+    protected boolean isIpv6Unreachable() {
+        return ipv6Unreachable;
+    }
 
     @GuardedBy("lock") private long fastCatchupTimeSecs;
     private final CopyOnWriteArrayList<Wallet> wallets;
@@ -340,7 +343,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** The default timeout between when a connection attempt begins and version message exchange completes */
     public static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 5000;
     private volatile int vConnectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
-    
+    protected int getConnectTimeoutMillis() {
+        return vConnectTimeoutMillis;
+    }
+
     /** Whether bloom filter support is enabled when using a non FullPrunedBlockchain*/
     private volatile boolean vBloomFilteringEnabled = true;
 
@@ -414,13 +420,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             public int compare(PeerAddress a, PeerAddress b) {
                 checkState(lock.isHeldByCurrentThread());
                 int result = backoffMap.get(a).compareTo(backoffMap.get(b));
-                if (result != 0)
-                    return result;
-                result = Ints.compare(getPriority(a), getPriority(b));
-                if (result != 0)
-                    return result;
                 // Sort by port if otherwise equals - for testing
-                result = Ints.compare(a.getPort(), b.getPort());
+                if (result == 0)
+                    result = Integer.compare(a.getPort(), b.getPort());
                 return result;
             }
         });
@@ -442,7 +444,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 try {
                     this.headerChain = new BlockChain(params, new MemoryBlockStore(params));
                     StoredBlock cursor = chain.getChainHead();
-                    while (cursor != null) {
+                    while (cursor != null && !cursor.getHeader().equals(params.getGenesisBlock())) {
                         this.headerChain.getBlockStore().put(cursor);
                         cursor = cursor.getPrev(chain.getBlockStore());
                     }
@@ -562,8 +564,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 discoverySuccess = discoverPeers() > 0;
             }
 
-            long retryTime;
-            PeerAddress addrToTry;
             lock.lock();
             try {
                 if (doDiscovery) {
@@ -587,12 +587,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                         // were given a fixed set of addresses in some test scenario.
                     }
                     return;
-                } else {
-                    do {
-                        addrToTry = inactives.poll();
-                    } while (ipv6Unreachable && addrToTry.getAddr() instanceof Inet6Address);
-                    retryTime = backoffMap.get(addrToTry).getRetryTime();
                 }
+                PeerAddress addrToTry;
+                do {
+                    addrToTry = inactives.poll();
+                } while (ipv6Unreachable && addrToTry.getAddr() instanceof Inet6Address);
+                long retryTime = backoffMap.get(addrToTry).getRetryTime();
                 retryTime = Math.max(retryTime, groupBackoff.getRetryTime());
                 if (retryTime > now) {
                     long delay = retryTime - now;
@@ -611,7 +611,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     };
 
-    private void triggerConnections() {
+    protected void triggerConnections() {
         // Run on a background thread due to the need to potentially retry and back off in the background.
         if (!executor.isShutdown())
             executor.execute(triggerConnectionsJob);
@@ -1169,7 +1169,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         Futures.getUnchecked(executor.submit(Runnables.doNothing()));
     }
 
-    private int countConnectedAndPendingPeers() {
+    protected int countConnectedAndPendingPeers() {
         lock.lock();
         try {
             return peers.size() + pendingPeers.size();
@@ -2130,7 +2130,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
         @Override
         public void onMasterNodeListDiffDownloaded(Stage stage, SimplifiedMasternodeListDiff mnlistdiff) {
-            if (stage == Stage.Finished) {
+            if (stage == Stage.Received) {
                 masternodeListsInLastSecond++;
                 bytesInLastSecond += mnlistdiff.getMessageSize();
             }
@@ -2163,6 +2163,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         masternodeListsSynced++;
         mnListDownloadedFuture.set(masternodeListsSynced);
         queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Complete, null);
+    }
+
+    public void addMnListDownloadCompleteListener(Runnable listener, Executor executor) {
+        mnListDownloadedFuture.addListener(listener, executor);
     }
 
     FutureCallback<Boolean> headersDownloadedCallback;
@@ -2503,13 +2507,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
         tx.getConfidence().setPeerInfo(getConnectedPeers().size(), minConnections);
 
-        // keep track of how many times a transaction is sent
-        int sendCount = 0;
-        if(pendingTxSendCounts.containsKey(tx.getHash())) {
-            sendCount = pendingTxSendCounts.get(tx.getHash());
-        }
-        pendingTxSendCounts.put(tx.getHash(), ++sendCount);
-
         final TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
         broadcast.setMinConnections(minConnections);
         broadcast.setDropPeersAfterBroadcast(dropPeersAfterBroadcast && tx.getConfidence().numBroadcastPeers() == 0);
@@ -2539,49 +2536,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             public void onFailure(Throwable throwable) {
                 // This can happen if we get a reject message from a peer.
                 runningBroadcasts.remove(broadcast);
-            }
-        }, MoreExecutors.directExecutor());
-
-        // Handle the case of 0.14.0.x nodes disconnecting dashj when sending transactions
-        // This will resend the transaction one if it was only sent to 1 peer
-        // This will resend the transaction up to 9 times if any one peer was disconnected while sending
-        Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
-            final int MAX_ATTEMPTS = 9;
-            Context context = Context.get();
-            @Override
-            public void onSuccess(Transaction transaction) {
-                log.info("Successfully sent tx {}", transaction.getTxId());
-                Context.propagate(context);
-
-                if(transaction.getConfidence().numBroadcastPeers() == 0) {
-                    // TODO: this tx was sent to a single peer, should we send it again to make sure or see if there are more connections?
-                    int sentCount = pendingTxSendCounts.get(transaction.getTxId());
-
-                    if(sentCount <= 2) {
-                        log.info("resending tx {} since it was only sent to 1 peer", tx.getHash());
-                        broadcastTransaction(tx);
-                    } else pendingTxSendCounts.put(tx.getHash(), sentCount + MAX_ATTEMPTS);
-                }
-                pendingTxSendCounts.remove(tx.getHash());
-            }
-
-            @Override
-            public void onFailure(Throwable throwable) {
-                Context.propagate(context);
-                int sentCount = pendingTxSendCounts.get(tx.getHash());
-                if(throwable instanceof PeerException) {
-                    log.info("Failed to send tx {} due to disconnects", tx.getHash());
-
-                    if(sentCount <= MAX_ATTEMPTS) {
-                        log.info("resending tx {} due to disconnects", tx.getHash());
-                        broadcastTransaction(tx);
-                    } else {
-                        pendingTxSendCounts.remove(tx.getHash());
-                    }
-                } else {
-                    log.info("Failed to send tx {} due to rejections from peers", tx.getHash());
-                    pendingTxSendCounts.remove(tx.getHash());
-                }
             }
         }, MoreExecutors.directExecutor());
 

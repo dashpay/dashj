@@ -19,7 +19,6 @@
 package org.bitcoinj.crypto.bls;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Base58;
@@ -49,6 +48,7 @@ import org.dashj.bls.ExtendedPublicKey;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -869,12 +869,12 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         BLSDeterministicKey other = (BLSDeterministicKey) o;
         return super.equals(other)
                 && Arrays.equals(this.chainCode, other.chainCode)
-                && Objects.equal(this.childNumberPath, other.childNumberPath);
+                && Objects.equals(this.childNumberPath, other.childNumberPath);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(super.hashCode(), Arrays.hashCode(chainCode), childNumberPath);
+        return Objects.hash(super.hashCode(), Arrays.hashCode(chainCode), childNumberPath);
     }
 
     @Override

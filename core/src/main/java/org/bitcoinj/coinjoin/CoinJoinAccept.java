@@ -56,7 +56,7 @@ public class CoinJoinAccept extends Message {
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinAccept(denomination=%d, txCollateral=%s)",
+                "CoinJoinAccept(denom=%d, txCol=%s)",
                 denomination,
                 txCollateral.getTxId()
         );

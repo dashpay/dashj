@@ -78,16 +78,15 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         checkpoints.put(794950, Sha256Hash.wrap("000001860e4c7248a9c5cc3bc7106041750560dc5cd9b3a2641b49494bcff5f2"));
         checkpoints.put(808000, Sha256Hash.wrap("00000104cb60a2b5e00a8a4259582756e5bf0dca201c0993c63f0e54971ea91a"));
         checkpoints.put(850100, Sha256Hash.wrap("000004728b8ff2a16b9d4eebb0fd61eeffadc9c7fe4b0ec0b5a739869401ab5b"));
+        checkpoints.put(899760, Sha256Hash.wrap("000007b169cbf75796ee1147b24f6cdf627c189490d7472187408e0902413a68"));
 
-        // updated with Dash Core 0.17.0.3 seed list
-        addrSeeds = new int[]{
-                0x10a8302d,
-                0x4faf4433,
-                0x05dacd3c,
-                0x939c6e8f,
-                0xf9cb3eb2,
-                0xf093bdce
+        // updated with Dash Core 21.0.0 seed list
+        addrSeeds = new int[] {
+                0x2e4de52b,
+                0xf7a74d2d,
+                0xf9cb3eb2
         };
+
         bip32HeaderP2PKHpub = 0x043587cf;
         bip32HeaderP2PKHpriv = 0x04358394;
 
@@ -125,6 +124,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         DIP0008BlockHeight = 78800;
         DIP0024BlockHeight = 769700 + 4 * 288;
         v19BlockHeight = 850100;
+        v20BlockHeight = 905100;
 
         //LLMQ parameters
         addLLMQ(LLMQParameters.LLMQType.LLMQ_50_60);
@@ -138,6 +138,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_25_67;
         llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_60_75;
         llmqTypeMnhf = LLMQParameters.LLMQType.LLMQ_50_60;
+        llmqTypeAssetLocks = LLMQParameters.LLMQType.LLMQ_50_60;
 
         BIP34Height = 76;   // 000008ebb1db2598e897d17275285767717c6acfeac4c73def49fbea1ddcbcb6
         BIP65Height = 2431; // 0000039cf01242c7f921dcb4806a5994bc003b48c1973ae0c89b67809c2bb2ab
@@ -248,42 +249,9 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         "35.167.165.224",
         "34.210.26.93",
         "35.90.53.180",
-        "34.214.48.68",
-        "35.166.18.166",
-        "35.165.50.126",
-        "52.42.202.128",
-        "52.12.176.90",
-        "44.233.44.95",
-        "35.167.145.149",
-        "52.34.144.50",
-        "44.240.98.102",
-        "54.201.32.131",
-        "52.10.229.11",
-        "52.13.132.146",
-        "44.228.242.181",
-        "35.82.197.197",
-        "52.40.219.41",
-        "44.239.39.153",
-        "54.149.33.167",
-        "35.164.23.245",
-        "52.33.28.47",
-        "52.43.86.231",
-        "52.43.13.92",
-        "35.163.144.230",
-        "52.89.154.48",
-        "52.24.124.162",
-        "44.227.137.77",
-        "35.85.21.179",
-        "54.187.14.232",
-        "54.68.235.201",
-        "52.13.250.182",
-        "35.82.49.196",
-        "44.232.196.6",
-        "54.189.164.39",
-        "54.213.204.85",
     };
 
-    public static String[] HP_MASTERNODES = {
+    public String [] HP_MASTERNODES = {
         "34.214.48.68",
         "35.166.18.166",
         "35.165.50.126",

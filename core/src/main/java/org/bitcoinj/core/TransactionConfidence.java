@@ -441,6 +441,7 @@ public class TransactionConfidence {
             for (Map.Entry<PeerAddress, RejectMessage> entry : rejects.entrySet()) {
                 builder.append(String.format("    Rejected by %s: %s - %s - %s", entry.getKey(),
                         entry.getValue().getReasonCode().toString(), entry.getValue().getRejectedMessage(), entry.getValue().getReasonString()));
+                builder.append("\n");
             }
         }
 

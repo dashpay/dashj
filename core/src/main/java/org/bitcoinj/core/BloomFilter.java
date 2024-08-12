@@ -23,7 +23,6 @@ import org.bitcoinj.script.ScriptChunk;
 import org.bitcoinj.script.ScriptPattern;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
 import java.io.IOException;
@@ -31,6 +30,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.Math.*;
@@ -373,7 +373,7 @@ public class BloomFilter extends Message {
 
     @Override
     public synchronized int hashCode() {
-        return Objects.hashCode(hashFuncs, nTweak, Arrays.hashCode(data));
+        return Objects.hash(hashFuncs, nTweak, Arrays.hashCode(data));
     }
 
     public final byte[] getData() {

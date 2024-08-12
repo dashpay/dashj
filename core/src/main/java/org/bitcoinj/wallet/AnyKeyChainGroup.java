@@ -224,7 +224,7 @@ public class AnyKeyChainGroup implements IKeyBag {
                                @Nullable EnumMap<KeyChain.KeyPurpose, IDeterministicKey> currentKeys, @Nullable KeyCrypter crypter,
                                KeyFactory keyFactory) {
         this.params = params;
-        this.basic = basicKeyChain == null ? new AnyBasicKeyChain(keyFactory) : basicKeyChain;
+        this.basic = basicKeyChain == null ? new AnyBasicKeyChain(crypter, keyFactory) : basicKeyChain;
         this.keyFactory = keyFactory;
         if (chains != null) {
             if (lookaheadSize > -1)
@@ -682,6 +682,7 @@ public class AnyKeyChainGroup implements IKeyBag {
         checkNotNull(keyCrypter);
         checkNotNull(aesKey);
         checkState((chains != null && !chains.isEmpty()) || basic.numKeys() != 0, "can't encrypt entirely empty wallet");
+        // This code must be exception safe.
 
         AnyBasicKeyChain newBasic = basic.toEncrypted(keyCrypter, aesKey);
         List<AnyDeterministicKeyChain> newChains = new ArrayList<>();
@@ -689,8 +690,6 @@ public class AnyKeyChainGroup implements IKeyBag {
             for (AnyDeterministicKeyChain chain : chains)
                 newChains.add(chain.toEncrypted(keyCrypter, aesKey));
         }
-
-        // Code below this point must be exception safe.
         this.keyCrypter = keyCrypter;
         this.basic = newBasic;
         if (chains != null) {

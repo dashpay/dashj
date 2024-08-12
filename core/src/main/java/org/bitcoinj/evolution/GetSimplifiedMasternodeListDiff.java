@@ -1,10 +1,9 @@
 package org.bitcoinj.evolution;
 
-import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.store.BlockStoreException;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -15,7 +14,7 @@ public class GetSimplifiedMasternodeListDiff extends AbstractQuorumRequest {
     Sha256Hash baseBlockHash;
     Sha256Hash blockHash;
 
-    public static int MESSAGE_SIZE = 64;
+    public static final int MESSAGE_SIZE = 64;
 
     public GetSimplifiedMasternodeListDiff(Sha256Hash baseBlockHash, Sha256Hash blockHash) {
         super();
@@ -64,14 +63,12 @@ public class GetSimplifiedMasternodeListDiff extends AbstractQuorumRequest {
     }
 
     @Override
-    public String toString(AbstractBlockChain blockChain) {
+    public String toString(DualBlockChain blockChain) {
         int baseHeight = -1;
         int blockHeight = -1;
         try {
-            baseHeight = blockChain.getBlockStore().get(baseBlockHash).getHeight();
-            blockHeight = blockChain.getBlockStore().get(blockHash).getHeight();
-        } catch (BlockStoreException x) {
-            throw new RuntimeException(x);
+            baseHeight = blockChain.getBlock(baseBlockHash).getHeight();
+            blockHeight = blockChain.getBlock(blockHash).getHeight();
         } catch (NullPointerException x) {
             // swallow
         }

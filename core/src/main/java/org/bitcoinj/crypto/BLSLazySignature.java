@@ -1,6 +1,5 @@
 package org.bitcoinj.crypto;
 
-import org.bitcoinj.core.ChildMessage;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
@@ -11,19 +10,22 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class BLSLazySignature extends BLSAbstractLazyObject {
     ReentrantLock lock = Threading.lock("BLSLazySignature");
-    Logger log = LoggerFactory.getLogger(BLSLazySignature.class);
-    BLSSignature signature;
+    private static final Logger log = LoggerFactory.getLogger(BLSLazySignature.class);
+    private BLSSignature signature;
 
+    @Deprecated
     public BLSLazySignature() {
         super(Context.get().getParams());
     }
 
     public BLSLazySignature(NetworkParameters params) {
         super(params);
+        length = BLSSignature.BLS_CURVE_SIG_SIZE;
     }
 
     public BLSLazySignature(BLSLazySignature signature) {
@@ -63,6 +65,23 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
         }
     }
 
+    protected void bitcoinSerializeToStream(OutputStream stream, boolean legacy) throws IOException {
+        lock.lock();
+        try {
+            if (!initialized && buffer == null) {
+                log.warn("signature and buffer are not initialized");
+                buffer = invalidSignature.getBuffer();
+            }
+            if (buffer == null) {
+                buffer = signature.getBuffer(BLSSignature.BLS_CURVE_SIG_SIZE, legacy);
+            }
+            stream.write(buffer);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Deprecated
     public BLSLazySignature assign(BLSLazySignature blsLazySignature) {
         lock.lock();
         try {
@@ -82,7 +101,7 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
         return this;
     }
 
-    public static BLSSignature invalidSignature = new BLSSignature();
+    public static final BLSSignature invalidSignature = new BLSSignature();
 
     public void setSignature(BLSSignature signature) {
         lock.lock();
@@ -118,6 +137,33 @@ public class BLSLazySignature extends BLSAbstractLazyObject {
 
     @Override
     public String toString() {
-        return initialized ? signature.toString() : (buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer));
+        if (initialized) {
+            return signature.toString();
+        } else {
+            return buffer == null ? invalidSignature.toString() : Utils.HEX.encode(buffer);
+        }
+    }
+
+    public boolean isValid() {
+        if (initialized) {
+            return signature.isValid();
+        } else {
+            return buffer != null;
+        }
+    }
+
+    public byte [] getBuffer() {
+        return buffer != null ? buffer : signature.getBuffer();
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BLSLazySignature)) return false;
+
+        BLSLazySignature that = (BLSLazySignature) o;
+        byte[] thisBuffer = getBuffer();
+        byte[] thatBuffer = that.getBuffer();
+        return legacy == that.legacy && Arrays.equals(thisBuffer, thatBuffer);
     }
 }

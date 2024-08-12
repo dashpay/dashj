@@ -15,34 +15,32 @@
  */
 package org.bitcoinj.crypto;
 
-import org.bitcoinj.core.ChildMessage;
-import org.bitcoinj.core.Context;
+import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Utils;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 
-
-
-public class BLSAbstractLazyObject extends ChildMessage {
+public abstract class BLSAbstractLazyObject extends Message {
 
     byte [] buffer;
     boolean initialized;
     boolean legacy;
 
-    public BLSAbstractLazyObject(NetworkParameters params) {
+    protected BLSAbstractLazyObject(NetworkParameters params) {
         super(params);
     }
 
-    public BLSAbstractLazyObject(BLSAbstractLazyObject lazyObject) {
+    protected BLSAbstractLazyObject(BLSAbstractLazyObject lazyObject) {
         super(lazyObject.params);
         this.buffer = lazyObject.buffer;
         this.initialized = lazyObject.initialized;
+        this.legacy = lazyObject.legacy;
     }
 
-    public BLSAbstractLazyObject(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
+    protected BLSAbstractLazyObject(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
         super(params, payload, offset, params.getProtocolVersionNum(legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC));
     }
 
@@ -52,8 +50,20 @@ public class BLSAbstractLazyObject extends ChildMessage {
         initialized = false;
     }
 
+    protected abstract void bitcoinSerializeToStream(OutputStream stream, boolean legacy) throws IOException;
+
+    public void bitcoinSerialize(OutputStream stream, boolean legacy) throws IOException {
+        bitcoinSerializeToStream(stream, legacy);
+    }
 
     public boolean isInitialized() {
         return initialized;
+    }
+
+    public abstract byte[] getBuffer();
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(getBuffer());
     }
 }

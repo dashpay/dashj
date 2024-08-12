@@ -18,6 +18,8 @@ package org.bitcoinj.coinjoin;
 
 import org.bitcoinj.core.Coin;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -56,8 +58,19 @@ public class CoinJoinClientOptions {
         get().coinJoinAmount.set(amount);
     }
 
+    public static void setDenomsGoal(int goal) { get().coinJoinDenomsGoal.set(goal); }
+    public static void setDenomsHardCap(int hardCap) { get().coinJoinDenomsHardCap.set(hardCap); }
+
     public static boolean isEnabled() { return CoinJoinClientOptions.get().enableCoinJoin.get(); }
     public static boolean isMultiSessionEnabled() { return CoinJoinClientOptions.get().isCoinJoinMultiSession.get(); }
+
+    public static List<Coin> getDenominations() { return CoinJoinClientOptions.get().allowedDenominations.get(); }
+
+    public static boolean removeDenomination(Coin amount) { return CoinJoinClientOptions.get().allowedDenominations.get().remove(amount); }
+
+    public static boolean removeDenomination(Denomination denomination) { return CoinJoinClientOptions.get().allowedDenominations.get().remove(denomination.value); }
+
+    public static void resetDenominations() { CoinJoinClientOptions.get().allowedDenominations.set(CoinJoin.getStandardDenominations()); }
     private static CoinJoinClientOptions instance;
     private static boolean onceFlag;
 
@@ -69,6 +82,7 @@ public class CoinJoinClientOptions {
     private final AtomicInteger coinJoinDenomsHardCap = new AtomicInteger(DEFAULT_COINJOIN_DENOMS_HARDCAP);
     private final AtomicBoolean enableCoinJoin = new AtomicBoolean(false);
     private final AtomicBoolean isCoinJoinMultiSession = new AtomicBoolean(DEFAULT_COINJOIN_MULTISESSION);
+    private final AtomicReference<List<Coin>> allowedDenominations = new AtomicReference<>(new ArrayList<>(CoinJoin.getStandardDenominations()));
 
     private CoinJoinClientOptions() {
         coinJoinSessions.set(DEFAULT_COINJOIN_SESSIONS);
@@ -95,5 +109,12 @@ public class CoinJoinClientOptions {
     }
     private static void init() {
         instance = new CoinJoinClientOptions();
+    }
+
+    public static String getString() {
+        return "amount: " + getAmount() + "\n" +
+                "rounds: " + getRounds() + "\n" +
+                "multi-session: " + isMultiSessionEnabled() + "\n" +
+                "denoms: " + getDenominations().size() + "\n";
     }
 }

@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_ALREADY_HAVE;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_DENOM;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_FEES;
@@ -137,7 +138,7 @@ public class CoinJoinBaseSession {
         }
 
         for (TransactionInput txin :vin){
-            log.info(" txin={}", txin);
+            log.info(COINJOIN_EXTRA, " txin={}", txin);
 
             if (txin.getOutpoint() == null) {
                 log.info("coinjoin: ERROR: invalid input!");

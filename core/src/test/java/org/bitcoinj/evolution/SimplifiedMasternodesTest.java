@@ -32,6 +32,7 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FlatDB;
 import org.bitcoinj.store.MemoryBlockStore;
 
+import org.bitcoinj.utils.MerkleRoot;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -151,6 +152,11 @@ public class SimplifiedMasternodesTest {
         loadFromFile("testnet-after19.2HF.mnlist", 5);
     }
 
+    @Test
+    public void loadFromFile_v5_after20_HardFork() throws Exception {
+        loadFromFile("testnet-905558-70230.mnlist", 5);
+    }
+
     private void loadFromFile(String filename, int fileVersion) throws BlockStoreException {
         initContext(PARAMS);
         URL datafile = Objects.requireNonNull(getClass().getResource(filename));
@@ -192,7 +198,7 @@ public class SimplifiedMasternodesTest {
             hashes.add(Sha256Hash.wrapReversed(Utils.HEX.decode(hashesAsStrings[i])));
         }
 
-        System.out.println(SimplifiedQuorumList.calculateMerkleRoot(hashes));
+        System.out.println(MerkleRoot.calculateMerkleRoot(hashes));
     }
 
 }

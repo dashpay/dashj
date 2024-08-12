@@ -18,21 +18,21 @@
 package org.bitcoinj.tools;
 
 import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinSendRequest;
+import org.bitcoinj.coinjoin.Denomination;
 import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
-import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
-import org.bitcoinj.params.BinTangDevNetParams;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.WhiteRussianDevNetParams;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
@@ -128,6 +128,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 
+import static org.bitcoinj.core.Coin.ZERO;
 import static org.bitcoinj.core.Coin.parseCoin;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -284,6 +285,7 @@ public class WalletTool {
         parser.accepts("locktime").withRequiredArg();
         parser.accepts("allow-unconfirmed");
         parser.accepts("coinjoin");
+        parser.accepts("return-change");
         parser.accepts("offline");
         parser.accepts("ignore-mandatory-extensions");
         OptionSpec<String> passwordFlag = parser.accepts("password").withRequiredArg();
@@ -341,8 +343,8 @@ public class WalletTool {
                 chainFileName = new File("regtest.chain");
                 break;
             case DEVNET:
-                params = BinTangDevNetParams.get();
-                chainFileName = new File("jack-daniels.chain");
+                params = OuzoDevNetParams.get();
+                chainFileName = new File("devnet.chain");
                 break;
             default:
                 throw new RuntimeException("Unreachable.");
@@ -446,7 +448,8 @@ public class WalletTool {
                     }
                     boolean allowUnconfirmed = options.has("allow-unconfirmed");
                     boolean isCoinJoin = options.has("coinjoin");
-                    send(outputFlag.values(options), feePerKb, lockTime, allowUnconfirmed, isCoinJoin);
+                    boolean returnChange = options.has("return-change");
+                    send(outputFlag.values(options), feePerKb, lockTime, allowUnconfirmed, isCoinJoin, returnChange);
                 } else if (options.has(paymentRequestLocation)) {
                     sendPaymentRequest(paymentRequestLocation.value(options), !options.has("no-pki"));
                 } else {
@@ -691,7 +694,7 @@ public class WalletTool {
         }
     }
 
-    private static void send(List<String> outputs, Coin feePerKb, String lockTimeStr, boolean allowUnconfirmed, boolean isCoinJoin) throws VerificationException {
+    private static void send(List<String> outputs, Coin feePerKb, String lockTimeStr, boolean allowUnconfirmed, boolean isCoinJoin, boolean returnChange) throws VerificationException {
         try {
             // Convert the input strings to outputs.
             Transaction t = new Transaction(params);
@@ -717,7 +720,7 @@ public class WalletTool {
                     return;
                 }
             }
-            SendRequest req = isCoinJoin ? CoinJoinSendRequest.forTx(wallet, t) : SendRequest.forTx(t);
+            SendRequest req = isCoinJoin ? CoinJoinSendRequest.forTx(wallet, t, returnChange) : SendRequest.forTx(t);
             if (!isCoinJoin)
                 req.coinSelector = UnmixedZeroConfCoinSelector.get();
             if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) :wallet.getBalance())) {
@@ -1313,8 +1316,8 @@ public class WalletTool {
             store = new SPVBlockStore(params, chainFileName);
             if (reset) {
                 try {
-                    CheckpointManager.checkpoint(params, CheckpointManager.openStream(params), store,
-                            wallet.getEarliestKeyCreationTime());
+                    long creationTime = Math.max(wallet.getEarliestKeyCreationTime(), params.getGenesisBlock().getTimeSeconds());
+                    CheckpointManager.checkpoint(params, CheckpointManager.openStream(params), store, creationTime);
                     StoredBlock head = store.getChainHead();
                     System.out.println("Skipped to checkpoint " + head.getHeight() + " at "
                             + Utils.dateTimeFormat(head.getHeader().getTimeSeconds() * 1000));
@@ -1350,7 +1353,9 @@ public class WalletTool {
         } else {
             //TODO: peerGroup.setRequiredServices(0); was used here previously, which is better
             //for now, however peerGroup doesn't work with masternodeListManager, but it should
-            peerGroup.addPeerDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
+            ThreeMethodPeerDiscovery peerDiscovery = new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager);
+            peerDiscovery.setIncludeDNS(false);
+            peerGroup.addPeerDiscovery(peerDiscovery);
         }
     }
 
@@ -1424,6 +1429,7 @@ public class WalletTool {
                 throw new RuntimeException(e);
             }
             wallet = WalletEx.fromSeed(params, seed, outputScriptType);
+            wallet.initializeCoinJoin(0);
         } else if (options.has(watchFlag)) {
             wallet = WalletEx.fromWatchingKeyB58(params, options.valueOf(watchFlag), creationTimeSecs);
         } else {
@@ -1597,6 +1603,9 @@ public class WalletTool {
 
         final boolean dumpPrivkeys = options.has("dump-privkeys");
         final boolean dumpLookahead = options.has("dump-lookahead");
+        if (options.has(roundsFlag)) {
+            CoinJoinClientOptions.setRounds(options.valueOf(roundsFlag));
+        }
 
         if (dumpPrivkeys && wallet.isEncrypted()) {
             if (password != null) {
@@ -1629,13 +1638,15 @@ public class WalletTool {
     }
 
     private static void mix() {
-        wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath());
+        wallet.getCoinJoin().addKeyChain(wallet.getKeyChainSeed(), DerivationPathFactory.get(wallet.getParams()).coinJoinDerivationPath(0));
         syncChain();
         // set defaults
-        CoinJoinReporter reporter = new CoinJoinReporter();
+        CoinJoinReporter reporter = new CoinJoinReporter(params);
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setSessions(1);
+        //CoinJoinClientOptions.removeDenomination(Denomination.SMALLEST);
+        //CoinJoinClientOptions.removeDenomination(CoinJoinClientOptions.getDenominations().stream().min(Coin::compareTo).get());
         Coin amountToMix = wallet.getBalance();
 
         // set command line arguments
@@ -1643,6 +1654,15 @@ public class WalletTool {
             amountToMix = Coin.parseCoin(options.valueOf(mixAmountFlag));
         }
         CoinJoinClientOptions.setAmount(amountToMix);
+
+        if (!amountToMix.isGreaterThanOrEqualTo(ZERO)) {
+            System.err.println("The mixing amount must be larger than zero");
+            return;
+        }
+        if (wallet.getBalance().isZero()) {
+            System.err.println("The wallet has no funds to mix");
+            return;
+        }
 
         if (options.has(sessionsFlag)) {
             CoinJoinClientOptions.setSessions(options.valueOf(sessionsFlag));
@@ -1654,18 +1674,23 @@ public class WalletTool {
         wallet.getCoinJoin().setRounds(CoinJoinClientOptions.getRounds());
 
         if (options.has(multiSessionFlag)) {
-            CoinJoinClientOptions.setMultiSessionEnabled(options.valueOf(multiSessionFlag));
+            CoinJoinClientOptions.setMultiSessionEnabled(true);
         }
+        System.out.println("Mixing Configuration:");
+        System.out.println(CoinJoinClientOptions.getString());
 
-        ProTxToOutpoint.initialize(params);
         wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
         wallet.getContext().coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
         wallet.getContext().coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);
         wallet.getContext().coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, reporter);
+        wallet.getContext().coinJoinManager.addTransationListener (Threading.SAME_THREAD, reporter);
+        wallet.getContext().blockChain.addNewBestBlockListener(Threading.SAME_THREAD, reporter);
 
+        wallet.getContext().coinJoinManager.start();
         // mix coins
         try {
             CoinJoinClientManager it = wallet.getContext().coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
+            wallet.getCoinJoin().refreshUnusedKeys();
             it.setStopOnNothingToDo(true);
             it.setBlockChain(wallet.getContext().blockChain);
 
@@ -1692,6 +1717,7 @@ public class WalletTool {
             wallet.getContext().coinJoinManager.removeSessionCompleteListener(reporter);
             wallet.getContext().coinJoinManager.removeMixingCompleteListener(reporter);
             wallet.getContext().coinJoinManager.removeSessionStartedListener(reporter);
+            wallet.getContext().coinJoinManager.removeTransactionListener(reporter);
             wallet.getContext().coinJoinManager.stop();
         } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);

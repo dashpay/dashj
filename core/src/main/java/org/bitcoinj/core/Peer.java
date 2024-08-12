@@ -16,7 +16,6 @@
 
 package org.bitcoinj.core;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
 import org.bitcoinj.coinjoin.CoinJoin;
@@ -43,10 +42,12 @@ import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -667,6 +668,9 @@ public class Peer extends PeerSocketHandler {
         if (peerVersionMessage.bestHeight < 0)
             // In this case, it's a protocol violation.
             throw new ProtocolException("Peer reports invalid best height: " + peerVersionMessage.bestHeight);
+        // set the serializer based on the protocol version
+        setMessageSerializer(params.getSerializer(false, vPeerVersionMessage.clientVersion));
+
         // Now it's our turn ...
         // Send an ACK message stating we accept the peers protocol version.
         sendMessage(new VersionAck());
@@ -886,8 +890,16 @@ public class Peer extends PeerSocketHandler {
                     blockChain.getBlockStore().get(blockChain.getBestChainHeight() - SigningManager.SIGN_HEIGHT_OFFSET);
 
             if (context.masternodeListManager.getListAtChainTip().getHeight() < masternodeListBlock.getHeight()) {
-                context.masternodeListManager.requestQuorumStateUpdate(this, headerChain.getChainHead(), masternodeListBlock);
-                queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Requesting, null);
+                if (context.masternodeListManager.requestQuorumStateUpdate(this, headerChain.getChainHead(), masternodeListBlock)) {
+                    queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Requesting, null);
+                } else {
+                    log.info(
+                            "mnlistdiff not requested though listAtChainTip({}) < masternodeListBlock({})",
+                            context.masternodeListManager.getListAtChainTip().getHeight(),
+                            masternodeListBlock.getHeight()
+                    );
+                    context.peerGroup.triggerMnListDownloadComplete();
+                }
             } else {
                 context.peerGroup.triggerMnListDownloadComplete();
             }
@@ -1479,7 +1491,7 @@ public class Peer extends PeerSocketHandler {
         }
 
         // The New InstantSendLock (ISLOCK)
-        if(context.instantSendManager != null && context.instantSendManager.isNewInstantSendEnabled() &&
+        if(context.instantSendManager != null && context.instantSendManager.isInstantSendEnabled() &&
                 context.masternodeSync != null && context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
             it = instantSendLocks.iterator();
             while (it.hasNext()) {
@@ -1741,7 +1753,7 @@ public class Peer extends PeerSocketHandler {
         StoredBlock chainHead = blockChain.getChainHead();
         Sha256Hash chainHeadHash = chainHead.getHeader().getHash();
         // Did we already make this request? If so, don't do it again.
-        if (Objects.equal(lastGetBlocksBegin, chainHeadHash) && Objects.equal(lastGetBlocksEnd, toHash)) {
+        if (Objects.equals(lastGetBlocksBegin, chainHeadHash) && Objects.equals(lastGetBlocksEnd, toHash)) {
             log.info("blockChainDownloadLocked({}): ignoring duplicated request: {}", toHash, chainHeadHash);
             for (Sha256Hash hash : pendingBlockDownloads)
                 log.info("Pending block download: {}", hash);
@@ -1818,7 +1830,7 @@ public class Peer extends PeerSocketHandler {
         StoredBlock chainHead = headerChain.getChainHead();
         Sha256Hash chainHeadHash = chainHead.getHeader().getHash();
         // Did we already make this request? If so, don't do it again.
-        if (Objects.equal(lastGetHeadersBegin, chainHeadHash) && Objects.equal(lastGetHeadersEnd, toHash)) {
+        if (Objects.equals(lastGetHeadersBegin, chainHeadHash) && Objects.equals(lastGetHeadersEnd, toHash)) {
             log.info("blockChainDownloadLocked({}): ignoring duplicated request: {}", toHash, chainHeadHash);
             for (Sha256Hash hash : pendingBlockDownloads)
                 log.info("Pending block download: {}", hash);

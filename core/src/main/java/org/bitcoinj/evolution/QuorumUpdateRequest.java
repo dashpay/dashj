@@ -16,8 +16,11 @@
 
 package org.bitcoinj.evolution;
 
-import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.DualBlockChain;
+import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.Utils;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A utility class that keeps track of a request message and a timestamp
@@ -28,15 +31,22 @@ import org.bitcoinj.core.Utils;
 public class QuorumUpdateRequest<T extends AbstractQuorumRequest> {
     T request;
     long time;
+    private final AtomicBoolean fulfilled = new AtomicBoolean(false);
+    private final AtomicBoolean received = new AtomicBoolean(false);
 
-
+    private PeerAddress peerAddress;
     public QuorumUpdateRequest(T request) {
-        this(request, Utils.currentTimeSeconds());
+        this(request, Utils.currentTimeSeconds(), null);
     }
 
-    public QuorumUpdateRequest(T request, long time) {
+    public QuorumUpdateRequest(T request, PeerAddress peerAddress) {
+        this(request, Utils.currentTimeSeconds(), peerAddress);
+    }
+
+    public QuorumUpdateRequest(T request, long time, PeerAddress peerAddress) {
         this.request = request;
         this.time = time;
+        this.peerAddress = peerAddress;
     }
 
     public T getRequestMessage() {
@@ -47,6 +57,14 @@ public class QuorumUpdateRequest<T extends AbstractQuorumRequest> {
         return time;
     }
 
+    public PeerAddress getPeerAddress() {
+        return peerAddress;
+    }
+
+    public void setPeerAddress(PeerAddress peerAddress) {
+        this.peerAddress = peerAddress;
+    }
+
     @Override
     public String toString() {
         return "QuorumUpdateRequest{" +
@@ -55,10 +73,26 @@ public class QuorumUpdateRequest<T extends AbstractQuorumRequest> {
                 '}';
     }
 
-    public String toString(AbstractBlockChain blockChain) {
+    public String toString(DualBlockChain blockChain) {
         return "QuorumUpdateRequest{" +
                 "request=" + request.toString(blockChain) +
                 ", time=" + time +
                 '}';
+    }
+
+    public void setFulfilled() {
+        this.fulfilled.set(true);
+    }
+
+    public boolean isFulfilled() {
+        return fulfilled.get();
+    }
+
+    public void setReceived() {
+        this.received.set(true);
+    }
+
+    public boolean getReceived() {
+        return received.get();
     }
 }

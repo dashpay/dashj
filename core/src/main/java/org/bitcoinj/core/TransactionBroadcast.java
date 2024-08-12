@@ -48,7 +48,7 @@ public class TransactionBroadcast {
     private boolean dropPeersAfterBroadcast = false;
     private int numWaitingFor;
     /** stores a boolean value for the disconnect status of a peer during sending **/
-    private HashMap<PeerAddress, Boolean> sentToPeers = new HashMap<>();
+    private final HashMap<PeerAddress, Boolean> sentToPeers = new HashMap<>();
     private int numToBroadcastTo;
 
     /** Used for shuffling the peers before broadcast: unit tests can replace this to make themselves deterministic. */
@@ -97,40 +97,17 @@ public class TransactionBroadcast {
         this.dropPeersAfterBroadcast = dropPeersAfterBroadcast;
     }
 
-    private PreMessageReceivedEventListener rejectionListener = new PreMessageReceivedEventListener() {
-        @Override
-        public Message onPreMessageReceived(Peer peer, Message m) {
-            if (m instanceof RejectMessage) {
-                RejectMessage rejectMessage = (RejectMessage)m;
-                if (tx.getTxId().equals(rejectMessage.getRejectedObjectHash())) {
-                    rejects.put(peer, rejectMessage);
-                    tx.getConfidence().markRejectedBy(peer.getAddress(), rejectMessage);
-                    tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.REJECT);
-
-                    int size = rejects.size();
-                    long threshold = Math.round(numWaitingFor / 2.0);
-                    if (size > threshold) {
-                        log.warn("Threshold for considering broadcast rejected has been reached ({}/{})", size, threshold);
-                        future.setException(new RejectedTransactionException(tx, rejectMessage));
-                        peerGroup.removePreMessageReceivedEventListener(this);
-                        peerGroup.removeDisconnectedEventListener(disconnectedListener);
-                    }
-                }
-            }
-            return m;
-        }
-    };
-
     public ListenableFuture<Transaction> broadcast() {
-        peerGroup.addPreMessageReceivedEventListener(Threading.SAME_THREAD, rejectionListener);
-        peerGroup.addDisconnectedEventListener(Threading.SAME_THREAD, disconnectedListener);
+        if (!dropPeersAfterBroadcast) {
+            peerGroup.addDisconnectedEventListener(Threading.SAME_THREAD, disconnectedListener);
+        }
         log.info("Waiting for {} peers required for broadcast, we have {} ...", minConnections, peerGroup.getConnectedPeers().size());
         peerGroup.waitForPeers(minConnections).addListener(new EnoughAvailablePeers(), Threading.SAME_THREAD);
         return future;
     }
 
     private class EnoughAvailablePeers implements Runnable {
-        private Context context;
+        private final Context context;
 
         public EnoughAvailablePeers() {
             this.context = Context.get();
@@ -149,6 +126,7 @@ public class TransactionBroadcast {
             // be seen, 4 peers is probably too little - it doesn't taken many broken peers for tx propagation to have
             // a big effect.
             List<Peer> peers = peerGroup.getConnectedPeers();    // snapshots
+            Peer downloadPeer = peerGroup.getDownloadPeer();     // download peer
             // Prepare to send the transaction by adding a listener that'll be called when confidence changes.
             tx.getConfidence().addEventListener(new ConfidenceChange());
             // Dash Core sends an inv in this case and then lets the peer request the tx data. We just
@@ -178,7 +156,11 @@ public class TransactionBroadcast {
                             public void run() {
                                 Context.propagate(context);
                                 Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
-                                peer.close();
+                                if (peer.equals(downloadPeer)) {
+                                    log.info("not dropping the download peer after sending a transaction");
+                                } else {
+                                    peer.close();
+                                }
                             }
                         }, Threading.THREAD_POOL);
                     }
@@ -226,7 +208,6 @@ public class TransactionBroadcast {
                 // We're done! It's important that the PeerGroup lock is not held (by this thread) at this
                 // point to avoid triggering inversions when the Future completes.
                 log.info("broadcastTransaction: {} complete", tx.getTxId());
-                peerGroup.removePreMessageReceivedEventListener(rejectionListener);
                 peerGroup.removeDisconnectedEventListener(disconnectedListener);
                 conf.removeEventListener(this);
                 future.set(tx);  // RE-ENTRANCY POINT
@@ -322,18 +303,23 @@ public class TransactionBroadcast {
         return count;
     }
 
-    private PeerDisconnectedEventListener disconnectedListener = new PeerDisconnectedEventListener() {
+    private final PeerDisconnectedEventListener disconnectedListener = new PeerDisconnectedEventListener() {
         @Override
         public void onPeerDisconnected(Peer peer, int peerCount) {
-            //log.info(peer + " was disconnected while sending a tx {}", tx.getHash());
             if(sentToPeers.containsKey(peer.getAddress())) {
                 sentToPeers.put(peer.getAddress(), true);
-                log.info(peer + " was disconnected while sending a transaction to it.  tx: {}", tx.getHash());
+                log.info(peer + " was disconnected while sending a transaction to it.  tx: {}", tx.getTxId());
                 int numDisconnectedPeers = getDisconnectedPeers();
+
+                RejectMessage rm = tx.determineRejectMessage();
+                if (rm == null)
+                    rm = new RejectMessage(peer.getVersionMessage().params, RejectMessage.RejectCode.OTHER, tx.getTxId(),"Peer disconnected after receiving this tx", "The transaction is invalid");
+                tx.getConfidence().markRejectedBy(peer.getAddress(), rm);
+                tx.getConfidence().queueListeners(TransactionConfidence.Listener.ChangeReason.REJECT);
+
                 if(numDisconnectedPeers >= Math.round(numToBroadcastTo / 2.0)) {
                     log.info(peer + " was disconnected, setting exception on this transaction broadcast");
                     future.setException(new PeerException(peer + " was disconnected"));
-                    peerGroup.removePreMessageReceivedEventListener(rejectionListener);
                     peerGroup.removeDisconnectedEventListener(this);
                 }
             }

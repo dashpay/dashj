@@ -20,10 +20,15 @@ public enum PoolStatus {
     WARMUP(0x0001),
     IDLE(0x0002),
     CONNECTING(0x0003),
-    MIXING(0x0004),
-    FINISHED(0x1005),
+    CONNECTED(0x0004),
+    MIXING(0x0005),
+    COMPLETE(0x0106),
+    FINISHED(0x1007),
+    TIMEOUT(0x0107),
+    CONNECTION_TIMEOUT(0x0108),
     // Errors
-    ERR_NO_INPUTS(0x2100),
+    /** can't create more denominations, possibly due to denom goal limits */
+    ERR_NO_INPUTS(0x3100),
     ERR_MASTERNODE_NOT_FOUND(0x2101),
     ERR_NO_MASTERNODES_DETECTED(0x2102),
     ERR_WALLET_LOCKED(0x3103),
@@ -35,6 +40,7 @@ public enum PoolStatus {
     private static final int STOP = 0x1000;
     private static final int ERROR = 0x2000;
     private static final int WARNING = 0x4000;
+    private static final int COMPLETED = 0x0100;
 
     final int value;
     PoolStatus(int value) {
@@ -44,4 +50,5 @@ public enum PoolStatus {
     public boolean isError() { return (value & ERROR) != 0; }
     public boolean isWarning() { return (value & WARNING) != 0; }
     public boolean shouldStop() { return (value & STOP) != 0; }
+    public boolean sessionCompleted() { return (value & COMPLETED) != 0; }
 }

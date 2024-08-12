@@ -1,6 +1,5 @@
 package org.bitcoinj.evolution;
 
-import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.slf4j.Logger;
@@ -58,12 +57,6 @@ public abstract class Masternode extends ChildMessage {
     }
 
     public TransactionOutPoint getCollateralOutpoint() {
-        if (masternodeOutpoint == null) {
-            masternodeOutpoint = ProTxToOutpoint.getMasternodeOutpoint(proRegTxHash);
-        }
-        if (masternodeOutpoint == null) {
-            log.info("masternodeOutpoint = null for {}; {}", getService(), getProTxHash());
-        }
         return masternodeOutpoint;
     }
 }

@@ -19,7 +19,6 @@ import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.coinjoin.utils.CoinJoinResult;
-import org.bitcoinj.coinjoin.utils.ProTxToOutpoint;
 import org.bitcoinj.coinjoin.utils.RelayTransaction;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
@@ -41,6 +40,7 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
+import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
@@ -109,10 +109,9 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-
+        BLSScheme.setLegacyDefault(false);
         BriefLogFormatter.initVerbose();
         Utils.setMockClock(); // Use mock clock
-        ProTxToOutpoint.initialize(UNITTEST);
         wallet.freshReceiveKey();
 
         coinbaseTo = Address.fromKey(UNITTEST, wallet.currentReceiveKey());
@@ -166,6 +165,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         globalTimeout = Timeout.seconds(30);
         mixingWallet = (WalletEx) wallet;
+        wallet.getContext().coinJoinManager.start();
     }
 
     protected Wallet createWallet(KeyChainGroup keyChainGroup) {
@@ -175,6 +175,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Override
     @After
     public void tearDown() {
+        wallet.getContext().coinJoinManager.stop();
         super.tearDown();
     }
 
@@ -182,7 +183,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Ignore
     public void sessionTest() throws Exception {
         System.out.println("Session test started...");
-        mixingWallet.initializeCoinJoin();
+        mixingWallet.initializeCoinJoin(0);
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);
@@ -344,6 +345,8 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         CoinJoinBroadcastTx broadcastTx = CoinJoin.getDSTX(mixingTx.getTxId());
         assertNotNull(broadcastTx);
 
+        assertTrue(clientManager.doAutomaticDenominating(true));
+
         if (clientManager.isMixing()) {
             clientManager.stopMixing();
         }
@@ -353,7 +356,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Test(timeout = 30000) // Exception: test timed out after 100 milliseconds
     public void sessionTestTwo() throws Exception {
         System.out.println("Session test started...");
-        mixingWallet.initializeCoinJoin();
+        mixingWallet.initializeCoinJoin(0);
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);
@@ -505,7 +508,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         Message broadcastTxMessage = outbound(spvClient);
         assertEquals(CoinJoinBroadcastTx.class, broadcastTxMessage.getClass());
         mixingTx = ((CoinJoinBroadcastTx) broadcastTxMessage).getTx();
-        memPool.add(mixingTx);//        wallet.receivePending(mixingTx, Lists.newArrayList());
+        memPool.add(mixingTx);
 
         CoinJoinBroadcastTx broadcastTxTwo = CoinJoin.getDSTX(mixingTx.getTxId());
         assertNotNull(broadcastTxTwo);
@@ -571,6 +574,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         // assertEquals(initialDenominatedBalance.subtract(mixingFee).subtract(mixed), wallet.getBalanceInfo().getDenominatedTrusted());
 
         // TODO: check wallet balance types here
+        assertTrue(clientManager.doAutomaticDenominating(true));
 
         if (clientManager.isMixing()) {
             clientManager.stopMixing();
@@ -597,7 +601,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
     @Test
     public void sessionAttemptWithEmptyWalletTest() throws Exception {
-        mixingWallet.initializeCoinJoin();
+        mixingWallet.initializeCoinJoin(0);
         CoinJoinClientOptions.reset();
         CoinJoinClientOptions.setAmount(Coin.COIN);
         CoinJoinClientOptions.setEnabled(true);

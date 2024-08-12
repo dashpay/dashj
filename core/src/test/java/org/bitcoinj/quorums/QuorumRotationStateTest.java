@@ -17,6 +17,7 @@ package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.crypto.BLSScheme;
@@ -47,7 +48,7 @@ public class QuorumRotationStateTest {
     static MainNetParams MAINPARAMS;
     static PeerGroup peerGroup;
     static BlockChain blockChain;
-
+    static DualBlockChain dualBlockChain;
     @BeforeClass
     public static void startup() throws BlockStoreException {
         MAINPARAMS = MainNetParams.get();
@@ -63,6 +64,7 @@ public class QuorumRotationStateTest {
             blockChain = null;
         }
         blockChain = new BlockChain(context, new SPVBlockStore(params, new File(SimplifiedMasternodesTest.class.getResource(blockchainFile).getFile())));
+        dualBlockChain = new DualBlockChain(blockChain, blockChain);
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         context.initDash(true, true);
 
@@ -124,11 +126,11 @@ public class QuorumRotationStateTest {
         FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<>(Context.get(), datafile.getFile(), true);
 
         SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(Context.get());
-        managerDefaultNames.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        managerDefaultNames.setBlockChain(dualBlockChain, null, context.quorumManager, context.quorumSnapshotManager, context.chainLockHandler);
         assertTrue(db.load(managerDefaultNames));
 
         SimplifiedMasternodeListManager managerSpecific = new SimplifiedMasternodeListManager(Context.get());
-        managerSpecific.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        managerSpecific.setBlockChain(dualBlockChain, null, context.quorumManager, context.quorumSnapshotManager, context.chainLockHandler);
         FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 3);
         assertTrue(db2.load(managerSpecific));
 
@@ -137,7 +139,7 @@ public class QuorumRotationStateTest {
 
         //load a file with version 3, expecting version 4
         SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(Context.get());
-        managerSpecificFail.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        managerSpecificFail.setBlockChain(dualBlockChain, null, context.quorumManager, context.quorumSnapshotManager, context.chainLockHandler);
         FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 4);
         assertFalse(db3.load(managerSpecificFail));
     }
@@ -155,11 +157,11 @@ public class QuorumRotationStateTest {
         FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(context, datafile.getFile(), true);
 
         SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(context);
-        managerDefaultNames.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        managerDefaultNames.setBlockChain(dualBlockChain, null, context.quorumManager, context.quorumSnapshotManager, context.chainLockHandler);
         assertTrue(db.load(managerDefaultNames));
 
         SimplifiedMasternodeListManager managerSpecific = new SimplifiedMasternodeListManager(context);
-        managerSpecific.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        managerSpecific.setBlockChain(dualBlockChain, null, context.quorumManager, context.quorumSnapshotManager, context.chainLockHandler);
         FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<SimplifiedMasternodeListManager>(context, datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 4);
         assertTrue(db2.load(managerSpecific));
 
@@ -168,7 +170,7 @@ public class QuorumRotationStateTest {
 
         //load a file with version 3, expecting version 4
         SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(context);
-        managerSpecificFail.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        managerSpecificFail.setBlockChain(dualBlockChain, null, context.quorumManager, context.quorumSnapshotManager, context.chainLockHandler);
         FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<>(context, datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 5);
         assertFalse(db3.load(managerSpecificFail));
     }
@@ -185,11 +187,11 @@ public class QuorumRotationStateTest {
         FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(context, datafile.getFile(), true);
 
         SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(context);
-        managerDefaultNames.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        managerDefaultNames.setBlockChain(dualBlockChain, null, context.quorumManager, context.quorumSnapshotManager, context.chainLockHandler);
         assertTrue(db.load(managerDefaultNames));
 
         SimplifiedMasternodeListManager managerSpecific = new SimplifiedMasternodeListManager(context);
-        managerSpecific.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        managerSpecific.setBlockChain(dualBlockChain, null, context.quorumManager, context.quorumSnapshotManager, context.chainLockHandler);
         FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<SimplifiedMasternodeListManager>(context, datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 3);
         assertTrue(db2.load(managerSpecific));
 
@@ -198,7 +200,7 @@ public class QuorumRotationStateTest {
 
         //load a file with version 3, expecting version 4
         SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(context);
-        managerSpecificFail.setBlockChain(blockChain, blockChain, null, context.quorumManager, context.quorumSnapshotManager);
+        managerSpecificFail.setBlockChain(dualBlockChain, null, context.quorumManager, context.quorumSnapshotManager, context.chainLockHandler);
         FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<>(context, datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), 5);
         assertFalse(db3.load(managerSpecificFail));
     }

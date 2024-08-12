@@ -65,10 +65,10 @@ public class GovernanceObject extends Message implements Serializable {
 
     public static final long GOVERNANCE_FEE_CONFIRMATIONS = 6;
     public static final long GOVERNANCE_MIN_RELAY_FEE_CONFIRMATIONS = 1;
-    public static final long GOVERNANCE_UPDATE_MIN = 60*60;
-    public static final long GOVERNANCE_DELETION_DELAY = 10*60;
-    public static final long GOVERNANCE_ORPHAN_EXPIRATION_TIME = 10*60;
-    public static final long GOVERNANCE_WATCHDOG_EXPIRATION_TIME = 2*60*60;
+    public static final long GOVERNANCE_UPDATE_MIN = 60*60L;
+    public static final long GOVERNANCE_DELETION_DELAY = 10*60L;
+    public static final long GOVERNANCE_ORPHAN_EXPIRATION_TIME = 10*60L;
+    public static final long GOVERNANCE_WATCHDOG_EXPIRATION_TIME = 2*60*60L;
 
     public static final int GOVERNANCE_TRIGGER_EXPIRATION_BLOCKS = 576;
 
@@ -154,13 +154,13 @@ public class GovernanceObject extends Message implements Serializable {
     public GovernanceObject(NetworkParameters params, byte[] payload) {
         super(params, payload, 0);
         context = Context.get();
-        mapCurrentMNVotes = new HashMap<TransactionOutPoint, VoteRecord>();
+        mapCurrentMNVotes = new HashMap<>();
     }
 
     public GovernanceObject(NetworkParameters params, byte[] payload, int cursor) {
         super(params, payload, cursor);
         context = Context.get();
-        mapCurrentMNVotes = new HashMap<TransactionOutPoint, VoteRecord>();
+        mapCurrentMNVotes = new HashMap<>();
     }
 
     public final long getCreationTime() {
@@ -250,7 +250,7 @@ public class GovernanceObject extends Message implements Serializable {
         nDeletionTime = readInt64();
         fExpired = readBytes(1)[0] == 0 ? false : true;
         int size = (int)readVarInt();
-        mapCurrentMNVotes = new HashMap<TransactionOutPoint, VoteRecord>();
+        mapCurrentMNVotes = new HashMap<>();
         for(int i = 0; i < size; ++i) {
             TransactionOutPoint vin = new TransactionOutPoint(params, payload, offset);
             cursor += vin.getMessageSize();
@@ -649,7 +649,7 @@ public class GovernanceObject extends Message implements Serializable {
     }
 
     public Pair<Boolean, VoteRecord> getCurrentMNVotes(TransactionOutPoint mnCollateralOutpoint) {
-        Pair<Boolean, VoteRecord> result = new Pair<Boolean, VoteRecord>(false, null); //default to failure
+        Pair<Boolean, VoteRecord> result = new Pair<>(false, null); //default to failure
         VoteRecord it = mapCurrentMNVotes.get(mnCollateralOutpoint);
         if (it == null) {
             return result;
@@ -668,7 +668,7 @@ public class GovernanceObject extends Message implements Serializable {
                 context.masternodeListManager.getListAtChainTip().getMNByCollateral(vote.getMasternodeOutpoint()) == null) {
             String message = "CGovernanceObject::ProcessVote -- Masternode index not found";
             exception.setException(message, GOVERNANCE_EXCEPTION_WARNING);
-            if (mapOrphanVotes.put(vote.getMasternodeOutpoint(), new Pair<Integer, GovernanceVote>((int)(Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME), vote))) {
+            if (mapOrphanVotes.put(vote.getMasternodeOutpoint(), new Pair<>((int)(Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME), vote))) {
                 if (pfrom != null) {
                     //TODO: context.masternodeManager.askForMN(pfrom, vote.getMasternodeOutpoint());
                 }

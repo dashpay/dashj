@@ -57,9 +57,11 @@ public class CoinJoinTransactionSigner implements TransactionSigner {
         VerifyFlag.NULLDUMMY);
 
     private final List<TransactionInput> sigs;
+    private final boolean anyoneCanPay;
 
-    public CoinJoinTransactionSigner(List<TransactionInput> sigs) {
+    public CoinJoinTransactionSigner(List<TransactionInput> sigs, boolean anyoneCanPay) {
         this.sigs = sigs;
+        this.anyoneCanPay = anyoneCanPay;
         sigs.clear();
     }
 
@@ -121,8 +123,7 @@ public class CoinJoinTransactionSigner implements TransactionSigner {
                     if (key.isEncrypted()) {
                         key = Context.get().coinJoinManager.requestDecryptKey(key);
                     }
-                    TransactionSignature signature = tx.calculateSignature(i, key, script, Transaction.SigHash.ALL,
-                            false);
+                    TransactionSignature signature = tx.calculateSignature(i, key, script, Transaction.SigHash.ALL, anyoneCanPay);
 
                     // at this point we have incomplete inputScript with OP_0 in place of one or more signatures. We
                     // already have calculated the signature using the local key and now need to insert it in the
@@ -137,7 +138,7 @@ public class CoinJoinTransactionSigner implements TransactionSigner {
                     txIn.setScriptSig(inputScript);
 
                     sigs.add(tx.getInput(i));
-                    log.info("coinjoin:  nMyInputIndex: {}, sigs.size(): {}, scriptSig={}", i, sigs.size(), tx.getInput(i).getScriptSig());
+                    log.info("coinjoin: myInputIndex: {}, sigs.size: {}, scriptSig={}", i, sigs.size(), tx.getInput(i).getScriptSig());
                 } else {
                     throw new IllegalStateException(Utils.HEX.encode(script));
                 }

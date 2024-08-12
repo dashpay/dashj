@@ -19,6 +19,7 @@ import com.google.common.collect.Lists;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.InsufficientMoneyException;
+import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
@@ -34,12 +35,13 @@ import org.bitcoinj.wallet.WalletEx;
 
 import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
 
-public class TransactionBuilder {
+public class TransactionBuilder implements AutoCloseable {
     /// Wallet the transaction will be build for
     private final WalletEx wallet;
     /// See CTransactionBuilder() for initialization
@@ -56,6 +58,8 @@ public class TransactionBuilder {
     private int bytesOutput = 0;
     /// Call KeepKey for all keys in destructor if fKeepKeys is true, call ReturnKey for all key if its false.
     private boolean keepKeys = false;
+
+    final private boolean dryRun;
     /// Protect vecOutputs
     private final ReentrantLock lock = Threading.lock("outputs");
     /// Contains all outputs already added to the transaction
@@ -63,7 +67,10 @@ public class TransactionBuilder {
     private final ArrayList<TransactionBuilderOutput> vecOutputs = new ArrayList<>();
     /// Needed by CTransactionBuilderOutput::UpdateAmount to lock cs_outputs
 
-    public TransactionBuilder(WalletEx wallet, final CompactTallyItem tallyItem) {
+    private Transaction transaction;
+
+    public TransactionBuilder(WalletEx wallet, final CompactTallyItem tallyItem, boolean dryRun) {
+        this.dryRun = dryRun;
         this.wallet = wallet;
         dummyReserveDestination = new ReserveDestination(wallet);
         this.tallyItem = tallyItem;
@@ -92,11 +99,6 @@ public class TransactionBuilder {
         // Calculate the output size
         bytesOutput = new TransactionOutput(wallet.getParams(), null, Coin.ZERO, dummyScript.getProgram()).getMessageSize();
         // Just to make sure..
-        clear();
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
         clear();
     }
 
@@ -133,7 +135,7 @@ public class TransactionBuilder {
         if (couldAddOutput(amountOutput)) {
             lock.lock();
             try {
-                vecOutputs.add(new TransactionBuilderOutput(this, wallet, amountOutput));
+                vecOutputs.add(new TransactionBuilderOutput(this, wallet, amountOutput, dryRun));
                 return vecOutputs.get(vecOutputs.size() - 1);
             } finally {
                 lock.unlock();
@@ -160,6 +162,10 @@ public class TransactionBuilder {
         try {
             vecSend = Lists.newArrayListWithExpectedSize(vecOutputs.size());
             for (TransactionBuilderOutput out : vecOutputs) {
+                // make sure the output is not invalid
+                if(ScriptPattern.isP2PKH(out.getScript()) && Arrays.equals(ScriptPattern.extractHashFromP2PKH(out.getScript()), new byte[20])) {
+                    return false;
+                }
                 vecSend.add(new Recipient(out.getScript(), out.getAmount(), false));
             }
         } finally {
@@ -173,9 +179,12 @@ public class TransactionBuilder {
         try {
             SendRequest request = SendRequest.forTx(req.tx);
             request.aesKey = wallet.getContext().coinJoinManager.requestKeyParameter(wallet);
+            request.coinControl = coinControl;
             wallet.sendCoins(request);
+            transaction = request.tx;
         } catch (InsufficientMoneyException x) {
-            throw new RuntimeException(x);
+            strResult.append(x);
+            return false;
         }
         keepKeys = true;
 
@@ -199,7 +208,7 @@ public class TransactionBuilder {
     }
 
     /// Clear the output vector and keep/return the included keys depending on the value of fKeepKeys
-    void clear() {
+    private void clear() {
         ArrayList<TransactionBuilderOutput> vecOutputsTmp;
 
         // Don't hold cs_outputs while clearing the outputs which might indirectly call lock cs_wallet
@@ -218,14 +227,14 @@ public class TransactionBuilder {
                 key.returnKey();
             }
         }
-        // Always return this key just to make sure..
+        System.out.println("returning: " + dummyReserveDestination.address);
+        // Always return this key
         dummyReserveDestination.returnDestination();
     }
     /// Get the total number of bytes used already by this transaction
     @GuardedBy("lock")
     int getBytesTotal() {
         return bytesBase + vecOutputs.size() * bytesOutput + getSizeOfCompactSizeDiff(vecOutputs.size());
-
     }
     /// Helper to calculate static amount left by simply subtracting an used amount and a fee from a provided initial amount.
     static Coin getAmountLeft(Coin amountInitial, Coin amountUsed, Coin fee) {
@@ -302,4 +311,12 @@ public class TransactionBuilder {
         return tx.getMessageSize();
     }
 
+    public Transaction getTransaction() {
+        return transaction;
+    }
+
+    @Override
+    public void close() {
+        clear();
+    }
 }

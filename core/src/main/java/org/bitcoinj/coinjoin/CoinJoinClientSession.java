@@ -16,8 +16,10 @@
 package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
 import org.bitcoinj.coinjoin.utils.KeyHolderStorage;
 import org.bitcoinj.coinjoin.utils.MasternodeGroup;
@@ -26,10 +28,13 @@ import org.bitcoinj.coinjoin.utils.TransactionBuilder;
 import org.bitcoinj.coinjoin.utils.TransactionBuilderOutput;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.KeyId;
+import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionDestination;
 import org.bitcoinj.core.TransactionInput;
@@ -70,8 +75,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_DENOM_OUTPUTS_THRESHOLD;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_QUEUE_TIMEOUT;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_SIGNING_TIMEOUT;
+import static org.bitcoinj.coinjoin.PoolMessage.ERR_CONNECTION_TIMEOUT;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_SESSION;
 import static org.bitcoinj.coinjoin.PoolMessage.ERR_TIMEOUT;
 import static org.bitcoinj.coinjoin.PoolMessage.MSG_POOL_MAX;
@@ -93,8 +100,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private final ArrayList<TransactionOutPoint> outPointLocked = Lists.newArrayList();
     private String strLastMessage;
     private String strAutoDenomResult;
+    private Boolean lastCreateDenominatedResult = true;
 
     private Masternode mixingMasternode;
+    private boolean joined; // did we join a session (true), or start a session (false)
     private Transaction txMyCollateral; // client side collateral
     private boolean isMyCollateralValid = false;
     private PendingDsaRequest pendingDsaRequest;
@@ -105,13 +114,16 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private final AtomicBoolean hasNothingToDo = new AtomicBoolean(false); // is mixing finished?
 
+    private final HashMap<Sha256Hash, Integer> collateralSessionMap = new HashMap<>();
     private final CopyOnWriteArrayList<ListenerRegistration<SessionStartedListener>> sessionStartedListeners
             = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<SessionCompleteListener>> sessionCompleteListeners
             = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<CoinJoinTransactionListener>> transactionListeners
+            = new CopyOnWriteArrayList<>();
 
     /// Create denominations
-    private boolean createDenominated(Coin balanceToDenominate) {
+    private boolean createDenominated(Coin balanceToDenominate, boolean dryRun) {
 
         if (!CoinJoinClientOptions.isEnabled()) return false;
 
@@ -126,26 +138,30 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         // Start from the largest balances first to speed things up by creating txes with larger/largest denoms included
-        vecTally.sort(new Comparator<CompactTallyItem>() {
-            @Override
-            public int compare(CompactTallyItem o, CompactTallyItem t1) {
-                if (o.amount.isGreaterThan(t1.amount))
-                    return 1;
-                if (o.amount.equals(t1.amount))
-                    return 0;
-                return -1;
-            }
+        vecTally.sort((a, b) -> {
+            if (a.amount.isGreaterThan(b.amount))
+                return 1;
+            if (a.amount.equals(b.amount))
+                return 0;
+            return -1;
         });
 
         boolean fCreateMixingCollaterals = !mixingWallet.hasCollateralInputs();
 
         for (CompactTallyItem item : vecTally) {
-            if (!createDenominated(balanceToDenominate, item, fCreateMixingCollaterals)) continue;
+            if (!createDenominated(balanceToDenominate, item, fCreateMixingCollaterals, dryRun)) continue;
             return true;
         }
 
-        log.info("coinjoin: createDenominated({}) -- failed! ", balanceToDenominate.toFriendlyString());
+        log.info("coinjoin: createDenominated({}) failed! ", balanceToDenominate.toFriendlyString());
         return false;
+    }
+
+    public void processTransaction(Transaction tx) {
+        log.info(COINJOIN_EXTRA, "processing tx of {}: {}", tx.getValue(mixingWallet), tx.getTxId());
+        if (collateralSessionMap.containsKey(tx.getTxId())) {
+            queueTransactionListeners(tx, collateralSessionMap.get(tx.getTxId()), CoinJoinTransactionType.MixingFee);
+        }
     }
 
     static class Result<T> {
@@ -172,9 +188,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         int process(Coin amount);
     }
 
-    private boolean createDenominated(Coin balanceToDenominate, CompactTallyItem tallyItem, boolean fCreateMixingCollaterals) {
+    private boolean createDenominated(Coin balanceToDenominate, CompactTallyItem tallyItem, boolean fCreateMixingCollaterals, boolean dryRun) {
 
-        if (!CoinJoinClientOptions.isEnabled()) 
+        if (!CoinJoinClientOptions.isEnabled())
             return false;
 
         // denominated input is always a single one, so we can check its amount directly and return early
@@ -182,185 +198,188 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
 
-        TransactionBuilder txBuilder = new TransactionBuilder(mixingWallet, tallyItem);
+        try (TransactionBuilder txBuilder = new TransactionBuilder(mixingWallet, tallyItem, dryRun)) {
+            log.info("coinjoin: Start {}", txBuilder);
 
-        log.info("coinjoin: Start {}", txBuilder);
+            // ****** Add an output for mixing collaterals ************ /
 
-        // ****** Add an output for mixing collaterals ************ /
+            if (fCreateMixingCollaterals && txBuilder.addOutput(CoinJoin.getMaxCollateralAmount()) == null) {
+                log.info("coinjoin: Failed to add collateral output");
+                return false;
+            }
 
-        if (fCreateMixingCollaterals && txBuilder.addOutput(CoinJoin.getMaxCollateralAmount()) == null) {
-            log.info("coinjoin: Failed to add collateral output");
-            return false;
-        }
+            // ****** Add outputs for denoms ************ /
 
-        // ****** Add outputs for denoms ************ /
+            final Result<Boolean> addFinal = new Result<>(true);
+            List<Coin> denoms = CoinJoinClientOptions.getDenominations();
 
-        final Result<Boolean> addFinal = new Result<>(true);
-        List<Coin> denoms = CoinJoin.getStandardDenominations();
+            HashMap<Coin, Integer> mapDenomCount = new HashMap<>();
+            for (Coin denomValue : denoms) {
+                mapDenomCount.put(denomValue, mixingWallet.countInputsWithAmount(denomValue));
+            }
 
-        HashMap<Coin, Integer> mapDenomCount = new HashMap<>();
-        for (Coin denomValue : denoms) {
-            mapDenomCount.put(denomValue, mixingWallet.countInputsWithAmount(denomValue));
-        }
+            // Will generate outputs for the createdenoms up to coinjoinmaxdenoms per denom
 
-        // Will generate outputs for the createdenoms up to coinjoinmaxdenoms per denom
+            // This works in the way creating PS denoms has traditionally worked, assuming enough funds,
+            // it will start with the smallest denom then create 11 of those, then go up to the next biggest denom create 11
+            // and repeat. Previously, once the largest denom was reached, as many would be created were created as possible and
+            // then any remaining was put into a change address and denominations were created in the same manner a block later.
+            // Now, in this system, so long as we don't reach COINJOIN_DENOM_OUTPUTS_THRESHOLD outputs the process repeats in
+            // the same transaction, creating up to nCoinJoinDenomsHardCap per denomination in a single transaction.
 
-        // This works in the way creating PS denoms has traditionally worked, assuming enough funds,
-        // it will start with the smallest denom then create 11 of those, then go up to the next biggest denom create 11
-        // and repeat. Previously, once the largest denom was reached, as many would be created were created as possible and
-        // then any remaining was put into a change address and denominations were created in the same manner a block later.
-        // Now, in this system, so long as we don't reach COINJOIN_DENOM_OUTPUTS_THRESHOLD outputs the process repeats in
-        // the same transaction, creating up to nCoinJoinDenomsHardCap per denomination in a single transaction.
+            while (txBuilder.couldAddOutput(CoinJoin.getSmallestDenomination()) && txBuilder.countOutputs() < COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
+                for (int it = denoms.size() - 1; it >= 0; --it) {
+                    Coin denomValue = denoms.get(it);
+                    Integer currentDenomIt = mapDenomCount.get(denomValue);
 
-        while (txBuilder.couldAddOutput(CoinJoin.getSmallestDenomination()) && txBuilder.countOutputs() < COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
-            for (int it = denoms.size() - 1; it >= 0; --it) {
-                Coin denomValue = denoms.get(it);
-                Integer currentDenomIt = mapDenomCount.get(denomValue);
-
-                int nOutputs = 0;
+                    int nOutputs = 0;
 
 
-                NeedMoreOutputs needMoreOutputs = new NeedMoreOutputs() {
+                    NeedMoreOutputs needMoreOutputs = new NeedMoreOutputs() {
+                        @Override
+                        public boolean process(Coin balanceToDenominate, int outputs, Result<Boolean> addFinal) {
+                            if (txBuilder.couldAddOutput(denomValue)) {
+                                if (addFinal.get() && balanceToDenominate.isPositive() && balanceToDenominate.isLessThan(denomValue)) {
+                                    addFinal.set(false); // add final denom only once, only the smalest possible one
+                                    log.info("coinjoin: 1 - FINAL - denomValue: {}, balanceToDenominate: {}, outputs: {}, {}",
+                                            denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), outputs, txBuilder);
+                                    return true;
+                                } else if (balanceToDenominate.isGreaterThanOrEqualTo(denomValue)) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        }
+                    };
+
+                    // add each output up to 11 times or until it can't be added again or until we reach nCoinJoinDenomsGoal
+                    while (needMoreOutputs.process(balanceToDenominate, nOutputs, addFinal) && nOutputs <= 10 && currentDenomIt < CoinJoinClientOptions.getDenomsGoal()) {
+                        // Add output and subtract denomination amount
+                        if (txBuilder.addOutput(denomValue) != null) {
+                            ++nOutputs;
+                            ++currentDenomIt;
+                            balanceToDenominate = balanceToDenominate.subtract(denomValue);
+                            log.info("coinjoin: 1 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
+                                    denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
+                        } else {
+                            log.info("coinjoin: 1 - Error: AddOutput failed for denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
+                                    denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
+                            return false;
+                        }
+
+                    }
+
+                    if (txBuilder.getAmountLeft().isZero() || balanceToDenominate.isLessThanOrEqualTo(Coin.ZERO)) break;
+                }
+
+                boolean finished = true;
+                for (Map.Entry<Coin, Integer> entry : mapDenomCount.entrySet()) {
+                    // Check if this specific denom could use another loop, check that there aren't nCoinJoinDenomsGoal of this
+                    // denom and that our nValueLeft/balanceToDenominate is enough to create one of these denoms, if so, loop again.
+                    if (entry.getValue() < CoinJoinClientOptions.getDenomsGoal() && txBuilder.couldAddOutput(entry.getKey()) && balanceToDenominate.isGreaterThan(Coin.ZERO)) {
+                        finished = false;
+                        log.info("coinjoin: 1 - NOT finished - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
+                                entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
+                        break;
+                    }
+                    log.info("coinjoin: 1 - FINISHED - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
+                            entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
+                }
+
+                if (finished) break;
+            }
+
+            // Now that nCoinJoinDenomsGoal worth of each denom have been created or the max number of denoms given the value of the input, do something with the remainder.
+            if (txBuilder.couldAddOutput(CoinJoin.getSmallestDenomination()) && balanceToDenominate.isGreaterThanOrEqualTo(CoinJoin.getSmallestDenomination()) && txBuilder.countOutputs() < COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
+                Coin largestDenomValue = denoms.get(0);
+
+                log.info("coinjoin: 2 - Process remainder: {}", txBuilder);
+
+                CountPossibleOutputs countPossibleOutputs = new CountPossibleOutputs() {
                     @Override
-                    public boolean process(Coin balanceToDenominate, int outputs, Result<Boolean> addFinal) {
-                        if (txBuilder.couldAddOutput(denomValue)) {
-                            if (addFinal.get() && balanceToDenominate.isPositive() && balanceToDenominate.isLessThan(denomValue)) {
-                                addFinal.set(false); // add final denom only once, only the smalest possible one
-                                log.info("coinjoin: 1 - FINAL - denomValue: {}, balanceToDenominate: {}, outputs: {}, {}",
-                                        denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), outputs, txBuilder);
-                                return true;
-                            } else if (balanceToDenominate.isGreaterThanOrEqualTo(denomValue)) {
-                                return true;
+                    public int process(Coin amount) {
+                        ArrayList<Coin> vecOutputs = new ArrayList<>();
+                        while (true) {
+                            // Create a potential output
+                            vecOutputs.add(amount);
+                            if (!txBuilder.couldAddOutputs(vecOutputs) || txBuilder.countOutputs() + vecOutputs.size() > COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
+                                // If it's not possible to add it due to insufficient amount left or total number of outputs exceeds
+                                // COINJOIN_DENOM_OUTPUTS_THRESHOLD drop the output again and stop trying.
+                                vecOutputs.remove(vecOutputs.size() - 1);
+                                break;
                             }
                         }
-                        return false;
+                        return vecOutputs.size();
                     }
                 };
 
-                // add each output up to 11 times or until it can't be added again or until we reach nCoinJoinDenomsGoal
-                while (needMoreOutputs.process(balanceToDenominate, nOutputs, addFinal) && nOutputs <= 10 && currentDenomIt < CoinJoinClientOptions.getDenomsGoal()) {
-                    // Add output and subtract denomination amount
-                    if (txBuilder.addOutput(denomValue) != null) {
-                        ++nOutputs;
-                        ++currentDenomIt;
-                        balanceToDenominate = balanceToDenominate.subtract(denomValue);
-                        log.info("coinjoin: 1 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
-                                denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
-                    } else {
-                        log.info("coinjoin: 1 - Error: AddOutput failed for denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
-                                denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
-                        return false;
-                    }
+                // Go big to small
+                for (Coin denomValue : denoms) {
+                    if (balanceToDenominate.isLessThanOrEqualTo(Coin.ZERO)) break;
+                    int nOutputs = 0;
 
-                }
+                    // Number of denoms we can create given our denom and the amount of funds we have left
+                    int denomsToCreateValue = countPossibleOutputs.process(denomValue);
+                    // Prefer overshooting the target balance by larger denoms (hence `+1`) instead of a more
+                    // accurate approximation by many smaller denoms. This is ok because when we get here we
+                    // should have nCoinJoinDenomsGoal of each smaller denom already. Also, without `+1`
+                    // we can end up in a situation when there is already nCoinJoinDenomsHardCap of smaller
+                    // denoms, yet we can't mix the remaining balanceToDenominate because it's smaller than
+                    // denomValue (and thus denomsToCreateBal == 0), so the target would never get reached
+                    // even when there is enough funds for that.
+                    int denomsToCreateBal = (int) (balanceToDenominate.value / denomValue.value + 1);
+                    // Use the smaller value
+                    int denomsToCreate = Math.min(denomsToCreateValue, denomsToCreateBal);
+                    log.info("coinjoin: 2 - balanceToDenominate: {}, denomValue: {}, denomsToCreateValue: {}, denomsToCreateBal: {}",
+                            balanceToDenominate.toFriendlyString(), denomValue.toFriendlyString(), denomsToCreateValue, denomsToCreateBal);
+                    Integer it = mapDenomCount.get(denomValue);
+                    for (int i = 0; i < denomsToCreate; ++i) {
+                        // Never go above the cap unless it's the largest denom
+                        if (denomValue != largestDenomValue && it >= CoinJoinClientOptions.getDenomsHardCap()) break;
 
-                if (txBuilder.getAmountLeft().isZero() || balanceToDenominate.isLessThanOrEqualTo(Coin.ZERO)) break;
-            }
-
-            boolean finished = true;
-            for (Map.Entry<Coin, Integer> entry : mapDenomCount.entrySet()) {
-                // Check if this specific denom could use another loop, check that there aren't nCoinJoinDenomsGoal of this
-                // denom and that our nValueLeft/balanceToDenominate is enough to create one of these denoms, if so, loop again.
-                if (entry.getValue() < CoinJoinClientOptions.getDenomsGoal() && txBuilder.couldAddOutput(entry.getKey()) && balanceToDenominate.isGreaterThan(Coin.ZERO)) {
-                    finished = false;
-                    log.info("coinjoin: 1 - NOT finished - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
-                            entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
-                    break;
-                }
-                log.info("coinjoin: 1 - FINISHED - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
-                        entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
-            }
-
-            if (finished) break;
-        }
-
-        // Now that nCoinJoinDenomsGoal worth of each denom have been created or the max number of denoms given the value of the input, do something with the remainder.
-        if (txBuilder.couldAddOutput(CoinJoin.getSmallestDenomination()) && balanceToDenominate.isGreaterThanOrEqualTo(CoinJoin.getSmallestDenomination()) && txBuilder.countOutputs() < COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
-            Coin largestDenomValue = denoms.get(0);
-
-            log.info("coinjoin: 2 - Process remainder: {}", txBuilder);
-
-            CountPossibleOutputs countPossibleOutputs = new CountPossibleOutputs() {
-                @Override
-                public int process(Coin amount) {
-                    ArrayList<Coin> vecOutputs = new ArrayList<>();
-                    while (true) {
-                        // Create a potential output
-                        vecOutputs.add(amount);
-                        if (!txBuilder.couldAddOutputs(vecOutputs) || txBuilder.countOutputs() + vecOutputs.size() > COINJOIN_DENOM_OUTPUTS_THRESHOLD) {
-                            // If it's not possible to add it due to insufficient amount left or total number of outputs exceeds
-                            // COINJOIN_DENOM_OUTPUTS_THRESHOLD drop the output again and stop trying.
-                            vecOutputs.remove(vecOutputs.size() -1);
+                        // Increment helpers, add output and subtract denomination amount
+                        if (txBuilder.addOutput(denomValue) != null) {
+                            nOutputs++;
+                            mapDenomCount.put(denomValue, ++it);
+                            balanceToDenominate = balanceToDenominate.subtract(denomValue);
+                        } else {
+                            log.info("coinjoin: 2 - Error: AddOutput failed at {}/{}, {}", i + 1, denomsToCreate, txBuilder);
                             break;
                         }
+                        log.info("coinjoin: 2 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
+                                denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
+                        if (txBuilder.countOutputs() >= COINJOIN_DENOM_OUTPUTS_THRESHOLD) break;
                     }
-                    return vecOutputs.size();
-                }
-            };
-
-            // Go big to small
-            for (Coin denomValue : denoms) {
-                if (balanceToDenominate.isGreaterThanOrEqualTo(Coin.ZERO)) break;
-                int nOutputs = 0;
-
-                // Number of denoms we can create given our denom and the amount of funds we have left
-                int denomsToCreateValue = countPossibleOutputs.process(denomValue);
-                // Prefer overshooting the target balance by larger denoms (hence `+1`) instead of a more
-                // accurate approximation by many smaller denoms. This is ok because when we get here we
-                // should have nCoinJoinDenomsGoal of each smaller denom already. Also, without `+1`
-                // we can end up in a situation when there is already nCoinJoinDenomsHardCap of smaller
-                // denoms, yet we can't mix the remaining balanceToDenominate because it's smaller than
-                // denomValue (and thus denomsToCreateBal == 0), so the target would never get reached
-                // even when there is enough funds for that.
-                int denomsToCreateBal = (int)(balanceToDenominate.value / denomValue.value + 1);
-                // Use the smaller value
-                int denomsToCreate = Math.min(denomsToCreateValue, denomsToCreateBal);
-                log.info("coinjoin: 2 - balanceToDenominate: {}, denomValue: {}, denomsToCreateValue: {}, denomsToCreateBal: {}",
-                        balanceToDenominate.toFriendlyString(), denomValue.toFriendlyString(), denomsToCreateValue, denomsToCreateBal);
-                Integer it = mapDenomCount.get(denomValue);
-                for (int i = 0; i < denomsToCreate; ++i) {
-                    // Never go above the cap unless it's the largest denom
-                    if (denomValue != largestDenomValue && it >= CoinJoinClientOptions.getDenomsHardCap()) break;
-
-                    // Increment helpers, add output and subtract denomination amount
-                    if (txBuilder.addOutput(denomValue) != null) {
-                        nOutputs++;
-                        mapDenomCount.put(denomValue, ++it);
-                        balanceToDenominate = balanceToDenominate.subtract(denomValue);
-                    } else {
-                        log.info("coinjoin: 2 - Error: AddOutput failed at {}/{}, {}", i + 1, denomsToCreate, txBuilder);
-                        break;
-                    }
-                    log.info("coinjoin: 2 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
-                            denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
                     if (txBuilder.countOutputs() >= COINJOIN_DENOM_OUTPUTS_THRESHOLD) break;
                 }
-                if (txBuilder.countOutputs() >= COINJOIN_DENOM_OUTPUTS_THRESHOLD) break;
+            }
+
+            log.info("coinjoin: 3 - balanceToDenominate: {}, {}", balanceToDenominate.toFriendlyString(), txBuilder);
+
+            for (Map.Entry<Coin, Integer> it : mapDenomCount.entrySet()) {
+                log.info("coinjoin: 3 - DONE - denomValue: {}, count: {}", it.getKey().toFriendlyString(), it.getValue());
+            }
+
+            // No reasons to create mixing collaterals if we can't create denoms to mix
+            if ((fCreateMixingCollaterals && txBuilder.countOutputs() == 1) || txBuilder.countOutputs() == 0) {
+                return false;
+            }
+
+            if (!dryRun) {
+                StringBuilder strResult = new StringBuilder();
+                if (!txBuilder.commit(strResult)) {
+                    log.info("coinjoin: Commit failed: {}", strResult);
+                    return false;
+                }
+
+                // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
+                mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
+
+                log.info("coinjoin: txid: {}", strResult);
+
+                queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.CreateDenomination);
             }
         }
-
-        log.info("coinjoin: 3 - balanceToDenominate: {}, {}", balanceToDenominate.toFriendlyString(), txBuilder);
-
-        for (Map.Entry<Coin, Integer> it : mapDenomCount.entrySet()) {
-            log.info("coinjoin: 3 - DONE - denomValue: {}, count: {}", it.getKey().toFriendlyString(), it.getValue());
-        }
-
-        // No reasons to create mixing collaterals if we can't create denoms to mix
-        if ((fCreateMixingCollaterals && txBuilder.countOutputs() == 1) || txBuilder.countOutputs() == 0) {
-            return false;
-        }
-
-        StringBuilder strResult = new StringBuilder();
-        if (!txBuilder.commit(strResult)) {
-            log.info("coinjoin: Commit failed: {}", strResult.toString());
-            return false;
-        }
-
-        // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
-        mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
-
-        log.info("coinjoin: txid: {}", strResult);
-
         return true;
     }
 
@@ -375,7 +394,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // This still leaves more than enough room for another data of typical MakeCollateralAmounts tx.
         List<CompactTallyItem> vecTally = mixingWallet.selectCoinsGroupedByAddresses(false, false, true, 400);
         if (vecTally.isEmpty()) {
-            log.info("coinjoin -- SelectCoinsGroupedByAddresses can't find any inputs!\n");
+            log.info("coinjoin: selectCoinsGroupedByAddresses can't find any inputs!\n");
             return false;
         }
 
@@ -400,7 +419,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         // If we got here then something is terribly broken actually
-        log.info("coinjoin -- ERROR: Can't make collaterals!\n");
+        log.error("coinjoin: ERROR: Can't make collaterals!\n");
         return false;
     }
     private boolean makeCollateralAmounts(CompactTallyItem tallyItem, boolean fTryDenominated) {
@@ -425,73 +444,73 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
 
-        TransactionBuilder txBuilder = new TransactionBuilder(wallet, tallyItem);
+        try (TransactionBuilder txBuilder = new TransactionBuilder(wallet, tallyItem, false)) {
+            log.info("coinjoin: Start {}", txBuilder);
 
-        log.info("coinjoin: Start {}",txBuilder);
+            // Skip way too tiny amounts. Smallest we want is minimum collateral amount in a one output tx
+            if (!txBuilder.couldAddOutput(CoinJoin.getCollateralAmount())) {
+                return false;
+            }
 
-        // Skip way too tiny amounts. Smallest we want is minimum collateral amount in a one output tx
-        if (!txBuilder.couldAddOutput(CoinJoin.getCollateralAmount())) {
-            return false;
+            int nCase; // Just for debug logs
+            if (txBuilder.couldAddOutputs(Arrays.asList(CoinJoin.getMaxCollateralAmount(), CoinJoin.getCollateralAmount()))) {
+                nCase = 1;
+                // <case1>, see TransactionRecord::decomposeTransaction
+                // Out1 == CoinJoin.GetMaxCollateralAmount()
+                // Out2 >= CoinJoin.GetCollateralAmount()
+
+                txBuilder.addOutput(CoinJoin.getMaxCollateralAmount());
+                // Note, here we first add a zero amount output to get the remainder after all fees and then assign it
+                TransactionBuilderOutput out = txBuilder.addOutput();
+                Coin nAmountLeft = txBuilder.getAmountLeft();
+                // If remainder is denominated add one duff to the fee
+                out.updateAmount(CoinJoin.isDenominatedAmount(nAmountLeft) ? nAmountLeft.subtract(Coin.valueOf(1, 0)) : nAmountLeft);
+
+            } else if (txBuilder.couldAddOutputs(Arrays.asList(CoinJoin.getCollateralAmount(), CoinJoin.getCollateralAmount()))) {
+                nCase = 2;
+                // <case2>, see TransactionRecord::decomposeTransaction
+                // Out1 CoinJoin.isCollateralAmount()
+                // Out2 CoinJoin.isCollateralAmount()
+
+                // First add two outputs to get the available value after all fees
+                TransactionBuilderOutput out1 = txBuilder.addOutput();
+                TransactionBuilderOutput out2 = txBuilder.addOutput();
+
+                // Create two equal outputs from the available value. This adds one duff to the fee if txBuilder.GetAmountLeft() is odd.
+                Coin nAmountOutputs = txBuilder.getAmountLeft().div(2);
+
+                assert (CoinJoin.isCollateralAmount(nAmountOutputs));
+
+                out1.updateAmount(nAmountOutputs);
+                out2.updateAmount(nAmountOutputs);
+
+            } else { // still at least possible to add one CoinJoin.GetCollateralAmount() output
+                nCase = 3;
+                // <case3>, see TransactionRecord::decomposeTransaction
+                // Out1 CoinJoin.isCollateralAmount()
+                // Out2 Skipped
+                TransactionBuilderOutput out = txBuilder.addOutput();
+                out.updateAmount(txBuilder.getAmountLeft());
+
+                assert (CoinJoin.isCollateralAmount(out.getAmount()));
+            }
+
+            log.info("coinjoin: Done with case {}: {}", nCase, txBuilder);
+
+            assert (txBuilder.isDust(txBuilder.getAmountLeft()));
+
+            StringBuilder strResult = new StringBuilder();
+            if (!txBuilder.commit(strResult)) {
+                log.info("coinjoin: Commit failed: {}", strResult);
+                return false;
+            }
+
+            mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
+
+            log.info("coinjoin: txid: {}", strResult);
+            queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.MakeCollateralInputs);
+            return true;
         }
-
-        int nCase; // Just for debug logs
-        if (txBuilder.couldAddOutputs(Arrays.asList(CoinJoin.getMaxCollateralAmount(), CoinJoin.getCollateralAmount()))) {
-            nCase = 1;
-            // <case1>, see TransactionRecord::decomposeTransaction
-            // Out1 == CoinJoin.GetMaxCollateralAmount()
-            // Out2 >= CoinJoin.GetCollateralAmount()
-
-            txBuilder.addOutput(CoinJoin.getMaxCollateralAmount());
-            // Note, here we first add a zero amount output to get the remainder after all fees and then assign it
-            TransactionBuilderOutput out = txBuilder.addOutput();
-            Coin nAmountLeft = txBuilder.getAmountLeft();
-            // If remainder is denominated add one duff to the fee
-            out.updateAmount(CoinJoin.isDenominatedAmount(nAmountLeft) ? nAmountLeft.subtract(Coin.valueOf(1, 0)) : nAmountLeft);
-
-        } else if (txBuilder.couldAddOutputs(Arrays.asList(CoinJoin.getCollateralAmount(), CoinJoin.getCollateralAmount()))) {
-            nCase = 2;
-            // <case2>, see TransactionRecord::decomposeTransaction
-            // Out1 CoinJoin.isCollateralAmount()
-            // Out2 CoinJoin.isCollateralAmount()
-
-            // First add two outputs to get the available value after all fees
-            TransactionBuilderOutput out1 = txBuilder.addOutput();
-            TransactionBuilderOutput out2 = txBuilder.addOutput();
-
-            // Create two equal outputs from the available value. This adds one duff to the fee if txBuilder.GetAmountLeft() is odd.
-            Coin nAmountOutputs = txBuilder.getAmountLeft().div(2);
-
-            assert(CoinJoin.isCollateralAmount(nAmountOutputs));
-
-            out1.updateAmount(nAmountOutputs);
-            out2.updateAmount(nAmountOutputs);
-
-        } else { // still at least possible to add one CoinJoin.GetCollateralAmount() output
-            nCase = 3;
-            // <case3>, see TransactionRecord::decomposeTransaction
-            // Out1 CoinJoin.isCollateralAmount()
-            // Out2 Skipped
-            TransactionBuilderOutput out = txBuilder.addOutput();
-            out.updateAmount(txBuilder.getAmountLeft());
-
-            assert(CoinJoin.isCollateralAmount(out.getAmount()));
-        }
-
-        log.info("coinjoin: Done with case {}: {}", nCase, txBuilder);
-
-        assert(txBuilder.isDust(txBuilder.getAmountLeft()));
-
-        StringBuilder strResult = new StringBuilder();
-        if (!txBuilder.commit(strResult)) {
-            log.info("coinjoin: Commit failed: {}", strResult);
-            return false;
-        }
-
-        mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
-
-        log.info("coinjoin: txid: {}", strResult);
-
-        return true;
     }
 
     private boolean createCollateralTransaction(Transaction txCollateral, StringBuilder strReason){
@@ -532,6 +551,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         try {
+            // don't set the source to TransactionConfidence.Source.SELF on these collateral transactions
+            // otherwise when the masternodes do submit these transactions to the network, they will be
+            // ignored by DashJ and when they are received
             SendRequest req = SendRequest.forTx(txCollateral);
             req.aesKey = context.coinJoinManager.requestKeyParameter(mixingWallet);
             mixingWallet.signTransaction(req);
@@ -540,6 +562,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
         isMyCollateralValid = true;
+        if (!collateralSessionMap.containsKey(txCollateral.getTxId())) {
+            collateralSessionMap.put(txCollateral.getTxId(), 0);
+        }
         return true;
     }
 
@@ -588,9 +613,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             mixingWallet.getContext().coinJoinManager.addPendingMasternode(this);
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
-            log.info("coinjoin: pending connection (from queue): sessionDenom: {} ({}), addr={}",
+            log.info("coinjoin: join existing queue -> pending connection, denom: {} ({}), addr={}",
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
             setStatus(PoolStatus.CONNECTING);
+            joined = true;
             return true;
         }
         setStatus(PoolStatus.WARN_NO_MIXING_QUEUES);
@@ -610,8 +636,11 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // find available denominated amounts
         HashSet<Coin> setAmounts = new HashSet<>();
         if (!mixingWallet.selectDenominatedAmounts(balanceNeedsAnonymized, setAmounts)) {
-            // this should never happen
-            setStatus(PoolStatus.ERR_NO_INPUTS);
+            // this should never happen according to Dash Core
+            // but this does happen if there is are coins that can be denominated, but cannot be cause of the denom goals
+            // so if the last denom result was false and there are no inputs, lets trigger the end.
+            if (!lastCreateDenominatedResult)
+                setStatus(PoolStatus.ERR_NO_INPUTS);
             return false;
         }
 
@@ -643,7 +672,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 continue;
             }
 
-            log.info("coinjoin: attempt {} connection to Masternode {}, {}", nTries, dmn.getService(), dmn.getProTxHash());
+            log.info("coinjoin: attempt {} connection to mn {}, protx: {}", nTries + 1, dmn.getService(), dmn.getProTxHash().toString().substring(0, 16));
 
             // try to get a single random denom out of setAmounts
             while (sessionDenom == 0) {
@@ -658,13 +687,13 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             mixingMasternode = dmn;
             context.coinJoinManager.addPendingMasternode(this);
             pendingDsaRequest = new PendingDsaRequest(dmn.getService(), new CoinJoinAccept(context.getParams(), sessionDenom, txMyCollateral));
-            log.info("coinjoin test: {}\n  {}", pendingDsaRequest.getDsa(), pendingDsaRequest.getDsa().toStringHex());
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: start new queue -> pending connection, nSessionDenom: {} ({}), addr={}",
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
             context.coinJoinManager.startAsync();
             setStatus(PoolStatus.CONNECTING);
+            joined = false;
             return true;
         }
         strAutoDenomResult = "Failed to start a new mixing queue";
@@ -690,7 +719,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         boolean fSelected = mixingWallet.selectTxDSInsByDenomination(sessionDenom, CoinJoin.getMaxPoolAmount(), vecTxDSInRet);
         if (!fSelected) {
-            strErrorRet.append("Can't select current denominated inputs");
+            strErrorRet.append("Can't select current denominated inputs: ").append(CoinJoin.denominationToAmount(sessionDenom).toFriendlyString()).append(" for session ").append(sessionID.get());
+            vecTxDSInRet.forEach(input -> strErrorRet.append("\n").append(input));
             return false;
         }
 
@@ -739,7 +769,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         if (vecPSInOutPairsRet.isEmpty()) {
             keyHolderStorage.returnAll();
-            strErrorRet.append("Can't prepare current denominated outputs");
+            if (strErrorRet.length() == 0)
+                strErrorRet.append("Can't prepare current denominated outputs");
             return false;
         }
 
@@ -758,7 +789,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private boolean sendDenominate(List<Pair<CoinJoinTransactionInput, TransactionOutput>> vecPSInOutPairs) {
 
         if (txMyCollateral.getInputs().isEmpty()) {
-            log.info("coinjoin:  -- CoinJoin collateral not set");
+            log.info("coinjoin: CoinJoin collateral not set");
             return false;
         }
 
@@ -779,7 +810,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         setState(POOL_STATE_ACCEPTING_ENTRIES);
         strLastMessage = "";
 
-        log.info("coinjoin: -- Added transaction to pool.");
+        log.info("coinjoin: Added transaction to pool.");
 
         Transaction tx = new Transaction(context.getParams()); // for debug purposes only
         ArrayList<CoinJoinTransactionInput> vecTxDSInTmp = Lists.newArrayList();
@@ -792,7 +823,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             tx.addOutput(pair.getSecond());
         }
 
-        log.info("coinjoin:  -- Submitting partial tx {}", tx); /* Continued */
+        log.info(COINJOIN_EXTRA, "coinjoin:  Submitting partial tx {} to session {}", tx, sessionID.get()); /* Continued */
 
         // store our entry for later use
         lock.lock();
@@ -810,14 +841,14 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private void relay(CoinJoinEntry entry) {
         if (mixingMasternode != null) {
-            log.info("Sending {}", entry.toString(true));
+            log.info("Sending {} to {}", entry.toString(true), sessionID);
            if(!context.coinJoinManager.forPeer(mixingMasternode.getService(), new MasternodeGroup.ForPeer() {
                @Override
                public boolean process(Peer peer) {
                    peer.sendMessage(entry);
                    return true;
                }
-           })) {
+           }, true)) {
                log.info("coinjoin: failed to send to {} CoinJoinEntry: {}", mixingMasternode.getService().getSocketAddress(), entry);
            }
         }
@@ -850,7 +881,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 keyHolderStorage.returnAll();
                 switch (statusUpdate.getMessageID()) {
                     case ERR_INVALID_COLLATERAL:
-                        log.error("coinjoin: collateral valid: {}", CoinJoin.isCollateralValid(txMyCollateral));
+                        log.error("coinjoin: collateral invalid: {}", CoinJoin.isCollateralValid(txMyCollateral));
                         isMyCollateralValid = false;
                         setNull(); // for now lets disconnect.  TODO: Why is the collateral invalid?
                         break;
@@ -866,8 +897,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 if (state.get() == statusUpdate.getState() && statusUpdate.getState() == POOL_STATE_QUEUE && sessionID.get() == 0 && statusUpdate.getSessionID() != 0) {
                     // new session id should be set only in POOL_STATE_QUEUE state
                     sessionID.set(statusUpdate.getSessionID());
+                    collateralSessionMap.put(txMyCollateral.getTxId(), statusUpdate.getSessionID());
                     timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
-                    strMessageTmp = strMessageTmp + " Set nSessionID to " + sessionID.get();
+                    strMessageTmp = strMessageTmp + " Set SID to " + sessionID.get();
                     queueSessionStartedListeners(MSG_SUCCESS);
                 }
                 log.info("coinjoin session: accepted by Masternode: {}", strMessageTmp);
@@ -886,18 +918,19 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private void completedTransaction(PoolMessage messageID) {
         if (messageID == MSG_SUCCESS) {
-            log.info("coinjoin: CompletedTransaction -- success");
-            queueSessionCompleteListeners(MSG_SUCCESS);
+            log.info("coinjoin: completedTransaction -- success");
+            queueSessionCompleteListeners(getState(), MSG_SUCCESS);
             mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
             keyHolderStorage.keepAll();
         } else {
-            log.info("coinjoin: CompletedTransaction -- error");
+            log.info("coinjoin: completedTransaction -- error");
             keyHolderStorage.returnAll();
         }
         unlockCoins();
         lock.lock();
         try {
             setNull(); // this will also disconnect the masternode
+            setStatus(PoolStatus.COMPLETE);
         } finally {
             lock.unlock();
         }
@@ -940,7 +973,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             for (TransactionOutput output : finalTransactionNew.getOutputs()) {
                 finalMutableTransaction.addOutput(output);
             }
-            log.info("coinjoin:  finalMutableTransaction={}", finalMutableTransaction); /* Continued */
+            log.info(COINJOIN_EXTRA, "coinjoin:  finalMutableTx={}", finalMutableTransaction); /* Continued */
 
             // STEP 1: check final transaction general rules
 
@@ -950,7 +983,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             finalMutableTransaction.sortOutputs();
 
             if (!finalMutableTransaction.getTxId().equals(finalTransactionNew.getTxId())) {
-                log.info("coinjoin:  ERROR! Masternode {} is not BIP69 compliant!", mixingMasternode.getProTxHash());
+                log.info(COINJOIN_EXTRA, "coinjoin:  ERROR! Masternode {} is not BIP69 compliant!", mixingMasternode.getProTxHash());
                 //unlockCoins();
                 //keyHolderStorage.returnAll();
                 //setNull();
@@ -1010,7 +1043,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     if (nMyInputIndex == -1) {
                         // Can't find one of my own inputs, refuse to sign. It's possible we'll be charged collateral. But that's
                         // better than signing if the transaction doesn't look like what we wanted.
-                        log.info("coinjoin:  missing input! txdsin={}\n", txdsin);
+                        log.info("coinjoin: missing input! txdsin={}\n", txdsin);
                         unlockCoins();
                         keyHolderStorage.returnAll();
                         setNull();
@@ -1018,15 +1051,13 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     }
 
                     sigs.add(finalMutableTransaction.getInput(nMyInputIndex));
-                    log.info("coinjoin:  nMyInputIndex: {}, sigs.size(): {}, scriptSig={}",
+                    log.info("coinjoin: myInputIndex: {}, sigs.size: {}, scriptSig={}",
                             nMyInputIndex, sigs.size(), finalMutableTransaction.getInput(nMyInputIndex).getScriptSig());
                 }
             }
 
-            //KeyBag maybeDecryptingKeyBag = new DecryptingKeyBag(mixingWallet, req.aesKey);
-
             TransactionSigner.ProposedTransaction proposal = new TransactionSigner.ProposedTransaction(finalMutableTransaction);
-            CoinJoinTransactionSigner signer = new CoinJoinTransactionSigner(sigs);
+            CoinJoinTransactionSigner signer = new CoinJoinTransactionSigner(sigs, true);
 
             if (!signer.signInputs(proposal, mixingWallet))
                 log.info("{} returned false for the tx", signer.getClass().getName());
@@ -1041,7 +1072,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
 
             // push all of our signatures to the Masternode
-            log.info("coinjoin:  pushing sigs to the masternode, finalMutableTransaction={}", finalMutableTransaction); /* Continued */
+            log.info("coinjoin:  pushing sigs to the masternode, finalMutableTx={}", finalMutableTransaction); /* Continued */
             node.sendMessage(new CoinJoinSignedInputs(mixingWallet.getContext().getParams(), sigs));
             setState(POOL_STATE_SIGNING);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
@@ -1066,13 +1097,17 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
         mixingMasternode = null;
         pendingDsaRequest = null;
-        log.info("session zeroed out");
+        log.info("session zeroed out {}; {}", state, status);
         super.setNull();
     }
 
     // internal session id
     static int nextId = 0;
     private final int id;
+
+    public int getId() {
+        return id;
+    }
 
     public CoinJoinClientSession(WalletEx mixingWallet) {
         super(mixingWallet.getContext());
@@ -1094,7 +1129,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private void processStatusUpdate(Peer peer, CoinJoinStatusUpdate statusUpdate) {
         if (mixingMasternode == null) {
-            log.info("mixingMaster node is null, ignoring status update");
+            log.info(COINJOIN_EXTRA, "mixingMaster node is null, ignoring status update");
             return;
         }
         if (!mixingMasternode.getService().getAddr().equals(peer.getAddress().getAddr()))
@@ -1110,12 +1145,12 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return;
 
         if (sessionID.get() != finalTransaction.getMsgSessionID()) {
-            log.info("DSFINALTX -- message doesn't match current CoinJoin session: sessionID: {}  msgSessionID: {}",
+            log.info("DSFINALTX: message doesn't match current CoinJoin session: sessionID: {}  msgSessionID: {}",
                     sessionID, finalTransaction.getMsgSessionID());
             return;
         }
 
-        log.info("DSFINALTX -- txNew {}", finalTransaction.getTransaction()); /* Continued */
+        log.info(COINJOIN_EXTRA, "DSFINALTX: txNew {}", finalTransaction.getTransaction()); /* Continued */
 
         // check to see if input is spent already? (and probably not confirmed)
         signFinalTransaction(finalTransaction.getTransaction(), peer);
@@ -1128,16 +1163,18 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return;
 
         if (completeMessage.getMsgMessageID().value < MSG_POOL_MIN.value || completeMessage.getMsgMessageID().value > MSG_POOL_MAX.value) {
-            log.info("DSCOMPLETE -- nMsgMessageID is out of bounds: {}", completeMessage.getMsgMessageID());
+            log.info("DSCOMPLETE: msgID is out of bounds: {}", completeMessage.getMsgMessageID());
             return;
         }
 
         if (sessionID.get() != completeMessage.getMsgSessionID()) {
-            log.info("DSCOMPLETE -- message doesn't match current CoinJoin session: nSessionID: {}  nMsgSessionID: {}", sessionID.get(), completeMessage.getMsgSessionID());
+            log.info("DSCOMPLETE: message doesn't match current CoinJoin session: SID: {}  msgID: {}  ({})",
+                    sessionID.get(), completeMessage.getMsgSessionID(),
+                    CoinJoin.getMessageByID(completeMessage.getMsgMessageID()));
             return;
         }
 
-        log.info("DSCOMPLETE -- nMsgSessionID {}  nMsgMessageID {} ({})", completeMessage.getMsgSessionID(),
+        log.info("DSCOMPLETE: msgSID {}  msg {} ({})", completeMessage.getMsgSessionID(),
                 completeMessage.getMsgMessageID(), CoinJoin.getMessageByID(completeMessage.getMsgMessageID()));
 
         completedTransaction(completeMessage.getMsgMessageID());
@@ -1228,7 +1265,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         if (getEntriesCount() > 0) {
-            setStatus(PoolStatus.MIXING);
+            if (!fDryRun)
+                setStatus(PoolStatus.MIXING);
             return false;
         }
 
@@ -1238,14 +1276,14 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
         try {
-            if (mixingWallet.getContext().masternodeListManager.getListAtChainTip().getValidMNsCount() == 0 &&
+            if (!fDryRun && mixingWallet.getContext().masternodeListManager.getListAtChainTip().getValidMNsCount() == 0 &&
                     !mixingWallet.getContext().getParams().getId().equals(NetworkParameters.ID_REGTEST)) {
                 strAutoDenomResult = "No Masternodes detected.";
                 log.info("coinjoin: {}", strAutoDenomResult);
                 //status.set(PoolStatus.ERR_NO_MASTERNODES_DETECTED);
                 //hasNothingToDo.set(true);
                 setStatus(PoolStatus.ERR_NO_MASTERNODES_DETECTED);
-                queueSessionCompleteListeners(ERR_SESSION);
+                queueSessionCompleteListeners(getState(), ERR_SESSION);
                 return false;
             }
 
@@ -1256,11 +1294,13 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             balanceNeedsAnonymized = CoinJoinClientOptions.getAmount().subtract(nBalanceAnonymized);
 
             if (balanceNeedsAnonymized.isLessThanOrEqualTo(Coin.ZERO)) {
-                log.info("coinjoin: Nothing to do");
+                log.info("coinjoin: Nothing to do {}", fDryRun);
                 // nothing to do, just keep it in idle mode
                 //status.set(PoolStatus.FINISHED);
                 //hasNothingToDo.set(true);
-                setStatus(PoolStatus.FINISHED);
+                if (!fDryRun) {
+                    setStatus(PoolStatus.FINISHED);
+                }
                 return false;
             }
             hasNothingToDo.set(false);
@@ -1278,8 +1318,18 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
             // mixable balance is way too small
             if (nBalanceAnonymizable.isLessThan(nValueMin)) {
-                setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
-                queueSessionCompleteListeners(ERR_SESSION);
+                //TODO: let us leave the previous code in this block for now
+                // we don't yet have a way to precalculate if we have funds that can be anonomized
+                // reliably
+                //setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
+                //queueSessionCompleteListeners(getState(), ERR_SESSION);
+                //return false;
+                Coin balanceLeftToMix = mixingWallet.getAnonymizableBalance(false, false);
+                if (!fDryRun && !balanceLeftToMix.isGreaterThanOrEqualTo(nValueMin)) {
+                    setStatus(PoolStatus.ERR_NOT_ENOUGH_FUNDS);
+                    queueSessionCompleteListeners(getState(), ERR_SESSION);
+                }
+                log.info("coinjoin: balance too low: dryRun: {}", fDryRun);
                 return false;
             }
 
@@ -1293,7 +1343,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
             // adjust balanceNeedsAnonymized to consume final denom
             if (nBalanceDenominated.subtract(nBalanceAnonymized).isGreaterThan(balanceNeedsAnonymized)) {
-                List<Coin> denoms = CoinJoin.getStandardDenominations();
+                List<Coin> denoms = CoinJoinClientOptions.getDenominations();
                 Coin nAdditionalDenom = Coin.ZERO;
                 for (Coin denom :denoms){
                     if (balanceNeedsAnonymized.isLessThan(denom)) {
@@ -1305,19 +1355,19 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 balanceNeedsAnonymized = balanceNeedsAnonymized.add(nAdditionalDenom);
             }
 
-            log.info("coinjoin: wallet stats:\n{}", bal);
+            log.info(COINJOIN_EXTRA, "coinjoin: wallet stats:\n{}", bal);
 
-            log.info("coinjoin: current stats:\n" +
-                    "    nValueMin: {}\n" +
+            log.info(COINJOIN_EXTRA, "coinjoin: current stats:\n" +
+                    "    min: {}\n" +
                     "    myTrusted: {}\n" +
-                    "    nBalanceAnonymizable: {}\n" +
-                    "    nBalanceAnonymized: {}\n" +
+                    "    balanceAnonymizable: {}\n" +
+                    "    balanceAnonymized: {}\n" +
                     "    balanceNeedsAnonymized: {}\n" +
-                    "    nBalanceAnonimizableNonDenom: {}\n" +
-                    "    nBalanceDenominatedConf: {}\n" +
-                    "    nBalanceDenominatedUnconf: {}\n" +
-                    "    nBalanceDenominated: {}\n" +
-                    "    nBalanceToDenominate: {}\n",
+                    "    balanceAnonimizableNonDenom: {}\n" +
+                    "    balanceDenominatedConf: {}\n" +
+                    "    balanceDenominatedUnconf: {}\n" +
+                    "    balanceDenominated: {}\n" +
+                    "    balanceToDenominate: {}\n",
                     nValueMin.toFriendlyString(),
                     bal.getMyTrusted().toFriendlyString(),
                     nBalanceAnonymizable.toFriendlyString(),
@@ -1330,13 +1380,17 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     nBalanceToDenominate.toFriendlyString()
             );
 
-            if (fDryRun) return true;
-
             // Check if we have should create more denominated inputs i.e.
             // there are funds to denominate and denominated balance does not exceed
             // max amount to mix yet.
+            lastCreateDenominatedResult = true;
             if (nBalanceAnonimizableNonDenom.isGreaterThanOrEqualTo(nValueMin.add(CoinJoin.getCollateralAmount())) && nBalanceToDenominate.isGreaterThan(Coin.ZERO)) {
-                createDenominated(nBalanceToDenominate);
+                lastCreateDenominatedResult = createDenominated(nBalanceToDenominate, fDryRun);
+            }
+
+            if (fDryRun) {
+                log.info("coinjoin: create denominations {}, {}", lastCreateDenominatedResult, fDryRun);
+                return lastCreateDenominatedResult;
             }
 
             //check if we have the collateral sized inputs
@@ -1371,7 +1425,11 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 }
             } else {
                 if (!isMyCollateralValid || !CoinJoin.isCollateralValid(txMyCollateral)) {
-                    log.info("coinjoin: invalid collateral, recreating...");
+                    log.info("coinjoin: invalid collateral, recreating... [id: {}] ", id);
+                    TransactionOutput output = txMyCollateral.getOutput(0);
+                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                        mixingWallet.getCoinJoin().addUnusedKey(KeyId.fromBytes(ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey()), false));
+                    }
                     if (!createCollateralTransaction(txMyCollateral, strReason)) {
                         log.info("coinjoin: create collateral error: {}", strReason);
                         return false;
@@ -1411,8 +1469,12 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             log.info("coinjoin: {}", strAutoDenomResult);
 
         status.set(poolStatus);
-        if (poolStatus.shouldStop())
+        if (poolStatus.shouldStop()) {
+            log.info("Session has nothing to do: {}", poolStatus);
+            if (poolStatus.isError())
+                log.error("Session has an error: {}", poolStatus);
             hasNothingToDo.set(true);
+        }
     }
 
     /// As a client, submit part of a future mixing transaction to a Masternode to start the process
@@ -1430,10 +1492,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         for (int i = 0; i < CoinJoinClientOptions.getRounds() + CoinJoinClientOptions.getRandomRounds(); ++i) {
             if (prepareDenominate(i, i, strError, vecTxDSIn, vecPSInOutPairsTmp, true)) {
-               log.info("coinjoin:  Running CoinJoin denominate for {} rounds, success", i);
+               log.info("coinjoin: Running CoinJoin denominate for {} rounds, success", i);
                 vecInputsByRounds.add(new Pair<>(i, vecPSInOutPairsTmp.size()));
             } else {
-               log.info("coinjoin:  Running CoinJoin denominate for {} rounds, error: {}", i, strError);
+               log.info(COINJOIN_EXTRA, "coinjoin: Running CoinJoin denominate for {} rounds, error: {}", i, strError);
             }
         }
 
@@ -1447,23 +1509,23 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         log.info("coinjoin: vecInputsByRounds(size={}) for denom {}", vecInputsByRounds.size(), sessionDenom);
         for (Pair<Integer, Integer> pair : vecInputsByRounds) {
-            log.info("coinjoin: vecInputsByRounds: rounds: {}, inputs: {}", pair.getFirst(), pair.getSecond());
+            log.info(COINJOIN_EXTRA, "coinjoin: vecInputsByRounds: rounds: {}, inputs: {}", pair.getFirst(), pair.getSecond());
         }
 
         int nRounds = vecInputsByRounds.get(0).getFirst();
         if (prepareDenominate(nRounds, nRounds, strError, vecTxDSIn, vecPSInOutPairsTmp)) {
-           log.info("coinjoin:  Running CoinJoin denominate for {} rounds, success", nRounds);
+            log.info("coinjoin: Running CoinJoin denominate for {} rounds, success", nRounds);
             return sendDenominate(vecPSInOutPairsTmp);
         }
 
         // We failed? That's strange but let's just make final attempt and try to mix everything
         if (prepareDenominate(0, CoinJoinClientOptions.getRounds() - 1, strError, vecTxDSIn, vecPSInOutPairsTmp)) {
-           log.info("coinjoin:  Running CoinJoin denominate for all rounds, success\n");
+            log.info("coinjoin: Running CoinJoin denominate for all rounds, success\n");
             return sendDenominate(vecPSInOutPairsTmp);
         }
 
         // Should never actually get here but just in case
-       log.info("coinjoin:  Running CoinJoin denominate for all rounds, error: {}", strError);
+        log.info("coinjoin: Running CoinJoin denominate for all rounds, error: {}", strError);
         strAutoDenomResult = strError.toString();
         return false;
     }
@@ -1478,16 +1540,18 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             public boolean process(Peer peer) {
                 timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
                 peer.sendMessage(pendingDsaRequest.getDsa());
-                log.info("coinjoin: valid collateral before sending: {}", CoinJoin.isCollateralValid(pendingDsaRequest.getDsa().getTxCollateral()));
+                log.info(COINJOIN_EXTRA, "coinjoin: valid collateral before sending: {}", CoinJoin.isCollateralValid(pendingDsaRequest.getDsa().getTxCollateral()));
                 log.info("sending {} to {}", pendingDsaRequest.getDsa(), peer);
                 return true;
             }
-        });
+        }, false);
 
         if (sentMessage) {
             pendingDsaRequest = null;
         } else if (pendingDsaRequest.isExpired()) {
-            log.info("coinjoin -- failed to connect to {}", pendingDsaRequest.getAddress());
+            log.info("coinjoin: failed to connect to {}; reason: cannot find peer", pendingDsaRequest.getAddress());
+            setStatus(PoolStatus.CONNECTION_TIMEOUT);
+            queueSessionCompleteListeners(getState(), ERR_CONNECTION_TIMEOUT);
             setNull();
         }
 
@@ -1517,8 +1581,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         log.info("coinjoin: {} {} timed out ({})", (state.get() == POOL_STATE_SIGNING) ? "Signing at session" : "Session", sessionID.get(), nTimeout);
 
+        queueSessionCompleteListeners(getState(), ERR_TIMEOUT);
         setState(POOL_STATE_ERROR);
-        queueSessionCompleteListeners(ERR_TIMEOUT);
+        setStatus(PoolStatus.TIMEOUT);
         unlockCoins();
         keyHolderStorage.returnAll();
         timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
@@ -1531,12 +1596,13 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     public String toString() {
         return "CoinJoinClientSession{id=" + id +
                 ", mixer=" + (mixingMasternode != null ? mixingMasternode.getService().getSocketAddress() : "none") +
+                ", joined=" + joined +
                 ", msg='" + strLastMessage + '\'' +
                 ", dsa=" + pendingDsaRequest +
                 ", entries=" + entries.size() +
                 ", state=" + state +
-                ", sessionID=" + sessionID +
-                ", sessionDenom=" + CoinJoin.denominationToString(sessionDenom) + "[" + sessionDenom + "]" +
+                ", SID=" + sessionID +
+                ", denom=" + CoinJoin.denominationToString(sessionDenom) + "[" + sessionDenom + "]" +
                 '}';
     }
 
@@ -1621,15 +1687,55 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         return ListenerRegistration.removeFromList(listener, sessionCompleteListeners);
     }
 
-    protected void queueSessionCompleteListeners(PoolMessage message) {
+    protected void queueSessionCompleteListeners(PoolState state, PoolMessage message) {
         //checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<SessionCompleteListener> registration : sessionCompleteListeners) {
-            registration.executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    registration.listener.onSessionComplete(mixingWallet, getSessionID(), getSessionDenom(), message);
-                }
+            registration.executor.execute(() -> {
+                MasternodeAddress address = mixingMasternode != null ? mixingMasternode.getService() : null;
+                registration.listener.onSessionComplete(mixingWallet, getSessionID(), getSessionDenom(), state, message, address, joined);
             });
+        }
+    }
+
+    public void addTransationListener(CoinJoinTransactionListener listener) {
+        addTransationListener (Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addTransationListener(Executor executor, CoinJoinTransactionListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        transactionListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public boolean removeTransactionListener(CoinJoinTransactionListener listener) {
+        return ListenerRegistration.removeFromList(listener, transactionListeners);
+    }
+
+    protected void queueTransactionListeners(Transaction tx, CoinJoinTransactionType type) {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<CoinJoinTransactionListener> registration : transactionListeners) {
+            registration.executor.execute(() -> registration.listener.onTransactionProcessed(tx, type, getSessionID()));
+        }
+    }
+
+    /**
+     *
+     * @param tx Transaction used for some purpose
+     * @param sessionId the session ID when the tx was used
+     * @param type CoinJoinTransactionType of tx
+     */
+
+    protected void queueTransactionListeners(Transaction tx, int sessionId, CoinJoinTransactionType type) {
+        //checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<CoinJoinTransactionListener> registration : transactionListeners) {
+            registration.executor.execute(() -> registration.listener.onTransactionProcessed(tx, type, sessionId));
         }
     }
 }

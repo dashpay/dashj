@@ -25,25 +25,25 @@ public class LLMQParametersTest {
     @Test
     public void verifyLLMQParameters() {
         LLMQParameters llmq_test = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_TEST, "llmq_test",
-                3, 2, 2, 24, 2, 10,
+                false, 3, 2, 2, 24, 2, 10,
                 18, 2, 2, 3, 3);
         LLMQParameters llmq_devnet = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_DEVNET, "llmq_devnet",
-                12, 7, 6, 24, 2, 10,
+                false, 12, 7, 6, 24, 2, 10,
                 18, 7, 4, 5, 6);
         LLMQParameters llmq50_60 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_50_60, "llmq_50_60",
-                50, 40, 30, 24, 2, 10,
+                false, 50, 40, 30, 24, 2, 10,
                 18,40, 24, 25, 25);
         LLMQParameters llmq400_60 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_400_60, "llmq_400_60",
-                400, 300, 240, 24*12, 4, 20,
+                false, 400, 300, 240, 24*12, 4, 20,
                 48, 300, 4, 5, 100);
         LLMQParameters llmq400_85 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_400_85, "llmq_400_85",
-                400, 350, 340, 24 * 24, 4, 20,
+                false, 400, 350, 340, 24 * 24, 4, 20,
                 48, 300, 4, 5, 100);
         LLMQParameters llmq100_67 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_100_67, "llmq_100_67",
-                100, 80, 67, 24, 2, 10,
+                false, 100, 80, 67, 24, 2, 10,
                 18, 80, 24, 25, 50);
         LLMQParameters llmq60_75 = new LLMQParameters(LLMQParameters.LLMQType.LLMQ_60_75, "llmq_60_75",
-                60, 50, 45, 24 * 12, 2, 42,
+                true, 60, 50, 45, 24 * 12, 2, 42,
                 50, 48, 32, 64, 25);
 
         assertEquals(llmq50_60, LLMQParameters.fromType(LLMQParameters.LLMQType.LLMQ_50_60));

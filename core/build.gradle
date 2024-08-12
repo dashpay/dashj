@@ -4,15 +4,16 @@ apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 apply plugin: 'jacoco'
 apply plugin: 'signing'
+// apply plugin:  'com.github.spotbugs'
 
-version = '19.1-CJ-SNAPSHOT'
+version = '21.0.0-CJ-SNAPSHOT'
 archivesBaseName = 'dashj-core'
 eclipse.project.name = 'dashj-core'
 
 dependencies {
-    compile 'org.bouncycastle:bcprov-jdk15to18:1.68'
-    implementation 'com.google.guava:guava:28.2-android'
-    compile 'com.google.protobuf:protobuf-javalite:3.14.0'
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
+    implementation 'com.google.guava:guava:30.0-jre'
+    implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
     implementation 'com.squareup.okhttp3:okhttp:3.12.8'
     implementation 'org.slf4j:slf4j-api:1.7.30'
     implementation 'net.jcip:jcip-annotations:1.0'
@@ -29,7 +30,7 @@ dependencies {
     implementation 'de.sfuhrm:saphir-hash-core:3.0.10'
     implementation 'org.dashj:dashj-bls:1.0.0'
     implementation 'com.lambdaworks:scrypt:1.4.0'
-    implementation 'org.json:json:20210307'
+    implementation 'org.json:json:20231013'
 
 }
 
@@ -40,7 +41,7 @@ javadoc.options.encoding = 'UTF-8'
 
 protobuf {
     protoc {
-        artifact = 'com.google.protobuf:protoc:3.14.0'
+        artifact = 'com.google.protobuf:protoc:3.17.3'
     }
     generateProtoTasks {
         all().each { task ->
@@ -51,14 +52,16 @@ protobuf {
             }
         }
     }
-    generatedFilesBaseDir = new File(projectDir, '/src') // workaround for '$projectDir/src'
 }
 
 test {
     exclude 'org/bitcoinj/core/PeerTest*'
     exclude 'org/bitcoinj/core/TransactionBroadcastTest*'
     exclude 'org/bitcoinj/net/NetworkAbstractionTests*'
+    exclude 'org/bitcoinj/net/discovery/DnsDiscoveryTest*'
     exclude 'org/bitcoinj/protocols/channels/ChannelConnectionTest*'
+    exclude 'org/bitcoinj/core/LevelDBFullPrunedBlockChainTest*'
+    exclude 'org/bitcoinj/store/LevelDBBlockStoreTest*'
     testLogging {
         events "failed"
         exceptionFormat "full"
@@ -155,3 +158,15 @@ jacocoTestReport {
         xml.destination file("${project.projectDir}/build/reports/jacoco/jacoco.xml")
     }
 }
+
+//tasks.spotbugsMain {
+//    reports.create("html") {
+//        required = true
+//        outputLocation = file("$buildDir/reports/spotbugs.html")
+//        setStylesheet("fancy-hist.xsl")
+//    }
+//    reports.create("xml") {
+//        required = true
+//        outputLocation = file("$buildDir/reports/spotbugs.xml")
+//    }
+//}

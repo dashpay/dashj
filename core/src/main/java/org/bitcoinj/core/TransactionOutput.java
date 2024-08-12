@@ -17,7 +17,6 @@
 
 package org.bitcoinj.core;
 
-import com.google.common.base.Objects;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.script.*;
 import org.bitcoinj.wallet.Wallet;
@@ -27,6 +26,7 @@ import javax.annotation.*;
 import java.io.*;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -320,11 +320,13 @@ public class TransactionOutput extends ChildMessage {
     }
 
     /**
-     * Returns true if this output is to a coinjoin related key
+     * Returns true if this output is to a coinjoin related key and is fully mixed
      */
     public boolean isCoinJoin(TransactionBag transactionBag) {
         try {
             if(!isDenominated())
+                return false;
+            if(!transactionBag.isFullyMixed(this))
                 return false;
 
             Script script = getScriptPubKey();
@@ -439,10 +441,14 @@ public class TransactionOutput extends ChildMessage {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(value, parent, Arrays.hashCode(scriptBytes));
+        return Objects.hash(value, parent, Arrays.hashCode(scriptBytes));
     }
 
     public boolean equalsWithoutParent(TransactionOutput output) {
         return value == output.value && Arrays.equals(scriptBytes, output.scriptBytes);
+    }
+
+    public boolean isFullyMixed(TransactionBag transactionBag) {
+        return transactionBag.isFullyMixed(this);
     }
 }

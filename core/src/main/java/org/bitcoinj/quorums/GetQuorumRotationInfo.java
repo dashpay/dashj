@@ -17,13 +17,12 @@
 package org.bitcoinj.quorums;
 
 import com.google.common.collect.Lists;
-import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.VarInt;
 import org.bitcoinj.evolution.AbstractQuorumRequest;
-import org.bitcoinj.store.BlockStoreException;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -41,7 +40,7 @@ public class GetQuorumRotationInfo extends AbstractQuorumRequest {
     }
 
     public GetQuorumRotationInfo(NetworkParameters params,
-                                 ArrayList<Sha256Hash> baseBlockHashes, Sha256Hash blockRequestHash, boolean extraShare) {
+                                 List<Sha256Hash> baseBlockHashes, Sha256Hash blockRequestHash, boolean extraShare) {
         super(params);
         this.baseBlockHashes = new ArrayList<>(baseBlockHashes.size());
         this.baseBlockHashes.addAll(baseBlockHashes);
@@ -74,7 +73,7 @@ public class GetQuorumRotationInfo extends AbstractQuorumRequest {
         return blockRequestHash;
     }
 
-    public ArrayList<Sha256Hash> getBaseBlockHashes() {
+    public List<Sha256Hash> getBaseBlockHashes() {
         return baseBlockHashes;
     }
 
@@ -88,16 +87,14 @@ public class GetQuorumRotationInfo extends AbstractQuorumRequest {
     }
 
     @Override
-    public String toString(AbstractBlockChain blockChain) {
+    public String toString(DualBlockChain blockChain) {
         List<Integer> baseHeights = Lists.newArrayList();
         int blockHeight = -1;
         try {
             for (Sha256Hash baseBlockHash : baseBlockHashes) {
-                baseHeights.add(blockChain.getBlockStore().get(baseBlockHash).getHeight());
+                baseHeights.add(blockChain.getBlock(baseBlockHash).getHeight());
             }
-            blockHeight = blockChain.getBlockStore().get(blockRequestHash).getHeight();
-        } catch (BlockStoreException x) {
-            throw new RuntimeException(x);
+            blockHeight = blockChain.getBlock(blockRequestHash).getHeight();
         } catch (NullPointerException x) {
             // swallow
         }

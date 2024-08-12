@@ -26,17 +26,10 @@ import java.util.Iterator;
 import java.util.List;
 
 public class UnmixedZeroConfCoinSelector extends ZeroConfCoinSelector {
-    //private final Wallet wallet;
-    private boolean onlyConfirmed = false;
-
-    private static final UnmixedZeroConfCoinSelector instance = new UnmixedZeroConfCoinSelector();
-
-    public static UnmixedZeroConfCoinSelector get() {
-        return instance;
-    }
-
-    protected UnmixedZeroConfCoinSelector() {
+    private final Wallet wallet;
+    public UnmixedZeroConfCoinSelector(Wallet wallet) {
         super();
+        this.wallet = wallet;
     }
 
     @Override
@@ -58,10 +51,8 @@ public class UnmixedZeroConfCoinSelector extends ZeroConfCoinSelector {
     protected boolean shouldSelect(Transaction tx) {
         if (tx != null) {
             for (TransactionOutput output : tx.getOutputs()) {
-                if (!output.isDenominated()) {
+                if (!output.isFullyMixed(wallet)) {
                     TransactionConfidence confidence = tx.getConfidence();
-                    if (onlyConfirmed)
-                        return confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING;
                     return super.shouldSelect(tx);
                 }
             }

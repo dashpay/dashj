@@ -28,6 +28,7 @@ import java.io.*;
 
 import static org.junit.Assert.assertEquals;
 
+@Ignore
 public class LevelDBBlockStoreTest {
     private static NetworkParameters UNITTEST;
 

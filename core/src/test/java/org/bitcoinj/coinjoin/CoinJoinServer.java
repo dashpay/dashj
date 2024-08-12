@@ -501,7 +501,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
         ArrayList<TransactionInput> vin = Lists.newArrayList();
         for (TransactionInput txin : entry.getMixingInputs()) {
-            log.info("coinjoin: -- txin={}",txin);
+            log.info("coinjoin: txin={}",txin);
             lock.lock();
             try {
                 for (CoinJoinEntry inner_entry :entries) {

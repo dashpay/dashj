@@ -29,19 +29,24 @@ import org.bitcoinj.coinjoin.CoinJoinQueue;
 import org.bitcoinj.coinjoin.CoinJoinStatusUpdate;
 import org.bitcoinj.coinjoin.callbacks.RequestDecryptedKey;
 import org.bitcoinj.coinjoin.callbacks.RequestKeyParameter;
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.core.AbstractBlockChain;
+import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
+import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -71,11 +76,13 @@ public class CoinJoinManager {
 
     private RequestKeyParameter requestKeyParameter;
     private RequestDecryptedKey requestDecryptedKey;
+    private final ScheduledExecutorService scheduledExecutorService;
 
-    public CoinJoinManager(Context context) {
+    public CoinJoinManager(Context context, ScheduledExecutorService scheduledExecutorService) {
         this.context = context;
         coinJoinClientManagers = new HashMap<>();
         coinJoinClientQueueManager = new CoinJoinClientQueueManager(context);
+        this.scheduledExecutorService = scheduledExecutorService;
     }
 
     public static boolean isCoinJoinMessage(Message message) {
@@ -113,8 +120,7 @@ public class CoinJoinManager {
             // report masternode group
             if (masternodeGroup != null) {
                 tick++;
-                if (tick % 10 == 0) {
-                    log.info(masternodeGroup.toString());
+                if (tick % 15 == 0) {
                     log.info(masternodeGroup.toString());
                 }
             }
@@ -137,12 +143,14 @@ public class CoinJoinManager {
         }
     };
 
-    public void start(ScheduledExecutorService scheduledExecutorService) {
+    public void start() {
+        log.info("CoinJoinManager starting...");
         schedule = scheduledExecutorService.scheduleWithFixedDelay(
                 maintenanceRunnable, 1, 1, TimeUnit.SECONDS);
     }
 
     public void stop() {
+        log.info("CoinJoinManager stopping...");
         if (schedule != null) {
             schedule.cancel(false);
             schedule = null;
@@ -153,17 +161,36 @@ public class CoinJoinManager {
             clientManager.stopMixing();
             clientManager.close(context.blockChain);
         }
+        stopAsync();
+    }
+
+    public boolean isRunning() {
+        return schedule != null && !schedule.isCancelled();
     }
 
     public void initMasternodeGroup(AbstractBlockChain blockChain) {
         this.blockChain = blockChain;
         masternodeGroup = new MasternodeGroup(context, blockChain);
+        masternodeGroup.setCoinJoinManager(this);
+        blockChain.addTransactionReceivedListener(transactionReceivedInBlockListener);
     }
 
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
             CoinJoin.updatedBlockTip(block);
+        }
+    };
+
+    TransactionReceivedInBlockListener transactionReceivedInBlockListener = new TransactionReceivedInBlockListener() {
+        @Override
+        public void receiveFromBlock(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
+            processTransaction(tx);
+        }
+
+        @Override
+        public boolean notifyTransactionIsInBlock(Sha256Hash txHash, StoredBlock block, BlockChain.NewBlockType blockType, int relativityOffset) throws VerificationException {
+            return false;
         }
     };
 
@@ -175,6 +202,7 @@ public class CoinJoinManager {
     public void close() {
         if (blockChain != null) {
             blockChain.removeNewBestBlockListener(newBestBlockListener);
+            blockChain.removeTransactionReceivedListener(transactionReceivedInBlockListener);
         }
     }
 
@@ -186,8 +214,8 @@ public class CoinJoinManager {
         return masternodeGroup.addPendingMasternode(session);
     }
 
-    public boolean forPeer(MasternodeAddress address, MasternodeGroup.ForPeer forPeer) {
-        return masternodeGroup.forPeer(address, forPeer);
+    public boolean forPeer(MasternodeAddress address, MasternodeGroup.ForPeer forPeer, boolean warn) {
+        return masternodeGroup.forPeer(address, forPeer, warn);
     }
     
     public void startAsync() {
@@ -199,9 +227,11 @@ public class CoinJoinManager {
     }
 
     public void stopAsync() {
-        if (masternodeGroup.isRunning()) {
-            context.peerGroup.shouldSendDsq(false);
+        if (masternodeGroup != null && masternodeGroup.isRunning()) {
+            if (context.peerGroup != null)
+                context.peerGroup.shouldSendDsq(false);
             masternodeGroup.stopAsync();
+            masternodeGroup = null;
         }
     }
 
@@ -212,6 +242,7 @@ public class CoinJoinManager {
     @VisibleForTesting
     public void setMasternodeGroup(MasternodeGroup masternodeGroup) {
         this.masternodeGroup = masternodeGroup;
+        masternodeGroup.setCoinJoinManager(this);
     }
 
     public SettableFuture<Boolean> getMixingFinishedFuture(Wallet wallet) {
@@ -330,6 +361,34 @@ public class CoinJoinManager {
         }
     }
 
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. Runs the listener methods in the user thread.
+     */
+    public void addTransationListener (CoinJoinTransactionListener listener) {
+        addTransationListener (Threading.USER_THREAD, listener);
+    }
+
+    /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addTransationListener (Executor executor, CoinJoinTransactionListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.addTransationListener (executor, listener);
+        }
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
+    public void removeTransactionListener(CoinJoinTransactionListener listener) {
+        for (CoinJoinClientManager manager : coinJoinClientManagers.values()) {
+            manager.removeTransationListener(listener);
+        }
+    }
+
     public void setRequestKeyParameter(RequestKeyParameter requestKeyParameter) {
         this.requestKeyParameter = requestKeyParameter;
     }
@@ -344,5 +403,17 @@ public class CoinJoinManager {
 
     public @Nullable ECKey requestDecryptKey(ECKey key) {
         return requestDecryptedKey != null ? requestDecryptedKey.requestDecryptedKey(key) : null;
+    }
+
+    public boolean isWaitingForNewBlock() {
+        return coinJoinClientManagers.values().stream().anyMatch(CoinJoinClientManager::isWaitingForNewBlock);
+    }
+
+    public boolean isMixing() {
+        return coinJoinClientManagers.values().stream().anyMatch(CoinJoinClientManager::isMixing);
+    }
+
+    public void processTransaction(Transaction tx) {
+        coinJoinClientManagers.values().forEach(coinJoinClientManager -> coinJoinClientManager.processTransaction(tx));
     }
 }

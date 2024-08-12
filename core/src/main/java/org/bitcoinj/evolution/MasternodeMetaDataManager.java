@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.List;
 
 public class MasternodeMetaDataManager extends AbstractManager {
 
@@ -36,8 +37,8 @@ public class MasternodeMetaDataManager extends AbstractManager {
 
     }
 
-    public ArrayList<Sha256Hash> getAndClearDirtyGovernanceObjectHashes() {
-        return new ArrayList<Sha256Hash>();
+    public List<Sha256Hash> getAndClearDirtyGovernanceObjectHashes() {
+        return new ArrayList<>();
     }
 
     @Override

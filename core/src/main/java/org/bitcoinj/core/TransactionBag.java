@@ -57,4 +57,7 @@ public interface TransactionBag {
 
     /** Returns transactions from a specific pool. */
     Map<Sha256Hash, Transaction> getTransactionPool(WalletTransaction.Pool pool);
+
+    /** Returns true if this output is fully mixed **/
+    boolean isFullyMixed(TransactionOutput output);
 }

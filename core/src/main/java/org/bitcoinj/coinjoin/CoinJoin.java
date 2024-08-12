@@ -32,6 +32,7 @@ import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -42,12 +43,16 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 
 public class CoinJoin {
     private static final Logger log = LoggerFactory.getLogger(CoinJoin.class);
-    private static final List<Coin> standardDenominations = Lists.newArrayList(
-            Coin.COIN.multiply(10).add(Coin.valueOf(10000)),
-            Coin.COIN.add(Coin.valueOf(1000)),
-            Coin.COIN.div(10).add(Coin.valueOf(100)),
-            Coin.COIN.div(100).add(Coin.valueOf(10)),
-            Coin.COIN.div(1000).add(Coin.valueOf(1))
+    // this list of standard denominations cannot be modified by DashJ and must remain the same as
+    // CoinJoin::vecStandardDenominations in coinjoin.cpp
+    private static final List<Coin> standardDenominations = Collections.unmodifiableList(
+            Lists.newArrayList(
+                Coin.COIN.multiply(10).add(Coin.valueOf(10000)),
+                Coin.COIN.add(Coin.valueOf(1000)),
+                Coin.COIN.div(10).add(Coin.valueOf(100)),
+                Coin.COIN.div(100).add(Coin.valueOf(10)),
+                Coin.COIN.div(1000).add(Coin.valueOf(1))
+            )
     );
 
     private static final HashMap<Sha256Hash, CoinJoinBroadcastTx> mapDSTX = new HashMap<>();
@@ -143,11 +148,16 @@ public class CoinJoin {
         return isCollateralValid(txCollateral, true);
     }
 
+    // TODO: consider IS Locks with InstantSendManager.isLocked(input)?
     public static boolean isCollateralValid(Transaction txCollateral, boolean checkInputs) {
-        if (txCollateral.getOutputs().isEmpty())
+        if (txCollateral.getOutputs().isEmpty()) {
+            log.info("coinjoin: Collateral invalid due to no outputs: {}", txCollateral.getTxId());
             return false;
-        if (txCollateral.getLockTime() != 0)
+        }
+        if (txCollateral.getLockTime() != 0) {
+            log.info("coinjoin: Collateral invalid due to lock time != 0: {}", txCollateral.getTxId());
             return false;
+        }
 
         Coin nValueIn = Coin.ZERO;
         Coin nValueOut = Coin.ZERO;
@@ -166,24 +176,25 @@ public class CoinJoin {
             for (TransactionInput txin : txCollateral.getInputs()) {
                 Transaction tx = txin.getConnectedTransaction();
                 if (tx != null) {
+                    if (tx.getOutput(txin.getOutpoint().getIndex()).getSpentBy() != null) {
+                        log.info("coinjoin: spent or non-locked mempool input! txin={}", txin);
+                        return false;
+                    }
                     nValueIn = nValueIn.add(tx.getOutput(txin.getOutpoint().getIndex()).getValue());
                 } else {
-                    log.info("coinjoin: -- Unknown inputs in collateral transaction, txCollateral={}", txCollateral); /* Continued */
+                    log.info("coinjoin: Unknown inputs in collateral transaction, txCollateral={}", txCollateral); /* Continued */
                     return false;
                 }
             }
 
             //collateral transactions are required to pay out a small fee to the miners
             if (nValueIn.minus(nValueOut).isLessThan(getCollateralAmount())) {
-                log.info("coinjoin:  did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut.minus(nValueIn), txCollateral); /* Continued */
+                log.info("coinjoin: did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut.minus(nValueIn), txCollateral); /* Continued */
                 return false;
             }
         }
 
-        log.info("coinjoin: collateral: {}", txCollateral); /* Continued */
-
-        // the collateral tx must not have been seen on the network
-        return txCollateral.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.UNKNOWN;
+        return true;
     }
     public static Coin getCollateralAmount() { return getSmallestDenomination().div(10); }
     public static Coin getMaxCollateralAmount() { return getCollateralAmount().multiply(4); }
@@ -333,6 +344,8 @@ public class CoinJoin {
                 return "Inputs vs outputs size mismatch.";
             case ERR_TIMEOUT:
                 return "Session has timed out.";
+            case ERR_CONNECTION_TIMEOUT:
+                return "Connection attempt has timed out (" + PendingDsaRequest.TIMEOUT + " ms).";
             default:
                 return "Unknown response.";
         }
@@ -361,5 +374,20 @@ public class CoinJoin {
     @GuardedBy("mapdstxLock")
     public static boolean hasDSTX(Sha256Hash hash) {
         return mapDSTX.containsKey(hash);
+    }
+
+    public static String getRoundsString(int rounds) {
+        switch (rounds) {
+            case -4:
+                return "bad index";
+            case -3:
+                return "collateral";
+            case -2:
+                return "non-denominated";
+            case -1:
+                return "no such tx";
+            default:
+                return "coinjoin";
+        }
     }
 }

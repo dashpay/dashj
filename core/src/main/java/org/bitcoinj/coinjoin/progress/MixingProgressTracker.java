@@ -19,11 +19,19 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 
 import org.bitcoinj.coinjoin.PoolMessage;
+import org.bitcoinj.coinjoin.PoolState;
 import org.bitcoinj.coinjoin.PoolStatus;
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
+import org.bitcoinj.core.MasternodeAddress;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
@@ -34,9 +42,13 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class MixingProgressTracker implements SessionStartedListener, SessionCompleteListener, MixingCompleteListener,
-        NewBestBlockListener {
+        NewBestBlockListener, CoinJoinTransactionListener {
     protected int completedSessions = 0;
     protected int timedOutSessions = 0;
+    protected int timedOutConnections = 0;
+    protected int timedOutQueues = 0;
+    protected int timedOutWhileSigning = 0;
+    protected int timedOutWhileAccepting = 0;
     private double lastPercent = 0;
 
     private final SettableFuture<PoolMessage> future = SettableFuture.create();
@@ -46,11 +58,25 @@ public class MixingProgressTracker implements SessionStartedListener, SessionCom
     }
 
     @Override
-    public void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message) {
+    public void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolState state,
+                                  PoolMessage message, MasternodeAddress address, boolean joined) {
         if (message == PoolMessage.MSG_SUCCESS) {
             completedSessions++;
             lastPercent = calculatePercentage(wallet);
+        } else if (message == PoolMessage.ERR_CONNECTION_TIMEOUT) {
+            timedOutConnections++;
         } else {
+            switch (state) {
+                case POOL_STATE_QUEUE:
+                    ++timedOutQueues;
+                    break;
+                case POOL_STATE_SIGNING:
+                    ++timedOutWhileSigning;
+                    break;
+                case POOL_STATE_ACCEPTING_ENTRIES:
+                    ++timedOutWhileAccepting;
+                    break;
+            }
             timedOutSessions++;
         }
     }
@@ -96,6 +122,11 @@ public class MixingProgressTracker implements SessionStartedListener, SessionCom
 
     @Override
     public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+
+    }
+
+    @Override
+    public void onTransactionProcessed(Transaction tx, CoinJoinTransactionType type, int sessionId) {
 
     }
 }

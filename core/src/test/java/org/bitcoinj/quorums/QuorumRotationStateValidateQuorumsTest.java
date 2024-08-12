@@ -40,10 +40,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by hashengineering on 11/26/18.
@@ -131,6 +133,14 @@ public class QuorumRotationStateValidateQuorumsTest {
                         70227,
                         848728,
                         SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
+                },
+                {
+                        TESTNETPARAMS,
+                        "qrinfo-testnet-0-947248-70230-after20HF.dat",
+                        "testnet-with-tip-947248.spvchain",
+                        70230,
+                        947224,
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
                 }
         });
     }
@@ -140,9 +150,8 @@ public class QuorumRotationStateValidateQuorumsTest {
             context = new Context(params);
 
         blockChain = new BlockChain(context, new SPVBlockStore(params, new File(Objects.requireNonNull(SimplifiedMasternodesTest.class.getResource(blockchainFile)).getPath())));
-
-        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         context.initDash(true, true);
+        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
         context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
     }
@@ -170,6 +179,15 @@ public class QuorumRotationStateValidateQuorumsTest {
             manager.processDiffMessage(null, qrinfo, false, qrinfoComplete);
             qrinfoComplete.get(120, TimeUnit.SECONDS);
 
+            // check verification and other items
+            AtomicBoolean verified = new AtomicBoolean(true);
+            manager.getQuorumListAtTip(params.getLlmqDIP0024InstantSend()).forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {
+                @Override
+                public void processQuorum(FinalCommitment finalCommitment) {
+                    verified.set(verified.get() && finalCommitment.isVerified());
+                }
+            });
+            assertTrue(verified.get());
             assertEquals(height, manager.getQuorumListAtTip(context.getParams().getLlmqDIP0024InstantSend()).getHeight());
 
             stream.close();

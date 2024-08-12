@@ -20,7 +20,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
     int type;
     int platformHTTPPort;
     KeyId platformNodeId;
-    static int MESSAGE_SIZE = 151;
+    static final int MESSAGE_SIZE = 151;
     //In Memory
     Sha256Hash confirmedHashWithProRegTxHash;
 
@@ -137,7 +137,6 @@ public class SimplifiedMasternodeListEntry extends Masternode {
                 Utils.uint16ToByteStreamLE(type, stream);
                 if (type == MasternodeType.HIGHPERFORMANCE.index) {
                     Utils.uint16ToByteStreamLE(platformHTTPPort, stream);
-                    // TODO: not in beta 5
                     platformNodeId.bitcoinSerialize(stream);
                 }
             }
@@ -168,6 +167,10 @@ public class SimplifiedMasternodeListEntry extends Masternode {
             proRegTxHash.toString(), service.toString(), pubKeyOperator, keyIdVoting, isValid, platformHTTPPort, platformNodeId);
     }
 
+    public short getVersion() {
+        return version;
+    }
+
     public Sha256Hash getConfirmedHash() {
         return confirmedHash;
     }
@@ -190,8 +193,16 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         return isValid;
     }
 
+    public Sha256Hash getConfirmedHashWithProRegTxHash() {
+        return confirmedHashWithProRegTxHash;
+    }
+
     public int getType() {
         return type;
+    }
+
+    public boolean isHPMN() {
+        return type == MasternodeType.HIGHPERFORMANCE.index;
     }
 
     public int getPlatformHTTPPort() {
@@ -200,10 +211,6 @@ public class SimplifiedMasternodeListEntry extends Masternode {
 
     public KeyId getPlatformNodeId() {
         return platformNodeId;
-    }
-
-    public Sha256Hash getConfirmedHashWithProRegTxHash() {
-        return confirmedHashWithProRegTxHash;
     }
 
     void updateConfirmedHashWithProRegTxHash() {

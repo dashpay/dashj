@@ -33,7 +33,7 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.evolution.AssetLockTransaction;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.utils.ExchangeRate;
@@ -170,6 +170,8 @@ public class SendRequest {
     // Tracks if this has been passed to wallet.completeTx already: just a safety check.
     boolean completed;
 
+    public CoinControl coinControl = null;
+
     protected SendRequest() {}
 
     /**
@@ -237,9 +239,19 @@ public class SendRequest {
     /**
      * <p>Creates a new credit funding transaction for a public key with a funding amount.</p>
      */
+    @Deprecated
     public static SendRequest creditFundingTransaction(NetworkParameters params, ECKey publicKey, Coin credits) {
         SendRequest req = new SendRequest();
-        req.tx = new CreditFundingTransaction(params, publicKey, credits);
+        req.tx = new AssetLockTransaction(params, publicKey, credits);
+        return req;
+    }
+
+    /**
+     * <p>Creates a new asset lock transaction for a public key with a funding amount.</p>
+     */
+    public static SendRequest assetLock(NetworkParameters params, ECKey publicKey, Coin credits) {
+        SendRequest req = new SendRequest();
+        req.tx = new AssetLockTransaction(params, publicKey, credits);
         return req;
     }
 
@@ -313,4 +325,8 @@ public class SendRequest {
 
     //Dash Specific
     public boolean useInstantSend;
+
+    public boolean hasCoinControl() {
+        return coinControl != null;
+    }
 }

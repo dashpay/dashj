@@ -18,9 +18,7 @@
 package org.bitcoinj.wallet;
 
 import com.google.common.annotations.*;
-import com.google.common.base.*;
 import com.google.common.collect.*;
-import com.google.common.primitives.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
@@ -56,6 +54,8 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerFilterProvider;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.evolution.AssetLockPayload;
+import org.bitcoinj.evolution.SpecialTxPayload;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.TransactionConfidence.*;
 import org.bitcoinj.crypto.*;
@@ -1215,6 +1215,8 @@ public class Wallet extends BaseTaggableObject
             return isPubKeyHashMine(address.getHash(), scriptType);
         else if (scriptType == ScriptType.P2SH)
             return isPayToScriptHashMine(address.getHash());
+        else if (scriptType == ScriptType.P2WSH)
+            return false;
         else
             throw new IllegalArgumentException(address.toString());
     }
@@ -1352,9 +1354,9 @@ public class Wallet extends BaseTaggableObject
                         byte[] pubkey = ScriptPattern.extractKeyFromP2PK(script);
                         keyChainGroup.markPubKeyAsUsed(pubkey);
                         if (receivingFromFriendsGroup != null)
-                        receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
+                            receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
                         if (sendingToFriendsGroup != null)
-                        sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
+                            sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
                         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                             extension.markPubKeyAsUsed(pubkey);
                         }
@@ -1363,9 +1365,9 @@ public class Wallet extends BaseTaggableObject
                         byte[] pubkeyHash = ScriptPattern.extractHashFromP2PKH(script);
                         keyChainGroup.markPubKeyHashAsUsed(pubkeyHash);
                         if (receivingFromFriendsGroup != null)
-                        receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                            receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
                         if (sendingToFriendsGroup != null)
-                        sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                            sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
                         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                             extension.markPubKeyHashAsUsed(pubkeyHash);
                         }
@@ -1374,21 +1376,28 @@ public class Wallet extends BaseTaggableObject
                                 ScriptPattern.extractHashFromP2SH(script));
                         keyChainGroup.markP2SHAddressAsUsed(a);
                         if (receivingFromFriendsGroup != null)
-                        receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
+                            receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
                         if (sendingToFriendsGroup != null)
-                        sendingToFriendsGroup.markP2SHAddressAsUsed(a);
+                            sendingToFriendsGroup.markP2SHAddressAsUsed(a);
                         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                             extension.markP2SHAddressAsUsed(a);
-                        }
-                    } else if (ScriptPattern.isCreditBurn(script)) {
-                        byte [] h = ScriptPattern.extractCreditBurnKeyId(script);
-                        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
-                            extension.markPubKeyHashAsUsed(h);
                         }
                     }
                 } catch (ScriptException e) {
                     // Just means we didn't understand the output of this transaction: ignore it.
                     log.warn("Could not parse tx output script: {}", e.toString());
+                }
+            }
+
+            // handle special transactions
+            SpecialTxPayload payload = tx.getExtraPayloadObject();
+            if (payload instanceof AssetLockPayload) {
+                AssetLockPayload assetLockPayload = (AssetLockPayload) payload;
+                for (TransactionOutput output : assetLockPayload.getCreditOutputs()) {
+                    byte [] h = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                    for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                        extension.markPubKeyHashAsUsed(h);
+                    }
                 }
             }
         } finally {
@@ -4444,6 +4453,9 @@ public class Wallet extends BaseTaggableObject
             // can customize coin selection policies. The call below will ignore immature coinbases and outputs
             // we don't have the keys for.
             List<TransactionOutput> candidates = calculateAllSpendCandidates(true, req.missingSigsMode == MissingSigsMode.THROW);
+            if (req.hasCoinControl()) {
+                candidates.removeIf(output -> !req.coinControl.isSelected(output.getOutPointFor()));
+            }
 
             CoinSelection bestCoinSelection;
             TransactionOutput bestChangeOutput = null;
@@ -4476,8 +4488,7 @@ public class Wallet extends BaseTaggableObject
             }
 
             if (req.emptyWallet) {
-                final Coin feePerKb = req.feePerKb == null ? Coin.ZERO : req.feePerKb;
-                if (!adjustOutputDownwardsForFee(req.tx, bestCoinSelection, feePerKb, req.ensureMinRequiredFee, req.useInstantSend))
+                if (!adjustOutputDownwardsForFee(req.tx, bestCoinSelection, req.feePerKb, req.ensureMinRequiredFee, req.useInstantSend))
                     throw new CouldNotAdjustDownwards();
             }
 
@@ -4863,7 +4874,7 @@ public class Wallet extends BaseTaggableObject
 
         @Override public int compareTo(TxOffsetPair o) {
             // note that in this implementation compareTo() is not consistent with equals()
-            return Ints.compare(offset, o.offset);
+            return Integer.compare(offset, o.offset);
         }
     }
 
@@ -5153,6 +5164,10 @@ public class Wallet extends BaseTaggableObject
         try {
             if (!watchedScripts.isEmpty())
                 return true;
+            if (keyChainGroup.chains != null)
+                for (DeterministicKeyChain chain : keyChainGroup.chains)
+                    if (chain.getOutputScriptType() == Script.ScriptType.P2WPKH)
+                        return true;
             return false;
         } finally {
             keyChainGroupLock.unlock();
@@ -5249,6 +5264,8 @@ public class Wallet extends BaseTaggableObject
     public boolean checkForFilterExhaustion(FilteredBlock block) {
         keyChainGroupLock.lock();
         try {
+            if (!keyChainGroup.isSupportsDeterministicChains())
+                return false;
             int epoch = keyChainGroup.getCombinedKeyLookaheadEpochs();
             for (Transaction tx : block.getAssociatedTransactions().values()) {
                 markKeysAsUsed(tx);
@@ -5389,7 +5406,7 @@ public class Wallet extends BaseTaggableObject
                 keyChainExtensions.remove(extension.getWalletExtensionID());
             else
             extensions.remove(extension.getWalletExtensionID());
-            Throwables.propagate(throwable);
+            throw throwable;
         } finally {
             keyChainGroupLock.unlock();
             lock.unlock();
@@ -5426,6 +5443,8 @@ public class Wallet extends BaseTaggableObject
             result = new FeeCalculation();
             Transaction tx = new Transaction(params);
             addSuppliedInputs(tx, req.tx.getInputs());
+            tx.setVersion(req.tx.getVersion());
+            tx.setExtraPayload(req.tx.getExtraPayload());
 
             Coin valueNeeded = value;
             if (!req.recipientsPayFees) {
@@ -6241,5 +6260,10 @@ public class Wallet extends BaseTaggableObject
         for (ECKey key : keys)
             addresses.add(Address.fromKey(getParams(), key));
         return addresses;
+    }
+
+    @Override
+    public boolean isFullyMixed(TransactionOutput output) {
+        return false;
     }
 }

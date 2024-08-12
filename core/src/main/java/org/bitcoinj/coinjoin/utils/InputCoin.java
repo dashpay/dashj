@@ -22,15 +22,13 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 
-import javax.annotation.Nullable;
-
-public class InputCoin implements Comparable {
+public class InputCoin implements Comparable<InputCoin> {
     private final TransactionOutPoint outPoint;
     private final TransactionOutput output;
     private final Coin effectiveValue;
     private int inputBytes;
 
-    public InputCoin(@Nullable Transaction tx, int i) {
+    public InputCoin(Transaction tx, int i) {
         Preconditions.checkNotNull(tx, "transaction should not be null");
         Preconditions.checkArgument(i < tx.getOutputs().size(), "The output index is out of range");
         outPoint = new TransactionOutPoint(tx.getParams(), i, tx.getTxId());
@@ -38,15 +36,14 @@ public class InputCoin implements Comparable {
         effectiveValue = output.getValue();
     }
 
-    public InputCoin(@Nullable Transaction tx, int i, int inputBytes) {
+    public InputCoin(Transaction tx, int i, int inputBytes) {
         this(tx, i);
         this.inputBytes = inputBytes;
     }
 
 
     @Override
-    public int compareTo(Object o) {
-        InputCoin inputCoin = (InputCoin) o;
+    public int compareTo(InputCoin inputCoin) {
         return outPoint.getHash().compareTo(inputCoin.outPoint.getHash());
     }
 

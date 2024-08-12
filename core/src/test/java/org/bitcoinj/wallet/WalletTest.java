@@ -59,7 +59,6 @@ import org.easymock.EasyMock;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.protobuf.ByteString;
 
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
@@ -92,6 +91,7 @@ import static org.junit.Assert.*;
 public class WalletTest extends TestWithWallet {
     private static final Logger log = LoggerFactory.getLogger(WalletTest.class);
 
+    private static final int SCRYPT_ITERATIONS = 256;
     private static final CharSequence PASSWORD1 = "my helicopter contains eels";
     private static final CharSequence WRONG_PASSWORD = "nothing noone nobody nowhere";
 
@@ -2133,10 +2133,7 @@ public class WalletTest extends TestWithWallet {
 
         // Try added an ECKey that was encrypted with a differenct ScryptParameters (i.e. a non-homogenous key).
         // This is not allowed as the ScryptParameters is stored at the Wallet level.
-        Protos.ScryptParameters.Builder scryptParametersBuilder = Protos.ScryptParameters.newBuilder()
-                .setSalt(ByteString.copyFrom(KeyCrypterScrypt.randomSalt()));
-        Protos.ScryptParameters scryptParameters = scryptParametersBuilder.build();
-        KeyCrypter keyCrypterDifferent = new KeyCrypterScrypt(scryptParameters);
+        KeyCrypter keyCrypterDifferent = new KeyCrypterScrypt();
         ECKey ecKeyDifferent = new ECKey();
         ecKeyDifferent = ecKeyDifferent.encrypt(keyCrypterDifferent, aesKey);
         encryptedWallet.importKey(ecKeyDifferent);
@@ -3337,7 +3334,7 @@ public class WalletTest extends TestWithWallet {
         assertTrue(wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2PKH));
         assertTrue(wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2WPKH));
 
-        KeyParameter aesKey = new KeyCrypterScrypt().deriveKey("abc");
+        KeyParameter aesKey = new KeyCrypterScrypt(SCRYPT_ITERATIONS).deriveKey("abc");
         wallet.encrypt(new KeyCrypterScrypt(), aesKey);
         assertTrue(wallet.isEncrypted());
         try {
@@ -3357,6 +3354,21 @@ public class WalletTest extends TestWithWallet {
         assertTrue(wallet.isEncrypted());
         assertFalse(wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2PKH));
         assertTrue(wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2WPKH));
+        assertEquals(Script.ScriptType.P2PKH, wallet.currentReceiveAddress().getOutputScriptType());
+        assertEquals(Script.ScriptType.P2PKH, wallet.freshReceiveAddress().getOutputScriptType());
+    }
+
+    @Test
+    public void upgradeToDeterministic_noDowngrade_unencrypted() throws Exception {
+        wallet = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2PKH);
+        assertFalse(wallet.isEncrypted());
+        assertFalse(wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2PKH));
+        assertEquals(Script.ScriptType.P2PKH, wallet.currentReceiveAddress().getOutputScriptType());
+        assertEquals(Script.ScriptType.P2PKH, wallet.freshReceiveAddress().getOutputScriptType());
+
+        wallet.upgradeToDeterministic(Script.ScriptType.P2PKH, null);
+        assertFalse(wallet.isEncrypted());
+        assertFalse(wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2PKH));
         assertEquals(Script.ScriptType.P2PKH, wallet.currentReceiveAddress().getOutputScriptType());
         assertEquals(Script.ScriptType.P2PKH, wallet.freshReceiveAddress().getOutputScriptType());
     }
@@ -3604,5 +3616,12 @@ public class WalletTest extends TestWithWallet {
         assertEquals(wallet.currentReceiveKey(), clone.currentReceiveKey());
         assertEquals(wallet.freshReceiveAddress(Script.ScriptType.P2PKH),
                 clone.freshReceiveAddress(Script.ScriptType.P2PKH));
+    }
+
+    @Test
+    public void fullyMixedTest() throws Exception {
+        receiveATransaction(wallet, wallet.freshAddress(KeyPurpose.RECEIVE_FUNDS));
+        Transaction tx = wallet.getWalletTransactions().iterator().next().getTransaction();
+        assertFalse(wallet.isFullyMixed(tx.getOutput(0)));
     }
 }

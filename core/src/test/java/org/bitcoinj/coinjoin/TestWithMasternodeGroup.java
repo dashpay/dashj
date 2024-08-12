@@ -134,7 +134,7 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
             }
 
             @Override
-            public boolean forPeer(MasternodeAddress service, ForPeer predicate) {
+            public boolean forPeer(MasternodeAddress service, ForPeer predicate, boolean warn) {
                 // this test will only connect to one "masternode"
                 if (lastMasternode != null) {
                     return predicate.process(lastMasternode.peer);
