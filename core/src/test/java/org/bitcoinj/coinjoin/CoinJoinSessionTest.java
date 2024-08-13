@@ -150,7 +150,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 coinbase,
                 Collections.singletonList(entry),
                 Collections.emptyList(),
-                SimplifiedMasternodeListDiff.LEGACY_BLS_VERSION
+                SimplifiedMasternodeListDiff.CURRENT_VERSION
         );
         wallet.getContext().masternodeListManager.processMasternodeListDiff(null, diff, true);
 
