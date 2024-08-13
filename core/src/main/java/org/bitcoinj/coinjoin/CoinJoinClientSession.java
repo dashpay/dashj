@@ -1500,11 +1500,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         // more inputs first, for equal input count prefer the one with fewer rounds
-        Collections.sort(vecInputsByRounds, new Comparator<Pair<Integer, Integer>>() {
-            @Override
-            public int compare(Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
-                return (a.getSecond() > b.getSecond()) ? a.getSecond() - b.getSecond() : a.getFirst() - b.getFirst();
-            }
+        vecInputsByRounds.sort((a, b) -> {
+            int inputCompare = Integer.compare(b.getSecond(), a.getSecond());
+            return inputCompare != 0 ? inputCompare : Integer.compare(a.getFirst(), b.getFirst());
         });
 
         log.info("coinjoin: vecInputsByRounds(size={}) for denom {}", vecInputsByRounds.size(), sessionDenom);
