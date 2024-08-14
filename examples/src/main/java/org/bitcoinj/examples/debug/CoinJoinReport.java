@@ -18,6 +18,8 @@ package org.bitcoinj.examples.debug;
 import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinBroadcastTx;
+import org.bitcoinj.coinjoin.CoinJoinClientOptions;
+import org.bitcoinj.coinjoin.CoinJoinConstants;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
@@ -42,6 +44,29 @@ public class CoinJoinReport extends Report {
     HashMap<Sha256Hash, BlockInfo> blockMap = new HashMap<>();
     HashMap<Sha256Hash, List<CoinJoinBroadcastTx>> blockTxMap = new HashMap<>();
 
+    static class BlockStats {
+        Sha256Hash blockHash;
+        int blockHeight;
+        long blockTime;
+        int mix10;
+        int mix1;
+        int mixTenth;
+        int mixHundredth;
+        int mixThousandth;
+
+        public BlockStats(Sha256Hash blockHash, int blockHeight, long blockTime, int mix10, int mix1, int mixTenth, int mixHundredth, int mixThousandth) {
+            this.blockHash = blockHash;
+            this.blockHeight = blockHeight;
+            this.blockTime = blockTime;
+            this.mix10 = mix10;
+            this.mix1 = mix1;
+            this.mixTenth = mixTenth;
+            this.mixHundredth = mixHundredth;
+            this.mixThousandth = mixThousandth;
+        }
+    }
+    ArrayList<BlockStats> stats = Lists.newArrayList();
+
     public CoinJoinReport(String dashClientPath, String confPath, NetworkParameters params) {
         super("coinjoin-report-", dashClientPath, confPath, params);
     }
@@ -64,8 +89,9 @@ public class CoinJoinReport extends Report {
     public void printReport() {
         try {
             FileWriter writer = new FileWriter(outputFile);
-            writer.append("Block Id, Block Number, 10, 1, 0.1, 0.01, 0.001\n");
+            writer.append("Block Id, Block Number, Block Time, 10, 1, 0.1, 0.01, 0.001, 15x0.01, 12x0.01+30x0.001\n");
 
+            stats = Lists.newArrayList();
             for (BlockInfo blockInfo : blockList) {
                 Block block = blockInfo.storedBlock.getHeader();
 
@@ -86,15 +112,37 @@ public class CoinJoinReport extends Report {
                     }
                 }
 
-                String line = String.format("%s, %d, %d, %d, %d, %d, %d\n",
-                        block.getHash(),
+                stats.add(new BlockStats(block.getHash(),
                         blockInfo.storedBlock.getHeight(),
+                        blockInfo.storedBlock.getHeader().getTime().getTime(),
                         countDenom[0],
                         countDenom[1],
                         countDenom[2],
                         countDenom[3],
-                        countDenom[4]
+                        countDenom[4]));
+
+                long mix15xTenths = calculateMix15xHundredths(stats);
+                if (mix15xTenths != -1L) {
+                    mix15xTenths /= 60000;
+                }
+                long mix12xHundredthsAnd30Thousandths = calculateMixWithHundredthsAndThousandths(stats, 12, 30);
+                if (mix12xHundredthsAnd30Thousandths != -1L) {
+                    mix12xHundredthsAnd30Thousandths /= 60000;
+                }
+
+                String line = String.format("%s, %d, %s, %d, %d, %d, %d, %d, %f, %f\n",
+                        block.getHash(),
+                        blockInfo.storedBlock.getHeight(),
+                        blockInfo.storedBlock.getHeader().getTime(),
+                        countDenom[0],
+                        countDenom[1],
+                        countDenom[2],
+                        countDenom[3],
+                        countDenom[4],
+                        mix15xTenths != -1 ? (double) mix15xTenths / 60 : -1,
+                        mix12xHundredthsAnd30Thousandths != -1 ? (double) mix12xHundredthsAnd30Thousandths / 60: -1
                 );
+
                 writer.append(line);
             }
             writer.close();
@@ -106,6 +154,68 @@ public class CoinJoinReport extends Report {
                 IOException e) {
             log.error("io error", e);
             throw new RuntimeException(e);
+        }
+    }
+
+    private long calculateMix15xHundredths(ArrayList<BlockStats> stats) {
+        try {
+            int count = stats.size();
+            int lastIndex = -1;
+            int mixingTx = 0;
+            for (int i = count - 1; i >= 0; i--) {
+                if (stats.get(i).mixHundredth != 0) {
+                    if (lastIndex == -1)
+                        lastIndex = i;
+                    // limit estimate to max sessions per block
+                    mixingTx += Math.min(stats.get(i).mixHundredth, CoinJoinClientOptions.getSessions());
+                    if (mixingTx >= 15) {
+                        return stats.get(lastIndex).blockTime - stats.get(i - 1).blockTime;
+                    }
+                }
+            }
+            return -1;
+        } catch (IndexOutOfBoundsException e) {
+            return -1;
+        }
+    }
+    private long calculateMixWithHundredthsAndThousandths(ArrayList<BlockStats> stats, int hundredths, int thousandths) {
+        try {
+            int count = stats.size();
+            int lastIndex = -1;
+            int mixingTx = 0;
+            long mixingHundredths = -1;
+            for (int i = count - 1; i >= 0; i--) {
+                if (stats.get(i).mixHundredth != 0) {
+                    if (lastIndex == -1)
+                        lastIndex = i;
+                    // limit estimate to max sessions per block
+                    mixingTx += Math.min(stats.get(i).mixHundredth, CoinJoinClientOptions.getSessions());
+                    if (mixingTx >= hundredths) {
+                        mixingHundredths = stats.get(lastIndex).blockTime - stats.get(i - 1).blockTime;
+                        break;
+                    }
+                }
+            }
+            lastIndex = -1;
+            mixingTx = 0;
+            long mixingThousandths = -1;
+            for (int i = count - 1; i >= 0; i--) {
+                if (stats.get(i).mixThousandth != 0) {
+                    if (lastIndex == -1)
+                        lastIndex = i;
+                    // limit estimate to max sessions per block
+                    mixingTx += Math.min(stats.get(i).mixThousandth, CoinJoinClientOptions.getSessions());
+                    if (mixingTx >= thousandths) {
+                        mixingThousandths = stats.get(lastIndex).blockTime - stats.get(i - 1).blockTime;
+                        break;
+                    }
+                }
+            }
+            return mixingHundredths != -1 && mixingThousandths != -1  ?
+                    Math.max(mixingHundredths, mixingThousandths) :
+                    -1;
+        } catch (IndexOutOfBoundsException e) {
+            return -1;
         }
     }
 }
