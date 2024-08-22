@@ -257,7 +257,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                         // Add output and subtract denomination amount
                         if (txBuilder.addOutput(denomValue) != null) {
                             ++nOutputs;
-                            ++currentDenomIt;
+                            mapDenomCount.put(denomValue, ++currentDenomIt);
                             balanceToDenominate = balanceToDenominate.subtract(denomValue);
                             log.info("coinjoin: 1 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
                                     denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
@@ -276,7 +276,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 for (Map.Entry<Coin, Integer> entry : mapDenomCount.entrySet()) {
                     // Check if this specific denom could use another loop, check that there aren't nCoinJoinDenomsGoal of this
                     // denom and that our nValueLeft/balanceToDenominate is enough to create one of these denoms, if so, loop again.
-                    if (entry.getValue() < CoinJoinClientOptions.getDenomsGoal() && txBuilder.couldAddOutput(entry.getKey()) && balanceToDenominate.isGreaterThan(Coin.ZERO)) {
+                    Coin denom = entry.getKey();
+                    Integer count = entry.getValue();
+                    if (count < CoinJoinClientOptions.getDenomsGoal() && txBuilder.couldAddOutput(denom) &&
+                            balanceToDenominate.isGreaterThan(CoinJoin.getSmallestDenomination())) {
                         finished = false;
                         log.info("coinjoin: 1 - NOT finished - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
                                 entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
