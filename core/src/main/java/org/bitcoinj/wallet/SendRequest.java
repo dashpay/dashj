@@ -256,6 +256,17 @@ public class SendRequest {
     }
 
     /**
+     * <p>Creates a new asset lock transaction for a public key with a funding amount.</p>
+     */
+    public static SendRequest assetLock(NetworkParameters params, ECKey publicKey, Coin credits, boolean emptyWallet) {
+        SendRequest req = new SendRequest();
+        req.emptyWallet = emptyWallet;
+        req.tx = new AssetLockTransaction(params, publicKey, credits);
+        return req;
+    }
+
+
+    /**
      * Construct a SendRequest for a CPFP (child-pays-for-parent) transaction. The resulting transaction is already
      * completed, so you should directly proceed to signing and broadcasting/committing the transaction. CPFP is
      * currently only supported by a few miners, so use with care.
