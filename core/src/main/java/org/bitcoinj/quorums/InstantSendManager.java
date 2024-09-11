@@ -13,6 +13,7 @@ import org.bitcoinj.quorums.listeners.ChainLockListener;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
+import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -26,6 +27,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class InstantSendManager implements RecoveredSignatureListener {
@@ -36,8 +40,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
     private static final Logger log = LoggerFactory.getLogger(InstantSendManager.class);
     ReentrantLock lock = Threading.lock("InstantSendManager");
     InstantSendDatabase db;
+    @Deprecated
     Thread workThread;
+    @Deprecated
     private boolean runWithoutThread = true;
+    private ScheduledExecutorService scheduledExecutorService;
     AbstractBlockChain blockChain;
 
     //Keep track of when the ISLOCK arrived
@@ -52,6 +59,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
         this.quorumSigningManager = context.signingManager;
         pendingInstantSendLocks = new HashMap<>();
         invalidInstantSendLocks = new HashMap<>();
+        scheduledExecutorService = createScheduledExecutorService();
+    }
+
+    private ScheduledExecutorService createScheduledExecutorService() {
+        return Executors.newScheduledThreadPool(1, new ContextPropagatingThreadFactory("instantsend"));
     }
 
     @Override
@@ -72,6 +84,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
             peerGroup.addOnTransactionBroadcastListener(this.transactionBroadcastListener);
         }
         context.chainLockHandler.addChainLockListener(this.chainLockListener);
+        if (scheduledExecutorService == null)
+            scheduledExecutorService = createScheduledExecutorService();
     }
 
     public void close(PeerGroup peerGroup) {
@@ -84,6 +98,15 @@ public class InstantSendManager implements RecoveredSignatureListener {
             peerGroup.removeOnTransactionBroadcastListener(this.transactionBroadcastListener);
         }
         context.chainLockHandler.removeChainLockListener(this.chainLockListener);
+        try {
+            if (!scheduledExecutorService.awaitTermination(3000, TimeUnit.MILLISECONDS)) {
+                log.warn("scheduled threads still remain");
+            }
+            scheduledExecutorService = null;
+        } catch (InterruptedException e) {
+            log.warn("thread termination interrupted");
+            // swallow
+        }
     }
 
     private boolean isInitialized() {
@@ -713,8 +736,10 @@ public class InstantSendManager implements RecoveredSignatureListener {
     void updateWalletTransaction(Sha256Hash txid, Transaction tx) {
         TransactionConfidence confidence = tx != null ? tx.getConfidence() : context.getConfidenceTable().get(txid);
         if(confidence != null) {
-            confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED);
-            confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
+            scheduledExecutorService.schedule(() -> {
+                confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED);
+                confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
+            }, 250, TimeUnit.MILLISECONDS);
         } else {
             log.info("Can't find {} in mempool", txid);
         }
