@@ -33,6 +33,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Math.min;
@@ -336,6 +337,12 @@ public class SimplifiedMasternodeList extends Message {
             }
         }
         return null;
+    }
+
+    public List<Masternode> getMasternodesByVotingKey(KeyId votingKeyId) {
+        return mnMap.values().stream()
+                .filter(simplifiedMasternodeListEntry -> simplifiedMasternodeListEntry.keyIdVoting.equals(votingKeyId))
+                .collect(Collectors.toList());
     }
 
     public interface ForeachMNCallback {

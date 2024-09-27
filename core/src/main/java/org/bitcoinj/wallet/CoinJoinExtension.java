@@ -71,6 +71,8 @@ import static org.dashj.bls.Utils.HexUtils.HEX;
 
 public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinExtension.class);
+    private static final int COINJOIN_LOOKADHEAD = 400;
+    private static final int COINJOIN_LOOKADHEAD_THRESHOLD = COINJOIN_LOOKADHEAD - 1;
 
     protected AnyKeyChainGroup coinJoinKeyChainGroup;
 
@@ -154,9 +156,17 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             coinJoinKeyChainGroup = AnyKeyChainGroup.fromProtobufUnencrypted(containingWallet.params,
                     coinJoinProto.getKeyList(), ECKeyFactory.get(), false);
         }
+        if (coinJoinKeyChainGroup.hasKeyChains()) {
+            setLookaheadSize();
+        }
         rounds = coinJoinProto.getRounds();
         CoinJoinClientOptions.setRounds(rounds);
         loadedKeys = true;
+    }
+
+    private void setLookaheadSize() {
+        coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadSize(COINJOIN_LOOKADHEAD);
+        coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadThreshold(COINJOIN_LOOKADHEAD_THRESHOLD);
     }
 
     public boolean hasKeyChain(ImmutableList<ChildNumber> path) {
@@ -179,7 +189,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 coinJoinKeyChainGroup = AnyKeyChainGroup.builder(wallet.getParams(), ECKeyFactory.get()).build();
             }
             coinJoinKeyChainGroup.addAndActivateHDChain(AnyDeterministicKeyChain.builder().seed(seed).accountPath(path).build());
-            coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadSize(300);
+            setLookaheadSize();
         }
     }
 
@@ -196,7 +206,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             AnyDeterministicKeyChain chain = AnyDeterministicKeyChain.builder().seed(seed).accountPath(path).build();
             AnyDeterministicKeyChain encryptedChain = chain.toEncrypted(wallet.getKeyCrypter(), keyParameter);
             coinJoinKeyChainGroup.addAndActivateHDChain(encryptedChain);
-            coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadSize(300);
+            setLookaheadSize();
         }
     }
 

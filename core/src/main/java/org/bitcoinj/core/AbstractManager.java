@@ -281,8 +281,10 @@ public abstract class AbstractManager extends Message {
     /** Requests an asynchronous save on a background thread */
     protected void saveLater() {
         ManagerFiles files = vFileManager;
-        if (files != null)
+        if (files != null) {
+            Context.propagate(context);
             files.saveLater();
+        }
     }
 
     /**
