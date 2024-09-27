@@ -522,6 +522,7 @@ message Wallet {
 
   repeated Key keysForFriends = 30;  //spending, friends send us money
   repeated Key keysFromFriends = 31; //watching, we send money to friends
+  repeated Key keysCoinJoin = 32;    // coinjoin
   // Next tag: 18
 }
 
@@ -535,4 +536,11 @@ message ExchangeRate {
   required string fiat_currency_code = 3;
 
   // Next tag: 4
+}
+/** CoinJoin KeyChain */
+message CoinJoin {
+  // key chain
+  repeated Key key = 1;
+  // last value of rounds from mixing
+  required int32 rounds = 2;
 }

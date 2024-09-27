@@ -25,6 +25,7 @@ import static org.bitcoinj.governance.GovernanceObject.*;
  */
 public class GovernanceManager extends AbstractManager {
     private static final Logger log = LoggerFactory.getLogger(GovernanceManager.class);
+    private static final Random random = new Random();
     // critical section to protect the inner data structures
     ReentrantLock lock = Threading.lock("GovernanceManager");
 
@@ -1125,7 +1126,7 @@ public class GovernanceManager extends AbstractManager {
                 GovernanceObject pObj = findGovernanceObject(nHash);
 
                 if (pObj != null) {
-                    filter = new BloomFilter(params.getGovernanceFilterElements(), GOVERNANCE_FILTER_FP_RATE, new Random().nextInt(999999), BloomFilter.BloomUpdate.UPDATE_ALL);
+                    filter = new BloomFilter(params.getGovernanceFilterElements(), GOVERNANCE_FILTER_FP_RATE, random.nextInt(999999), BloomFilter.BloomUpdate.UPDATE_ALL);
                     ArrayList<GovernanceVote> vecVotes = pObj.getVoteFile().getVotes();
                     nVoteCount = vecVotes.size();
                     for (int i = 0; i < vecVotes.size(); ++i) {

@@ -22,6 +22,22 @@ import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
+import org.bitcoinj.core.KeyId;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionBag;
+import org.bitcoinj.core.TransactionBroadcast;
+import org.bitcoinj.core.TransactionBroadcaster;
+import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.UTXO;
+import org.bitcoinj.core.UTXOProvider;
+import org.bitcoinj.core.UTXOProviderException;
+import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Base58;
@@ -38,22 +54,9 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerFilterProvider;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.evolution.AssetLockPayload;
+import org.bitcoinj.evolution.SpecialTxPayload;
 import org.bitcoinj.script.ScriptException;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionBag;
-import org.bitcoinj.core.TransactionBroadcast;
-import org.bitcoinj.core.TransactionBroadcaster;
-import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.UTXO;
-import org.bitcoinj.core.UTXOProvider;
-import org.bitcoinj.core.UTXOProviderException;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.TransactionConfidence.*;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.evolution.EvolutionContact;
@@ -82,6 +85,7 @@ import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.*;
 
 import static com.google.common.base.Preconditions.*;
+import static org.bitcoinj.core.NetworkParameters.MAX_MONEY;
 
 // To do list:
 //
@@ -150,9 +154,9 @@ public class Wallet extends BaseTaggableObject
     //           to the user in the UI, etc). A transaction can leave dead and move into spent/unspent if there is a
     //           re-org to a chain that doesn't include the double spend.
 
-    private final Map<Sha256Hash, Transaction> pending;
-    private final Map<Sha256Hash, Transaction> unspent;
-    private final Map<Sha256Hash, Transaction> spent;
+    protected final Map<Sha256Hash, Transaction> pending;
+    protected final Map<Sha256Hash, Transaction> unspent;
+    protected final Map<Sha256Hash, Transaction> spent;
     private final Map<Sha256Hash, Transaction> dead;
 
     // All transactions together.
@@ -242,7 +246,6 @@ public class Wallet extends BaseTaggableObject
     // Stores objects that know how to serialize/unserialize themselves to byte streams and whether they're mandatory
     // or not. The string key comes from the extension itself.
     private final HashMap<String, WalletExtension> extensions;
-
     // Stores objects that know how to serialize/unserialize themselves to byte streams and whether they're mandatory
     // or not. The string key comes from the extension itself.
     private final HashMap<String, KeyChainGroupExtension> keyChainExtensions;
@@ -251,7 +254,7 @@ public class Wallet extends BaseTaggableObject
     @GuardedBy("lock") private volatile List<TransactionSigner> signers;
 
     // If this is set then the wallet selects spendable candidate outputs from a UTXO provider.
-    @Nullable private volatile UTXOProvider vUTXOProvider;
+    @Nullable protected volatile UTXOProvider vUTXOProvider;
 
     /**
      * Creates a new, empty wallet with a randomly chosen seed and no transactions. Make sure to provide for sufficient
@@ -458,7 +461,7 @@ public class Wallet extends BaseTaggableObject
         return new Wallet(params, group);
     }
 
-    private static Script.ScriptType outputScriptTypeFromB58(NetworkParameters params, String base58) {
+    protected static Script.ScriptType outputScriptTypeFromB58(NetworkParameters params, String base58) {
         int header = ByteBuffer.wrap(Base58.decodeChecked(base58)).getInt();
         if (header == params.getBip32HeaderP2PKHpub() || header == params.getBip32HeaderP2PKHpriv())
             return Script.ScriptType.P2PKH;
@@ -470,7 +473,7 @@ public class Wallet extends BaseTaggableObject
         this(Context.getOrCreate(params), keyChainGroup);
     }
 
-    private Wallet(Context context, KeyChainGroup keyChainGroup) {
+    protected Wallet(Context context, KeyChainGroup keyChainGroup) {
         this.context = checkNotNull(context);
         this.params = checkNotNull(context.getParams());
         this.keyChainGroup = checkNotNull(keyChainGroup);
@@ -1307,6 +1310,37 @@ public class Wallet extends BaseTaggableObject
     }
 
     /**
+     * Returns true if this wallet knows the script corresponding to the given hash.
+     *
+     * @param pubKeyHash
+     * @param scriptType
+     */
+    @Override
+    public boolean isCoinJoinPubKeyHashMine(byte[] pubKeyHash, @Nullable ScriptType scriptType) {
+        return false;
+    }
+
+    /**
+     * Returns true if this wallet contains a coinjoin keypair with the given public key.
+     *
+     * @param pubKey
+     */
+    @Override
+    public boolean isCoinJoinPubKeyMine(byte[] pubKey) {
+        return false;
+    }
+
+    /**
+     * Returns true if this wallet knows the coinjoin script corresponding to the given hash.
+     *
+     * @param payToScriptHash
+     */
+    @Override
+    public boolean isCoinJoinPayToScriptHashMine(byte[] payToScriptHash) {
+        return false;
+    }
+
+    /**
      * Marks all keys used in the transaction output as used in the wallet.
      * See {@link DeterministicKeyChain#markKeyAsUsed(DeterministicKey)} for more info on this.
      */
@@ -1320,9 +1354,9 @@ public class Wallet extends BaseTaggableObject
                         byte[] pubkey = ScriptPattern.extractKeyFromP2PK(script);
                         keyChainGroup.markPubKeyAsUsed(pubkey);
                         if (receivingFromFriendsGroup != null)
-                        receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
+                            receivingFromFriendsGroup.markPubKeyAsUsed(pubkey);
                         if (sendingToFriendsGroup != null)
-                        sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
+                            sendingToFriendsGroup.markPubKeyAsUsed(pubkey);
                         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                             extension.markPubKeyAsUsed(pubkey);
                         }
@@ -1331,9 +1365,9 @@ public class Wallet extends BaseTaggableObject
                         byte[] pubkeyHash = ScriptPattern.extractHashFromP2PKH(script);
                         keyChainGroup.markPubKeyHashAsUsed(pubkeyHash);
                         if (receivingFromFriendsGroup != null)
-                        receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                            receivingFromFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
                         if (sendingToFriendsGroup != null)
-                        sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
+                            sendingToFriendsGroup.markPubKeyHashAsUsed(pubkeyHash);
                         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                             extension.markPubKeyHashAsUsed(pubkeyHash);
                         }
@@ -1342,21 +1376,28 @@ public class Wallet extends BaseTaggableObject
                                 ScriptPattern.extractHashFromP2SH(script));
                         keyChainGroup.markP2SHAddressAsUsed(a);
                         if (receivingFromFriendsGroup != null)
-                        receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
+                            receivingFromFriendsGroup.markP2SHAddressAsUsed(a);
                         if (sendingToFriendsGroup != null)
-                        sendingToFriendsGroup.markP2SHAddressAsUsed(a);
+                            sendingToFriendsGroup.markP2SHAddressAsUsed(a);
                         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                             extension.markP2SHAddressAsUsed(a);
-                        }
-                    } else if (ScriptPattern.isCreditBurn(script)) {
-                        byte [] h = ScriptPattern.extractCreditBurnKeyId(script);
-                        for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
-                            extension.markPubKeyHashAsUsed(h);
                         }
                     }
                 } catch (ScriptException e) {
                     // Just means we didn't understand the output of this transaction: ignore it.
                     log.warn("Could not parse tx output script: {}", e.toString());
+                }
+            }
+
+            // handle special transactions
+            SpecialTxPayload payload = tx.getExtraPayloadObject();
+            if (payload instanceof AssetLockPayload) {
+                AssetLockPayload assetLockPayload = (AssetLockPayload) payload;
+                for (TransactionOutput output : assetLockPayload.getCreditOutputs()) {
+                    byte [] h = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                    for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                        extension.markPubKeyHashAsUsed(h);
+                    }
                 }
             }
         } finally {
@@ -2750,7 +2791,7 @@ public class Wallet extends BaseTaggableObject
      * If the transactions outputs are all marked as spent, and it's in the unspent map, move it.
      * If the owned transactions outputs are not all marked as spent, and it's in the spent map, move it.
      */
-    private void maybeMovePool(Transaction tx, String context) {
+    protected void maybeMovePool(Transaction tx, String context) {
         checkState(lock.isHeldByCurrentThread());
         if (tx.isEveryOwnedOutputSpent(this)) {
             // There's nothing left I can spend in this transaction.
@@ -3244,7 +3285,7 @@ public class Wallet extends BaseTaggableObject
     /**
      * Adds the given transaction to the given pools and registers a confidence change listener on it.
      */
-    private void addWalletTransaction(Pool pool, Transaction tx) {
+    protected void addWalletTransaction(Pool pool, Transaction tx) {
         checkState(lock.isHeldByCurrentThread());
         transactions.put(tx.getTxId(), tx);
         switch (pool) {
@@ -3273,6 +3314,29 @@ public class Wallet extends BaseTaggableObject
         // registration requests. That makes the code in the wallet simpler.
         tx.getConfidence().addEventListener(Threading.SAME_THREAD, txConfidenceListener);
     }
+
+    /**
+     * Returns a WalletTransaction for the given hash.
+     */
+    public WalletTransaction getWalletTransaction(Sha256Hash hash) {
+        lock.lock();
+        try {
+            // TODO: optimize this method to loop through all tx's only once
+            Set<WalletTransaction> all = new HashSet<>();
+            addWalletTransactionsToSet(all, Pool.UNSPENT, unspent.values());
+            addWalletTransactionsToSet(all, Pool.SPENT, spent.values());
+            addWalletTransactionsToSet(all, Pool.DEAD, dead.values());
+            addWalletTransactionsToSet(all, Pool.PENDING, pending.values());
+            for (WalletTransaction wtx : all) {
+                if (wtx.getTransaction().getTxId().equals(hash))
+                    return wtx;
+            }
+        } finally {
+            lock.unlock();
+        }
+        return null;
+    }
+
 
     /**
      * Returns all non-dead, active transactions ordered by recency.
@@ -3884,7 +3948,24 @@ public class Wallet extends BaseTaggableObject
         /** Same as ESTIMATED but only for outputs we have the private keys for and can sign ourselves. */
         ESTIMATED_SPENDABLE,
         /** Same as AVAILABLE but only for outputs we have the private keys for and can sign ourselves. */
-        AVAILABLE_SPENDABLE
+        AVAILABLE_SPENDABLE,
+
+        /**
+         * Includes only transactions that have been denominated and are ready to be mixed.
+         * Whether we <i>actually</i> have the private keys or not is irrelevant for this balance type.
+         */
+        DENOMINATED,
+
+        /** Same as DENOMINATED but only for outputs we have the private keys for and can sign ourselves. */
+        DENOMINATED_SPENDABLE,
+
+        /**
+         * Includes only transactions that have been denominated and are ready to be mixed.
+         * Whether we <i>actually</i> have the private keys or not is irrelevant for this balance type.
+         */
+        COINJOIN,
+        /** Same as COINJOIN but only for outputs we have the private keys for and can sign ourselves. */
+        COINJOIN_SPENDABLE
     }
 
     /**
@@ -3903,13 +3984,17 @@ public class Wallet extends BaseTaggableObject
         try {
             if (balanceType == BalanceType.AVAILABLE || balanceType == BalanceType.AVAILABLE_SPENDABLE) {
                 List<TransactionOutput> candidates = calculateAllSpendCandidates(true, balanceType == BalanceType.AVAILABLE_SPENDABLE);
-                CoinSelection selection = coinSelector.select(NetworkParameters.MAX_MONEY, candidates);
+                CoinSelection selection = coinSelector.select(MAX_MONEY, candidates);
                 return selection.valueGathered;
             } else if (balanceType == BalanceType.ESTIMATED || balanceType == BalanceType.ESTIMATED_SPENDABLE) {
                 List<TransactionOutput> all = calculateAllSpendCandidates(false, balanceType == BalanceType.ESTIMATED_SPENDABLE);
                 Coin value = Coin.ZERO;
                 for (TransactionOutput out : all) value = value.add(out.getValue());
                 return value;
+            } else if (balanceType == BalanceType.COINJOIN || balanceType == BalanceType.COINJOIN_SPENDABLE) {
+                return Coin.ZERO;
+            } else if (balanceType == BalanceType.DENOMINATED || balanceType == BalanceType.DENOMINATED_SPENDABLE) {
+                return Coin.ZERO;
             } else {
                 throw new AssertionError("Unknown balance type");  // Unreachable.
             }
@@ -4368,6 +4453,9 @@ public class Wallet extends BaseTaggableObject
             // can customize coin selection policies. The call below will ignore immature coinbases and outputs
             // we don't have the keys for.
             List<TransactionOutput> candidates = calculateAllSpendCandidates(true, req.missingSigsMode == MissingSigsMode.THROW);
+            if (req.hasCoinControl()) {
+                candidates.removeIf(output -> !req.coinControl.isSelected(output.getOutPointFor()));
+            }
 
             CoinSelection bestCoinSelection;
             TransactionOutput bestChangeOutput = null;
@@ -4549,6 +4637,7 @@ public class Wallet extends BaseTaggableObject
                     Transaction transaction = checkNotNull(output.getParentTransaction());
                     if (excludeImmatureCoinbases && !transaction.isMature())
                         continue;
+
                     candidates.add(output);
                 }
             } else {
@@ -4728,7 +4817,7 @@ public class Wallet extends BaseTaggableObject
      * required for spending without actually having all the linked data (i.e parent tx).
      *
      */
-    private class FreeStandingTransactionOutput extends TransactionOutput {
+    protected class FreeStandingTransactionOutput extends TransactionOutput {
         private UTXO output;
         private int chainHeight;
 
@@ -5276,7 +5365,26 @@ public class Wallet extends BaseTaggableObject
             lock.unlock();
         }
     }
+    
+    /** checks for the existance of an extension */
+    public boolean hasExtension(String id) {
+        lock.lock();
+        try {
+            return extensions.containsKey(id) || keyChainExtensions.containsKey(id);
+        } finally {
+            lock.unlock();
+        }
+    }
 
+    public KeyChainGroupExtension getKeyChainExtension(String id) {
+        lock.lock();
+        try {
+            return keyChainExtensions.get(id);
+        } finally {
+            lock.unlock();
+        }
+    }
+     
     /**
      * Deserialize the wallet extension with the supplied data and then install it, replacing any existing extension
      * that may have existed with the same ID. If an exception is thrown then the extension is removed from the wallet,
@@ -5335,6 +5443,8 @@ public class Wallet extends BaseTaggableObject
             result = new FeeCalculation();
             Transaction tx = new Transaction(params);
             addSuppliedInputs(tx, req.tx.getInputs());
+            tx.setVersion(req.tx.getVersion());
+            tx.setExtraPayload(req.tx.getExtraPayload());
 
             Coin valueNeeded = value;
             if (!req.recipientsPayFees) {
@@ -5371,7 +5481,7 @@ public class Wallet extends BaseTaggableObject
                 throw new InsufficientMoneyException(valueMissing);
             }
             Coin change = selection.valueGathered.subtract(valueNeeded);
-            if (change.isGreaterThan(Coin.ZERO)) {
+            if (change.isGreaterThan(Coin.ZERO) && req.returnChange) {
                 // The value of the inputs is greater than what we want to send. Just like in real life then,
                 // we need to take back some coins ... this is called "change". Add another output that sends the change
                 // back to us. The address comes either from the request or currentChangeAddress() as a default.
@@ -5801,6 +5911,7 @@ public class Wallet extends BaseTaggableObject
         }
         return hasPath;
     }
+
     /**
      * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
      */
@@ -6151,4 +6262,8 @@ public class Wallet extends BaseTaggableObject
         return addresses;
     }
 
+    @Override
+    public boolean isFullyMixed(TransactionOutput output) {
+        return false;
+    }
 }

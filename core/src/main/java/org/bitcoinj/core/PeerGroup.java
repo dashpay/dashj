@@ -22,7 +22,9 @@ import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 import net.jcip.annotations.*;
+import org.bitcoinj.coinjoin.SendCoinJoinQueue;
 import org.bitcoinj.core.listeners.*;
+import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
@@ -114,9 +116,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     private volatile boolean vUsedUp;
 
     // Addresses to try to connect to, excluding active peers.
-    @GuardedBy("lock") private final PriorityQueue<PeerAddress> inactives;
-    @GuardedBy("lock") private final Map<PeerAddress, ExponentialBackoff> backoffMap;
-    @GuardedBy("lock") private final Map<PeerAddress, Integer> priorityMap;
+    @GuardedBy("lock") protected final PriorityQueue<PeerAddress> inactives;
+    @GuardedBy("lock") protected final Map<PeerAddress, ExponentialBackoff> backoffMap;
+    @GuardedBy("lock") protected final Map<PeerAddress, Integer> priorityMap;
 
     // Currently active peers. This is an ordered list rather than a set to make unit tests predictable.
     private final CopyOnWriteArrayList<Peer> peers;
@@ -175,6 +177,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     @GuardedBy("lock") private boolean useLocalhostPeerWhenPossible = true;
     @GuardedBy("lock") private boolean ipv6Unreachable = false;
 
+    protected boolean isIpv6Unreachable() {
+        return ipv6Unreachable;
+    }
+
     @GuardedBy("lock") private long fastCatchupTimeSecs;
     private final CopyOnWriteArrayList<Wallet> wallets;
     private final CopyOnWriteArrayList<PeerFilterProvider> peerFilterProviders;
@@ -197,6 +203,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     // should peers be dropped after broadcast
     private boolean dropPeersAfterBroadcast = true;
+
+    // should send senddsq to all peers after connecting
+    private boolean shouldSendDsq = false;
 
     // This event listener is added to every peer. It's here so when we announce transactions via an "inv", every
     // peer can fetch them.
@@ -334,7 +343,10 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** The default timeout between when a connection attempt begins and version message exchange completes */
     public static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 5000;
     private volatile int vConnectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
-    
+    protected int getConnectTimeoutMillis() {
+        return vConnectTimeoutMillis;
+    }
+
     /** Whether bloom filter support is enabled when using a non FullPrunedBlockchain*/
     private volatile boolean vBloomFilteringEnabled = true;
 
@@ -599,7 +611,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     };
 
-    private void triggerConnections() {
+    protected void triggerConnections() {
         // Run on a background thread due to the need to potentially retry and back off in the background.
         if (!executor.isShutdown())
             executor.execute(triggerConnectionsJob);
@@ -1051,7 +1063,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     // Adds peerAddress to backoffMap map and inactives queue.
     // Returns true if it was added, false if it was already there.
-    private boolean addInactive(PeerAddress peerAddress, int priority) {
+    protected boolean addInactive(PeerAddress peerAddress, int priority) {
         lock.lock();
         try {
             // Deduplicate
@@ -1157,7 +1169,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         Futures.getUnchecked(executor.submit(Runnables.doNothing()));
     }
 
-    private int countConnectedAndPendingPeers() {
+    protected int countConnectedAndPendingPeers() {
         lock.lock();
         try {
             return peers.size() + pendingPeers.size();
@@ -1592,7 +1604,17 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** You can override this to customise the creation of {@link Peer} objects. */
     @GuardedBy("lock")
     protected Peer createPeer(PeerAddress address, VersionMessage ver) {
-        return new Peer(params, ver, address, chain, headerChain, requiredServices, downloadTxDependencyDepth);
+        Peer peer = new Peer(params, ver, address, chain, headerChain, requiredServices, downloadTxDependencyDepth);
+        // mark this as a masternode if it is
+        if (context.masternodeListManager != null) {
+            SimplifiedMasternodeList mnList = context.masternodeListManager.getMasternodeList();
+            if (mnList.size() != 0) {
+                if (mnList.containsMN(address)) {
+                    peer.setMasternode(true);
+                }
+            }
+        }
+        return peer;
     }
 
     /**
@@ -1730,6 +1752,11 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 peer.addPreMessageReceivedEventListener(registration.executor, registration.listener);
             for (ListenerRegistration<MasternodeListDownloadedListener> registration : masternodeListDownloadListeners)
                 peer.addMasternodeListDownloadedListener(registration.executor, registration.listener);
+
+            // handle coinjoin related items
+            if (shouldSendDsq) {
+                peer.sendMessage(new SendCoinJoinQueue(params, true));
+            }
         } finally {
             lock.unlock();
         }
@@ -2854,5 +2881,13 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             }
         }
         return mostCommonHeight.getSecond();
+    }
+
+    public void shouldSendDsq(boolean shouldSendDsq) {
+        List<Peer> peerList = getConnectedPeers();
+        for (Peer peer : peerList) {
+            peer.sendMessage(new SendCoinJoinQueue(params, shouldSendDsq));
+        }
+        this.shouldSendDsq = shouldSendDsq;
     }
 }

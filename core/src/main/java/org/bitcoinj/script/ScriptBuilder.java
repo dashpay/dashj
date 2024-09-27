@@ -563,10 +563,10 @@ public class ScriptBuilder {
         return builder.build();
     }
 
-    public static Script createCreditBurnOutput(ECKey creditBurnKey) {
+    public static Script createAssetLockOutput() {
         ScriptBuilder builder = new ScriptBuilder();
         builder.addChunk(new ScriptChunk(OP_RETURN, null));
-        builder.data(creditBurnKey.getPubKeyHash());
+        builder.data(new byte[0]);
         return builder.build();
     }
 }

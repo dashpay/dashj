@@ -55,6 +55,7 @@ Usage: wallet-tool --flags action-name
                           --locktime=2013/01/01  sets the lock time to 1st Jan 2013
                           --allow-unconfirmed will let you create spends of pending non-change outputs.
                           --no-pki disables pki verification for payment requests.
+                          --coinjoin creates a coinjoin transaction
   encrypt              Requires --password and uses it to encrypt the wallet in place.
   decrypt              Requires --password and uses it to decrypt the wallet in place.
   upgrade              Upgrade basic or deterministic wallets to deterministic wallets of the given script type.
@@ -93,6 +94,11 @@ Usage: wallet-tool --flags action-name
                           --output=pubkey:value sets the destination for the money
                           --fee-per-kb or --fee-sat-per-byte sets the network fee, see below
                           --txhash=hash sets the transaction to spend
+mix                    Mixes the entire balance or the specified amount
+                          --amount=value sets the amount to mix
+                          --rounds=value sets the number of rounds to mix
+                          --sessions=value sets the number of concurrent mixing sessions
+                          --multi-session doesn't wait for the next block to be mined to continue
 
 >>> GENERAL OPTIONS
   --debuglog           Enables logging from the core library.

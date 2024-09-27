@@ -346,6 +346,10 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         BIP66Height = 245817;
 
         coinType = 5;
+
+        // coinjoin
+        poolMinParticipants = 3;
+        poolMaxParticipants = 20;
     }
 
     private static MainNetParams instance;

@@ -29,9 +29,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Math.min;
@@ -305,6 +307,42 @@ public class SimplifiedMasternodeList extends Message {
         } finally {
             lock.unlock();
         }
+    }
+
+    public boolean containsMN(PeerAddress address) {
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if (entry.getValue().getService().getAddr().equals(address.getAddr())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Deprecated
+    public Masternode getValidMNByCollateral(TransactionOutPoint masternodeOutpoint) {
+        // TODO: we don't have an answer for this yet
+        // masternodeOutpoint is hardcoded
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if (Objects.equals(entry.getValue().getCollateralOutpoint(), masternodeOutpoint)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    public Masternode getMNByAddress(InetSocketAddress socketAddress) {
+        for (Map.Entry<Sha256Hash, SimplifiedMasternodeListEntry> entry : mnMap.entrySet()) {
+            if (Objects.equals(entry.getValue().getService().getSocketAddress(), socketAddress)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    public List<Masternode> getMasternodesByVotingKey(KeyId votingKeyId) {
+        return mnMap.values().stream()
+                .filter(simplifiedMasternodeListEntry -> simplifiedMasternodeListEntry.keyIdVoting.equals(votingKeyId))
+                .collect(Collectors.toList());
     }
 
     public interface ForeachMNCallback {

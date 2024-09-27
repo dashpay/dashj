@@ -100,7 +100,7 @@ public class WalletProtobufSerializer {
         this(new WalletFactory() {
             @Override
             public Wallet create(NetworkParameters params, KeyChainGroup keyChainGroup) {
-                return new Wallet(params, keyChainGroup);
+                return new WalletEx(params, keyChainGroup);
             }
         });
     }
@@ -634,6 +634,7 @@ public class WalletProtobufSerializer {
             wallet.setDescription(walletProto.getDescription());
         }
 
+        // load extensions before processing transactions
         loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
 
         if (forceReset) {

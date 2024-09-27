@@ -22,14 +22,17 @@ import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
+import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.params.MainNetParams;
@@ -70,7 +73,7 @@ public class AbstractKeyChainGroupExtensionTest {
     private static final KeyParameter AES_KEY = KEY_CRYPTER.deriveKey("password");
     private AnyKeyChainGroup group;
     private IDeterministicKey watchingAccountKey;
-    
+
     private final KeyFactory EC_KEYFACTORY = ECKeyFactory.get();
 
     static class KeyChainGroupGroupExtension extends AbstractKeyChainGroupExtension {

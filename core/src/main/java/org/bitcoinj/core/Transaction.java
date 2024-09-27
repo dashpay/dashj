@@ -843,11 +843,10 @@ public class Transaction extends ChildMessage {
                 s.append(indent).append("        ");
                 ScriptType scriptType = scriptPubKey.getScriptType();
                 if (scriptType != null) {
-                    if (scriptType != ScriptType.CREDITBURN)
+                    if (scriptType != ScriptType.ASSETLOCK)
                         s.append(scriptType).append(" addr:").append(scriptPubKey.getToAddress(params));
-                    else if (ScriptPattern.isCreditBurn(scriptPubKey)) {
-                        byte [] hash160 = ScriptPattern.extractCreditBurnKeyId(scriptPubKey);
-                        s.append(scriptType).append(" addr:").append(Address.fromPubKeyHash(params, hash160));
+                    else if (ScriptPattern.isAssetLock(scriptPubKey) && getType() == Type.TRANSACTION_ASSET_LOCK) {
+                        s.append(scriptType);
                     }
                 } else
                     s.append("unknown script type");
@@ -933,6 +932,12 @@ public class Transaction extends ChildMessage {
                                            SigHash sigHash, boolean anyoneCanPay) throws ScriptException {
         // Verify the API user didn't try to do operations out of order.
         checkState(!outputs.isEmpty(), "Attempting to sign tx without outputs.");
+        return addSignedInputNoOutputsCheck(prevOut, scriptPubKey, sigKey, sigHash, anyoneCanPay);
+    }
+
+    public TransactionInput addSignedInputNoOutputsCheck(TransactionOutPoint prevOut, Script scriptPubKey, ECKey sigKey,
+                                           SigHash sigHash, boolean anyoneCanPay) throws ScriptException {
+        // Verify the API user didn't try to do operations out of order.
         TransactionInput input = new TransactionInput(params, this, new byte[] {}, prevOut);
         addInput(input);
         int inputIndex = inputs.size() - 1;
@@ -1360,7 +1365,7 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * <p>Returns the list of transacion outputs, whether spent or unspent, that match a wallet by address or that are
+     * <p>Returns the list of transaction outputs, whether spent or unspent, that match a wallet by address or that are
      * watched by a wallet, i.e., transaction outputs whose script's address is controlled by the wallet and transaction
      * outputs whose script is watched by the wallet.</p>
      *
@@ -1683,8 +1688,8 @@ public class Transaction extends ChildMessage {
     }
 
     public void setExtraPayload(SpecialTxPayload specialTxPayload) {
-        setExtraPayload(specialTxPayload.getPayload());
         setVersionAndType(SPECIAL_VERSION, specialTxPayload.getType());
+        setExtraPayload(specialTxPayload.getPayload());
         unCache();
     }
 
@@ -1770,6 +1775,33 @@ public class Transaction extends ChildMessage {
             throw new RuntimeException(x.getMessage());
         }
     }
+    public boolean isTrusted(TransactionBag bag) {
+        //if (isFinal(wallet.getLastBlockSeenHeight(), wallet.getLastBlockSeenTimeSecs()))
+        //    return false;
+        TransactionConfidence confidence = getConfidence();
+        if (confidence != null) {
+            if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)
+                return true;
+            if (confidence.getIXType() == TransactionConfidence.IXType.IX_LOCKED)
+                return true;
+            // Don't trust unconfirmed transactions from us unless they are in the mempool.
+            if (confidence.getConfidenceType() == ConfidenceType.PENDING && confidence.numBroadcastPeers() == 0)
+                return false;
+        }
+
+        // Trusted if all inputs are from us and are in the mempool:
+        for (TransactionInput txin : getInputs()) {
+            // Transactions not sent by us: not trusted
+            Transaction parent = bag.getTransactionPool(Pool.PENDING).get(txin.getOutpoint().getHash());
+            if (parent == null)
+                return false;
+            TransactionOutput parentOut = parent.getOutput(txin.getOutpoint().getIndex());
+            if (!parentOut.isMine(bag))
+                return false;
+        }
+
+        return true;
+    }
 
     /**
      * This method simulates the BIP61 Reject messages from Dash Core prior to v19.
@@ -1798,5 +1830,9 @@ public class Transaction extends ChildMessage {
             }
         }
         return null;
+    }
+
+    public boolean isEmpty() {
+        return inputs.isEmpty() && outputs.isEmpty();
     }
 }

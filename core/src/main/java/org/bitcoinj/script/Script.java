@@ -61,7 +61,7 @@ public class Script {
         P2SH(3), // pay to script hash
         P2WPKH(4), // pay to witness pubkey hash
         P2WSH(5), // pay to witness script hash
-        CREDITBURN(6); // pay to credit system
+        ASSETLOCK(6); // pay to credit system
 
         public final int id;
 
@@ -1630,8 +1630,8 @@ public class Script {
             return ScriptType.P2PK;
         if (ScriptPattern.isP2SH(this))
             return ScriptType.P2SH;
-        if(ScriptPattern.isCreditBurn(this))
-            return ScriptType.CREDITBURN;
+        if(ScriptPattern.isAssetLock(this))
+            return ScriptType.ASSETLOCK;
         return null;
     }
 

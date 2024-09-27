@@ -97,15 +97,11 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headerChain) {
         this.blockChain = blockChain;
         this.headerChain = headerChain;
-        this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
         this.quorumSigningManager = context.signingManager;
     }
 
     @Override
     public void close() {
-        if (blockChain != null) {
-            blockChain.removeNewBestBlockListener(this.newBestBlockListener);
-        }
         blockChain = null;
         super.close();
     }
@@ -476,8 +472,6 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         }
 
     }
-
-    private final NewBestBlockListener newBestBlockListener = block -> updatedBlockTip(block, null);
 
     private final CopyOnWriteArrayList<ListenerRegistration<ChainLockListener>> chainLockListeners;
 

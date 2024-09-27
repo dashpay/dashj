@@ -43,7 +43,7 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         genesisBlock.setDifficultyTarget(Block.EASIEST_DIFFICULTY_TARGET);
         genesisBlock.solve();
         port = 19999;
-        interval = 10;
+        interval = 576;
         dumpedPrivateKeyHeader = 239;
         targetTimespan = 200000000;  // 6 years. Just a very big number.
         spendableCoinbaseDepth = 5;
@@ -88,8 +88,13 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         llmqTypeAssetLocks = LLMQParameters.LLMQType.LLMQ_50_60;
 
         BIP65Height = 2431; // 0000039cf01242c7f921dcb4806a5994bc003b48c1973ae0c89b67809c2bb2ab
+        DIP0024BlockHeight = 3000;
 
         coinType = 1;
+
+        // coinjoin
+        poolMinParticipants = 2;
+        poolMaxParticipants = 20;
     }
 
     private static UnitTestParams instance;

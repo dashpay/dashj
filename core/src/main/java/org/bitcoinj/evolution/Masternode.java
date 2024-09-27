@@ -2,10 +2,14 @@ package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSPublicKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class Masternode extends ChildMessage {
+    private static final Logger log = LoggerFactory.getLogger(Masternode.class);
 
     Sha256Hash proRegTxHash;
+    TransactionOutPoint masternodeOutpoint;
 
     Masternode(NetworkParameters params) {
         super(params);
@@ -50,5 +54,9 @@ public abstract class Masternode extends ChildMessage {
     @Override
     public int hashCode() {
         return proRegTxHash.hashCode();
+    }
+
+    public TransactionOutPoint getCollateralOutpoint() {
+        return masternodeOutpoint;
     }
 }

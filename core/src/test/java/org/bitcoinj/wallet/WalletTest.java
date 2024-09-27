@@ -64,7 +64,6 @@ import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +79,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.Assert;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.bitcoinj.core.Coin.*;
 import static org.bitcoinj.core.Utils.HEX;
@@ -192,6 +190,8 @@ public class WalletTest extends TestWithWallet {
         encryptedWallet.encrypt(PASSWORD1);
         encryptedWallet.decrypt(PASSWORD1);
     }
+
+
 
     @Test
     public void basicSpendingFromP2SH() throws Exception {
@@ -3616,5 +3616,12 @@ public class WalletTest extends TestWithWallet {
         assertEquals(wallet.currentReceiveKey(), clone.currentReceiveKey());
         assertEquals(wallet.freshReceiveAddress(Script.ScriptType.P2PKH),
                 clone.freshReceiveAddress(Script.ScriptType.P2PKH));
+    }
+
+    @Test
+    public void fullyMixedTest() throws Exception {
+        receiveATransaction(wallet, wallet.freshAddress(KeyPurpose.RECEIVE_FUNDS));
+        Transaction tx = wallet.getWalletTransactions().iterator().next().getTransaction();
+        assertFalse(wallet.isFullyMixed(tx.getOutput(0)));
     }
 }

@@ -21,6 +21,8 @@ import com.google.common.annotations.*;
 import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.hashengineering.crypto.X11;
+import org.bitcoinj.crypto.BLSSignature;
+import org.bitcoinj.evolution.CoinbaseTx;
 import org.bitcoinj.script.*;
 import org.slf4j.*;
 
@@ -929,12 +931,23 @@ public class Block extends Message {
     // Used to make transactions unique.
     private static int txCounter;
 
+
+    /** Adds a coinbase transaction to the block. This exists for unit tests.
+     *
+     * @param height block height, if known, or -1 otherwise.
+     */
+    @VisibleForTesting
+    void addCoinbaseTransaction(byte[] pubKeyTo, Coin value, final int height) {
+        addCoinbaseTransaction(pubKeyTo, value, height, null, null);
+    }
     /** Adds a coinbase transaction to the block. This exists for unit tests.
      * 
      * @param height block height, if known, or -1 otherwise.
      */
     @VisibleForTesting
-    void addCoinbaseTransaction(byte[] pubKeyTo, Coin value, final int height) {
+    void addCoinbaseTransaction(byte[] pubKeyTo, Coin value, final int height,
+                                @Nullable final Sha256Hash merkleRootMasternodeList,
+                                @Nullable final Sha256Hash merkleRootQuorumList) {
         unCacheTransactions();
         transactions = new ArrayList<>();
         Transaction coinbase = new Transaction(params);
@@ -954,6 +967,9 @@ public class Block extends Message {
                 inputBuilder.build().getProgram()));
         coinbase.addOutput(new TransactionOutput(params, coinbase, value,
                 ScriptBuilder.createP2PKOutputScript(ECKey.fromPublicOnly(pubKeyTo)).getProgram()));
+        if (merkleRootMasternodeList != null && merkleRootQuorumList != null) {
+            coinbase.setExtraPayload(new CoinbaseTx(params, CoinbaseTx.CB_V20_VERSION, height, merkleRootMasternodeList, merkleRootQuorumList, 1, BLSSignature.dummy(), FIFTY_COINS));
+        }
         transactions.add(coinbase);
         coinbase.setParent(this);
         coinbase.length = coinbase.unsafeBitcoinSerialize().length;
@@ -975,17 +991,45 @@ public class Block extends Message {
 
     /**
      * Returns a solved block that builds on top of this one. This exists for unit tests.
+     */
+    @VisibleForTesting
+    public Block createNextBlock(Address to, long version, long time, int blockHeight,
+                                 @Nullable final Sha256Hash merkleRootMasternodeList,
+                                 @Nullable final Sha256Hash merkleRootQuorumList) {
+        return createNextBlock(to, version, null, time, pubkeyForTesting, FIFTY_COINS, blockHeight, merkleRootMasternodeList, merkleRootQuorumList);
+    }
+
+    /**
+     * Returns a solved block that builds on top of this one. This exists for unit tests.
      * In this variant you can specify a public key (pubkey) for use in generating coinbase blocks.
-     * 
+     *
      * @param height block height, if known, or -1 otherwise.
      */
     Block createNextBlock(@Nullable final Address to, final long version,
                           @Nullable TransactionOutPoint prevOut, final long time,
                           final byte[] pubKey, final Coin coinbaseValue,
                           final int height) {
+        return createNextBlock(to, version, prevOut, time, pubKey, coinbaseValue, height, null, null);
+
+    }
+
+    /**
+     * Returns a solved block that builds on top of this one. This exists for unit tests.
+     * In this variant you can specify a public key (pubkey) for use in generating coinbase blocks.
+     *
+     * @param height block height, if known, or -1 otherwise.
+     * @param merkleRootMasternodeList the merkle root of the masternode list or null
+     * @param merkleRootQuorumList the merkle root of the quorum list or null
+     */
+    Block createNextBlock(@Nullable final Address to, final long version,
+                          @Nullable TransactionOutPoint prevOut, final long time,
+                          final byte[] pubKey, final Coin coinbaseValue,
+                          final int height,
+                          @Nullable final Sha256Hash merkleRootMasternodeList,
+                          @Nullable final Sha256Hash merkleRootQuorumList) {
         Block b = new Block(params, version);
         b.setDifficultyTarget(difficultyTarget);
-        b.addCoinbaseTransaction(pubKey, coinbaseValue, height);
+        b.addCoinbaseTransaction(pubKey, coinbaseValue, height, merkleRootMasternodeList, merkleRootQuorumList);
 
         if (to != null) {
             // Add a transaction paying 50 coins to the "to" address.

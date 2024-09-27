@@ -41,6 +41,8 @@ import java.util.Collection;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -148,15 +150,14 @@ public class QuorumRotationStateValidateQuorumsTest {
             context = new Context(params);
 
         blockChain = new BlockChain(context, new SPVBlockStore(params, new File(Objects.requireNonNull(SimplifiedMasternodesTest.class.getResource(blockchainFile)).getPath())));
-
-        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         context.initDash(true, true);
+        peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
         context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
     }
 
     @Test
-    public void processDiffMessage() throws BlockStoreException, IOException, ExecutionException, InterruptedException {
+    public void processDiffMessage() throws BlockStoreException, IOException, ExecutionException, InterruptedException, TimeoutException {
         try {
             // this is for mainnet
             URL datafile = Objects.requireNonNull(getClass().getResource(qrInfoFilename));
@@ -176,7 +177,7 @@ public class QuorumRotationStateValidateQuorumsTest {
 
             SettableFuture<Boolean> qrinfoComplete = SettableFuture.create();
             manager.processDiffMessage(null, qrinfo, false, qrinfoComplete);
-            qrinfoComplete.get();
+            qrinfoComplete.get(120, TimeUnit.SECONDS);
 
             // check verification and other items
             AtomicBoolean verified = new AtomicBoolean(true);

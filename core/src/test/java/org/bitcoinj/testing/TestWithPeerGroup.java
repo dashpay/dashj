@@ -39,7 +39,7 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
     protected PeerGroup peerGroup;
 
     protected VersionMessage remoteVersionMessage;
-    private final ClientType clientType;
+    protected final ClientType clientType;
 
     public TestWithPeerGroup(ClientType clientType) {
         super(clientType);
@@ -66,6 +66,7 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         remoteVersionMessage.clientVersion =
                 NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
         blockJobs = false;
+        beforeInitPeerGroup();
         initPeerGroup();
     }
 
@@ -80,6 +81,10 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    protected void beforeInitPeerGroup() {
+
     }
 
     protected void initPeerGroup() {

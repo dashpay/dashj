@@ -41,14 +41,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Implements basic keychain functionality for a keychain extension
  */
 abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExtension {
-    protected final ReentrantLock keyChainGroupLock = Threading.lock("keychaingroup");
+    protected final ReentrantLock keyChainGroupLock = Threading.lock("keychaingroup-extension");
     protected @Nullable Wallet wallet;
 
     protected AbstractKeyChainGroupExtension(Wallet wallet) {
         this.wallet = wallet;
     }
 
-    abstract protected AnyKeyChainGroup getKeyChainGroup();
+    abstract public AnyKeyChainGroup getKeyChainGroup();
 
     boolean isInitialized() {
         return getKeyChainGroup() != null;
@@ -534,5 +534,9 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
     protected void saveWallet() {
         if (wallet != null)
             wallet.saveLater();
+    }
+
+    public void setWallet(Wallet wallet) {
+        this.wallet = wallet;
     }
 }

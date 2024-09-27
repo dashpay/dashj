@@ -18,11 +18,8 @@
 package org.bitcoinj.script;
 
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Utils;
 
 import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.bitcoinj.script.Script.decodeFromOpN;
@@ -169,9 +166,9 @@ public class ScriptPattern {
 
     /**
      * Returns whether this script matches the format used for credit burn outputs:
-     * {@code OP_RETURN [20] [creditBurnKeyId]}
+     * {@code OP_RETURN 0[]}
      */
-    public static boolean isCreditBurn(Script script) {
+    public static boolean isAssetLock(Script script) {
         List<ScriptChunk> chunks = script.chunks;
         if (chunks.size() != 2)
             return false;
@@ -180,11 +177,7 @@ public class ScriptPattern {
             return false;
         ScriptChunk chunk1 = chunks.get(1);
         byte[] chunk1data = chunk1.data;
-        if (chunk1data == null)
-            return false;
-        if (chunk1data.length != 20)
-            return false;
-        return true;
+        return chunk1data != null && chunk1data.length == 0;
     }
 
     /**
@@ -239,9 +232,5 @@ public class ScriptPattern {
     public static boolean isOpReturn(Script script) {
         List<ScriptChunk> chunks = script.chunks;
         return chunks.size() > 0 && chunks.get(0).equalsOpCode(ScriptOpCodes.OP_RETURN);
-    }
-
-    public static byte[] extractCreditBurnKeyId(Script script) {
-        return script.chunks.get(1).data;
     }
 }

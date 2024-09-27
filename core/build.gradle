@@ -6,7 +6,7 @@ apply plugin: 'jacoco'
 apply plugin: 'signing'
 // apply plugin:  'com.github.spotbugs'
 
-version = '21.0.0'
+version = '21.0.0-CJ-SNAPSHOT'
 archivesBaseName = 'dashj-core'
 eclipse.project.name = 'dashj-core'
 
@@ -67,6 +67,8 @@ test {
         exceptionFormat "full"
     }
     finalizedBy jacocoTestReport // report is always generated after tests run
+    // uncomment this next line to show logs in test output during CI tests
+    // testLogging.showStandardStreams = true
 }
 
 tasks.withType(Test) {

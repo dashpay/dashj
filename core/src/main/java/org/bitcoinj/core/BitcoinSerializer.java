@@ -19,7 +19,7 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.coinjoin.*;
 import org.bitcoinj.crypto.BLSScheme;
-import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.evolution.AssetLockTransaction;
 import org.bitcoinj.evolution.GetSimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.governance.GovernanceObject;
@@ -101,7 +101,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(SendHeadersMessage.class, "sendheaders");
         names.put(SendAddressMessageV2.class, "sendaddrv2");
         names.put(GetMasternodePaymentRequestSyncMessage.class, "mnget");
-        names.put(CreditFundingTransaction.class, "tx");
+        names.put(AssetLockTransaction.class, "tx");
         names.put(GetQuorumRotationInfo.class, "getqrinfo");
         names.put(QuorumRotationInfo.class, "qrinfo");
         // CoinJoin
@@ -315,15 +315,21 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("qrinfo")) {
             return new QuorumRotationInfo(params, payloadBytes, protocolVersion);
         } else if(command.equals("dssu")) {
-            return new CoinJoinStatusUpdate(params, payloadBytes);
+            return new CoinJoinStatusUpdate(params, payloadBytes, protocolVersion);
         } else if (command.equals("dsq")) {
-            return new CoinJoinQueue(params, payloadBytes);
+            return new CoinJoinQueue(params, payloadBytes, protocolVersion);
         } else if (command.equals("dsf")) {
             return new CoinJoinFinalTransaction(params, payloadBytes);
         } else if (command.equals("dsc")) {
             return new CoinJoinComplete(params, payloadBytes);
         } else if (command.equals("dstx")) {
-            return new CoinJoinFinalTransaction(params, payloadBytes);
+            return new CoinJoinBroadcastTx(params, payloadBytes, protocolVersion);
+        } else if(command.equals("dsa")) {
+            return new CoinJoinAccept(params, payloadBytes);
+        } else if(command.equals("dsi")) {
+            return new CoinJoinEntry(params, payloadBytes);
+        } else if(command.equals("dss")) {
+            return new CoinJoinSignedInputs(params, payloadBytes);
         } else {
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);

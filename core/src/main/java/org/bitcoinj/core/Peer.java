@@ -16,7 +16,10 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.coinjoin.CoinJoinQueue;
+import com.google.common.collect.Lists;
+
+import org.bitcoinj.coinjoin.CoinJoin;
+import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.listeners.MasternodeListDownloadedListener;
@@ -504,20 +507,6 @@ public class Peer extends PeerSocketHandler {
     static long count = 1;
     @Override
     protected void processMessage(Message m) throws Exception {
-        /*if(startTime == 0)
-            startTime = Utils.currentTimeMillis();
-        else
-        {
-            long current = Utils.currentTimeMillis();
-            dataReceived += m.getMessageSize();
-
-            if(count % 100 == 0)
-            {
-                log.info("[bandwidth] " + (dataReceived / 1024 / 1024) + " MiB in " +(current-startTime)/1000 + " s:" + (dataReceived / 1024)/(current-startTime)*1000 + " KB/s");
-            }
-            count++;
-        }*/
-
 
         // Allow event listeners to filter the message stream. Listeners are allowed to drop messages by
         // returning null.
@@ -579,8 +568,6 @@ public class Peer extends PeerSocketHandler {
             processUTXOMessage((UTXOsMessage) m);
         } else if (m instanceof RejectMessage) {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
-        } else if(m instanceof CoinJoinQueue) {
-            //do nothing
         }
         else if(m instanceof SporkMessage)
         {
@@ -607,6 +594,8 @@ public class Peer extends PeerSocketHandler {
             // We ignore this message, because we don't reply to sendaddrv2 message.
         } else if (m instanceof QuorumRotationInfo) {
             context.masternodeListManager.processQuorumRotationInfo(this, (QuorumRotationInfo) m, false, null);
+        } else if (CoinJoinManager.isCoinJoinMessage(m)) {
+            context.coinJoinManager.processMessage(this, m);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
@@ -1392,6 +1381,8 @@ public class Peer extends PeerSocketHandler {
                 return context.instantSendManager.alreadyHave(inv);
             case ChainLockSignature:
                 return context.chainLockHandler.alreadyHave(inv);
+            case DarkSendTransaction:
+                return CoinJoin.hasDSTX(inv.hash);
         }
         // Don't know what it is, just say we already got one
         return true;
@@ -1412,6 +1403,7 @@ public class Peer extends PeerSocketHandler {
             switch (item.type) {
                 case Transaction:
                 case TransactionLockRequest:
+                case DarkSendTransaction:
                     transactions.add(item);
                     break;
                 case Block:
@@ -1428,8 +1420,6 @@ public class Peer extends PeerSocketHandler {
                 case BudgetProposal: break;
                 case BudgetFinalized: break;
                 case BudgetFinalizedVote: break;
-                case DarkSendTransaction:
-                    break;
                 case GovernanceObject:
                     goveranceObjects.add(item);
                     break;
@@ -2337,10 +2327,14 @@ public class Peer extends PeerSocketHandler {
         vecRequestsFulfilled.add(strRequest);
     }
 
-    boolean masternode = false;
+    protected boolean masternode = false;
     public boolean isMasternode() { return masternode; }
 
-    int masternodeListCount = -1;
+    public void setMasternode(boolean masternode) {
+        this.masternode = masternode;
+    }
+
+    protected int masternodeListCount = -1;
     public int getMasternodeListCount() { return masternodeListCount; }
     public void setMasternodeListCount(int count) { masternodeListCount = count; }
 

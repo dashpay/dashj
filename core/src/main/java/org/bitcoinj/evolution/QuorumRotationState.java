@@ -442,7 +442,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     public boolean isSynced() {
-        if (!params.isDIP0024Active(blockChain.getBestChainHeight()))
+        if (blockChain != null && !params.isDIP0024Active(blockChain.getBestChainHeight()))
             return true;
 
         if(mnListAtH.getHeight() == -1)

@@ -142,6 +142,7 @@ public class QuorumStateValidateQuorumsTest {
             stream.close();
         } finally {
             context.setDebugMode(false);
+            context.close();
             blockChain.getBlockStore().close();
         }
     }

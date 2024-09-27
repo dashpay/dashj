@@ -18,17 +18,20 @@ package org.bitcoinj.evolution;
 
 
 import com.google.common.collect.Lists;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VarInt;
+import org.bitcoinj.script.Script;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.bitcoinj.core.Transaction.Type.TRANSACTION_ASSET_LOCK;
 
@@ -79,8 +82,19 @@ public class AssetLockPayload extends SpecialTxPayload {
     }
 
     public String toString() {
-        return String.format("AssetLockPayload(creditOutputs: %d)",
-                creditOutputs.size());
+        StringBuilder s = new StringBuilder("AssetLockPayload");
+        creditOutputs.forEach(output -> {
+            Script scriptPubKey = output.getScriptPubKey();
+            s.append("\n   out  ");
+            s.append(scriptPubKey.getChunks().size() > 0 ? scriptPubKey.toString() : "<no scriptPubKey>");
+            s.append("  ");
+            s.append(output.getValue().toFriendlyString());
+            s.append('\n');
+            s.append("        ");
+            Script.ScriptType scriptType = scriptPubKey.getScriptType();
+            s.append(scriptType).append(" addr:").append(scriptPubKey.getToAddress(params));
+        });
+        return s.toString();
     }
 
     @Override
@@ -96,6 +110,13 @@ public class AssetLockPayload extends SpecialTxPayload {
     public List<TransactionOutput> getCreditOutputs() {
         return creditOutputs;
     }
+
+    public Coin getFundingAmount() {
+        return creditOutputs.stream()
+                .map(TransactionOutput::getValue)
+                .reduce(Coin.ZERO, Coin::add);
+    }
+
 
     @Override
     public JSONObject toJson() {

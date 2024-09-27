@@ -26,7 +26,7 @@ public class ZeroConfCoinSelector extends DefaultCoinSelector {
         return instance;
     }
 
-    private ZeroConfCoinSelector() {
+    protected ZeroConfCoinSelector() {
 
     }
 

@@ -16,11 +16,8 @@
 package org.bitcoinj.core;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Arrays;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 
 /*
  * Created by Hash Engineering on 8/25/2018.
@@ -29,26 +26,23 @@ import java.util.Arrays;
 /**
  * KeyId stores a Hash160 of a public key.  It is displayed in big endian.
  */
-public class KeyId extends Message {
-    public static final int MESSAGE_SIZE = 20;
-
-    private byte [] bytes;
-
+public class KeyId extends TransactionDestination {
     public static final KeyId KEYID_ZERO = new KeyId(new byte[20]);
 
     public KeyId(NetworkParameters params, byte[] payload, int offset) throws ProtocolException {
         super(params, payload, offset);
     }
 
-    private KeyId(byte [] key) {
-        super();
-        Preconditions.checkArgument(key.length == 20);
-        bytes = new byte[key.length];
-        System.arraycopy(key, 0, bytes, 0, key.length);
+    private KeyId(byte [] keyId) {
+        super(keyId);
+    }
+
+    public static KeyId fromBytes(byte[] bytes) {
+        return new KeyId(bytes);
     }
 
     private KeyId(byte [] key, boolean isLittleEndian) {
-        super();
+        super(key);
         Preconditions.checkArgument(key.length == 20);
         if (isLittleEndian) {
             bytes = new byte[key.length];
@@ -56,10 +50,6 @@ public class KeyId extends Message {
         } else {
             bytes = Utils.reverseBytes(key);
         }
-    }
-
-    public static KeyId fromBytes(byte[] bytes) {
-        return new KeyId(bytes);
     }
 
     public static KeyId fromBytes(byte[] bytes, boolean isLittleEndian) {
@@ -70,51 +60,17 @@ public class KeyId extends Message {
         return new KeyId(Utils.reverseBytes(Utils.HEX.decode(keyId)));
     }
 
-    public int calculateMessageSizeInBytes() {
-        return bytes.length;
-    }
-
-    @Override
-    protected void parse() throws ProtocolException {
-        bytes = readBytes(MESSAGE_SIZE);
-        length = cursor - offset;
-    }
-
-    @Override
-    protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        stream.write(bytes);
-    }
-
     public String toString() {
         return "KeyId(" + Utils.HEX.encode(Utils.reverseBytes(bytes)) +")";
     }
 
-    public byte [] getBytes() { return bytes; }
-
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        KeyId keyId = (KeyId)o;
-        return Arrays.equals(keyId.bytes, this.bytes);
-    }
-
-    Address getAddress(NetworkParameters params) {
-        return Address.fromScriptHash(params, bytes);
+    @Override
+    public Address getAddress(NetworkParameters params) {
+        return Address.fromPubKeyHash(params, bytes);
     }
 
     @Override
-    public Sha256Hash getHash() {
-        try {
-            UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(MESSAGE_SIZE);
-            bitcoinSerializeToStream(bos);
-            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
-        } catch (IOException x) {
-            throw new RuntimeException(x);
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return Ints.fromBytes(bytes[MESSAGE_SIZE - 4], bytes[MESSAGE_SIZE - 3], bytes[MESSAGE_SIZE - 2], bytes[MESSAGE_SIZE - 1]);
+    public Script getScript() {
+        return ScriptBuilder.createP2PKHOutputScript(bytes);
     }
 }
