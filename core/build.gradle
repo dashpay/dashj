@@ -6,7 +6,7 @@ apply plugin: 'jacoco'
 apply plugin: 'signing'
 // apply plugin:  'com.github.spotbugs'
 
-version = '21.0.0-CJ-SNAPSHOT'
+version = '21.1.0'
 archivesBaseName = 'dashj-core'
 eclipse.project.name = 'dashj-core'
 
