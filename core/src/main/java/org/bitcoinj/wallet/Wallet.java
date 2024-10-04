@@ -5946,7 +5946,7 @@ public class Wallet extends BaseTaggableObject
                 receivingFromFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
             }
             receivingFromFriendsGroup.addAndActivateHDChain(chain);
-            saveNow();
+            saveLater();
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -5966,7 +5966,7 @@ public class Wallet extends BaseTaggableObject
                 sendingToFriendsGroup = FriendKeyChainGroup.friendlybuilder(params).build();
             }
             sendingToFriendsGroup.addAndActivateHDChain(chain);
-            saveNow();
+            saveLater();
         } finally {
             keyChainGroupLock.unlock();
         }
