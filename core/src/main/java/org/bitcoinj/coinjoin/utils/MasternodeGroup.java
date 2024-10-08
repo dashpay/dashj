@@ -147,7 +147,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
      * @param chain
      */
     public MasternodeGroup(Context context, @Nullable AbstractBlockChain chain) {
-        super(context, chain);
+        super(context, chain, false);
         init();
     }
 

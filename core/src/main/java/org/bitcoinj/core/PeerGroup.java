@@ -365,8 +365,13 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     }
 
     /** See {@link #PeerGroup(Context, AbstractBlockChain)} */
+    public PeerGroup(NetworkParameters params, @Nullable AbstractBlockChain chain, boolean syncBlockchain) {
+        this(Context.getOrCreate(params), chain, null, new NioClientManager(), syncBlockchain);
+    }
+
+    /** See {@link #PeerGroup(Context, AbstractBlockChain)} */
     public PeerGroup(NetworkParameters params, @Nullable AbstractBlockChain chain) {
-        this(Context.getOrCreate(params), chain, null, new NioClientManager());
+        this(Context.getOrCreate(params), chain, null, new NioClientManager(), true);
     }
 
     /** See {@link #PeerGroup(Context, AbstractBlockChain)} */
@@ -382,6 +387,14 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         this(context, chain, null, new NioClientManager());
     }
 
+    /**
+     * Creates a PeerGroup for the given context and chain. Blocks will be passed to the chain as they are broadcast
+     * and downloaded. This is probably the constructor you want to use.
+     */
+    public PeerGroup(Context context, @Nullable AbstractBlockChain chain, boolean syncsBlockchain) {
+        this(context, chain, null, new NioClientManager(), syncsBlockchain);
+    }
+
     /** See {@link #PeerGroup(Context, AbstractBlockChain, AbstractBlockChain, ClientConnectionManager)} */
     public PeerGroup(NetworkParameters params, @Nullable AbstractBlockChain chain, ClientConnectionManager connectionManager) {
         this(Context.getOrCreate(params), chain, null, connectionManager);
@@ -389,9 +402,17 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     /**
      * Creates a new PeerGroup allowing you to specify the {@link ClientConnectionManager} which is used to create new
-     * connections and keep track of existing ones.
+     * connections and keep track of existing ones.  This peer group will initialize headerChain if null
      */
     private PeerGroup(Context context, @Nullable AbstractBlockChain chain, @Nullable AbstractBlockChain headerChain, ClientConnectionManager connectionManager) {
+        this(context, chain, headerChain, connectionManager, true);
+    }
+
+        /**
+         * Creates a new PeerGroup allowing you to specify the {@link ClientConnectionManager} which is used to create new
+         * connections and keep track of existing ones.
+         */
+    private PeerGroup(Context context, @Nullable AbstractBlockChain chain, @Nullable AbstractBlockChain headerChain, ClientConnectionManager connectionManager, boolean syncsBlockchain) {
         checkNotNull(context);
         this.context = context;
         this.params = context.getParams();
@@ -438,15 +459,18 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         vMinRequiredProtocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM);
         runningVoteBroadcasts = Collections.synchronizedSet(new HashSet<GovernanceVoteBroadcast>());
 
-        //DashSpecific
-        if (headerChain == null) {
+        // Dash Specific - if this PeerGroup does not sync the blockchain, then syncsBlockchain should be false
+        // otherwise, if headerChain is null, then copy the last 100 headers over to it
+        if (headerChain == null && syncsBlockchain) {
             if (context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
                 try {
                     this.headerChain = new BlockChain(params, new MemoryBlockStore(params));
                     StoredBlock cursor = chain.getChainHead();
-                    while (cursor != null && !cursor.getHeader().equals(params.getGenesisBlock())) {
+                    int headers = 0; // limit headers to 100, enough to sync
+                    while (cursor != null && !cursor.getHeader().equals(params.getGenesisBlock()) && headers < 100) {
                         this.headerChain.getBlockStore().put(cursor);
                         cursor = cursor.getPrev(chain.getBlockStore());
+                        headers++;
                     }
                 } catch (BlockStoreException x) {
                     // swallow
