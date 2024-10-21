@@ -303,7 +303,7 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
             return newValue;
         } else if (bytes.length < 32) {
             byte [] newValue = new byte[32];
-            System.arraycopy(bytes, bytes.length - 32, newValue, 0, 32);
+            System.arraycopy(bytes, 0, newValue, 32 - bytes.length, bytes.length);
             return newValue;
         }
         throw new IllegalArgumentException("bytes does not have length 32 or 33 ");
