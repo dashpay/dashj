@@ -1,0 +1,2 @@
+queries:
+  - exclude: java/weak-cryptographic-algorithm
