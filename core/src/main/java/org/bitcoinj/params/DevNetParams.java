@@ -144,6 +144,9 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         BIP66Height = 1;
         coinType = 1;
         minSporkKeys = 1;
+        DIP0024BlockHeight = 300;
+        v19BlockHeight = 300;
+        v20BlockHeight = 300;
 
         // coinjoin
         poolMinParticipants = 2;
