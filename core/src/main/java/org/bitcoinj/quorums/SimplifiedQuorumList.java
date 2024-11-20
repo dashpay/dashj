@@ -120,7 +120,7 @@ public class SimplifiedQuorumList extends Message {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append("SimplifiedQuorumList(count: ").append(size()).append("; ").append(height).append("/").append(")");
+        builder.append("SimplifiedQuorumList(count: ").append(size()).append("; ").append(height).append(")");
 
         if (Context.get().isDebugMode()) {
             for (Map.Entry<Sha256Hash, FinalCommitment> entry : minableCommitments.entrySet()) {
