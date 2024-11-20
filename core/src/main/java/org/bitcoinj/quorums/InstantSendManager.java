@@ -63,7 +63,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
     }
 
     private ScheduledExecutorService createScheduledExecutorService() {
-        return Executors.newScheduledThreadPool(1, new ContextPropagatingThreadFactory("instantsend"));
+        return Executors.newScheduledThreadPool(2, new ContextPropagatingThreadFactory("instantsend"));
     }
 
     @Override
@@ -745,8 +745,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
     }
 
-    public void syncTransaction(Transaction tx, StoredBlock block, int posInBlock)
-    {
+    public void syncTransaction(Transaction tx, StoredBlock block, int posInBlock) {
+        scheduledExecutorService.schedule(() -> {
+            syncTransactionInternal(tx, block, posInBlock);
+        }, 250, TimeUnit.MILLISECONDS);
+    }
+
+    private void syncTransactionInternal(Transaction tx, StoredBlock block, int posInBlock) {
         if (!isInstantSendEnabled()) {
             return;
         }
