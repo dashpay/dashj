@@ -746,12 +746,6 @@ public class InstantSendManager implements RecoveredSignatureListener {
     }
 
     public void syncTransaction(Transaction tx, StoredBlock block, int posInBlock) {
-        scheduledExecutorService.schedule(() -> {
-            syncTransactionInternal(tx, block, posInBlock);
-        }, 250, TimeUnit.MILLISECONDS);
-    }
-
-    private void syncTransactionInternal(Transaction tx, StoredBlock block, int posInBlock) {
         if (!isInstantSendEnabled()) {
             return;
         }
