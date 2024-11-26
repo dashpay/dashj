@@ -40,6 +40,7 @@ import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.slf4j.Logger;
@@ -83,9 +84,11 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
     static final Logger log = LoggerFactory.getLogger(CoinJoinServer.class);
     static final Random random = new Random();
+    private final DashSystem system;
     private final CoinJoinBaseManager baseManager = new CoinJoinBaseManager();
-    public CoinJoinServer(Context context) {
+    public CoinJoinServer(Context context, DashSystem system) {
         super(context);
+        this.system = system;
         operatorSecretKey = BLSSecretKey.fromSeed(Sha256Hash.ZERO_HASH.getBytes());
         entry = new SimplifiedMasternodeListEntry(
                 context.getParams(),
@@ -158,7 +161,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
 
         log.info("coinjoin server:DSACCEPT -- denom {} ({})  txCollateral {}", dsa.getDenomination(), CoinJoin.denominationToString(dsa.getDenomination()), dsa.getTxCollateral()); /* Continued */
 
-        SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
+        SimplifiedMasternodeList mnList = system.masternodeListManager.getListAtChainTip();
         Masternode dmn = mnList.getMN(proTxHash);
         if (dmn == null) {
             pushStatus(from, STATUS_REJECTED, ERR_MN_LIST);
@@ -178,9 +181,9 @@ public class CoinJoinServer extends CoinJoinBaseSession {
                 lock.unlock();
             }
 
-            long nLastDsq = context.masternodeMetaDataManager.getMetaInfo(dmn.getProTxHash()).getLastDsq();
-            long nDsqThreshold = context.masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), mnList.getValidMNsCount());
-            if (nLastDsq != 0 && nDsqThreshold > context.masternodeMetaDataManager.getDsqCount()) {
+            long nLastDsq = system.masternodeMetaDataManager.getMetaInfo(dmn.getProTxHash()).getLastDsq();
+            long nDsqThreshold = system.masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), mnList.getValidMNsCount());
+            if (nLastDsq != 0 && nDsqThreshold > system.masternodeMetaDataManager.getDsqCount()) {
                 log.info("coinjoin server:DSACCEPT -- last dsq too recent, must wait: peer addr={}", from.getAddress().getSocketAddress());
                 pushStatus(from, STATUS_REJECTED, ERR_RECENT);
                 return;
@@ -751,7 +754,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
     }
 
     protected void relay(Message message) {
-        for (Peer peer : context.peerGroup.getConnectedPeers()) {
+        for (Peer peer : system.peerGroup.getConnectedPeers()) {
             peer.sendMessage(message);
         }
     }

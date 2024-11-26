@@ -15,7 +15,7 @@ public class Superblock extends GovernanceObject {
 
     private int nEpochStart;
     private int nStatus;
-    private ArrayList<GovernancePayment> vecPayments;;
+    private ArrayList<GovernancePayment> vecPayments;
 
     Superblock(NetworkParameters params) {
         super(params);
@@ -83,11 +83,11 @@ public class Superblock extends GovernanceObject {
     }
 
     public final GovernanceObject getGovernanceObject() {
-        context.governanceManager.lock.lock();
+        governanceManager.lock.lock();
         try {
-            return  context.governanceManager.findGovernanceObject(nGovObjHash);
+            return  governanceManager.findGovernanceObject(nGovObjHash);
         } finally {
-            context.governanceManager.lock.unlock();
+            governanceManager.lock.unlock();
         }
     }
 

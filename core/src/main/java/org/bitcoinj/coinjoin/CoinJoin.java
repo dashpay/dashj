@@ -27,6 +27,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.quorums.ChainLocksHandler;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -226,13 +227,13 @@ public class CoinJoin {
         return -1L * inputAmount.div(Coin.COIN.value).value;
     }
 
-    private static void checkDSTXes(StoredBlock block) {
+    private static void checkDSTXes(StoredBlock block, ChainLocksHandler chainLocksHandler) {
         mapdstxLock.lock();
         try {
             Iterator<Map.Entry<Sha256Hash, CoinJoinBroadcastTx>> it = mapDSTX.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<Sha256Hash, CoinJoinBroadcastTx> entry = it.next();
-                if (entry.getValue().isExpired(block)) {
+                if (entry.getValue().isExpired(block, chainLocksHandler)) {
                     it.remove();
                 }
             }
@@ -248,11 +249,11 @@ public class CoinJoin {
         return mapDSTX.get(hash);
     }
 
-    public static void updatedBlockTip(StoredBlock block){
-        checkDSTXes(block);
+    public static void updatedBlockTip(StoredBlock block, ChainLocksHandler chainLocksHandler) {
+        checkDSTXes(block, chainLocksHandler);
     }
-    public static void notifyChainLock(StoredBlock block) {
-        checkDSTXes(block);
+    public static void notifyChainLock(StoredBlock block, ChainLocksHandler chainLocksHandler) {
+        checkDSTXes(block, chainLocksHandler);
     }
 
     public static void updateDSTXConfirmedHeight(Transaction tx, int nHeight) {

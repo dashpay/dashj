@@ -57,7 +57,7 @@ public class CoinJoinTransactionTypeTest extends TestWithCoinJoinWallet {
         myAddress = Address.fromKey(UNITTEST, myKey);
         blockStore = new MemoryBlockStore(UNITTEST);
         chain = new BlockChain(UNITTEST, wallet, blockStore);
-        Context.get().initDash(false, true);
+        // Context.get().initDash(false, true);
     }
 
     @Test

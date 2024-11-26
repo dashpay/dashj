@@ -102,7 +102,7 @@ public class CreateChainFile {
         chain.addWallet(wallet);
         peerGroup.addWallet(wallet);
 
-        DownloadProgressTracker bListener = new DownloadProgressTracker() {
+        DownloadProgressTracker bListener = new DownloadProgressTracker(false) {
             @Override
             public void doneDownload() {
                 System.out.println("blockchain downloaded");

@@ -19,6 +19,7 @@ package org.bitcoinj.evolution;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.quorums.LLMQUtils;
 import org.bitcoinj.utils.MerkleRoot;
 import org.bitcoinj.utils.Pair;
@@ -116,7 +117,7 @@ public class SimplifiedMasternodeList extends Message {
         size = (int)readVarInt();
         Preconditions.checkArgument(size == 0, "There is an offset error with this data file, rejecting...");
 
-        if(Context.get().masternodeListManager.getFormatVersion() >= 2) {
+        if(DashSystem.get(params).masternodeListManager.getFormatVersion() >= 2) {
             ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
             buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
             buffer.rewind();

@@ -97,6 +97,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     Context context;
     DualBlockChain blockChain;
     protected PeerGroup peerGroup;
+    protected MasternodeSync masternodeSync;
 
     QuorumUpdateRequest<Request> lastRequest;
 
@@ -105,7 +106,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     boolean waitingForMNListDiff;
     /** is the Sync Stage on past HEADERS and MNLIST */
     boolean initChainTipSyncComplete() {
-        return context.peerGroup != null && context.peerGroup.getSyncStage().value > PeerGroup.SyncStage.MNLIST.value;
+        return peerGroup != null && peerGroup.getSyncStage().value > PeerGroup.SyncStage.MNLIST.value;
     }
     BlockQueue pendingBlocks = new BlockQueue();
 
@@ -171,8 +172,9 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     }
 
     // TODO: Do we need to keep track of the header chain also?
-    public void setBlockChain(PeerGroup peerGroup, DualBlockChain blockChain) {
+    public void setBlockChain(PeerGroup peerGroup, DualBlockChain blockChain, MasternodeSync masternodeSync) {
         this.blockChain = blockChain;
+        this.masternodeSync = masternodeSync;
         if (peerGroup != null) {
             this.peerGroup = peerGroup;
         }
@@ -215,7 +217,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     abstract boolean needsUpdate(StoredBlock nextBlock);
 
     public abstract void processDiff(@Nullable Peer peer, DiffMessage difference,
-                                     DualBlockChain blockChain,
+                                     DualBlockChain blockChain, MasternodeListManager masternodeListManager,
                                      boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage)
             throws VerificationException;
 
@@ -336,8 +338,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     }
 
     protected boolean shouldProcessMNListDiff() {
-        return context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_DMN_LIST) ||
-                context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_QUORUM_LIST);
+        return masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_DMN_LIST) ||
+                masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_QUORUM_LIST);
     }
 
     boolean requestNextMNListDiff() {
@@ -345,7 +347,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             return false;
 
         log.info("download peer = {}, but obtaining backup from peerGroup downloadPeer", downloadPeer);
-        Peer downloadPeerBackup = downloadPeer == null ? context.peerGroup.getDownloadPeer() : downloadPeer;
+        Peer downloadPeerBackup = downloadPeer == null ? peerGroup.getDownloadPeer() : downloadPeer;
         log.info("backup download peer = {}", downloadPeerBackup);
         lock.lock();
         try {
@@ -434,7 +436,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
         if (downloadPeer == null) {
             log.info("using peerGroup downloadPeer in maybeGetMNListDiffFresh ");
-            downloadPeer = context.peerGroup.getDownloadPeer();
+            downloadPeer = peerGroup.getDownloadPeer();
             log.info("using peerGroup downloadPeer in maybeGetMNListDiffFresh {}", downloadPeer);
         }
 
@@ -563,7 +565,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public final NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            boolean value = initChainTipSyncComplete() || !context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+            boolean value = initChainTipSyncComplete() || !masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
             boolean needsUpdate = needsUpdate(block);
             if (needsUpdate && value && getMasternodeListAtTip().getHeight() < block.getHeight() && isDeterministicMNsSporkActive() && stateManager.isLoadedFromFile()) {
                 long timePeriod = syncOptions == MasternodeListSyncOptions.SYNC_SNAPSHOT_PERIOD ? SNAPSHOT_TIME_PERIOD : MAX_CACHE_SIZE * 3 * 600L;
@@ -595,7 +597,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public final PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
-            downloadPeer = context.peerGroup.getDownloadPeer();
+            downloadPeer = peerGroup.getDownloadPeer();
             log.info("peer connected and setting download peer to {} with onPeerConnected", downloadPeer);
         }
     };
@@ -604,7 +606,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         @Override
         public void onPeerDisconnected(Peer peer, int peerCount) {
             if (downloadPeer == peer) {
-                downloadPeer = context.peerGroup.getDownloadPeer();
+                downloadPeer = peerGroup.getDownloadPeer();
                 log.info("setting download peer to {} with onPeerDisconnected, previously was {}", downloadPeer, peer);
                 if (downloadPeer == null)
                     chooseRandomDownloadPeer();
@@ -651,7 +653,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     };
 
     void chooseRandomDownloadPeer() {
-        List<Peer> peers = context.peerGroup.getConnectedPeers();
+        List<Peer> peers = peerGroup.getConnectedPeers();
         if (peers != null && !peers.isEmpty()) {
             downloadPeer = peers.get(random.nextInt(peers.size()));
             log.info("setting download peer with chooseRandomDownloadPeer: {}", downloadPeer);
@@ -745,10 +747,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 return;
             }
             // use tryLock to avoid deadlocks
-            boolean isLocked = context.peerGroup.getLock().tryLock(500, TimeUnit.MILLISECONDS);
+            boolean isLocked = peerGroup.getLock().tryLock(500, TimeUnit.MILLISECONDS);
             try {
                 if (isLocked) {
-                    downloadPeer = context.peerGroup.getDownloadPeer();
+                    downloadPeer = peerGroup.getDownloadPeer();
                     log.info("{}: peergroup lock acquired, obtaining downloadPeer from peerGroup: {}",
                             Thread.currentThread().getName(), downloadPeer);
                     if (downloadPeer == null) {
@@ -758,7 +760,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
                 }
             } finally {
                 if (isLocked) {
-                    context.peerGroup.getLock().unlock();
+                    peerGroup.getLock().unlock();
                 }
             }
         } catch (InterruptedException x) {

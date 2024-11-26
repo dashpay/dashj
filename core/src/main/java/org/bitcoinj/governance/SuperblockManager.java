@@ -12,18 +12,19 @@ import static org.bitcoinj.governance.GovernanceVote.VoteSignal.VOTE_SIGNAL_FUND
  * Created by Hash Engineering on 6/6/2018.
  */
 public class SuperblockManager {
+    private GovernanceManager governanceManager;
     private static final Logger log = LoggerFactory.getLogger(SuperblockManager.class);
 
-    public static boolean isSuperblockTriggered(int nBlockHeight) {
+    public static boolean isSuperblockTriggered(int nBlockHeight, GovernanceManager governanceManager, GovernanceTriggerManager triggerManager) {
         log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- Start nBlockHeight = {}", nBlockHeight);
         if (!Superblock.isValidBlockHeight(Context.get().getParams(), nBlockHeight)) {
             return false;
         }
         
-        Context.get().governanceManager.lock.lock();
+        governanceManager.lock.lock();
         try {
             // GET ALL ACTIVE TRIGGERS
-            ArrayList<Superblock> vecTriggers = Context.get().triggerManager.getActiveTriggers();
+            ArrayList<Superblock> vecTriggers = triggerManager.getActiveTriggers();
 
             log.info("gobject--CSuperblockManager::IsSuperblockTriggered -- vecTriggers.size() = {}", vecTriggers.size());
 
@@ -67,21 +68,21 @@ public class SuperblockManager {
 
             return false;
         } finally {
-            Context.get().governanceManager.lock.unlock();
+            governanceManager.lock.unlock();
         }
     }
 
-    public static Superblock getBestSuperblock(int nBlockHeight) {
+    public static Superblock getBestSuperblock(int nBlockHeight, GovernanceManager governanceManager, GovernanceTriggerManager triggerManager) {
         Context context = Context.get();
         if (!Superblock.isValidBlockHeight(context.getParams(), nBlockHeight)) {
             return null;
         }
 
 
-        context.governanceManager.lock.lock();
+        governanceManager.lock.lock();
         try {
             Superblock superblockResult = null;
-            ArrayList<Superblock> vecTriggers = context.triggerManager.getActiveTriggers();
+            ArrayList<Superblock> vecTriggers = triggerManager.getActiveTriggers();
             int nYesCount = 0;
 
             for (Superblock pSuperblock : vecTriggers) {
@@ -115,21 +116,21 @@ public class SuperblockManager {
 
             return nYesCount > 0 ? superblockResult : null;
         } finally {
-            context.governanceManager.lock.unlock();
+            governanceManager.lock.unlock();
         }
     }
 
-    public static Transaction createSuperblock(int nBlockHeight, ArrayList<TransactionOutput> voutSuperblockRet) {
+    public static Transaction createSuperblock(int nBlockHeight, ArrayList<TransactionOutput> voutSuperblockRet, GovernanceManager governanceManager, GovernanceTriggerManager triggerManager) {
         log.info( "CSuperblockManager::CreateSuperblock Start");
 
         Context context = Context.get();
-        context.governanceManager.lock.lock();
+        governanceManager.lock.lock();
         try {
 
             Transaction tx = new Transaction(context.getParams());
             // GET THE BEST SUPERBLOCK FOR THIS BLOCK HEIGHT
 
-            Superblock pSuperblock = SuperblockManager.getBestSuperblock(nBlockHeight);
+            Superblock pSuperblock = SuperblockManager.getBestSuperblock(nBlockHeight, governanceManager, triggerManager);
             if (pSuperblock == null) {
                 log.info("gobject--CSuperblockManager::CreateSuperblock -- Can't find superblock for height {}", nBlockHeight);
                 log.info("CSuperblockManager::CreateSuperblock Failed to get superblock for height, returning");
@@ -175,39 +176,36 @@ public class SuperblockManager {
             log.info( "CSuperblockManager::CreateSuperblock End");
             return tx;
         } finally {
-            context.governanceManager.lock.unlock();
+            governanceManager.lock.unlock();
         }
     }
 
     //C++ TO JAVA CONVERTER TODO TASK: The implementation of the following method could not be found:
 //	static String getRequiredPaymentsString(int nBlockHeight);
-    public static boolean isValid(Transaction txNew, int nBlockHeight, Coin blockReward) {
+    public static boolean isValid(Transaction txNew, int nBlockHeight, Coin blockReward, GovernanceManager governanceManager, GovernanceTriggerManager triggerManager) {
         // GET BEST SUPERBLOCK, SHOULD MATCH
-        Context context = Context.get();
-        context.governanceManager.lock.lock();
+        governanceManager.lock.lock();
         try {
 
-            Superblock pSuperblock = SuperblockManager.getBestSuperblock(nBlockHeight);
+            Superblock pSuperblock = SuperblockManager.getBestSuperblock(nBlockHeight, governanceManager, triggerManager);
             if (pSuperblock != null) {
                 return pSuperblock.isValid(txNew, nBlockHeight, blockReward);
             }
 
             return false;
         } finally {
-            context.governanceManager.lock.unlock();
+            governanceManager.lock.unlock();
         }
     }
 
-    static String getRequiredPaymentsString(int nBlockHeight)
-    {
-        Context context = Context.get();
-        context.governanceManager.lock.lock();
+    static String getRequiredPaymentsString(int nBlockHeight, GovernanceManager governanceManager, GovernanceTriggerManager triggerManager) {
+        governanceManager.lock.lock();
         try {
             String ret = "Unknown";
 
             // GET BEST SUPERBLOCK
 
-            Superblock pSuperblock = getBestSuperblock(nBlockHeight);
+            Superblock pSuperblock = getBestSuperblock(nBlockHeight, governanceManager, triggerManager);
             if (pSuperblock == null) {
                 log.info("gobject--CSuperblockManager::GetRequiredPaymentsString -- Can't find superblock for height {}", nBlockHeight);
                 return "error";
@@ -220,7 +218,7 @@ public class SuperblockManager {
                 if (payment != null) {
                     // PRINT NICE LOG OUTPUT FOR SUPERBLOCK PAYMENT
 
-                    Address address = payment.script.getToAddress(context.getParams());
+                    Address address = payment.script.getToAddress(governanceManager.getParams());
 
                     // RETURN NICE OUTPUT FOR CONSOLE
 
@@ -234,7 +232,7 @@ public class SuperblockManager {
 
             return ret;
         } finally {
-            context.governanceManager.lock.unlock();
+            governanceManager.lock.unlock();
         }
     }
 

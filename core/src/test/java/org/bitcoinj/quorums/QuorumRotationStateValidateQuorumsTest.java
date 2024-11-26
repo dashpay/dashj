@@ -23,6 +23,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.evolution.SimplifiedMasternodesTest;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
@@ -54,6 +55,7 @@ import static org.junit.Assert.assertTrue;
 public class QuorumRotationStateValidateQuorumsTest {
 
     static Context context;
+    static DashSystem system;
     static final MainNetParams MAINPARAMS = MainNetParams.get();
     static final TestNet3Params TESTNETPARAMS = TestNet3Params.get();
 
@@ -148,12 +150,12 @@ public class QuorumRotationStateValidateQuorumsTest {
     private void initContext() throws BlockStoreException {
         if (context == null || !context.getParams().equals(params))
             context = new Context(params);
-
+        system = new DashSystem(context);
         blockChain = new BlockChain(context, new SPVBlockStore(params, new File(Objects.requireNonNull(SimplifiedMasternodesTest.class.getResource(blockchainFile)).getPath())));
-        context.initDash(true, true);
+        system.initDash(true, true);
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
-        context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
+        system.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
     }
 
     @Test
@@ -171,7 +173,7 @@ public class QuorumRotationStateValidateQuorumsTest {
             stream.read(buffer);
 
             SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
-            context.setMasternodeListManager(manager);
+            system.setMasternodeListManager(manager);
 
             QuorumRotationInfo qrinfo = new QuorumRotationInfo(context.getParams(), buffer, protocolVersion);
 
@@ -196,7 +198,7 @@ public class QuorumRotationStateValidateQuorumsTest {
         } catch (Exception x) {
             x.printStackTrace();
         } finally {
-            context.close();
+            system.close();
             blockChain.getBlockStore().close();
         }
     }

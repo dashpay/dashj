@@ -135,7 +135,7 @@ public class CoinJoinMonitor {
         }
 
         System.out.println("Network Utilization ----------------------------");
-        System.out.println("Masternodes: " + Context.get().masternodeListManager.getMasternodeList().countEnabled());
+        System.out.println("Masternodes: " + kit.system().masternodeListManager.getMasternodeList().countEnabled());
         System.out.printf("Hours: %.1f\n", hours);
         System.out.printf("Sessions/hour: %.1f\n", (double) completedSessions.size() / hours);
 
@@ -189,7 +189,7 @@ public class CoinJoinMonitor {
                 kit.peerGroup().shouldSendDsq(true);
             }
         };
-        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
+        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, kit.system().masternodeListManager));
 
         if(checkpoints != null) {
             try {

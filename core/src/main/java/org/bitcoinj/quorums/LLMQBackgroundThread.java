@@ -1,6 +1,7 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.Context;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +22,18 @@ public class LLMQBackgroundThread extends Thread {
     private static final Logger log = LoggerFactory.getLogger(LLMQBackgroundThread.class);
 
     Context context;
-    public LLMQBackgroundThread(Context context) {
+    protected InstantSendManager instantSendManager;
+    protected ChainLocksHandler chainLocksHandler;
+    protected SigningManager signingManager;
+    protected SimplifiedMasternodeListManager masternodeListManager;
+    public LLMQBackgroundThread(Context context, InstantSendManager instantSendManager,
+                                ChainLocksHandler chainLocksHandler, SigningManager signingManager,
+                                SimplifiedMasternodeListManager masternodeListManager) {
         this.context = context;
+        this.instantSendManager = instantSendManager;
+        this.chainLocksHandler = chainLocksHandler;
+        this.signingManager = signingManager;
+        this.masternodeListManager = masternodeListManager;
     }
 
     int debugTimer = 0;
@@ -31,23 +42,23 @@ public class LLMQBackgroundThread extends Thread {
     public void run() {
         Context.propagate(context);
         log.info("starting LLMQBackgroundThread.run");
-        if (context.signingManager == null) {
+        if (signingManager == null) {
             // stop this thread if there is no signing manager
             return;
         }
         try {
-            context.signingManager.addRecoveredSignatureListener(context.instantSendManager);
-            context.signingManager.addRecoveredSignatureListener(context.chainLockHandler);
+            signingManager.addRecoveredSignatureListener(instantSendManager);
+            signingManager.addRecoveredSignatureListener(chainLocksHandler);
             while (!isInterrupted()) {
                 boolean didWork = false;
 
                 // only the DIP24 lists need to be synced for this to work
-                if (context.masternodeListManager.isSyncedForInstantSend()) {
-                    didWork = context.instantSendManager.processPendingInstantSendLocks();
+                if (masternodeListManager.isSyncedForInstantSend()) {
+                    didWork = instantSendManager.processPendingInstantSendLocks();
 
-                    didWork |= context.signingManager.processPendingRecoveredSigs();
+                    didWork |= signingManager.processPendingRecoveredSigs();
 
-                    context.signingManager.cleanup();
+                    signingManager.cleanup();
                 }
 
                 if (!didWork) {
@@ -56,7 +67,7 @@ public class LLMQBackgroundThread extends Thread {
 
                 debugTimer++;
                 if(debugTimer % 400 == 0) {
-                    log.info("{}", context.instantSendManager);
+                    log.info("{}", instantSendManager);
                     if(debugTimer == 2000)
                         debugTimer = 0;
                 }
@@ -68,8 +79,8 @@ public class LLMQBackgroundThread extends Thread {
             log.info("stopping LLMQBackgroundThread via InterruptedException");
             //let the thread stop
         } finally {
-            context.signingManager.removeRecoveredSignatureListener(context.instantSendManager);
-            context.signingManager.removeRecoveredSignatureListener(context.chainLockHandler);
+            signingManager.removeRecoveredSignatureListener(instantSendManager);
+            signingManager.removeRecoveredSignatureListener(chainLocksHandler);
         }
     }
 }

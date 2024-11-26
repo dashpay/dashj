@@ -19,6 +19,7 @@ import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
+import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
 import org.bitcoinj.coinjoin.utils.KeyHolderStorage;
@@ -42,7 +43,9 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.MasternodeMetaDataManager;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptException;
@@ -110,6 +113,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private final KeyHolderStorage keyHolderStorage; // storage for keys used in PrepareDenominate
 
+    private final MasternodeSync masternodeSync;
+    private final CoinJoinManager coinJoinManager;
+    private final SimplifiedMasternodeListManager masternodeListManager;
+    private final MasternodeMetaDataManager masternodeMetaDataManager;
     private final WalletEx mixingWallet;
 
     private final AtomicBoolean hasNothingToDo = new AtomicBoolean(false); // is mixing finished?
@@ -198,7 +205,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
 
-        try (TransactionBuilder txBuilder = new TransactionBuilder(mixingWallet, tallyItem, dryRun)) {
+        try (TransactionBuilder txBuilder = new TransactionBuilder(mixingWallet, coinJoinManager, tallyItem, dryRun)) {
             log.info("coinjoin: Start {}", txBuilder);
 
             // ****** Add an output for mixing collaterals ************ /
@@ -376,7 +383,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 }
 
                 // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
-                mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
+                coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
 
                 log.info("coinjoin: txid: {}", strResult);
 
@@ -447,7 +454,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
 
-        try (TransactionBuilder txBuilder = new TransactionBuilder(wallet, tallyItem, false)) {
+        try (TransactionBuilder txBuilder = new TransactionBuilder(wallet, coinJoinManager, tallyItem, false)) {
             log.info("coinjoin: Start {}", txBuilder);
 
             // Skip way too tiny amounts. Smallest we want is minimum collateral amount in a one output tx
@@ -508,7 +515,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 return false;
             }
 
-            mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
+            coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
 
             log.info("coinjoin: txid: {}", strResult);
             queueTransactionListeners(txBuilder.getTransaction(), CoinJoinTransactionType.MakeCollateralInputs);
@@ -558,7 +565,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             // otherwise when the masternodes do submit these transactions to the network, they will be
             // ignored by DashJ and when they are received
             SendRequest req = SendRequest.forTx(txCollateral);
-            req.aesKey = context.coinJoinManager.requestKeyParameter(mixingWallet);
+            req.aesKey = coinJoinManager.requestKeyParameter(mixingWallet);
             mixingWallet.signTransaction(req);
         } catch (ScriptException x) {
             strReason.append("Unable to sign collateral transaction!");
@@ -573,15 +580,15 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     private boolean joinExistingQueue(Coin balanceNeedsAnonymized) {
         if (!CoinJoinClientOptions.isEnabled()) return false;
-        if (mixingWallet.getContext().coinJoinManager.getCoinJoinClientQueueManager() == null) return false;
+        if (coinJoinManager.getCoinJoinClientQueueManager() == null) return false;
 
-        SimplifiedMasternodeList mnList = mixingWallet.getContext().masternodeListManager.getListAtChainTip();
+        SimplifiedMasternodeList mnList = masternodeListManager.getListAtChainTip();
 
         // Dash Core checks for recent winners, but we cannot do that
 
         // Look through the queues and see if anything matches
         CoinJoinQueue dsq;
-        while ((dsq = mixingWallet.getContext().coinJoinManager.getCoinJoinClientQueueManager().getQueueItemAndTry()) != null) {
+        while ((dsq = coinJoinManager.getCoinJoinClientQueueManager().getQueueItemAndTry()) != null) {
             Masternode dmn = mnList.getMN(dsq.getProTxHash());
 
             if (dmn == null) {
@@ -603,9 +610,9 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 continue;
             }
 
-            mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).addUsedMasternode(dsq.getProTxHash());
+            coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).addUsedMasternode(dsq.getProTxHash());
 
-            if (mixingWallet.getContext().coinJoinManager.isMasternodeOrDisconnectRequested(dmn.getService())) {
+            if (coinJoinManager.isMasternodeOrDisconnectRequested(dmn.getService())) {
                 log.info("coinjoin: skipping masternode connection, addr={}", dmn.getService());
                 continue;
             }
@@ -613,7 +620,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             sessionDenom = dsq.getDenomination();
             mixingMasternode = dmn;
             pendingDsaRequest = new PendingDsaRequest(dmn.getService(), new CoinJoinAccept(mixingWallet.getContext().getParams(), sessionDenom, txMyCollateral));
-            mixingWallet.getContext().coinJoinManager.addPendingMasternode(this);
+            coinJoinManager.addPendingMasternode(this);
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: join existing queue -> pending connection, denom: {} ({}), addr={}",
@@ -633,7 +640,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
 
         int nTries = 0;
-        SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
+        SimplifiedMasternodeList mnList = masternodeListManager.getListAtChainTip();
         int nMnCount = mnList.getValidMNsCount();
 
         // find available denominated amounts
@@ -649,27 +656,27 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         // otherwise, try one randomly
         while (nTries < 10) {
-            Masternode dmn = context.coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).getRandomNotUsedMasternode();
+            Masternode dmn = coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).getRandomNotUsedMasternode();
 
             if (dmn == null) {
                 setStatus(PoolStatus.ERR_MASTERNODE_NOT_FOUND);
                 return false;
             }
 
-            context.coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).addUsedMasternode(dmn.getProTxHash());
+            coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).addUsedMasternode(dmn.getProTxHash());
 
-            long nLastDsq = context.masternodeMetaDataManager.getMetaInfo(dmn.getProTxHash()).getLastDsq();
-            long nDsqThreshold = context.masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), nMnCount);
-            if (nLastDsq != 0 && nDsqThreshold > context.masternodeMetaDataManager.getDsqCount()) {
+            long nLastDsq = masternodeMetaDataManager.getMetaInfo(dmn.getProTxHash()).getLastDsq();
+            long nDsqThreshold = masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), nMnCount);
+            if (nLastDsq != 0 && nDsqThreshold > masternodeMetaDataManager.getDsqCount()) {
                 log.info("coinjoin: warning: Too early to mix on this masternode!" + /* Continued */
                         " masternode={}  addr={}  nLastDsq={}  nDsqThreshold={}  nDsqCount={}",
                         dmn.getProTxHash(), dmn.getService(), nLastDsq,
-                        nDsqThreshold, context.masternodeMetaDataManager.getDsqCount());
+                        nDsqThreshold, masternodeMetaDataManager.getDsqCount());
                 nTries++;
                 continue;
             }
 
-            if (context.coinJoinManager.isMasternodeOrDisconnectRequested(dmn.getService())) {
+            if (coinJoinManager.isMasternodeOrDisconnectRequested(dmn.getService())) {
                 log.info("coinjoin: warning: skipping masternode connection, addr={}", dmn.getService());
                 nTries++;
                 continue;
@@ -688,13 +695,13 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
 
             mixingMasternode = dmn;
-            context.coinJoinManager.addPendingMasternode(this);
+            coinJoinManager.addPendingMasternode(this);
             pendingDsaRequest = new PendingDsaRequest(dmn.getService(), new CoinJoinAccept(context.getParams(), sessionDenom, txMyCollateral));
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: start new queue -> pending connection, nSessionDenom: {} ({}), addr={}",
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
-            context.coinJoinManager.startAsync();
+            coinJoinManager.startAsync();
             setStatus(PoolStatus.CONNECTING);
             joined = false;
             return true;
@@ -708,7 +715,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         if (!CoinJoinClientOptions.isEnabled()) return false;
 
-        if (mixingWallet.isEncrypted() && context.coinJoinManager.requestKeyParameter(mixingWallet) == null) {
+        if (mixingWallet.isEncrypted() && coinJoinManager.requestKeyParameter(mixingWallet) == null) {
             strErrorRet.append("Wallet locked, unable to create transaction!");
             return false;
         }
@@ -845,7 +852,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     private void relay(CoinJoinEntry entry) {
         if (mixingMasternode != null) {
             log.info("Sending {} to {}", entry.toString(true), sessionID);
-           if(!context.coinJoinManager.forPeer(mixingMasternode.getService(), new MasternodeGroup.ForPeer() {
+           if(!coinJoinManager.forPeer(mixingMasternode.getService(), new MasternodeGroup.ForPeer() {
                @Override
                public boolean process(Peer peer) {
                    peer.sendMessage(entry);
@@ -923,7 +930,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         if (messageID == MSG_SUCCESS) {
             log.info("coinjoin: completedTransaction -- success");
             queueSessionCompleteListeners(getState(), MSG_SUCCESS);
-            mixingWallet.getContext().coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
+            coinJoinManager.coinJoinClientManagers.get(mixingWallet.getDescription()).updatedSuccessBlock();
             keyHolderStorage.keepAll();
         } else {
             log.info("coinjoin: completedTransaction -- error");
@@ -1060,7 +1067,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
 
             TransactionSigner.ProposedTransaction proposal = new TransactionSigner.ProposedTransaction(finalMutableTransaction);
-            CoinJoinTransactionSigner signer = new CoinJoinTransactionSigner(sigs, true);
+            CoinJoinTransactionSigner signer = new CoinJoinTransactionSigner(coinJoinManager, sigs, true);
 
             if (!signer.signInputs(proposal, mixingWallet))
                 log.info("{} returned false for the tx", signer.getClass().getName());
@@ -1090,8 +1097,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     protected void setNull() {
         // Client side
         if (mixingMasternode != null) {
-            if (context.coinJoinManager.isMasternodeOrDisconnectRequested(mixingMasternode.getService())) {
-                if (!context.coinJoinManager.disconnectMasternode(mixingMasternode)) {
+            if (coinJoinManager.isMasternodeOrDisconnectRequested(mixingMasternode.getService())) {
+                if (!coinJoinManager.disconnectMasternode(mixingMasternode)) {
                     log.info("not closing existing masternode: {}", mixingMasternode.getService().getSocketAddress());
                 }
             } else {
@@ -1112,8 +1119,14 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         return id;
     }
 
-    public CoinJoinClientSession(WalletEx mixingWallet) {
+    public CoinJoinClientSession(WalletEx mixingWallet, CoinJoinManager coinJoinManager,
+                                 SimplifiedMasternodeListManager masternodeListManager,
+                                 MasternodeMetaDataManager masternodeMetaDataManager, MasternodeSync masternodeSync) {
         super(mixingWallet.getContext());
+        this.coinJoinManager = coinJoinManager;
+        this.masternodeListManager = masternodeListManager;
+        this.masternodeMetaDataManager = masternodeMetaDataManager;
+        this.masternodeSync = masternodeSync;
         this.mixingWallet = mixingWallet;
         this.keyHolderStorage = new KeyHolderStorage();
         this.txMyCollateral = new Transaction(context.getParams());
@@ -1208,7 +1221,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         nStatusMessageProgress += 10;
         String strSuffix;
 
-        if (fWaitForBlock || (mixingWallet.getContext().masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !mixingWallet.getContext().masternodeSync.isBlockchainSynced())) {
+        if (fWaitForBlock || (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !masternodeSync.isBlockchainSynced())) {
             return strAutoDenomResult;
         }
 
@@ -1253,7 +1266,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     public boolean doAutomaticDenominating(boolean fDryRun) {
         if (state.get() != POOL_STATE_IDLE) return false;
 
-        if (mixingWallet.getContext().masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !mixingWallet.getContext().masternodeSync.isBlockchainSynced()) {
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !masternodeSync.isBlockchainSynced()) {
             strAutoDenomResult = "Can't mix while sync in progress.";
             return false;
         }
@@ -1262,7 +1275,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         Coin balanceNeedsAnonymized;
 
-        if (!fDryRun && mixingWallet.isEncrypted() && context.coinJoinManager.requestKeyParameter(mixingWallet) == null) {
+        if (!fDryRun && mixingWallet.isEncrypted() && coinJoinManager.requestKeyParameter(mixingWallet) == null) {
             setStatus(PoolStatus.ERR_WALLET_LOCKED);
             return false;
         }
@@ -1279,7 +1292,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
         try {
-            if (!fDryRun && mixingWallet.getContext().masternodeListManager.getListAtChainTip().getValidMNsCount() == 0 &&
+            if (!fDryRun && masternodeListManager.getListAtChainTip().getValidMNsCount() == 0 &&
                     !mixingWallet.getContext().getParams().getId().equals(NetworkParameters.ID_REGTEST)) {
                 strAutoDenomResult = "No Masternodes detected.";
                 log.info("coinjoin: {}", strAutoDenomResult);
@@ -1536,7 +1549,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
 
         // should be masternode peers
-        boolean sentMessage = mixingWallet.getContext().coinJoinManager.forPeer(pendingDsaRequest.getAddress(), new MasternodeGroup.ForPeer() {
+        boolean sentMessage = coinJoinManager.forPeer(pendingDsaRequest.getAddress(), new MasternodeGroup.ForPeer() {
             @Override
             public boolean process(Peer peer) {
                 timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
