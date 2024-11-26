@@ -121,19 +121,12 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         StoredBlock block;
         boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
 
-        long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
-        block = blockChain.getBlock(mnlistdiff.getBlockHash());
-
-        if(!isLoadingBootStrap && block.getHeight() != newHeight)
-            throw new ProtocolException("mnlistdiff blockhash (height="+block.getHeight()+" doesn't match coinbase blockheight: " + newHeight);
-
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Processing, mnlistdiff);
 
         SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
         if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST))
             newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
-        newMNList.setBlock(block, block != null && block.getHeader().getPrevBlockHash().equals(mnlistdiff.getPrevBlockHash()));
 
         SimplifiedQuorumList newQuorumList = quorumList;
         if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
@@ -265,27 +258,6 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         mnlistdiff.dump(mnList.getHeight(), newHeight);
         lastRequest.setReceived();
 
-        // TODO: Remove with v21.0.1
-        if (lock.isLocked()) {
-            log.warn("the lock is held. holdCount {}, queue length {}, held by this thread {}", lock.getHoldCount(), lock.getQueueLength(), lock.isHeldByCurrentThread());
-            log.warn("the current thread is {} with stack trace:", Thread.currentThread().getName());
-            StackTraceElement [] trace = lock.getOwner().getStackTrace();
-            for (StackTraceElement e : trace) {
-                log.info("  {}", e);
-            }
-            log.warn("the lock is held by {} with stack trace:", lock.getOwner());
-            trace = lock.getOwner().getStackTrace();
-            for (StackTraceElement e : trace) {
-                log.info("  {}", e);
-            }
-            for (Thread thread : lock.getQueuedThreads()) {
-                log.info("queued thread: {}\n stack trace:", thread.getName());
-                trace = thread.getStackTrace();
-                for (StackTraceElement e : trace) {
-                    log.info("  {}", e);
-                }
-            }
-        }
         lock.lock();
         try {
             log.info("lock acquired when processing mnlistdiff");
