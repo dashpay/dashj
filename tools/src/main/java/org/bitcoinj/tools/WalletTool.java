@@ -27,6 +27,7 @@ import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.params.MainNetParams;
@@ -161,6 +162,7 @@ public class WalletTool {
     private static String password;
     private static org.bitcoin.protocols.payments.Protos.PaymentRequest paymentRequest;
     private static AuthenticationGroupExtension authenticationGroupExtension;
+    private static DashSystem system;
 
     public static class Condition {
         public enum Type {
@@ -351,9 +353,10 @@ public class WalletTool {
         }
         Context context = new Context(params);
         Context.propagate(context);
-        context.initDash(true, true);
-        context.masternodeSync.syncFlags.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-        context.initDashSync(".", "coinjoin-" + params.getNetworkName());
+        system = new DashSystem(context);
+        system.initDash(true, true);
+        system.masternodeSync.syncFlags.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+        system.initDashSync(".", "coinjoin-" + params.getNetworkName());
 
         mode = modeFlag.value(options);
 
@@ -1353,7 +1356,7 @@ public class WalletTool {
         } else {
             //TODO: peerGroup.setRequiredServices(0); was used here previously, which is better
             //for now, however peerGroup doesn't work with masternodeListManager, but it should
-            ThreeMethodPeerDiscovery peerDiscovery = new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager);
+            ThreeMethodPeerDiscovery peerDiscovery = new ThreeMethodPeerDiscovery(params, system.masternodeListManager);
             peerDiscovery.setIncludeDNS(false);
             peerGroup.addPeerDiscovery(peerDiscovery);
         }
@@ -1363,7 +1366,7 @@ public class WalletTool {
         try {
             setup();
             int startTransactions = wallet.getTransactions(true).size();
-            DownloadProgressTracker listener = new DownloadProgressTracker();
+            DownloadProgressTracker listener = new DownloadProgressTracker(system.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING));
             peerGroup.start();
             peerGroup.startBlockChainDownload(listener);
             try {
@@ -1389,7 +1392,7 @@ public class WalletTool {
                 peerGroup.stop();
             saveWallet(walletFile);
             store.close();
-            wallet.getContext().close();
+            system.close();
             wallet = null;
         } catch (BlockStoreException e) {
             throw new RuntimeException(e);
@@ -1679,20 +1682,20 @@ public class WalletTool {
         System.out.println("Mixing Configuration:");
         System.out.println(CoinJoinClientOptions.getString());
 
-        wallet.getContext().coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet));
-        wallet.getContext().coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
-        wallet.getContext().coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);
-        wallet.getContext().coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, reporter);
-        wallet.getContext().coinJoinManager.addTransationListener (Threading.SAME_THREAD, reporter);
-        wallet.getContext().blockChain.addNewBestBlockListener(Threading.SAME_THREAD, reporter);
+        system.coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet, system.masternodeSync, system.coinJoinManager, system.masternodeListManager, system.masternodeMetaDataManager));
+        system.coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
+        system.coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);
+        system.coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, reporter);
+        system.coinJoinManager.addTransationListener (Threading.SAME_THREAD, reporter);
+        system.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, reporter);
 
-        wallet.getContext().coinJoinManager.start();
+        system.coinJoinManager.start();
         // mix coins
         try {
-            CoinJoinClientManager it = wallet.getContext().coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
+            CoinJoinClientManager it = system.coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
             wallet.getCoinJoin().refreshUnusedKeys();
             it.setStopOnNothingToDo(true);
-            it.setBlockChain(wallet.getContext().blockChain);
+            it.setBlockChain(system.blockChain);
 
             {
                 if (wallet.isEncrypted()) {
@@ -1711,14 +1714,14 @@ public class WalletTool {
             System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + it.getStatuses() + ", will retry")));
 
             // wait until finished mixing
-            SettableFuture<Boolean> mixingFinished = wallet.getContext().coinJoinManager.getMixingFinishedFuture(wallet);
+            SettableFuture<Boolean> mixingFinished = system.coinJoinManager.getMixingFinishedFuture(wallet);
             mixingFinished.addListener(() -> System.out.println("Mixing complete."), Threading.SAME_THREAD);
             mixingFinished.get();
-            wallet.getContext().coinJoinManager.removeSessionCompleteListener(reporter);
-            wallet.getContext().coinJoinManager.removeMixingCompleteListener(reporter);
-            wallet.getContext().coinJoinManager.removeSessionStartedListener(reporter);
-            wallet.getContext().coinJoinManager.removeTransactionListener(reporter);
-            wallet.getContext().coinJoinManager.stop();
+            system.coinJoinManager.removeSessionCompleteListener(reporter);
+            system.coinJoinManager.removeMixingCompleteListener(reporter);
+            system.coinJoinManager.removeSessionStartedListener(reporter);
+            system.coinJoinManager.removeTransactionListener(reporter);
+            system.coinJoinManager.stop();
         } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);
         }
