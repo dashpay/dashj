@@ -72,7 +72,7 @@ public abstract class ChainLockBlockChainTest {
 
     @After
     public void tearDown() {
-        DashSystem.remove(system);
+        system.remove();
     }
 
     public abstract BlockStore createStore(NetworkParameters params, int blockCount) throws BlockStoreException;

@@ -51,7 +51,6 @@ public class BlockChainTest {
     public ExpectedException thrown = ExpectedException.none();
 
     private BlockChain testNetChain;
-    private DashSystem system;
 
     private Wallet wallet;
     private BlockChain chain;
@@ -98,13 +97,6 @@ public class BlockChainTest {
         chain = new BlockChain(UNITTEST, wallet, blockStore);
 
         coinbaseTo = Address.fromKey(UNITTEST, wallet.currentReceiveKey());
-        system = new DashSystem(Context.get());
-        system.initDash(false, true);
-    }
-
-    @Before
-    public void tearDown() {
-        system.remove();
     }
 
     @Test
