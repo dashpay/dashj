@@ -18,6 +18,7 @@ package org.bitcoinj.quorums;
 import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
+import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.quorums.listeners.ChainLockListener;
@@ -36,12 +37,17 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
+import static org.bitcoinj.utils.Threading.SAME_THREAD;
 
 /**
  * Manages ChainLocks
@@ -60,6 +66,10 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     boolean isEnforced;
     AbstractBlockChain blockChain;
     AbstractBlockChain headerChain;
+    protected PeerGroup peerGroup;
+    protected SigningManager signingManager;
+    protected SporkManager sporkManager;
+    protected MasternodeSync masternodeSync;
 
     Sha256Hash bestChainLockHash;
     ChainLockSignature bestChainLock;
@@ -94,15 +104,34 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         chainLockListeners = new CopyOnWriteArrayList<>();
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain, AbstractBlockChain headerChain) {
+//    public ChainLocksHandler(Context context, AbstractBlockChain blockChain, AbstractBlockChain headerChain) {
+//        super(context);
+//        seenChainLocks = new HashMap<>();
+//        lastCleanupTime = 0;
+//        chainLockListeners = new CopyOnWriteArrayList<>();
+//        setBlockChain(blockChain, headerChain);
+//    }
+
+    public void setBlockChain(PeerGroup peerGroup, AbstractBlockChain blockChain, AbstractBlockChain headerChain, SigningManager signingManager, SporkManager sporkManager, MasternodeSync masternodeSync) {
         this.blockChain = blockChain;
+        this.peerGroup = peerGroup;
+        if (peerGroup != null) {
+            peerGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
+        }
+        blockChain.setChainLocksHandler(this);
         this.headerChain = headerChain;
-        this.quorumSigningManager = context.signingManager;
+        this.quorumSigningManager = signingManager;
+        this.signingManager = signingManager;
+        this.sporkManager = sporkManager;
+        this.masternodeSync = masternodeSync;
     }
 
     @Override
     public void close() {
         blockChain = null;
+        headerChain = null;
+        peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        peerGroup = null;
         super.close();
     }
 
@@ -164,7 +193,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
     public void processChainLockSignature(Peer peer, ChainLockSignature clsig)
     {
-        if (!context.sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED)) {
+        if (!sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED)) {
             return;
         }
 
@@ -191,7 +220,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         log.info("process chainlock: {}", hash);
         Sha256Hash requestId = clsig.getRequestId();
         Sha256Hash msgHash = clsig.blockHash;
-        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.CHAINLOCK)) {
+        if (masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.CHAINLOCK)) {
             try {
                 if (!quorumSigningManager.verifyRecoveredSig(context.getParams().getLlmqChainLocks(), clsig.height, requestId, msgHash, clsig.signature)) {
                     log.info("invalid CLSIG ({}), peer={}", clsig, from != null ? from : "null");
@@ -313,7 +342,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
             boolean isDIP0008Active = (blockChain.getBestChainHeight() - 1) > params.getDIP0008BlockHeight();
 
             boolean oldIsEnforced = isEnforced;
-            isSporkActive = context.sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED);
+            isSporkActive = sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED);
             isEnforced = (isDIP0008Active && isSporkActive);
 
             if (!oldIsEnforced && isEnforced) {
@@ -635,4 +664,35 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     public ChainLockSignature getChainLock(Sha256Hash blockHash) {
         return chainlockMap.get(blockHash);
     }
+
+    public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
+        if (m instanceof InventoryMessage) {
+            if (masternodeSync != null && masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_CHAINLOCKS)) {
+                InventoryMessage inv = (InventoryMessage) m;
+                List<InventoryItem> items = inv.getItems();
+                List<InventoryItem> chainLocks = new LinkedList<>();
+                for (InventoryItem item : items) {
+                    if (Objects.requireNonNull(item.type) == InventoryItem.Type.ChainLockSignature) {
+                        chainLocks.add(item);
+                    }
+                }
+                Iterator<InventoryItem> it = chainLocks.iterator();
+                GetDataMessage getdata = new GetDataMessage(context.getParams());
+                while (it.hasNext()) {
+                    InventoryItem item = it.next();
+                    if(!alreadyHave(item)) {
+                        getdata.addItem(item);
+                    }
+                }
+                if (!getdata.getItems().isEmpty()) {
+                    // This will cause us to receive a bunch of block or tx messages.
+                    peer.sendMessage(getdata);
+                }
+            }
+        } else if (m instanceof ChainLockSignature) {
+            processChainLockSignature(peer, (ChainLockSignature) m);
+            return null;
+        }
+        return m;
+    };
 }

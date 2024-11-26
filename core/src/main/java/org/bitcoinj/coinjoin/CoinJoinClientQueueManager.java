@@ -15,13 +15,16 @@
  */
 package org.bitcoinj.coinjoin;
 
+import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.MasternodeMetaDataManager;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,11 +35,19 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 
 public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
     private final Context context;
+    private final CoinJoinManager coinJoinManager;
+    private final SimplifiedMasternodeListManager masternodeListManager;
+    private final MasternodeMetaDataManager masternodeMetaDataManager;
+    private final MasternodeSync masternodeSync;
     private final Logger log = LoggerFactory.getLogger(CoinJoinClientManager.class);
     private final HashMap<Sha256Hash, Long> spammingMasternodes = new HashMap();
 
-    public CoinJoinClientQueueManager(Context context) {
+    public CoinJoinClientQueueManager(Context context, CoinJoinManager coinJoinManager, SimplifiedMasternodeListManager masternodeListManager, MasternodeMetaDataManager masternodeMetaDataManager, MasternodeSync masternodeSync) {
         super();
+        this.coinJoinManager = coinJoinManager;
+        this.masternodeListManager = masternodeListManager;
+        this.masternodeMetaDataManager = masternodeMetaDataManager;
+        this.masternodeSync = masternodeSync;
         this.context = context;
     }
 
@@ -69,7 +80,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
             if (dsq.isTimeOutOfBounds())
                 return;
 
-            SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
+            SimplifiedMasternodeList mnList = masternodeListManager.getListAtChainTip();
             Masternode dmn = mnList.getMN(dsq.getProTxHash());
             if (dmn == null)
                 return;
@@ -83,12 +94,12 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
             if (dsq.isReady() && isTrySubmitDenominate(dmn)) {
                 log.info("coinjoin: DSQUEUE: {} is ready on masternode {}", dsq, dmn.getService());
             } else {
-                long nLastDsq = context.masternodeMetaDataManager.getMetaInfo(dmn.getProTxHash()).getLastDsq();
-                long nDsqThreshold = context.masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), mnList.getValidMNsCount());
+                long nLastDsq = masternodeMetaDataManager.getMetaInfo(dmn.getProTxHash()).getLastDsq();
+                long nDsqThreshold = masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), mnList.getValidMNsCount());
                 log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE -- lastDsq: {}  dsqThreshold: {}  dsqCount: {}",
-                        nLastDsq, nDsqThreshold, context.masternodeMetaDataManager.getDsqCount());
+                        nLastDsq, nDsqThreshold, masternodeMetaDataManager.getDsqCount());
                 // don't allow a few nodes to dominate the queuing process
-                if (nLastDsq != 0 && nDsqThreshold > context.masternodeMetaDataManager.getDsqCount()) {
+                if (nLastDsq != 0 && nDsqThreshold > masternodeMetaDataManager.getDsqCount()) {
                     if (!spammingMasternodes.containsKey(dsq.getProTxHash())) {
                         spammingMasternodes.put(dsq.getProTxHash(), Utils.currentTimeMillis());
                         log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: Masternode {} is sending too many dsq messages", dmn.getProTxHash());
@@ -96,11 +107,11 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                     return;
                 }
 
-                context.masternodeMetaDataManager.allowMixing(dmn.getProTxHash());
+                masternodeMetaDataManager.allowMixing(dmn.getProTxHash());
 
                 log.info("coinjoin: DSQUEUE: new {} from masternode {}", dsq, dmn.getService().getAddr());
 
-                context.coinJoinManager.coinJoinClientManagers.values().stream().anyMatch(new Predicate<CoinJoinClientManager>() {
+                coinJoinManager.coinJoinClientManagers.values().stream().anyMatch(new Predicate<CoinJoinClientManager>() {
                     @Override
                     public boolean test(CoinJoinClientManager coinJoinClientManager) {
                         return coinJoinClientManager.markAlreadyJoinedQueueAsTried(dsq);
@@ -119,7 +130,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
     }
 
     private boolean isTrySubmitDenominate(Masternode dmn) {
-        return context.coinJoinManager.coinJoinClientManagers.values().stream().anyMatch(new Predicate<CoinJoinClientManager>() {
+        return coinJoinManager.coinJoinClientManagers.values().stream().anyMatch(new Predicate<CoinJoinClientManager>() {
             @Override
             public boolean test(CoinJoinClientManager coinJoinClientManager) {
                 return coinJoinClientManager.trySubmitDenominate(dmn.getService());
@@ -131,11 +142,11 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
 
         if (!CoinJoinClientOptions.isEnabled())
             return;
-        if (context.masternodeSync == null)
+        if (masternodeSync == null)
             return;
 
-        if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) &&
-                !context.masternodeSync.isBlockchainSynced())
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) &&
+                !masternodeSync.isBlockchainSynced())
             return;
 
         checkQueue();

@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.UnitTestParams;
@@ -50,6 +51,7 @@ public class BlockChainTest {
     public ExpectedException thrown = ExpectedException.none();
 
     private BlockChain testNetChain;
+    private DashSystem system;
 
     private Wallet wallet;
     private BlockChain chain;
@@ -96,7 +98,13 @@ public class BlockChainTest {
         chain = new BlockChain(UNITTEST, wallet, blockStore);
 
         coinbaseTo = Address.fromKey(UNITTEST, wallet.currentReceiveKey());
-        Context.get().initDash(false, true);
+        system = new DashSystem(Context.get());
+        system.initDash(false, true);
+    }
+
+    @Before
+    public void tearDown() {
+        system.remove();
     }
 
     @Test

@@ -76,7 +76,7 @@ public class FullPrunedForwardingService {
         // Start up a basic app using a class that automates some boilerplate.
         kit = new FullPrunedWalletAppKit(params, new File("."), filePrefix);
 
-        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
+        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, kit.system().masternodeListManager));
 
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.

@@ -2903,10 +2903,6 @@ public class Wallet extends BaseTaggableObject
 
             isConsistentOrThrow();
 
-            //Dash Specific
-            if(context.instantSendManager != null && context.instantSendManager.isInstantSendEnabled())
-                context.instantSendManager.syncTransaction(tx, null, -1);
-
             // let keychain extensions process the transaction
             for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
                 extension.processTransaction(tx, null, BlockChain.NewBlockType.BEST_CHAIN);
@@ -5625,9 +5621,6 @@ public class Wallet extends BaseTaggableObject
                 continue;
 
             }
-            //Dash Specific
-            if (context.instantSendManager != null && context.instantSendManager.isInstantSendEnabled())
-                context.instantSendManager.syncTransaction(tx, null, -1);
 
             checkState(confidenceType == ConfidenceType.PENDING || confidenceType == ConfidenceType.IN_CONFLICT,
                     "Expected PENDING or IN_CONFLICT, was %s.", confidenceType);

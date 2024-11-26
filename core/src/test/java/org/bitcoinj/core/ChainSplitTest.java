@@ -19,6 +19,7 @@ package org.bitcoinj.core;
 
 import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.testing.FakeTxBuilder;
@@ -68,7 +69,7 @@ public class ChainSplitTest {
         coinsTo = Address.fromKey(UNITTEST, key1);
         coinsTo2 = Address.fromKey(UNITTEST, key2);
         someOtherGuy = Address.fromKey(UNITTEST, new ECKey());
-        Context.get().initDash(false, true);
+        //new DashSystem(Context.get()).initDash(false, true);
     }
 
     @Test

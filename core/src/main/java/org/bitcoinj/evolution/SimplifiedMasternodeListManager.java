@@ -22,6 +22,9 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.AbstractManager;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.DualBlockChain;
+import org.bitcoinj.core.GetDataMessage;
+import org.bitcoinj.core.InventoryItem;
+import org.bitcoinj.core.InventoryMessage;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
@@ -32,8 +35,10 @@ import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VarInt;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
 import org.bitcoinj.quorums.ChainLocksHandler;
 import org.bitcoinj.quorums.FinalCommitment;
+import org.bitcoinj.quorums.InstantSendLock;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.bitcoinj.quorums.Quorum;
 import org.bitcoinj.quorums.QuorumManager;
@@ -57,6 +62,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.bitcoinj.utils.Threading.SAME_THREAD;
+
 /**
  * This class manages the state of the masternode lists and quorums.  It does so with help from
  * {@link QuorumState} for DIP4 quorums and {@link QuorumRotationState} for DIP24 quorums
@@ -65,7 +72,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * class {@link AbstractManager}
  */
 
-public class SimplifiedMasternodeListManager extends AbstractManager implements QuorumStateManager {
+public class SimplifiedMasternodeListManager extends MasternodeListManager {
     private static final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeListManager.class);
     private final ReentrantLock lock = Threading.lock("SimplifiedMasternodeListManager");
 
@@ -127,7 +134,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     boolean requiresLoadingFromFile;
 
     PeerGroup peerGroup;
-
+    protected MasternodeSync masternodeSync;
     QuorumSnapshotManager quorumSnapshotManager;
     QuorumManager quorumManager;
 
@@ -146,6 +153,22 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         quorumState.setStateManager(this);
         quorumRotationState = new QuorumRotationState(context);
         quorumRotationState.setStateManager(this);
+    }
+
+    public SimplifiedMasternodeListManager(Context context, DualBlockChain blockChain, @Nullable PeerGroup peerGroup,
+                                           QuorumManager quorumManager, QuorumSnapshotManager quorumSnapshotManager, ChainLocksHandler chainLocksHandler) {
+        super(context);
+        tipBlockHash = params.getGenesisBlock().getHash();
+
+        saveOptions = SaveOptions.SAVE_EVERY_CHANGE;
+        loadedFromFile = false;
+        requiresLoadingFromFile = true;
+
+        quorumState = new QuorumState(context, MasternodeListSyncOptions.SYNC_MINIMUM);
+        quorumState.setStateManager(this);
+        quorumRotationState = new QuorumRotationState(context);
+        quorumRotationState.setStateManager(this);
+        setBlockChain(blockChain, peerGroup, quorumManager, quorumSnapshotManager, chainLocksHandler, masternodeSync);
     }
 
     @Override
@@ -277,8 +300,9 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     protected boolean shouldProcessMNListDiff() {
-        return context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_DMN_LIST) ||
-                context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_QUORUM_LIST);
+
+        return masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_DMN_LIST) ||
+                masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_QUORUM_LIST);
     }
 
     @Override
@@ -295,7 +319,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
 
     public void processMasternodeListDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap) {
         try {
-            quorumState.processDiff(peer, mnlistdiff, blockChain, isLoadingBootStrap, context.peerGroup.getSyncStage());
+            quorumState.processDiff(peer, mnlistdiff, blockChain, this, isLoadingBootStrap, peerGroup.getSyncStage());
 
             processMasternodeList(mnlistdiff);
             processQuorumList(quorumState.getQuorumListAtTip());
@@ -333,7 +357,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
                 @Override
                 public void run() {
                     try {
-                        quorumRotationState.processDiff(peer, quorumRotationInfo, blockChain, isLoadingBootStrap, PeerGroup.SyncStage.BLOCKS);
+                        quorumRotationState.processDiff(peer, quorumRotationInfo, blockChain, SimplifiedMasternodeListManager.this, isLoadingBootStrap, PeerGroup.SyncStage.BLOCKS);
                         processMasternodeList(quorumRotationInfo.getMnListDiffAtH());
                         unCache();
 
@@ -387,13 +411,18 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     }
 
     public void setBlockChain(DualBlockChain blockChain, @Nullable PeerGroup peerGroup,
-                              QuorumManager quorumManager, QuorumSnapshotManager quorumSnapshotManager, ChainLocksHandler chainLocksHandler) {
+                              QuorumManager quorumManager, QuorumSnapshotManager quorumSnapshotManager, ChainLocksHandler chainLocksHandler,
+                              MasternodeSync masternodeSync) {
         this.blockChain = blockChain;
         this.peerGroup = peerGroup;
+        if (peerGroup != null) {
+            peerGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
+        }
         this.quorumManager = quorumManager;
         this.quorumSnapshotManager = quorumSnapshotManager;
-        quorumState.setBlockChain(peerGroup, blockChain);
-        quorumRotationState.setBlockChain(peerGroup, blockChain);
+        this.masternodeSync = masternodeSync;
+        quorumState.setBlockChain(peerGroup, blockChain, masternodeSync);
+        quorumRotationState.setBlockChain(peerGroup, blockChain, masternodeSync);
         quorumState.setChainLocksHandler(chainLocksHandler);
         quorumRotationState.setChainLocksHandler(chainLocksHandler);
         if(shouldProcessMNListDiff()) {
@@ -415,6 +444,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
             quorumState.close();
             quorumRotationState.close();
 
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
             try {
                 threadPool.shutdown();
                 threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
@@ -509,6 +539,7 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
         }
     }
 
+    @Override
     public List<Masternode> getAllQuorumMembers(LLMQParameters.LLMQType llmqType, Sha256Hash blockHash)
     {
         if (isQuorumRotationEnabled(llmqType)) {
@@ -612,4 +643,15 @@ public class SimplifiedMasternodeListManager extends AbstractManager implements 
     public ReentrantLock getLock() {
         return lock;
     }
+
+    public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
+        if (m instanceof SimplifiedMasternodeListDiff) {
+            processMasternodeListDiff(peer, (SimplifiedMasternodeListDiff) m);
+            return null;
+        } else if (m instanceof QuorumRotationInfo) {
+            processQuorumRotationInfo(peer, (QuorumRotationInfo) m, false, null);
+            return null;
+        }
+        return m;
+    };
 }

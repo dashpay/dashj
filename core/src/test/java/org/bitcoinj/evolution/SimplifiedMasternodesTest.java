@@ -19,6 +19,7 @@ package org.bitcoinj.evolution;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSLazyPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 
@@ -48,6 +49,7 @@ import java.util.Objects;
 public class SimplifiedMasternodesTest {
 
     static Context context;
+    static DashSystem system;
     static NetworkParameters PARAMS;
     static MainNetParams MAINPARAMS;
     static DevNetParams DEVNETPARAMS;
@@ -64,13 +66,14 @@ public class SimplifiedMasternodesTest {
 
     private static void initContext(NetworkParameters params) throws BlockStoreException {
         context = new Context(params);
+        system = new DashSystem(context);
         if (blockChain == null) {
             blockChain = new BlockChain(context, new MemoryBlockStore(params));
         }
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
-        context.initDash(true, true);
+        system.initDash(true, true);
 
-        context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
+        system.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
     }
 
     @Test
@@ -163,11 +166,11 @@ public class SimplifiedMasternodesTest {
         FlatDB<SimplifiedMasternodeListManager> db = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true);
 
         SimplifiedMasternodeListManager managerDefaultNames = new SimplifiedMasternodeListManager(Context.get());
-        context.setMasternodeListManager(managerDefaultNames);
+        system.setMasternodeListManager(managerDefaultNames);
         assertTrue(db.load(managerDefaultNames));
 
         SimplifiedMasternodeListManager managerSpecific = new SimplifiedMasternodeListManager(Context.get());
-        context.setMasternodeListManager(managerSpecific);
+        system.setMasternodeListManager(managerSpecific);
         FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), fileVersion);
         assertTrue(db2.load(managerSpecific));
 
@@ -176,7 +179,7 @@ public class SimplifiedMasternodesTest {
 
         //load a file with version 6, expecting version 5
         SimplifiedMasternodeListManager managerSpecificFail = new SimplifiedMasternodeListManager(Context.get());
-        context.setMasternodeListManager(managerSpecificFail);
+        system.setMasternodeListManager(managerSpecificFail);
         FlatDB<SimplifiedMasternodeListManager> db3 = new FlatDB<SimplifiedMasternodeListManager>(Context.get(), datafile.getFile(), true, managerSpecific.getDefaultMagicMessage(), fileVersion + 1);
         assertFalse(db3.load(managerSpecificFail));
     }

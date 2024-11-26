@@ -19,6 +19,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.quorums.ChainLocksHandler;
@@ -28,6 +29,7 @@ import org.bitcoinj.store.FullPrunedBlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -57,13 +59,20 @@ public abstract class ChainLockBlockChainTest {
 
     protected BlockChain chain;
     protected BlockStore store;
+    protected DashSystem system;
 
     @Before
     public void setUp() throws Exception {
         BriefLogFormatter.init();
         Context context = new Context(PARAMS, 100, Coin.ZERO, false);
         Context.propagate(context);
-        context.initDash(false, true);
+        system = new DashSystem(Context.get());
+        system.initDash(false, true);
+    }
+
+    @After
+    public void tearDown() {
+        DashSystem.remove(system);
     }
 
     public abstract BlockStore createStore(NetworkParameters params, int blockCount) throws BlockStoreException;
@@ -96,10 +105,10 @@ public abstract class ChainLockBlockChainTest {
 
         Context context = Context.getOrCreate(PARAMS);
 
-        context.setPeerGroupAndBlockChain(null, chain, null);
-        context.masternodeSync.syncFlags = EnumSet.noneOf(MasternodeSync.SYNC_FLAGS.class);
+        system.setPeerGroupAndBlockChain(null, chain, null);
+        system.masternodeSync.syncFlags = EnumSet.noneOf(MasternodeSync.SYNC_FLAGS.class);
 
-        ChainLocksHandler chainLocksHandler = context.chainLockHandler;
+        ChainLocksHandler chainLocksHandler = system.chainLockHandler;
 
         for (Rule rule : blockList.list) {
             if (rule instanceof FullBlockTestGenerator.BlockAndValidity) {

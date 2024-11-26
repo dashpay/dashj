@@ -116,10 +116,11 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     }
 
     public void applyDiff(Peer peer, DualBlockChain blockChain,
+                          MasternodeListManager masternodeListManager,
                           SimplifiedMasternodeListDiff mnlistdiff, boolean isLoadingBootStrap)
             throws BlockStoreException, MasternodeListDiffException {
         StoredBlock block;
-        boolean isSyncingHeadersFirst = context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
+        boolean isSyncingHeadersFirst = peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
 
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         block = blockChain.getBlock(mnlistdiff.getBlockHash());
@@ -130,15 +131,15 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Processing, mnlistdiff);
 
         SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
-        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST))
+        if(masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST))
             newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
         newMNList.setBlock(block, block != null && block.getHeader().getPrevBlockHash().equals(mnlistdiff.getPrevBlockHash()));
 
         SimplifiedQuorumList newQuorumList = quorumList;
         if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
-            newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, blockChain, false, true);
-            if (context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
+            newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, blockChain,  masternodeListManager, chainLocksHandler, false, true);
+            if (masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM))
                 newQuorumList.verify(mnlistdiff.coinBaseTx, mnlistdiff, quorumList, newMNList);
         } else {
             quorumList.syncWithMasternodeList(newMNList);
@@ -251,13 +252,14 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
     @Override
     public void processDiff(@Nullable Peer peer, SimplifiedMasternodeListDiff mnlistdiff, DualBlockChain blockChain,
+                            MasternodeListManager masternodeListManager,
                             boolean isLoadingBootStrap, PeerGroup.SyncStage syncStage) throws VerificationException {
         long newHeight = ((CoinbaseTx) mnlistdiff.coinBaseTx.getExtraPayloadObject()).getHeight();
         if (peer != null) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Received, mnlistdiff);
         Stopwatch watch = Stopwatch.createStarted();
         Stopwatch watchMNList = Stopwatch.createUnstarted();
         Stopwatch watchQuorums = Stopwatch.createUnstarted();
-        boolean isSyncingHeadersFirst = context.peerGroup != null && context.peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
+        boolean isSyncingHeadersFirst = peerGroup != null && peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST;
         log.info("processing {} mnlistdiff (headersFirst={}) between : {} & {}; {} from {}",
                 isLoadingBootStrap ? "bootstrap" : "requested", isSyncingHeadersFirst,
                 getMnList().getHeight(), newHeight, mnlistdiff, peer);
@@ -289,7 +291,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         lock.lock();
         try {
             log.info("lock acquired when processing mnlistdiff");
-            applyDiff(peer, blockChain, mnlistdiff, isLoadingBootStrap);
+            applyDiff(peer, blockChain, masternodeListManager, mnlistdiff, isLoadingBootStrap);
 
             log.info("{}", this);
             lastRequest.setFulfilled();
@@ -366,7 +368,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         waitingForMNListDiff = false;
         if (!initChainTipSyncComplete() && !isLoadingBootStrap) {
             log.info("initChainTipSync=false");
-            context.peerGroup.triggerMnListDownloadComplete();
+            peerGroup.triggerMnListDownloadComplete();
             log.info("initChainTipSync=true");
         }
     }
