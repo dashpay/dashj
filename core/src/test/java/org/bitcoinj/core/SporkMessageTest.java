@@ -16,7 +16,6 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.TestNet3Params;
 import org.junit.Test;
 
@@ -25,12 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 public class SporkMessageTest {
     static NetworkParameters PARAMS = TestNet3Params.get();
-    static Context context = new Context(PARAMS);
-    static DashSystem system = new DashSystem(context);
-
-    static {
-        system.initDash(true, true);
-    }
 
     @Test
     public void verifySpork() {
