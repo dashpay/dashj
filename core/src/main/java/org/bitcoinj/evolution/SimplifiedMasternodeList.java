@@ -117,7 +117,8 @@ public class SimplifiedMasternodeList extends Message {
         size = (int)readVarInt();
         Preconditions.checkArgument(size == 0, "There is an offset error with this data file, rejecting...");
 
-        if(DashSystem.get(params).masternodeListManager.getFormatVersion() >= 2) {
+        // TODO: we need to find a way out of this
+        if (DashSystem.get(params).masternodeListManager.getFormatVersion() >= 2) {
             ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
             buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));
             buffer.rewind();
