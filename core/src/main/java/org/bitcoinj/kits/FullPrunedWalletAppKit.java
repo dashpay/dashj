@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.params.MainNetParams;
@@ -97,6 +98,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
     @Nullable protected PeerDiscovery discovery;
 
     protected volatile Context context;
+    protected volatile DashSystem vSystem;
 
 
 
@@ -122,9 +124,9 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
         this.params = checkNotNull(context.getParams());
         this.directory = checkNotNull(directory);
         this.filePrefix = checkNotNull(filePrefix);
-
-        context.initDash(false, true);
-        context.initDashSync(directory.getAbsolutePath());
+        this.vSystem = new DashSystem(context);
+        vSystem.initDash(false, true);
+        vSystem.initDashSync(directory.getAbsolutePath());
     }
 
     /**
@@ -135,9 +137,9 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
         this.params = checkNotNull(context.getParams());
         this.directory = checkNotNull(directory);
         this.filePrefix = checkNotNull(filePrefix);
-
-        context.initDash(liteMode, true);
-        context.initDashSync(directory.getAbsolutePath());
+        this.vSystem = new DashSystem(context);
+        vSystem.initDash(liteMode, true);
+        vSystem.initDashSync(directory.getAbsolutePath());
     }
 
     /** Will only connect to the given addresses. Cannot be called after startup. */
@@ -349,7 +351,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
                 completeExtensionInitiations(vPeerGroup);
 
                 // TODO: Be able to use the provided download listener when doing a blocking startup.
-                final DownloadProgressTracker listener = new DownloadProgressTracker();
+                final DownloadProgressTracker listener = new DownloadProgressTracker(vSystem.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING));
                 vPeerGroup.startBlockChainDownload(listener);
                 listener.await();
             } else {
@@ -357,7 +359,7 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
                     @Override
                     public void onSuccess(@Nullable Object result) {
                         completeExtensionInitiations(vPeerGroup);
-                        final DownloadProgressTracker l = downloadListener == null ? new DownloadProgressTracker() : downloadListener;
+                        final DownloadProgressTracker l = downloadListener == null ? new DownloadProgressTracker(vSystem.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) : downloadListener;
                         vPeerGroup.startBlockChainDownload(l);
                     }
 
@@ -498,7 +500,8 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
             vPeerGroup.stop();
             vWallet.saveToFile(vWalletFile);
             vStore.close();
-
+            vSystem.close();
+            vSystem = null;
             vPeerGroup = null;
             vWallet = null;
             vStore = null;
@@ -525,6 +528,11 @@ public class FullPrunedWalletAppKit extends AbstractIdleService {
     public Wallet wallet() {
         checkState(state() == State.STARTING || state() == State.RUNNING, "Cannot call until startup is complete");
         return vWallet;
+    }
+
+    public DashSystem system() {
+        checkState(state() == State.STARTING || state() == State.RUNNING, "Cannot call until startup is complete");
+        return vSystem;
     }
 
     public PeerGroup peerGroup() {

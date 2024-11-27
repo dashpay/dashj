@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.UnitTestParams;
@@ -96,7 +97,6 @@ public class BlockChainTest {
         chain = new BlockChain(UNITTEST, wallet, blockStore);
 
         coinbaseTo = Address.fromKey(UNITTEST, wallet.currentReceiveKey());
-        Context.get().initDash(false, true);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package org.bitcoinj.wallet;
 
 import com.google.common.collect.Lists;
+import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinClientSession;
 import org.bitcoinj.core.Coin;
@@ -15,6 +16,7 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.BinTangDevNetParams;
 import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -54,6 +56,7 @@ public class CoinJoinWalletTest {
     };
 
     Context context = new Context(DEVNET);
+    DashSystem system = new DashSystem(context);
 
     @Before
     public void setUp() throws UnreadableWalletException {
@@ -136,7 +139,13 @@ public class CoinJoinWalletTest {
         System.out.println(balanceInfo);
         System.out.println(nBalanceAnonimizableNonDenom.toFriendlyString());
 
-        CoinJoinClientSession session = new CoinJoinClientSession(coinJoinWallet);
+        CoinJoinClientSession session = new CoinJoinClientSession(
+                coinJoinWallet,
+                system.coinJoinManager,
+                system.masternodeListManager,
+                system.masternodeMetaDataManager,
+                system.masternodeSync
+        );
         CoinJoinClientOptions.setRounds(4);
         CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setAmount(Coin.valueOf(1, 25));

@@ -1,5 +1,7 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
+import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceSyncMessage;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
@@ -20,6 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static java.lang.Math.max;
 import static org.bitcoinj.core.MasternodeSync.SYNC_FLAGS.*;
 import static org.bitcoinj.governance.GovernanceManager.MIN_GOVERNANCE_PEER_PROTO_VERSION;
+import static org.bitcoinj.utils.Threading.SAME_THREAD;
 
 /**
  * Created by Eric on 2/21/2016.
@@ -98,27 +101,41 @@ public class MasternodeSync {
     AtomicLong timeLastUpdateBlockTip = new AtomicLong(0);
 
     AbstractBlockChain blockChain;
+    GovernanceManager governanceManager;
+    PeerGroup peerGroup;
     Context context;
     NetFullfilledRequestManager netFullfilledRequestManager;
 
-    void setBlockChain(AbstractBlockChain blockChain, NetFullfilledRequestManager netFullfilledRequestManager) {
+    @Deprecated
+    private boolean isLiteMode;
+    @Deprecated
+    private boolean allowInstantSendInLiteMode;
+
+    public void setBlockChain(AbstractBlockChain blockChain, PeerGroup peerGroup, NetFullfilledRequestManager netFullfilledRequestManager, GovernanceManager governanceManager) {
         this.blockChain = blockChain;
+        this.peerGroup = peerGroup;
+        if (peerGroup != null) {
+            peerGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
+        }
         this.netFullfilledRequestManager = netFullfilledRequestManager;
+        this.governanceManager = governanceManager;
         updateBlockTip(blockChain.chainHead, true);
     }
 
     public void close() {
-
+        if (peerGroup != null) {
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
     }
 
-    public MasternodeSync(Context context) {
+    public MasternodeSync(Context context, boolean isLiteMode, boolean allowInstantSendInLiteMode) {
         this.context = context;
         this.eventListeners = new CopyOnWriteArrayList<ListenerRegistration<MasternodeSyncListener>>();
-        if (context.isLiteMode() && context.allowInstantXinLiteMode()) {
+        if (isLiteMode && allowInstantSendInLiteMode) {
             this.syncFlags = SYNC_DEFAULT_SPV;
             this.verifyFlags = VERIFY_DEFAULT_SPV;
             this.featureFlags = FEATURES_SPV;
-        } else if (context.isLiteMode()) {
+        } else if (isLiteMode) {
             this.syncFlags = SYNC_LITE_MODE;
             this.verifyFlags = VERIFY_LITE_MODE;
             this.featureFlags = FEATURES_LITE_MODE;
@@ -293,14 +310,14 @@ public class MasternodeSync {
 
         // gradually request the rest of the votes after sync finished
         if (isSynced()) {
-            context.governanceManager.requestGovernanceObjectVotes();
+            governanceManager.requestGovernanceObjectVotes();
             return;
         }
 
-        if (context.peerGroup == null)
+        if (peerGroup == null)
             return;
 
-        ReentrantLock nodeLock = context.peerGroup.getLock();
+        ReentrantLock nodeLock = peerGroup.getLock();
 
         if (!nodeLock.tryLock())
             return;
@@ -310,7 +327,7 @@ public class MasternodeSync {
             log.info("processTick -- tick {} currentAsset {} triedPeerCount {} syncProgress {}",
                     tick, getAssetName(), triedPeerCount, nSyncProgress);
 
-            List<Peer> nodesCopy = context.peerGroup.getConnectedPeers();
+            List<Peer> nodesCopy = peerGroup.getConnectedPeers();
             for (Peer peer : nodesCopy) {
 
                 // QUICK MODE (REGTEST ONLY!)
@@ -406,7 +423,7 @@ public class MasternodeSync {
                 if (!netFullfilledRequestManager.hasFulfilledRequest(peer.getAddress(), "governance-sync")) {
                     continue;
                 }
-                int objsLeftToAsk = context.governanceManager.requestGovernanceObjectVotes(peer);
+                int objsLeftToAsk = governanceManager.requestGovernanceObjectVotes(peer);
                 // check for data
                 if (objsLeftToAsk == 0) {
                     if (timeNoObjectsLeft == 0) {
@@ -478,7 +495,7 @@ public class MasternodeSync {
     public void queueOnSyncStatusChanged(final int newStatus, final double syncStatus) {
         //checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<MasternodeSyncListener> registration : eventListeners) {
-            if (registration.executor == Threading.SAME_THREAD) {
+            if (registration.executor == SAME_THREAD) {
                 registration.listener.onSyncStatusChanged(newStatus, syncStatus);
             } else {
                 registration.executor.execute(new Runnable() {
@@ -514,7 +531,7 @@ public class MasternodeSync {
         }
     }
 
-    void updateBlockTip(StoredBlock storedBlock, boolean initialDownload)
+    public void updateBlockTip(StoredBlock storedBlock, boolean initialDownload)
     {
         if (!initialDownload && storedBlock.getHeight() % 100 == 0)
             log.info("updateBlockTip: height:  {} initialDownload={}", storedBlock.getHeight(), initialDownload);
@@ -585,4 +602,15 @@ public class MasternodeSync {
     public String toString() {
         return "MasternodeSync{"+ getAssetName()+ "}";
     }
+
+    PreMessageReceivedEventListener preMessageReceivedEventListener = new PreMessageReceivedEventListener() {
+        @Override
+        public Message onPreMessageReceived(Peer peer, Message m) {
+            if (m instanceof SyncStatusCount) {
+                processSyncStatusCount(peer, (SyncStatusCount)m);
+                return null;
+            }
+            return m;
+        }
+    };
 }

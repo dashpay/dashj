@@ -31,6 +31,7 @@ import org.bitcoinj.core.VersionAck;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.net.BlockingClientManager;
 import org.bitcoinj.net.ClientConnectionManager;
 import org.bitcoinj.net.NioClientManager;
@@ -53,6 +54,7 @@ import static com.google.common.base.Preconditions.checkState;
 public class TestWithMasternodeGroup extends TestWithPeerGroup {
 
     protected MasternodeGroup masternodeGroup;
+    protected DashSystem system;
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -60,7 +62,8 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
 
     @Override
     protected void beforeInitPeerGroup() {
-        Context.get().initDash(true, true);
+        system = new DashSystem(Context.get());
+        system.initDash(true, true);
     }
 
     @After
@@ -71,6 +74,8 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
             Utils.finishMockSleep();
             if (masternodeGroup.isRunning())
                 masternodeGroup.stopAsync();
+            system.remove();
+            system = null;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -98,7 +103,7 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
     protected final Semaphore jobBlocks = new Semaphore(0);
 
     private MasternodeGroup createMasternodeGroup(final ClientConnectionManager manager) {
-        return new MasternodeGroup(UNITTEST, blockChain, manager) {
+        return new MasternodeGroup(UNITTEST, blockChain, system.masternodeListManager, manager) {
             @Override
             protected ListeningScheduledExecutorService createPrivateExecutor() {
                 return MoreExecutors.listeningDecorator(new ScheduledThreadPoolExecutor(1, new ContextPropagatingThreadFactory("MasternodeGroup test thread")) {
@@ -122,7 +127,7 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
             public boolean addPendingMasternode(CoinJoinClientSession session) {
                 try {
                     Sha256Hash proTxHash = session.getMixingMasternodeInfo().getProTxHash();
-                    Masternode mn = context.masternodeListManager.getListAtChainTip().getMN(proTxHash);
+                    Masternode mn = system.masternodeListManager.getListAtChainTip().getMN(proTxHash);
                     pendingSessions.add(session);
                     masternodeMap.put(proTxHash, session);
                     addressMap.put(session.getMixingMasternodeInfo().getService(), session);

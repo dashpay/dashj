@@ -6,8 +6,10 @@ import com.google.common.collect.Sets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
+import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
 import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
 import org.bitcoinj.crypto.BLSBatchVerifier;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
 import org.bitcoinj.quorums.listeners.ChainLockListener;
 import org.bitcoinj.store.BlockStore;
@@ -16,6 +18,8 @@ import org.bitcoinj.store.FullPrunedBlockStore;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,12 +29,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static org.bitcoinj.utils.Threading.SAME_THREAD;
 
 public class InstantSendManager implements RecoveredSignatureListener {
 
@@ -39,13 +46,19 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     private static final Logger log = LoggerFactory.getLogger(InstantSendManager.class);
     ReentrantLock lock = Threading.lock("InstantSendManager");
-    InstantSendDatabase db;
+    protected InstantSendDatabase db;
+    protected ChainLocksHandler chainLocksHandler;
+    protected PeerGroup peerGroup;
+    protected MasternodeSync masternodeSync;
+    protected SporkManager sporkManager;
+    protected SimplifiedMasternodeListManager masternodeListManager;
     @Deprecated
     Thread workThread;
     @Deprecated
     private boolean runWithoutThread = true;
     private ScheduledExecutorService scheduledExecutorService;
     AbstractBlockChain blockChain;
+    private ArrayList<Wallet> wallets = new ArrayList<>();
 
     //Keep track of when the ISLOCK arrived
     HashMap<InstantSendLock, Long> invalidInstantSendLocks;
@@ -53,13 +66,25 @@ public class InstantSendManager implements RecoveredSignatureListener {
     // Incoming and not verified yet
     HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pendingInstantSendLocks;
 
-    public InstantSendManager(Context context, InstantSendDatabase db) {
+    public InstantSendManager(Context context, InstantSendDatabase db, SigningManager signingManager) {
         this.context = context;
         this.db = db;
-        this.quorumSigningManager = context.signingManager;
+        this.quorumSigningManager = signingManager;
         pendingInstantSendLocks = new HashMap<>();
         invalidInstantSendLocks = new HashMap<>();
         scheduledExecutorService = createScheduledExecutorService();
+    }
+
+    public InstantSendManager(Context context, InstantSendDatabase db, AbstractBlockChain blockChain,
+                              @Nullable PeerGroup peerGroup, @Nullable ChainLocksHandler chainLocksHandler, SigningManager signingManager,
+                              MasternodeSync masternodeSync, SporkManager sporkManager) {
+        this.context = context;
+        this.db = db;
+        this.quorumSigningManager = signingManager;
+        pendingInstantSendLocks = new HashMap<>();
+        invalidInstantSendLocks = new HashMap<>();
+        scheduledExecutorService = createScheduledExecutorService();
+        setBlockChain(blockChain, peerGroup, chainLocksHandler, masternodeSync, sporkManager, masternodeListManager);
     }
 
     private ScheduledExecutorService createScheduledExecutorService() {
@@ -71,19 +96,41 @@ public class InstantSendManager implements RecoveredSignatureListener {
         return String.format("InstantSendManager:  pendingInstantSendLocks %d, DB: %s", pendingInstantSendLocks.size(), db);
     }
 
-    public InstantSendManager(Context context, InstantSendDatabase db, boolean runWithoutThread) {
-        this(context, db);
-        this.runWithoutThread = runWithoutThread;
-    }
+//    public InstantSendManager(Context context, InstantSendDatabase db, boolean runWithoutThread) {
+//        this(context, db);
+//        this.runWithoutThread = runWithoutThread;
+//    }
 
-    public void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup) {
+//    public void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup) {
+//        this.peerGroup = peerGroup;
+//        this.blockChain = blockChain;
+//        this.blockChain.addTransactionReceivedListener(this.transactionReceivedInBlockListener);
+//        this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
+//        if (peerGroup != null) {
+//            peerGroup.addOnTransactionBroadcastListener(this.transactionBroadcastListener);
+//        }
+//        if (scheduledExecutorService == null)
+//            scheduledExecutorService = createScheduledExecutorService();
+//    }
+
+    public void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup,
+                              @Nullable ChainLocksHandler chainLocksHandler, MasternodeSync masternodeSync,
+                              SporkManager sporkManager, SimplifiedMasternodeListManager masternodeListManager) {
+        this.peerGroup = peerGroup;
         this.blockChain = blockChain;
+        this.masternodeSync = masternodeSync;
+        this.masternodeListManager = masternodeListManager;
+        this.sporkManager = sporkManager;
         this.blockChain.addTransactionReceivedListener(this.transactionReceivedInBlockListener);
         this.blockChain.addNewBestBlockListener(this.newBestBlockListener);
         if (peerGroup != null) {
             peerGroup.addOnTransactionBroadcastListener(this.transactionBroadcastListener);
+            peerGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
         }
-        context.chainLockHandler.addChainLockListener(this.chainLockListener);
+        if (chainLocksHandler != null) {
+            this.chainLocksHandler = chainLocksHandler;
+            chainLocksHandler.addChainLockListener(this.chainLockListener);
+        }
         if (scheduledExecutorService == null)
             scheduledExecutorService = createScheduledExecutorService();
     }
@@ -96,8 +143,10 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
         if (peerGroup != null) {
             peerGroup.removeOnTransactionBroadcastListener(this.transactionBroadcastListener);
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
         }
-        context.chainLockHandler.removeChainLockListener(this.chainLockListener);
+        chainLocksHandler.removeChainLockListener(this.chainLockListener);
+        wallets.forEach(wallet -> wallet.removeCoinsSentEventListener(coinsSentEventListener));
         try {
             if (!scheduledExecutorService.awaitTermination(3000, TimeUnit.MILLISECONDS)) {
                 log.warn("scheduled threads still remain");
@@ -114,7 +163,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
     }
 
     public boolean isInstantSendEnabled() {
-        return context.sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
+        return sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
     }
 
     public void processInstantSendLock(Peer peer, InstantSendLock isLock) {
@@ -146,7 +195,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             } catch (BlockStoreException x) {
                 throw new RuntimeException(x);
             }
-        } else if (context.getParams().isDIP0024Active(context.blockChain.getChainHead())) {
+        } else if (context.getParams().isDIP0024Active(blockChain.getChainHead())) {
             // Ignore non-deterministic islocks once rotation is active
             return;
         }
@@ -207,6 +256,42 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
         return true;
     }
+
+    public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
+        if (m instanceof InventoryMessage) {
+            if (isInstantSendEnabled() && masternodeSync != null && masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
+                InventoryMessage inv = (InventoryMessage) m;
+                List<InventoryItem> items = inv.getItems();
+                List<InventoryItem> instantSendLocks = new LinkedList<>();
+                for (InventoryItem item : items) {
+                    switch (item.type) {
+                        case InstantSendLock:
+                        case InstantSendDeterministicLock:
+                            instantSendLocks.add(item);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                Iterator<InventoryItem> it = instantSendLocks.iterator();
+                GetDataMessage getdata = new GetDataMessage(context.getParams());
+                while (it.hasNext()) {
+                    InventoryItem item = it.next();
+                    if(!alreadyHave(item)) {
+                        getdata.addItem(item);
+                    }
+                }
+                if (!getdata.getItems().isEmpty()) {
+                    // This will cause us to receive a bunch of block or tx messages.
+                    peer.sendMessage(getdata);
+                }
+            }
+        } else if (m instanceof InstantSendLock) {
+            processInstantSendLock(peer, (InstantSendLock) m);
+            return null;
+        }
+        return m;
+    };
 
     public boolean alreadyHave(InventoryItem inv)
     {
@@ -374,7 +459,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
                 int txAge = blockChain.getBestChainHeight() - utxo.getHeight();
                 if (txAge < nInstantSendConfirmationsRequired) {
-                    if (context.chainLockHandler.hasChainLock(utxo.getHeight(), block.getHash())) {
+                    if (chainLocksHandler.hasChainLock(utxo.getHeight(), block.getHash())) {
                         if (printDebug) {
                             log.info("txid={}: outpoint {} too new and not ChainLocked. nTxAge={}, nInstantSendConfirmationsRequired={}",
                                     txHash, outpoint.toStringShort(), txAge, nInstantSendConfirmationsRequired);
@@ -394,7 +479,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     TransactionConfidence confidence = parent.getConfidence();
                     if(confidence != null && confidence.getDepthInBlocks() < nInstantSendConfirmationsRequired) {
                         StoredBlock block = blockStore.get(confidence.getAppearedAtChainHeight());
-                        if (context.chainLockHandler.hasChainLock(confidence.getAppearedAtChainHeight(), block.getHeader().getHash()))
+                        if (chainLocksHandler.hasChainLock(confidence.getAppearedAtChainHeight(), block.getHeader().getHash()))
                         {
                             if (printDebug) {
                                 log.info("txid={}: outpoint {} too new and not ChainLocked. nTxAge={}, nInstantSendConfirmationsRequired={}",
@@ -513,7 +598,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> p : pend.entrySet()) {
             Sha256Hash hash = p.getKey();
 
-            if(!context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.INSTANTSENDLOCK)) {
+            if(!masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.INSTANTSENDLOCK)) {
                 //If we don't verify the instantsendlock as being signed by a quorum...
                 processInstantSendLock(p.getValue().getFirst(), hash, p.getValue().getSecond());
                 continue;
@@ -572,7 +657,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (quorum == null) {
                 // should not happen, but if one fails to select, all others will also fail to select
                 log.info("islock: quorum not found to verify signature [tipHeight: {} vs {}]", tipHeight,
-                        context.masternodeListManager.getQuorumListAtTip(llmqType).getHeight());
+                        masternodeListManager.getQuorumListAtTip(llmqType).getHeight());
                 log.info("islock: signHeight: {}, id: {}", signHeight, id);
                 log.info("islock: dash-cli quorum selectquorum {} {}", llmqType.getValue(), Sha256Hash.wrap(id.getReversedBytes()));
                 invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
@@ -602,7 +687,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
 
         Stopwatch timer = Stopwatch.createStarted();
-        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
+        if(masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
             batchVerifier.verify();
 
         log.info("InstantSendManager -- verified locks. count={}, alreadyVerified={}, vt={}, nodes={}",
@@ -680,7 +765,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 if(block != null) {
                     // Let's see if the TX that was locked by this islock is already mined in a ChainLocked block. If yes,
                     // we can simply ignore the islock, as the ChainLock implies locking of all TXs in that chain
-                    if (context.chainLockHandler.hasChainLock(height, block.getHeader().getHash())) {
+                    if (chainLocksHandler.hasChainLock(height, block.getHeader().getHash())) {
                         log.info("txlock={}, islock={}: dropping islock as it already got a ChainLock in block {}, peer={}",
                                 islock.txid, hash, block.getHeader().getHash(), from);
                         return;
@@ -793,7 +878,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
 
-            if (context.sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED)) {
+            if (sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED)) {
                 // Nothing to do here. We should keep all islocks and let chainlocks handle them.
                 return;
             }
@@ -991,4 +1076,18 @@ public class InstantSendManager implements RecoveredSignatureListener {
             syncTransaction(t, null, -1);
         }
     };
+
+    WalletCoinsSentEventListener coinsSentEventListener = (wallet, tx, prevBalance, newBalance) -> syncTransaction(tx, null, -1);
+
+    public void addWallet(Wallet wallet) {
+        wallet.addCoinsSentEventListener(coinsSentEventListener);
+        wallets.add(wallet);
+    }
+
+    public void removeWallet(Wallet wallet) {
+        if (wallets.contains(wallet)) {
+            wallet.removeCoinsSentEventListener(coinsSentEventListener);
+            wallets.remove(wallet);
+        }
+    }
 }

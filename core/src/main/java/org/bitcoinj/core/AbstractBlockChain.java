@@ -905,7 +905,6 @@ public abstract class AbstractBlockChain {
         synchronized (chainHeadLock) {
             this.chainHead = chainHead;
         }
-        Context.get().updatedChainHead(chainHead);
     }
 
     /**

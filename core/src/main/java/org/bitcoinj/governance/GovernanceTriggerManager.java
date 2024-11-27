@@ -17,6 +17,7 @@ public class GovernanceTriggerManager {
     Context context;
 
     private HashMap<Sha256Hash, Superblock> mapTrigger;
+    private GovernanceManager governanceManager;
 
     /**
      *   Add Governance Object
@@ -24,7 +25,7 @@ public class GovernanceTriggerManager {
 
     public boolean addNewTrigger(Sha256Hash nHash) {
         log.info("CGovernanceTriggerManager::AddNewTrigger: Start");
-        context.governanceManager.lock.lock();
+        governanceManager.lock.lock();
         try {
 
             // IF WE ALREADY HAVE THIS HASH, RETURN
@@ -55,11 +56,11 @@ public class GovernanceTriggerManager {
 
             return true;
         } finally {
-            context.governanceManager.lock.unlock();
+            governanceManager.lock.unlock();
         }
     }
 
-    public GovernanceTriggerManager(Context context) {
+    public GovernanceTriggerManager(Context context, GovernanceManager governanceManager) {
         this.mapTrigger = new HashMap<Sha256Hash, Superblock>();
         this.context = context;
     }
@@ -72,13 +73,13 @@ public class GovernanceTriggerManager {
 
     public void cleanAndRemove() {
         log.info("gobject--CGovernanceTriggerManager::CleanAndRemove -- Start");
-        context.governanceManager.lock.lock();
+        governanceManager.lock.lock();
         try {
 
             // LOOK AT THESE OBJECTS AND COMPILE A VALID LIST OF TRIGGERS
             for (Map.Entry<Sha256Hash, Superblock> it : mapTrigger.entrySet()) {
                 //int nNewStatus = -1;
-                GovernanceObject pObj = context.governanceManager.findGovernanceObject(it.getKey());
+                GovernanceObject pObj = governanceManager.findGovernanceObject(it.getKey());
                 if (pObj == null) {
                     continue;
                 }
@@ -116,7 +117,7 @@ public class GovernanceTriggerManager {
                             // Rough approximation: a cycle of Superblock ++
                             int nExpirationBlock = nTriggerBlock + GOVERNANCE_TRIGGER_EXPIRATION_BLOCKS;
                             log.info("gobject--CGovernanceTriggerManager::CleanAndRemove -- nTriggerBlock = {}, nExpirationBlock = {}", nTriggerBlock, nExpirationBlock);
-                            if (context.governanceManager.getCachedBlockHeight() > nExpirationBlock) {
+                            if (governanceManager.getCachedBlockHeight() > nExpirationBlock) {
                                 log.info("gobject--CGovernanceTriggerManager::CleanAndRemove -- Outdated trigger found");
                                 remove = true;
                                 GovernanceObject pgovobj = pSuperblock.getGovernanceObject();
@@ -145,7 +146,7 @@ public class GovernanceTriggerManager {
                 }
             }
         } finally {
-            context.governanceManager.lock.unlock();
+            governanceManager.lock.unlock();
         }
 
         log.info("CGovernanceTriggerManager::CleanAndRemove: End");
@@ -159,7 +160,7 @@ public class GovernanceTriggerManager {
      */
 
     public ArrayList<Superblock> getActiveTriggers() {
-        context.governanceManager.lock.lock();
+        governanceManager.lock.lock();
         try {
             ArrayList<Superblock> vecResults = new ArrayList<Superblock>();
 
@@ -171,7 +172,7 @@ public class GovernanceTriggerManager {
 
                 Map.Entry<Sha256Hash, Superblock> entry = it.next();
 
-                GovernanceObject pObj = context.governanceManager.findGovernanceObject(entry.getKey());
+                GovernanceObject pObj = governanceManager.findGovernanceObject(entry.getKey());
 
                 if (pObj != null) {
                     log.info("GetActiveTriggers: pObj->GetDataAsString() = " + pObj.getDataAsPlainString());
@@ -183,7 +184,7 @@ public class GovernanceTriggerManager {
 
             return vecResults;
         } finally {
-            context.governanceManager.lock.unlock();
+            governanceManager.lock.unlock();
         }
     }
 

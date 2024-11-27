@@ -22,6 +22,7 @@ import org.bitcoinj.coinjoin.listeners.MixingCompleteListener;
 import org.bitcoinj.coinjoin.listeners.MixingStartedListener;
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
+import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
@@ -36,8 +37,10 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.MasternodeMetaDataManager;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -88,6 +91,10 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
     private String strAutoDenomResult = "";
 
     private final Context context;
+    private final MasternodeSync masternodeSync;
+    private final CoinJoinManager coinJoinManager;
+    private final SimplifiedMasternodeListManager masternodeListManager;
+    private final MasternodeMetaDataManager masternodeMetaDataManager;
     private final WalletEx mixingWallet;
     
     // Keep track of current block height
@@ -104,8 +111,8 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
             = new CopyOnWriteArrayList<>();
 
     private boolean waitForAnotherBlock() {
-        if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) &&
-                !mixingWallet.getContext().masternodeSync.isBlockchainSynced()) return true;
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) &&
+                !masternodeSync.isBlockchainSynced()) return true;
 
         if (CoinJoinClientOptions.isMultiSessionEnabled()) return false;
 
@@ -124,23 +131,31 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
 
     public int cachedNumBlocks = Integer.MAX_VALUE;    // used for the overview screen
 
-    public CoinJoinClientManager(Wallet wallet) {
+    public CoinJoinClientManager(Wallet wallet, MasternodeSync masternodeSync, CoinJoinManager coinJoinManager, SimplifiedMasternodeListManager masternodeListManager, MasternodeMetaDataManager masternodeMetaDataManager) {
         checkArgument(wallet instanceof WalletEx);
         mixingWallet = (WalletEx) wallet;
         context = wallet.getContext();
+        this.masternodeSync = masternodeSync;
+        this.coinJoinManager = coinJoinManager;
+        this.masternodeMetaDataManager = masternodeMetaDataManager;
+        this.masternodeListManager = masternodeListManager;
         mixingWallet.addCoinsReceivedEventListener(this);
     }
 
-    public CoinJoinClientManager(WalletEx wallet) {
+    public CoinJoinClientManager(WalletEx wallet, MasternodeSync masternodeSync, CoinJoinManager coinJoinManager, SimplifiedMasternodeListManager masternodeListManager, MasternodeMetaDataManager masternodeMetaDataManager) {
         mixingWallet = wallet;
         context = wallet.getContext();
+        this.masternodeSync = masternodeSync;
+        this.coinJoinManager = coinJoinManager;
+        this.masternodeMetaDataManager = masternodeMetaDataManager;
+        this.masternodeListManager = masternodeListManager;
         mixingWallet.addCoinsReceivedEventListener(this);
     }
 
     public void processMessage(Peer from, Message message, boolean enable_bip61) {
         if (!CoinJoinClientOptions.isEnabled())
             return;
-        if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !context.masternodeSync.isBlockchainSynced())
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !masternodeSync.isBlockchainSynced())
             return;
 
         if (message instanceof CoinJoinStatusUpdate ||
@@ -225,17 +240,17 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         if (!CoinJoinClientOptions.isEnabled() || (!dryRun && !isMixing()))
             return false;
 
-        if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !mixingWallet.getContext().masternodeSync.isBlockchainSynced()) {
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !masternodeSync.isBlockchainSynced()) {
             strAutoDenomResult = "Can't mix while sync in progress.";
             return false;
         }
 
-        if (!dryRun && mixingWallet.isEncrypted() && context.coinJoinManager.requestKeyParameter(mixingWallet) == null) {
+        if (!dryRun && mixingWallet.isEncrypted() && coinJoinManager.requestKeyParameter(mixingWallet) == null) {
             strAutoDenomResult = "Wallet is locked.";
             return false;
         }
 
-        int mnCountEnabled = context.masternodeListManager.getListAtChainTip().getValidMNsCount();
+        int mnCountEnabled = masternodeListManager.getListAtChainTip().getValidMNsCount();
 
         // If we've used 90% of the Masternode list then drop the oldest first ~30%
         int thresholdHigh = (int) (mnCountEnabled * 0.9);
@@ -274,7 +289,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         lock.lock();
         try {
             if (deqSessions.size() < CoinJoinClientOptions.getSessions()) {
-                CoinJoinClientSession newSession = new CoinJoinClientSession(mixingWallet);
+                CoinJoinClientSession newSession = new CoinJoinClientSession(mixingWallet, coinJoinManager, masternodeListManager, masternodeMetaDataManager, masternodeSync);
                 log.info("creating new session: {}: ", newSession.getId());
                 for (ListenerRegistration<SessionCompleteListener> listener : sessionCompleteListeners) {
                     newSession.addSessionCompleteListener(listener.executor, listener.listener);
@@ -378,7 +393,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         masternodesUsed.add(proTxHash);
     }
     public Masternode getRandomNotUsedMasternode() {
-        SimplifiedMasternodeList mnList = context.masternodeListManager.getListAtChainTip();
+        SimplifiedMasternodeList mnList = masternodeListManager.getListAtChainTip();
 
         int nCountEnabled = mnList.getValidMNsCount();
         int nCountNotExcluded = nCountEnabled - masternodesUsed.size();
@@ -443,8 +458,8 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         if (!CoinJoinClientOptions.isEnabled())
             return;
 
-        if (context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)
-                &&!context.masternodeSync.isBlockchainSynced())
+        if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)
+                &&!masternodeSync.isBlockchainSynced())
             return;
 
         nTick++;

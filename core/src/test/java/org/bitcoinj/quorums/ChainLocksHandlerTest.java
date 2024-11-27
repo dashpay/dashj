@@ -8,6 +8,7 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.SporkId;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -28,6 +29,7 @@ public class ChainLocksHandlerTest {
     ChainLocksHandler chainLocksHandler;
     NetworkParameters params = TestNet3Params.get();
     Context context = new Context(params);
+    DashSystem system;
     BlockStore blockStore;
     BlockChain blockChain;
     PeerGroup peerGroup;
@@ -45,7 +47,8 @@ public class ChainLocksHandlerTest {
 
     @After
     public void tearDown() throws BlockStoreException {
-        context.close();
+        system.close();
+        system.remove();
         blockStore.close();
     }
 
@@ -55,18 +58,19 @@ public class ChainLocksHandlerTest {
         blockStore = new SPVBlockStore(params, new File(Objects.requireNonNull(getClass().getResource(blockchainFile)).getPath()));
 
         blockChain = new BlockChain(context, blockStore);
-        context.initDash(true, true);
+        system = new DashSystem(context);
+        system.initDash(true, true);
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
-        SimplifiedMasternodeListManager manager = context.masternodeListManager;
+        SimplifiedMasternodeListManager manager = system.masternodeListManager;
         URL mnlistManagerFile = Objects.requireNonNull(getClass().getResource(mnlistFile));
         FlatDB<SimplifiedMasternodeListManager> db2 = new FlatDB<>(Context.get(), mnlistManagerFile.getFile(), true, manager.getDefaultMagicMessage(), 5);
         assertTrue(db2.load(manager));
 
-        context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
-        context.sporkManager.processSporkForUnitTesting(SporkId.SPORK_19_CHAINLOCKS_ENABLED);
+        system.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
+        system.sporkManager.processSporkForUnitTesting(SporkId.SPORK_19_CHAINLOCKS_ENABLED);
 
-        chainLocksHandler = context.chainLockHandler;
+        chainLocksHandler = system.chainLockHandler;
         chainLocksHandler.checkActiveState();
     }
     @Test

@@ -18,6 +18,7 @@
 
 package org.bitcoinj.signers;
 
+import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Transaction;
@@ -48,7 +49,7 @@ import java.util.List;
  */
 public class CoinJoinTransactionSigner implements TransactionSigner {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinTransactionSigner.class);
-
+    private CoinJoinManager coinJoinManager;
     /**
      * Verify flags that are safe to use when testing if an input is already
      * signed.
@@ -59,7 +60,8 @@ public class CoinJoinTransactionSigner implements TransactionSigner {
     private final List<TransactionInput> sigs;
     private final boolean anyoneCanPay;
 
-    public CoinJoinTransactionSigner(List<TransactionInput> sigs, boolean anyoneCanPay) {
+    public CoinJoinTransactionSigner(CoinJoinManager coinJoinManager, List<TransactionInput> sigs, boolean anyoneCanPay) {
+        this.coinJoinManager = coinJoinManager;
         this.sigs = sigs;
         this.anyoneCanPay = anyoneCanPay;
         sigs.clear();
@@ -121,7 +123,7 @@ public class CoinJoinTransactionSigner implements TransactionSigner {
                 if (ScriptPattern.isP2PK(scriptPubKey) || ScriptPattern.isP2PKH(scriptPubKey)
                         || ScriptPattern.isP2SH(scriptPubKey)) {
                     if (key.isEncrypted()) {
-                        key = Context.get().coinJoinManager.requestDecryptKey(key);
+                        key = coinJoinManager.requestDecryptKey(key);
                     }
                     TransactionSignature signature = tx.calculateSignature(i, key, script, Transaction.SigHash.ALL, anyoneCanPay);
 
