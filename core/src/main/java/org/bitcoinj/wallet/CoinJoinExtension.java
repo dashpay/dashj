@@ -71,7 +71,7 @@ import static org.dashj.bls.Utils.HexUtils.HEX;
 
 public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinExtension.class);
-    private static final int COINJOIN_LOOKADHEAD = 400;
+    private static final int COINJOIN_LOOKADHEAD = 500;
     private static final int COINJOIN_LOOKADHEAD_THRESHOLD = COINJOIN_LOOKADHEAD - 1;
 
     protected AnyKeyChainGroup coinJoinKeyChainGroup;
