@@ -60,6 +60,10 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
     public double preBlocksWeight = 0.05;
     public double blocksWeight;
 
+    public DownloadProgressTracker() {
+        this(false);
+    }
+
     public DownloadProgressTracker(boolean hasPreBlockProcessing) {
         this.hasPreBlockProcessing = hasPreBlockProcessing;
     }
