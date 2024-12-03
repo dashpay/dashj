@@ -76,4 +76,24 @@ public class RecoveredSignature extends Message {
             updateHash();
         return hash;
     }
+
+    public Sha256Hash getId() {
+        return id;
+    }
+
+    public Sha256Hash getMsgHash() {
+        return msgHash;
+    }
+
+    public Sha256Hash getQuorumHash() {
+        return quorumHash;
+    }
+
+    public BLSLazySignature getSignature() {
+        return signature;
+    }
+
+    public int getLlmqType() {
+        return llmqType;
+    }
 }
