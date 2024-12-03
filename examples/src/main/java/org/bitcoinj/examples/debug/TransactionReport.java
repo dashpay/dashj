@@ -20,17 +20,14 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.quorums.LLMQParameters;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -39,6 +36,7 @@ public class TransactionReport extends Report {
     static Logger log = LoggerFactory.getLogger(TransactionReport.class);
     ArrayList<TransactionInfo> txList = new ArrayList<>();
     HashMap<Sha256Hash, TransactionInfo> txMap = new HashMap<>();
+    HashMap<Sha256Hash, Long> txISLockMap = new HashMap<>();
 
 
 
@@ -53,6 +51,12 @@ public class TransactionReport extends Report {
         txMap.put(tx.getTxId(), txInfo);
     }
 
+    public void addISLockTime(Sha256Hash txId) {
+        if (!txISLockMap.containsKey(txId)) {
+            txISLockMap.put(txId, Utils.currentTimeMillis());
+        }
+    }
+
 
 
     @Override
@@ -60,7 +64,7 @@ public class TransactionReport extends Report {
         try {
             FileWriter writer = new FileWriter(outputFile);
             int cycleLength = -1;
-            writer.append("TxId, Block Received, Block Mined, In Mempool, IS Status, Core instantlock_internal, Block Rec. Mod, Cycle Hash, Quorum Hash:Index\n");
+            writer.append("TxId, Block Received, Block Mined, In Mempool, IS Status, IS Delay, Core instantlock_internal, Block Rec. Mod, Cycle Hash, Quorum Hash:Index\n");
             for (TransactionInfo txInfo : txList) {
                 if (cycleLength == -1) {
                     cycleLength = LLMQParameters.fromType(txInfo.tx.getParams().getLlmqDIP0024InstantSend()).getDkgInterval();
@@ -71,17 +75,21 @@ public class TransactionReport extends Report {
                 if ((txInfo.txCore == null || blockMined == -1 || blockMined == txInfo.blockRecieved) && dashClientPath.length() > 0) {
                     txInfo.txCore = runRPCCommand(String.format("getrawtransaction %s true", txInfo.tx.getTxId()));
                 }
-                String line = String.format("%s, %d, %d, %d, %s, %s, %d, %s, %s\n",
+                Long isLocktime = txISLockMap.get(txInfo.tx.getTxId());
+
+                String line = String.format("%s, %d, %d, %d, %s, %.2f, %s, %d, %s, %s",
                         txInfo.tx.getTxId(),
                         txInfo.blockRecieved,
                         blockMined,
                         blockMined != -1 ? blockMined - txInfo.blockRecieved : 0,
                         confidence.getIXType(),
-                        txInfo.txCore != null && txInfo.txCore.getBoolean("instantlock_internal"),
+                        isLocktime != null ? ((double)(isLocktime - txInfo.timeReceived))/1000.0 : -1,
+                        txInfo.txCore != null ? txInfo.txCore.getBoolean("instantlock_internal") : "N/A",
                         txInfo.blockRecieved % cycleLength,
                         confidence.getIXType() != TransactionConfidence.IXType.IX_NONE && confidence.getInstantSendlock() != null ? confidence.getInstantSendlock().getCycleHash() : "",
                         (confidence.getIXType() != TransactionConfidence.IXType.IX_NONE && confidence.getIXType() != TransactionConfidence.IXType.IX_REQUEST && confidence.getInstantSendlock() != null) ? (confidence.getInstantSendlock().getQuorumHash() + ":" + confidence.getInstantSendlock().getQuorumIndex()):"");
                 writer.append(line);
+                writer.append("\n");
             }
             writer.close();
         } catch (FileNotFoundException e) {
