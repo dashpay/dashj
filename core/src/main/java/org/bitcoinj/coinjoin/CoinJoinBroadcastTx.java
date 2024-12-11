@@ -31,6 +31,8 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.BLSSignature;
+import org.bitcoinj.manager.DashSystem;
+import org.bitcoinj.quorums.ChainLocksHandler;
 import org.bitcoinj.script.ScriptPattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,12 +151,12 @@ public class CoinJoinBroadcastTx extends Message {
         this.confirmedHeight = confirmedHeight;
     }
 
-    public boolean isExpired(StoredBlock block) {
+    public boolean isExpired(StoredBlock block, ChainLocksHandler chainLocksHandler) {
         // expire confirmed DSTXes after ~1h since confirmation or chainlocked confirmation
         if (confirmedHeight == -1 || block.getHeight() < confirmedHeight) return false; // not mined yet
         if (block.getHeight() - confirmedHeight > 24) return true; // mined more than an hour ago
         // TODO: this may crash
-        return Context.get().chainLockHandler.hasChainLock(block.getHeight(), block.getHeader().getHash());
+        return chainLocksHandler.hasChainLock(block.getHeight(), block.getHeader().getHash());
     }
 
     public boolean isValidStructure() {

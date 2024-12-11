@@ -115,9 +115,9 @@ public class ForwardingService {
                 kit.peerGroup().setUseLocalhostPeerWhenPossible(false);
                 kit.peerGroup().setDropPeersAfterBroadcast(params.getDropPeersAfterBroadcast());
                 kit.wallet().getContext().setDebugMode(true);
+                kit.setDiscovery(new ThreeMethodPeerDiscovery(params, kit.system().masternodeListManager));
             }
         };
-        kit.setDiscovery(new ThreeMethodPeerDiscovery(params, Context.get().masternodeListManager));
 
         if (params == RegTestParams.get()) {
             // Regression test mode is designed for testing and development only, so there's no public network for it.
@@ -182,7 +182,7 @@ public class ForwardingService {
                 blockReport.printReport();
             }
         });
-        kit.wallet().getContext().chainLockHandler.addChainLockListener(new ChainLockListener() {
+        kit.system().chainLockHandler.addChainLockListener(new ChainLockListener() {
             @Override
             public void onNewChainLock(StoredBlock block) {
                 blockReport.setChainLock(block);

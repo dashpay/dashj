@@ -2,9 +2,12 @@ package org.bitcoinj.masternode.owner;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.governance.GovernanceException;
+import org.bitcoinj.governance.GovernanceManager;
 import org.bitcoinj.governance.GovernanceVote;
 import org.bitcoinj.governance.GovernanceVoteBroadcast;
+import org.bitcoinj.governance.GovernanceVoteBroadcaster;
 import org.bitcoinj.governance.GovernanceVoting;
 
 import java.io.File;
@@ -24,6 +27,9 @@ public class MasternodeControl {
      * The Context.
      */
     Context context;
+    private final SimplifiedMasternodeListManager masternodeListManager;
+    private final GovernanceManager governanceManager;
+    private final GovernanceVoteBroadcaster broadcaster;
 
     /**
      * Instantiates a new Masternode control.
@@ -31,9 +37,15 @@ public class MasternodeControl {
      * @param context              the context
      * @param masternodeConfigFile the masternode config file
      */
-    public MasternodeControl(Context context, File masternodeConfigFile) {
+    public MasternodeControl(Context context, File masternodeConfigFile,
+                             GovernanceVoteBroadcaster broadcaster,
+                             SimplifiedMasternodeListManager masternodeListManager,
+                             GovernanceManager governanceManager) {
         this.context = context;
         masternodeConfig = new MasternodeConfig(masternodeConfigFile);
+        this.masternodeListManager = masternodeListManager;
+        this.governanceManager = governanceManager;
+        this.broadcaster = broadcaster;
     }
 
     /**
@@ -42,8 +54,11 @@ public class MasternodeControl {
      * @param context              the context
      * @param masternodeConfigFile the masternode config file name
      */
-    public MasternodeControl(Context context, String masternodeConfigFile) {
-        this(context, new File(masternodeConfigFile));
+    public MasternodeControl(Context context, String masternodeConfigFile,
+                             GovernanceVoteBroadcaster broadcaster,
+                             SimplifiedMasternodeListManager masternodeListManager,
+                             GovernanceManager governanceManager) {
+        this(context, new File(masternodeConfigFile), broadcaster, masternodeListManager, governanceManager);
     }
 
     public void addConfig(String alias, String ip, String privKey, String txHash, String outputIndex) {
@@ -127,7 +142,7 @@ public class MasternodeControl {
 
             TransactionOutPoint outpoint = new TransactionOutPoint(context.getParams(), nOutputIndex, nTxHash);
 
-            Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByCollateral(outpoint);
+            Masternode mn = masternodeListManager.getListAtChainTip().getMNByCollateral(outpoint);
 
             if(mn == null) {
                 nFailed++;
@@ -147,19 +162,19 @@ public class MasternodeControl {
             // UPDATE LOCAL DATABASE WITH NEW OBJECT SETTINGS
 
             GovernanceException exception = new GovernanceException();
-            if(context.governanceManager.processVoteAndRelay(vote, exception)) {
+            if(governanceManager.processVoteAndRelay(vote, exception)) {
                 nSuccessful++;
-                errorMessage.append(alias + "voting successful\n");
-                broadcast = context.peerGroup.broadcastGovernanceVote(vote);
+                errorMessage.append(alias).append("voting successful\n");
+                broadcast = broadcaster.broadcastGovernanceVote(vote);
             } else {
                 nFailed++;
-                errorMessage.append(alias + "-- failure --" + exception.getMessage() + "\n");
+                errorMessage.append(alias).append("-- failure --").append(exception.getMessage()).append("\n");
             }
         }
 
         // REPORT STATS TO THE USER
 
-        errorMessage.append("overall result : " + String.format("Voted successfully %d time(s) and failed %d time(s).", nSuccessful, nFailed));
+        errorMessage.append("overall result : ").append(String.format("Voted successfully %d time(s) and failed %d time(s).", nSuccessful, nFailed));
 
         return broadcast;
     }
@@ -225,7 +240,7 @@ public class MasternodeControl {
 
             TransactionOutPoint outpoint = new TransactionOutPoint(context.getParams(), nOutputIndex, nTxHash);
 
-            Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByCollateral(outpoint);
+            Masternode mn = masternodeListManager.getListAtChainTip().getMNByCollateral(outpoint);
 
             if(mn == null) {
                 nFailed++;
@@ -245,7 +260,7 @@ public class MasternodeControl {
             // UPDATE LOCAL DATABASE WITH NEW OBJECT SETTINGS
 
             GovernanceException exception = new GovernanceException();
-            if(context.governanceManager.processVoteAndRelay(vote, exception)) {
+            if(governanceManager.processVoteAndRelay(vote, exception)) {
                 nSuccessful++;
                 errorMessage.append(alias + "voting successful\n");
             } else {

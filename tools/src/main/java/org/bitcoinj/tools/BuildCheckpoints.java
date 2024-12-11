@@ -19,6 +19,7 @@ package org.bitcoinj.tools;
 
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.*;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.net.discovery.ThreeMethodPeerDiscovery;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
@@ -100,10 +101,12 @@ public class BuildCheckpoints {
         // Configure bitcoinj to fetch only headers, not save them to disk, connect to a local fully synced/validated
         // node and to save block headers that are on interval boundaries, as long as they are <1 month old.
         final Context context = Context.getOrCreate(params);
+        DashSystem system = new DashSystem(context);
+        system.initDash(true, false);
         final BlockStore store = new MemoryBlockStore(params);
         final BlockChain chain = new BlockChain(params, store);
         final PeerGroup peerGroup = new PeerGroup(params, chain);
-        context.initDash(true, false);
+
 
         final InetAddress ipAddress;
 
@@ -243,7 +246,6 @@ public class BuildCheckpoints {
 
     private static void startPeerGroup(PeerGroup peerGroup, InetAddress ipAddress) {
         final PeerAddress peerAddress = new PeerAddress(params, ipAddress);
-        Context.getOrCreate(params).initDash(true, false);
         System.out.println("Connecting to " + peerAddress + "...");
         peerGroup.addAddress(peerAddress);
         peerGroup.start();

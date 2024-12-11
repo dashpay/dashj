@@ -39,15 +39,23 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.MasternodeAddress;
+import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
+import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
+import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
 import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.MasternodeMetaDataManager;
+import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.bitcoinj.quorums.ChainLocksHandler;
+import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
@@ -62,6 +70,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import static org.bitcoinj.utils.Threading.SAME_THREAD;
+
 public class CoinJoinManager {
 
     private static final Logger log = LoggerFactory.getLogger(CoinJoinManager.class);
@@ -70,7 +80,9 @@ public class CoinJoinManager {
     private final CoinJoinClientQueueManager coinJoinClientQueueManager;
 
     private MasternodeGroup masternodeGroup;
-
+    private PeerGroup peerGroup;
+    private SimplifiedMasternodeListManager masternodeListManager;
+    private ChainLocksHandler chainLocksHandler;
     private ScheduledFuture<?> schedule;
     private AbstractBlockChain blockChain;
 
@@ -78,10 +90,16 @@ public class CoinJoinManager {
     private RequestDecryptedKey requestDecryptedKey;
     private final ScheduledExecutorService scheduledExecutorService;
 
-    public CoinJoinManager(Context context, ScheduledExecutorService scheduledExecutorService) {
+    public CoinJoinManager(Context context, ScheduledExecutorService scheduledExecutorService,
+                           SimplifiedMasternodeListManager masternodeListManager,
+                           MasternodeMetaDataManager masternodeMetaDataManager,
+                           MasternodeSync masternodeSync,
+                           ChainLocksHandler chainLocksHandler) {
         this.context = context;
         coinJoinClientManagers = new HashMap<>();
-        coinJoinClientQueueManager = new CoinJoinClientQueueManager(context);
+        this.masternodeListManager = masternodeListManager;
+        this.chainLocksHandler = chainLocksHandler;
+        coinJoinClientQueueManager = new CoinJoinClientQueueManager(context, this, masternodeListManager, masternodeMetaDataManager, masternodeSync);
         this.scheduledExecutorService = scheduledExecutorService;
     }
 
@@ -159,7 +177,7 @@ public class CoinJoinManager {
         for (CoinJoinClientManager clientManager: coinJoinClientManagers.values()) {
             clientManager.resetPool();
             clientManager.stopMixing();
-            clientManager.close(context.blockChain);
+            clientManager.close(blockChain);
         }
         stopAsync();
     }
@@ -170,7 +188,7 @@ public class CoinJoinManager {
 
     public void initMasternodeGroup(AbstractBlockChain blockChain) {
         this.blockChain = blockChain;
-        masternodeGroup = new MasternodeGroup(context, blockChain);
+        masternodeGroup = new MasternodeGroup(context, blockChain, masternodeListManager);
         masternodeGroup.setCoinJoinManager(this);
         blockChain.addTransactionReceivedListener(transactionReceivedInBlockListener);
     }
@@ -178,7 +196,7 @@ public class CoinJoinManager {
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
-            CoinJoin.updatedBlockTip(block);
+            CoinJoin.updatedBlockTip(block, chainLocksHandler);
         }
     };
 
@@ -194,15 +212,22 @@ public class CoinJoinManager {
         }
     };
 
-    public void setBlockchain(AbstractBlockChain blockChain) {
+    public void setBlockchain(AbstractBlockChain blockChain, PeerGroup peerGroup) {
         this.blockChain = blockChain;
+        this.peerGroup = peerGroup;
         blockChain.addNewBestBlockListener(newBestBlockListener);
+        if (peerGroup != null) {
+            peerGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
+        }
     }
 
     public void close() {
         if (blockChain != null) {
             blockChain.removeNewBestBlockListener(newBestBlockListener);
             blockChain.removeTransactionReceivedListener(transactionReceivedInBlockListener);
+        }
+        if (peerGroup != null) {
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
         }
     }
 
@@ -221,15 +246,15 @@ public class CoinJoinManager {
     public void startAsync() {
         if (!masternodeGroup.isRunning()) {
             log.info("coinjoin: broadcasting senddsq(true) to all peers");
-            context.peerGroup.shouldSendDsq(true);
+            peerGroup.shouldSendDsq(true);
             masternodeGroup.startAsync();
         }
     }
 
     public void stopAsync() {
         if (masternodeGroup != null && masternodeGroup.isRunning()) {
-            if (context.peerGroup != null)
-                context.peerGroup.shouldSendDsq(false);
+            if (peerGroup != null)
+                peerGroup.shouldSendDsq(false);
             masternodeGroup.stopAsync();
             masternodeGroup = null;
         }
@@ -416,4 +441,12 @@ public class CoinJoinManager {
     public void processTransaction(Transaction tx) {
         coinJoinClientManagers.values().forEach(coinJoinClientManager -> coinJoinClientManager.processTransaction(tx));
     }
+
+    public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
+        if (isCoinJoinMessage(m)) {
+            processMessage(peer, m);
+            return null;
+        }
+        return m;
+    };
 }

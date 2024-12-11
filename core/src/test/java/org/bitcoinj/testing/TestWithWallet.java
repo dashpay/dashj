@@ -27,6 +27,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.store.BlockStore;
@@ -57,6 +58,7 @@ public class TestWithWallet {
     protected Wallet wallet;
     protected BlockChain chain;
     protected BlockStore blockStore;
+    protected DashSystem system;
 
     @BeforeClass
     public static void setUpClass() throws Exception {
@@ -73,7 +75,6 @@ public class TestWithWallet {
         myAddress = Address.fromKey(UNITTEST, myKey);
         blockStore = new MemoryBlockStore(UNITTEST);
         chain = new BlockChain(UNITTEST, wallet, blockStore);
-        Context.get().initDash(false, true);
     }
 
     public void tearDown() throws Exception {

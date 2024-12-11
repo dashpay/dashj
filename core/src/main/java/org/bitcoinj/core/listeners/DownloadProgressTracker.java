@@ -61,10 +61,11 @@ public class DownloadProgressTracker extends AbstractPeerDataEventListener {
     public double blocksWeight;
 
     public DownloadProgressTracker() {
-        Context context = Context.get();
-        if (context != null) {
-            hasPreBlockProcessing = context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-        }
+        this(false);
+    }
+
+    public DownloadProgressTracker(boolean hasPreBlockProcessing) {
+        this.hasPreBlockProcessing = hasPreBlockProcessing;
     }
 
     protected void updateBlocksWeight() {

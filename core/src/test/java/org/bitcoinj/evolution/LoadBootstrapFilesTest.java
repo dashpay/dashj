@@ -20,6 +20,7 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.quorums.QuorumRotationInfoTest;
@@ -45,6 +46,7 @@ import static org.junit.Assert.fail;
 public class LoadBootstrapFilesTest {
 
     private static Context context;
+    private static DashSystem system;
     private static final MainNetParams MAINPARAMS = MainNetParams.get();
     private static final TestNet3Params TESTNETPARAMS = TestNet3Params.get();
     private static PeerGroup peerGroup;
@@ -100,14 +102,15 @@ public class LoadBootstrapFilesTest {
 
     private void initContext() throws BlockStoreException {
         context = new Context(params);
+        system = new DashSystem(context);
         if (blockChain == null) {
             blockChain = new BlockChain(context, new MemoryBlockStore(params));
         }
 
-        context.initDash(true, true);
+        system.initDash(true, true);
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 
-        context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
+        system.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
     }
 
     @Test
@@ -118,7 +121,7 @@ public class LoadBootstrapFilesTest {
         initContext();
 
         SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
-        context.setMasternodeListManager(manager);
+        system.setMasternodeListManager(manager);
         manager.setBootstrap(mnlistdiffFile.getPath(), (qrinfoFile != null) ? qrinfoFile.getPath() : null, fileFormatVersion);
 
         manager.resetMNList(true, true);

@@ -23,8 +23,14 @@ import com.google.common.util.concurrent.*;
 import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.protocols.channels.*;
+import org.bitcoinj.quorums.ChainLocksHandler;
+import org.bitcoinj.quorums.InstantSendDatabase;
+import org.bitcoinj.quorums.InstantSendManager;
+import org.bitcoinj.quorums.SPVInstantSendDatabase;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.store.*;
 import org.bitcoinj.wallet.*;
@@ -90,6 +96,12 @@ public class WalletAppKit extends AbstractIdleService {
 
     protected volatile Context context;
 
+    // other Dash Objects
+    protected DashSystem vSystem;
+    protected ChainLocksHandler vChainLocksHandler;
+    protected InstantSendManager vInstantSendManager;
+    protected SimplifiedMasternodeListManager vMasternodeManager;
+
 
 
     /**
@@ -125,10 +137,10 @@ public class WalletAppKit extends AbstractIdleService {
         this.structure = structure != null ? structure : KeyChainGroupStructure.DEFAULT;
         this.directory = checkNotNull(directory);
         this.filePrefix = checkNotNull(filePrefix);
-
-        context.initDash(true, true);
-        context.masternodeSync.addSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-        context.initDashSync(directory.getAbsolutePath(), filePrefix);
+        vSystem = new DashSystem(context);
+        vSystem.initDash(true, true);
+        vSystem.masternodeSync.addSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+        vSystem.initDashSync(directory.getAbsolutePath(), filePrefix);
     }
 
     /**
@@ -137,8 +149,9 @@ public class WalletAppKit extends AbstractIdleService {
     public WalletAppKit(Context context, File directory, String filePrefix, boolean liteMode) {
         this(context, Script.ScriptType.P2PKH, KeyChainGroupStructure.DEFAULT, directory, filePrefix);
 
-        context.initDash(liteMode, true);
-        context.initDashSync(directory.getAbsolutePath());
+        vSystem = new DashSystem(context);
+        vSystem.initDash(liteMode, true);
+        vSystem.initDashSync(directory.getAbsolutePath());
     }
 
     /** Will only connect to the given addresses. Cannot be called after startup. */
@@ -368,6 +381,8 @@ public class WalletAppKit extends AbstractIdleService {
             }
             vChain.addWallet(vWallet);
             vPeerGroup.addWallet(vWallet);
+            //vSystem.initDashSync(directory.getAbsolutePath(), filePrefix);
+            vSystem.addWallet(vWallet);
             onSetupCompleted();
 
             if (blockingStartup) {
@@ -377,7 +392,7 @@ public class WalletAppKit extends AbstractIdleService {
                 completeExtensionInitiations(vPeerGroup);
 
                 // TODO: Be able to use the provided download listener when doing a blocking startup.
-                final DownloadProgressTracker listener = new DownloadProgressTracker();
+                final DownloadProgressTracker listener = new DownloadProgressTracker(vSystem.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING));
                 vPeerGroup.startBlockChainDownload(listener);
                 listener.await();
             } else {
@@ -385,7 +400,7 @@ public class WalletAppKit extends AbstractIdleService {
                     @Override
                     public void onSuccess(@Nullable Object result) {
                         completeExtensionInitiations(vPeerGroup);
-                        final DownloadProgressTracker l = downloadListener == null ? new DownloadProgressTracker() : downloadListener;
+                        final DownloadProgressTracker l = downloadListener == null ? new DownloadProgressTracker(vSystem.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) : downloadListener;
                         vPeerGroup.startBlockChainDownload(l);
                     }
 
@@ -399,6 +414,18 @@ public class WalletAppKit extends AbstractIdleService {
         } catch (BlockStoreException e) {
             throw new IOException(e);
         }
+    }
+
+//    protected ChainLocksHandler createChainLocksHandler() {
+//        return new ChainLocksHandler(context, vChain, null);
+//    }
+//
+//    protected InstantSendManager createInstantSendManager() {
+//        return new InstantSendManager(context, createInstandSendDatabase(), vChain, vPeerGroup, vChainLocksHandler);
+//    }
+
+    protected InstantSendDatabase createInstandSendDatabase() {
+        return new SPVInstantSendDatabase(context);
     }
 
     private Wallet createOrLoadWallet(boolean shouldReplayWallet) throws Exception {
@@ -528,6 +555,8 @@ public class WalletAppKit extends AbstractIdleService {
             vPeerGroup.stop();
             vWallet.saveToFile(vWalletFile);
             vStore.close();
+            vChainLocksHandler.close();
+            vInstantSendManager.close(vPeerGroup);
 
             vPeerGroup = null;
             vWallet = null;
@@ -555,6 +584,11 @@ public class WalletAppKit extends AbstractIdleService {
     public Wallet wallet() {
         checkState(state() == State.STARTING || state() == State.RUNNING, "Cannot call until startup is complete");
         return vWallet;
+    }
+
+    public DashSystem system() {
+        checkState(state() == State.STARTING || state() == State.RUNNING, "Cannot call until startup is complete");
+        return vSystem;
     }
 
     public PeerGroup peerGroup() {

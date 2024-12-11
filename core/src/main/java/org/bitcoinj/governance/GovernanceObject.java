@@ -20,6 +20,8 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.MasternodeMetaDataManager;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -146,6 +148,12 @@ public class GovernanceObject extends Message implements Serializable {
 
     private GovernanceObjectVoteFile fileVotes;
 
+    protected SimplifiedMasternodeListManager masternodeListManager;
+    protected GovernanceManager governanceManager;
+    private MasternodeMetaDataManager masternodeMetaDataManager;
+    protected MasternodeSync masternodeSync;
+
+
     Context context;
     public GovernanceObject(NetworkParameters params) {
         super(params);
@@ -161,6 +169,13 @@ public class GovernanceObject extends Message implements Serializable {
         super(params, payload, cursor);
         context = Context.get();
         mapCurrentMNVotes = new HashMap<>();
+    }
+
+    public void setObjects(SimplifiedMasternodeListManager masternodeListManager, MasternodeMetaDataManager masternodeMetaDataManager, GovernanceManager governanceManager, MasternodeSync masternodeSync) {
+        this.masternodeListManager = masternodeListManager;
+        this. masternodeMetaDataManager = masternodeMetaDataManager;
+        this.governanceManager = governanceManager;
+        this.masternodeSync = masternodeSync;
     }
 
     public final long getCreationTime() {
@@ -377,7 +392,7 @@ public class GovernanceObject extends Message implements Serializable {
         if (fCheckCollateral) {
             if ((nObjectType == GOVERNANCE_OBJECT_TRIGGER) || (nObjectType == GOVERNANCE_OBJECT_WATCHDOG)) {
                 String strOutpoint = masternodeOutpoint.toStringShort();
-                Masternode infoMn = context.masternodeListManager.getListAtChainTip().getMNByCollateral(masternodeOutpoint);
+                Masternode infoMn = masternodeListManager.getListAtChainTip().getMNByCollateral(masternodeOutpoint);
                 if (infoMn == null ) {
 
                     /* TODO:  fix this
@@ -571,10 +586,10 @@ public class GovernanceObject extends Message implements Serializable {
 
     public void updateSentinelVariables() {
         // CALCULATE MINIMUM SUPPORT LEVELS REQUIRED
-        if(context.masternodeListManager.getLock().isHeldByCurrentThread()) {
+        if(masternodeListManager.getLock().isHeldByCurrentThread()) {
 
         }
-        int nMnCount = context.masternodeListManager.getListAtChainTip().countEnabled();
+        int nMnCount = masternodeListManager.getListAtChainTip().countEnabled();
         if (nMnCount == 0) {
             return;
         }
@@ -664,13 +679,13 @@ public class GovernanceObject extends Message implements Serializable {
     }
 
     public boolean processVote(Peer pfrom, GovernanceVote vote, GovernanceException exception) {
-        if (context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST) &&
-                context.masternodeListManager.getListAtChainTip().getMNByCollateral(vote.getMasternodeOutpoint()) == null) {
+        if (masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST) &&
+                masternodeListManager.getListAtChainTip().getMNByCollateral(vote.getMasternodeOutpoint()) == null) {
             String message = "CGovernanceObject::ProcessVote -- Masternode index not found";
             exception.setException(message, GOVERNANCE_EXCEPTION_WARNING);
             if (mapOrphanVotes.put(vote.getMasternodeOutpoint(), new Pair<>((int)(Utils.currentTimeSeconds() + GOVERNANCE_ORPHAN_EXPIRATION_TIME), vote))) {
                 if (pfrom != null) {
-                    //TODO: context.masternodeManager.askForMN(pfrom, vote.getMasternodeOutpoint());
+                    //TODO: masternodeManager.askForMN(pfrom, vote.getMasternodeOutpoint());
                 }
                 log.info("{}", message);
             } else {
@@ -714,7 +729,7 @@ public class GovernanceObject extends Message implements Serializable {
 
         long nNow = Utils.currentTimeSeconds();
         long nVoteTimeUpdate = voteInstance.nTime;
-        if (context.governanceManager.areRateChecksEnabled()) {
+        if (governanceManager.areRateChecksEnabled()) {
             long nTimeDelta = nNow - voteInstance.nTime;
             if (nTimeDelta < GOVERNANCE_UPDATE_MIN) {
                 String oftenMessage = "CGovernanceObject::ProcessVote -- Masternode voting too often, MN outpoint = " +
@@ -727,14 +742,14 @@ public class GovernanceObject extends Message implements Serializable {
             }
         }
         // Finally check that the vote is actually valid (done last because of cost of signature verification)
-        if (!vote.isValid(true)) {
+        if (!vote.isValid(true, masternodeListManager, masternodeSync)) {
             String validMessage = "CGovernanceObject::ProcessVote -- Invalid vote" + ", MN outpoint = " + vote.getMasternodeOutpoint().toStringShort() + ", governance object hash = " + getHash().toString() + ", vote hash = " + vote.getHash().toString();
             log.info("gobject--{}", validMessage);
             exception.setException(validMessage, GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
-            context.governanceManager.addInvalidVote(vote);
+            governanceManager.addInvalidVote(vote);
             return false;
         }
-        if (!context.masternodeMetaDataManager.addGovernanceVote(vote.getMasternodeOutpoint(), vote.getParentHash())) {
+        if (!masternodeMetaDataManager.addGovernanceVote(vote.getMasternodeOutpoint(), vote.getParentHash())) {
             String unableMessage = "CGovernanceObject::ProcessVote -- Unable to add governance vote" + ", MN outpoint = " + vote.getMasternodeOutpoint().toStringShort() + ", governance object hash = " + getHash().toString();
             log.info("gobject--{}", unableMessage);
             exception.setException(unableMessage, GOVERNANCE_EXCEPTION_PERMANENT_ERROR);
@@ -758,7 +773,7 @@ public class GovernanceObject extends Message implements Serializable {
         Iterator<Map.Entry<TransactionOutPoint, VoteRecord>> it = mapCurrentMNVotes.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<TransactionOutPoint, VoteRecord> entry = it.next();
-            if (context.masternodeListManager.getListAtChainTip().getMNByCollateral(entry.getKey()) == null) {
+            if (masternodeListManager.getListAtChainTip().getMNByCollateral(entry.getKey()) == null) {
                 fileVotes.removeVotesFromMasternode(entry.getKey());
                 it.remove();
             }

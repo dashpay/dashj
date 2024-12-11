@@ -24,6 +24,7 @@ import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.SpecialTxPayload;
+import org.bitcoinj.manager.DashSystem;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -310,14 +311,15 @@ public class FinalCommitment extends SpecialTxPayload {
                 return false;
             }
 
-            Context.get().signingManager.logSignature("QUORUM", quorumPublicKey.getPublicKey(), commitmentHash, quorumSignature.getSignature());
-
-            if(Context.get().masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
-                if (!quorumSignature.getSignature().verifyInsecure(quorumPublicKey.getPublicKey(), commitmentHash, isLegacy())) {
-                    log.error("invalid quorum signature");
-                    return false;
-                }
-            }
+            // TODO: remove signing manager requirements
+//            signingManager.logSignature("QUORUM", quorumPublicKey.getPublicKey(), commitmentHash, quorumSignature.getSignature());
+//
+//            if(masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
+//                if (!quorumSignature.getSignature().verifyInsecure(quorumPublicKey.getPublicKey(), commitmentHash, isLegacy())) {
+//                    log.error("invalid quorum signature");
+//                    return false;
+//                }
+//            }
         }
         verified = true;
         return true;
