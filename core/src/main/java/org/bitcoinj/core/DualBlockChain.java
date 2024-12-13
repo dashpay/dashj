@@ -45,9 +45,7 @@ public class DualBlockChain {
 
     public int getBlockHeight(Sha256Hash blockHash) {
         try {
-            if (headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight()) {
-                return headersChain.getBlockStore().get(blockHash).getHeight();
-            } else return blockChain.getBlockStore().get(blockHash).getHeight();
+            return getLongestChain().getBlockStore().get(blockHash).getHeight();
         } catch (BlockStoreException x) {
             return -1;
         }
@@ -60,7 +58,7 @@ public class DualBlockChain {
         return height;
     }
 
-    public StoredBlock getBlock(Sha256Hash blockHash) {
+    public StoredBlock getBlockOld(Sha256Hash blockHash) {
         try {
             StoredBlock block =  blockChain.getBlockStore().get(blockHash);
             if (block == null && headersChain != null) {
@@ -72,13 +70,24 @@ public class DualBlockChain {
         }
     }
 
+    private AbstractBlockChain getLongestChain() {
+        return headersChain != null && headersChain.getBestChainHeight() > blockChain.getBestChainHeight() ?
+            headersChain : blockChain;
+    }
+
+    public StoredBlock getBlock(Sha256Hash blockHash) {
+        try {
+            AbstractBlockChain chain = getLongestChain();
+            return chain.getBlockStore().get(blockHash);
+        } catch (BlockStoreException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public StoredBlock getBlockAncestor(StoredBlock block, int height) {
         try {
-            StoredBlock ancestor = block.getAncestor(blockChain.getBlockStore(), height);
-            if (ancestor == null && headersChain != null) {
-                ancestor = block.getAncestor(headersChain.getBlockStore(), height);
-            }
-            return ancestor;
+            AbstractBlockChain chain = getLongestChain();
+            return block.getAncestor(chain.getBlockStore(), height);
         } catch (BlockStoreException e) {
             throw new RuntimeException(e);
         }
@@ -86,20 +95,14 @@ public class DualBlockChain {
 
     public StoredBlock getBlock(int height) {
         try {
-            StoredBlock block =  blockChain.getBlockStore().get(height);
-            if (block == null && headersChain != null) {
-                block = headersChain.getBlockStore().get(height);
-            }
-            return block;
+            AbstractBlockChain chain = getLongestChain();
+            return chain.getBlockStore().get(height);
         } catch (BlockStoreException e) {
             throw new RuntimeException(e);
         }
     }
 
     public StoredBlock getChainHead() {
-        StoredBlock bestBlock = blockChain.getChainHead();
-        if (headersChain != null && headersChain.getBestChainHeight() > bestBlock.getHeight())
-            bestBlock = headersChain.getChainHead();
-        return bestBlock;
+        return getLongestChain().chainHead;
     }
 }
