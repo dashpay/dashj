@@ -72,6 +72,7 @@ import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.bitcoinj.wallet.listeners.WalletReorganizeEventListener;
+import org.bitcoinj.wallet.listeners.WalletResetEventListener;
 import org.slf4j.*;
 import org.bouncycastle.crypto.params.*;
 
@@ -202,6 +203,8 @@ public class Wallet extends BaseTaggableObject
     private final CopyOnWriteArrayList<ListenerRegistration<WalletCoinsSentEventListener>> coinsSentListeners
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<WalletReorganizeEventListener>> reorganizeListeners
+        = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<WalletResetEventListener>> resetListeners
         = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<ListenerRegistration<ScriptsChangeEventListener>> scriptChangeListeners
         = new CopyOnWriteArrayList<>();
@@ -3042,6 +3045,14 @@ public class Wallet extends BaseTaggableObject
     }
 
     /**
+     * Adds an event listener object. Methods on this object are called when something interesting happens,
+     * like receiving money. The listener is executed by the given executor.
+     */
+    public void addResetEventListener(Executor executor, WalletResetEventListener listener) {
+        // This is thread safe, so we don't need to take the lock.
+        resetListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+    /**
      * Adds an event listener object. Methods on this object are called when scripts
      * watched by this wallet change. Runs the listener methods in the user thread.
      */
@@ -3126,6 +3137,14 @@ public class Wallet extends BaseTaggableObject
      * Removes the given event listener object. Returns true if the listener was removed, false if that listener
      * was never added.
      */
+    public boolean removeResetEventListener(WalletResetEventListener listener) {
+        return ListenerRegistration.removeFromList(listener, resetListeners);
+    }
+
+    /**
+     * Removes the given event listener object. Returns true if the listener was removed, false if that listener
+     * was never added.
+     */
     public boolean removeScriptChangeEventListener(ScriptsChangeEventListener listener) {
         return ListenerRegistration.removeFromList(listener, scriptChangeListeners);
     }
@@ -3203,6 +3222,18 @@ public class Wallet extends BaseTaggableObject
                 @Override
                 public void run() {
                     registration.listener.onReorganize(Wallet.this);
+                }
+            });
+        }
+    }
+
+    protected void queueOnReset() {
+        checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<WalletResetEventListener> registration : resetListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onWalletReset(Wallet.this);
                 }
             });
         }
@@ -3424,6 +3455,7 @@ public class Wallet extends BaseTaggableObject
             lastBlockSeenHeight = -1; // Magic value for 'never'.
             lastBlockSeenTimeSecs = 0;
             saveLater();
+            queueOnReset();
             maybeQueueOnWalletChanged();
         } finally {
             lock.unlock();
