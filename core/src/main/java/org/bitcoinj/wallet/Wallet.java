@@ -3275,6 +3275,42 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
+    public Set<Transaction> getTransactionsOpt(boolean includeDead) {
+        lock.lock();
+        try {
+            int capacity = unspent.size() + spent.size() + pending.size() + (includeDead ? dead.size(): 0);
+            Set<Transaction> all = new HashSet<>(capacity);
+            all.addAll(unspent.values());
+            all.addAll(spent.values());
+            all.addAll(pending.values());
+            if (includeDead)
+                all.addAll(dead.values());
+            return all;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Returns a list of all transactions in the wallet.
+     * @param includeDead     If true, transactions that were overridden by a double spend are included.
+     */
+    public Collection<Transaction> getTransactionList(boolean includeDead) {
+        lock.lock();
+        try {
+            int capacity = unspent.size() + spent.size() + pending.size() + (includeDead ? dead.size(): 0);
+            ArrayList<Transaction> all = new ArrayList<>(capacity);
+            all.addAll(unspent.values());
+            all.addAll(spent.values());
+            all.addAll(pending.values());
+            if (includeDead)
+                all.addAll(dead.values());
+            return all;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     /**
      * Returns a set of all WalletTransactions in the wallet.
      */
