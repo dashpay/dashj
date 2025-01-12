@@ -2420,9 +2420,9 @@ public class Wallet extends BaseTaggableObject
                 int diff = valueDifference.signum();
                 // We pick one callback based on the value difference, though a tx can of course both send and receive
                 // coins from the wallet.
-                if (diff > 0) {
+                if (diff >= 0) {
                     queueOnCoinsReceived(tx, prevBalance, newBalance);
-                } else if (diff < 0) {
+                } else {
                     queueOnCoinsSent(tx, prevBalance, newBalance);
                 }
             }
