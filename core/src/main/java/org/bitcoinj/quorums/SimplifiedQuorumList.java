@@ -405,7 +405,7 @@ public class SimplifiedQuorumList extends Message {
         blockHash = masternodeList.getBlockHash();
     }
 
-    private boolean checkCommitment(FinalCommitment commitment, StoredBlock prevBlock, MasternodeListManager manager,
+    private boolean checkCommitment(FinalCommitment commitment, StoredBlock quorumBlock, MasternodeListManager manager,
                          DualBlockChain chain, boolean validateQuorums) throws BlockStoreException
     {
         if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitment.MAX_VERSION) {
