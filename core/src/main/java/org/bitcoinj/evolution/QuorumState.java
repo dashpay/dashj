@@ -124,11 +124,14 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.Processing, mnlistdiff);
 
+        Stopwatch mnWatch = Stopwatch.createStarted();
         SimplifiedMasternodeList newMNList = mnList.applyDiff(mnlistdiff);
         if(masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST))
             newMNList.verify(mnlistdiff.coinBaseTx, mnlistdiff, mnList);
+        mnWatch.stop();
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedMasternodes, mnlistdiff);
 
+        Stopwatch qWatch = Stopwatch.createStarted();
         SimplifiedQuorumList newQuorumList = quorumList;
         if (mnlistdiff.coinBaseTx.getExtraPayloadObject().getVersion() >= SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION) {
             newQuorumList = quorumList.applyDiff(mnlistdiff, isLoadingBootStrap, blockChain,  masternodeListManager, chainLocksHandler, false, true);
@@ -137,6 +140,8 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         } else {
             quorumList.syncWithMasternodeList(newMNList);
         }
+        qWatch.stop();
+        log.info("applyDiff processing times: mn {}; quorums: {}", mnWatch, qWatch);
         if (peer != null && isSyncingHeadersFirst) peer.queueMasternodeListDownloadedListeners(MasternodeListDownloadedListener.Stage.ProcessedQuorums, mnlistdiff);
 
         // save the current state, if both mnLists and quorums are both applied

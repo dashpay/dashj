@@ -412,20 +412,8 @@ public class SimplifiedQuorumList extends Message {
             throw new VerificationException("invalid quorum commitment version: " + commitment.getVersion());
         }
 
-        StoredBlock quorumBlock = chain.getBlock(commitment.quorumHash);
         if(quorumBlock == null)
             throw new VerificationException("invalid quorum hash: " + commitment.quorumHash);
-
-        StoredBlock cursor = prevBlock;
-        while(cursor != null) {
-            if(cursor.getHeader().getHash().equals(quorumBlock.getHeader().getHash()))
-                break;
-            cursor = chain.getBlock(cursor.getHeader().getHash());
-        }
-
-        if(cursor == null)
-            throw new VerificationException("invalid quorum hash: " + commitment.quorumHash);
-
 
         if (!params.getLlmqs().containsKey(LLMQParameters.LLMQType.fromValue(commitment.llmqType))) {
             throw new VerificationException("invalid LLMQType: " + commitment.llmqType);

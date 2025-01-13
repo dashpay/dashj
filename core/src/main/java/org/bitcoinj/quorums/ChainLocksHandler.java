@@ -621,11 +621,15 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     public void addCoinbaseChainLock(Sha256Hash blockHash, int ancestor, BLSSignature signature) {
         try {
             int height;
-            StoredBlock block = blockChain.getBlockStore().get(blockHash);
-            BlockStore blockStore = blockChain.getBlockStore();
-            if (block == null) {
+            StoredBlock block = null;
+            BlockStore blockStore = null;
+            if (headerChain != null) {
                 block = headerChain.getBlockStore().get(blockHash);
                 blockStore = headerChain.getBlockStore();
+            }
+            if (block == null) {
+                block = blockChain.getBlockStore().get(blockHash);
+                blockStore = blockChain.getBlockStore();
             }
             if (block != null) {
                 block = block.getAncestor(blockStore, block.getHeight() - ancestor);
