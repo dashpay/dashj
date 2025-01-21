@@ -60,4 +60,7 @@ public interface TransactionBag {
 
     /** Returns true if this output is fully mixed **/
     boolean isFullyMixed(TransactionOutput output);
+
+    /** Returns true if this output is locked **/
+    boolean isLockedOutput(TransactionOutPoint outPoint);
 }
