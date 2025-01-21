@@ -1,5 +1,6 @@
 package org.bitcoinj.wallet;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
@@ -128,7 +129,7 @@ public class CoinJoinWalletTest {
     @Test
     @Ignore
     public void balanceTest() throws UnreadableWalletException {
-        InputStream stream = getClass().getResourceAsStream("coinjoin.wallet");
+        InputStream stream = Preconditions.checkNotNull(getClass().getResourceAsStream("coinjoin.wallet"));
         WalletEx coinJoinWallet = (WalletEx) new WalletProtobufSerializer().readWallet(stream);
 
         Coin balance = coinJoinWallet.getBalance();
