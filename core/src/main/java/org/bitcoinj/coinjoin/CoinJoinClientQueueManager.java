@@ -53,7 +53,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                         // no way the same mn can send another dsq with the same readiness this soon
                         if (!spammingMasternodes.containsKey(dsq.getProTxHash())) {
                             spammingMasternodes.put(dsq.getProTxHash(), Utils.currentTimeMillis());
-                            log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: Peer {} is sending WAY too many dsq messages for a masternode {}", from.getAddress().getAddr(), dsq.getProTxHash());
+                            log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: Peer {} is sending WAY too many dsq messages for a mn {}", from.getAddress().getAddr(), dsq.getProTxHash());
                         }
                         return;
                     }
@@ -81,7 +81,7 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
 
             // if the queue is ready, submit if we can
             if (dsq.isReady() && isTrySubmitDenominate(dmn)) {
-                log.info("coinjoin: DSQUEUE: {} is ready on masternode {}", dsq, dmn.getService());
+                log.info("coinjoin: DSQUEUE: {} is ready on mn {}", dsq, dmn.getService());
             } else {
                 long nLastDsq = context.masternodeMetaDataManager.getMetaInfo(dmn.getProTxHash()).getLastDsq();
                 long nDsqThreshold = context.masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), mnList.getValidMNsCount());
@@ -91,14 +91,14 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
                 if (nLastDsq != 0 && nDsqThreshold > context.masternodeMetaDataManager.getDsqCount()) {
                     if (!spammingMasternodes.containsKey(dsq.getProTxHash())) {
                         spammingMasternodes.put(dsq.getProTxHash(), Utils.currentTimeMillis());
-                        log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: Masternode {} is sending too many dsq messages", dmn.getProTxHash());
+                        log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: Mn {} is sending too many dsq messages", dmn.getProTxHash());
                     }
                     return;
                 }
 
                 context.masternodeMetaDataManager.allowMixing(dmn.getProTxHash());
 
-                log.info("coinjoin: DSQUEUE: new {} from masternode {}", dsq, dmn.getService().getAddr());
+                log.info("coinjoin: DSQUEUE: new {} from mn {}", dsq, dmn.getService().getAddr());
 
                 context.coinJoinManager.coinJoinClientManagers.values().stream().anyMatch(new Predicate<CoinJoinClientManager>() {
                     @Override
