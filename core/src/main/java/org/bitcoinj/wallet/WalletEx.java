@@ -3,7 +3,6 @@ package org.bitcoinj.wallet;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinConstants;
@@ -297,21 +296,6 @@ public class WalletEx extends Wallet {
         }
     }
 
-    protected HashSet<TransactionOutPoint> lockedCoinsSet = Sets.newHashSet();
-    public boolean isLockedCoin(Sha256Hash hash, long index) {
-        TransactionOutPoint outPoint = new TransactionOutPoint(params, index, hash);
-        return isLockedCoin(outPoint);
-    }
-
-    public boolean isLockedCoin(TransactionOutPoint outPoint) {
-        lock.lock();
-        try {
-            return lockedCoinsSet.contains(outPoint);
-        } finally {
-            lock.unlock();
-        }
-    }
-
     HashMap<TransactionOutPoint, Integer> mapOutpointRoundsCache = new HashMap<>();
     // Recursively determine the rounds of a given input (How deep is the CoinJoin chain for a given input)
     public int getRealOutpointCoinJoinRounds(TransactionOutPoint outPoint) {
@@ -555,7 +539,7 @@ public class WalletEx extends Wallet {
                     if (maxOutpointsPerAddress != -1 && itTallyItem != null && (long) (itTallyItem.inputCoins.size()) >= maxOutpointsPerAddress)
                         continue;
 
-                    if (isSpent(outpoint.getParentTransactionHash(), i) || isLockedCoin(outpoint.getParentTransactionHash(), i))
+                    if (isSpent(outpoint.getParentTransactionHash(), i) || isLockedOutput(outpoint.getParentTransactionHash(), i))
                         continue;
 
                     if (skipDenominated && CoinJoin.isDenominatedAmount(wtx.getOutput(i).getValue()))
@@ -640,15 +624,17 @@ public class WalletEx extends Wallet {
     }
 
     /** locks an unspent outpoint so that it cannot be spent */
+    @Override
     public boolean lockCoin(TransactionOutPoint outPoint) {
-        boolean added = lockedCoinsSet.add(outPoint);
+        boolean added = super.lockCoin(outPoint);
         clearAnonymizableCaches();
         return added;
     }
 
     /** unlocks an outpoint so that it cannot be spent */
+    @Override
     public void unlockCoin(TransactionOutPoint outPoint) {
-        lockedCoinsSet.remove(outPoint);
+        super.unlockCoin(outPoint);
         clearAnonymizableCaches();
     }
 
@@ -802,7 +788,7 @@ public class WalletEx extends Wallet {
                             && !coinControl.isSelected(new TransactionOutPoint(params, i, wtxid)))
                         continue;
 
-                    if (isLockedCoin(wtxid, i) && nCoinType != CoinType.ONLY_MASTERNODE_COLLATERAL)
+                    if (isLockedOutput(wtxid, i) && nCoinType != CoinType.ONLY_MASTERNODE_COLLATERAL)
                         continue;
 
                     if (isSpent(wtxid, i))

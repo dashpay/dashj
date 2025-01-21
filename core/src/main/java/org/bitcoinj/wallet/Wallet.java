@@ -22,7 +22,6 @@ import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
-import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
@@ -258,6 +257,9 @@ public class Wallet extends BaseTaggableObject
 
     // If this is set then the wallet selects spendable candidate outputs from a UTXO provider.
     @Nullable protected volatile UTXOProvider vUTXOProvider;
+    // keep track of locked outputs to prevent double spends
+    @GuardedBy("lock") protected HashSet<TransactionOutPoint> lockedOutputs = Sets.newHashSet();
+
 
     /**
      * Creates a new, empty wallet with a randomly chosen seed and no transactions. Make sure to provide for sufficient
@@ -4484,6 +4486,8 @@ public class Wallet extends BaseTaggableObject
             if (req.hasCoinControl()) {
                 candidates.removeIf(output -> !req.coinControl.isSelected(output.getOutPointFor()));
             }
+            // prevent locked outputs from being included
+            candidates.removeIf(output -> isLockedOutput(output.getOutPointFor()));
 
             CoinSelection bestCoinSelection;
             TransactionOutput bestChangeOutput = null;
@@ -6290,5 +6294,39 @@ public class Wallet extends BaseTaggableObject
     @Override
     public boolean isFullyMixed(TransactionOutput output) {
         return false;
+    }
+
+    public boolean isLockedOutput(Sha256Hash hash, long index) {
+        TransactionOutPoint outPoint = new TransactionOutPoint(params, index, hash);
+        return isLockedOutput(outPoint);
+    }
+
+    @Override
+    public boolean isLockedOutput(TransactionOutPoint outPoint) {
+        lock.lock();
+        try {
+            return lockedOutputs.contains(outPoint);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /** locks an unspent outpoint so that it cannot be spent */
+    public boolean lockCoin(TransactionOutPoint outPoint) {
+        lock.lock();
+        try {
+            return lockedOutputs.add(outPoint);
+        } finally {
+            lock.unlock();
+        }
+    }
+    /** unlocks an outpoint so that it cannot be spent */
+    public void unlockCoin(TransactionOutPoint outPoint) {
+        lock.lock();
+        try {
+            lockedOutputs.remove(outPoint);
+        } finally {
+            lock.unlock();
+        }
     }
 }
