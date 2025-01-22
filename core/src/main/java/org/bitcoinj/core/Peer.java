@@ -573,50 +573,14 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof RejectMessage) {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
         }
-        else /*if (m instanceof SporkMessage) {
-            sporkManager.processSpork(this, (SporkMessage)m);
-        } else if (m instanceof SyncStatusCount) {
-            masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
-        } else if (m instanceof GovernanceSyncMessage) {
-            //swallow for now
-        } /*else if (m instanceof GovernanceObject) {
-            context.governanceManager.processGovernanceObject(this, (GovernanceObject)m);
-        } else if (m instanceof GovernanceVote) {
-            context.governanceManager.processGovernanceObjectVote(this, (GovernanceVote)m);
-        } else if (m instanceof SimplifiedMasternodeListDiff) {
-            context.masternodeListManager.processMasternodeListDiff(this, (SimplifiedMasternodeListDiff) m);
-        } else if (m instanceof InstantSendLock) {
-            context.instantSendManager.processInstantSendLock(this, (InstantSendLock) m);
-        } else if (m instanceof ChainLockSignature) {
-            context.chainLockHandler.processChainLockSignature(this, (ChainLockSignature)m);
-        } else */ if (m instanceof SendHeadersMessage) {
+        else if (m instanceof SendHeadersMessage) {
             // We ignore this message, because we don't announce new blocks.
         } else if (m instanceof SendAddressMessageV2) {
             // We ignore this message, because we don't reply to sendaddrv2 message.
-        } else /*if (m instanceof QuorumRotationInfo) {
-            context.masternodeListManager.processQuorumRotationInfo(this, (QuorumRotationInfo) m, false, null);
-        } else if (CoinJoinManager.isCoinJoinMessage(m)) {
-            context.coinJoinManager.processMessage(this, m);
-        } else*/ {
+        } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
     }
-
-//    protected void processInstantSendLock(InstantSendLock islock) {
-//        if (currentFilteredBlock != null) {
-//            if (!currentFilteredBlock.getTransactionHashes().contains(islock.getTxId())) {
-//                // Got an islock that didn't fit into the filtered block, so we must have received everything.
-//                endFilteredBlock(currentFilteredBlock);
-//                currentFilteredBlock = null;
-//            } else {
-//                //if this transaction is more than 24 hours old, don't process the islock
-//                if (currentFilteredBlock.getBlockHeader().getTimeSeconds() + TimeUnit.DAYS.toSeconds(1) > System.currentTimeMillis()) {
-//                    return;
-//                }
-//            }
-//        }
-//        context.instantSendManager.processInstantSendLock(this, islock);
-//    }
 
     protected void processUTXOMessage(UTXOsMessage m) {
         SettableFuture<UTXOsMessage> future = null;
