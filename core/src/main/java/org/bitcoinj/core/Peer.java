@@ -1325,34 +1325,6 @@ public class Peer extends PeerSocketHandler {
         }
     }
 
-    //added for dash
-    boolean alreadyHave(InventoryItem inv)
-    {
-        switch (inv.type)
-        {
-//            case Spork:
-//                return context.sporkManager.hasSpork(inv.hash);
-            case MasternodePaymentVote:
-            case BudgetFinalizedVote:
-            case BudgetVote:
-            case BudgetProposal:
-            case BudgetFinalized:
-                return false;
-//            case GovernanceObject:
-//            case GovernanceObjectVote:
-//                return !context.governanceManager.confirmInventoryRequest(inv);
-//            case InstantSendLock:
-//            case InstantSendDeterministicLock:
-//                return context.instantSendManager.alreadyHave(inv);
-//            case ChainLockSignature:
-//                return context.chainLockHandler.alreadyHave(inv);
-            case DarkSendTransaction:
-                return CoinJoin.hasDSTX(inv.hash);
-        }
-        // Don't know what it is, just say we already got one
-        return true;
-    }
-
     protected void processInv(InventoryMessage inv) {
         List<InventoryItem> items = inv.getItems();
 
