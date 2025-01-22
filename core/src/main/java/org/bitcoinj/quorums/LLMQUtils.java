@@ -93,14 +93,6 @@ public class LLMQUtils {
         return sporkValue == 1 && llmqType != LLMQ_100_67 && llmqType != LLMQ_400_60 && llmqType != LLMQ_400_85;
     }
 
-//    boolean isAllMembersConnectedEnabled(LLMQParameters.LLMQType llmqType) {
-//        return evalSpork(llmqType, Context.get().sporkManager.getSporkValue(SPORK_21_QUORUM_ALL_CONNECTED));
-//    }
-//
-//    boolean isQuorumPoseEnabled(LLMQParameters.LLMQType llmqType) {
-//        return evalSpork(llmqType, Context.get().sporkManager.getSporkValue(SPORK_23_QUORUM_POSE));
-//    }
-
     public static boolean isQuorumRotationEnabled(@Nullable AbstractBlockChain headerChain, AbstractBlockChain blockChain, NetworkParameters params, LLMQParameters.LLMQType type) {
         if (type != params.getLlmqDIP0024InstantSend()) {
             return false;

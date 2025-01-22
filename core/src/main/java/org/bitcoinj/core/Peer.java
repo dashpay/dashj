@@ -1455,57 +1455,6 @@ public class Peer extends PeerSocketHandler {
             }
         }
 
-        // The New InstantSendLock (ISLOCK)
-//        if(context.instantSendManager != null && context.instantSendManager.isInstantSendEnabled() &&
-//                context.masternodeSync != null && context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
-//            it = instantSendLocks.iterator();
-//            while (it.hasNext()) {
-//                InventoryItem item = it.next();
-//                if(!alreadyHave(item)) {
-//                    getdata.addItem(item);
-//                }
-//            }
-//        }
-
-        // The ChainLock (CLSIG)
-//        if(/*context.sporkManager != null && context.sporkManager.isSporkActive(SporkManager.SPORK_19_CHAINLOCKS_ENABLED) && */
-//                context.masternodeSync != null && context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_CHAINLOCKS)) {
-//            it = chainLocks.iterator();
-//            while (it.hasNext()) {
-//                InventoryItem item = it.next();
-//                if (!alreadyHave(item)) {
-//                    getdata.addItem(item);
-//                }
-//            }
-//        }
-
-//        if(context.masternodeSync != null && context.masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_SPORKS)) {
-//            it = sporks.iterator();
-//            while (it.hasNext()) {
-//                InventoryItem item = it.next();
-//                getdata.addItem(item);
-//            }
-//        }
-
-//        if(context.masternodeSync != null && context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
-//            it = goveranceObjects.iterator();
-//
-//            while (it.hasNext()) {
-//                InventoryItem item = it.next();
-//                if (!alreadyHave(item))
-//                    getdata.addItem(item);
-//                else {
-//                    // The line below can trigger confidence listeners.
-//                    GovernanceVoteConfidence conf = context.getVoteConfidenceTable().seen(item.hash, this.getAddress());
-//
-//                    log.debug("{}: getdata on tx {}", getAddress(), item.hash);
-//                    getdata.addItem(item);
-//                    // Register with the garbage collector that we care about the confidence data for a while.
-//                    pendingVotes.add(conf);
-//                }
-//            }
-//        }
-
         // If we are requesting filteredblocks we have to send a ping after the getdata so that we have a clear
         // end to the final FilteredBlock's transactions (in the form of a pong) sent to us
         boolean pingAfterGetData = false;
