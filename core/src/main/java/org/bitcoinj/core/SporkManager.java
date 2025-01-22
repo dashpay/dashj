@@ -17,6 +17,7 @@ package org.bitcoinj.core;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
+import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
 import org.bitcoinj.core.listeners.SporkUpdatedEventListener;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Pair;
@@ -30,11 +31,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static org.bitcoinj.utils.Threading.SAME_THREAD;
 
 
 /**
@@ -69,6 +73,7 @@ public class SporkManager {
     @GuardedBy("lock") private final HashSet<KeyId> setSporkPubKeyIds = new HashSet<>();
 
     private AbstractBlockChain blockChain;
+    private MasternodeSync masternodeSync;
     private final Context context;
 
     public SporkManager(Context context)
@@ -83,10 +88,12 @@ public class SporkManager {
         setMinSporkKeys(context.getParams().getMinSporkKeys());
     }
 
-    void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup) {
+    public void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup, MasternodeSync masternodeSync) {
         this.blockChain = blockChain;
+        this.masternodeSync = masternodeSync;
         if (peerGroup != null) {
             peerGroup.addConnectedEventListener(peerConnectedEventListener);
+            peerGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
         }
     }
 
@@ -96,13 +103,16 @@ public class SporkManager {
     }
 
     public void close(PeerGroup peerGroup) {
-        peerGroup.removeConnectedEventListener(peerConnectedEventListener);
+        if (peerGroup != null) {
+            peerGroup.removeConnectedEventListener(peerConnectedEventListener);
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
     }
 
     void processSpork(Peer from, SporkMessage spork) {
-        if (context.isLiteMode() && !context.allowInstantXinLiteMode()) {
-            return; //disable all darksend/masternode related functionality
-        }
+//        if (context.isLiteMode() && !context.allowInstantXinLiteMode()) {
+//            return; //disable all darksend/masternode related functionality
+//        }
 
         Sha256Hash hash = spork.getHash();
         String logMessage = String.format("SPORK -- hash: %s id: %d (%s) value: %10d bestHeight: %d peer=%s:%d",
@@ -314,6 +324,42 @@ public class SporkManager {
         }
     };
 
+    public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
+        if (m instanceof InventoryMessage) {
+            if (masternodeSync != null && masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_SPORKS)) {
+                InventoryMessage inv = (InventoryMessage) m;
+                List<InventoryItem> items = inv.getItems();
+                List<InventoryItem> instantSendLocks = new LinkedList<>();
+                for (InventoryItem item : items) {
+                    switch (item.type) {
+                        case InstantSendLock:
+                        case InstantSendDeterministicLock:
+                            instantSendLocks.add(item);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                Iterator<InventoryItem> it = instantSendLocks.iterator();
+                GetDataMessage getdata = new GetDataMessage(SporkManager.this.context.getParams());
+                while (it.hasNext()) {
+                    InventoryItem item = it.next();
+                    if(!alreadyHave(item)) {
+                        getdata.addItem(item);
+                    }
+                }
+                if (!getdata.getItems().isEmpty()) {
+                    // This will cause us to receive a bunch of block or tx messages.
+                    peer.sendMessage(getdata);
+                }
+            }
+        } else if (m instanceof SporkMessage) {
+            processSpork(peer, (SporkMessage) m);
+            return null;
+        }
+        return m;
+    };
+
     private transient CopyOnWriteArrayList<ListenerRegistration<SporkUpdatedEventListener>> eventListeners;
 
     /**
@@ -344,7 +390,7 @@ public class SporkManager {
     public void queueOnUpdate(final SporkMessage spork) {
         //checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<SporkUpdatedEventListener> registration : eventListeners) {
-            if (registration.executor == Threading.SAME_THREAD) {
+            if (registration.executor == SAME_THREAD) {
                 registration.listener.onSporkUpdated(spork);
             } else {
                 registration.executor.execute(new Runnable() {
@@ -363,6 +409,10 @@ public class SporkManager {
             sporkList.add(entry.getValue());
         }
         return sporkList;
+    }
+
+    public boolean alreadyHave(InventoryItem item) {
+        return hasSpork(item.hash);
     }
 
     public boolean hasSpork(Sha256Hash hashSpork) {

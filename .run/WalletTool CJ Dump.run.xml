@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="WalletTool CJ Dump" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="org.bitcoinj.tools.WalletTool" />
-    <module name="dashj-master-three.tools.main" />
+    <module name="dashj-parent.dashj-tools.main" />
     <option name="PROGRAM_PARAMETERS" value="dump --wallet=coinjoin.testnet.wallet --net=TEST --rounds=1" />
     <option name="VM_PARAMETERS" value="-Djava.library.path=contrib/dashj-bls/bls/target/cmake" />
     <extension name="coverage">

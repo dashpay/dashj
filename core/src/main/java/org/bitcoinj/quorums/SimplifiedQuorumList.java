@@ -20,6 +20,7 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.*;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.MerkleRoot;
 import org.bitcoinj.utils.Pair;
@@ -137,7 +138,7 @@ public class SimplifiedQuorumList extends Message {
         return answer.map(Map.Entry::getKey).orElse(null);
     }
 
-    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, DualBlockChain chain, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
+    public SimplifiedQuorumList applyDiff(SimplifiedMasternodeListDiff diff, boolean isLoadingBootstrap, DualBlockChain chain, MasternodeListManager masternodeListManager, ChainLocksHandler chainLocksHandler, boolean doDIP24, boolean validateOldQuorums) throws MasternodeListDiffException{
         lock.lock();
         try {
             CoinbaseTx cbtx = (CoinbaseTx) diff.getCoinBaseTx().getExtraPayloadObject();
@@ -158,12 +159,12 @@ public class SimplifiedQuorumList extends Message {
                 BLSSignature signature = diff.getQuorumsCLSigs() != null ?
                         getSignatureForIndex(diff.getQuorumsCLSigs(), i) : null;
                 if (signature != null)
-                    Context.get().chainLockHandler.addCoinbaseChainLock(entry.quorumHash, 8, signature);
+                   chainLocksHandler.addCoinbaseChainLock(entry.quorumHash, 8, signature);
 
                 // find a better way to do this
                 if ((doDIP24 && entry.llmqType == params.getLlmqDIP0024InstantSend().value) || (!doDIP24 && entry.llmqType != params.getLlmqDIP0024InstantSend().value)) {
                     // for now, don't use the return value
-                    verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry);
+                    verifyQuorum(isLoadingBootstrap, chain, masternodeListManager, validateOldQuorums, entry);
                 }
                 result.addCommitment(entry);
             }
@@ -175,12 +176,12 @@ public class SimplifiedQuorumList extends Message {
         }
     }
 
-    public void verifyQuorums(boolean isLoadingBootstrap, DualBlockChain chain, boolean validateOldQuorums) throws BlockStoreException, ProtocolException{
+    public void verifyQuorums(boolean isLoadingBootstrap, DualBlockChain chain, MasternodeListManager masternodeListManager, boolean validateOldQuorums) throws BlockStoreException, ProtocolException{
         lock.lock();
         try {
             int verifiedCount = 0;
             for (FinalCommitment entry : minableCommitments.values()) {
-                if (verifyQuorum(isLoadingBootstrap, chain, validateOldQuorums, entry)) {
+                if (verifyQuorum(isLoadingBootstrap, chain, masternodeListManager, validateOldQuorums, entry)) {
                     verifiedCount++;
                 }
             }
@@ -190,7 +191,9 @@ public class SimplifiedQuorumList extends Message {
         }
     }
 
-    private boolean verifyQuorum(boolean isLoadingBootstrap, DualBlockChain chain, boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
+    private boolean verifyQuorum(boolean isLoadingBootstrap, DualBlockChain chain,
+                                 MasternodeListManager masternodeListManager,
+                                 boolean validateOldQuorums, FinalCommitment entry) throws BlockStoreException {
         StoredBlock block = chain.getBlock(entry.getQuorumHash());
         if (block != null) {
             LLMQParameters llmqParameters = params.getLlmqs().get(entry.getLlmqType());
@@ -202,7 +205,7 @@ public class SimplifiedQuorumList extends Message {
                 if (block.getHeight() % dkgInterval != 0)
                     throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
             }
-            boolean isVerified = checkCommitment(entry, block, Context.get().masternodeListManager, chain, validateOldQuorums);
+            boolean isVerified = checkCommitment(entry, block, masternodeListManager, chain, validateOldQuorums);
             isFirstQuorumCheck = false;
             return isVerified;
         } else {
@@ -402,7 +405,7 @@ public class SimplifiedQuorumList extends Message {
         blockHash = masternodeList.getBlockHash();
     }
 
-    private boolean checkCommitment(FinalCommitment commitment, StoredBlock quorumBlock, SimplifiedMasternodeListManager manager,
+    private boolean checkCommitment(FinalCommitment commitment, StoredBlock quorumBlock, MasternodeListManager manager,
                          DualBlockChain chain, boolean validateQuorums) throws BlockStoreException
     {
         if (commitment.getVersion() == 0 || commitment.getVersion() > FinalCommitment.MAX_VERSION) {

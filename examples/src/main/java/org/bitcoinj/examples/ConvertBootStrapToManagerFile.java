@@ -19,6 +19,7 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -34,15 +35,17 @@ public class ConvertBootStrapToManagerFile {
     static Context context;
     static PeerGroup peerGroup;
     static BlockChain blockChain;
+    static DashSystem system;
     private static void initContext(NetworkParameters params) throws BlockStoreException {
         context = new Context(params);
+        system = new DashSystem(context);
         if (blockChain == null) {
             blockChain = new BlockChain(context, new MemoryBlockStore(params));
         }
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
-        context.initDash(true, true);
+        system.initDash(true, true);
 
-        context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
+        system.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
     }
     public static void main(String[] args) {
         if (args.length < 3) {
@@ -72,12 +75,12 @@ public class ConvertBootStrapToManagerFile {
             initContext(params);
             //Context context = Context.getOrCreate(params);
             //context.initDash(true, true);
-            context.initDashSync(".", "convert");
-            context.masternodeListManager.setBootstrap(mnlistdiffFilename, qrinfoFilename, fileVersion);
-            context.masternodeListManager.resetMNList(true, true);
+            system.initDashSync(".", "convert");
+            system.masternodeListManager.setBootstrap(mnlistdiffFilename, qrinfoFilename, fileVersion);
+            system.masternodeListManager.resetMNList(true, true);
             try {
-                context.masternodeListManager.waitForBootstrapLoaded();
-                context.masternodeListManager.save();
+                system.masternodeListManager.waitForBootstrapLoaded();
+                system.masternodeListManager.save();
 
                 Thread.sleep(5000);
                 System.out.println("Save complete.");

@@ -4,6 +4,7 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSBatchVerifier;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSignature;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.quorums.listeners.RecoveredSignatureListener;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
@@ -47,25 +48,29 @@ public class SigningManager {
     QuorumManager quorumManager;
     AbstractBlockChain blockChain;
     AbstractBlockChain headerChain;
+    protected MasternodeSync masternodeSync;
+    protected SimplifiedMasternodeListManager masternodeListManager;
 
     long lastCleanupTime;
 
     File signatureLog;
     public OutputStream signatureStream;
 
-    public SigningManager(Context context, RecoveredSignaturesDatabase db) {
+    public SigningManager(Context context, RecoveredSignaturesDatabase db, QuorumManager quorumManager, MasternodeSync masternodeSync) {
         this.context = context;
         this.db = db;
         this.lastCleanupTime = 0;
-        this.quorumManager = context.quorumManager;
+        this.quorumManager = quorumManager;
+        this.masternodeSync = masternodeSync;
         this.recoveredSigsListeners = new CopyOnWriteArrayList<ListenerRegistration<RecoveredSignatureListener>>();
         this.pendingReconstructedRecoveredSigs = new ArrayList<Pair<RecoveredSignature, Quorum>>();
         this.pendingRecoveredSigs = new HashMap<Integer, ArrayList<RecoveredSignature>>();
     }
 
-    public void setBlockChain(AbstractBlockChain blockChain, @Nullable AbstractBlockChain headerChain) {
+    public void setBlockChain(AbstractBlockChain blockChain, @Nullable AbstractBlockChain headerChain, SimplifiedMasternodeListManager masternodeListManager) {
         this.blockChain = blockChain;
         this.headerChain = headerChain;
+        this.masternodeListManager = masternodeListManager;
     }
 
     public void close() {
@@ -201,7 +206,7 @@ public class SigningManager {
         }
 
 
-        if (LLMQUtils.isQuorumRotationEnabled(context, context.getParams(), llmqType)) {
+        if (LLMQUtils.isQuorumRotationEnabled(headerChain, blockChain, context.getParams(), llmqType)) {
             ArrayList<Quorum> quorums = quorumManager.scanQuorums(llmqType, startBlock, poolSize);
             if (quorums.isEmpty()) {
                 return null;
@@ -390,7 +395,7 @@ public class SigningManager {
 
         //cxxtimer::Timer verifyTimer(true);
         long start = Utils.currentTimeMillis();
-        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
+        if(masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES))
             batchVerifier.verify();
         long end = Utils.currentTimeMillis();
         //verifyTimer.stop();
@@ -493,7 +498,7 @@ public class SigningManager {
 
         logSignature("RECSIG", quorum.getCommitment().quorumPublicKey.getPublicKey(), signHash, sig);
 
-        if(context.masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
+        if(masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.BLS_SIGNATURES)) {
             boolean result = sig.verifyInsecure(quorum.getCommitment().quorumPublicKey.getPublicKey(), signHash);
             if (!result) {
                 log.info("signature not validated with {}, msg: {}, id: {}, signHash: {}", quorum, msgHash, Sha256Hash.wrap(id.getReversedBytes()), signHash);
@@ -502,7 +507,7 @@ public class SigningManager {
                 StoredBlock block = blockChain.getBlockStore().get((int) (signedAtHeight - SIGN_HEIGHT_OFFSET));
                 if (block == null)
                     headerChain.getBlockStore().get((int) (signedAtHeight - SIGN_HEIGHT_OFFSET));
-                for (Quorum q : context.masternodeListManager.getAllQuorums(llmqType)) {
+                for (Quorum q : masternodeListManager.getAllQuorums(llmqType)) {
                     log.info("attempting verification of {}: {} with {}", Sha256Hash.wrap(id.getReversedBytes()), sig.verifyInsecure(q.getCommitment().quorumPublicKey.getPublicKey(), signHash), q);
                 }
             } else {
@@ -530,7 +535,7 @@ public class SigningManager {
     }
 
     public void logSignature(String type, BLSPublicKey publicKey, Sha256Hash messageHash, BLSSignature signature) {
-        if(context.masternodeSync.hasFeatureFlag(MasternodeSync.FEATURE_FLAGS.LOG_SIGNATURES)) {
+        if(masternodeSync.hasFeatureFlag(MasternodeSync.FEATURE_FLAGS.LOG_SIGNATURES)) {
             if(!sigLogInitialized)
                 initializeSignatureLog();
             try {
@@ -552,7 +557,7 @@ public class SigningManager {
     }
 
     public void initializeSignatureLog() {
-        if(!context.masternodeSync.hasFeatureFlag(MasternodeSync.FEATURE_FLAGS.LOG_SIGNATURES))
+        if(!masternodeSync.hasFeatureFlag(MasternodeSync.FEATURE_FLAGS.LOG_SIGNATURES))
             return;
         try {
             boolean exists = false;

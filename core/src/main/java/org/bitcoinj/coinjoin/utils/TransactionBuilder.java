@@ -42,6 +42,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static com.google.common.base.Preconditions.checkState;
 
 public class TransactionBuilder implements AutoCloseable {
+    private final CoinJoinManager coinJoinManager;
     /// Wallet the transaction will be build for
     private final WalletEx wallet;
     /// See CTransactionBuilder() for initialization
@@ -69,8 +70,9 @@ public class TransactionBuilder implements AutoCloseable {
 
     private Transaction transaction;
 
-    public TransactionBuilder(WalletEx wallet, final CompactTallyItem tallyItem, boolean dryRun) {
+    public TransactionBuilder(WalletEx wallet, CoinJoinManager coinJoinManager, final CompactTallyItem tallyItem, boolean dryRun) {
         this.dryRun = dryRun;
+        this.coinJoinManager = coinJoinManager;
         this.wallet = wallet;
         dummyReserveDestination = new ReserveDestination(wallet);
         this.tallyItem = tallyItem;
@@ -94,7 +96,7 @@ public class TransactionBuilder implements AutoCloseable {
         ECKey secret = new ECKey();
         Script dummyScript = ScriptBuilder.createP2PKHOutputScript(secret);
         // Calculate required bytes for the dummy signed tx with tallyItem's inputs only
-        bytesBase = calculateMaximumSignedTxSize(dummyTx, wallet, false);
+        bytesBase = calculateMaximumSignedTxSize(dummyTx, wallet, coinJoinManager, false);
 
         // Calculate the output size
         bytesOutput = new TransactionOutput(wallet.getParams(), null, Coin.ZERO, dummyScript.getProgram()).getMessageSize();
@@ -178,7 +180,7 @@ public class TransactionBuilder implements AutoCloseable {
 
         try {
             SendRequest request = SendRequest.forTx(req.tx);
-            request.aesKey = wallet.getContext().coinJoinManager.requestKeyParameter(wallet);
+            request.aesKey = coinJoinManager.requestKeyParameter(wallet);
             request.coinControl = coinControl;
             wallet.sendCoins(request);
             transaction = request.tx;
@@ -280,7 +282,7 @@ public class TransactionBuilder implements AutoCloseable {
         return VarInt.sizeOf(oldSize) - VarInt.sizeOf(newSize);
     }
 
-    static int calculateMaximumSignedTxSize(Transaction tx, Wallet wallet, boolean useMaxSig)
+    static int calculateMaximumSignedTxSize(Transaction tx, Wallet wallet, CoinJoinManager coinJoinManager, boolean useMaxSig)
     {
         ArrayList<TransactionOutput> txouts = Lists.newArrayList();
         for (TransactionInput input : tx.getInputs()) {
@@ -292,18 +294,18 @@ public class TransactionBuilder implements AutoCloseable {
             checkState(input.getOutpoint().getIndex() < mi.getOutputs().size());
             txouts.add(mi.getOutput(input.getOutpoint().getIndex()));
         }
-        return calculateMaximumSignedTxSize(tx, wallet, txouts, useMaxSig);
+        return calculateMaximumSignedTxSize(tx, wallet, coinJoinManager, txouts, useMaxSig);
     }
 
     // txouts needs to be in the order of tx.vin
-    static int calculateMaximumSignedTxSize(Transaction tx, Wallet wallet, List<TransactionOutput> txouts, boolean useMaxSig)
+    static int calculateMaximumSignedTxSize(Transaction tx, Wallet wallet, CoinJoinManager coinJoinManager, List<TransactionOutput> txouts, boolean useMaxSig)
     {
         SendRequest req = SendRequest.forTx(tx);
         for (TransactionOutput output : txouts) {
             ECKey key = wallet.findKeyFromPubKeyHash(ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey()), Script.ScriptType.P2PKH);
             checkState(key != null, "there must be a key for this output");
             if (key.isEncrypted()) {
-                key = wallet.getContext().coinJoinManager.requestDecryptKey(key);
+                key = coinJoinManager.requestDecryptKey(key);
             }
 
             req.tx.addSignedInputNoOutputsCheck(output.getOutPointFor(),output.getScriptPubKey(), key, Transaction.SigHash.ALL, false);

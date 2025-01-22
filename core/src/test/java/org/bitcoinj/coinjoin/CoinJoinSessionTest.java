@@ -116,7 +116,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         coinbaseTo = Address.fromKey(UNITTEST, wallet.currentReceiveKey());
         operatorSecretKey = BLSSecretKey.fromSeed(Sha256Hash.ZERO_HASH.getBytes());
-        coinJoinServer = new CoinJoinServer(wallet.getContext());
+        coinJoinServer = new CoinJoinServer(context, system);
 
         entry = new SimplifiedMasternodeListEntry(
                 UNITTEST,
@@ -152,9 +152,9 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 Collections.emptyList(),
                 SimplifiedMasternodeListDiff.CURRENT_VERSION
         );
-        wallet.getContext().masternodeListManager.processMasternodeListDiff(null, diff, true);
+        system.masternodeListManager.processMasternodeListDiff(null, diff, true);
 
-        wallet.getContext().coinJoinManager.setMasternodeGroup(masternodeGroup);
+        system.coinJoinManager.setMasternodeGroup(masternodeGroup);
         MockTransactionBroadcaster broadcaster = new MockTransactionBroadcaster(wallet);
         wallet.setTransactionBroadcaster(broadcaster);
 
@@ -165,7 +165,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
 
         globalTimeout = Timeout.seconds(30);
         mixingWallet = (WalletEx) wallet;
-        wallet.getContext().coinJoinManager.start();
+        system.coinJoinManager.start();
     }
 
     protected Wallet createWallet(KeyChainGroup keyChainGroup) {
@@ -175,7 +175,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
     @Override
     @After
     public void tearDown() {
-        wallet.getContext().coinJoinManager.stop();
+        system.coinJoinManager.stop();
         super.tearDown();
     }
 
@@ -196,15 +196,24 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         InboundMessageQueuer p2 = connectPeer(2);
         assertEquals(2, peerGroup.numConnectedPeers());
 
-        CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
+        CoinJoinManager coinJoinManager = system.coinJoinManager;
 
-        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(mixingWallet));
+        coinJoinManager.coinJoinClientManagers.put(
+                wallet.getDescription(),
+                new CoinJoinClientManager(
+                        mixingWallet,
+                        system.masternodeSync,
+                        system.coinJoinManager,
+                        system.masternodeListManager,
+                        system.masternodeMetaDataManager
+                )
+        );
 
         HashMap<TransactionOutPoint, ECKey> keyMap = new HashMap<>();
 
         // mix coins
         CoinJoinClientManager clientManager = coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
-        clientManager.setBlockChain(wallet.getContext().blockChain);
+        clientManager.setBlockChain(system.blockChain);
 
         addBlock();
         clientManager.updatedSuccessBlock();
@@ -229,7 +238,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         // mix 1 session (1 round)
         do {
             Thread.sleep(1000);
-            wallet.getContext().coinJoinManager.doMaintenance();
+            system.coinJoinManager.doMaintenance();
             addBlock();
 
             // this section of nextMessage() and if/else blocks will simulate a mixing masternode
@@ -378,13 +387,22 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         assertEquals(GetSporksMessage.class, outbound(spvClient).getClass());
         assertEquals(GetSporksMessage.class, outbound(someNode).getClass());
 
-        CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
+        CoinJoinManager coinJoinManager = system.coinJoinManager;
 
-        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(mixingWallet));
+        coinJoinManager.coinJoinClientManagers.put(
+                wallet.getDescription(),
+                new CoinJoinClientManager(
+                        mixingWallet,
+                        system.masternodeSync,
+                        system.coinJoinManager,
+                        system.masternodeListManager,
+                        system.masternodeMetaDataManager
+                )
+        );
 
         // mix coins
         CoinJoinClientManager clientManager = coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
-        clientManager.setBlockChain(wallet.getContext().blockChain);
+        clientManager.setBlockChain(system.blockChain);
 
         // check balance
         assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
@@ -407,7 +425,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         // step 0: client will connect to the masternode, if it hasn't yet
         do {
             Thread.sleep(1000);
-            wallet.getContext().coinJoinManager.doMaintenance();
+            system.coinJoinManager.doMaintenance();
             addBlock();
         } while (lastMasternode == null);
         assertEquals(Coin.FIFTY_COINS, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
@@ -497,7 +515,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         InventoryMessage inv = (InventoryMessage) invMessage;
         assertEquals(1, inv.getItems().size());
         // step 10: client requests the dstx
-        GetDataMessage getDataMessage = new GetDataMessage(wallet.getContext().getParams());
+        GetDataMessage getDataMessage = new GetDataMessage(context.getParams());
         getDataMessage.addItem(inv.getItems().get(0));
 
         // step 10: masternode processes request for getdata
@@ -624,12 +642,21 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         assertEquals(GetSporksMessage.class, outbound(spvClient).getClass());
         assertEquals(GetSporksMessage.class, outbound(someNode).getClass());
 
-        CoinJoinManager coinJoinManager = wallet.getContext().coinJoinManager;
+        CoinJoinManager coinJoinManager = system.coinJoinManager;
 
-        coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(mixingWallet));
+        coinJoinManager.coinJoinClientManagers.put(
+                wallet.getDescription(),
+                new CoinJoinClientManager(
+                        mixingWallet,
+                        system.masternodeSync,
+                        system.coinJoinManager,
+                        system.masternodeListManager,
+                        system.masternodeMetaDataManager
+                )
+        );
         CoinJoinClientManager clientManager = coinJoinManager.coinJoinClientManagers.get(wallet.getDescription());
         clientManager.setStopOnNothingToDo(true);
-        clientManager.setBlockChain(wallet.getContext().blockChain);
+        clientManager.setBlockChain(system.blockChain);
 
         // check balance
         assertEquals(Coin.ZERO, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
@@ -654,7 +681,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         System.out.println("Mixing " + (result ? "started successfully" : ("start failed: " + clientManager.getStatuses() + ", will retry")));
         addBlock();
 
-        wallet.getContext().coinJoinManager.doMaintenance();
+        system.coinJoinManager.doMaintenance();
 
         assertEquals(Coin.ZERO, wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE));
 

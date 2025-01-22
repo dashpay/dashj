@@ -15,7 +15,7 @@ public class MasternodePayments {
     final float nStorageCoeff = 1.25f;
     final int nMinBlocksToStore = 5000;
 
-    MasternodePayments(Context context)
+    public MasternodePayments(Context context)
     {
         this.context = context;
     }

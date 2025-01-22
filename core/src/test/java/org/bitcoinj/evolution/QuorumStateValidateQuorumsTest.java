@@ -20,6 +20,7 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.quorums.LLMQParameters;
@@ -47,6 +48,7 @@ import static org.junit.Assert.assertEquals;
 public class QuorumStateValidateQuorumsTest {
 
     static Context context;
+    static DashSystem system;
     static final MainNetParams MAINPARAMS = MainNetParams.get();
     static final TestNet3Params TESTNETPARAMS = TestNet3Params.get();
     static PeerGroup peerGroup;
@@ -106,15 +108,12 @@ public class QuorumStateValidateQuorumsTest {
     }
 
     private void initContext() throws BlockStoreException {
-        //if (context == null || !context.getParams().equals(params))
         context = new Context(params);
-
+        system = new DashSystem(context);
         blockChain = new BlockChain(context, new SPVBlockStore(params, new File(Objects.requireNonNull(SimplifiedMasternodesTest.class.getResource(blockchainFile)).getPath())));
 
-        context.initDash(true, true);
+        system.initDash(true, true);
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
-
-        //context.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain, true);
     }
 
     @Test
@@ -131,7 +130,7 @@ public class QuorumStateValidateQuorumsTest {
             stream.read(buffer);
 
             SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
-            context.setMasternodeListManager(manager);
+            system.setMasternodeListManager(manager);
             context.setDebugMode(true);
 
             SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(context.getParams(), buffer, protocolVersion);
@@ -142,7 +141,7 @@ public class QuorumStateValidateQuorumsTest {
             stream.close();
         } finally {
             context.setDebugMode(false);
-            context.close();
+            system.close();
             blockChain.getBlockStore().close();
         }
     }

@@ -24,11 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 public class SporkMessageTest {
     static NetworkParameters PARAMS = TestNet3Params.get();
-    static Context context = new Context(PARAMS);
-
-    static {
-        context.initDash(true, true);
-    }
 
     @Test
     public void verifySpork() {

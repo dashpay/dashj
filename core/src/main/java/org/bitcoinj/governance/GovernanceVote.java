@@ -19,6 +19,7 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSignature;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -339,7 +340,7 @@ public class GovernanceVote extends ChildMessage implements Serializable {
         vchSig.bitcoinSerialize(stream);
     }
 
-    public boolean isValid(boolean useVotingKey) {
+    public boolean isValid(boolean useVotingKey, SimplifiedMasternodeListManager masternodeListManager, MasternodeSync masternodeSync) {
         if (nTime > Utils.currentTimeSeconds() + (60 * 60)) {
             log.info("gobject--CGovernanceVote::IsValid -- vote is too far ahead of current time - {} - nTime {} - Max Time {}", getHash().toString(), nTime, Utils.currentTimeSeconds() + (60 * 60));
             return false;
@@ -357,8 +358,8 @@ public class GovernanceVote extends ChildMessage implements Serializable {
             return false;
         }
 
-        if(context.masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST)) {
-            Masternode dmn = context.masternodeListManager.getListAtChainTip().getMNByCollateral(masternodeOutpoint);
+        if(masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_MASTERNODE_LIST)) {
+            Masternode dmn = masternodeListManager.getListAtChainTip().getMNByCollateral(masternodeOutpoint);
             if (dmn == null) {
                 log.info("gobject--CGovernanceVote::IsValid -- Unknown Masternode - {}", masternodeOutpoint.toStringShort());
                 return false;
@@ -376,10 +377,10 @@ public class GovernanceVote extends ChildMessage implements Serializable {
 
     void relay () {
         // Do not relay until fully synced
-        if(!context.masternodeSync.isSynced()) {
-            log.info("gobject--CGovernanceVote::Relay -- won't relay until fully synced");
-            return;
-        }
+//        if(!context.masternodeSync.isSynced()) {
+//            log.info("gobject--CGovernanceVote::Relay -- won't relay until fully synced");
+//            return;
+//        }
 
         //InventoryItem inv = new InventoryItem(InventoryItem.Type.GovernanceObjectVote, getHash());
         //context.peerGroup.relayInventory(inv, MIN_GOVERNANCE_PEER_PROTO_VERSION);

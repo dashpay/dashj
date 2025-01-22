@@ -32,6 +32,7 @@ import org.bitcoinj.governance.GovernanceVote;
 import org.bitcoinj.governance.GovernanceVoteBroadcast;
 import org.bitcoinj.governance.GovernanceVoteBroadcaster;
 import org.bitcoinj.governance.GovernanceVoteConfidence;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.net.*;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.quorums.LLMQUtils;
@@ -104,6 +105,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     protected final Context context;
     @Nullable protected final AbstractBlockChain chain;
     @Nullable protected AbstractBlockChain headerChain;
+    protected final DashSystem system;
 
     // This executor is used to queue up jobs: it's used when we don't want to use locks for mutual exclusion,
     // typically because the job might call in to user provided code that needs/wants the freedom to use the API
@@ -461,8 +463,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
         // Dash Specific - if this PeerGroup does not sync the blockchain, then syncsBlockchain should be false
         // otherwise, if headerChain is null, then copy the last 100 headers over to it
+        system = DashSystem.get(params);
         if (headerChain == null && syncsBlockchain) {
-            if (context.getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
+            if (system != null && getSyncFlags().contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
                 try {
                     this.headerChain = new BlockChain(params, new MemoryBlockStore(params));
                     StoredBlock cursor = chain.getChainHead();
@@ -482,7 +485,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         } else {
             this.headerChain = headerChain;
         }
-        context.setPeerGroupAndBlockChain(this, chain, this.headerChain);
+        if (system != null) {
+            system.setPeerGroupAndBlockChain(this, chain, this.headerChain);
+        }
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);
@@ -668,10 +673,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     transactions.add(tx);
                     it.remove();
                     break;
-                }
-                if(item.type == InventoryItem.Type.GovernanceObjectVote) {
-                    if(Context.get().governanceManager.haveVoteForHash(item.hash))
-                        transactions.add(Context.get().governanceManager.getVoteForHash(item.hash));
                 }
             }
             return transactions;
@@ -1260,7 +1261,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     channels.awaitRunning();
                     triggerConnections();
                     setupPinging();
-                    context.start();
+                    if (system != null) {
+                        system.start();
+                    }
                 } catch (Throwable e) {
                     log.error("Exception when starting up", e);  // The executor swallows exceptions :(
                 }
@@ -1290,7 +1293,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     for (PeerDiscovery peerDiscovery : peerDiscoverers) {
                         peerDiscovery.shutdown();
                     }
-                    context.shutdown();
+                    if (system != null) {
+                        system.shutdown();
+                    }
                     vRunning = false;
                     log.info("Stopped, took {}.", watch);
                 } catch (Throwable e) {
@@ -1630,8 +1635,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     protected Peer createPeer(PeerAddress address, VersionMessage ver) {
         Peer peer = new Peer(params, ver, address, chain, headerChain, requiredServices, downloadTxDependencyDepth);
         // mark this as a masternode if it is
-        if (context.masternodeListManager != null) {
-            SimplifiedMasternodeList mnList = context.masternodeListManager.getMasternodeList();
+        if (system != null && system.masternodeListManager != null) {
+            SimplifiedMasternodeList mnList = system.masternodeListManager.getMasternodeList();
             if (mnList.size() != 0) {
                 if (mnList.containsMN(address)) {
                     peer.setMasternode(true);
@@ -1710,7 +1715,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
      * from at least one peer all the blocks that are in that peer's inventory.
      */
     public void downloadBlockChain() {
-        DownloadProgressTracker listener = new DownloadProgressTracker();
+        DownloadProgressTracker listener = new DownloadProgressTracker(system.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING));
         startBlockChainDownload(listener);
         try {
             listener.await();
@@ -2223,7 +2228,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             @Override
             public void onSuccess(@Nullable Integer listsSynced) {
                 log.info("Stage masternode list download successful: {}", listsSynced);
-                Set<MasternodeSync.SYNC_FLAGS> flags = context.getSyncFlags();
+                Set<MasternodeSync.SYNC_FLAGS> flags = getSyncFlags();
                 if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)) {
                     if(syncStage.value < SyncStage.PREBLOCKS.value) {
                         setSyncStage(SyncStage.PREBLOCKS);
@@ -2306,7 +2311,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             addMasternodeListDownloadListener(Threading.SAME_THREAD, chainDownloadSpeedCalculator);
 
             // how can we download headers first, then at the end do the blockchain/merkle blocks
-            Set<MasternodeSync.SYNC_FLAGS> flags = Context.get().getSyncFlags();
+            Set<MasternodeSync.SYNC_FLAGS> flags = getSyncFlags();
             if (flags.contains(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST)) {
                 log.info("Attempting to sync headers first");
                 if (peer.getBestHeight() > headerChain.getChainHead().getHeight() &&
@@ -2913,5 +2918,13 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             peer.sendMessage(new SendCoinJoinQueue(params, shouldSendDsq));
         }
         this.shouldSendDsq = shouldSendDsq;
+    }
+
+    private Set<MasternodeSync.SYNC_FLAGS> getSyncFlags() {
+        if (system != null) {
+            return system.getSyncFlags();
+        } else {
+            return EnumSet.noneOf(MasternodeSync.SYNC_FLAGS.class);
+        }
     }
 }

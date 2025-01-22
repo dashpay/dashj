@@ -1,11 +1,18 @@
 package org.bitcoinj.governance;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.listeners.GetDataEventListener;
+import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
+import org.bitcoinj.evolution.MasternodeMetaDataManager;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.governance.listeners.GovernanceObjectAddedEventListener;
 import org.bitcoinj.governance.listeners.GovernanceVoteConfidenceEventListener;
 import org.bitcoinj.utils.*;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
@@ -19,6 +26,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_PERMANENT_ERROR;
 import static org.bitcoinj.governance.GovernanceException.Type.GOVERNANCE_EXCEPTION_WARNING;
 import static org.bitcoinj.governance.GovernanceObject.*;
+import static org.bitcoinj.utils.Threading.SAME_THREAD;
 
 /**
  * Created by HashEngineering on 5/11/2018.
@@ -80,6 +88,12 @@ public class GovernanceManager extends AbstractManager {
     private HashSet<Sha256Hash> setRequestedVotes;
 
     private boolean fRateChecksEnabled;
+    private MasternodeSync masternodeSync;
+    private PeerGroup peerGroup;
+    private SimplifiedMasternodeListManager masternodeListManager;
+    private MasternodeMetaDataManager masternodeMetaDataManager;
+    private NetFullfilledRequestManager netFullfilledRequestManager;
+    private GovernanceTriggerManager triggerManager;
 
     public GovernanceManager(Context context) {
         super(context);
@@ -149,6 +163,7 @@ public class GovernanceManager extends AbstractManager {
         for(int i = 0; i < size; ++i) {
             Sha256Hash hash = readHash();
             GovernanceObjectFromFile govobj = new GovernanceObjectFromFile(params, payload, cursor);
+            govobj.setObjects(masternodeListManager, masternodeMetaDataManager, this, masternodeSync);
             cursor += govobj.getMessageSize();
             mapObjects.put(hash, govobj);
         }
@@ -251,12 +266,89 @@ public class GovernanceManager extends AbstractManager {
         return new GovernanceManager(Context.get());
     }
 
+    public void setBlockChain(PeerGroup peerGroup, MasternodeSync masternodeSync, SimplifiedMasternodeListManager masternodeListManager, MasternodeMetaDataManager masternodeMetaDataManager, NetFullfilledRequestManager netFullfilledRequestManager, GovernanceTriggerManager triggerManager) {
+        this.peerGroup = peerGroup;
+        this.masternodeSync = masternodeSync;
+        this.masternodeListManager = masternodeListManager;
+        this.masternodeMetaDataManager = masternodeMetaDataManager;
+        this.netFullfilledRequestManager = netFullfilledRequestManager;
+        this.triggerManager = triggerManager;
+        if (peerGroup != null) {
+            peerGroup.addGetDataEventListener(SAME_THREAD, getDataEventListener);
+            peerGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
+        }
+    }
+
+    GetDataEventListener getDataEventListener = new GetDataEventListener() {
+        @Nullable
+        @Override
+        public List<Message> getData(Peer peer, GetDataMessage m) {
+            lock.lock();
+            try {
+                LinkedList<Message> votes = new LinkedList<>();
+                LinkedList<InventoryItem> items = new LinkedList<>(m.getItems());
+                for (InventoryItem item : items) {
+                    if (item.type == InventoryItem.Type.GovernanceObjectVote) {
+                        if (haveVoteForHash(item.hash))
+                            votes.add(getVoteForHash(item.hash));
+                    }
+                }
+                return votes;
+            } finally {
+                lock.unlock();
+            }
+        }
+    };
+
+    PreMessageReceivedEventListener preMessageReceivedEventListener = new PreMessageReceivedEventListener() {
+        @Override
+        public Message onPreMessageReceived(Peer peer, Message m) {
+            if (m instanceof InventoryMessage) {
+                if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE)) {
+                    InventoryMessage inv = (InventoryMessage) m;
+                    List<InventoryItem> items = inv.getItems();
+                    List<InventoryItem> instantSendLocks = new LinkedList<>();
+                    for (InventoryItem item : items) {
+                        switch (item.type) {
+                            case GovernanceObject:
+                            case GovernanceObjectVote:
+                                instantSendLocks.add(item);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    Iterator<InventoryItem> it = instantSendLocks.iterator();
+                    GetDataMessage getdata = new GetDataMessage(context.getParams());
+                    while (it.hasNext()) {
+                        InventoryItem item = it.next();
+                        if(!confirmInventoryRequest(item)) {
+                            getdata.addItem(item);
+                        }
+                    }
+                    if (!getdata.getItems().isEmpty()) {
+                        // This will cause us to receive a bunch of block or tx messages.
+                        peer.sendMessage(getdata);
+                    }
+                }
+            } else if (m instanceof GovernanceObject) {
+                processGovernanceObject(peer, (GovernanceObject)m);
+                return null;
+            } else if (m instanceof GovernanceVote) {
+                processGovernanceObjectVote(peer, (GovernanceVote)m);
+                return null;
+            }
+            return m;
+        }
+    };
+
     public void processGovernanceObject(Peer peer, GovernanceObject govobj) {
         Sha256Hash nHash = govobj.getHash();
+        govobj.setObjects(masternodeListManager, masternodeMetaDataManager, this, masternodeSync);
 
         peer.setAskFor.remove(nHash);
 
-        if(!context.masternodeSync.isBlockchainSynced()) {
+        if(!masternodeSync.isBlockchainSynced()) {
             log.info("gobject--MNGOVERNANCEOBJECT -- masternode list not synced");
             return;
         }
@@ -340,7 +432,7 @@ public class GovernanceManager extends AbstractManager {
         peer.setAskFor.remove(nHash);
 
         // Ignore such messages until masternode list is synced
-        if (!context.masternodeSync.isBlockchainSynced()) {
+        if (!masternodeSync.isBlockchainSynced()) {
             log.info("gobject--MNGOVERNANCEOBJECTVOTE -- masternode list not synced");
             return;
         }
@@ -357,11 +449,11 @@ public class GovernanceManager extends AbstractManager {
         GovernanceException exception = new GovernanceException();
         if (processVote(peer, vote, exception)) {
             log.info("gobject--MNGOVERNANCEOBJECTVOTE -- {} new", strHash);
-            context.masternodeSync.bumpAssetLastTime("processGovernanceObjectVote");
+            masternodeSync.bumpAssetLastTime("processGovernanceObjectVote");
             vote.relay();
         } else {
             log.info("gobject--MNGOVERNANCEOBJECTVOTE -- Rejected vote, error = {}", exception.getMessage());
-            if ((exception.getNodePenalty() != 0) && context.masternodeSync.isSynced()) {
+            if ((exception.getNodePenalty() != 0) && masternodeSync.isSynced()) {
                 //Misbehaving(pfrom.GetId(), exception.GetNodePenalty());
             }
             return;
@@ -496,7 +588,7 @@ public class GovernanceManager extends AbstractManager {
 
             result.setSecond(false);
 
-            if (!context.masternodeSync.isSynced()) {
+            if (!masternodeSync.isSynced()) {
                 result.setFirst(true);
                 return result;
             }
@@ -715,7 +807,7 @@ public class GovernanceManager extends AbstractManager {
             switch(govobj.getObjectType()) {
                 case GOVERNANCE_OBJECT_TRIGGER:
                     log.info("CGovernanceManager::AddGovernanceObject Before AddNewTrigger");
-                    context.triggerManager.addNewTrigger(nHash);
+                    triggerManager.addNewTrigger(nHash);
                     log.info("CGovernanceManager::AddGovernanceObject After AddNewTrigger");
                     break;
                 case GOVERNANCE_OBJECT_WATCHDOG:
@@ -732,7 +824,7 @@ public class GovernanceManager extends AbstractManager {
             // Update the rate buffer
             masternodeRateUpdate(govobj);
 
-            context.masternodeSync.bumpAssetLastTime("addGovernanceObject");
+            masternodeSync.bumpAssetLastTime("addGovernanceObject");
 
             // WE MIGHT HAVE PENDING/ORPHAN VOTES FOR THIS OBJECT
 
@@ -791,7 +883,7 @@ public class GovernanceManager extends AbstractManager {
 
     public void doMaintenance()
     {
-        if(context.isLiteMode() || !context.masternodeSync.isSynced()) return;
+        if(masternodeSync.syncFlags.contains(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) || !masternodeSync.isSynced()) return;
 
         // CHECK OBJECTS WE'VE ASKED FOR, REMOVE OLD ENTRIES
 
@@ -848,8 +940,6 @@ public class GovernanceManager extends AbstractManager {
                 setHash.add(inv.hash);
                 log.info("gobject--CGovernanceManager::ConfirmInventoryRequest added inv to requested set, {}, object = {}", inv.type, inv);
             }
-
-            //log.info("gobject--CGovernanceManager::ConfirmInventoryRequest reached end, returning true");
             return true;
         } finally {
             lock.unlock();
@@ -863,7 +953,7 @@ public class GovernanceManager extends AbstractManager {
     public void updateCachesAndClean() {
         log.info("gobject--CGovernanceManager::UpdateCachesAndClean");
 
-        List<Sha256Hash> vecDirtyHashes = context.masternodeMetaDataManager.getAndClearDirtyGovernanceObjectHashes();
+        List<Sha256Hash> vecDirtyHashes = masternodeMetaDataManager.getAndClearDirtyGovernanceObjectHashes();
         
         lock.lock();
         try {
@@ -914,7 +1004,7 @@ public class GovernanceManager extends AbstractManager {
                 Iterator<Map.Entry<Sha256Hash, GovernanceObject>> it = mapObjects.entrySet().iterator();
 
                 // Clean up any expired or invalid triggers
-                context.triggerManager.cleanAndRemove();
+                triggerManager.cleanAndRemove();
 
                 while (it.hasNext()) {
                     Map.Entry<Sha256Hash, GovernanceObject> entry = it.next();
@@ -949,7 +1039,7 @@ public class GovernanceManager extends AbstractManager {
 
                     if ((pObj.isSetCachedDelete() || pObj.isSetExpired()) && (nTimeSinceDeletion >= GOVERNANCE_DELETION_DELAY)) {
                         log.info("CGovernanceManager::UpdateCachesAndClean -- erase obj {}", entry.getValue());
-                        context.masternodeMetaDataManager.removeGovernanceObject(pObj.getHash());
+                        masternodeMetaDataManager.removeGovernanceObject(pObj.getHash());
 
                         // Remove vote references
                         final LinkedList<CacheItem<Sha256Hash, GovernanceObject>> listItems = mapVoteToObject.getItemList();
@@ -1067,11 +1157,9 @@ public class GovernanceManager extends AbstractManager {
 
         log.info("gobject--CGovernanceObject::RequestOrphanObjects -- number objects = {}\n", vecHashesFiltered.size());
 
-        PeerGroup peerGroup = context.peerGroup;
         peerGroup.getLock().lock();
         try {
-            for (int i = 0; i < vecHashesFiltered.size(); ++i) {
-                final Sha256Hash nHash = vecHashesFiltered.get(i);
+            for (final Sha256Hash nHash : vecHashesFiltered) {
                 for (int j = 0; j < peerGroup.getConnectedPeers().size(); ++j) {
                     Peer node = peerGroup.getConnectedPeers().get(j);
                     if (node.isMasternode()) {
@@ -1144,7 +1232,7 @@ public class GovernanceManager extends AbstractManager {
     }
 
     public void checkPostponedObjects() {
-        if (!context.masternodeSync.isSynced()) {
+        if (!masternodeSync.isSynced()) {
             return;
         }
 
@@ -1241,7 +1329,7 @@ public class GovernanceManager extends AbstractManager {
         int nMaxObjRequestsPerNode = 1;
         int nProjectedVotes = 2000;
         if (params.getId() != NetworkParameters.ID_MAINNET) {
-            nMaxObjRequestsPerNode = Math.max(1, (int)(nProjectedVotes / Math.max(1, context.masternodeListManager.getListAtChainTip().size())));
+            nMaxObjRequestsPerNode = Math.max(1, (int)(nProjectedVotes / Math.max(1, masternodeListManager.getListAtChainTip().size())));
         }
 
 
@@ -1298,7 +1386,7 @@ public class GovernanceManager extends AbstractManager {
                 nHashGovobj = vpGovObjsTmp.get(vpGovObjsTmp.size() - 1).getHash();
             }
             boolean fAsked = false;
-            for (Peer pnode : context.peerGroup.getConnectedPeers()) {
+            for (Peer pnode : peerGroup.getConnectedPeers()) {
                 // Only use regular peers, don't try to ask from outbound "masternode" connections -
                 // they stay connected for a short period of time and it's possible that we won't get everything we should.
                 // Only use outbound connections - inbound connection could be a "masternode" connection
@@ -1368,7 +1456,7 @@ public class GovernanceManager extends AbstractManager {
         // Ignore such requests until we are fully synced.
         // We could start processing this after masternode list is synced
         // but this is a heavy one so it's better to finish sync first.
-        if (!context.masternodeSync.isSynced()) return;
+        if (!masternodeSync.isSynced()) return;
 
         if(message.prop.isZero()) {
             syncAll(peer);
@@ -1380,7 +1468,7 @@ public class GovernanceManager extends AbstractManager {
 
     public void syncSingleObjAndItsVotes(Peer pnode, Sha256Hash nProp, BloomFilter filter) {
         // do not provide any data until our node is synced
-        if (!context.masternodeSync.isSynced()) {
+        if (!masternodeSync.isSynced()) {
             return;
         }
 
@@ -1418,7 +1506,7 @@ public class GovernanceManager extends AbstractManager {
             //C++ TO JAVA CONVERTER TODO TASK: There is no equivalent to implicit typing in Java unless the Java 10 inferred typing option is selected:
             for (GovernanceVote vote : fileVotes.getVotes()) {
                 Sha256Hash nVoteHash = vote.getHash();
-                if (filter.contains(nVoteHash.getReversedBytes()) || !vote.isValid(true)) {
+                if (filter.contains(nVoteHash.getReversedBytes()) || !vote.isValid(true, masternodeListManager, masternodeSync)) {
                     continue;
                 }
                 pnode.pushInventory(new InventoryItem(InventoryItem.Type.GovernanceObjectVote, nVoteHash));
@@ -1435,18 +1523,18 @@ public class GovernanceManager extends AbstractManager {
 
     public void syncAll(Peer pnode) {
         // do not provide any data until our node is synced
-        if (!context.masternodeSync.isSynced()) {
+        if (!masternodeSync.isSynced()) {
             return;
         }
 
-        if (context.netFullfilledRequestManager.hasFulfilledRequest(pnode.getAddress(), "govsync")) {
+        if (netFullfilledRequestManager.hasFulfilledRequest(pnode.getAddress(), "govsync")) {
             //LOCK(cs_main);
             // Asking for the whole list multiple times in a short period of time is no good
             log.info("gobject--CGovernanceManager:: -- peer already asked me for the list");
             //Misbehaving(pnode.GetId(), 20);
             return;
         }
-        context.netFullfilledRequestManager.addFulfilledRequest(pnode.getAddress(), "govsync");
+        netFullfilledRequestManager.addFulfilledRequest(pnode.getAddress(), "govsync");
 
         int nObjCount = 0;
         int nVoteCount = 0;
@@ -1568,7 +1656,7 @@ public class GovernanceManager extends AbstractManager {
     private void queueOnTransactionConfidenceChanged(final GovernanceVote vote) {
         checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<GovernanceVoteConfidenceEventListener> registration : voteConfidenceListeners) {
-            if (registration.executor == Threading.SAME_THREAD) {
+            if (registration.executor == SAME_THREAD) {
                 registration.listener.onVoteConfidenceChanged(vote);
             } else {
                 registration.executor.execute(new Runnable() {
@@ -1612,7 +1700,7 @@ public class GovernanceManager extends AbstractManager {
     private void queueOnGovernanceObjectAdded(final Sha256Hash nHash, final GovernanceObject object) {
         checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<GovernanceObjectAddedEventListener> registration : governanceObjectAddedListeners) {
-            if (registration.executor == Threading.SAME_THREAD) {
+            if (registration.executor == SAME_THREAD) {
                 registration.listener.onGovernanceObjectAdded(nHash, object);
             } else {
                 registration.executor.execute(new Runnable() {
@@ -1627,6 +1715,9 @@ public class GovernanceManager extends AbstractManager {
 
     @Override
     public void close() {
-
+        if (peerGroup != null) {
+            peerGroup.removeGetDataEventListener(getDataEventListener);
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
     }
 }

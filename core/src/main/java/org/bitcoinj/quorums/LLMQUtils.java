@@ -10,6 +10,7 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSignature;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -92,20 +93,12 @@ public class LLMQUtils {
         return sporkValue == 1 && llmqType != LLMQ_100_67 && llmqType != LLMQ_400_60 && llmqType != LLMQ_400_85;
     }
 
-    boolean isAllMembersConnectedEnabled(LLMQParameters.LLMQType llmqType) {
-        return evalSpork(llmqType, Context.get().sporkManager.getSporkValue(SPORK_21_QUORUM_ALL_CONNECTED));
-    }
-
-    boolean isQuorumPoseEnabled(LLMQParameters.LLMQType llmqType) {
-        return evalSpork(llmqType, Context.get().sporkManager.getSporkValue(SPORK_23_QUORUM_POSE));
-    }
-
-    public static boolean isQuorumRotationEnabled(Context context, NetworkParameters params, LLMQParameters.LLMQType type) {
+    public static boolean isQuorumRotationEnabled(@Nullable AbstractBlockChain headerChain, AbstractBlockChain blockChain, NetworkParameters params, LLMQParameters.LLMQType type) {
         if (type != params.getLlmqDIP0024InstantSend()) {
             return false;
         }
 
-        int bestHeight = max(context.headerChain != null ? context.headerChain.getBestChainHeight() : 0, context.blockChain.getBestChainHeight());
+        int bestHeight = max(headerChain != null ? headerChain.getBestChainHeight() : 0, blockChain.getBestChainHeight());
         boolean quorumRotationActive = bestHeight >= params.getDIP0024BlockHeight();
         return params.getLlmqDIP0024InstantSend() == type && quorumRotationActive;
     }

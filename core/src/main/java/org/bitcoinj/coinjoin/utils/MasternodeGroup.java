@@ -35,6 +35,8 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.evolution.Masternode;
+import org.bitcoinj.evolution.MasternodeListManager;
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.net.ClientConnectionManager;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
@@ -68,6 +70,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
     protected final HashMap<Sha256Hash, CoinJoinClientSession> masternodeMap = new HashMap<>();
     protected final HashMap<MasternodeAddress, CoinJoinClientSession> addressMap = new HashMap<>();
 
+    private MasternodeListManager masternodeListManager;
     private final ArrayList<Masternode> pendingClosingMasternodes = new ArrayList<>();
 
     private final PeerDiscovery masternodeDiscovery = new PeerDiscovery() {
@@ -116,27 +119,14 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
         super(context);
     }
 
-    /**
-     * See {@link #MasternodeGroup(Context, AbstractBlockChain)}
-     *
-     * @param params
-     * @param chain
-     */
     public MasternodeGroup(NetworkParameters params, @Nullable AbstractBlockChain chain) {
         super(params, chain);
-        init();
+        init(null);
     }
 
-    /**
-     * See {@link #MasternodeGroup(Context, AbstractBlockChain)}
-     *
-     * @param params
-     * @param chain
-     * @param headerChain
-     */
     public MasternodeGroup(NetworkParameters params, @Nullable AbstractBlockChain chain, @Nullable AbstractBlockChain headerChain) {
         super(params, chain, headerChain);
-        init();
+        init(null);
     }
 
     /**
@@ -146,12 +136,13 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
      * @param context
      * @param chain
      */
-    public MasternodeGroup(Context context, @Nullable AbstractBlockChain chain) {
+    public MasternodeGroup(Context context, @Nullable AbstractBlockChain chain, SimplifiedMasternodeListManager masternodeListManager) {
         super(context, chain, false);
-        init();
+        init(masternodeListManager);
     }
 
-    private void init() {
+    private void init(MasternodeListManager masternodeListManager) {
+        this.masternodeListManager = masternodeListManager;
         addPeerDiscovery(masternodeDiscovery);
         setUseLocalhostPeerWhenPossible(false);
         setDropPeersAfterBroadcast(false);
@@ -165,9 +156,10 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
      * @param chain
      * @param connectionManager
      */
-    public MasternodeGroup(NetworkParameters params, @Nullable AbstractBlockChain chain, ClientConnectionManager connectionManager) {
+    public MasternodeGroup(NetworkParameters params, @Nullable AbstractBlockChain chain,
+                           MasternodeListManager masternodeListManager, ClientConnectionManager connectionManager) {
         super(params, chain, connectionManager);
-        init();
+        init(masternodeListManager);
     }
 
     public boolean addPendingMasternode(CoinJoinClientSession session) {
@@ -315,7 +307,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
             return null; // do not connect to the same peer again
         }
 
-        Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByAddress(address.getSocketAddress());
+        Masternode mn = masternodeListManager.getListAtChainTip().getMNByAddress(address.getSocketAddress());
         CoinJoinClientSession session;
 
         pendingMasternodesLock.lock();
@@ -386,7 +378,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
         }
         log.info("need to drop {} masternodes", masternodesToDrop.size());
         masternodesToDrop.forEach(peer -> {
-            Masternode mn = context.masternodeListManager.getListAtChainTip().getMNByAddress(peer.getAddress().getSocketAddress());
+            Masternode mn = masternodeListManager.getListAtChainTip().getMNByAddress(peer.getAddress().getSocketAddress());
             //pendingSessions.remove(mn.getProTxHash());
             log.info("masternode will be disconnected: {}: {}", peer, mn.getProTxHash());
             peer.close();
