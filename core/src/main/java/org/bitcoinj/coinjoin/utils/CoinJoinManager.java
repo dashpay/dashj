@@ -190,6 +190,7 @@ public class CoinJoinManager {
         this.blockChain = blockChain;
         masternodeGroup = new MasternodeGroup(context, blockChain, masternodeListManager);
         masternodeGroup.setCoinJoinManager(this);
+        masternodeGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
         blockChain.addTransactionReceivedListener(transactionReceivedInBlockListener);
     }
 
@@ -228,6 +229,9 @@ public class CoinJoinManager {
         }
         if (peerGroup != null) {
             peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
+        if (masternodeGroup != null) {
+            masternodeGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
         }
     }
 
@@ -268,6 +272,7 @@ public class CoinJoinManager {
     public void setMasternodeGroup(MasternodeGroup masternodeGroup) {
         this.masternodeGroup = masternodeGroup;
         masternodeGroup.setCoinJoinManager(this);
+        masternodeGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
     }
 
     public SettableFuture<Boolean> getMixingFinishedFuture(Wallet wallet) {
