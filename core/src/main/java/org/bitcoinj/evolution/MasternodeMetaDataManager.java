@@ -114,7 +114,7 @@ public class MasternodeMetaDataManager extends AbstractManager {
     public long getDsqThreshold(Sha256Hash proTxHash, int mnCount) {
         MasternodeMetaInfo metaInfo = getMetaInfo(proTxHash);
         if (metaInfo == null) {
-            // return a threshold which is slightly above nDsqCount i.e. a no-go
+            // return a threshold which is slightly above dsqCount i.e. a no-go
             return getDsqCount() + 1;
         }
         return metaInfo.getLastDsq() + mnCount / 5;
