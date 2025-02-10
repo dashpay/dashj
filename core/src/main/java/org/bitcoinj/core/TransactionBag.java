@@ -63,4 +63,7 @@ public interface TransactionBag {
 
     /** Returns true if this output is locked **/
     boolean isLockedOutput(TransactionOutPoint outPoint);
+
+    /** lock output to prevent other transaction operations from using it */
+    boolean lockOutput(TransactionOutPoint outPoint);
 }

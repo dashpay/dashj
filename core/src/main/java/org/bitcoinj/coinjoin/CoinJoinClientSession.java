@@ -789,7 +789,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         for (Pair<CoinJoinTransactionInput, TransactionOutput> pair : vecPSInOutPairsRet) {
-            mixingWallet.lockCoin(pair.getFirst().getOutpoint());
+            mixingWallet.lockOutput(pair.getFirst().getOutpoint());
             outPointLocked.add(pair.getFirst().getOutpoint());
         }
 
