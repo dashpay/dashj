@@ -2329,6 +2329,9 @@ public class Wallet extends BaseTaggableObject
                 tx = tmp;
         }
 
+        // check locked outputs and remove any in this transaction
+        tx.getOutputs().forEach(output -> lockedOutputs.remove(output.getOutPointFor()));
+
         boolean wasPending = pending.remove(txHash) != null;
         if (wasPending)
             log.info("  <-pending");

@@ -1203,7 +1203,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // TODO: should we wait here? check Dash Core code
 
         for (TransactionOutPoint outpoint : outPointLocked)
-            mixingWallet.unlockCoin(outpoint);
+            mixingWallet.unlockOutput(outpoint);
 
         outPointLocked.clear();
     }
@@ -1450,7 +1450,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
             // lock the funds we're going to use for our collateral
             for (TransactionInput txin :txMyCollateral.getInputs()){
-                mixingWallet.lockCoin(txin.getOutpoint());
+                mixingWallet.lockOutput(txin.getOutpoint());
                 outPointLocked.add(txin.getOutpoint());
             }
         } finally {
