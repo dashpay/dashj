@@ -1,6 +1,5 @@
 package org.bitcoinj.wallet;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.CoinJoin;
@@ -181,7 +180,6 @@ public class WalletEx extends Wallet {
     /**
      * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
      */
-    @VisibleForTesting
     public void initializeCoinJoin(int account) {
         getCoinJoin().addKeyChain(getKeyChainSeed(), derivationPathFactory.coinJoinDerivationPath(account));
     }
