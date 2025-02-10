@@ -3630,7 +3630,7 @@ public class WalletTest extends TestWithWallet {
         Transaction firstTx = sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, COIN, wallet.currentReceiveAddress());
         Transaction secondTx = sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, COIN, wallet.currentReceiveAddress());
         TransactionOutPoint firstTxLockedOutPoint = firstTx.getOutputs().stream().filter(output -> output.isMine(wallet)).findFirst().get().getOutPointFor();
-        wallet.lockCoin(firstTxLockedOutPoint);
+        wallet.lockOutput(firstTxLockedOutPoint);
         SendRequest req = SendRequest.emptyWallet(wallet.freshAddress(KeyPurpose.RECEIVE_FUNDS));
         wallet.completeTx(req);
         assertTrue(req.tx.getInputs().stream().noneMatch(input -> input.getOutpoint().equals(firstTxLockedOutPoint)));

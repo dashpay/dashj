@@ -6312,7 +6312,8 @@ public class Wallet extends BaseTaggableObject
     }
 
     /** locks an unspent outpoint so that it cannot be spent */
-    public boolean lockCoin(TransactionOutPoint outPoint) {
+    @Override
+    public boolean lockOutput(TransactionOutPoint outPoint) {
         lock.lock();
         try {
             return lockedOutputs.add(outPoint);
@@ -6321,7 +6322,7 @@ public class Wallet extends BaseTaggableObject
         }
     }
     /** unlocks an outpoint so that it cannot be spent */
-    public void unlockCoin(TransactionOutPoint outPoint) {
+    public void unlockOutput(TransactionOutPoint outPoint) {
         lock.lock();
         try {
             lockedOutputs.remove(outPoint);

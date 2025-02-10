@@ -625,16 +625,16 @@ public class WalletEx extends Wallet {
 
     /** locks an unspent outpoint so that it cannot be spent */
     @Override
-    public boolean lockCoin(TransactionOutPoint outPoint) {
-        boolean added = super.lockCoin(outPoint);
+    public boolean lockOutput(TransactionOutPoint outPoint) {
+        boolean added = super.lockOutput(outPoint);
         clearAnonymizableCaches();
         return added;
     }
 
     /** unlocks an outpoint so that it cannot be spent */
     @Override
-    public void unlockCoin(TransactionOutPoint outPoint) {
-        super.unlockCoin(outPoint);
+    public void unlockOutput(TransactionOutPoint outPoint) {
+        super.unlockOutput(outPoint);
         clearAnonymizableCaches();
     }
 
