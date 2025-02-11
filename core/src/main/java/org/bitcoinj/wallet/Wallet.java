@@ -4490,7 +4490,9 @@ public class Wallet extends BaseTaggableObject
                 candidates.removeIf(output -> !req.coinControl.isSelected(output.getOutPointFor()));
             }
             // prevent locked outputs from being included
-            candidates.removeIf(output -> isLockedOutput(output.getOutPointFor()));
+            candidates.removeIf(output ->
+                isLockedOutput(output.getOutPointFor()) && !req.canUseLockedOutput(output)
+            );
 
             CoinSelection bestCoinSelection;
             TransactionOutput bestChangeOutput = null;
