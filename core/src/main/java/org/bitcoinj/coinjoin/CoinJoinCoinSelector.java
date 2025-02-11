@@ -25,18 +25,18 @@ import org.bitcoinj.wallet.ZeroConfCoinSelector;
 
 import java.util.ArrayList;
 import java.util.List;
+import static com.google.common.base.Preconditions.checkArgument;
 
 public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
     private final TransactionBag transactionBag;
     private boolean onlyConfirmed;
 
     public CoinJoinCoinSelector(TransactionBag transactionBag) {
-        super();
-        this.transactionBag = transactionBag;
-        this.onlyConfirmed = false;
+        this(transactionBag, false);
     }
     public CoinJoinCoinSelector(TransactionBag transactionBag, boolean onlyConfirmed) {
-        this(transactionBag);
+        checkArgument(transactionBag != null, "transactionBag cannot be null");
+        this.transactionBag = transactionBag;
         this.onlyConfirmed = onlyConfirmed;
     }
 
