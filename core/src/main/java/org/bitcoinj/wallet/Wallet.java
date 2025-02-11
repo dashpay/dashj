@@ -2329,9 +2329,6 @@ public class Wallet extends BaseTaggableObject
                 tx = tmp;
         }
 
-        // check locked outputs and remove any in this transaction
-        tx.getOutputs().forEach(output -> lockedOutputs.remove(output.getOutPointFor()));
-
         boolean wasPending = pending.remove(txHash) != null;
         if (wasPending)
             log.info("  <-pending");
@@ -2374,6 +2371,9 @@ public class Wallet extends BaseTaggableObject
         }
 
         if (block != null) {
+            // check locked outputs and remove any in this transaction
+            tx.getInputs().forEach(input -> lockedOutputs.remove(input.getOutpoint()));
+
             // Mark the tx as appearing in this block so we can find it later after a re-org. This also tells the tx
             // confidence object about the block and sets its depth appropriately.
             tx.setBlockAppearance(block, bestChain, relativityOffset);
