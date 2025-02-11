@@ -121,7 +121,7 @@ public class CoinJoinBroadcastTx extends Message {
     public String toString() {
         int denomination = CoinJoin.amountToDenomination(tx.getOutput(0).getValue());
         return String.format(
-                "CoinJoinBroadcastTx(denomination=%s[%d], outputs=%d, tx=%s, proTxHash=%s, signatureTime=%d)",
+                "dstx(%s[%d], outputs=%d, tx=%s, proTx=%s, signatureTime=%d)",
                 CoinJoin.denominationToString(denomination),
                 denomination,
                 tx.getOutputs().size(),
@@ -181,7 +181,7 @@ public class CoinJoinBroadcastTx extends Message {
     public boolean sign(BLSSecretKey blsKeyOperator) {
         Sha256Hash hash = getSignatureHash();
 
-        BLSSignature sig = blsKeyOperator.Sign(hash);
+        BLSSignature sig = blsKeyOperator.sign(hash);
         if (!sig.isValid()) {
             return false;
         }

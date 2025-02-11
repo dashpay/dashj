@@ -23,6 +23,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.math.BigInteger;
 import java.util.Date;
 import java.util.List;
+import java.util.function.Predicate;
 
 import org.bitcoin.protocols.payments.Protos.PaymentDetails;
 import org.bitcoinj.coinjoin.utils.Recipient;
@@ -171,6 +172,8 @@ public class SendRequest {
     boolean completed;
 
     public CoinControl coinControl = null;
+    /** allow client to approve of sending locked ouputs */
+    public Predicate<TransactionOutput> canUseLockedOutputPredicate = null;
 
     protected SendRequest() {}
 
@@ -339,5 +342,9 @@ public class SendRequest {
 
     public boolean hasCoinControl() {
         return coinControl != null;
+    }
+
+    public boolean canUseLockedOutput(TransactionOutput output) {
+        return canUseLockedOutputPredicate != null && canUseLockedOutputPredicate.test(output);
     }
 }

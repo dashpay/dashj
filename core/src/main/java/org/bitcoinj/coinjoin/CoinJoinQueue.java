@@ -145,7 +145,7 @@ public class CoinJoinQueue extends Message {
     @Override
     public String toString() {
         return String.format(
-                "CoinJoinQueue(denom=%s[%d], t=%d[exp=%s], ready=%s, proTxHash=%s)",
+                "dsq(%s[%d], t=%d[exp=%s], ready=%s, proTx=%s)",
                 CoinJoin.denominationToString(denomination),
                 denomination,
                 time,
