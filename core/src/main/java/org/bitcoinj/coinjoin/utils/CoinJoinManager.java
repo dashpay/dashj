@@ -164,7 +164,7 @@ public class CoinJoinManager {
             coinJoinClientQueueManager.doMaintenance();
 
             for (CoinJoinClientManager clientManager : coinJoinClientManagers.values()) {
-                clientManager.doMaintenance();
+                clientManager.doMaintenance(finishCurrentSessions);
             }
         }
     }
@@ -199,6 +199,7 @@ public class CoinJoinManager {
             clientManager.close(blockChain);
         }
         stopAsync();
+        finishCurrentSessions = false;
     }
 
     public boolean isRunning() {
@@ -472,4 +473,16 @@ public class CoinJoinManager {
         }
         return m;
     };
+
+    public void setFinishCurrentSessions(boolean finishCurrentSessions) {
+        this.finishCurrentSessions = finishCurrentSessions;
+    }
+
+    public void addWallet(WalletEx wallet) {
+        wallets.add(wallet);
+    }
+
+    public void removeWallet(WalletEx wallet) {
+        wallets.remove(wallet);
+    }
 }

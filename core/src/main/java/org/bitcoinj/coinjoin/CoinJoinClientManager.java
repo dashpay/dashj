@@ -240,9 +240,14 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
 
     /// Passively run mixing in the background according to the configuration in settings
     public boolean doAutomaticDenominating() {
-        return doAutomaticDenominating(false);
+        return doAutomaticDenominating(false, false);
     }
-    public boolean doAutomaticDenominating(boolean dryRun) {
+
+    public boolean doAutomaticDenominating(boolean finishCurrentSessions) {
+        return doAutomaticDenominating(finishCurrentSessions, false);
+    }
+
+    public boolean doAutomaticDenominating(boolean finishCurrentSessions, boolean dryRun) {
         if (!CoinJoinClientOptions.isEnabled() || (!dryRun && !isMixing()))
             return false;
 
@@ -321,7 +326,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
                     return false;
                 }
 
-                fResult &= session.doAutomaticDenominating(dryRun);
+                fResult &= session.doAutomaticDenominating(finishCurrentSessions, dryRun);
             }
 
             return fResult;
@@ -461,7 +466,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
     }
     static int nTick = 0;
     static int nDoAutoNextRun = nTick + COINJOIN_AUTO_TIMEOUT_MIN;
-    public void doMaintenance() {
+    public void doMaintenance(boolean finishCurrentSession) {
         if (!CoinJoinClientOptions.isEnabled())
             return;
 
@@ -473,7 +478,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         checkTimeout();
         processPendingDsaRequest();
         if (nDoAutoNextRun >= nTick) {
-            doAutomaticDenominating();
+            doAutomaticDenominating(finishCurrentSession);
             nDoAutoNextRun = nTick + COINJOIN_AUTO_TIMEOUT_MIN + random.nextInt(COINJOIN_AUTO_TIMEOUT_MAX - COINJOIN_AUTO_TIMEOUT_MIN);
         }
 

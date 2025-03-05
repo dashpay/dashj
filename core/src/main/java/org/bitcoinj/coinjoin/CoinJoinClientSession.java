@@ -1264,10 +1264,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     }
 
     /// Passively run mixing in the background according to the configuration in settings
-    public boolean doAutomaticDenominating() {
-        return doAutomaticDenominating(false);
+    public boolean doAutomaticDenominating(boolean finishCurrentSession) {
+        return doAutomaticDenominating(finishCurrentSession,false);
     }
-    public boolean doAutomaticDenominating(boolean fDryRun) {
+    public boolean doAutomaticDenominating(boolean finishCurrentSession, boolean fDryRun) {
         if (state.get() != POOL_STATE_IDLE) return false;
 
         if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !masternodeSync.isBlockchainSynced()) {
@@ -1296,6 +1296,14 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
         try {
+            if (finishCurrentSession) {
+                log.info("coinjoin: finish this session {}", fDryRun);
+                // nothing to do, just keep it in idle mode
+                if (!fDryRun) {
+                    setStatus(PoolStatus.FINISHED);
+                }
+                return false;
+            }
             if (!fDryRun && masternodeListManager.getListAtChainTip().getValidMNsCount() == 0 &&
                     !mixingWallet.getContext().getParams().getId().equals(NetworkParameters.ID_REGTEST)) {
                 strAutoDenomResult = "No Masternodes detected.";
