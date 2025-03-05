@@ -516,7 +516,7 @@ public class WalletEx extends Wallet {
                 if (wtx.isCoinBase() && wtx.isMature())
                     continue;
 
-                TransactionConfidence confidence = wtx.getConfidence();
+                TransactionConfidence confidence = wtx.getConfidence(context);
                 if (skipUnconfirmed && !wtx.isTrusted(this))
                     continue;
 
@@ -609,7 +609,7 @@ public class WalletEx extends Wallet {
     public int countInputsWithAmount(Coin inputValue) {
         int count = 0;
         for (TransactionOutput output : myUnspents) {
-            TransactionConfidence confidence = output.getParentTransaction().getConfidence();
+            TransactionConfidence confidence = output.getParentTransaction().getConfidence(context);
             // confirmations must be 0 or higher, not conflicted or dead
             if (confidence != null && (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING || confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)) {
                 // inputValue must match, the TX is mine and is not spent
@@ -751,7 +751,7 @@ public class WalletEx extends Wallet {
                     continue;
                 }
 
-                int depth = coin.getConfidence().getDepthInBlocks();
+                int depth = coin.getConfidence(context).getDepthInBlocks();
                 if (depth < minDepth || depth > maxDepth)
                     continue;
 

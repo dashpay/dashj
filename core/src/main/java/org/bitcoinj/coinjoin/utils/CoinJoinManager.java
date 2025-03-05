@@ -182,6 +182,7 @@ public class CoinJoinManager {
 
     public void start() {
         log.info("CoinJoinManager starting...");
+        Context.propagate(context);
         schedule = scheduledExecutorService.scheduleWithFixedDelay(
                 maintenanceRunnable, 1, 1, TimeUnit.SECONDS);
     }
