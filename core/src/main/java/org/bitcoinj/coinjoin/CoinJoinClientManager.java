@@ -140,6 +140,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         this.masternodeMetaDataManager = masternodeMetaDataManager;
         this.masternodeListManager = masternodeListManager;
         mixingWallet.addCoinsReceivedEventListener(this);
+        this.coinJoinManager.addWallet(mixingWallet);
     }
 
     public CoinJoinClientManager(WalletEx wallet, MasternodeSync masternodeSync, CoinJoinManager coinJoinManager, SimplifiedMasternodeListManager masternodeListManager, MasternodeMetaDataManager masternodeMetaDataManager) {
@@ -150,13 +151,14 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         this.masternodeMetaDataManager = masternodeMetaDataManager;
         this.masternodeListManager = masternodeListManager;
         mixingWallet.addCoinsReceivedEventListener(this);
+        this.coinJoinManager.addWallet(mixingWallet);
     }
 
-    public void processMessage(Peer from, Message message, boolean enable_bip61) {
+    public Message processMessage(Peer from, Message message, boolean enable_bip61) {
         if (!CoinJoinClientOptions.isEnabled())
-            return;
+            return message;
         if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !masternodeSync.isBlockchainSynced())
-            return;
+            return message;
 
         if (message instanceof CoinJoinStatusUpdate ||
                 message instanceof CoinJoinFinalTransaction ||
@@ -164,12 +166,16 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
             lock.lock();
             try {
                 for (CoinJoinClientSession session : deqSessions) {
-                    session.processMessage(from, message, enable_bip61);
+                    boolean messageHandled = session.processMessage(from, message, enable_bip61);
+                    if (messageHandled) {
+                        return null;
+                    }
                 }
             } finally {
                 lock.unlock();
             }
         }
+        return message;
     }
 
 
@@ -447,6 +453,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
     public void close(AbstractBlockChain blockChain) {
         blockChain.removeNewBestBlockListener(newBestBlockListener);
         mixingWallet.removeCoinsReceivedEventListener(this);
+        coinJoinManager.removeWallet(mixingWallet);
     }
 
     public void updatedSuccessBlock() {

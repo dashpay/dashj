@@ -1133,67 +1133,71 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         this.id = nextId++;
     }
 
-    public void processMessage(Peer peer, Message message, boolean enable_bip61) {
+    public boolean processMessage(Peer peer, Message message, boolean enable_bip61) {
         if (message instanceof CoinJoinStatusUpdate) {
-            processStatusUpdate(peer, (CoinJoinStatusUpdate) message);
+            return processStatusUpdate(peer, (CoinJoinStatusUpdate) message);
         } else if (message instanceof CoinJoinFinalTransaction) {
-            processFinalTransaction(peer, (CoinJoinFinalTransaction) message);
+            return processFinalTransaction(peer, (CoinJoinFinalTransaction) message);
         } else if (message instanceof CoinJoinComplete) {
-            processComplete(peer, (CoinJoinComplete) message);
+            return processComplete(peer, (CoinJoinComplete) message);
         }
+        return false;
     }
 
-    private void processStatusUpdate(Peer peer, CoinJoinStatusUpdate statusUpdate) {
+    private boolean processStatusUpdate(Peer peer, CoinJoinStatusUpdate statusUpdate) {
         if (mixingMasternode == null) {
             log.info(COINJOIN_EXTRA, "mixingMaster node is null, ignoring status update");
-            return;
+            return false;
         }
         if (!mixingMasternode.getService().getAddr().equals(peer.getAddress().getAddr()))
-            return;
+            return false;
 
         processPoolStateUpdate(peer, statusUpdate);
+        return true;
     }
 
-    private void processFinalTransaction(Peer peer, CoinJoinFinalTransaction finalTransaction) {
+    private boolean processFinalTransaction(Peer peer, CoinJoinFinalTransaction finalTransaction) {
         if (mixingMasternode == null)
-            return;
+            return false;
         if (!mixingMasternode.getService().getAddr().equals(peer.getAddress().getAddr()))
-            return;
+            return false;
 
         if (sessionID.get() != finalTransaction.getMsgSessionID()) {
             log.info("DSFINALTX: message doesn't match current CoinJoin session: #{}  msgSessionID: {}",
                     sessionID, finalTransaction.getMsgSessionID());
-            return;
+            return false;
         }
 
         log.info(COINJOIN_EXTRA, "DSFINALTX: txNew {}", finalTransaction.getTransaction()); /* Continued */
 
         // check to see if input is spent already? (and probably not confirmed)
         signFinalTransaction(finalTransaction.getTransaction(), peer);
+        return true;
     }
 
-    private void processComplete(Peer peer, CoinJoinComplete completeMessage) {
+    private boolean processComplete(Peer peer, CoinJoinComplete completeMessage) {
         if (mixingMasternode == null)
-            return;
+            return false;
         if (!mixingMasternode.getService().getAddr().equals(peer.getAddress().getAddr()))
-            return;
+            return false;
 
         if (completeMessage.getMsgMessageID().value < MSG_POOL_MIN.value || completeMessage.getMsgMessageID().value > MSG_POOL_MAX.value) {
             log.info("DSCOMPLETE: msg is out of bounds: {}", completeMessage.getMsgMessageID());
-            return;
+            return false;
         }
 
         if (sessionID.get() != completeMessage.getMsgSessionID()) {
             log.info("DSCOMPLETE: message doesn't match current CoinJoin session: #{}  msg: {} ({})",
                     sessionID.get(), completeMessage.getMsgSessionID(),
                     CoinJoin.getMessageByID(completeMessage.getMsgMessageID()));
-            return;
+            return false;
         }
 
         log.info("DSCOMPLETE: #{} msg {} ({})", completeMessage.getMsgSessionID(),
                 completeMessage.getMsgMessageID(), CoinJoin.getMessageByID(completeMessage.getMsgMessageID()));
 
         completedTransaction(completeMessage.getMsgMessageID());
+        return true;
     }
 
     public void unlockCoins() {

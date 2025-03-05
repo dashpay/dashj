@@ -16,6 +16,7 @@
 package org.bitcoinj.coinjoin.utils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinBroadcastTx;
@@ -64,6 +65,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -75,6 +77,7 @@ import static org.bitcoinj.utils.Threading.SAME_THREAD;
 public class CoinJoinManager {
 
     private static final Logger log = LoggerFactory.getLogger(CoinJoinManager.class);
+    private final ArrayList<WalletEx> wallets = Lists.newArrayList();
     private final Context context;
     public final HashMap<String, CoinJoinClientManager> coinJoinClientManagers;
     private final CoinJoinClientQueueManager coinJoinClientQueueManager;
@@ -89,6 +92,8 @@ public class CoinJoinManager {
     private RequestKeyParameter requestKeyParameter;
     private RequestDecryptedKey requestDecryptedKey;
     private final ScheduledExecutorService scheduledExecutorService;
+
+    private boolean finishCurrentSessions = false;
 
     public CoinJoinManager(Context context, ScheduledExecutorService scheduledExecutorService,
                            SimplifiedMasternodeListManager masternodeListManager,
@@ -115,20 +120,34 @@ public class CoinJoinManager {
         return coinJoinClientQueueManager;
     }
 
-    public void processMessage(Peer from, Message message) {
+    public Message processMessage(Peer from, Message message) {
         if (message instanceof CoinJoinQueue) {
             coinJoinClientQueueManager.processDSQueue(from, (CoinJoinQueue) message, false);
+            return null;
         } else if(message instanceof CoinJoinBroadcastTx) {
             processBroadcastTx((CoinJoinBroadcastTx) message);
+            return null;
         } else  {
-            for (CoinJoinClientManager clientManager : coinJoinClientManagers.values()) {
-                clientManager.processMessage(from, message, false);
-            }
+            forwardToClientManagers(from, message);
+        }
+        return message;
+    }
+
+    private void forwardToClientManagers(Peer from, Message message) {
+        for (CoinJoinClientManager clientManager : coinJoinClientManagers.values()) {
+            clientManager.processMessage(from, message, false);
         }
     }
 
     private void processBroadcastTx(CoinJoinBroadcastTx dstx) {
         CoinJoin.addDSTX(dstx);
+        wallets.forEach(wallet -> {
+            if (wallet.isTransactionRelevant(dstx.getTx())) {
+                log.info("dstx: {}", dstx.getTx());
+                // do we need dependencies?
+                wallet.receivePending(dstx.getTx(), Lists.newArrayList());
+            }
+        });
     }
 
     int tick = 0;
@@ -449,8 +468,7 @@ public class CoinJoinManager {
 
     public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
         if (isCoinJoinMessage(m)) {
-            processMessage(peer, m);
-            return null;
+            return processMessage(peer, m);
         }
         return m;
     };
