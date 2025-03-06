@@ -592,7 +592,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         // assertEquals(initialDenominatedBalance.subtract(mixingFee).subtract(mixed), wallet.getBalanceInfo().getDenominatedTrusted());
 
         // TODO: check wallet balance types here
-        assertTrue(clientManager.doAutomaticDenominating(true));
+        assertTrue(clientManager.doAutomaticDenominating(false, true));
 
         if (clientManager.isMixing()) {
             clientManager.stopMixing();

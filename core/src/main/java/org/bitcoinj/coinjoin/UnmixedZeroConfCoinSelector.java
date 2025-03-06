@@ -52,7 +52,6 @@ public class UnmixedZeroConfCoinSelector extends ZeroConfCoinSelector {
         if (tx != null) {
             for (TransactionOutput output : tx.getOutputs()) {
                 if (!output.isFullyMixed(wallet)) {
-                    TransactionConfidence confidence = tx.getConfidence();
                     return super.shouldSelect(tx);
                 }
             }

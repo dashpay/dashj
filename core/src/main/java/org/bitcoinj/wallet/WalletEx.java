@@ -1,9 +1,7 @@
 package org.bitcoinj.wallet;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.bitcoinj.coinjoin.CoinJoin;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinConstants;
@@ -182,7 +180,6 @@ public class WalletEx extends Wallet {
     /**
      * Creates a new keychain and activates it using the seed of the active key chain, if the path does not exist.
      */
-    @VisibleForTesting
     public void initializeCoinJoin(int account) {
         getCoinJoin().addKeyChain(getKeyChainSeed(), derivationPathFactory.coinJoinDerivationPath(account));
     }
@@ -292,21 +289,6 @@ public class WalletEx extends Wallet {
             }
 
             return tx.getOutput(index).getSpentBy() != null;
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    protected HashSet<TransactionOutPoint> lockedCoinsSet = Sets.newHashSet();
-    public boolean isLockedCoin(Sha256Hash hash, long index) {
-        TransactionOutPoint outPoint = new TransactionOutPoint(params, index, hash);
-        return isLockedCoin(outPoint);
-    }
-
-    public boolean isLockedCoin(TransactionOutPoint outPoint) {
-        lock.lock();
-        try {
-            return lockedCoinsSet.contains(outPoint);
         } finally {
             lock.unlock();
         }
@@ -534,7 +516,7 @@ public class WalletEx extends Wallet {
                 if (wtx.isCoinBase() && wtx.isMature())
                     continue;
 
-                TransactionConfidence confidence = wtx.getConfidence();
+                TransactionConfidence confidence = wtx.getConfidence(context);
                 if (skipUnconfirmed && !wtx.isTrusted(this))
                     continue;
 
@@ -555,7 +537,7 @@ public class WalletEx extends Wallet {
                     if (maxOutpointsPerAddress != -1 && itTallyItem != null && (long) (itTallyItem.inputCoins.size()) >= maxOutpointsPerAddress)
                         continue;
 
-                    if (isSpent(outpoint.getParentTransactionHash(), i) || isLockedCoin(outpoint.getParentTransactionHash(), i))
+                    if (isSpent(outpoint.getParentTransactionHash(), i) || isLockedOutput(outpoint.getParentTransactionHash(), i))
                         continue;
 
                     if (skipDenominated && CoinJoin.isDenominatedAmount(wtx.getOutput(i).getValue()))
@@ -627,7 +609,7 @@ public class WalletEx extends Wallet {
     public int countInputsWithAmount(Coin inputValue) {
         int count = 0;
         for (TransactionOutput output : myUnspents) {
-            TransactionConfidence confidence = output.getParentTransaction().getConfidence();
+            TransactionConfidence confidence = output.getParentTransaction().getConfidence(context);
             // confirmations must be 0 or higher, not conflicted or dead
             if (confidence != null && (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING || confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)) {
                 // inputValue must match, the TX is mine and is not spent
@@ -640,15 +622,17 @@ public class WalletEx extends Wallet {
     }
 
     /** locks an unspent outpoint so that it cannot be spent */
-    public boolean lockCoin(TransactionOutPoint outPoint) {
-        boolean added = lockedCoinsSet.add(outPoint);
+    @Override
+    public boolean lockOutput(TransactionOutPoint outPoint) {
+        boolean added = super.lockOutput(outPoint);
         clearAnonymizableCaches();
         return added;
     }
 
     /** unlocks an outpoint so that it cannot be spent */
-    public void unlockCoin(TransactionOutPoint outPoint) {
-        lockedCoinsSet.remove(outPoint);
+    @Override
+    public void unlockOutput(TransactionOutPoint outPoint) {
+        super.unlockOutput(outPoint);
         clearAnonymizableCaches();
     }
 
@@ -767,7 +751,7 @@ public class WalletEx extends Wallet {
                     continue;
                 }
 
-                int depth = coin.getConfidence().getDepthInBlocks();
+                int depth = coin.getConfidence(context).getDepthInBlocks();
                 if (depth < minDepth || depth > maxDepth)
                     continue;
 
@@ -802,7 +786,7 @@ public class WalletEx extends Wallet {
                             && !coinControl.isSelected(new TransactionOutPoint(params, i, wtxid)))
                         continue;
 
-                    if (isLockedCoin(wtxid, i) && nCoinType != CoinType.ONLY_MASTERNODE_COLLATERAL)
+                    if (isLockedOutput(wtxid, i) && nCoinType != CoinType.ONLY_MASTERNODE_COLLATERAL)
                         continue;
 
                     if (isSpent(wtxid, i))

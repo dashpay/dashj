@@ -248,7 +248,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                             if (txBuilder.couldAddOutput(denomValue)) {
                                 if (addFinal.get() && balanceToDenominate.isPositive() && balanceToDenominate.isLessThan(denomValue)) {
                                     addFinal.set(false); // add final denom only once, only the smalest possible one
-                                    log.info("coinjoin: 1 - FINAL - denomValue: {}, balanceToDenominate: {}, outputs: {}, {}",
+                                    log.info("coinjoin: 1 - FINAL - {}, toDenominate: {}, outputs: {}, {}",
                                             denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), outputs, txBuilder);
                                     return true;
                                 } else if (balanceToDenominate.isGreaterThanOrEqualTo(denomValue)) {
@@ -266,10 +266,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                             ++nOutputs;
                             mapDenomCount.put(denomValue, ++currentDenomIt);
                             balanceToDenominate = balanceToDenominate.subtract(denomValue);
-                            log.info("coinjoin: 1 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
+                            log.info("coinjoin: 1 - {}, toDenominate: {}, outputs: {}, {}",
                                     denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
                         } else {
-                            log.info("coinjoin: 1 - Error: AddOutput failed for denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
+                            log.info("coinjoin: 1 - Error: AddOutput failed for {}, toDenominate: {}, outputs: {}, {}",
                                     denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
                             return false;
                         }
@@ -288,11 +288,11 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     if (count < CoinJoinClientOptions.getDenomsGoal() && txBuilder.couldAddOutput(denom) &&
                             balanceToDenominate.isGreaterThan(CoinJoin.getSmallestDenomination())) {
                         finished = false;
-                        log.info("coinjoin: 1 - NOT finished - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
+                        log.info("coinjoin: 1 - NOT finished - denomValue: {}, count: {}, toDenominate: {}, {}",
                                 entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
                         break;
                     }
-                    log.info("coinjoin: 1 - FINISHED - denomValue: {}, count: {}, balanceToDenominate: {}, {}",
+                    log.info("coinjoin: 1 - FINISHED - {}, count: {}, toDenominate: {}, {}",
                             entry.getKey().toFriendlyString(), entry.getValue(), balanceToDenominate.toFriendlyString(), txBuilder);
                 }
 
@@ -340,7 +340,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     int denomsToCreateBal = (int) (balanceToDenominate.value / denomValue.value + 1);
                     // Use the smaller value
                     int denomsToCreate = Math.min(denomsToCreateValue, denomsToCreateBal);
-                    log.info("coinjoin: 2 - balanceToDenominate: {}, denomValue: {}, denomsToCreateValue: {}, denomsToCreateBal: {}",
+                    log.info("coinjoin: 2 - toDenominate: {}, {}, denomsToCreateValue: {}, denomsToCreateBal: {}",
                             balanceToDenominate.toFriendlyString(), denomValue.toFriendlyString(), denomsToCreateValue, denomsToCreateBal);
                     Integer it = mapDenomCount.get(denomValue);
                     for (int i = 0; i < denomsToCreate; ++i) {
@@ -356,7 +356,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                             log.info("coinjoin: 2 - Error: AddOutput failed at {}/{}, {}", i + 1, denomsToCreate, txBuilder);
                             break;
                         }
-                        log.info("coinjoin: 2 - denomValue: {}, balanceToDenominate: {}, nOutputs: {}, {}",
+                        log.info("coinjoin: 2 - {}, toDenominate: {}, nOutputs: {}, {}",
                                 denomValue.toFriendlyString(), balanceToDenominate.toFriendlyString(), nOutputs, txBuilder);
                         if (txBuilder.countOutputs() >= COINJOIN_DENOM_OUTPUTS_THRESHOLD) break;
                     }
@@ -364,10 +364,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 }
             }
 
-            log.info("coinjoin: 3 - balanceToDenominate: {}, {}", balanceToDenominate.toFriendlyString(), txBuilder);
+            log.info("coinjoin: 3 - toDenominate: {}, {}", balanceToDenominate.toFriendlyString(), txBuilder);
 
             for (Map.Entry<Coin, Integer> it : mapDenomCount.entrySet()) {
-                log.info("coinjoin: 3 - DONE - denomValue: {}, count: {}", it.getKey().toFriendlyString(), it.getValue());
+                log.info("coinjoin: 3 - DONE - {}, count: {}", it.getKey().toFriendlyString(), it.getValue());
             }
 
             // No reasons to create mixing collaterals if we can't create denoms to mix
@@ -606,7 +606,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
             // Try to match their denominations if possible, select exact number of denominations
             if (!mixingWallet.selectTxDSInsByDenomination(dsq.getDenomination(), balanceNeedsAnonymized, vecTxDSInTmp)) {
-                log.info("coinjoin: couldn't match denomination {} ({})", dsq.getDenomination(), CoinJoin.denominationToString(dsq.getDenomination()));
+                log.info("coinjoin: couldn't match denom {} ({})", dsq.getDenomination(), CoinJoin.denominationToString(dsq.getDenomination()));
                 continue;
             }
 
@@ -623,7 +623,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             coinJoinManager.addPendingMasternode(this);
             setState(POOL_STATE_QUEUE);
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
-            log.info("coinjoin: join existing queue -> pending connection, denom: {} ({}), addr={}",
+            log.info("coinjoin: join existing queue -> pending connection, {} ({}), addr={}",
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
             setStatus(PoolStatus.CONNECTING);
             joined = true;
@@ -669,7 +669,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             long nDsqThreshold = masternodeMetaDataManager.getDsqThreshold(dmn.getProTxHash(), nMnCount);
             if (nLastDsq != 0 && nDsqThreshold > masternodeMetaDataManager.getDsqCount()) {
                 log.info("coinjoin: warning: Too early to mix on this masternode!" + /* Continued */
-                        " masternode={}  addr={}  nLastDsq={}  nDsqThreshold={}  nDsqCount={}",
+                        " masternode={} addr={} lastDsq={}  dsqThreshold={}  nDsqCount={}",
                         dmn.getProTxHash(), dmn.getService(), nLastDsq,
                         nDsqThreshold, masternodeMetaDataManager.getDsqCount());
                 nTries++;
@@ -789,7 +789,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         for (Pair<CoinJoinTransactionInput, TransactionOutput> pair : vecPSInOutPairsRet) {
-            mixingWallet.lockCoin(pair.getFirst().getOutpoint());
+            mixingWallet.lockOutput(pair.getFirst().getOutpoint());
             outPointLocked.add(pair.getFirst().getOutpoint());
         }
 
@@ -833,7 +833,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             tx.addOutput(pair.getSecond());
         }
 
-        log.info(COINJOIN_EXTRA, "coinjoin:  Submitting partial tx {} to session {}", tx, sessionID.get()); /* Continued */
+        log.info(COINJOIN_EXTRA, "coinjoin:  Submitting partial tx {} to #{}", tx, sessionID.get()); /* Continued */
 
         // store our entry for later use
         lock.lock();
@@ -912,7 +912,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                     strMessageTmp = strMessageTmp + " Set SID to " + sessionID.get();
                     queueSessionStartedListeners(MSG_SUCCESS);
                 }
-                log.info("coinjoin session: accepted by Masternode: {}", strMessageTmp);
+                log.info("coinjoin session: accepted by MN: {}", strMessageTmp);
                 break;
             }
             default: {
@@ -1003,7 +1003,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             // Make sure all inputs/outputs are valid
             ValidInOuts validResult = isValidInOuts(finalMutableTransaction.getInputs(), finalMutableTransaction.getOutputs());
             if (!validResult.result) {
-                log.info("coinjoin:  ERROR! IsValidInOuts() failed: {}", CoinJoin.getMessageByID(validResult.messageId));
+                log.info("coinjoin:  ERROR! isValidInOuts() failed: {}", CoinJoin.getMessageByID(validResult.messageId));
                 unlockCoins();
                 keyHolderStorage.returnAll();
                 setNull();
@@ -1133,67 +1133,71 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         this.id = nextId++;
     }
 
-    public void processMessage(Peer peer, Message message, boolean enable_bip61) {
+    public boolean processMessage(Peer peer, Message message, boolean enable_bip61) {
         if (message instanceof CoinJoinStatusUpdate) {
-            processStatusUpdate(peer, (CoinJoinStatusUpdate) message);
+            return processStatusUpdate(peer, (CoinJoinStatusUpdate) message);
         } else if (message instanceof CoinJoinFinalTransaction) {
-            processFinalTransaction(peer, (CoinJoinFinalTransaction) message);
+            return processFinalTransaction(peer, (CoinJoinFinalTransaction) message);
         } else if (message instanceof CoinJoinComplete) {
-            processComplete(peer, (CoinJoinComplete) message);
+            return processComplete(peer, (CoinJoinComplete) message);
         }
+        return false;
     }
 
-    private void processStatusUpdate(Peer peer, CoinJoinStatusUpdate statusUpdate) {
+    private boolean processStatusUpdate(Peer peer, CoinJoinStatusUpdate statusUpdate) {
         if (mixingMasternode == null) {
             log.info(COINJOIN_EXTRA, "mixingMaster node is null, ignoring status update");
-            return;
+            return false;
         }
         if (!mixingMasternode.getService().getAddr().equals(peer.getAddress().getAddr()))
-            return;
+            return false;
 
         processPoolStateUpdate(peer, statusUpdate);
+        return true;
     }
 
-    private void processFinalTransaction(Peer peer, CoinJoinFinalTransaction finalTransaction) {
+    private boolean processFinalTransaction(Peer peer, CoinJoinFinalTransaction finalTransaction) {
         if (mixingMasternode == null)
-            return;
+            return false;
         if (!mixingMasternode.getService().getAddr().equals(peer.getAddress().getAddr()))
-            return;
+            return false;
 
         if (sessionID.get() != finalTransaction.getMsgSessionID()) {
-            log.info("DSFINALTX: message doesn't match current CoinJoin session: sessionID: {}  msgSessionID: {}",
+            log.info("DSFINALTX: message doesn't match current CoinJoin session: #{}  msgSessionID: {}",
                     sessionID, finalTransaction.getMsgSessionID());
-            return;
+            return false;
         }
 
         log.info(COINJOIN_EXTRA, "DSFINALTX: txNew {}", finalTransaction.getTransaction()); /* Continued */
 
         // check to see if input is spent already? (and probably not confirmed)
         signFinalTransaction(finalTransaction.getTransaction(), peer);
+        return true;
     }
 
-    private void processComplete(Peer peer, CoinJoinComplete completeMessage) {
+    private boolean processComplete(Peer peer, CoinJoinComplete completeMessage) {
         if (mixingMasternode == null)
-            return;
+            return false;
         if (!mixingMasternode.getService().getAddr().equals(peer.getAddress().getAddr()))
-            return;
+            return false;
 
         if (completeMessage.getMsgMessageID().value < MSG_POOL_MIN.value || completeMessage.getMsgMessageID().value > MSG_POOL_MAX.value) {
-            log.info("DSCOMPLETE: msgID is out of bounds: {}", completeMessage.getMsgMessageID());
-            return;
+            log.info("DSCOMPLETE: msg is out of bounds: {}", completeMessage.getMsgMessageID());
+            return false;
         }
 
         if (sessionID.get() != completeMessage.getMsgSessionID()) {
-            log.info("DSCOMPLETE: message doesn't match current CoinJoin session: SID: {}  msgID: {}  ({})",
+            log.info("DSCOMPLETE: message doesn't match current CoinJoin session: #{}  msg: {} ({})",
                     sessionID.get(), completeMessage.getMsgSessionID(),
                     CoinJoin.getMessageByID(completeMessage.getMsgMessageID()));
-            return;
+            return false;
         }
 
-        log.info("DSCOMPLETE: msgSID {}  msg {} ({})", completeMessage.getMsgSessionID(),
+        log.info("DSCOMPLETE: #{} msg {} ({})", completeMessage.getMsgSessionID(),
                 completeMessage.getMsgMessageID(), CoinJoin.getMessageByID(completeMessage.getMsgMessageID()));
 
         completedTransaction(completeMessage.getMsgMessageID());
+        return true;
     }
 
     public void unlockCoins() {
@@ -1203,7 +1207,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         // TODO: should we wait here? check Dash Core code
 
         for (TransactionOutPoint outpoint : outPointLocked)
-            mixingWallet.unlockCoin(outpoint);
+            mixingWallet.unlockOutput(outpoint);
 
         outPointLocked.clear();
     }
@@ -1260,10 +1264,10 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     }
 
     /// Passively run mixing in the background according to the configuration in settings
-    public boolean doAutomaticDenominating() {
-        return doAutomaticDenominating(false);
+    public boolean doAutomaticDenominating(boolean finishCurrentSession) {
+        return doAutomaticDenominating(finishCurrentSession,false);
     }
-    public boolean doAutomaticDenominating(boolean fDryRun) {
+    public boolean doAutomaticDenominating(boolean finishCurrentSession, boolean fDryRun) {
         if (state.get() != POOL_STATE_IDLE) return false;
 
         if (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_GOVERNANCE) && !masternodeSync.isBlockchainSynced()) {
@@ -1292,12 +1296,18 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             return false;
         }
         try {
+            if (finishCurrentSession) {
+                log.info("coinjoin: finish this session {}", fDryRun);
+                // nothing to do, just keep it in idle mode
+                if (!fDryRun) {
+                    setStatus(PoolStatus.FINISHED);
+                }
+                return false;
+            }
             if (!fDryRun && masternodeListManager.getListAtChainTip().getValidMNsCount() == 0 &&
                     !mixingWallet.getContext().getParams().getId().equals(NetworkParameters.ID_REGTEST)) {
                 strAutoDenomResult = "No Masternodes detected.";
                 log.info("coinjoin: {}", strAutoDenomResult);
-                //status.set(PoolStatus.ERR_NO_MASTERNODES_DETECTED);
-                //hasNothingToDo.set(true);
                 setStatus(PoolStatus.ERR_NO_MASTERNODES_DETECTED);
                 queueSessionCompleteListeners(getState(), ERR_SESSION);
                 return false;
@@ -1312,8 +1322,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             if (balanceNeedsAnonymized.isLessThanOrEqualTo(Coin.ZERO)) {
                 log.info("coinjoin: Nothing to do {}", fDryRun);
                 // nothing to do, just keep it in idle mode
-                //status.set(PoolStatus.FINISHED);
-                //hasNothingToDo.set(true);
                 if (!fDryRun) {
                     setStatus(PoolStatus.FINISHED);
                 }
@@ -1405,7 +1413,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
 
             if (fDryRun) {
-                log.info("coinjoin: create denominations {}, {}", lastCreateDenominatedResult, fDryRun);
+                log.info("coinjoin: create denominations {}, dryRun={}", lastCreateDenominatedResult, fDryRun);
                 return lastCreateDenominatedResult;
             }
 
@@ -1454,7 +1462,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             }
             // lock the funds we're going to use for our collateral
             for (TransactionInput txin :txMyCollateral.getInputs()){
-                mixingWallet.lockCoin(txin.getOutpoint());
+                mixingWallet.lockOutput(txin.getOutpoint());
                 outPointLocked.add(txin.getOutpoint());
             }
         } finally {
@@ -1608,15 +1616,15 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
     @Override
     public String toString() {
-        return "CoinJoinClientSession{id=" + id +
+        return "ClientSession{id=" + id +
                 ", mixer=" + (mixingMasternode != null ? mixingMasternode.getService().getSocketAddress() : "none") +
                 ", joined=" + joined +
                 ", msg='" + strLastMessage + '\'' +
                 ", dsa=" + pendingDsaRequest +
                 ", entries=" + entries.size() +
                 ", state=" + state +
-                ", SID=" + sessionID +
-                ", denom=" + CoinJoin.denominationToString(sessionDenom) + "[" + sessionDenom + "]" +
+                ", #" + sessionID +
+                ", " + CoinJoin.denominationToString(sessionDenom) + "[" + sessionDenom + "]" +
                 '}';
     }
 

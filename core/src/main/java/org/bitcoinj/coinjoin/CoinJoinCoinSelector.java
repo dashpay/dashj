@@ -14,31 +14,29 @@
 
 package org.bitcoinj.coinjoin;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.wallet.CoinSelection;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
 
 import java.util.ArrayList;
 import java.util.List;
+import static com.google.common.base.Preconditions.checkArgument;
 
 public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
-    private final Wallet wallet;
+    private final TransactionBag transactionBag;
     private boolean onlyConfirmed;
 
-    public CoinJoinCoinSelector(Wallet wallet) {
-        super();
-        this.wallet = wallet;
-        this.onlyConfirmed = false;
+    public CoinJoinCoinSelector(TransactionBag transactionBag) {
+        this(transactionBag, false);
     }
-    public CoinJoinCoinSelector(Wallet wallet, boolean onlyConfirmed) {
-        this(wallet);
+    public CoinJoinCoinSelector(TransactionBag transactionBag, boolean onlyConfirmed) {
+        checkArgument(transactionBag != null, "transactionBag cannot be null");
+        this.transactionBag = transactionBag;
         this.onlyConfirmed = onlyConfirmed;
     }
 
@@ -62,7 +60,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                 break;
             // don't bother with shouldSelect, since we have to check all the outputs
             // with isCoinJoin anyways.
-            if (output.isCoinJoin(wallet) && !isLockedCoin(output)) {
+            if (output.isCoinJoin(transactionBag) && !transactionBag.isLockedOutput(output.getOutPointFor())) {
                 selected.add(output);
                 total += output.getValue().value;
             }
@@ -70,15 +68,11 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
         return new CoinSelection(Coin.valueOf(total), selected);
     }
 
-    private boolean isLockedCoin(TransactionOutput output) {
-        return wallet instanceof WalletEx && ((WalletEx) wallet).isLockedCoin(output.getOutPointFor());
-    }
-
     @Override
     protected boolean shouldSelect(Transaction tx) {
         if (tx != null) {
             for (TransactionOutput output : tx.getOutputs()) {
-                if (output.isCoinJoin(wallet)) {
+                if (output.isCoinJoin(transactionBag)) {
                     TransactionConfidence confidence = tx.getConfidence();
                     if (onlyConfirmed)
                         return confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING;

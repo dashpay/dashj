@@ -3624,4 +3624,16 @@ public class WalletTest extends TestWithWallet {
         Transaction tx = wallet.getWalletTransactions().iterator().next().getTransaction();
         assertFalse(wallet.isFullyMixed(tx.getOutput(0)));
     }
+
+    @Test
+    public void lockedOutputsTest() throws Exception {
+        Transaction firstTx = sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, COIN, wallet.currentReceiveAddress());
+        Transaction secondTx = sendMoneyToWallet(wallet, AbstractBlockChain.NewBlockType.BEST_CHAIN, COIN, wallet.currentReceiveAddress());
+        TransactionOutPoint firstTxLockedOutPoint = firstTx.getOutputs().stream().filter(output -> output.isMine(wallet)).findFirst().get().getOutPointFor();
+        wallet.lockOutput(firstTxLockedOutPoint);
+        SendRequest req = SendRequest.emptyWallet(wallet.freshAddress(KeyPurpose.RECEIVE_FUNDS));
+        wallet.completeTx(req);
+        assertTrue(req.tx.getInputs().stream().noneMatch(input -> input.getOutpoint().equals(firstTxLockedOutPoint)));
+        assertEquals(req.tx.getInputs().get(0).getConnectedTransaction(), secondTx);
+    }
 }
