@@ -221,6 +221,10 @@ public class CoinJoinReporter extends MixingProgressTracker {
                 PoolState state = sessionState.get(sessionId);
                 writer.write("Fee Charged on session: " + sessionId +  " state: " + state + " txid:" + tx.getTxId());
                 writer.newLine();
+            } else if (type == CoinJoinTransactionType.CombineDust) {
+                writeTime();
+                writer.write("Combining Dust: " + tx.getTxId());
+                writer.newLine();
             }
         } catch (IOException x) {
             throw new RuntimeException(x);

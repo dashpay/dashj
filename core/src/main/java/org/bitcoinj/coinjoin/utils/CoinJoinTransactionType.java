@@ -21,12 +21,14 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.script.ScriptPattern;
 
 public enum CoinJoinTransactionType {
     None,
     CreateDenomination,
     MakeCollateralInputs,
+    CombineDust,
     MixingFee,
     Mixing,
     Send;
@@ -47,23 +49,42 @@ public enum CoinJoinTransactionType {
                         // <case2>, see CCoinJoinClientSession.makeCollateralAmounts
                         (nAmount0 == nAmount1 && CoinJoin.isCollateralAmount(nAmount0));
             } else if (tx.getOutputs().size() == 1) {
-                // <case3>, see CCoinJoinClientSession.makeCollateralAmounts
-                makeCollateral = CoinJoin.isCollateralAmount(tx.getOutput(0).getValue());
+                TransactionOutput firstOutput = tx.getOutput(0);
+
+                if (CoinJoin.isCollateralAmount(firstOutput.getValue())) {
+                    // <case3>, see CCoinJoinClientSession.makeCollateralAmounts
+                    makeCollateral = true;
+                } else if (tx.getInputs().size() > 1 && tx.getValue(transactionBag).plus(tx.getFee()).equals(Coin.ZERO)) {
+                    // No good way to check if this is a dust output
+                    // except to check if the spending tx is a denomination
+                    Transaction spendingTx = firstOutput.getSpentBy() != null ? 
+                                firstOutput.getSpentBy().getParentTransaction() : null;
+
+                    if (spendingTx != null && isDenomination(spendingTx)) {
+                        return CombineDust;
+                    }
+                }
             }
             if (makeCollateral) {
                 return MakeCollateralInputs;
-            } else {
-                for (TransactionOutput output : tx.getOutputs()) {
-                    if (CoinJoin.isDenominatedAmount(output.getValue())) {
-                        return CreateDenomination; // Done, it's definitely a tx creating mixing denoms, no need to look any further
-                    }
-                }
+            } else if (isDenomination(tx)) {
+                return CreateDenomination;
             }
         }
         // is this a coinjoin send transaction
         if (isCoinJoinSend(tx))
             return Send;
         return None;
+    }
+    
+    private static boolean isDenomination(Transaction tx) {
+        for (TransactionOutput output : tx.getOutputs()) {
+            if (CoinJoin.isDenominatedAmount(output.getValue())) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     /**

@@ -75,6 +75,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -165,7 +166,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         }
 
         // If that fails, try to combine smaller outputs to create larger denominations
-        if (combineOutputs(balanceToDenominate, vecTally, mapDenomCount, dryRun)) {
+        if (combineOutputs(vecTally, mapDenomCount, dryRun)) {
             return true;
         }
 
@@ -177,13 +178,19 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
      * Combines smaller outputs to create larger denominations when needed.
      * This is useful when we have enough total funds but no single output is large enough.
      */
-    private boolean combineOutputs(Coin balanceToDenominate, List<CompactTallyItem> vecTally, HashMap<Coin, Integer> mapDenomCount, boolean dryRun) {
+    private boolean combineOutputs(List<CompactTallyItem> vecTally, HashMap<Coin, Integer> mapDenomCount, boolean dryRun) {
         if (!CoinJoinClientOptions.isEnabled() || vecTally.isEmpty()) return false;
 
         Coin totalAvailable = Coin.ZERO;
+        Set<TransactionOutPoint> uniqueInputs = new HashSet<>();
+
         for (CompactTallyItem item : vecTally) {
             totalAvailable = totalAvailable.add(item.amount);
+            for (InputCoin inputCoin : item.inputCoins) {
+                uniqueInputs.add(inputCoin.getOutPoint());
+            }
         }
+        int totalInputs = uniqueInputs.size();
 
         // Check if we have denominations that aren't reached hardcap and are less than balanceToDenominate
         boolean canCreateMoreDenoms = false;
@@ -191,14 +198,15 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             Coin denom = entry.getKey();
             Integer count = entry.getValue();
 
-            if (denom.isLessThanOrEqualTo(balanceToDenominate) &&
+            if (denom.isLessThanOrEqualTo(totalAvailable) &&
                     count < CoinJoinClientOptions.getDenomsHardCap()) {
                 canCreateMoreDenoms = true;
                 break;
             }
         }
 
-        if (!canCreateMoreDenoms) {
+        if (!canCreateMoreDenoms || totalInputs < 2) {
+            log.info("coinjoin: cannot combine - cannot create more denoms");
             return false;
         }
 
@@ -226,10 +234,11 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
         try {
             mixingWallet.sendCoins(req);
-            log.info("Success in combining outputs");
+            log.info("coinjoin: successfully combined outputs");
+            queueTransactionListeners(req.tx, CoinJoinTransactionType.CombineDust);
             return true;
         } catch (InsufficientMoneyException e) {
-            log.error("Failed to combine outputs: {}", e.getMessage());
+            log.error("coinjoin: failed to combine outputs: {}", e.getMessage());
             return false;
         }
     }
