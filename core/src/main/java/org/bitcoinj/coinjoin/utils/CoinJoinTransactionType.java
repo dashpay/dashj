@@ -54,14 +54,18 @@ public enum CoinJoinTransactionType {
                 if (CoinJoin.isCollateralAmount(firstOutput.getValue())) {
                     // <case3>, see CCoinJoinClientSession.makeCollateralAmounts
                     makeCollateral = true;
-                } else if (tx.getInputs().size() > 1 && tx.getValue(transactionBag).plus(tx.getFee()).equals(Coin.ZERO)) {
-                    // No good way to check if this is a dust output
-                    // except to check if the spending tx is a denomination
-                    Transaction spendingTx = firstOutput.getSpentBy() != null ? 
+                } else {
+                    Coin txFee = tx.getFee();
+
+                    if (txFee != null && tx.getInputs().size() > 1 && tx.getValue(transactionBag).plus(txFee).equals(Coin.ZERO)) {
+                        // No good way to check if this is a dust output
+                        // except to check if the spending tx is a denomination
+                        Transaction spendingTx = firstOutput.getSpentBy() != null ?
                                 firstOutput.getSpentBy().getParentTransaction() : null;
 
-                    if (spendingTx != null && isDenomination(spendingTx)) {
-                        return CombineDust;
+                        if (spendingTx != null && isDenomination(spendingTx)) {
+                            return CombineDust;
+                        }
                     }
                 }
             }
