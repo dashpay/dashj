@@ -22,6 +22,7 @@ import org.bitcoinj.coinjoin.listeners.SessionStartedListener;
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.coinjoin.utils.CompactTallyItem;
+import org.bitcoinj.coinjoin.utils.InputCoin;
 import org.bitcoinj.coinjoin.utils.KeyHolderStorage;
 import org.bitcoinj.coinjoin.utils.MasternodeGroup;
 import org.bitcoinj.coinjoin.utils.ReserveDestination;
@@ -29,6 +30,7 @@ import org.bitcoinj.coinjoin.utils.TransactionBuilder;
 import org.bitcoinj.coinjoin.utils.TransactionBuilderOutput;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.MasternodeSync;
@@ -57,6 +59,7 @@ import org.bitcoinj.utils.Pair;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Balance;
 import org.bitcoinj.wallet.CoinControl;
+import org.bitcoinj.wallet.KeyChain;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.WalletEx;
 import org.slf4j.Logger;
@@ -72,6 +75,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -154,14 +158,89 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         });
 
         boolean fCreateMixingCollaterals = !mixingWallet.hasCollateralInputs();
+        HashMap<Coin, Integer> mapDenomCount = new HashMap<>();
 
         for (CompactTallyItem item : vecTally) {
-            if (!createDenominated(balanceToDenominate, item, fCreateMixingCollaterals, dryRun)) continue;
+            if (!createDenominated(balanceToDenominate, item, mapDenomCount, fCreateMixingCollaterals, dryRun)) continue;
+            return true;
+        }
+
+        // If that fails, try to combine smaller outputs to create larger denominations
+        if (combineOutputs(vecTally, mapDenomCount, dryRun)) {
             return true;
         }
 
         log.info("coinjoin: createDenominated({}) failed! ", balanceToDenominate.toFriendlyString());
         return false;
+    }
+
+    /**
+     * Combines smaller outputs to create larger denominations when needed.
+     * This is useful when we have enough total funds but no single output is large enough.
+     */
+    private boolean combineOutputs(List<CompactTallyItem> vecTally, HashMap<Coin, Integer> mapDenomCount, boolean dryRun) {
+        if (!CoinJoinClientOptions.isEnabled() || vecTally.isEmpty()) return false;
+
+        Coin totalAvailable = Coin.ZERO;
+        Set<TransactionOutPoint> uniqueInputs = new HashSet<>();
+
+        for (CompactTallyItem item : vecTally) {
+            totalAvailable = totalAvailable.add(item.amount);
+            for (InputCoin inputCoin : item.inputCoins) {
+                uniqueInputs.add(inputCoin.getOutPoint());
+            }
+        }
+        int totalInputs = uniqueInputs.size();
+
+        // Check if we have denominations that aren't reached hardcap and are less than balanceToDenominate
+        boolean canCreateMoreDenoms = false;
+        for (Map.Entry<Coin, Integer> entry : mapDenomCount.entrySet()) {
+            Coin denom = entry.getKey();
+            Integer count = entry.getValue();
+
+            if (denom.isLessThanOrEqualTo(totalAvailable) &&
+                    count < CoinJoinClientOptions.getDenomsHardCap()) {
+                canCreateMoreDenoms = true;
+                break;
+            }
+        }
+
+        if (!canCreateMoreDenoms || totalInputs < 2) {
+            log.info("coinjoin: cannot combine - cannot create more denoms");
+            return false;
+        }
+
+        log.info("coinjoin: combining smaller outputs");
+        Transaction tx = new Transaction(mixingWallet.getParams());
+        tx.addOutput(Coin.ZERO, mixingWallet.freshAddress(KeyChain.KeyPurpose.CHANGE));
+        SendRequest req = SendRequest.forTx(tx);
+        CoinControl coinControl = new CoinControl();
+
+        for (CompactTallyItem tallyItem : vecTally) {
+            for (InputCoin inputCoin : tallyItem.inputCoins) {
+                coinControl.select(inputCoin.getOutPoint());
+            }
+        }
+
+        coinControl.setAllowOtherInputs(false);
+        coinControl.setRequireAllInputs(true);
+        req.coinControl = coinControl;
+        req.emptyWallet = true;
+        req.aesKey = coinJoinManager.requestKeyParameter(mixingWallet);
+
+        if (dryRun) {
+            return true;
+        }
+
+        try {
+            mixingWallet.sendCoins(req);
+            log.info("coinjoin: successfully combined outputs");
+            queueTransactionListeners(req.tx, CoinJoinTransactionType.CombineDust);
+            return true;
+        } catch (InsufficientMoneyException e) {
+            log.error("coinjoin: failed to combine outputs: {}", e.getMessage());
+            return false;
+        }
     }
 
     public void processTransaction(Transaction tx) {
@@ -195,7 +274,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         int process(Coin amount);
     }
 
-    private boolean createDenominated(Coin balanceToDenominate, CompactTallyItem tallyItem, boolean fCreateMixingCollaterals, boolean dryRun) {
+    private boolean createDenominated(Coin balanceToDenominate, CompactTallyItem tallyItem, HashMap<Coin, Integer> mapDenomCount, boolean fCreateMixingCollaterals, boolean dryRun) {
 
         if (!CoinJoinClientOptions.isEnabled())
             return false;
@@ -220,7 +299,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             final Result<Boolean> addFinal = new Result<>(true);
             List<Coin> denoms = CoinJoinClientOptions.getDenominations();
 
-            HashMap<Coin, Integer> mapDenomCount = new HashMap<>();
+            // Initialize the denomination count map
             for (Coin denomValue : denoms) {
                 mapDenomCount.put(denomValue, mixingWallet.countInputsWithAmount(denomValue));
             }
