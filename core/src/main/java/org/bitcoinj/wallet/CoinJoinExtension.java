@@ -442,6 +442,8 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
 
     public void refreshUnusedKeys() {
         List<IDeterministicKey> issuedKeys;
+        Set<Transaction> txes = wallet.getTransactions(true);
+        
         unusedKeysLock.lock();
         try {
             keyChainGroupLock.lock();
@@ -456,8 +458,6 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), (DeterministicKey) key);
                 keyUsage.put(key, false);
             });
-
-            Set<Transaction> txes = wallet.getTransactions(true);
 
             Stream<IDeterministicKey> usedKeys = issuedKeys.stream().filter(key -> {
                         boolean found = txes.stream().anyMatch(tx ->
@@ -491,6 +491,8 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     public String getUnusedKeyReport() {
         List<IDeterministicKey> issuedKeys;
         HashMap<ImmutableList<ChildNumber>, IDeterministicKey> unusedKeyMap = Maps.newHashMap();
+        Set<Transaction> txes = wallet.getTransactions(true);
+        
         unusedKeysLock.lock();
         try {
             keyChainGroupLock.lock();
@@ -503,8 +505,6 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             }
 
             issuedKeys.forEach(key -> unusedKeyMap.put(key.getPath(), key));
-
-            Set<Transaction> txes = wallet.getTransactions(true);
 
             Stream<IDeterministicKey> usedKeys = issuedKeys.stream().filter(key ->
                     txes.stream().anyMatch(tx ->
@@ -566,6 +566,8 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     public String getKeyUsageReport() {
         List<IDeterministicKey> issuedKeys;
         HashMap<DeterministicKey, Integer> usedKeyMap = Maps.newHashMap();
+        Set<Transaction> txes = wallet.getTransactions(true);
+        
         unusedKeysLock.lock();
         try {
             keyChainGroupLock.lock();
@@ -576,8 +578,6 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             } finally {
                 keyChainGroupLock.unlock();
             }
-
-            Set<Transaction> txes = wallet.getTransactions(true);
 
             issuedKeys.forEach(key -> txes.forEach(tx -> {
                 Stream<TransactionOutput> keyUsage = tx.getOutputs().stream().filter(output -> {
@@ -592,7 +592,6 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                     usedKeyMap.put((DeterministicKey) key, currentCount == null ? 1 : currentCount + 1);
                 }
             }));
-
 
             StringBuilder builder = new StringBuilder();
             builder.append("Duplicate Used Key List: \n");
