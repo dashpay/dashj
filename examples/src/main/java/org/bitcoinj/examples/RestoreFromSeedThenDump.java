@@ -29,6 +29,7 @@ import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 
 import java.io.File;
@@ -84,12 +85,13 @@ public class RestoreFromSeedThenDump {
                 .build();
 
         // The wallet class provides a easy fromSeed() function that loads a new wallet from a given seed.
-        Wallet wallet = new Wallet(params, keyChainGroup);
+        WalletEx wallet = new WalletEx(params, keyChainGroup);
         AuthenticationGroupExtension mnext = new AuthenticationGroupExtension(wallet);
         mnext.addKeyChain(seed, factory.masternodeOwnerDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
         mnext.addKeyChain(seed, factory.masternodeVotingDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
         mnext.addKeyChain(seed, factory.masternodeOperatorDerivationPath(), AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
         wallet.addExtension(mnext);
+        wallet.initializeCoinJoin(0);
 
         // Because we are importing an existing wallet which might already have transactions we must re-download the blockchain to make the wallet picks up these transactions
         // You can find some information about this in the guides: https://bitcoinj.github.io/working-with-the-wallet#setup
