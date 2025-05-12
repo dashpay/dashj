@@ -201,8 +201,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
 
         context.getConfidenceTable().seen(isLock.txid, peer.getAddress());
-        TransactionConfidence confidence = context.getConfidenceTable().get(isLock.txid);
-        if(confidence != null) {
+        TransactionConfidence confidence = context.getConfidenceTable().getOrCreate(isLock.txid);
+        if (confidence != null) {
             if (confidence.getIXType() != TransactionConfidence.IXType.IX_NONE) {
                 return;
             }
@@ -306,8 +306,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (confidence != null && confidence.getIXType() != TransactionConfidence.IXType.IX_NONE) {
                 return true;
             }
-            if(!invalidInstantSendLocks.isEmpty()) {
-                for(InstantSendLock islock : invalidInstantSendLocks.keySet()) {
+            if (!invalidInstantSendLocks.isEmpty()) {
+                for (InstantSendLock islock : invalidInstantSendLocks.keySet()) {
                     if(inv.hash.equals(islock.getHash()))
                         return true;
                 }
@@ -723,11 +723,13 @@ public class InstantSendManager implements RecoveredSignatureListener {
                 // testing again means that we might be a block behind or something
                 // for now, let us not save this to be retested forever...
                 // invalidInstantSendLocks.put(islock, Utils.currentTimeSeconds());
-                TransactionConfidence confidence = context.getConfidenceTable().get(islock.txid);
-                if(confidence != null) {
+                TransactionConfidence confidence = context.getConfidenceTable().getOrCreate(islock.txid);
+                if (confidence != null) {
                     log.info("islock: set to IX_LOCK_FAILED for {}", islock.txid);
                     confidence.setIXType(TransactionConfidence.IXType.IX_LOCK_FAILED);
                     confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
+                } else {
+                    log.info("confidence for {} not found", islock.txid);
                 }
                 continue;
             }
@@ -756,8 +758,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
     {
         StoredBlock minedBlock = null;
 
-        TransactionConfidence confidence = context.getConfidenceTable().get(hash);
-        if(confidence != null && confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
+        TransactionConfidence confidence = context.getConfidenceTable().getOrCreate(hash);
+        if (confidence != null && confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
             long height = confidence.getAppearedAtChainHeight();
 
             try {
@@ -819,14 +821,14 @@ public class InstantSendManager implements RecoveredSignatureListener {
     }
 
     void updateWalletTransaction(Sha256Hash txid, Transaction tx) {
-        TransactionConfidence confidence = tx != null ? tx.getConfidence() : context.getConfidenceTable().get(txid);
-        if(confidence != null) {
+        TransactionConfidence confidence = tx != null ? tx.getConfidence() : context.getConfidenceTable().getOrCreate(txid);
+        if (confidence != null) {
             scheduledExecutorService.schedule(() -> {
                 confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED);
                 confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
             }, 250, TimeUnit.MILLISECONDS);
         } else {
-            log.info("Can't find {} in mempool", txid);
+            log.info("confidence for {} not found", txid);
         }
     }
 
