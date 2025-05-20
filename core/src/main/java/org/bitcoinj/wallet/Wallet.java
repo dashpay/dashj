@@ -83,6 +83,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.*;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.*;
 import static org.bitcoinj.core.NetworkParameters.MAX_MONEY;
@@ -1303,7 +1304,25 @@ public class Wallet extends BaseTaggableObject
     public RedeemData findRedeemDataFromScriptHash(byte[] payToScriptHash) {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.findRedeemDataFromScriptHash(payToScriptHash);
+            RedeemData redeemData = keyChainGroup.findRedeemDataFromScriptHash(payToScriptHash);
+            if (redeemData == null && receivingFromFriendsGroup != null) {
+                redeemData = receivingFromFriendsGroup.findRedeemDataFromScriptHash(payToScriptHash);
+            }
+            if (redeemData == null) {
+                for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
+                    if (extension.hasSpendableKeys()) {
+                        IRedeemData redeemDataFromExt = extension.findRedeemDataFromScriptHash(payToScriptHash);
+                        if (redeemDataFromExt != null && redeemDataFromExt.keys.stream().allMatch(key -> key instanceof ECKey)) {
+                            redeemData = RedeemData.of(
+                                    redeemDataFromExt.keys.stream().map(key -> (ECKey)key).collect(Collectors.toList()),
+                                    redeemDataFromExt.redeemScript
+                            );
+                            break;
+                        }
+                    }
+                }
+            }
+            return redeemData;
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -2372,7 +2391,10 @@ public class Wallet extends BaseTaggableObject
 
         if (block != null) {
             // check locked outputs and remove any in this transaction
-            tx.getInputs().forEach(input -> lockedOutputs.remove(input.getOutpoint()));
+            tx.getInputs().forEach(input -> {
+                log.info("unlock output: {}:{}", input.getOutpoint().getHash(), input.getOutpoint().getIndex());
+                lockedOutputs.remove(input.getOutpoint());
+            });
 
             // Mark the tx as appearing in this block so we can find it later after a re-org. This also tells the tx
             // confidence object about the block and sets its depth appropriately.
@@ -5338,10 +5360,28 @@ public class Wallet extends BaseTaggableObject
             if (!keyChainGroup.isSupportsDeterministicChains())
                 return false;
             int epoch = keyChainGroup.getCombinedKeyLookaheadEpochs();
+            if (sendingToFriendsGroup != null) {
+                epoch += sendingToFriendsGroup.getCombinedKeyLookaheadEpochs();
+            }
+            if (receivingFromFriendsGroup != null) {
+                epoch += receivingFromFriendsGroup.getCombinedKeyLookaheadEpochs();
+            }
+            for(KeyChainGroupExtension keyChainGroupExtension : keyChainExtensions.values()) {
+                epoch += keyChainGroupExtension.getCombinedKeyLookaheadEpochs();
+            }
             for (Transaction tx : block.getAssociatedTransactions().values()) {
                 markKeysAsUsed(tx);
             }
             int newEpoch = keyChainGroup.getCombinedKeyLookaheadEpochs();
+            if (sendingToFriendsGroup != null) {
+                newEpoch += sendingToFriendsGroup.getCombinedKeyLookaheadEpochs();
+            }
+            if (receivingFromFriendsGroup != null) {
+                newEpoch += receivingFromFriendsGroup.getCombinedKeyLookaheadEpochs();
+            }
+            for(KeyChainGroupExtension keyChainGroupExtension : keyChainExtensions.values()) {
+                newEpoch += keyChainGroupExtension.getCombinedKeyLookaheadEpochs();
+            }
             checkState(newEpoch >= epoch);
             // If the key lookahead epoch has advanced, there was a call to addKeys and the PeerGroup already has a
             // pending request to recalculate the filter queued up on another thread. The calling Peer should abandon
@@ -6355,6 +6395,7 @@ public class Wallet extends BaseTaggableObject
     public boolean lockOutput(TransactionOutPoint outPoint) {
         lock.lock();
         try {
+            log.info("lock output: {}:{}", outPoint.getHash(), outPoint.getIndex());
             return lockedOutputs.add(outPoint);
         } finally {
             lock.unlock();
@@ -6364,6 +6405,7 @@ public class Wallet extends BaseTaggableObject
     public void unlockOutput(TransactionOutPoint outPoint) {
         lock.lock();
         try {
+            log.info("unlock output: {}:{}", outPoint.getHash(), outPoint.getIndex());
             lockedOutputs.remove(outPoint);
         } finally {
             lock.unlock();
