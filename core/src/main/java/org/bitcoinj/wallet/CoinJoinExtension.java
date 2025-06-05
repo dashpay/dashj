@@ -239,6 +239,9 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     public TreeMap<Integer, List<TransactionOutput>> getOutputs() {
         checkNotNull(wallet);
         TreeMap<Integer, List<TransactionOutput>> outputs = Maps.newTreeMap();
+        if (getKeyChainGroup() == null) {
+            return outputs;
+        }
         for (Coin amount : CoinJoin.getStandardDenominations()) {
             outputs.put(CoinJoin.amountToDenomination(amount), Lists.newArrayList());
         }
