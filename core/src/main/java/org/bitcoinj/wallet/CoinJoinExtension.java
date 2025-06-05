@@ -30,12 +30,14 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.KeyId;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.IDeterministicKey;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptPattern;
@@ -237,6 +239,9 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     public TreeMap<Integer, List<TransactionOutput>> getOutputs() {
         checkNotNull(wallet);
         TreeMap<Integer, List<TransactionOutput>> outputs = Maps.newTreeMap();
+        if (getKeyChainGroup() == null) {
+            return outputs;
+        }
         for (Coin amount : CoinJoin.getStandardDenominations()) {
             outputs.put(CoinJoin.amountToDenomination(amount), Lists.newArrayList());
         }
@@ -599,6 +604,28 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 if (count > 1)
                     builder.append("  ").append("hash160:").append(Utils.HEX.encode(key.getPubKeyHash())).append(":").append(count).append("\n");
             });
+
+            builder.append("Key Usage Order: \n");
+            txes.stream().sorted(Transaction.SORT_TX_BY_HEIGHT).forEachOrdered(tx -> {
+                TransactionConfidence confidence = tx.getConfidence(wallet.context);
+
+                tx.getOutputs().forEach(output -> {
+                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                        byte[] hash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                        IKey key = findKeyFromPubKeyHash(hash, Script.ScriptType.P2PKH);
+                        if (key != null && key instanceof IDeterministicKey) {
+                            IDeterministicKey deterministicKey = (IDeterministicKey) key;
+                            if (confidence != null) {
+                                builder.append(confidence.getAppearedAtChainHeight()).append(": ");
+                            } else {
+                                builder.append("?").append(": ");
+                            }
+                            builder.append(deterministicKey.getPathAsString()).append("\n");
+                        }
+                    }
+                });
+            });
+
             return builder.toString();
 
         } finally {

@@ -257,7 +257,7 @@ public class CoinJoinManager {
     }
 
     public boolean isMasternodeOrDisconnectRequested(MasternodeAddress address) {
-        return masternodeGroup.isMasternodeOrDisconnectRequested(address);
+        return masternodeGroup != null && masternodeGroup.isMasternodeOrDisconnectRequested(address);
     }
 
     public boolean addPendingMasternode(CoinJoinClientSession session) {

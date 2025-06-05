@@ -18,6 +18,7 @@
 package org.bitcoinj.core;
 
 import com.google.common.primitives.UnsignedBytes;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.evolution.*;
@@ -265,6 +266,8 @@ public class Transaction extends ChildMessage {
     @Nullable
     private String memo;
 
+    private CoinJoinTransactionType coinJoinTransactionType = CoinJoinTransactionType.Unknown;
+
     public Transaction(NetworkParameters params) {
         super(params);
         version = CURRENT_VERSION;
@@ -499,6 +502,18 @@ public class Transaction extends ChildMessage {
             cachedForBag = wallet;
         }
         return result;
+    }
+
+    /**
+     * Returns the cached difference of {@link Transaction#getValueSentToMe(TransactionBag)} and {@link Transaction#getValueSentFromMe(TransactionBag)}.
+     */
+    public Coin getCachedValue() throws ScriptException {
+        return cachedValue;
+    }
+
+    public void setCachedValue(Coin value/*, TransactionBag bag*/) {
+        cachedValue = value;
+        // cachedForBag = bag;
     }
 
     /**
@@ -1725,6 +1740,20 @@ public class Transaction extends ChildMessage {
         }
         if (extraPayloadObject != null)
             extraPayloadObject.setParent(this);
+    }
+
+    /**
+     * Returns the coinjoin transaction type {@link #coinJoinTransactionType}.
+     */
+    public CoinJoinTransactionType getCoinJoinTransactionType() {
+        return coinJoinTransactionType;
+    }
+
+    /**
+     * Set the coinjoin transaction type {@link #coinJoinTransactionType}.
+     */
+    public void setCoinJoinTransactionType(CoinJoinTransactionType coinJoinTransactionType) {
+        this.coinJoinTransactionType = coinJoinTransactionType;
     }
 
     /* returns false if inputs > 4 or there are less than the required confirmations */

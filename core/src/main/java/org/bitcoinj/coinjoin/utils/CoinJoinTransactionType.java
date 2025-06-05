@@ -31,12 +31,18 @@ public enum CoinJoinTransactionType {
     CombineDust,
     MixingFee,
     Mixing,
-    Send;
+    Send,
+    Unknown;
 
     public static CoinJoinTransactionType fromTx(Transaction tx, TransactionBag transactionBag) {
-        if (tx.getInputs().size() == tx.getOutputs().size() && tx.getValue(transactionBag).equals(Coin.ZERO)) {
+        CoinJoinTransactionType currentType = tx.getCoinJoinTransactionType();
+        if (currentType != Unknown) {
+            return currentType;
+        } else if (tx.getInputs().size() == tx.getOutputs().size() && tx.getValue(transactionBag).equals(Coin.ZERO)) {
+            tx.setCoinJoinTransactionType(Mixing);
             return Mixing;
         } else if (isMixingFee(tx)) {
+            tx.setCoinJoinTransactionType(MixingFee);
             return MixingFee;
         } else {
             boolean makeCollateral = false;
@@ -64,20 +70,25 @@ public enum CoinJoinTransactionType {
                                 firstOutput.getSpentBy().getParentTransaction() : null;
 
                         if (spendingTx != null && isDenomination(spendingTx)) {
+                            tx.setCoinJoinTransactionType(CombineDust);
                             return CombineDust;
                         }
                     }
                 }
             }
             if (makeCollateral) {
+                tx.setCoinJoinTransactionType(MakeCollateralInputs);
                 return MakeCollateralInputs;
             } else if (isDenomination(tx)) {
+                tx.setCoinJoinTransactionType(CreateDenomination);
                 return CreateDenomination;
             }
         }
         // is this a coinjoin send transaction
-        if (isCoinJoinSend(tx))
+        if (isCoinJoinSend(tx)) {
+            tx.setCoinJoinTransactionType(Send);
             return Send;
+        }
         return None;
     }
     

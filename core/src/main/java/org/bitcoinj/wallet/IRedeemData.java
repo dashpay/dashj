@@ -42,14 +42,14 @@ public class IRedeemData {
     public final Script redeemScript;
     public final List<IKey> keys;
 
-    private IRedeemData(List<BLSKey> keys, Script redeemScript) {
+    private IRedeemData(List<IKey> keys, Script redeemScript) {
         this.redeemScript = redeemScript;
         List<IKey> sortedKeys = new ArrayList<>(keys);
         Collections.sort(sortedKeys, BLSKey.PUBKEY_COMPARATOR);
         this.keys = sortedKeys;
     }
 
-    public static IRedeemData of(List<BLSKey> keys, Script redeemScript) {
+    public static IRedeemData of(List<IKey> keys, Script redeemScript) {
         return new IRedeemData(keys, redeemScript);
     }
 
@@ -57,7 +57,7 @@ public class IRedeemData {
      * Creates RedeemData for P2PKH, P2WPKH or P2PK input. Provided key is a single private key needed
      * to spend such inputs.
      */
-    public static IRedeemData of(BLSKey key, Script redeemScript) {
+    public static IRedeemData of(IKey key, Script redeemScript) {
         checkArgument(ScriptPattern.isP2PKH(redeemScript)
                 || ScriptPattern.isP2PK(redeemScript));
         return key != null ? new IRedeemData(Collections.singletonList(key), redeemScript) : null;

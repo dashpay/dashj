@@ -292,6 +292,18 @@ message TransactionConfidence {
   // Next tag: 9
 }
 
+enum TransactionType {
+  REGULAR_SEND = 0;
+  RECEIVE = 1;
+  CREATE_DENOMINATION = 2;
+  MAKE_COLLATERAL_INPUTS = 3;
+  COMBINE_DUST = 4;
+  MIXING_FEE = 5;
+  MIXING = 6;
+  COINJOIN_SEND = 7;
+  NONE = 100;
+}
+
 /** A bitcoin transaction */
 
 message Transaction {
@@ -367,6 +379,8 @@ message Transaction {
   // Next tag: 14
 
   optional bytes extra_payload = 20;
+  optional int64 value = 21;
+  optional TransactionType type = 22;
 }
 
 /** The parameters used in the scrypt key derivation function.
