@@ -199,4 +199,8 @@ public final class BtcAutoFormat extends BtcFormat {
     @Override
     public String toString() { return "Auto-format " + pattern(); }
 
+    @Override
+    public int hashCode() {
+        return pattern().hashCode();
+    }
 }

@@ -40,7 +40,7 @@ public class BaseTaggableObject implements TaggableObject {
     }
 
     @Override
-    public ByteString getTag(String tag) {
+    public synchronized ByteString getTag(String tag) {
         ByteString b = maybeGetTag(tag);
         if (b == null)
             throw new IllegalArgumentException("Unknown tag " + tag);
