@@ -539,4 +539,9 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
     public void setWallet(Wallet wallet) {
         this.wallet = wallet;
     }
+
+    @Override
+    public int getCombinedKeyLookaheadEpochs() {
+        return hasKeyChains() ? getKeyChainGroup().getCombinedKeyLookaheadEpochs() : 0;
+    }
 }

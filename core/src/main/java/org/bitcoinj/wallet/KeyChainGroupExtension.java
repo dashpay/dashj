@@ -90,4 +90,6 @@ public interface KeyChainGroupExtension extends WalletExtension {
 
     boolean hasSpendableKeys();
     boolean isTransactionRevelant(Transaction tx);
+
+    int getCombinedKeyLookaheadEpochs();
 }

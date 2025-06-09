@@ -27,7 +27,9 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicHierarchy;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
@@ -1007,5 +1009,37 @@ public class WalletEx extends Wallet {
     @Override
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain) {
         return super.toString(includeLookahead, includePrivateKeys, aesKey, includeTransactions, includeExtensions, chain) + getTransactionReport();
+    }
+
+    @Override
+    public List<Transaction> getTransactionsWithFriend(EvolutionContact contact) {
+        FriendKeyChain fromChain = receivingFromFriendsGroup != null  ?
+                receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN) :
+                null;
+        FriendKeyChain toChain = sendingToFriendsGroup != null ?
+                sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN) :
+                null;
+
+        ArrayList<Transaction> txs = Lists.newArrayList();
+        if (fromChain == null && toChain == null) {
+            return txs;
+        }
+
+        for(WalletTransaction wtx : getWalletTransactions()) {
+            Transaction tx = wtx.getTransaction();
+            CoinJoinTransactionType type = CoinJoinTransactionType.fromTx(tx, this);
+            if (type == CoinJoinTransactionType.None || type == CoinJoinTransactionType.Send) {
+                for (TransactionOutput output : tx.getOutputs()) {
+                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                        byte[] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                        if ((fromChain != null && fromChain.findKeyFromPubHash(hash160) != null) ||
+                                (toChain != null && toChain.findKeyFromPubHash(hash160) != null)) {
+                            txs.add(tx);
+                        }
+                    }
+                }
+            }
+        }
+        return txs;
     }
 }

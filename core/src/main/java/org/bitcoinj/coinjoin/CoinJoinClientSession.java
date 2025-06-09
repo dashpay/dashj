@@ -970,7 +970,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
                 keyHolderStorage.returnAll();
                 switch (statusUpdate.getMessageID()) {
                     case ERR_INVALID_COLLATERAL:
-                        log.error("coinjoin: collateral invalid: {}", CoinJoin.isCollateralValid(txMyCollateral));
+                        log.error("coinjoin: collateral invalid: {}, tx: {}", CoinJoin.isCollateralValid(txMyCollateral), txMyCollateral);
                         isMyCollateralValid = false;
                         setNull(); // for now lets disconnect.  TODO: Why is the collateral invalid?
                         break;

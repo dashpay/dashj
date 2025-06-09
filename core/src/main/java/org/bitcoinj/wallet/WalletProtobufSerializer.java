@@ -17,6 +17,7 @@
 
 package org.bitcoinj.wallet;
 
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.BLSLazySignature;
@@ -55,6 +56,12 @@ import java.net.UnknownHostException;
 import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.bitcoinj.wallet.Protos.TransactionType.COINJOIN_SEND;
+import static org.bitcoinj.wallet.Protos.TransactionType.COMBINE_DUST;
+import static org.bitcoinj.wallet.Protos.TransactionType.CREATE_DENOMINATION;
+import static org.bitcoinj.wallet.Protos.TransactionType.MAKE_COLLATERAL_INPUTS;
+import static org.bitcoinj.wallet.Protos.TransactionType.MIXING;
+import static org.bitcoinj.wallet.Protos.TransactionType.MIXING_FEE;
 
 /**
  * Serialize and de-serialize a wallet to a byte stream containing a
@@ -347,8 +354,42 @@ public class WalletProtobufSerializer {
             txBuilder.setMemo(tx.getMemo());
 
         byte [] extraPayload = tx.getExtraPayload();
-        if(extraPayload != null && extraPayload.length > 0)
+        if (extraPayload != null && extraPayload.length > 0)
             txBuilder.setExtraPayload(ByteString.copyFrom(extraPayload));
+
+        Coin cachedValue = tx.getCachedValue();
+        if (cachedValue != null) {
+            txBuilder.setValue(cachedValue.value);
+        }
+
+        CoinJoinTransactionType coinJoinTransactionType = tx.getCoinJoinTransactionType();
+        Protos.TransactionType txType = null;
+        switch (coinJoinTransactionType) {
+            case CombineDust:
+                txType = COMBINE_DUST;
+                break;
+            case CreateDenomination:
+                txType = CREATE_DENOMINATION;
+                break;
+            case MakeCollateralInputs:
+                txType = MAKE_COLLATERAL_INPUTS;
+                break;
+            case Mixing:
+                txType = MIXING;
+                break;
+            case MixingFee:
+                txType = MIXING_FEE;
+                break;
+            case Send:
+                txType = COINJOIN_SEND;
+                break;
+            default:
+                // don't set or save a value
+                break;
+        }
+        if (txType != null) {
+            txBuilder.setType(txType);
+        }
 
         return txBuilder.build();
     }
@@ -803,8 +844,42 @@ public class WalletProtobufSerializer {
         if (txProto.hasMemo())
             tx.setMemo(txProto.getMemo());
 
-        if(txProto.hasExtraPayload())
+        if (txProto.hasExtraPayload())
             tx.setExtraPayload(txProto.getExtraPayload().toByteArray());
+
+        if (txProto.hasValue()) {
+            tx.setCachedValue(Coin.valueOf(txProto.getValue()));
+        }
+
+        if (txProto.hasType()) {
+            CoinJoinTransactionType coinJoinTransactionType = null;
+            switch (txProto.getType()) {
+                case COMBINE_DUST:
+                    coinJoinTransactionType = CoinJoinTransactionType.CombineDust;
+                    break;
+                case CREATE_DENOMINATION:
+                    coinJoinTransactionType = CoinJoinTransactionType.CreateDenomination;
+                    break;
+                case MAKE_COLLATERAL_INPUTS:
+                    coinJoinTransactionType = CoinJoinTransactionType.MakeCollateralInputs;
+                    break;
+                case MIXING:
+                    coinJoinTransactionType = CoinJoinTransactionType.Mixing;
+                    break;
+                case MIXING_FEE:
+                    coinJoinTransactionType = CoinJoinTransactionType.MixingFee;
+                    break;
+                case COINJOIN_SEND:
+                    coinJoinTransactionType = CoinJoinTransactionType.Send;
+                    break;
+                default:
+                    // leave as null or handle unknown type
+                    break;
+            }
+            if (coinJoinTransactionType != null) {
+                tx.setCoinJoinTransactionType(coinJoinTransactionType);
+            }
+        }
 
         // Transaction should now be complete.
         Sha256Hash protoHash = byteStringToHash(txProto.getHash());
