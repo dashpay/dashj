@@ -100,12 +100,12 @@ publishing {
             pom {
                 name = 'DashJ'
                 description = 'Dash Java Library'
-                url = 'httsp://dashj.org'
+                url = 'https://dashj.org'
 
                 licenses {
                     license {
                         name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
                     }
                 }
                 developers {
@@ -118,7 +118,7 @@ publishing {
                 scm {
                     connection = 'scm:git:git://github.com/dashevo/dashj.git'
                     developerConnection = 'scm:git:ssh://github.com/dashevo/dashj.git'
-                    url = 'http://github.com/dashevo/dashj.git'
+                    url = 'https://github.com/dashevo/dashj.git'
                 }
             }
         }
@@ -126,13 +126,14 @@ publishing {
     repositories {
         maven {
             // change URLs to point to your repos, e.g. http://my.org/repo
-            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            def releasesRepoUrl = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://central.sonatype.com/repository/maven-snapshots/"
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
             credentials {
-                username = project.hasProperty('ossrhUsername')?project.findProperty('ossrhUsername'):''
-                password = project.hasProperty('ossrhPassword')?project.findProperty('ossrhPassword'):''
+                username = project.hasProperty('ossrhUsernameDash')?project.findProperty('ossrhUsernameDash'):''
+                password = project.hasProperty('ossrhPasswordDash')?project.findProperty('ossrhPasswordDash'):''
             }
+            name = 'ossrh-staging-api'
         }
     }
 }
