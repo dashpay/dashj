@@ -86,6 +86,10 @@ public interface KeyChainGroupExtension extends WalletExtension {
     void addEventListener(KeyChainEventListener listener);
     void addEventListener(KeyChainEventListener listener, Executor executor);
     boolean removeEventListener(KeyChainEventListener listener);
+
+    default String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
+        return toString(includeLookahead, includePrivateKeys, aesKey, false);
+    }
     String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeDebugInfo);
 
     boolean hasSpendableKeys();
