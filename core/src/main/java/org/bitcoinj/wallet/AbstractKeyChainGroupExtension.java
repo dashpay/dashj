@@ -527,7 +527,7 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
     }
 
     @Override
-    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
+    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeDebugInfo) {
         return getWalletExtensionID() + ":\n" + (isInitialized() ? getKeyChainGroup().toString(includeLookahead, includePrivateKeys, aesKey) : "No keychains");
     }
 
